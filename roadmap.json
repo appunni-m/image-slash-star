@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1530,
-      "decode_rows": 1133,
+      "total_rows": 1531,
+      "decode_rows": 1134,
       "encode_rows": 397,
-      "decode_active": 1128,
+      "decode_active": 1129,
       "decode_planned": 5,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 306,
-      "decode_active": 301,
+      "decode_rows": 307,
+      "decode_active": 302,
       "decode_planned": 5,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_235_reconstruction_cases",
+      "no_selector_behavior": "run_all_237_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -99,14 +99,14 @@
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",
       "latest_evidence": {
         "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
-        "commit_sha": "9061135585461cb9309f2760e525a230cec68d22",
-        "run_id": "00dc6cfa-f1a3-45fa-8038-bdc494a4db4b",
-        "snapshot_id": "fd53e0b9-0465-49cc-b44f-a2233eea41f1",
+        "commit_sha": "349f5d436b79a26086a28b6110aeb67eb3c374d6",
+        "run_id": "56fb2027-255c-4e34-a8d0-b67e88f7db04",
+        "snapshot_id": "12bfe199-0967-4e75-8246-c1fbd4724b5a",
         "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-        "duration_ms": 42067,
+        "duration_ms": 81649,
         "selected_fixtures": [
-          "coverage_vertical8x16_following_filter_intra_mode2_01.avif"
+          "coverage_h16x8_following_dct_dct_01.avif"
         ],
         "status": "passed_and_ingested",
         "result": {
@@ -119,21 +119,21 @@
           "claim_status": "supported",
           "measurement_scope": "selected_subset",
           "comparison_mode": "additive_union",
-          "covered_lines_delta": 8,
-          "covered_branches_delta": 7,
-          "covered_functions_delta": 0,
-          "covered_regions_delta": 281,
-          "total_lines_delta": 3553,
-          "total_branches_delta": 254,
-          "total_functions_delta": 38,
-          "total_regions_delta": 10093,
-          "selected_projection_newly_covered_line_identities": 562,
-          "not_observed": 75363,
+          "covered_lines_delta": 662,
+          "covered_branches_delta": 17,
+          "covered_functions_delta": 1,
+          "covered_regions_delta": 5289,
+          "total_lines_delta": 3639,
+          "total_branches_delta": 364,
+          "total_functions_delta": 39,
+          "total_regions_delta": 10218,
+          "selected_projection_newly_covered_line_identities": 7393,
+          "not_observed": 39434,
           "regressed": 0,
           "merge_exact": false,
           "test_attribution": "unavailable",
           "snapshot_diff_claim_status": "limited",
-          "note": "The additive baseline-union review reports +8 covered lines, +7 branches, +0 functions, and +281 regions. Denominator changes are +3,553 lines, +254 branches, +38 functions, and +10,093 regions. The selected snapshot projection reports 562 newly covered line identities; unobserved baseline hits are not regressions. The compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 9061135585461cb9309f2760e525a230cec68d22. This is bounded selected-subset evidence, not a complete release measurement or global regression claim."
+          "note": "The additive baseline-union review reports +662 covered lines, +17 branches, +1 function, and +5,289 regions. Denominator changes are +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected snapshot projection reports 7,393 newly covered line identities; 39,434 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 349f5d436b79a26086a28b6110aeb67eb3c374d6. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
         }
       }
     },
@@ -2225,7 +2225,7 @@
         "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, and split-transform classes recorded in bounded_witnesses, including the bounded origin and following Horizontal16x8 DCT_DCT classes with exact partition, entropy, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and the existing complete 4:2:0 canvas walker to publish the left leaf before reconstructing the following leaf; unproven rectangular geometries/modes retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain open.",
         "latest_witness": "The latest bounded proof is coverage_h16x8_following_dct_dct_01.avif: a 32x8 8-bit 4:2:0 root PARTITION_SPLIT with two level-3 top-row PARTITION_HORZ Horizontal16x8 leaves. The following leaf starts at pixel x=16, uses one unsplit TX16x8 DCT_DCT luma payload with transform CDF symbol 1 and EOB 99, and uses skipped TX8x4 DCT_DCT U/V payloads. Safe Rust matches the pinned 248-operation dav1d trace, exact three-record partition, separate Y/U/V planes, and 768-byte Pillow RGB8 output.",
         "latest_slice": "The following Horizontal16x8 slice adds one deterministic 32x8 8-bit 4:2:0 witness selected from a 100-case/10-family input-only campaign. Its root split and two top-row horizontal children force the existing complete safe-Rust canvas path to publish the origin leaf’s right edge before decoding the right leaf’s luma and chroma syntax. Exact dav1d, Y/U/V, Pillow RGB, selected matrix, and focused reconstruction evidence are recorded separately; this bounded result does not replace the complete four-metric release gate.",
-        "latest_evidence_addition": "The promoted coverage_h16x8_following_dct_dct_01.avif fixture has fixture SHA-256 e60c2fd265b7e59fa61e4dc712e168f38707cc775b4bc2f09cbdbfd9c74b8695, encoded-item SHA-256 b83789d3dec2cc7c2327b6e0e6d6272137b4a9d8ca89a772dbc08bba2aaed70a, Pillow RGB SHA-256 f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f, decoded Y/U/V SHA-256 values dc24f1c3f2f5a457e8d28090e0123e773cbdb3fb94cfcb17ce2936428256c0ef, 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and input-only dav1d trace SHA-256 1d3f0148011f975899097d0d50a4403b26b00d882de26860cc059cf3ecf77606. The campaign report tests/fixtures/outputs/av1_search/coverage_horizontal16x8_following_campaign_01.json has SHA-256 4fcbc48a986aff770191555b7bd99695791084ed2e4f98d2e437462ae970c6a6; it evaluated 100 candidates across 10 families and qualified 38, promoting h16x8-following-f01-n00 (seed 328000). The campaign double-encoded and double-decoded every candidate through pinned Pillow/libavif and scalar dav1d and never invoked repository Rust. The selected Coverage MCP measurement will be appended after ingestion; this evidence remains bounded and does not replace the complete four-metric release measurement.",
+        "latest_evidence_addition": "The promoted coverage_h16x8_following_dct_dct_01.avif fixture has fixture SHA-256 e60c2fd265b7e59fa61e4dc712e168f38707cc775b4bc2f09cbdbfd9c74b8695, encoded-item SHA-256 b83789d3dec2cc7c2327b6e0e6d6272137b4a9d8ca89a772dbc08bba2aaed70a, Pillow RGB SHA-256 f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f, decoded Y/U/V SHA-256 values dc24f1c3f2f5a457e8d28090e0123e773cbdb3fb94cfcb17ce2936428256c0ef, 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and input-only dav1d trace SHA-256 1d3f0148011f975899097d0d50a4403b26b00d882de26860cc059cf3ecf77606. The campaign report tests/fixtures/outputs/av1_search/coverage_horizontal16x8_following_campaign_01.json has SHA-256 4fcbc48a986aff770191555b7bd99695791084ed2e4f98d2e437462ae970c6a6; it evaluated 100 candidates across 10 families and qualified 38, promoting h16x8-following-f01-n00 (seed 328000). The campaign double-encoded and double-decoded every candidate through pinned Pillow/libavif and scalar dav1d and never invoked repository Rust. Managed Coverage MCP run 56fb2027-255c-4e34-a8d0-b67e88f7db04 passed in 81,649 ms at exact implementation commit 349f5d436b79a26086a28b6110aeb67eb3c374d6 and ingested snapshot 12bfe199-0967-4e75-8246-c1fbd4724b5a against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. Its standalone incremental review reports additive deltas of +662 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639/+364/+39/+10,218, 7,393 selected-projection newly covered line identities, 39,434 unobserved baseline observations, zero regressions, conservative merge, and unavailable named-test attribution. The compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for the implementation commit. This is bounded selected-subset evidence and does not replace the complete four-metric release measurement.",
         "current_slice": "The new following Horizontal16x8 fixture promotes a bounded 32x8 8-bit 4:2:0 root PARTITION_SPLIT with two top-row PARTITION_HORZ leaves. Both leaves use qcat-three transform-context-two CDFs, unsplit TX16x8 DCT_DCT luma with EOB 99, and skipped TX8x4 DCT_DCT U/V payloads; the right leaf is reconstructed from the completed left luma edge while luma and chroma edges stay separate. The existing complete safe-Rust 4:2:0 canvas walker already handles this class, so the change adds authoritative campaign, oracle, fixture, and exact parity evidence without a native fallback. Alternate topology/transform/depth/tool states, other dimensions/depths/subsampling, sequences, encoding, and the four-metric 100% coverage gate remain open.",
         "current_slice_update": {
           "target": "following vertical Square8 chroma Diagonal67 mode 8 with ADST-DCT TX4x4 U/V",
@@ -3232,9 +3232,40 @@
         "scope": "This closes only the bounded 32x8 following Horizontal16x8 DC/DCT-DCT/unsplit/skipped-chroma class. General following-leaf geometry, alternate transforms, optional tools, high depth, HDR, sequences, encoding, and AVF-STILL-001 remain open.",
         "managed_incremental_coverage": {
           "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "run_id": "56fb2027-255c-4e34-a8d0-b67e88f7db04",
+          "snapshot_id": "12bfe199-0967-4e75-8246-c1fbd4724b5a",
           "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "commit_sha": "349f5d436b79a26086a28b6110aeb67eb3c374d6",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "duration_ms": 81649,
           "selected_fixture": "coverage_h16x8_following_dct_dct_01.avif",
-          "status": "pending_after_clean_commit"
+          "status": "passed_and_ingested",
+          "result": {
+            "passed": 1,
+            "failed": 0,
+            "filtered_out": 43,
+            "status": "passed_and_ingested"
+          },
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 662,
+            "covered_branches_delta": 17,
+            "covered_functions_delta": 1,
+            "covered_regions_delta": 5289,
+            "total_lines_delta": 3639,
+            "total_branches_delta": 364,
+            "total_functions_delta": 39,
+            "total_regions_delta": 10218,
+            "selected_projection_newly_covered_line_identities": 7393,
+            "not_observed": 39434,
+            "regressed": 0,
+            "merge_exact": false,
+            "test_attribution": "unavailable",
+            "snapshot_diff_claim_status": "limited",
+            "note": "The exact selected fixture passed and standalone Coverage MCP coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +662 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected projection reports 7,393 newly covered line identities; 39,434 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 349f5d436b79a26086a28b6110aeb67eb3c374d6. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          }
         }
       },
       "AVF-ENTROPY-001": {
