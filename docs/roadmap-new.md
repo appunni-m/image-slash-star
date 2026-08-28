@@ -1202,6 +1202,23 @@ reports 223 newly covered line identities, +1 covered function, +967 covered
 regions, and zero regressions; merge exactness is false and test attribution
 is unavailable. The selected subset is bounded evidence, not a replacement for
 the complete four-metric release measurement.
+The latest selected AVIF policy run `4aae5760-8537-4500-8afd-a92e1235cf5e`
+passed in 31,512 ms at exact implementation commit
+`fb5497e97daf596b42d36e94ae0cb3f9377417cb` and ingested snapshot
+`1cb3b222-bbf5-4b8e-a0de-ebcf85eec477` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+`decode:avif:animated_error_resilient` and
+`decode:avif:error_animated_repeated_frame_id`; the matrix reported 2/2
+active rows passed, 0 failed, and 0 planned-not-executed. The standalone
+incremental review reports additive baseline-union deltas of +8 lines, +10
+branches, +0 functions, and +1,081 regions, with denominator changes of
++4,121/+440/+46/+12,367 and 1,315 selected-projection newly covered line
+identities. It reports 74,613 unobserved baseline observations and zero
+regressions; merge is conservative and named-test attribution is unavailable.
+The ordinary snapshot projection retains metadata commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db`, so the durable run commit is the
+authoritative implementation provenance. This is bounded selected-subset
+evidence, not a complete four-metric release measurement.
 The pure-Rust cutover also closes the obsolete native-path findings
 `AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
 `FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.
@@ -1711,7 +1728,7 @@ that an entire workstream is finished because one slice passed.
 | W1 | Pillow-visible GIF `enc_bilevel`, JPEG `enc_cmyk`, and WebP `I;16` normalization fixture projections | Integrated in the current tree | `Encode.gif`, `Encode.jpeg`, and `Encode.webp` have real Pillow-visible rows and retained encoded/raw fixtures. Managed parity run `84716077-aee7-4396-8328-e6735202b044` passes 1,449/1,449 at the measured revision. |
 | W2 | `OutputSink` checkpoint/rollback plus cancellation at the final sink segment; the API-038 decode-format allow-list; PNG zlib-inflation/scanline, GIF LZW code/expansion, JPEG baseline/progressive-MCU, BMP raw payload/scanline, ICO embedded 24/32-bit BMP rows, and TIFF Deflate/PackBits/LZW/predictor/sample-conversion/raw-payload/raw-tile checkpoints; TIFF raw-strip/raw-tile allocation reuse; synchronous progress callbacks | Integrated locally; managed product-parity evidence remains revision-bound | `OutputSink` has caller-visible checkpoint/rollback behavior; the current all-feature `feature_gate_tests` contract passes 66/66, including progress callbacks and the listed codec work-budget boundaries. The allow-list and decoder checkpoint/allocation slices are Rust-only and have no Pillow rows. The 2d3e source-quality snapshot is historical; current local quality evidence is recorded in the current-tree sections above, while product-claim acceptance remains bound to the claim ledger until its parity evidence is refreshed. |
 | W3 | Coverage-origin inventory and justified defensive-path evidence | Evidence-only; no new product behavior | The origin verifier passes for 513 exact `cfg(coverage)` guards across 86 files, with no Pillow-parity origin assigned. The current managed snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c` is recorded from run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0` at implementation commit `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`; the selected incremental run `de02b397-48fa-44ed-bdaf-df4487b096bf` covered the runtime validation of the compile-time JPEG AC table builder through the two standard/custom Huffman rows. Snapshot metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` is retained as a caveat. The four metrics remain below 100% and stay visible in the current coverage table. |
-| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 299 AVIF decode rows are active, 5 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The 10-bit and 12-bit still witnesses, H16x4 TX4x4/TX8x4 and split filter-intra TX8x4 witnesses, the origin Vertical8x16 mode-4 TX4x4-grid witness, the new V4x16 predictor/transform witness, and the Square64/I444/CFL/luma-angle/Smooth/H32x8/Diagonal45/rectangular-palette/SmoothVertical/Diagonal67 witness set are bounded production classes, not general AVIF completion. |
+| W4 | AVIF `iloc` item-location/source-provenance contract and pure-Rust cutover | Integrated locally; capability gaps remain planned | Item extents and source locations are retained and asserted by the Rust-only feature contract. The runtime no longer depends on `libavif`/`dav1d`/`libaom`; 308 AVIF decode rows are active, 3 decode rows are explicit pure-Rust gaps, and all 32 encode rows remain planned. The 10-bit and 12-bit still witnesses, H16x4 TX4x4/TX8x4 and split filter-intra TX8x4 witnesses, the origin Vertical8x16 mode-4 TX4x4-grid witness, the new V4x16 predictor/transform witness, the qcat-one square AV1/CDF path, and the bounded first-frame sequence policy cases are bounded production classes, not general AVIF completion. |
 | W5 | Machine-checked unreachable-contract catalog and Cargo package surface | Integrated in the current tree | The ten-category catalog and exact package-path manifest both verify successfully; claim-ledger, diagnostic, license, and package-surface checks remain release evidence rather than Pillow parity. |
 
 The five worker checkouts were disposable execution spaces. Their reviewed

@@ -806,6 +806,58 @@
             "snapshot_diff_claim_status": "limited",
             "note": "The exact selected fixture passed and the standalone Coverage MCP incremental review measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +663 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected projection reports 7,400 newly covered line identities; 39,411 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 7f7e76be3b94128f65472f17631d098aa19be7ea. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-29",
+          "managed_coverage_mcp": true,
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "fb5497e97daf596b42d36e94ae0cb3f9377417cb",
+          "run_id": "4aae5760-8537-4500-8afd-a92e1235cf5e",
+          "snapshot_id": "1cb3b222-bbf5-4b8e-a0de-ebcf85eec477",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 31512,
+          "arguments": [
+            "--test",
+            "coverage_matrix_tests",
+            "--",
+            "test_decode_matrix_avif",
+            "--exact",
+            "--nocapture",
+            "--skip",
+            "__image_slash_star_matrix_row_selector__=decode:avif:animated_error_resilient",
+            "--skip",
+            "__image_slash_star_matrix_row_selector__=decode:avif:error_animated_repeated_frame_id"
+          ],
+          "selected_rows": [
+            "decode:avif:animated_error_resilient",
+            "decode:avif:error_animated_repeated_frame_id"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "matrix row selection: selected=2 active=2 planned-not-executed=0; decode matrix (selected): 2/2 active rows passed, 0 failed, 0 planned-not-executed; the central test result was 1 passed, 0 failed, 43 filtered out",
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 8,
+            "covered_branches_delta": 10,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 1081,
+            "total_lines_delta": 4121,
+            "total_branches_delta": 440,
+            "total_functions_delta": 46,
+            "total_regions_delta": 12367,
+            "selected_projection_newly_covered_line_identities": 1315,
+            "not_observed": 74613,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "snapshot_diff_claim_status": "limited",
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The selected AVIF matrix run passed exactly the two active first-frame/sequence-policy rows. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +1,081 regions; denominator changes are +4,121 lines, +440 branches, +46 functions, and +12,367 regions because this slice adds production AV1/CDF and validation code. The selected projection reports 1,315 newly covered line identities; 74,613 baseline observations were not observed and are not regressions. Merge is conservative rather than exact, named-test attribution is unavailable, and the ordinary snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit fb5497e97daf596b42d36e94ae0cb3f9377417cb. This is bounded selected-subset evidence, not a complete four-metric release measurement or global regression claim."
+          }
         }
       ],
       "coverage_origin_inventory": {
@@ -4032,6 +4084,63 @@
         ],
         "deliverable": "Parse sample tables, references, timing, disposal/blend/default-image state, limits, and present frames.",
         "current_evidence": "Safe validation rejects repeated current frame IDs and reserves sequence byte budgets. The repeated-ID fixture now has exact first-frame RGB8 evidence: ordinary decode publishes its independent first sample while sequence decode rejects the later repeated ID before publishing partial state. The valid error-resilient fixture also has exact first-frame RGB8 evidence while its full multi-frame presentation remains a typed Unsupported gap. Full AVIF multi-frame presentation, timing, references, disposal, and blend behavior remain planned.",
+        "current_slice_update_2026_08_29_first_frame_sequence_policy": {
+          "status": "completed_bounded",
+          "target": "Publish the independent first sample for two valid AVIF sequence containers while retaining transactional full-sequence validation and typed sequence errors.",
+          "fixtures": [
+            "animated_error_resilient.avif",
+            "animated_repeated_frame_id.avif"
+          ],
+          "production_changes": [
+            "Add dav1d 1.5.3 qcat-one coefficient CDF defaults and retain the proven square-only qcat-one admission boundary for 4:2:0 leaves.",
+            "Validate sample zero through a fresh one-sample safe-Rust plane before any later sequence sample is semantically decoded, while preserving still/default-image precedence.",
+            "Reject a repeated current frame ID as typed Malformed before publishing sequence state; return typed Unsupported at SequenceDecode for valid multi-frame presentation that is not implemented."
+          ],
+          "behavior": {
+            "animated_error_resilient": "decode() publishes exact 16x16 RGB8 sample zero; decode_sequence() returns Unsupported with format AVIF, stage SequenceDecode, and UnsupportedReason::NotImplemented.",
+            "animated_repeated_frame_id": "decode() publishes exact 16x16 RGB8 sample zero; decode_sequence() returns Malformed for the repeated current frame ID before any sequence frame is published.",
+            "first_frame_rgb8_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+            "transactional_sequence_state": "The complete sequence is validated before frame publication; no partial sequence is returned on a later-frame error."
+          },
+          "focused_verification": "The selected AVIF matrix rows pass 2/2; the exact decode-policy test passes; the complete active AVIF matrix passes 308/308 with 3 explicit planned decode gaps; all strict Rust gates and static verifiers pass.",
+          "managed_incremental_coverage": {
+            "project_id": "2b9f48753c80b021b894b600",
+            "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+            "run_id": "4aae5760-8537-4500-8afd-a92e1235cf5e",
+            "snapshot_id": "1cb3b222-bbf5-4b8e-a0de-ebcf85eec477",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "commit_sha": "fb5497e97daf596b42d36e94ae0cb3f9377417cb",
+            "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+            "duration_ms": 31512,
+            "selected_rows": [
+              "decode:avif:animated_error_resilient",
+              "decode:avif:error_animated_repeated_frame_id"
+            ],
+            "status": "passed_and_ingested",
+            "log_evidence": "matrix row selection: selected=2 active=2 planned-not-executed=0; decode matrix (selected): 2/2 active rows passed, 0 failed, 0 planned-not-executed; test result: 1 passed, 0 failed, 43 filtered out",
+            "review": {
+              "claim_status": "supported",
+              "measurement_scope": "selected_subset",
+              "comparison_mode": "additive_union",
+              "covered_lines_delta": 8,
+              "covered_branches_delta": 10,
+              "covered_functions_delta": 0,
+              "covered_regions_delta": 1081,
+              "total_lines_delta": 4121,
+              "total_branches_delta": 440,
+              "total_functions_delta": 46,
+              "total_regions_delta": 12367,
+              "selected_projection_newly_covered_line_identities": 1315,
+              "not_observed": 74613,
+              "regressed": 0,
+              "test_attribution": "unavailable",
+              "merge_exact": false,
+              "snapshot_diff_claim_status": "limited",
+              "note": "The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +1,081 regions. The selected projection reports 1,315 newly covered line identities; unselected baseline observations are not regressions. Snapshot metadata retains commit 3272b3ef49a87c2947c08b46596b442195c6a8db as a provenance caveat while the durable run record is exact for fb5497e97daf596b42d36e94ae0cb3f9377417cb. This remains bounded selected-subset evidence, not a complete four-metric release measurement."
+            }
+          },
+          "scope": "This closes independent first-sample materialization and stateful repeated-ID validation for the two named sequence cases. Full multi-frame AVIF presentation, timing, references, disposal, blend behavior, high-depth sequences, and the remaining animated row stay planned."
+        },
         "next": "Implement one-frame-at-a-time AVIF sequence materialization before eager collection."
       },
       "AVF-TILE-001": {
