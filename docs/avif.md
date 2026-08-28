@@ -70,10 +70,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 304 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 309 AVIF decode rows and 32 encode
 rows:
 
-- 299 decode rows are active: portable still reconstruction and structural
+- 304 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 5 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and three sequence cases.
@@ -394,6 +394,35 @@ The production correction uses explicit vertical top-right extension
 availability plus the shared eight-sample Z1 edge/filter predicate. This
 closes only this bounded following-vertical Square8/chroma-Diagonal67 class;
 broader Diagonal67, AV1, and AVF-STILL-001 remain open.
+
+The next reachable luma Diagonal67 class is now also recorded by
+`coverage_square8_luma_diagonal67_vertical_01.avif`. It is an 8×16 visible
+8-bit 4:2:0 frame with a clipped 16×16 split root and two vertically stacked
+Square8 leaves; the bottom leaf has luma mode 8/angle symbol 3 (zero delta,
+resolved 67°), an unsplit TX8×8 DCT-DCT luma block with EOB 2, and skipped
+TX4×4 U/V. The input-only campaign evaluated 100 candidates across 10
+families, qualified 8, and promoted `D67V-F06-N01` (seed 12051); repository
+Rust was not invoked. The pinned trace has 67 entropy operations and partition
+ranges `46608/54426/37798`. Fixture, encoded-item, Pillow RGB, Y, U/V, and
+trace SHA-256 values are
+`3bbcb1feb155e38a237e93680f88bc9825cac7300386a8817318b152578364fe`,
+`3912489d6f3ac34c30345fa0ed52b27d7cdebe120a47767ee406f805bf6c2b21`,
+`1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0`,
+`fc031c4f9e0656a6d88087ba047d41a1b4121184d5257c026b8da10e6bcb3cd3`,
+`bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6`, and
+`decc9a1bc632f3f00d5dac0da1c035c07f74999f98aa6516f79e996e1f29de2f`.
+The durable report is
+`tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_campaign_01.json`
+(SHA-256
+`f1cfde41757a43de1c2b09c6e4ce76069724ee6e1475b450c9debcd089d648ef`).
+Safe Rust uses the actual reconstructed top edge, `top[0]` as top-left, and
+repeated `top[7]` for the unavailable top-right extension only for this
+semantic no-left/zero-delta/unsplit-DCT-DCT case; transform-split and other
+Diagonal67 cases retain their prior path. The full active AVIF matrix passes
+304/304, and the independent reconstruction selector passes 1/1. This closes
+only this bounded following-vertical Square8/luma-Diagonal67 class; broader
+angle deltas, split/depth/transform variants, other availability contexts,
+chroma Diagonal67, and AVF-STILL-001 remain open.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is

@@ -5865,7 +5865,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 238);
+    assert_eq!(expected.cases.len(), 239);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6599,6 +6599,40 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 following Square8 chroma Diagonal67 vertical witness partition topology"
+            );
+        } else if case.fixture == "coverage_square8_luma_diagonal67_vertical_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: 46_608,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 54_426,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 37_798,
+                    },
+                ],
+                "AV1 following Square8 luma Diagonal67 vertical witness partition topology"
             );
         } else if case.fixture == "coverage_square8_luma_diagonal_down_right_01.avif" {
             assert_eq!(
@@ -8551,6 +8585,53 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Square8 chroma Diagonal67 vertical witness leaf states"
             );
         }
+        if case.fixture == "coverage_square8_luma_diagonal67_vertical_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                67,
+                "AV1 following Square8 luma Diagonal67 vertical witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-yangle-symbol[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=52620",
+                    "Post-cdef_idx[0]: r=52620",
+                    "Post-ymode[0]: r=50204",
+                    "Post-uvmode[0]: r=63800",
+                    "Post-tx[1]: r=63800",
+                    "Post-txtp-intra[1->1][0][1->0]: r=44964",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=6]: r=41224",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=35987 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=63148 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=36618",
+                    "Post-ymode[8]: r=34464",
+                    "Post-yangle-symbol[3]: r=43984",
+                    "Post-uvmode[0]: r=32772",
+                    "Post-tx[1]: r=32772",
+                    "Post-txtp-intra[1->1][8][1->0]: r=53516",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=2]: r=62984",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=55969 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=49926 [x=0,cbx4=0]",
+                ],
+                "AV1 following Square8 luma Diagonal67 vertical witness leaf states"
+            );
+        }
         if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -10171,6 +10252,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_square8_chroma_diagonal67_vertical_01.avif" => {
                 "2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae"
+            }
+            "coverage_square8_luma_diagonal67_vertical_01.avif" => {
+                "1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0"
             }
             "coverage_square8_luma_diagonal_down_right_01.avif" => {
                 "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b"
