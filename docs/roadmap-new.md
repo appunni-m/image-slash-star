@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 304 rows total, 299 active, 5 explicit planned
+- AVIF decode/inspect/verify: 305 rows total, 300 active, 5 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,528 rows total, 1126 active decode rows, 365 active encode
+- Whole matrix: 1,529 rows total, 1127 active decode rows, 365 active encode
   rows, 5 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -612,7 +612,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  234 reconstruction cases; a selected run reads and executes only the
+  235 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does
@@ -738,7 +738,7 @@ the corresponding status is recorded in `roadmap.json`:
   slice adds exact evidence without claiming a production decoder edit; mode
   4, other contexts/topologies, and broader AV1 still remain partial.
 
-- The newest bounded origin implementation proof is
+- The preceding bounded origin implementation proof is
   `coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif`: an 8x16,
   8-bit 4:2:0 `Vertical8x16` origin leaf selecting `FILTER_PRED[13/4]`,
   transform-luma mode 0, and a depth-two 2-column × 4-row grid of eight
@@ -770,6 +770,48 @@ the corresponding status is recorded in `roadmap.json`:
   projection retains metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db`;
   the exact run record is authoritative for implementation provenance. This
   is bounded incremental evidence, not a complete release measurement.
+
+  The latest bounded following-leaf proof is
+  `coverage_vertical8x16_following_filter_intra_mode2_01.avif`: a 16x32,
+  8-bit 4:2:0 split-root frame with four coded-order 8x16 `Vertical8x16`
+  leaves. The lower-left following leaf selects `FILTER_PRED[13/2]` with a
+  `TX8x16` luma transform; the lower-right selects `FILTER_PRED[13/0]` and
+  the pinned `TX[1]` two-payload luma state. The upper-right `0/0` trace is
+  ordinary DC, not FILTER_PRED. All four U/V payloads use TX4x8 DCT-DCT with
+  EOB 0. Safe Rust matches the exact three partition records, all 1,023
+  entropy operations, reconstructed Y/U/V planes, and the independent
+  1,536-byte Pillow RGB8 reference. The fixture SHA-256 is
+  `252f1ef0ac2b5af88a90d8f6c6952186ea968db0350af5e7f5c19a1465581ec2`, the
+  encoded-item SHA-256 is
+  `49620e57e1d5749c7e6ee2c76d8cf14e29709922db4c249a3da50cc8b2940bfb`, and
+  the RGB SHA-256 is
+  `403dfa0053c7a79267a72b0c4b8aad0462efb45e9baac12dd488468b3d3d924b`.
+  The reconstructed plane SHA-256 values are Y
+  `369245ee4125261a45aab212133114ed8e44b7d9707011d23f5e1e65c5a5e854`, U
+  `d8eeb09b5d4d74c33d5db255677a84ef0dff4e019d8c256805097a7e91dd20cb`, and V
+  `9fe1f341a82af9fbd72d403bfd860c658b0ee7ea3caa7be0d48ea4cc5567e59e`.
+  The maintained deterministic generator uses seed 1406 and the input-only
+  oracle never invokes repository Rust; no separate campaign identifier is
+  claimed for this direct topology witness. This closes only the proven
+  following mode-2/mode-0 class; other following modes/geometries and
+  `AVF-STILL-001` remain partial.
+
+  Managed Coverage MCP ran the exact fixture selector against complete
+  baseline snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
+  `00dc6cfa-f1a3-45fa-8038-bdc494a4db4b` passed in 42,067 ms at exact
+  implementation commit `9061135585461cb9309f2760e525a230cec68d22` and
+  ingested snapshot `fd53e0b9-0465-49cc-b44f-a2233eea41f1`. The log reports
+  1 passed, 0 failed, and 43 filtered out. The additive baseline-union review
+  reports +8 covered lines, +7 branches, +0 functions, and +281 regions;
+  denominator changes are +3,553 lines, +254 branches, +38 functions, and
+  +10,093 regions. The selected projection reports 562 newly covered line
+  identities, 75,363 baseline hits were not observed, and zero regressions
+  were reported. The merge is conservative rather than exact and named-test
+  attribution is unavailable; the compact snapshot retains metadata commit
+  `3272b3ef49a87c2947c08b46596b442195c6a8db` while the durable run record is
+  authoritative for implementation provenance. This is bounded selected-
+  subset evidence, not a complete four-metric release measurement or global
+  regression claim.
 
   Managed Coverage MCP ran the exact fixture selector against baseline
   snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
@@ -1518,7 +1560,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,528 total | 1,131 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,126 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,529 total | 1,132 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,127 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 44/44 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2786,7 +2828,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 304 AVIF decode/inspect/verify rows exist: 299 are
+**Current exact state:** 305 AVIF decode/inspect/verify rows exist: 300 are
 active and 5 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
@@ -2805,7 +2847,7 @@ Pillow RGB8 bytes match safe Rust. The exact fixture selector run
 +7 branches, +0 functions, and +281 regions with zero reported regressions.
 This remains bounded subset evidence and does not close broader AV1 support.
 
-The newest bounded origin implementation proof is
+The preceding bounded origin implementation proof is
 `coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif`: an 8x16,
 8-bit 4:2:0 `Vertical8x16` origin leaf with `FILTER_PRED[13/4]`, transform-
 luma mode 0, and a depth-two 2×4 grid of eight row-major TX4x4 luma DCT-DCT
@@ -2832,6 +2874,47 @@ additive baseline-union deltas are +8 lines, +7 branches, +0 functions, and
 reported regressions limited to the selected subset; the selected projection
 reports 385 newly covered line identities. This is bounded incremental
 evidence, not the complete four-metric release measurement.
+
+The latest bounded following-leaf proof is
+`coverage_vertical8x16_following_filter_intra_mode2_01.avif`: a 16x32, 8-bit
+4:2:0 split-root frame with four coded-order 8x16 `Vertical8x16` leaves. The
+lower-left following leaf selects `FILTER_PRED[13/2]` with a TX8x16 luma
+transform; the lower-right selects `FILTER_PRED[13/0]` and the pinned `TX[1]`
+two-payload luma state. The upper-right `0/0` trace is ordinary DC, not
+FILTER_PRED. All four U/V payloads use TX4x8 DCT-DCT with EOB 0. Safe Rust
+matches the exact three partition records, all 1,023 entropy operations,
+reconstructed Y/U/V planes, and the independent 1,536-byte Pillow RGB8
+reference. The fixture SHA-256 is
+`252f1ef0ac2b5af88a90d8f6c6952186ea968db0350af5e7f5c19a1465581ec2`, the
+encoded-item SHA-256 is
+`49620e57e1d5749c7e6ee2c76d8cf14e29709922db4c249a3da50cc8b2940bfb`, and the
+RGB SHA-256 is
+`403dfa0053c7a79267a72b0c4b8aad0462efb45e9baac12dd488468b3d3d924b`. The
+reconstructed Y/U/V SHA-256 values are
+`369245ee4125261a45aab212133114ed8e44b7d9707011d23f5e1e65c5a5e854`,
+`d8eeb09b5d4d74c33d5db255677a84ef0dff4e019d8c256805097a7e91dd20cb`, and
+`9fe1f341a82af9fbd72d403bfd860c658b0ee7ea3caa7be0d48ea4cc5567e59e`.
+The maintained deterministic generator uses seed 1406 and the input-only
+oracle never invokes repository Rust; no separate campaign identifier is
+claimed for this direct topology witness. This closes only the proven
+following mode-2/mode-0 class; other following modes/geometries and
+`AVF-STILL-001` remain partial.
+
+The managed Coverage MCP result for this exact single-fixture selector is run
+`00dc6cfa-f1a3-45fa-8038-bdc494a4db4b`, snapshot
+`fd53e0b9-0465-49cc-b44f-a2233eea41f1`, at exact implementation commit
+`9061135585461cb9309f2760e525a230cec68d22`, against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed 1/1 in 42,067 ms with 43
+filtered-out cases. The additive baseline-union deltas are +8 lines, +7
+branches, +0 functions, and +281 regions, with denominator changes of
++3,553/+254/+38/+10,093; the selected projection reports 562 newly covered
+line identities, 75,363 baseline hits were not observed, and zero regressions
+were reported. The merge is conservative rather than exact, named-test
+attribution is unavailable, and the compact snapshot retains metadata commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db`; the durable run record is
+authoritative for implementation provenance. This is bounded selected-subset
+evidence, not the complete four-metric release measurement or a global
+regression claim.
 
 The latest bounded rectangular proof is the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
