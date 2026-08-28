@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 306 rows total, 301 active, 5 explicit planned
+- AVIF decode/inspect/verify: 307 rows total, 302 active, 5 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,530 rows total, 1128 active decode rows, 365 active encode
+- Whole matrix: 1,531 rows total, 1129 active decode rows, 365 active encode
   rows, 5 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -299,6 +299,16 @@ the corresponding status is recorded in `roadmap.json`:
   closes only the bounded following-Horizontal16x8 DC/DCT-DCT/unsplit/
   skipped-chroma class; broader following geometry, alternate transforms,
   optional tools, sequences, encoding, and AVF-STILL-001 remain open.
+  Managed Coverage MCP run `56fb2027-255c-4e34-a8d0-b67e88f7db04` passed in
+  81,649 ms at exact implementation commit `349f5d436b79a26086a28b6110aeb67eb3c374d6`
+  and ingested snapshot `12bfe199-0967-4e75-8246-c1fbd4724b5a` against
+  explicit baseline `7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its standalone
+  incremental review reports +662/+17/+1/+5,289 covered line/branch/function/
+  region deltas, denominator changes +3,639/+364/+39/+10,218, 7,393 selected
+  line identities newly covered, 39,434 baseline observations not observed,
+  and zero regressions. This is conservative selected-subset evidence with
+  unavailable named-test attribution, not the complete four-metric release
+  measurement.
 - The newest bounded origin proof is `coverage_r32x32_filter_intra_probe_01.avif`,
   a 32x32 8-bit 4:2:0 horizontal split with an origin Horizontal32x16
   filter-intra leaf followed by another Horizontal32x16 leaf. Its origin uses
@@ -663,7 +673,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  235 reconstruction cases; a selected run reads and executes only the
+  237 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does
