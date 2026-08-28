@@ -5865,7 +5865,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 236);
+    assert_eq!(expected.cases.len(), 237);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6275,6 +6275,40 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     range: 46_840,
                 }],
                 "AV1 Horizontal16x8 origin witness partition topology"
+            );
+        } else if case.fixture == "coverage_h16x8_following_dct_dct_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 38_416,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 1,
+                        range: 54_924,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 0,
+                        level: 3,
+                        context: 2,
+                        partition: 1,
+                        range: 43_772,
+                    },
+                ],
+                "AV1 following Horizontal16x8 DCT-DCT witness partition topology"
             );
         } else if case.fixture == "coverage_square16_chroma_smooth_horizontal_01.avif" {
             assert_eq!(
@@ -7493,6 +7527,48 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=57701 [x=0,cbx4=0]",
                 ],
                 "AV1 origin Horizontal16x8 DCT-DCT witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_h16x8_following_dct_dct_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                248,
+                "AV1 following Horizontal16x8 DCT-DCT witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=53101",
+                    "Post-cdef_idx[0]: r=53101",
+                    "Post-ymode[0]: r=50630",
+                    "Post-uvmode[0]: r=64808",
+                    "Post-tx[8]: r=64808",
+                    "Post-y-cf-blk[tx=8,txtp=0,eob=99]: r=40200",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=36742 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=33680 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=42408",
+                    "Post-ymode[0]: r=41820",
+                    "Post-uvmode[0]: r=56884",
+                    "Post-tx[8]: r=56884",
+                    "Post-y-cf-blk[tx=8,txtp=0,eob=99]: r=63240",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=58419 [x=0,cbx4=2]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=54268 [x=0,cbx4=2]",
+                ],
+                "AV1 following Horizontal16x8 DCT-DCT witness leaf states"
             );
         }
         if case.fixture == "coverage_square16_filter_intra_mode0_01.avif" {
@@ -9966,6 +10042,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h16x8_origin_dct_dct_01.avif" => {
                 "2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab"
+            }
+            "coverage_h16x8_following_dct_dct_01.avif" => {
+                "f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f"
             }
             "coverage_r32x32_following_01.avif" => {
                 "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7"

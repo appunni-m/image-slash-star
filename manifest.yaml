@@ -4172,6 +4172,12 @@ formats:
       - coverage_h16x8_origin_dct_dct_01.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: coverage_h16x8_following_dct_dct_01
+      description: 32x8 4:2:0 quality-36 speed-0 root PARTITION_SPLIT with two top-row PARTITION_HORZ Horizontal16x8 leaves, non-empty luma residual on the following leaf, and skipped TX8x4 chroma
+      test_assets:
+      - coverage_h16x8_following_dct_dct_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_r32x32_filter_intra_probe_01
       description: 32x32 4:2:0 quality-76 speed-0 horizontal split with a true origin Horizontal32x16 leaf, CDF-index-8 filter-intra, and a following Horizontal32x16 leaf
       test_assets:

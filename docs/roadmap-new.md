@@ -283,6 +283,22 @@ the corresponding status is recorded in `roadmap.json`:
   states and a filter-intra leaf. This remains bounded evidence, not general
   I444 or AV1 completion. The previous-slice managed snapshot below records
   that promotion; its zero metric delta is retained as historical context.
+- The newest bounded following-leaf proof is
+  `coverage_h16x8_following_dct_dct_01.avif`: a deterministic 32x8 8-bit
+  4:2:0 frame whose root is `PARTITION_SPLIT` with two level-3 top-row
+  `PARTITION_HORZ` Horizontal16x8 leaves. The right leaf begins at pixel
+  x=16, consumes the completed left luma edge, uses an unsplit TX16x8
+  DCT_DCT luma payload with transform CDF symbol 1 and EOB 99, and uses
+  skipped TX8x4 DCT_DCT U/V payloads with EOB -1. The pinned dav1d 1.5.3
+  trace has 248 entropy operations and exact partition ranges
+  `38416/54924/43772`; safe Rust matches the exact Y/U/V planes and 768-byte
+  Pillow RGB8 output. The input-only campaign evaluated 100 candidates across
+  10 families, qualified 38, and promoted `h16x8-following-f01-n00` (seed
+  328000) without invoking repository Rust. Fixture, encoded-item, Pillow
+  RGB, Y/U/V, and trace SHA-256 values are recorded in `roadmap.json`. This
+  closes only the bounded following-Horizontal16x8 DC/DCT-DCT/unsplit/
+  skipped-chroma class; broader following geometry, alternate transforms,
+  optional tools, sequences, encoding, and AVF-STILL-001 remain open.
 - The newest bounded origin proof is `coverage_r32x32_filter_intra_probe_01.avif`,
   a 32x32 8-bit 4:2:0 horizontal split with an origin Horizontal32x16
   filter-intra leaf followed by another Horizontal32x16 leaf. Its origin uses
