@@ -34,6 +34,8 @@ from generate_av1_reconstruction_refs import (
 SIZE = (8, 16)
 EXPECTED_YUV_BYTES = SIZE[0] * SIZE[1] + 2 * (SIZE[0] // 2) * (SIZE[1] // 2)
 SUBSAMPLING = "4:2:0"
+LAYOUT_UNSPLIT = "unsplit-tx8x16"
+LAYOUT_TX4X4_GRID = "tx4x4-grid-2x4"
 ADVANCED = {
     "min-partition-size": "8",
     "max-partition-size": "16",
@@ -283,9 +285,10 @@ def classify(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
     target_filter_mode: int,
+    target_layout: str,
     yuv_bytes: int,
 ) -> dict[str, object]:
-    """Apply exact predicates for one origin unsplit Vertical8x16 leaf."""
+    """Apply exact predicates for one origin Vertical8x16 target layout."""
 
     root_blocks = [
         block
@@ -318,14 +321,23 @@ def classify(
             luma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
         if match := CHROMA_PATTERN.match(line):
             chroma_payloads.append({name: int(value) for name, value in match.groupdict().items()})
+    expected_tx_marker = "Post-tx[7]" if target_layout == LAYOUT_UNSPLIT else "Post-tx[0]"
     expected_syntax_markers = [
         "Post-skip[0]",
         "Post-cdef_idx[0]",
         "Post-ymode[0]",
         "Post-uvmode[0]",
         f"Post-filterintramode[13/{target_filter_mode}]",
-        "Post-tx[7]",
+        expected_tx_marker,
     ]
+    if target_layout == LAYOUT_UNSPLIT:
+        luma_shape = len(luma_payloads) == 1 and luma_payloads[0]["tx"] == 7
+    elif target_layout == LAYOUT_TX4X4_GRID:
+        luma_shape = len(luma_payloads) == 8 and all(
+            payload["tx"] == 0 for payload in luma_payloads
+        )
+    else:
+        raise ValueError(f"unsupported target layout: {target_layout}")
     predicates = {
         "one_origin_vertical8x16_root": (
             len(blocks) == 1
@@ -339,8 +351,10 @@ def classify(
             and filter_modes[0]["y_mode"] == 13
             and filter_modes[0]["filter_mode"] == target_filter_mode
         ),
-        "one_unsplit_tx8x16_luma": len(luma_payloads) == 1 and luma_payloads[0]["tx"] == 7,
-        "luma_nonempty": bool(luma_payloads) and luma_payloads[0]["eob"] >= 0,
+        "luma_layout": luma_shape,
+        "luma_nonempty": bool(luma_payloads) and all(
+            payload["eob"] > 0 for payload in luma_payloads
+        ),
         "one_tx4x8_chroma_pair": (
             len(chroma_payloads) == 2
             and {item["plane"] for item in chroma_payloads} == {0, 1}
@@ -353,6 +367,7 @@ def classify(
         "root_partition": root,
         "group_count": len(groups),
         "target_filter_mode": target_filter_mode,
+        "target_layout": target_layout,
         "syntax_markers": syntax_markers,
         "filter_modes": filter_modes,
         "luma_payloads": luma_payloads,
@@ -371,6 +386,7 @@ def decode_candidate(
     candidate: dict[str, object],
     retain_dir: Path | None,
     target_filter_mode: int,
+    target_layout: str,
 ) -> dict[str, object]:
     """Encode, independently decode, and classify one candidate."""
 
@@ -378,7 +394,8 @@ def decode_candidate(
     if not isinstance(pixels, bytes):
         raise TypeError("candidate pixels must be bytes")
     encoded = encode(pixels, int(candidate["quality"]), int(candidate["speed"]))
-    if encoded != encode(pixels, int(candidate["quality"]), int(candidate["speed"])):
+    encoded_second = encode(pixels, int(candidate["quality"]), int(candidate["speed"]))
+    if encoded != encoded_second:
         raise RuntimeError(f"nondeterministic encoding for {candidate['id']}")
     path = work / f"{candidate['id']}.avif"
     path.write_bytes(encoded)
@@ -411,7 +428,8 @@ def decode_candidate(
         env=environment,
     )
     blocks, groups, entropy_count = parse_trace(result.stdout)
-    yuv_bytes = output_path.stat().st_size
+    yuv = output_path.read_bytes()
+    yuv_bytes = len(yuv)
     return {
         "id": candidate["id"],
         "family": candidate["family"],
@@ -420,11 +438,14 @@ def decode_candidate(
         "speed": candidate["speed"],
         "input_rgb_sha256": sha256(pixels),
         "encoded_file_sha256": sha256(encoded),
+        "encoded_file_sha256_second": sha256(encoded_second),
         "encoded_item_sha256": sha256(sample),
         "encoded_item_length": len(sample),
+        "decoded_yuv_sha256": sha256(yuv),
         "entropy_operation_count": entropy_count,
         "partition_blocks": blocks,
-        **classify(blocks, groups, target_filter_mode, yuv_bytes),
+        "repository_rust_invoked": False,
+        **classify(blocks, groups, target_filter_mode, target_layout, yuv_bytes),
     }
 
 
@@ -439,6 +460,12 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
     parser.add_argument("--filter-mode", type=int, choices=range(5), default=2)
+    parser.add_argument(
+        "--target-layout",
+        choices=(LAYOUT_UNSPLIT, LAYOUT_TX4X4_GRID),
+        default=LAYOUT_UNSPLIT,
+        help="exact luma payload topology to qualify",
+    )
     args = parser.parse_args()
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -473,6 +500,7 @@ def main() -> None:
                 candidate,
                 args.retain_dir,
                 args.filter_mode,
+                args.target_layout,
             )
             for candidate in candidates()
         ]
@@ -493,12 +521,24 @@ def main() -> None:
             "advanced": ADVANCED,
         },
         "search": {
+            "input_only": True,
             "candidate_count": len(reports),
+            "family_count": 10,
+            "candidates_per_family": 10,
+            "repository_rust_invoked": False,
+            "target_id": args.target_layout,
             "target": (
                 "origin Vertical8x16 FILTER_PRED mode "
-                f"{args.filter_mode} with one TX8x16 luma payload and TX4x8 U/V pair"
+                f"{args.filter_mode} with "
+                + (
+                    "one TX8x16 luma payload"
+                    if args.target_layout == LAYOUT_UNSPLIT
+                    else "a 2x4 grid of eight TX4x4 luma payloads"
+                )
+                + " and TX4x8 U/V pair"
             ),
             "filter_mode": args.filter_mode,
+            "target_layout": args.target_layout,
             "expected_yuv_bytes": EXPECTED_YUV_BYTES,
             "families": [
                 "F01_rgb_noise",
@@ -522,7 +562,7 @@ def main() -> None:
                     "single_leaf_group",
                     "ordered_filter_intra_syntax",
                     "filter_intra_selected",
-                    "one_unsplit_tx8x16_luma",
+                    "luma_layout",
                     "luma_nonempty",
                     "one_tx4x8_chroma_pair",
                     "full_yuv_output",
