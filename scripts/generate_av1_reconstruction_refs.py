@@ -42,6 +42,9 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
         "coverage_vertical8x16_following_filter_intra_mode2_01.avif",
     }
 )
+H16X8_ORIGIN_TARGET_FIXTURES = frozenset(
+    {"coverage_h16x8_origin_dct_dct_01.avif"}
+)
 SQUARE32_SPLIT_TARGET_FIXTURES = frozenset(
     {"coverage_square32_origin_tx16x16_split_01.avif"}
 )
@@ -980,6 +983,11 @@ EXPECTED_FIXTURES = {
         "file_sha256": "efa45a748283d03b65005365b0c6c281e5378a22369e0119add49536fc3bf8ba",
         "rgb_sha256": "0269cf259d6753f2ed578b701877c2fe4de42b3f2d812c168a079fc43b9d3328",
         "size": [32, 16],
+    },
+    "coverage_h16x8_origin_dct_dct_01.avif": {
+        "file_sha256": "abcc5033662bf727681061787deddc63e3bf8e9c16af6dd700848339c09ca9f2",
+        "rgb_sha256": "2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab",
+        "size": [16, 8],
     },
     "coverage_r32x32_following_01.avif": {
         "file_sha256": "28b9df05ad61bf01fef2ac11a6a9fa775ced07aed181e30c5c905caaedf4b6d3",
@@ -2094,6 +2102,7 @@ def generate(
                 if name in SQUARE64_SPLIT_TARGET_FIXTURES
                 else target_executable
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
+                or name in H16X8_ORIGIN_TARGET_FIXTURES
                 or name in SQUARE32_SPLIT_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in H16X4_FILTER_INTRA_SPLIT_TARGET_FIXTURES
@@ -2122,6 +2131,7 @@ def generate(
                 if name in SQUARE64_SPLIT_TARGET_FIXTURES
                 else target_env
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
+                or name in H16X8_ORIGIN_TARGET_FIXTURES
                 or name in SQUARE32_SPLIT_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
                 or name in H16X4_FILTER_INTRA_SPLIT_TARGET_FIXTURES

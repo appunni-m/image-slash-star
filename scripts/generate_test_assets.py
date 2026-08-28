@@ -5087,6 +5087,46 @@ def gen_avif():
                 speed=speed,
             )
 
+    def horizontal16x8_origin_dct_dct():
+        """Generate the promoted origin Horizontal16x8 DCT-DCT witness.
+
+        This is h16x8-f01-n01 from the pinned input-only rectangular-transform
+        campaign. Keep the pixel algebra and encoder controls identical to the
+        campaign so the committed fixture remains independently reproducible.
+        """
+
+        amplitude = 32
+
+        def pixel(x, y):
+            value = 128 + (amplitude if (x + y + 1) % 2 else -amplitude)
+            return (value, value, value)
+
+        return image_from_pixels((16, 8), pixel)
+
+    write_campaign_image(
+        "coverage_h16x8_origin_dct_dct_01",
+        horizontal16x8_origin_dct_dct(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=44,
+        speed=0,
+    )
+
     def cfl_signal(family, index, x, y):
         """Return the deterministic origin Square16 CFL search field."""
 

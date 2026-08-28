@@ -3865,6 +3865,65 @@ fn closed_lossy_420_qcat3_horizontal_four_context(context: &FirstBlockContext) -
         && transform_state
 }
 
+fn closed_lossy_420_qcat3_horizontal_rect_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+
+    let base_context = context.bit_depth == 8
+        && !context.superres_enabled
+        && !context.monochrome
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.disable_cdf_update
+        && !context.frame_tools.film_grain_present;
+    let geometry = matches!(context.level, 0 | 1)
+        && context.block_width == 4
+        && context.block_height == 2
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.frame_width == 16
+        && context.frame_height == 8
+        && context.upscaled_width == 16
+        && context.subsampling_x
+        && context.subsampling_y;
+    let sequence_tools = !context.enable_filter_intra && !context.enable_intra_edge_filter;
+    let quantization_state = (121..=255).contains(&quantization.base)
+        && context.frame_tools.segment_qindex == quantization.base
+        && !context.frame_tools.segment_lossless
+        && quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == -16
+        && quantization.u_ac_delta == -16
+        && quantization.v_dc_delta == -16
+        && quantization.v_ac_delta == -16
+        && quantization.using_matrix
+        && quantization.matrix_y == 7
+        && quantization.matrix_u == 8
+        && quantization.matrix_v == 8;
+    let tile_delta_state =
+        !context.frame_tools.delta_q_present && !context.frame_tools.delta_lf_present;
+    let no_effective_filters = context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && context.restoration_unit_size_log2 == [8; 2];
+    let transform_state = matches!(context.frame_tools.transform_mode, 1 | 2)
+        && !context.frame_tools.reduced_transform_set;
+
+    base_context
+        && geometry
+        && sequence_tools
+        && quantization_state
+        && tile_delta_state
+        && no_effective_filters
+        && transform_state
+}
+
 fn closed_lossy_420_horizontal_four_split_context(context: &FirstBlockContext) -> bool {
     // The H4 helper does not arm a superblock delta-q sentence. Keep the
     // existing exact class and add only the independently evidenced qcat-three
@@ -4116,6 +4175,7 @@ pub(super) fn validate_first_partition(
         || closed_lossy_420_reconstruction_context(context)
         || closed_lossy_420_square64_split_context(context)
         || closed_lossy_420_16x16_vertical_pair_context(context)
+        || closed_lossy_420_qcat3_horizontal_rect_context(context)
         || closed_lossy_420_horizontal_four_split_context(context)
         || closed_lossy_444_16x16_reconstruction_context(context);
     if !closed_class {
@@ -4150,6 +4210,7 @@ pub(super) fn validate_first_partition(
             | closed_lossy_420_reconstruction_context(context)
             | closed_lossy_420_square64_split_context(context)
             | closed_lossy_420_16x16_vertical_pair_context(context)
+            | closed_lossy_420_qcat3_horizontal_rect_context(context)
             | closed_lossy_420_horizontal_four_split_context(context)
             | closed_lossy_444_16x16_reconstruction_context(context);
         if trace_closed_context {
@@ -4424,6 +4485,14 @@ pub(super) fn validate_first_partition(
                         super::block::TransformGrid::Vertical8x16
                     };
                     return decode_closed_420_leaf(&mut decoder, context, transform_grid);
+                }
+                let reconstruct_lossy_420_qcat3_horizontal_rectangular_leaf = !split
+                    & closed_lossy_420_qcat3_horizontal_rect_context(context)
+                    & horizontal_split
+                    & (level == 3);
+                if reconstruct_lossy_420_qcat3_horizontal_rectangular_leaf {
+                    let reconstructed = decode_closed_lossy_420_leaf(&mut decoder, context);
+                    return reconstructed;
                 }
                 let reconstruct_recursive_split = split
                     & closed_444_reconstruction_context(context)

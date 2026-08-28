@@ -3214,6 +3214,12 @@ const QCAT2_LUMA_16X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
     [599, 0],
 ];
 
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].skip[2][0]` is
+// `CDF1(32510)`; the range decoder stores its complement. This scalar is
+// used by the transform-context-two luma sentence when its residual-neighbor
+// context is zero.
+const QCAT3_LUMA_16X16_SKIP: [u16; 2] = [258, 0];
+
 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[*].skip[3][0..=6]`, complemented
 // for the portable range decoder. R32x16 children of an R64x16 transform use
 // transform-context three and retain all seven luma neighbor contexts.
@@ -3297,7 +3303,107 @@ const LOSSY_LUMA_TXP_INTRA1_S8: [[u16; 7]; 13] = [
 
 // AV1 qcat-three coefficient CDFs (qindex 121..=255), complemented for the
 // portable range decoder. These are the exact dav1d 1.5.3 defaults used by
-// the 16x4 luma and 8x4 subsampled-chroma terminals.
+// the rectangular luma and subsampled-chroma terminals admitted below.
+// `eob_bin_128[0][0]` is the two-dimensional EOB sentence for R16x8.
+const QCAT3_LUMA_8X16_EOB_BIN: [u16; 8] = [29_296, 27_883, 25_279, 20_287, 14_251, 8_232, 3_133, 0];
+
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].eob_hi_bit[2][0]`,
+// complemented for the portable range decoder. R16x8 uses the transform-
+// context-two luma sentence.
+const QCAT3_LUMA_16X16_EOB_HIGH: [[u16; 2]; 9] = [
+    [12_827, 0],
+    [12_241, 0],
+    [11_298, 0],
+    [10_281, 0],
+    [13_210, 0],
+    [10_414, 0],
+    [12_437, 0],
+    [16_384, 0],
+    [16_384, 0],
+];
+
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].eob_base_tok[2][0]`,
+// complemented for the portable range decoder.
+const QCAT3_LUMA_16X16_EOB_BASE: [[u16; 3]; 4] = [
+    [12_788, 2_177, 0],
+    [549, 171, 0],
+    [187, 62, 0],
+    [965, 481, 0],
+];
+
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].base_tok[2][0]`,
+// complemented for the portable range decoder. The 41 rows are indexed by
+// the luma low-coefficient context of the R16x8 sentence.
+const QCAT3_LUMA_16X16_BASE: [[u16; 4]; 41] = [
+    [24_892, 15_867, 11_027, 0],
+    [8_767, 870, 143, 0],
+    [18_239, 4_809, 1_317, 0],
+    [24_495, 11_950, 5_510, 0],
+    [27_490, 18_095, 11_258, 0],
+    [29_785, 23_925, 18_729, 0],
+    [4_752, 194, 36, 0],
+    [15_297, 2_462, 467, 0],
+    [22_544, 8_705, 3_040, 0],
+    [26_166, 14_814, 7_716, 0],
+    [28_766, 21_183, 15_009, 0],
+    [2_578, 134, 29, 0],
+    [15_271, 2_486, 498, 0],
+    [22_539, 9_039, 3_230, 0],
+    [26_424, 15_557, 8_328, 0],
+    [28_919, 21_579, 15_660, 0],
+    [4_198, 185, 42, 0],
+    [15_247, 2_607, 530, 0],
+    [22_615, 9_203, 3_390, 0],
+    [26_313, 15_427, 8_325, 0],
+    [28_861, 21_726, 15_744, 0],
+    [2_079, 53, 20, 0],
+    [11_222, 928, 158, 0],
+    [19_221, 5_187, 1_309, 0],
+    [23_856, 11_011, 4_459, 0],
+    [27_220, 17_688, 10_722, 0],
+    [1_985, 228, 83, 0],
+    [15_228, 3_240, 1_100, 0],
+    [22_608, 11_300, 5_985, 0],
+    [28_044, 19_375, 12_714, 0],
+    [30_066, 24_594, 19_666, 0],
+    [1_120, 82, 26, 0],
+    [11_814, 1_674, 431, 0],
+    [20_348, 7_070, 2_589, 0],
+    [25_464, 13_448, 6_520, 0],
+    [28_402, 20_507, 13_904, 0],
+    [1_187, 45, 20, 0],
+    [11_395, 1_182, 243, 0],
+    [20_024, 6_143, 1_883, 0],
+    [25_337, 12_446, 5_818, 0],
+    [28_076, 19_445, 12_657, 0],
+];
+
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].br_tok[2][0]`,
+// complemented for the portable range decoder.
+const QCAT3_LUMA_16X16_HIGH: [[u16; 4]; 21] = [
+    [15_655, 9_035, 5_687, 0],
+    [18_629, 11_362, 7_316, 0],
+    [24_216, 17_766, 12_992, 0],
+    [26_897, 21_648, 17_390, 0],
+    [28_313, 24_152, 20_515, 0],
+    [29_299, 25_858, 22_382, 0],
+    [30_513, 28_215, 25_986, 0],
+    [14_544, 8_392, 5_715, 0],
+    [13_478, 6_058, 3_154, 0],
+    [17_832, 9_777, 5_584, 0],
+    [21_530, 13_817, 9_006, 0],
+    [23_982, 17_151, 12_180, 0],
+    [25_451, 19_540, 14_765, 0],
+    [27_667, 23_256, 19_275, 0],
+    [10_129, 4_546, 2_558, 0],
+    [9_552, 3_437, 1_461, 0],
+    [13_693, 6_006, 2_873, 0],
+    [17_754, 9_655, 5_311, 0],
+    [20_830, 12_911, 8_016, 0],
+    [22_826, 15_488, 10_486, 0],
+    [25_601, 19_624, 15_016, 0],
+];
+
 const QCAT3_LUMA_8X8_EOB_BIN: [u16; 7] = [26_461, 25_227, 20_708, 16_410, 10_215, 4_903, 0];
 
 const QCAT3_LUMA_8X8_EOB_BIN_1D: [u16; 7] = [31_479, 30_448, 28_797, 24_842, 18_615, 8_477, 0];
@@ -4487,9 +4593,15 @@ impl BlockCdfs {
                 Some(cdfs)
             }
             3 => {
+                cdfs.lossy_luma_16x16_coefficient_skip = QCAT3_LUMA_16X16_SKIP;
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT3_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT3_LUMA_32X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_32x32_coefficient_skip_contexts = QCAT3_LUMA_32X32_SKIP_CONTEXTS;
+                cdfs.lossy_luma_8x16_eob_bin = QCAT3_LUMA_8X16_EOB_BIN;
+                cdfs.lossy_luma_16x16_eob_high = QCAT3_LUMA_16X16_EOB_HIGH;
+                cdfs.lossy_luma_16x16_eob_base = QCAT3_LUMA_16X16_EOB_BASE;
+                cdfs.lossy_luma_16x16_base = QCAT3_LUMA_16X16_BASE;
+                cdfs.lossy_luma_16x16_high_tokens = QCAT3_LUMA_16X16_HIGH;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT3_LUMA_8X8_EOB_BIN;
                 cdfs.lossy_luma_8x8_eob_bin_1d = QCAT3_LUMA_8X8_EOB_BIN_1D;
                 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].eob_bin_32`
@@ -12647,6 +12759,7 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Horizontal8x4
         | TransformGrid::Square8
         | TransformGrid::Horizontal16x4
+        | TransformGrid::Horizontal16x8
         | TransformGrid::Horizontal32x8
         | TransformGrid::Square16
         | TransformGrid::Vertical8x16
@@ -13832,6 +13945,7 @@ fn luma_16x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
     }
     match quantization.matrix_y {
         2 => Ok(Some(&quantization::Y_16X8_MATRIX_2)),
+        7 => Ok(Some(&quantization::Y_16X8_MATRIX_7)),
         9 => Ok(Some(&quantization::Y_16X8_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_16X8_MATRIX_10)),
         _ => Err(PortableUnavailable),
@@ -43699,8 +43813,12 @@ mod tests {
         let Some(qcat_two) = BlockCdfs::defaults_for_qindex([0, 0], 120) else {
             panic!("qcat two");
         };
+        let Some(qcat_three) = BlockCdfs::defaults_for_qindex([0, 0], 121) else {
+            panic!("qcat three");
+        };
         assert_eq!(qcat_zero.lossy_luma_32x32_coefficient_skip, [14_848, 0]);
         assert_eq!(qcat_two.lossy_luma_32x32_coefficient_skip, [2_099, 0]);
+        assert_eq!(qcat_three.lossy_luma_16x16_coefficient_skip, [258, 0]);
     }
 
     #[test]
@@ -44095,6 +44213,48 @@ fn reconstruct_origin_luma_override(
             split,
         )
         .map(Some);
+    }
+
+    if matches!(transform_grid, TransformGrid::Horizontal16x8)
+        && matches!(syntax.reconstruction, ReconstructionPolicy::Lossy420Dct16x8)
+    {
+        if !syntax.palette.is_present()
+            && matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+            && matches!(syntax.luma_predictor, LumaPredictor::Dc)
+            && syntax.luma_angle.is_none()
+            && syntax.filter_intra_mode.is_none()
+            && matches!(syntax.chroma_predictor, ChromaPredictor::Dc)
+            && syntax.chroma_angle.is_none()
+            && matches!(
+                syntax.lossy_luma_16x8_transform,
+                Lossy4x8TransformKind::DctDct
+            )
+            && syntax.lossy_luma_4x4_split.is_none()
+            && syntax.lossy_luma_4x4_grid_split.is_none()
+            && syntax.lossy_luma_8x4_split.is_none()
+            && syntax.lossy_luma_8x8_split.is_none()
+            && syntax.lossy_luma_8x8_grid_split.is_none()
+            && syntax
+                .lossy_chroma_8x4_coefficients
+                .iter()
+                .all(Option::is_none)
+        {
+            // At the origin dav1d prepares the absent top edge as 127 and
+            // the absent left edge as 129, with a 128 top-left corner. For
+            // DC that pair of edges resolves to the scalar 128 predictor;
+            // reuse the checked R16x8 inverse-transform path after making
+            // that boundary contract explicit.
+            return Ok(Some(reconstruct_lossy_luma_16x8(
+                128,
+                syntax.lossy_luma_16x8_coefficients,
+                syntax.lossy_luma_16x8_transform,
+            )));
+        }
+
+        // Do not let the generic scalar-predictor policy silently accept an
+        // origin R16x8 sentence whose predictor, split, transform, or
+        // chroma syntax has not been proven by the committed oracle witness.
+        return Err(PortableUnavailable);
     }
 
     if matches!(transform_grid, TransformGrid::Square16) && !syntax.palette.is_present() {
