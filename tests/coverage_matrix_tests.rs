@@ -5865,7 +5865,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 240);
+    assert_eq!(expected.cases.len(), 241);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6667,6 +6667,42 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 following Square8 luma Diagonal67 vertical split-TX4x4 witness partition topology"
+            );
+        } else if case.fixture
+            == "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif"
+        {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: 46_608,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 54_426,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 34_793,
+                    },
+                ],
+                "AV1 following Square8 luma Diagonal67 70-degree split-TX4x4 witness partition topology"
             );
         } else if case.fixture == "coverage_square8_luma_diagonal_down_right_01.avif" {
             assert_eq!(
@@ -8748,6 +8784,137 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 split-TX4x4 witness must retain skipped U/V payloads for both leaves"
             );
         }
+        if case.fixture == "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                78,
+                "AV1 following Square8 luma Diagonal67 70-degree split-TX4x4 entropy operation count"
+            );
+            let all_debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let first_bottom_leaf = all_debug_lines
+                .iter()
+                .position(|line| *line == "poc=0,y=2,x=0,bl=4,ctx=0,bp=0: r=34793")
+                .expect("AV1 70-degree witness must record its bottom leaf");
+            assert_eq!(
+                &all_debug_lines[first_bottom_leaf..first_bottom_leaf.saturating_add(19)],
+                [
+                    "poc=0,y=2,x=0,bl=4,ctx=0,bp=0: r=34793",
+                    "Post-skip[0]: r=33709",
+                    "Post-ymode[8]: r=63168",
+                    "Post-yangle-symbol[4]: r=54152",
+                    "Post-uvmode[0]: r=40004",
+                    "Post-tx[0]: r=62416",
+                    "l",
+                    " 00 00 00 00",
+                    " 4f 4f 53 57",
+                    "tl",
+                    " 4f",
+                    "t",
+                    " 4f 53 57 5a",
+                    " 5c 5f 63 66",
+                    "y-intra-pred",
+                    " 50 54 58 5b",
+                    " 52 56 59 5b",
+                    " 53 57 5a 5c",
+                    " 55 58 5b 5d",
+                ],
+                "AV1 70-degree witness must retain dav1d's raw top-only edge and predictor"
+            );
+            let first_bottom_dq = all_debug_lines[first_bottom_leaf..]
+                .iter()
+                .position(|line| *line == "dq")
+                .map(|offset| first_bottom_leaf.saturating_add(offset))
+                .expect("AV1 70-degree witness must record its first luma coefficient matrix");
+            assert_eq!(
+                &all_debug_lines[first_bottom_dq..first_bottom_dq.saturating_add(5)],
+                [
+                    "dq",
+                    "   0   0   0   0",
+                    "   0  84   0   0",
+                    "   0   0   0   0",
+                    "   0   0   0   0",
+                ],
+                "AV1 70-degree witness must retain the first TX4x4 AC coefficient"
+            );
+            let post_debug_lines = all_debug_lines
+                .iter()
+                .copied()
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-yangle-symbol[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                post_debug_lines,
+                vec![
+                    "Post-skip[0]: r=52620",
+                    "Post-cdef_idx[0]: r=52620",
+                    "Post-ymode[0]: r=50204",
+                    "Post-uvmode[0]: r=63800",
+                    "Post-tx[1]: r=38896",
+                    "Post-txtp-intra[1->1][0][1->0]: r=54776",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=6]: r=37896",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=33082 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=58186 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=33709",
+                    "Post-ymode[8]: r=63168",
+                    "Post-yangle-symbol[4]: r=54152",
+                    "Post-uvmode[0]: r=40004",
+                    "Post-tx[0]: r=62416",
+                    "Post-txtp-intra[0->0][8][1->0]: r=59632",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=4]: r=39608",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=39132",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=47128",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=34044",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=60068 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=53590 [x=0,cbx4=0]",
+                ],
+                "AV1 following Square8 luma Diagonal67 70-degree split-TX4x4 witness leaf states"
+            );
+            assert_eq!(
+                post_debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=0,txtp=0,"))
+                    .count(),
+                4,
+                "AV1 70-degree split-TX4x4 witness must decode four row-major luma children"
+            );
+            assert_eq!(
+                post_debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=0,txtp=0,eob=4]:"))
+                    .count(),
+                1,
+                "AV1 70-degree split-TX4x4 witness must retain the nonzero first-child residual"
+            );
+            assert_eq!(
+                post_debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-yangle-symbol[4]:"))
+                    .count(),
+                1,
+                "AV1 70-degree split-TX4x4 witness must retain angle symbol 4"
+            );
+            assert_eq!(
+                post_debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk["))
+                    .count(),
+                4,
+                "AV1 70-degree split-TX4x4 witness must retain skipped U/V payloads"
+            );
+        }
         if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -10374,6 +10541,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif" => {
                 "eb2bebe4dbb452c932c1334ec8420fd5b3ca8589641254938dc52d7d41365a2a"
+            }
+            "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif" => {
+                "7ba0cab00dbb9d6b9c65788839e471bfe4df2008e47a61ad5bc82ebd5101dce6"
             }
             "coverage_square8_luma_diagonal_down_right_01.avif" => {
                 "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b"
