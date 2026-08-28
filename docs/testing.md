@@ -97,7 +97,7 @@ same arguments to its registered LLVM command, for example:
 ```
 
 With no AV1 fixture selector, the existing reconstruction test still validates
-all 232 oracle cases and all other coverage helpers retain their full-run
+all 233 oracle cases and all other coverage helpers retain their full-run
 behavior. With a selector, matrix dispatch and unrelated AV1 coverage helpers
 return before doing fixture work; the reconstruction test validates only the
 requested cases and asserts that every requested name ran exactly once. The
@@ -123,6 +123,18 @@ ingested snapshot `ff859be1-e7ab-4f82-96c9-84044d1f24cc`, reporting +8 lines,
 +8 branches, +0 functions, +281 regions, and no reported regressions against
 the same baseline. These are selected-subset evidence only; unselected
 baseline hits are not observed and neither run is the release coverage gate.
+
+The newest managed one-fixture reconstruction run
+`096b83e7-ccab-4a2b-93b4-a39d051817cf` passed in 36,099 ms at exact
+implementation commit `430c5beb39757ce570c2f07ea5fb2e044a580205` and ingested
+snapshot `f1f52e16-9275-43c0-9e28-7e38bea081e8` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+`coverage_vertical8x16_filter_intra_mode3_01.avif` and passed 1/1 cases. The
+additive baseline-union review measured +8 covered lines, +7 branches, +0
+functions, and +281 regions with no reported regressions; denominator changes
+were +3,211 lines, +126 branches, +26 functions, and +9,543 regions. The
+selected projection is bounded because unselected baseline hits are not
+observed; it does not replace the complete release coverage measurement.
 
 The two active AVIF negative controls
 `portable_lossy_420_q99_eob_bin_control.avif` and
