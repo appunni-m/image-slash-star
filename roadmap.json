@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1526,
-      "decode_rows": 1129,
+      "total_rows": 1527,
+      "decode_rows": 1130,
       "encode_rows": 397,
-      "decode_active": 1124,
+      "decode_active": 1125,
       "decode_planned": 5,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 302,
-      "decode_active": 297,
+      "decode_rows": 303,
+      "decode_active": 298,
       "decode_planned": 5,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_232_reconstruction_cases",
+      "no_selector_behavior": "run_all_233_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -98,14 +98,14 @@
       "dispatcher": "test_av1_reconstruction_matches_pinned_dav1d_fixture",
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",
       "latest_evidence": {
-        "commit_sha": "72759602317c50016a6bf38fc80ee06bb1de9afe",
-        "run_id": "44360fd2-4d9c-4ce0-845b-deef0d7c0ef1",
-        "snapshot_id": "5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb",
+        "commit_sha": "430c5beb39757ce570c2f07ea5fb2e044a580205",
+        "run_id": "096b83e7-ccab-4a2b-93b4-a39d051817cf",
+        "snapshot_id": "f1f52e16-9275-43c0-9e28-7e38bea081e8",
         "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-        "duration_ms": 31912,
+        "duration_ms": 36099,
         "selected_fixtures": [
-          "coverage_h16x4_filter_intra_tx8x4_split_01.avif"
+          "coverage_vertical8x16_filter_intra_mode3_01.avif"
         ],
         "status": "passed_and_ingested"
       }
@@ -1638,6 +1638,126 @@
             "focused_verification": "The focused reconstruction selector passes this exact fixture, the selected AVIF matrix row passes 1/1, the full coverage_matrix_tests target passes 44/44 under the coverage build, and strict fmt, check, Clippy, rustdoc, and library tests pass.",
             "scope": "This closes only the bounded following-Horizontal16x4 split filter-intra mode-4/TX8x4 class. Other filter-intra modes, unsplit and alternate transform/topology states, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_filter_intra_mode3_01": {
+            "fixture": "coverage_vertical8x16_filter_intra_mode3_01.avif",
+            "dimensions": [
+              8,
+              16
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 76,
+            "speed": 0,
+            "topology": "one origin Vertical8x16 leaf with no split, one TX8x16 luma transform, and one TX4x8 U/V transform per chroma plane",
+            "filter_intra": {
+              "target_mode": 3,
+              "trace_value": "13/3",
+              "prediction": "the origin filter-intra predictor uses the normal unavailable-edge convention before non-empty luma and chroma residual reconstruction"
+            },
+            "luma_transform": "TX8x16 DCT_DCT",
+            "chroma_transforms": [
+              "TX4x8 DCT_DCT U",
+              "TX4x8 DCT_DCT V"
+            ],
+            "luma_eob": 78,
+            "chroma_eob": [
+              6,
+              6
+            ],
+            "input_rgb_sha256": "f431299ac24537b9040fc04ba4b91b51425c2d10f99c8428e8aac2702a3ffdfe",
+            "fixture_sha256": "091bac9643129816c6a0a1dddc94cba4965c1849acc2fc46175ce1a117ba0c17",
+            "encoded_item": {
+              "bytes": 48,
+              "sha256": "cd7e03206d361c1f66428b6da304af0e1f4e56120c6bac0313bf5de44de28e61"
+            },
+            "pillow_rgb": {
+              "bytes": 384,
+              "mode": "RGB8",
+              "sha256": "a900cd81f92250ea4b1057109066cb0d0ebbbcdb4d8568e4675e2816ff549777"
+            },
+            "decoded_plane_sha256": {
+              "y": "3383a34c42138d7c9633bc961c8acc841467f24dba2e2b0268cc080d62aec39d",
+              "u": "e7fb01bec40b1f23df199f59159812bb23286ddd058191f09e683e4c2e06cd88",
+              "v": "0233e1fd1c804ceeaf1014399e8d0f55b86ff0bf95f314abb0af95dca80f6e14"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition": "poc=0,y=0,x=0,level=3,context=0,partition=2,range=42232",
+              "entropy_operation_count": 187,
+              "target_entropy": [
+                "Post-filterintramode[13/3]",
+                "Post-tx[7]",
+                "Post-txtp-intra[7->1][6][1->0]",
+                "Post-y-cf-blk[tx=7,txtp=0,eob=78]",
+                "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=6]",
+                "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=6]"
+              ],
+              "evidence": "The pinned input-only campaign selected the exact filter-intra, transform, EOB, and full-YUV topology; repository Rust was not invoked by the oracle."
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_vertical8x16_filter_intra.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_filter_intra_mode3_campaign_01.json",
+              "report_sha256": "e139c5ef0bbbd1bfdb322c7d0cfcb7ae97c9117a13b8f9eb7cf1b38231cbab91",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 4,
+              "qualified_candidates": [
+                "f09_flat_noise_00",
+                "f09_flat_noise_01",
+                "f09_flat_noise_09",
+                "f10_mosaic_04"
+              ],
+              "promoted": "f10_mosaic_04",
+              "seed": 1005,
+              "repository_rust_invoked": false,
+              "expected_yuv_bytes": 192,
+              "selection_reason": "The promoted F10 mosaic candidate retains non-empty luma and U/V residuals while preserving the exact origin Vertical8x16/mode-3 topology."
+            },
+            "managed_incremental_coverage": {
+              "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+              "run_id": "096b83e7-ccab-4a2b-93b4-a39d051817cf",
+              "snapshot_id": "f1f52e16-9275-43c0-9e28-7e38bea081e8",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "commit_sha": "430c5beb39757ce570c2f07ea5fb2e044a580205",
+              "duration_ms": 36099,
+              "arguments": [
+                "test",
+                "--test",
+                "coverage_matrix_tests",
+                "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+                "--",
+                "--exact",
+                "--nocapture",
+                "--skip",
+                "__image_slash_star_av1_fixture_selector__=coverage_vertical8x16_filter_intra_mode3_01.avif"
+              ],
+              "selected_fixtures": [
+                "coverage_vertical8x16_filter_intra_mode3_01.avif"
+              ],
+              "status": "passed_and_ingested",
+              "log_evidence": "AV1 reconstruction fixture selection: selected=1 [coverage_vertical8x16_filter_intra_mode3_01.avif]; test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.63s",
+              "review": {
+                "comparison_mode": "additive_union",
+                "covered_lines_delta": 8,
+                "covered_branches_delta": 7,
+                "covered_functions_delta": 0,
+                "covered_regions_delta": 281,
+                "total_lines_delta": 3211,
+                "total_branches_delta": 126,
+                "total_functions_delta": 26,
+                "total_regions_delta": 9543,
+                "regressed": 0,
+                "merge_exact": false,
+                "test_attribution": "unavailable",
+                "selected_projection_newly_covered_line_identities": 334,
+                "note": "The selected subset added these additive baseline-union metrics without a reported regression. Its replacement-style projection is limited because unselected baseline hits are not observed; this is bounded evidence, not a complete four-metric release measurement."
+              }
+            },
+            "focused_verification": "The exact AV1 fixture selector passes this case, the selected AVIF matrix row passes 1/1, and strict fmt, locked check, and workspace Clippy pass. No production decoder change is claimed because the existing safe filter-intra mode dispatcher already handled mode 3.",
+            "scope": "This closes only the bounded origin Vertical8x16 8-bit 4:2:0 filter-intra mode-3/unsplit-TX8x16/TX4x8-chroma class. Other filter-intra modes, following-leaf contexts, alternate transforms and topologies, high depth, HDR, sequences, encoding, and the four-metric 100% coverage gate remain open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
         },
     "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the coverage_entropy_mosaic_01.avif and coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frames through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new regression witness is a single TX32X32 DCT_DCT luma leaf with EOB 494 and 1,167 entropy operations; its pinned dav1d 1.5.3 trace, reconstructed Y/U/V planes, and final Pillow 12.2.0 RGB bytes are exact. The existing 02 frame has EOB 467 and 1,168 matching operations. The promoted R8x16, Horizontal32x16, R16x64, and both 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The new coverage_r32x8_h4_ripple_01.avif witness is a 32x32 8-bit 4:2:0 PARTITION_H4 frame with three 32x8 luma leaves and 16x4 subsampled chroma leaves, an exact 1,522-operation entropy trace, exact Y/U/V planes, and exact Pillow RGB output; it exercises the geometry-specific matrix-9 dequantization and one-sided DC path. The coverage_i444_rect_01.avif witness is a 16x16 8-bit lossy 4:4:4 frame with a split root and four 8x8 terminals, full-resolution Y/U/V residuals, delta-Q, a pinned 499-operation dav1d trace, exact 16x16 reconstructed planes, and exact Pillow RGB8 output. The new coverage_i444_rect_02.avif witness is a second 16x16 8-bit lossy 4:4:4 split-root/four-leaf frame with a pinned 553-operation dav1d trace, exact 16x16 Y/U/V planes, exact Pillow RGB8 output, distinct residual/EOB states, and a filter-intra leaf. The new coverage_r32x32_filter_intra_probe_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with an origin Horizontal32x16 leaf using filter-intra y-mode 13/filter mode 2 and dav1d's missing-edge values (top 127, left 129, top-left 128), followed by a second Horizontal32x16 leaf; its pinned trace has 1,168 entropy operations and safe Rust matches exact Y/U/V planes and Pillow RGB bytes. The new coverage_r32x32_filter_intra_mode3_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with filter-intra mode 3 on both Horizontal32x16 leaves. The production path reconstructs the vertically following second leaf from its prepared spatial edges; its pinned dav1d trace has 4,359 entropy operations, and safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. Its fixture, encoded-item, and RGB SHA-256 values are 79efb409fcfecd8cc3cd1fccb4ab22dd33190b6d91148524c03affaf9b809b29, cbf90be7ee9f18a5ef502f3fa0030d0fe97be481459461df687d968dfbdcb2e5, and 8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495. The new coverage_r32x16_filter_intra_tx8x8_01.avif witness is a 32x16 8-bit full-range BT.601 4:2:0 origin Horizontal32x16 split leaf with filter-intra disabled (trace sentinel Post-filterintramode[0/0]) and a depth-two TX8x8 luma grid. Its pinned dav1d trace has 2,328 entropy operations, the partition path is root H followed by the visible Horizontal32x16 terminal, safe Rust reconstructs all four luma TX8x8 children through the generic split path, and exact Y/U/V planes and Pillow RGB8 bytes match independently. Its fixture, encoded-item, and RGB SHA-256 values are 9e3f8459144572f29db4932816c957e237fb4911f4c45be7496dab681295b066, 07691b54568545dfed21545ae659d56991a4e60a992fba40602f725a90e26f89, and fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 decoder path is enabled only for the simple origin Square16 palette witness, and broader 4:2:2 support remains open. The new coverage_square16_filter_intra_mode0_01.avif origin witness adds exact Square16 filter-intra mode-0, unsplit TX16x16 luma, TX8x8 chroma, 1,116-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode0_01.avif witness adds exact origin Vertical8x16 filter-intra mode-0, unsplit TX8x16 luma, TX4x8 chroma, 584-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode1_01.avif witness adds exact origin Vertical8x16 filter-intra mode-1, unsplit TX8x16 luma, TX4x8 chroma, 559-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The newest bounded witness is coverage_square8_chroma_diagonal113_01.avif, a 16x8 8-bit 4:2:0 horizontal split whose right-hand Square8 leaf selects chroma Diagonal113, ADST-DCT U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges are 37392, 43662, and 63946, with 304 entropy operations; safe Rust matches the exact partition, entropy, Y/U/V, and Pillow RGB evidence. Fixture, encoded-item, and Pillow RGB SHA-256 values are c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7, 6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c, and 05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462. This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class; broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001 remain partial. The newest paired rectangular H16x4/V4x16 fixtures add exact safe-Rust false-filter-CDF and UV-palette reconstruction evidence with 162-operation traces in each orientation; this is one bounded class and AVF-STILL-001 remains partial. The new coverage_square32_origin_tx16x16_split_01.avif witness adds a 32x32 4:2:0 origin Square32 leaf with four TX16x16 luma DCT children, DC prediction, non-empty residuals, and TX16x16 DCT chroma; its 4,436-operation pinned trace, exact Y/U/V planes, and Pillow RGB bytes match safe Rust.",
@@ -1793,6 +1913,93 @@
             }
           },
           "scope": "This is evidence for one 8-bit 4:2:0 origin mode-2 class. Generic safe-Rust prediction already implements the mode; no production decoder change is claimed. Modes 3 and 4, other topologies, and AVF-STILL-001 remain partial."
+        },
+        "current_slice_update_2026_08_28_v8x16_filter_intra_mode3": {
+          "target": "origin Vertical8x16 filter-intra mode 3 with one unsplit TX8x16 luma block and one TX4x8 U/V pair",
+          "fixture": "coverage_vertical8x16_filter_intra_mode3_01.avif",
+          "script": "scripts/explore_avif_vertical8x16_filter_intra.py",
+          "campaign_report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_filter_intra_mode3_campaign_01.json",
+          "campaign_report_sha256": "e139c5ef0bbbd1bfdb322c7d0cfcb7ae97c9117a13b8f9eb7cf1b38231cbab91",
+          "campaign": {
+            "candidate_count": 100,
+            "family_count": 10,
+            "qualified": 4,
+            "qualified_candidates": [
+              "f09_flat_noise_00",
+              "f09_flat_noise_01",
+              "f09_flat_noise_09",
+              "f10_mosaic_04"
+            ],
+            "promoted": "f10_mosaic_04",
+            "seed": 1005,
+            "filter_mode": 3,
+            "repository_rust_invoked": false,
+            "expected_yuv_bytes": 192,
+            "rejection_counts": {
+              "one_origin_vertical8x16_root": 29,
+              "single_leaf_group": 29,
+              "ordered_filter_intra_syntax": 94,
+              "filter_intra_selected": 91,
+              "one_unsplit_tx8x16_luma": 62,
+              "luma_nonempty": 29,
+              "one_tx4x8_chroma_pair": 37,
+              "full_yuv_output": 0
+            }
+          },
+          "pinned_dav1d": {
+            "implementation": "dav1d 1.5.3",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "partition": "poc=0,y=0,x=0,level=3,context=0,partition=2,range=42232",
+            "entropy_operation_count": 187,
+            "encoded_item_length": 48,
+            "encoded_item_sha256": "cd7e03206d361c1f66428b6da304af0e1f4e56120c6bac0313bf5de44de28e61",
+            "fixture_sha256": "091bac9643129816c6a0a1dddc94cba4965c1849acc2fc46175ce1a117ba0c17",
+            "pillow_rgb_sha256": "a900cd81f92250ea4b1057109066cb0d0ebbbcdb4d8568e4675e2816ff549777",
+            "decoded_plane_sha256": {
+              "y": "3383a34c42138d7c9633bc961c8acc841467f24dba2e2b0268cc080d62aec39d",
+              "u": "e7fb01bec40b1f23df199f59159812bb23286ddd058191f09e683e4c2e06cd88",
+              "v": "0233e1fd1c804ceeaf1014399e8d0f55b86ff0bf95f314abb0af95dca80f6e14"
+            },
+            "target_syntax": [
+              "Post-filterintramode[13/3]",
+              "Post-tx[7]",
+              "Post-txtp-intra[7->1][6][1->0]",
+              "Post-y-cf-blk[tx=7,txtp=0,eob=78]",
+              "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=6]",
+              "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=6]"
+            ]
+          },
+          "input_only_oracle": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 generated the candidates and pinned dav1d 1.5.3 supplied the syntax, entropy, and YUV trace; repository Rust was not invoked during candidate selection.",
+          "managed_incremental_coverage": {
+            "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+            "run_id": "096b83e7-ccab-4a2b-93b4-a39d051817cf",
+            "snapshot_id": "f1f52e16-9275-43c0-9e28-7e38bea081e8",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "commit_sha": "430c5beb39757ce570c2f07ea5fb2e044a580205",
+            "duration_ms": 36099,
+            "selected_fixtures": [
+              "coverage_vertical8x16_filter_intra_mode3_01.avif"
+            ],
+            "status": "passed_and_ingested",
+            "review": {
+              "comparison_mode": "additive_union",
+              "covered_lines_delta": 8,
+              "covered_branches_delta": 7,
+              "covered_functions_delta": 0,
+              "covered_regions_delta": 281,
+              "total_lines_delta": 3211,
+              "total_branches_delta": 126,
+              "total_functions_delta": 26,
+              "total_regions_delta": 9543,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable",
+              "selected_projection_newly_covered_line_identities": 334,
+              "note": "The selected subset added +8 lines, +7 branches, +0 functions, and +281 regions in the additive baseline union with zero reported regressions. The selected projection is limited because unselected baseline hits are not observed; this is bounded evidence, not a complete release measurement."
+            }
+          },
+          "focused_verification": "The exact AV1 fixture selector passes 1/1, the selected AVIF matrix row passes 1/1, cargo fmt --check, locked cargo check, and strict workspace Clippy pass. No production decoder edit is claimed because the existing safe filter-intra dispatcher already handled mode 3.",
+          "scope": "This closes only the bounded origin Vertical8x16 8-bit 4:2:0 filter-intra mode-3/unsplit-TX8x16/TX4x8-chroma class. Other filter-intra modes, following-leaf contexts, alternate transforms and topologies, high depth, HDR, sequences, encoding, and the four-metric 100% coverage gate remain open."
         },
         "current_slice_update_2026_08_27_h16x4_transform_search": {
           "target": "origin PARTITION_H4 16x16 4:2:0 with four Horizontal16x4 luma leaves; predictor-enabled ADST_DCT and ADST_ADST transform pairs",
