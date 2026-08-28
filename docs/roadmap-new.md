@@ -1140,8 +1140,9 @@ The managed Coverage MCP incremental run for this exact filtered fixture was
 `a94d18a6-52c1-4729-9056-88ed1f84c3cd`, passed in 80,843 ms at implementation
 commit `288223f66f31814c2bb30f2047284cd20550f4bc`, and ingested snapshot
 `61afd9af-e181-494b-a55c-7fa3f0306495` against explicit baseline
-`7665cda3-f4a7-4568-b871-a9d34afaa92c`. The selected run passed 1/1 with 43
-other coverage-harness tests filtered at the fixture level. Standalone
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. The managed command passed all 44
+coverage-harness tests; the reconstruction dispatcher executed exactly one
+requested fixture. Standalone
 `coverage_review(task=incremental)` reports additive baseline-union deltas of
 +661 lines, +17 branches, +1 function, and +5,289 regions; denominator changes
 are +3,639/+364/+39/+10,218. Its selected projection reports 7,393 newly
