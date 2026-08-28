@@ -1084,26 +1084,56 @@ fn avif_repeated_frame_id_is_rejected_by_safe_sequence_validation()
     assert_eq!(error.stage(), Some(img::ImageErrorStage::SequenceDecode));
     assert!(!error.to_string().is_empty());
 
-    // The remaining planned gap is deliberate: first-frame materialization
-    // and presentation are not claimed merely because sequence validation is
-    // now safe and stateful.
-    assert!(matches!(
-        img::decode(&bytes),
-        Err(img::ImageError::Unsupported {
-            format: Some(img::ImageFormat::Avif),
-            ..
-        })
-    ));
+    let decoded = img::decode(&bytes)?;
+    assert_eq!(decoded.format, img::ImageFormat::Avif);
+    let first_frame = decoded.content;
+    assert_eq!(first_frame.mode, img::ImageMode::Rgb8);
+    assert_eq!(first_frame.width, 16);
+    assert_eq!(first_frame.height, 16);
+    assert_eq!(first_frame.pixels.len(), 16 * 16 * 3);
+    assert_eq!(
+        sha256::digest_hex(&first_frame.pixels),
+        "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    );
+    assert!(first_frame.source.avif_file_type().is_some());
+
+    // Sequence decoding still validates the complete track before publishing
+    // anything, so the repeated second-frame ID remains a typed failure.
+    assert!(error.to_string().contains("current frame ID"));
 
     let valid_sequence =
         fs::read(root.join("tests/fixtures/input/images/avif/animated_error_resilient.avif"))?;
-    assert!(matches!(
-        img::decode_sequence(&valid_sequence),
-        Err(img::ImageError::Unsupported {
-            format: Some(img::ImageFormat::Avif),
-            ..
-        })
-    ));
+    let valid_first_frame = img::decode(&valid_sequence)?;
+    assert_eq!(valid_first_frame.format, img::ImageFormat::Avif);
+    assert_eq!(valid_first_frame.content.mode, img::ImageMode::Rgb8);
+    assert_eq!(valid_first_frame.content.width, 16);
+    assert_eq!(valid_first_frame.content.height, 16);
+    assert_eq!(
+        sha256::digest_hex(&valid_first_frame.content.pixels),
+        "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    );
+    let valid_sequence_error = match img::decode_sequence(&valid_sequence) {
+        Ok(_) => return Err("valid error-resilient AVIF sequence was presented".into()),
+        Err(error) => error,
+    };
+    assert_eq!(
+        valid_sequence_error.kind(),
+        img::ImageErrorKind::Unsupported
+    );
+    assert_eq!(valid_sequence_error.format(), Some(img::ImageFormat::Avif));
+    assert_eq!(
+        valid_sequence_error.stage(),
+        Some(img::ImageErrorStage::SequenceDecode)
+    );
+    assert_eq!(
+        valid_sequence_error.unsupported_reason(),
+        Some(img::UnsupportedReason::NotImplemented)
+    );
+    assert!(
+        valid_sequence_error
+            .message()
+            .is_some_and(|message| message.contains("sequence rendering"))
+    );
     Ok(())
 }
 

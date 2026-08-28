@@ -22510,16 +22510,16 @@
           "type": "decode",
           "format": "avif",
           "category": "animated",
-          "description": "Two-frame pinned AV1-oracle sequence with frame ID numbers enabled",
+          "description": "First-frame decode of a two-frame pinned AV1-oracle sequence with frame ID numbers enabled; full sequence presentation remains a safe-Rust gap",
           "asset": "animated_error_resilient.avif",
           "expect_error": false,
-          "status": "planned",
+          "status": "active",
           "oracle_detects_format": true,
           "oracle_status": "ok",
           "expect_sequence_error": false,
-          "rust_expect_sequence_error": false,
-          "rust_sequence_error_kind": null,
-          "rust_sequence_error_reason": null,
+          "rust_expect_sequence_error": true,
+          "rust_sequence_error_kind": "unsupported",
+          "rust_sequence_error_reason": "Pure Rust AVIF still decoding can publish sample zero, but multi-frame error-resilient presentation is not implemented yet.",
           "verification_scope": "header_only",
           "inspect_container_format": "AVIF",
           "inspect_cursor_hotspot": null,
@@ -22546,36 +22546,135 @@
             "operations": "pillow_fixture",
             "sequence_canvas": "pillow_fixture",
             "sequence_source": "independent_implementation",
-            "sequence_pixels": "pillow_fixture"
+            "sequence_pixels": "pillow_fixture",
+            "rust_sequence_contract": "defensive_model"
           },
           "operations": {
             "detect": "ok",
             "inspect": "ok",
             "verify": "ok",
             "decode": "ok",
-            "decode_sequence": "ok"
+            "decode_sequence": "error"
           },
-          "error_contracts": {},
-          "gap": "Pure Rust AVIF sequence decoding does not yet implement animated tracks, including error-resilient flags.",
-          "pure_rust_work_item": "AVF-SEQUENCE-001",
-          "former_native_only": true,
+          "error_contracts": {
+            "decode_sequence": {
+              "pillow_type": null,
+              "pillow_message": null,
+              "rust_kind": "unsupported",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "defensive_model"
+            }
+          },
           "ref_bit_depth": 8,
           "ref_bit_depth_origin": "independent_implementation",
           "inspect_source_byte_order": null,
           "inspect_source_byte_order_origin": null,
           "inspect_status": "ok",
-          "verify_status": "ok"
+          "verify_status": "ok",
+          "ref_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_error_resilient_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              16,
+              16
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": null,
+            "loop_origin": "pillow_fixture",
+            "background": null,
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  16,
+                  16
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_error_resilient_avif_frame_0.bin",
+                "ref_bytes": 768,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  16,
+                  16
+                ],
+                "ref_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  16,
+                  16
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_error_resilient_avif_frame_1.bin",
+                "ref_bytes": 768,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  16,
+                  16
+                ],
+                "ref_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ]
+          }
         },
         {
           "id": "error_animated_repeated_frame_id",
           "type": "decode",
           "format": "avif",
           "category": "error",
-          "description": "Error-resilient sequence whose second frame repeats the previous current frame ID",
+          "description": "Error-resilient sequence whose first frame decodes independently and whose second frame repeats the previous current frame ID",
           "asset": "animated_repeated_frame_id.avif",
           "expect_error": false,
           "expect_sequence_error": true,
-          "status": "planned",
+          "status": "active",
           "oracle_detects_format": true,
           "oracle_status": "ok",
           "sequence_status": "error",
@@ -22584,7 +22683,7 @@
           "sequence_error_kind": "malformed",
           "rust_expect_sequence_error": true,
           "rust_sequence_error_kind": "malformed",
-          "rust_sequence_error_reason": "Pure Rust AV1 sequence validation rejects a repeated current frame ID before sequence presentation.",
+          "rust_sequence_error_reason": "Pure Rust AV1 sequence validation rejects a repeated current frame ID before any sequence frame is published.",
           "verification_scope": "header_only",
           "inspect_container_format": "AVIF",
           "inspect_cursor_hotspot": null,
@@ -22637,9 +22736,26 @@
           "inspect_source_byte_order_origin": null,
           "inspect_status": "ok",
           "verify_status": "ok",
-          "pure_rust_work_item": "AVF-SEQUENCE-001",
-          "gap": "Pure Rust AV1 sequence validation now rejects the repeated current frame ID, but first-frame materialization and full sequence presentation remain planned.",
-          "former_native_only": true
+          "ref_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_repeated_frame_id_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          }
         },
         {
           "id": "animated_track_only",
@@ -120772,8 +120888,8 @@
     "encode_rows": 397,
     "formats": 8,
     "assets_available": 1137,
-    "decode_active": 1133,
-    "decode_planned": 5,
+    "decode_active": 1135,
+    "decode_planned": 3,
     "encode_not_wired": 32
   }
 }

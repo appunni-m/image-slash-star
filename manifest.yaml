@@ -4548,23 +4548,22 @@ formats:
       gap: Pure Rust AVIF sequence decoding does not yet implement track timing, frame references, or presentation.
       pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_error_resilient
-      description: Two-frame pinned AV1-oracle sequence with frame ID numbers enabled
+      description: First-frame decode of a two-frame pinned AV1-oracle sequence with frame ID numbers enabled; full sequence presentation remains a safe-Rust gap
       test_assets:
       - animated_error_resilient.avif
-      status: planned
-      gap: Pure Rust AVIF sequence decoding does not yet implement animated tracks, including error-resilient flags.
-      pure_rust_work_item: AVF-SEQUENCE-001
+      status: active
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: unsupported
+      rust_sequence_error_reason: Pure Rust AVIF still decoding can publish sample zero, but multi-frame error-resilient presentation is not implemented yet.
     - id: error_animated_repeated_frame_id
-      description: Error-resilient sequence whose second frame repeats the previous current frame ID
+      description: Error-resilient sequence whose first frame decodes independently and whose second frame repeats the previous current frame ID
       test_assets:
       - animated_repeated_frame_id.avif
-      status: planned
-      gap: Pure Rust AV1 sequence validation now rejects the repeated current frame ID, but first-frame materialization and full sequence presentation remain planned.
-      pure_rust_work_item: AVF-SEQUENCE-001
+      status: active
       expect_sequence_error: true
       rust_expect_sequence_error: true
       rust_sequence_error_kind: malformed
-      rust_sequence_error_reason: Pure Rust AV1 sequence validation rejects a repeated current frame ID before sequence presentation.
+      rust_sequence_error_reason: Pure Rust AV1 sequence validation rejects a repeated current frame ID before any sequence frame is published.
     - id: animated_track_only
       description: Five-frame avis track sequence whose required top-level meta box is replaced by a same-size free box
       test_assets:
