@@ -66,6 +66,9 @@ VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES = frozenset(
         "coverage_vertical8x16_filter_intra_mode2_01.avif",
     }
 )
+H16X4_FILTER_INTRA_SPLIT_TARGET_FIXTURES = frozenset(
+    {"coverage_h16x4_filter_intra_tx8x4_split_01.avif"}
+)
 CHROMA_DIAGONAL113_TARGET_FIXTURES = frozenset(
     {"coverage_square8_chroma_diagonal113_01.avif"}
 )
@@ -1175,6 +1178,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167",
         "size": [16, 16],
     },
+    "coverage_h16x4_filter_intra_tx8x4_split_01.avif": {
+        "file_sha256": "e2660fd8efe6609ec42182bf7edfab466b0dee57c12d5beebcea8aad03ff67c0",
+        "rgb_sha256": "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3",
+        "size": [16, 16],
+    },
     "coverage_v4x16_predictor_adst_adst_01.avif": {
         "file_sha256": "e5c6fe86bdc3a1339836521421aba220e4fe703b1379483d7b69972af974920b",
         "rgb_sha256": "66d1531446de70283fcb048f1f82f7c0a5e454eaf8e2bee70afa8efecf683994",
@@ -2063,6 +2071,7 @@ def generate(
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE32_SPLIT_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
+                or name in H16X4_FILTER_INTRA_SPLIT_TARGET_FIXTURES
                 or name in LUMA_SMOOTH_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES
@@ -2090,6 +2099,7 @@ def generate(
                 if name in VERTICAL_FOLLOWING_TARGET_FIXTURES
                 or name in SQUARE32_SPLIT_TARGET_FIXTURES
                 or name in SQUARE16_FILTER_INTRA_TARGET_FIXTURES
+                or name in H16X4_FILTER_INTRA_SPLIT_TARGET_FIXTURES
                 or name in LUMA_SMOOTH_TARGET_FIXTURES
                 or name in VERTICAL8X16_FILTER_INTRA_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL113_TARGET_FIXTURES

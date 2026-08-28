@@ -13699,6 +13699,7 @@ fn luma_8x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'s
     }
     match quantization.matrix_y {
         6 => Ok(Some(&quantization::Y_8X4_MATRIX_6)),
+        7 => Ok(Some(&quantization::Y_8X4_MATRIX_7)),
         _ => Err(PortableUnavailable),
     }
 }
@@ -13745,6 +13746,7 @@ fn luma_16x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
     match quantization.matrix_y {
         6 => Ok(Some(&quantization::Y_16X4_MATRIX_6)),
         5 => Ok(Some(&quantization::Y_16X4_MATRIX_5)),
+        7 => Ok(Some(&quantization::Y_16X4_MATRIX_7)),
         8 => Ok(Some(&quantization::Y_16X4_MATRIX_8)),
         10 => Ok(Some(&quantization::Y_16X4_MATRIX_10)),
         _ => Err(PortableUnavailable),
@@ -17273,11 +17275,6 @@ fn reconstruct_lossy_luma_16x4_8x4_split(
     has_left: bool,
     split: LossyLuma8x4Split,
 ) -> PortableResult<ReconstructedPlane> {
-    if filter_intra_mode.is_some() {
-        // The bounded split has no filter-intra TX8x4 predictor oracle yet.
-        return Err(PortableUnavailable);
-    }
-
     let mut samples = vec![0_u16; 64];
     for column in 0_usize..2 {
         let offset_x = column.saturating_mul(8);
@@ -17296,79 +17293,92 @@ fn reconstruct_lossy_luma_16x4_8x4_split(
         };
         let coefficients = split.coefficients[column];
         let transform = split.transforms[column];
-        let block = match predictor {
-            LumaPredictor::Dc => reconstruct_lossy_luma_8x4(
-                match (has_top, has_left || column != 0) {
-                    (true, true) => rectangular_dc_predictor(&top_edge, &left_edge),
-                    (true, false) => one_sided_dc_predictor_8(top_edge),
-                    (false, true) => one_sided_dc_predictor_4(left_edge),
-                    (false, false) => 128,
-                },
-                coefficients,
-                transform,
-            ),
-            LumaPredictor::Vertical => reconstruct_lossy_luma_8x4_from_prediction(
-                std::array::from_fn(|index| top_edge[index % 8]),
-                coefficients,
-                transform,
-            ),
-            LumaPredictor::Horizontal => reconstruct_lossy_luma_8x4_from_prediction(
-                std::array::from_fn(|index| left_edge[index / 8]),
-                coefficients,
-                transform,
-            ),
-            LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
-                reconstruct_lossy_luma_8x4_diagonal_z1(
+        let block = if let Some(mode) = filter_intra_mode {
+            let prediction = reconstruct_filter_intra_prediction(
+                mode,
+                8,
+                4,
+                block_top_left,
+                &top_edge,
+                &left_edge,
+            )?;
+            let prediction: [u16; 32] = prediction.try_into().map_err(|_| PortableUnavailable)?;
+            reconstruct_lossy_luma_8x4_from_prediction(prediction, coefficients, transform)
+        } else {
+            match predictor {
+                LumaPredictor::Dc => reconstruct_lossy_luma_8x4(
+                    match (has_top, has_left || column != 0) {
+                        (true, true) => rectangular_dc_predictor(&top_edge, &left_edge),
+                        (true, false) => one_sided_dc_predictor_8(top_edge),
+                        (false, true) => one_sided_dc_predictor_4(left_edge),
+                        (false, false) => 128,
+                    },
+                    coefficients,
+                    transform,
+                ),
+                LumaPredictor::Vertical => reconstruct_lossy_luma_8x4_from_prediction(
+                    std::array::from_fn(|index| top_edge[index % 8]),
+                    coefficients,
+                    transform,
+                ),
+                LumaPredictor::Horizontal => reconstruct_lossy_luma_8x4_from_prediction(
+                    std::array::from_fn(|index| left_edge[index / 8]),
+                    coefficients,
+                    transform,
+                ),
+                LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
+                    reconstruct_lossy_luma_8x4_diagonal_z1(
+                        top_edge,
+                        block_top_left,
+                        angle.ok_or(PortableUnavailable)?,
+                        coefficients,
+                        transform,
+                    )?
+                }
+                LumaPredictor::DiagonalDownRight
+                | LumaPredictor::Diagonal113
+                | LumaPredictor::Diagonal157 => reconstruct_lossy_luma_8x4_diagonal_z2(
                     top_edge,
+                    left_edge,
                     block_top_left,
                     angle.ok_or(PortableUnavailable)?,
                     coefficients,
                     transform,
-                )?
+                )?,
+                LumaPredictor::Diagonal203 => reconstruct_lossy_luma_8x4_diagonal_z3(
+                    left_edge,
+                    block_top_left,
+                    angle.ok_or(PortableUnavailable)?,
+                    coefficients,
+                    transform,
+                )?,
+                LumaPredictor::Smooth => reconstruct_lossy_luma_8x4_smooth(
+                    top_edge,
+                    top_edge[7],
+                    left_edge,
+                    coefficients,
+                    transform,
+                ),
+                LumaPredictor::SmoothVertical => reconstruct_lossy_luma_8x4_smooth_vertical(
+                    top_edge,
+                    left_edge[3],
+                    coefficients,
+                    transform,
+                ),
+                LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_8x4_smooth_horizontal(
+                    left_edge,
+                    top_edge[7],
+                    coefficients,
+                    transform,
+                ),
+                LumaPredictor::Paeth => reconstruct_lossy_luma_8x4_from_prediction(
+                    std::array::from_fn(|index| {
+                        paeth_predictor(top_edge[index % 8], left_edge[index / 8], block_top_left)
+                    }),
+                    coefficients,
+                    transform,
+                ),
             }
-            LumaPredictor::DiagonalDownRight
-            | LumaPredictor::Diagonal113
-            | LumaPredictor::Diagonal157 => reconstruct_lossy_luma_8x4_diagonal_z2(
-                top_edge,
-                left_edge,
-                block_top_left,
-                angle.ok_or(PortableUnavailable)?,
-                coefficients,
-                transform,
-            )?,
-            LumaPredictor::Diagonal203 => reconstruct_lossy_luma_8x4_diagonal_z3(
-                left_edge,
-                block_top_left,
-                angle.ok_or(PortableUnavailable)?,
-                coefficients,
-                transform,
-            )?,
-            LumaPredictor::Smooth => reconstruct_lossy_luma_8x4_smooth(
-                top_edge,
-                top_edge[7],
-                left_edge,
-                coefficients,
-                transform,
-            ),
-            LumaPredictor::SmoothVertical => reconstruct_lossy_luma_8x4_smooth_vertical(
-                top_edge,
-                left_edge[3],
-                coefficients,
-                transform,
-            ),
-            LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_8x4_smooth_horizontal(
-                left_edge,
-                top_edge[7],
-                coefficients,
-                transform,
-            ),
-            LumaPredictor::Paeth => reconstruct_lossy_luma_8x4_from_prediction(
-                std::array::from_fn(|index| {
-                    paeth_predictor(top_edge[index % 8], left_edge[index / 8], block_top_left)
-                }),
-                coefficients,
-                transform,
-            ),
         };
         for row in 0_usize..4 {
             let source_start = row.saturating_mul(8);
@@ -28335,6 +28345,16 @@ fn reconstruct_following_lossy_420_vertical_16x4_leaf(
             has_luma_left,
             split,
         )?
+    } else if let Some(mode) = filter_intra_mode {
+        let prediction: [u16; 64] =
+            reconstruct_filter_intra_prediction(mode, 16, 4, luma_top[0], &luma_top, &luma_left)?
+                .try_into()
+                .map_err(|_| PortableUnavailable)?;
+        reconstruct_lossy_luma_16x4_from_prediction(
+            prediction,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        )
     } else {
         match luma_predictor {
             LumaPredictor::Dc => reconstruct_lossy_luma_16x4(
@@ -40504,7 +40524,7 @@ impl Lossy420Decoder {
             )
         });
         let leaf = if matches!(transform_grid, TransformGrid::Horizontal16x4) {
-            if syntax.filter_intra_mode.is_some() || syntax.palette.is_present() {
+            if syntax.palette.is_present() {
                 return Err(PortableUnavailable);
             }
             let above_right_is_above_left =
@@ -42292,9 +42312,7 @@ impl Lossy420Decoder {
         );
         let syntax = match syntax {
             Ok(syntax) => syntax,
-            Err(_) => {
-                return Err(PortableUnavailable);
-            }
+            Err(_) => return Err(PortableUnavailable),
         };
         self.remember_qindex(&syntax, decoder);
         let predictors = origin_predictors(syntax.luma_predictor);
