@@ -39,6 +39,7 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
         "coverage_r32x8_filter_intra_cdf9_false_01.avif",
         "coverage_r16x32_following_filter_intra_split_mode0_01.avif",
         "coverage_r16x32_following_filter_intra_split_mode3_01.avif",
+        "coverage_vertical8x16_following_filter_intra_mode2_01.avif",
     }
 )
 SQUARE32_SPLIT_TARGET_FIXTURES = frozenset(
@@ -1075,6 +1076,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "4e246340bdbe95175760098f3beb1cd22df27f0dfa4dfc4b4c0587e9913448a3",
         "size": [8, 16],
     },
+    "coverage_vertical8x16_following_filter_intra_mode2_01.avif": {
+        "file_sha256": "252f1ef0ac2b5af88a90d8f6c6952186ea968db0350af5e7f5c19a1465581ec2",
+        "rgb_sha256": "403dfa0053c7a79267a72b0c4b8aad0462efb45e9baac12dd488468b3d3d924b",
+        "size": [16, 32],
+    },
     "coverage_square8_chroma_diagonal113_01.avif": {
         "file_sha256": "c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7",
         "rgb_sha256": "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462",
@@ -1394,7 +1400,10 @@ def instrument(
          (f->frame_hdr->width[0] == 32 && f->frame_hdr->height == 32 && \
           !f->frame_hdr->delta.q.present && \
           !f->frame_hdr->allow_screen_content_tools && \
-          t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 8))
+          t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 8) || \
+         (f->frame_hdr->width[0] == 16 && f->frame_hdr->height == 32 && \
+          f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 && \
+          t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 4))
 #define DEBUG_B_PIXELS 1
 """
     horizontal_square16 = """\
@@ -1444,7 +1453,11 @@ def instrument(
                      (f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 &&
                       bs == BS_16x32 && t->bx >= 4 && t->bx < 8 &&
                      b->y_mode == FILTER_PRED &&
-                     (b->y_angle == 0 || b->y_angle == 3)));
+                     (b->y_angle == 0 || b->y_angle == 3)) ||
+                     (f->frame_hdr->width[0] == 16 &&
+                      f->frame_hdr->height == 32 &&
+                      f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 &&
+                      t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 4));
 """
     horizontal_square16 = """\
     const int dbg = DEBUG_BLOCK_INFO;
