@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1525,
-      "decode_rows": 1128,
+      "total_rows": 1526,
+      "decode_rows": 1129,
       "encode_rows": 397,
-      "decode_active": 1123,
+      "decode_active": 1124,
       "decode_planned": 5,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 301,
-      "decode_active": 296,
+      "decode_rows": 302,
+      "decode_active": 297,
       "decode_planned": 5,
       "encode_rows": 32,
       "encode_active": 0,
@@ -48,7 +48,7 @@
       "former_native_remaining": 37
     },
     "tests": {
-      "coverage_matrix_tests": "36/36 matrix tests",
+      "coverage_matrix_tests": "44/44 matrix tests",
       "feature_gate_tests": "66/66 feature-gate tests",
       "animation_loop_tests": "4/4 animation-loop contract tests",
       "doctests": "1/1"
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_231_reconstruction_cases",
+      "no_selector_behavior": "run_all_232_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -98,14 +98,14 @@
       "dispatcher": "test_av1_reconstruction_matches_pinned_dav1d_fixture",
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",
       "latest_evidence": {
-        "commit_sha": "3281cf6d524ead2a4a34299f154e8ae942dc9952",
-        "run_id": "0effd878-d082-4952-9ecf-63b0892d375d",
-        "snapshot_id": "cabeeba6-7f0c-453e-9ef3-cc02bb4a5fd8",
+        "commit_sha": "72759602317c50016a6bf38fc80ee06bb1de9afe",
+        "run_id": "44360fd2-4d9c-4ce0-845b-deef0d7c0ef1",
+        "snapshot_id": "5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb",
         "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-        "duration_ms": 32144,
+        "duration_ms": 31912,
         "selected_fixtures": [
-          "coverage_422_square16_vertical_halves_01.avif"
+          "coverage_h16x4_filter_intra_tx8x4_split_01.avif"
         ],
         "status": "passed_and_ingested"
       }
@@ -548,6 +548,103 @@
             "merge_exact": false,
             "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
             "note": "The selected central matrix run passed both active malformed controls. The additive baseline-union review reports +1 covered branch and no covered-line, function, or region identity increase; the selected projection reports 1,080 newly covered line identities. Denominator changes are +3,201 lines, +126 branches, +26 functions, and +9,511 regions because the selected run is a subset under a changed implementation. Unselected baseline hits remain not_observed; this is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim. The durable run record is exact for implementation commit feb851bdb1c882191c1467117b2acbb5b533ec3a; the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db."
+          }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "72759602317c50016a6bf38fc80ee06bb1de9afe",
+          "run_id": "44360fd2-4d9c-4ce0-845b-deef0d7c0ef1",
+          "snapshot_id": "5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 31912,
+          "arguments": [
+            "test",
+            "--test",
+            "coverage_matrix_tests",
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+            "--",
+            "--exact",
+            "--nocapture",
+            "--skip",
+            "__image_slash_star_av1_fixture_selector__=coverage_h16x4_filter_intra_tx8x4_split_01.avif"
+          ],
+          "selected_rows": [
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture (1 exact AV1 fixture case: coverage_h16x4_filter_intra_tx8x4_split_01.avif)"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "the central test result was 1 passed, 0 failed, 43 filtered out; the exact AV1 fixture selector reported one requested and one executed fixture",
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 8,
+            "covered_branches_delta": 7,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 281,
+            "newly_covered_lines": 1474,
+            "total_lines_delta": 3211,
+            "total_branches_delta": 126,
+            "total_functions_delta": 26,
+            "total_regions_delta": 9543,
+            "not_observed": 75454,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The selected reconstruction run passed exactly the new filter-intra fixture. The additive baseline-union review reports +8 covered lines, +7 branches, +0 functions, and +281 regions with zero regressions; the selected projection reports 1,474 newly covered line identities. Denominator changes are +3,211 lines, +126 branches, +26 functions, and +9,543 regions because the selected run is a subset under a changed implementation. Unselected baseline hits remain not_observed, so this is bounded selected-subset evidence rather than a complete four-metric release measurement. The durable run record is exact for implementation commit 72759602317c50016a6bf38fc80ee06bb1de9afe; the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db."
+          }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-28",
+          "managed_coverage_mcp": true,
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "72759602317c50016a6bf38fc80ee06bb1de9afe",
+          "run_id": "a740718c-1912-4280-8cff-4969d1acf19e",
+          "snapshot_id": "ff859be1-e7ab-4f82-96c9-84044d1f24cc",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 30162,
+          "arguments": [
+            "test",
+            "--test",
+            "coverage_matrix_tests",
+            "test_decode_matrix_avif",
+            "--",
+            "--exact",
+            "--nocapture",
+            "--skip",
+            "__image_slash_star_matrix_row_selector__=decode:avif:coverage_h16x4_filter_intra_tx8x4_split_01"
+          ],
+          "selected_rows": [
+            "decode:avif:coverage_h16x4_filter_intra_tx8x4_split_01"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "the selected AVIF matrix row passed 1/1 active rows with 0 failed and 0 planned-not-executed",
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 8,
+            "covered_branches_delta": 8,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 281,
+            "total_lines_delta": 3211,
+            "total_branches_delta": 126,
+            "total_functions_delta": 26,
+            "total_regions_delta": 9543,
+            "not_observed": 74676,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The selected AVIF matrix run passed the new active row. The additive baseline-union review reports +8 covered lines, +8 branches, +0 functions, and +281 regions with zero regressions. Denominator changes are +3,211 lines, +126 branches, +26 functions, and +9,543 regions because the selected run is a subset under a changed implementation. Unselected baseline hits remain not_observed, so this is bounded selected-subset evidence rather than a complete four-metric release measurement. The durable run record is exact for implementation commit 72759602317c50016a6bf38fc80ee06bb1de9afe; the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db."
           }
         }
       ],
@@ -1478,13 +1575,76 @@
             "focused_verification": "The AVIF decode matrix passes 296/296 active rows; the pinned reconstruction test passes all 231 cases including this fixture; strict fmt, locked checks, Clippy, rustdoc, and all-feature tests pass.",
             "scope": "This closes only the simple 16x16 origin Square16 8-bit 4:2:2 palette class. Rectangular/partial 4:2:2 blocks, residual-bearing palette blocks, optional filters/tools, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_h16x4_filter_intra_tx8x4_split_01": {
+            "fixture": "coverage_h16x4_filter_intra_tx8x4_split_01.avif",
+            "dimensions": [
+              16,
+              16
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 32,
+            "speed": 0,
+            "topology": "PARTITION_H4 root with a following Horizontal16x4 leaf at transform depth one and two terminal TX8x4 luma children",
+            "filter_intra": {
+              "target_mode": 4,
+              "trace_value": "13/4",
+              "prediction": "one filter-intra prediction per terminal child; the second child consumes the first child's reconstructed right edge"
+            },
+            "luma_quantization_matrix": 7,
+            "child_transforms": [
+              "TX8x4 DCT_DCT",
+              "TX8x4 DCT_DCT"
+            ],
+            "child_eob": [
+              0,
+              2
+            ],
+            "fixture_sha256": "e2660fd8efe6609ec42182bf7edfab466b0dee57c12d5beebcea8aad03ff67c0",
+            "encoded_item": {
+              "bytes": 38,
+              "sha256": "fb39cd215b49aac96047e79924569f9db3a2d4f20b781776d157a180601a817f"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3"
+            },
+            "decoded_plane_sha256": {
+              "y": "8e3c2dc3240fb5ae305728cfed940726617a2d95885d80dbdc24af8d32d50373",
+              "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
+              "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition": "poc=0,y=0,x=0,level=3,context=0,partition=8,range=43136",
+              "entropy_operation_count": 110,
+              "target_entropy": [
+                "Post-filterintramode[13/4]",
+                "Post-tx[6]",
+                "TX8x4 luma EOB 0",
+                "TX8x4 luma EOB 2"
+              ],
+              "evidence": "Input-only scalar dav1d probing produced the exact partition, filter-intra, transform, EOB, and raw-plane reference; repository Rust is not invoked by the oracle."
+            },
+            "trace_sha256": "09d86bca1e0c24fd453abcae8d8e2d87af7749e0dd8bedc1d51e2601d556eb77",
+            "production_changes": [
+              "Admit the evidenced filter-intra H16x4 split after exact CDF and topology checks.",
+              "Convert the safe filter-intra predictor to each terminal TX8x4 child and publish the first child's reconstructed right edge before predicting the second.",
+              "Wire the dav1d-derived luma matrix-7 tables for TX8x4 dequantization."
+            ],
+            "focused_verification": "The focused reconstruction selector passes this exact fixture, the selected AVIF matrix row passes 1/1, the full coverage_matrix_tests target passes 44/44 under the coverage build, and strict fmt, check, Clippy, rustdoc, and library tests pass.",
+            "scope": "This closes only the bounded following-Horizontal16x4 split filter-intra mode-4/TX8x4 class. Other filter-intra modes, unsplit and alternate transform/topology states, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
         },
     "current_evidence": "Safe Rust now decodes the 128x128 8-bit 4:2:0 baseline, all three legal generic-HEIF major-brand orderings, the 256x128 two-column multitile frame, the generated 8x32 4:2:0 R8x16 band pair, the pinned 32x16 4:2:0 Horizontal32x16 origin leaf, the pinned 16x64 4:2:0 Vertical16x64 depth-two TX16x16 luma split, and the coverage_entropy_mosaic_01.avif and coverage_entropy_mosaic_02.avif 32x32 8-bit 4:2:0 entropy-mosaic frames through safe reconstruction, restoration, raster, and RGB conversion with exact independent references. The new regression witness is a single TX32X32 DCT_DCT luma leaf with EOB 494 and 1,167 entropy operations; its pinned dav1d 1.5.3 trace, reconstructed Y/U/V planes, and final Pillow 12.2.0 RGB bytes are exact. The existing 02 frame has EOB 467 and 1,168 matching operations. The promoted R8x16, Horizontal32x16, R16x64, and both 32x32 fixtures share pinned partition/topology, checked 4:2:0 planes, exact entropy traces, and exact Pillow RGB bytes; the R16x64 path also uses the verified 16x16 matrix-10 luma table and top-only DC prediction when no left neighbor exists. The new coverage_r32x8_h4_ripple_01.avif witness is a 32x32 8-bit 4:2:0 PARTITION_H4 frame with three 32x8 luma leaves and 16x4 subsampled chroma leaves, an exact 1,522-operation entropy trace, exact Y/U/V planes, and exact Pillow RGB output; it exercises the geometry-specific matrix-9 dequantization and one-sided DC path. The coverage_i444_rect_01.avif witness is a 16x16 8-bit lossy 4:4:4 frame with a split root and four 8x8 terminals, full-resolution Y/U/V residuals, delta-Q, a pinned 499-operation dav1d trace, exact 16x16 reconstructed planes, and exact Pillow RGB8 output. The new coverage_i444_rect_02.avif witness is a second 16x16 8-bit lossy 4:4:4 split-root/four-leaf frame with a pinned 553-operation dav1d trace, exact 16x16 Y/U/V planes, exact Pillow RGB8 output, distinct residual/EOB states, and a filter-intra leaf. The new coverage_r32x32_filter_intra_probe_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with an origin Horizontal32x16 leaf using filter-intra y-mode 13/filter mode 2 and dav1d's missing-edge values (top 127, left 129, top-left 128), followed by a second Horizontal32x16 leaf; its pinned trace has 1,168 entropy operations and safe Rust matches exact Y/U/V planes and Pillow RGB bytes. The new coverage_r32x32_filter_intra_mode3_01.avif witness is a 32x32 8-bit 4:2:0 horizontal-split frame with filter-intra mode 3 on both Horizontal32x16 leaves. The production path reconstructs the vertically following second leaf from its prepared spatial edges; its pinned dav1d trace has 4,359 entropy operations, and safe Rust matches exact Y/U/V planes and Pillow RGB8 bytes. Its fixture, encoded-item, and RGB SHA-256 values are 79efb409fcfecd8cc3cd1fccb4ab22dd33190b6d91148524c03affaf9b809b29, cbf90be7ee9f18a5ef502f3fa0030d0fe97be481459461df687d968dfbdcb2e5, and 8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495. The new coverage_r32x16_filter_intra_tx8x8_01.avif witness is a 32x16 8-bit full-range BT.601 4:2:0 origin Horizontal32x16 split leaf with filter-intra disabled (trace sentinel Post-filterintramode[0/0]) and a depth-two TX8x8 luma grid. Its pinned dav1d trace has 2,328 entropy operations, the partition path is root H followed by the visible Horizontal32x16 terminal, safe Rust reconstructs all four luma TX8x8 children through the generic split path, and exact Y/U/V planes and Pillow RGB8 bytes match independently. Its fixture, encoded-item, and RGB SHA-256 values are 9e3f8459144572f29db4932816c957e237fb4911f4c45be7496dab681295b066, 07691b54568545dfed21545ae659d56991a4e60a992fba40602f725a90e26f89, and fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8. The closed 16x16 lossless 4:4:4 square fixtures and 64x64 alpha primary remain exact, and FrameCanvas validates atomic placement for 4:2:0, 4:4:4, and the prerequisite odd-width 4:2:2 geometry. This is one bounded transform/entropy class, not general AV1/AVIF completion; the 4:2:2 decoder path is enabled only for the simple origin Square16 palette witness, and broader 4:2:2 support remains open. The new coverage_square16_filter_intra_mode0_01.avif origin witness adds exact Square16 filter-intra mode-0, unsplit TX16x16 luma, TX8x8 chroma, 1,116-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode0_01.avif witness adds exact origin Vertical8x16 filter-intra mode-0, unsplit TX8x16 luma, TX4x8 chroma, 584-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The new coverage_vertical8x16_filter_intra_mode1_01.avif witness adds exact origin Vertical8x16 filter-intra mode-1, unsplit TX8x16 luma, TX4x8 chroma, 559-operation entropy, partition, Y/U/V, and Pillow RGB evidence; it is a bounded class only and does not close general AVF-STILL-001. The newest bounded witness is coverage_square8_chroma_diagonal113_01.avif, a 16x8 8-bit 4:2:0 horizontal split whose right-hand Square8 leaf selects chroma Diagonal113, ADST-DCT U/V transforms, and a split TX4x4 luma grid. Its pinned dav1d partition ranges are 37392, 43662, and 63946, with 304 entropy operations; safe Rust matches the exact partition, entropy, Y/U/V, and Pillow RGB evidence. Fixture, encoded-item, and Pillow RGB SHA-256 values are c014c0d3a2108ab2e97b3dd7575985dec029390b049d08335faa8b3d2aad31f7, 6940c3d9ff199ebb028dda748b79fb56c649c4438f0bc4166163a498eabf5c8c, and 05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462. This closes only the right-hand Square8/chroma-Diagonal113/ADST-DCT class; broader AV1 partition states, chroma modes, transforms, and AVF-STILL-001 remain partial. The newest paired rectangular H16x4/V4x16 fixtures add exact safe-Rust false-filter-CDF and UV-palette reconstruction evidence with 162-operation traces in each orientation; this is one bounded class and AVF-STILL-001 remains partial. The new coverage_square32_origin_tx16x16_split_01.avif witness adds a 32x32 4:2:0 origin Square32 leaf with four TX16x16 luma DCT children, DC prediction, non-empty residuals, and TX16x16 DCT chroma; its 4,436-operation pinned trace, exact Y/U/V planes, and Pillow RGB bytes match safe Rust.",
-        "latest_witness": "The latest bounded proof is coverage_h16x4_tx8x4_split_01.avif: a deterministic 16x16 8-bit 4:2:0 PARTITION_H4 stream whose following Horizontal16x4 leaf selects transform depth one, yielding two TX8x4 luma children with DCT_DCT transforms and EOB values 5 and 2. Safe Rust matches the independent 768-byte Pillow RGB8 reference; the input-only pinned dav1d probe confirms the two-child topology. This closes only bounded depth-one TX8x4 evidence; broader AV1 and AVF-STILL-001 remain partial.",
-        "latest_slice": "The H16x4 depth-one slice adds one deterministic 16x16 8-bit 4:2:0 following-Horizontal16x4 fixture with two non-skipped TX8x4 DCT_DCT luma children, qcat-three matrix-6 dequantization, and exact public RGB parity. The managed selected-row incremental review adds 686 covered lines and no new branch, function, or region identities; this remains one bounded class, not general AV1 or AVIF completion.",
-               "latest_evidence_addition": "The promoted D67V-F01-N00 fixture has fixture SHA-256 7251e37d120b6cd170d0f2de705b2e56cccda3dfbd3ea4384369132bd0ea0f3f, encoded-item SHA-256 90e351ddef37743cbde928804b30965b9c3099fb32c71f989d5dfdb971146ec8, Pillow RGB SHA-256 2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae, Y/U/V SHA-256 values 8686c05fa88a9d164fc4be87227e3f09189aa1c7ca4016f2e9a8a9cb5ed7b6dc, 1c2902255e36f70fb4d51da60bbd81470d8851d678afb49324bc581ec5d65df0, and 5183ad5bc6643e34ce0794e3a19c3c11e28cf7a6faa3799e0719fe22eb2f795e, and trace SHA-256 1b5c7e5dda87d07e4b4cdd37fe99ce3b33d56368a05026deb74c124e308589ba. The pinned trace has 118 entropy operations and partition ranges 46608/54426/48340. The input-only campaign report is tests/fixtures/outputs/av1_search/coverage_vertical_square8_chroma_diagonal67_campaign_01.json; it records repository_rust_invoked=false and deterministic double-encode, double-item, double-trace, double-YUV, and double-RGB predicates.",
-        "current_slice": "The new H16x4 depth-one fixture promotes a bounded following-Horizontal16x4/R8x4 class. It is a 16x16 8-bit 4:2:0 quality-24/speed-0 frame with a PARTITION_H4 root, two non-skipped TX8x4 DCT_DCT luma children, EOB values 5 and 2, qcat-three matrix-6 dequantization, and exact public RGB parity. Other H16x4 transforms and topologies, broader AV1 states, high depth, sequences, HDR, encoding, and the four-metric coverage gate remain open.",
+        "latest_witness": "The latest bounded proof is coverage_h16x4_filter_intra_tx8x4_split_01.avif: a deterministic 16x16 8-bit 4:2:0 PARTITION_H4 stream whose following Horizontal16x4 leaf selects filter-intra mode 4 at transform depth one, yielding two TX8x4 luma children with EOB values 0 and 2. Safe Rust publishes the first child's reconstructed right edge before predicting the second child, matches the pinned 110-operation dav1d trace, exact Y/U/V planes, and independent 768-byte Pillow RGB8 output. This closes only the bounded split filter-intra TX8x4 class; broader AV1 and AVF-STILL-001 remain partial.",
+        "latest_slice": "The H16x4 filter-intra slice adds one deterministic 16x16 8-bit 4:2:0 following-Horizontal16x4 fixture with mode-4 filter prediction applied independently to two terminal TX8x4 children, sequential internal-edge publication, matrix-7 luma dequantization, and exact public RGB parity. Managed Coverage MCP selected runs add bounded evidence for the reconstruction witness and matrix row with zero regressions; this remains one bounded class, not general AV1 or AVIF completion.",
+               "latest_evidence_addition": "The promoted coverage_h16x4_filter_intra_tx8x4_split_01.avif fixture has fixture SHA-256 e2660fd8efe6609ec42182bf7edfab466b0dee57c12d5beebcea8aad03ff67c0, encoded-item SHA-256 fb39cd215b49aac96047e79924569f9db3a2d4f20b781776d157a180601a817f, Pillow RGB SHA-256 bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3, Y/U/V SHA-256 values 8e3c2dc3240fb5ae305728cfed940726617a2d95885d80dbdc24af8d32d50373, 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and trace SHA-256 09d86bca1e0c24fd453abcae8d8e2d87af7749e0dd8bedc1d51e2601d556eb77. The pinned dav1d trace has 110 entropy operations, one PARTITION_H4 block, target filter-intra 13/4, and two TX6/TX8x4 luma sentences with EOB 0 and 2; repository Rust is not invoked by the oracle.",
+        "current_slice": "The new H16x4 filter-intra fixture promotes a bounded following-Horizontal16x4 split class. It is a 16x16 8-bit 4:2:0 quality-32/speed-0 frame with a PARTITION_H4 root, target filter-intra mode 4, two terminal TX8x4 luma children with EOB values 0 and 2, matrix-7 luma dequantization, and exact public RGB parity. The implementation uses checked safe-Rust predictor conversion and carries the first child's reconstructed edge into the second child's prediction. Other filter-intra modes and transform/topology combinations, broader AV1 states, high depth, sequences, HDR, encoding, and the four-metric coverage gate remain open.",
         "current_slice_update": {
           "target": "following vertical Square8 chroma Diagonal67 mode 8 with ADST-DCT TX4x4 U/V",
           "fixtures": [
@@ -1997,6 +2157,114 @@
               "test_attribution": "unavailable",
               "merge_exact": false,
               "note": "Selected fixture passed as 1/1. Aggregate baseline-union coverage added 7 branches, 2 functions, and 199 regions with zero covered-line identity delta; the selected projection reports 920 newly covered line identities. This is bounded selected-subset evidence, not a complete four-metric release measurement."
+            }
+          }
+        },
+        "current_slice_update_2026_08_28_h16x4_filter_intra_tx8x4": {
+          "target": "following Horizontal16x4 filter-intra mode 4 split into two terminal TX8x4 luma children",
+          "fixture": "coverage_h16x4_filter_intra_tx8x4_split_01.avif",
+          "generator": "scripts/generate_test_assets.py::horizontal16x4_filter_intra_depth_one_tx8x4",
+          "dimensions": [
+            16,
+            16
+          ],
+          "bit_depth": 8,
+          "subsampling": "4:2:0",
+          "encoding": {
+            "quality": 32,
+            "speed": 0,
+            "root": "PARTITION_H4",
+            "following_leaf": "Horizontal16x4",
+            "filter_intra": "mode 4 (dav1d trace 13/4)",
+            "transform_depth": 1,
+            "luma_children": [
+              "TX8x4 DCT_DCT EOB 0",
+              "TX8x4 DCT_DCT EOB 2"
+            ],
+            "luma_quantization_matrix": 7
+          },
+          "pinned_dav1d": {
+            "implementation": "dav1d 1.5.3",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "partition": "poc=0,y=0,x=0,level=3,context=0,partition=8,range=43136",
+            "entropy_operation_count": 110,
+            "target_syntax": [
+              "Post-filterintramode[13/4]",
+              "Post-tx[6]",
+              "Post-y-cf-blk[tx=6,txtp=0,eob=0]",
+              "Post-y-cf-blk[tx=6,txtp=0,eob=2]"
+            ],
+            "edge_dependency": "The first terminal child publishes its reconstructed right edge; the second filter-intra prediction consumes that internal edge and the second child's top-left context."
+          },
+          "fixture_sha256": "e2660fd8efe6609ec42182bf7edfab466b0dee57c12d5beebcea8aad03ff67c0",
+          "encoded_item": {
+            "bytes": 38,
+            "sha256": "fb39cd215b49aac96047e79924569f9db3a2d4f20b781776d157a180601a817f"
+          },
+          "pillow_rgb": {
+            "bytes": 768,
+            "mode": "RGB8",
+            "sha256": "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3"
+          },
+          "decoded_plane_sha256": {
+            "y": "8e3c2dc3240fb5ae305728cfed940726617a2d95885d80dbdc24af8d32d50373",
+            "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
+            "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
+          },
+          "trace_sha256": "09d86bca1e0c24fd453abcae8d8e2d87af7749e0dd8bedc1d51e2601d556eb77",
+          "production_changes": [
+            "Admit the evidenced filter-intra H16x4 split after exact CDF and topology checks.",
+            "Convert the safe filter-intra predictor for each terminal TX8x4 child and publish internal reconstructed edges sequentially.",
+            "Wire the dav1d-derived luma matrix-7 tables for TX8x4 dequantization."
+          ],
+          "focused_verification": "The exact AV1 fixture selector passes this case, the selected AVIF matrix row passes 1/1, the coverage build passes all 44 coverage_matrix_tests, and strict fmt, check, Clippy, rustdoc, and library tests pass.",
+          "scope": "This closes only the bounded following-Horizontal16x4 split filter-intra mode-4/TX8x4 class. Other filter-intra modes, unsplit and alternate transform/topology states, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
+          "managed_incremental_coverage": {
+            "reconstruction_run": {
+              "run_id": "44360fd2-4d9c-4ce0-845b-deef0d7c0ef1",
+              "snapshot_id": "5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "commit_sha": "72759602317c50016a6bf38fc80ee06bb1de9afe",
+              "duration_ms": 31912,
+              "status": "passed_and_ingested",
+              "review": {
+                "comparison_mode": "additive_union",
+                "covered_lines_delta": 8,
+                "covered_branches_delta": 7,
+                "covered_functions_delta": 0,
+                "covered_regions_delta": 281,
+                "total_lines_delta": 3211,
+                "total_branches_delta": 126,
+                "total_functions_delta": 26,
+                "total_regions_delta": 9543,
+                "regressed": 0,
+                "merge_exact": false,
+                "test_attribution": "unavailable",
+                "note": "The selected reconstruction run passed exactly this fixture. The selected projection reports 1,474 newly covered line identities, but unselected baseline hits remain not_observed; this is bounded evidence, not a complete release measurement."
+              }
+            },
+            "matrix_run": {
+              "run_id": "a740718c-1912-4280-8cff-4969d1acf19e",
+              "snapshot_id": "ff859be1-e7ab-4f82-96c9-84044d1f24cc",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "commit_sha": "72759602317c50016a6bf38fc80ee06bb1de9afe",
+              "duration_ms": 30162,
+              "status": "passed_and_ingested",
+              "review": {
+                "comparison_mode": "additive_union",
+                "covered_lines_delta": 8,
+                "covered_branches_delta": 8,
+                "covered_functions_delta": 0,
+                "covered_regions_delta": 281,
+                "total_lines_delta": 3211,
+                "total_branches_delta": 126,
+                "total_functions_delta": 26,
+                "total_regions_delta": 9543,
+                "regressed": 0,
+                "merge_exact": false,
+                "test_attribution": "unavailable",
+                "note": "The selected matrix row passed 1/1. Unselected baseline hits remain not_observed; this is bounded evidence, not a complete release measurement."
+              }
             }
           }
         }

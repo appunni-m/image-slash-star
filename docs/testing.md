@@ -24,8 +24,8 @@ deltas of +15 lines, +0 branches, +3 functions, and +24 regions. Named-test
 attribution is unavailable; bounded source review marks all seven rectangular
 transform wrappers green.
 The managed Pillow parity identifier below is the accepted claim-ledger result
-at its own recorded revision; the local ordinary all-feature matrix integration
-suite currently passes 36/36.
+at its own recorded revision; the local all-feature matrix integration target
+currently passes 44/44 under the coverage build.
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
 final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
 1,449/1,449 passed and no skips. The latest local feature-matrix run completed
@@ -97,7 +97,7 @@ same arguments to its registered LLVM command, for example:
 ```
 
 With no AV1 fixture selector, the existing reconstruction test still validates
-all 231 oracle cases and all other coverage helpers retain their full-run
+all 232 oracle cases and all other coverage helpers retain their full-run
 behavior. With a selector, matrix dispatch and unrelated AV1 coverage helpers
 return before doing fixture work; the reconstruction test validates only the
 requested cases and asserts that every requested name ran exactly once. The
@@ -109,17 +109,20 @@ outside `--skip`, ordinary libtest skip filters, and matrix-row/AV1-selector
 mixtures are rejected. Selected runs are bounded incremental evidence and do
 not replace the full four-metric release coverage measurement.
 
-The latest managed one-fixture run
-`0effd878-d082-4952-9ecf-63b0892d375d` passed in 32,144 ms at implementation
-commit `3281cf6d524ead2a4a34299f154e8ae942dc9952` and ingested snapshot
-`cabeeba6-7f0c-453e-9ef3-cc02bb4a5fd8` against baseline
+The latest managed one-fixture reconstruction run
+`44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms at implementation
+commit `72759602317c50016a6bf38fc80ee06bb1de9afe` and ingested snapshot
+`5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb` against baseline
 `7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
-`coverage_422_square16_vertical_halves_01.avif` and passed 1/1 cases. The
-additive baseline-union review measured +7 covered branches, +2 covered
-functions, +199 covered regions, and 0 covered-line identity delta; the
-selected projection reported 920 newly covered line identities and no
-regressions. This is selected-subset evidence only; unselected baseline hits
-are not observed and it is not the release coverage gate.
+`coverage_h16x4_filter_intra_tx8x4_split_01.avif` and passed 1/1 cases. The
+additive baseline-union review measured +8 covered lines, +7 branches, +0
+functions, and +281 regions with no reported regressions; the selected
+projection reported 1,474 newly covered line identities. The matching selected
+matrix-row run `a740718c-1912-4280-8cff-4969d1acf19e` passed in 30,162 ms and
+ingested snapshot `ff859be1-e7ab-4f82-96c9-84044d1f24cc`, reporting +8 lines,
++8 branches, +0 functions, +281 regions, and no reported regressions against
+the same baseline. These are selected-subset evidence only; unselected
+baseline hits are not observed and neither run is the release coverage gate.
 
 The two active AVIF negative controls
 `portable_lossy_420_q99_eob_bin_control.avif` and
@@ -5652,13 +5655,13 @@ evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
 The claim ledger (`tests/fixtures/claim_ledger.json`) pins the current
 implementation anchor `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`, manifest
-SHA-256 `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`,
+SHA-256 `252849fccefbb30ad3e763896547bd0b6e83ad61f9282a159a4b1eb74bce172d`,
 generated-matrix SHA-256
-`f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`,
+`dce8210fdc14977a71df506ebb9d3a7b0247b6d6bea09c4c6173ba39594a33bd`,
 Coverage MCP run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0` and snapshot
 `7665cda3-f4a7-4568-b871-a9d34afaa92c`, every fixture-manifest SHA-256, the
 VP8L property-map SHA-256
-`4af152b07754467a15cdc4e7fb75f8598332e2dd79bd52d4b5b58c649480da5a`, and
+`a7b0c6af0b8aef455d6794cdd8302af1c3ca97332c4856e50eb0fa535f23ff91`, and
 the inspector SHA-256
 `8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
