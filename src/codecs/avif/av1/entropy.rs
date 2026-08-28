@@ -1088,6 +1088,94 @@ pub(super) struct PartitionNode {
     pub(super) kind: PartitionKind,
 }
 
+/// Admit the following Vertical8x16 filter-intra leaves for which the
+/// portable reconstruction has an end-to-end oracle trace.
+///
+/// The complete walker exposes terminal leaves in coded order. For a 16×32
+/// 4:2:0 frame, exactly two preceding 8×16 leaves at `(0, 0)` and `(2, 0)`
+/// prove the upper row of a split 16×16 pair. The next `(0, 4)` leaf is then
+/// the lower-left child reached through the vertical-neighbor caller, followed
+/// by the lower-right child at `(2, 4)`. Keeping the admission here, before
+/// block syntax is decoded, prevents the generic Vertical8x16 path from
+/// claiming unsupported filter-intra modes or geometries that have not been
+/// validated against the reference decoder.
+fn following_v8x16_filter_intra_mode(
+    context: &FirstBlockContext,
+    node: PartitionNode,
+    leaves: &[(PartitionNode, super::block::FirstLeaf)],
+) -> Option<usize> {
+    if !following_v8x16_frame_context(context)
+        || node.level != 4
+        || node.y != 4
+        || node.width != 2
+        || node.height != 4
+        || node.kind != PartitionKind::None
+    {
+        return None;
+    }
+
+    let upper_pair = |leaves: &[(PartitionNode, super::block::FirstLeaf)]| {
+        if leaves.len() < 2 {
+            return false;
+        }
+        let upper_left = leaves[0].0;
+        let upper_right = leaves[1].0;
+        upper_left.level == 4
+            && upper_left.kind == PartitionKind::None
+            && upper_left.x == 0
+            && upper_left.y == 0
+            && upper_left.width == 2
+            && upper_left.height == 4
+            && upper_right.level == 4
+            && upper_right.kind == PartitionKind::None
+            && upper_right.x == 2
+            && upper_right.y == 0
+            && upper_right.width == 2
+            && upper_right.height == 4
+    };
+
+    if !upper_pair(leaves) {
+        return None;
+    }
+
+    match (node.x, leaves.len()) {
+        (0, 2) => Some(2),
+        (2, 3) => {
+            let lower_left = leaves[2].0;
+            (lower_left.level == 4
+                && lower_left.kind == PartitionKind::None
+                && lower_left.x == 0
+                && lower_left.y == 4
+                && lower_left.width == 2
+                && lower_left.height == 4)
+                .then_some(0)
+        }
+        _ => None,
+    }
+}
+
+fn following_v8x16_frame_context(context: &FirstBlockContext) -> bool {
+    context.frame_width == 16
+        && context.frame_height == 32
+        && context.upscaled_width == 16
+        && context.level == 0
+        && context.block_width == 4
+        && context.block_height == 8
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.monochrome
+        && context.subsampling_x
+        && context.subsampling_y
+        && context.bit_depth == 8
+        && !context.superres_enabled
+        && !context.segmentation_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.all_lossless
+}
+
 const MAX_PARTITION_NODES: usize = 1_048_576;
 
 /// Controls whether the interleaved partition walker should continue after a
@@ -2667,6 +2755,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     } else {
                         [None; 2]
                     };
+                    let following_v8x16_filter_intra_mode =
+                        following_v8x16_filter_intra_mode(context, node, &leaves);
 
                     if let Some((above_prior, above)) = above_left {
                         let above_left_width = above.width;
@@ -2686,6 +2776,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             above_right_width,
                             above_left_x_offset,
                             above_right_x_offset,
+                            following_v8x16_filter_intra_mode,
                             above_luma_extension: above_luma_extension.map(|(_, leaf)| leaf),
                             above_luma_extension_x_offset: above_luma_extension.map_or(
                                 0,

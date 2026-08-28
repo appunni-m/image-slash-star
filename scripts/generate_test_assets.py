@@ -6030,6 +6030,52 @@ def gen_avif():
         speed=0,
     )
 
+    def filter_intra_420_v8x16_following_mode2_quadrants_noise():
+        """Generate the following 8x16 mode-2 witness from the 100-case search.
+
+        The 16x32 frame produces a split root whose upper and lower 16x16
+        blocks each use a vertical pair of 8x16 leaves. The lower-left leaf
+        is the first following Vertical8x16 block and selects FILTER_PRED
+        mode 2 with one TX8x16 luma transform.
+        """
+
+        random_state = random.Random(1406)
+        quadrants = (
+            ((32, 80, 160), (224, 64, 32)),
+            ((48, 192, 80), (208, 192, 48)),
+        )
+        pixels = bytearray()
+        for y in range(32):
+            for x in range(16):
+                base = quadrants[y >= 16][x >= 8]
+                delta = random_state.randrange(31) - 15
+                pixels.extend(clamp_channel(component + delta) for component in base)
+        return Image.frombytes("RGB", (16, 32), bytes(pixels))
+
+    write_campaign_image(
+        "coverage_vertical8x16_following_filter_intra_mode2_01",
+        filter_intra_420_v8x16_following_mode2_quadrants_noise(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "32",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def filter_intra_square16_mode0_noise():
         """Generate the origin Square16 filter-intra mode-0 witness."""
 

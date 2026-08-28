@@ -1310,6 +1310,10 @@ pub(super) struct VerticalNeighbors<'a> {
     pub(super) above_left_x_offset: u32,
     /// Horizontal luma-sample offset of the current block's extension inside the upper-right leaf.
     pub(super) above_right_x_offset: u32,
+    /// The only following Vertical8x16 filter-intra mode admitted by the
+    /// complete-walker witness gate. `None` keeps synthetic/test callers and
+    /// all other geometries on the existing unsupported path.
+    pub(super) following_v8x16_filter_intra_mode: Option<usize>,
     /// Optional luma leaf immediately after an 8×8 block's top edge. Zone-1
     /// angular prediction uses this continuation without changing the
     /// above-right leaf used by the other transform families.
@@ -29037,7 +29041,7 @@ fn reconstruct_following_lossy_420_horizontal_8x16_leaf(
     let luma_top = [luma_left[0]; 8];
     let luma = match (luma_predictor, luma_angle) {
         (LumaPredictor::Dc, _) => reconstruct_lossy_luma_8x16(
-            rectangular_dc_predictor(&luma_top, &luma_left),
+            one_sided_dc_predictor_16(luma_left),
             lossy_luma_rect_coefficients,
             lossy_luma_rect_transform,
         ),
@@ -30344,6 +30348,7 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     above_right_width: u32,
     above_left_x_offset: u32,
     above_right_x_offset: u32,
+    following_v8x16_filter_intra_mode: Option<usize>,
     enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
     let BlockSyntax {
@@ -30394,14 +30399,21 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     };
     let smooth_neighbor_edges = smooth_edges(above_left.luma_predictor)
         || left_neighbor.is_some_and(|neighbor| smooth_edges(neighbor.luma_predictor));
-    let luma_top_left = top_left_sample
-        .or_else(|| {
-            above_left_x_offset
-                .checked_sub(1)
-                .map(|offset| bottom_sample_at(&above_left.planes[0], above_left_width, offset))
-        })
-        .or_else(|| above_left.planes[0].samples.last().copied())
-        .unwrap_or(luma_top[0]);
+    let luma_top_left = if filter_intra_mode.is_some() && !has_left {
+        // With no left neighbor, filter-intra uses the prepared missing-edge
+        // anchor at the first top sample. The upper leaf's final sample is
+        // diagonally unrelated to this child-local northwest reference.
+        luma_top[0]
+    } else {
+        top_left_sample
+            .or_else(|| {
+                above_left_x_offset
+                    .checked_sub(1)
+                    .map(|offset| bottom_sample_at(&above_left.planes[0], above_left_width, offset))
+            })
+            .or_else(|| above_left.planes[0].samples.last().copied())
+            .unwrap_or(luma_top[0])
+    };
 
     let luma = if let Some(split) = lossy_luma_8x8_split {
         match reconstruct_lossy_luma_8x16_split(
@@ -30419,6 +30431,20 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                 return Err(PortableUnavailable);
             }
         }
+    } else if let Some(mode) = filter_intra_mode {
+        if following_v8x16_filter_intra_mode != Some(mode) {
+            return Err(PortableUnavailable);
+        }
+        let top: [u16; 8] = luma_top[..8].try_into().map_err(|_| PortableUnavailable)?;
+        let prediction: [u16; 128] =
+            reconstruct_filter_intra_prediction(mode, 8, 16, luma_top_left, &top, &luma_left)?
+                .try_into()
+                .map_err(|_| PortableUnavailable)?;
+        reconstruct_lossy_luma_8x16_from_prediction(
+            prediction,
+            lossy_luma_rect_coefficients,
+            lossy_luma_rect_transform,
+        )
     } else {
         match (luma_predictor, luma_angle) {
             (LumaPredictor::Diagonal157, Some(angle)) => reconstruct_lossy_luma_8x16_diagonal(
@@ -30516,8 +30542,8 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                 transform,
             ),
             _ => reconstruct_lossy_luma_4x8(
-                [rectangular_dc_predictor(&top, &left); 4],
-                [rectangular_dc_predictor(&top, &left); 8],
+                [rectangular_dc_predictor(&top[..4], &left); 4],
+                [rectangular_dc_predictor(&top[..4], &left); 8],
                 coefficients,
                 transform,
             ),
@@ -42213,6 +42239,7 @@ impl Lossy420Decoder {
                     neighbors.above_right_width,
                     neighbors.above_left_x_offset,
                     neighbors.above_right_x_offset,
+                    neighbors.following_v8x16_filter_intra_mode,
                     tools.enable_intra_edge_filter,
                 )?;
                 for plane in 1..=2 {
@@ -42310,6 +42337,7 @@ impl Lossy420Decoder {
                 neighbors.above_right_width,
                 neighbors.above_left_x_offset,
                 neighbors.above_right_x_offset,
+                neighbors.following_v8x16_filter_intra_mode,
                 tools.enable_intra_edge_filter,
             );
 
@@ -42754,6 +42782,7 @@ where
             above_right_width: second.width,
             above_left_x_offset: 0,
             above_right_x_offset: 0,
+            following_v8x16_filter_intra_mode: None,
             above_luma_extension: None,
             above_luma_extension_x_offset: 0,
             above_chroma_extension: None,
@@ -42793,6 +42822,7 @@ where
             above_right_width: second.width,
             above_left_x_offset: 0,
             above_right_x_offset: 0,
+            following_v8x16_filter_intra_mode: None,
             above_luma_extension: None,
             above_luma_extension_x_offset: 0,
             above_chroma_extension: None,
@@ -42880,6 +42910,7 @@ fn horizontal_four_split_vertical_neighbors<'a>(
         above_right_width: above_luma.width,
         above_left_x_offset: 0,
         above_right_x_offset: 0,
+        following_v8x16_filter_intra_mode: None,
         above_luma_extension: None,
         above_luma_extension_x_offset: 0,
         above_chroma_extension: None,
