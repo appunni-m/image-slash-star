@@ -1136,6 +1136,21 @@ Rust coefficient path already handles this sentence, so the slice adds
 independent structural and pixel evidence without claiming broader EOB
 support.
 
+The managed Coverage MCP incremental run for this exact filtered fixture was
+`a94d18a6-52c1-4729-9056-88ed1f84c3cd`, passed in 80,843 ms at implementation
+commit `288223f66f31814c2bb30f2047284cd20550f4bc`, and ingested snapshot
+`61afd9af-e181-494b-a55c-7fa3f0306495` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. The selected run passed 1/1 with 43
+other coverage-harness tests filtered at the fixture level. Standalone
+`coverage_review(task=incremental)` reports additive baseline-union deltas of
++661 lines, +17 branches, +1 function, and +5,289 regions; denominator changes
+are +3,639/+364/+39/+10,218. Its selected projection reports 7,393 newly
+covered line identities, 39,423 unobserved baseline observations, and zero
+regressions. Named-test attribution is unavailable and the selected subset is
+not a complete release measurement; the compact snapshot metadata retains
+commit `3272b3ef49a87c2947c08b46596b442195c6a8db`, while the durable run is
+bound to the implementation commit above.
+
 Managed Coverage MCP then ran the exact central matrix selection for both
 controls: run `bcd2e044-53c5-4c06-a9c6-d6ca8b02220d` passed in 31,206 ms at
 implementation commit `feb851bdb1c882191c1467117b2acbb5b533ec3a` and ingested

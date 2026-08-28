@@ -99,14 +99,14 @@
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",
       "latest_evidence": {
         "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
-        "commit_sha": "349f5d436b79a26086a28b6110aeb67eb3c374d6",
-        "run_id": "56fb2027-255c-4e34-a8d0-b67e88f7db04",
-        "snapshot_id": "12bfe199-0967-4e75-8246-c1fbd4724b5a",
+        "commit_sha": "288223f66f31814c2bb30f2047284cd20550f4bc",
+        "run_id": "a94d18a6-52c1-4729-9056-88ed1f84c3cd",
+        "snapshot_id": "61afd9af-e181-494b-a55c-7fa3f0306495",
         "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-        "duration_ms": 81649,
+        "duration_ms": 80843,
         "selected_fixtures": [
-          "coverage_h16x8_following_dct_dct_01.avif"
+          "portable_lossy_420_q99_luma_eob_bin2_eob3.avif"
         ],
         "status": "passed_and_ingested",
         "result": {
@@ -119,7 +119,7 @@
           "claim_status": "supported",
           "measurement_scope": "selected_subset",
           "comparison_mode": "additive_union",
-          "covered_lines_delta": 662,
+          "covered_lines_delta": 661,
           "covered_branches_delta": 17,
           "covered_functions_delta": 1,
           "covered_regions_delta": 5289,
@@ -128,12 +128,12 @@
           "total_functions_delta": 39,
           "total_regions_delta": 10218,
           "selected_projection_newly_covered_line_identities": 7393,
-          "not_observed": 39434,
+          "not_observed": 39423,
           "regressed": 0,
           "merge_exact": false,
           "test_attribution": "unavailable",
           "snapshot_diff_claim_status": "limited",
-          "note": "The additive baseline-union review reports +662 covered lines, +17 branches, +1 function, and +5,289 regions. Denominator changes are +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected snapshot projection reports 7,393 newly covered line identities; 39,434 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 349f5d436b79a26086a28b6110aeb67eb3c374d6. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          "note": "The exact selected fixture passed 1/1 through the registered all-feature command. The additive baseline-union review reports +661 covered lines, +17 branches, +1 function, and +5,289 regions. Denominator changes are +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected snapshot projection reports 7,393 newly covered line identities; 39,423 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 288223f66f31814c2bb30f2047284cd20550f4bc. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
         }
       }
     },
@@ -3365,6 +3365,51 @@
             "test_attribution": "unavailable",
             "merge_exact": false,
             "note": "The selected central matrix run reports selected=2 active=2 and passes 2/2 active rows. The additive baseline-union review adds one covered branch and no covered-line, function, or region identity; the selected projection reports 1,080 newly covered line identities. Unselected baseline hits remain not_observed."
+          }
+        },
+        "latest_managed_incremental_coverage": {
+          "project_id": "2b9f48753c80b021b894b600",
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "run_id": "a94d18a6-52c1-4729-9056-88ed1f84c3cd",
+          "snapshot_id": "61afd9af-e181-494b-a55c-7fa3f0306495",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "commit_sha": "288223f66f31814c2bb30f2047284cd20550f4bc",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "duration_ms": 80843,
+          "arguments": [
+            "--",
+            "--skip",
+            "__image_slash_star_av1_fixture_selector__=portable_lossy_420_q99_luma_eob_bin2_eob3.avif"
+          ],
+          "selected_fixtures": [
+            "portable_lossy_420_q99_luma_eob_bin2_eob3.avif"
+          ],
+          "result": {
+            "passed": 1,
+            "failed": 0,
+            "filtered_out": 43,
+            "status": "passed_and_ingested"
+          },
+          "review": {
+            "claim_status": "supported",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 661,
+            "covered_branches_delta": 17,
+            "covered_functions_delta": 1,
+            "covered_regions_delta": 5289,
+            "total_lines_delta": 3639,
+            "total_branches_delta": 364,
+            "total_functions_delta": 39,
+            "total_regions_delta": 10218,
+            "selected_projection_newly_covered_line_identities": 7393,
+            "not_observed": 39423,
+            "regressed": 0,
+            "merge_exact": false,
+            "test_attribution": "unavailable",
+            "snapshot_diff_claim_status": "limited",
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The exact selected fixture passed 1/1 through the registered all-feature command. The additive baseline-union review reports +661 covered lines, +17 branches, +1 function, and +5,289 regions. Denominator changes are +3,639 lines, +364 branches, +39 functions, and +10,218 regions. The selected snapshot projection reports 7,393 newly covered line identities; 39,423 baseline observations were not observed and are not regressions. The merge is conservative rather than exact, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 288223f66f31814c2bb30f2047284cd20550f4bc. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
           }
         },
         "next": "Add independent positive fixtures for the remaining legal EOB-bin/base coefficient sentences, then implement only the syntax and transforms proven by those fixtures; retain Malformed for arithmetic overread and Unsupported for valid but unimplemented syntax."
