@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 309 rows total, 304 active, 5 explicit planned
+- AVIF decode/inspect/verify: 310 rows total, 305 active, 5 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,533 rows total, 1131 active decode rows, 365 active encode
+- Whole matrix: 1,534 rows total, 1132 active decode rows, 365 active encode
   rows, 5 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -571,6 +571,34 @@ the corresponding status is recorded in `roadmap.json`:
   100 candidates across 10 families emitted 37 symbol-2 cases and 26 unsplit
   TX8×8 cases, but zero had a nonzero decoded AC coefficient. It does not
   prove the nonzero-delta class unreachable and causes no decoder admission.
+- The split-transform fallback is now proven by
+  `coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif`: an 8×16
+  visible 8-bit 4:2:0 frame with the same clipped 16×16 vertical split and
+  following Square8 geometry. Its bottom leaf uses luma mode 8/angle symbol 3
+  (resolved 67°, zero delta), four split TX4×4 DCT-DCT luma payloads with EOB
+  values `15/-1/-1/-1`, and skipped U/V. The input-only campaign evaluated
+  100 candidates across 10 families, qualified 40, and promoted
+  `D67V-F02-N00` (seed 12010) without invoking repository Rust. Its pinned
+  dav1d trace has 92 entropy operations and partition ranges
+  `46608/54426/35039`; the nonzero luma residual is decoded dequantized AC
+  scan index 15 = 160. Fixture, encoded-item, Pillow RGB, Y/U/V, decoded-YUV,
+  and trace SHA-256 values are
+  `97d00ee7b26556ea9c1e68e11c435727c5224373074cc183ff9c4a7c688809ee`,
+  `fff30cbc7e67c22a881670f397405f1a3849d0522b7130be48a556c1032eaaaf`,
+  `eb2bebe4dbb452c932c1334ec8420fd5b3ca8589641254938dc52d7d41365a2a`,
+  `a9d2d3e0149e5a24f358400a9e3f8d2dbe04087da393675dbe61928179ab11d2`,
+  `bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6`,
+  `bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6`,
+  `70e5d44d47f62641b00dff5f10523af69a7b66704d67a0aedcc521f8e3c6fb0f`, and
+  `8584b9626db9c39301c610e704682190990ee7aa508e2993429c0f8c26298a15`.
+  Safe Rust now passes the actual split helper's intra-edge-filter state and
+  disables filtered upsampling only for the proven top-only/no-left/no-
+  extension, zero-delta/67°/DCT-DCT semantic class; other split and
+  Diagonal67 contexts retain their prior path. The selected reconstruction
+  proof passes 1/1 alongside the earlier unsplit witness; the full active AVIF
+  matrix passes 305/305 with 5 explicit planned skips. This closes only this
+  split-TX4×4 class; broader split/depth/transform, availability, sequence,
+  encoding, and AVF-STILL-001 work remains partial.
 - The newest bounded following-leaf proof is
   `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
   8-bit 4:2:0 vertical split with origin UV mode 0 (DC) and following UV mode
@@ -1704,7 +1732,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,533 total | 1,136 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,131 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,534 total | 1,137 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,132 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 44/44 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2973,7 +3001,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 309 AVIF decode/inspect/verify rows exist: 304 are
+**Current exact state:** 310 AVIF decode/inspect/verify rows exist: 305 are
 active and 5 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in

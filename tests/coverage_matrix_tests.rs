@@ -5865,7 +5865,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 239);
+    assert_eq!(expected.cases.len(), 240);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6633,6 +6633,40 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 following Square8 luma Diagonal67 vertical witness partition topology"
+            );
+        } else if case.fixture == "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 3,
+                        range: 46_608,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 54_426,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 2,
+                        level: 4,
+                        context: 0,
+                        partition: 0,
+                        range: 35_039,
+                    },
+                ],
+                "AV1 following Square8 luma Diagonal67 vertical split-TX4x4 witness partition topology"
             );
         } else if case.fixture == "coverage_square8_luma_diagonal_down_right_01.avif" {
             assert_eq!(
@@ -8632,6 +8666,88 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Square8 luma Diagonal67 vertical witness leaf states"
             );
         }
+        if case.fixture == "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                92,
+                "AV1 following Square8 luma Diagonal67 split-TX4x4 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-yangle-symbol[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=52620",
+                    "Post-cdef_idx[0]: r=52620",
+                    "Post-ymode[0]: r=50204",
+                    "Post-uvmode[0]: r=63800",
+                    "Post-tx[1]: r=38896",
+                    "Post-txtp-intra[1->1][0][1->0]: r=54776",
+                    "Post-y-cf-blk[tx=1,txtp=0,eob=6]: r=38152",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=33305 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=58638 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=33947",
+                    "Post-ymode[8]: r=63616",
+                    "Post-yangle-symbol[3]: r=40688",
+                    "Post-uvmode[0]: r=60912",
+                    "Post-tx[0]: r=47408",
+                    "Post-txtp-intra[0->0][8][1->0]: r=45112",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=15]: r=37224",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=36844",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=44338",
+                    "Post-y-cf-blk[tx=0,txtp=0,eob=-1]: r=64018",
+                    "Post-uv-cf-blk[pl=0,tx=0,txtp=0,eob=-1]: r=56879 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=0,txtp=0,eob=-1]: r=50842 [x=0,cbx4=0]",
+                ],
+                "AV1 following Square8 luma Diagonal67 split-TX4x4 witness leaf states"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=0,txtp=0,"))
+                    .count(),
+                4,
+                "AV1 split-TX4x4 witness must decode four row-major luma children"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-y-cf-blk[tx=0,txtp=0,eob=15]:"))
+                    .count(),
+                1,
+                "AV1 split-TX4x4 witness must retain the nonzero first-child residual"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-yangle-symbol[3]:"))
+                    .count(),
+                1,
+                "AV1 split-TX4x4 witness must retain the D67 angle symbol"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uv-cf-blk["))
+                    .count(),
+                4,
+                "AV1 split-TX4x4 witness must retain skipped U/V payloads for both leaves"
+            );
+        }
         if case.fixture == "coverage_r32x16_filter_intra_tx8x8_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -10255,6 +10371,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_square8_luma_diagonal67_vertical_01.avif" => {
                 "1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0"
+            }
+            "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif" => {
+                "eb2bebe4dbb452c932c1334ec8420fd5b3ca8589641254938dc52d7d41365a2a"
             }
             "coverage_square8_luma_diagonal_down_right_01.avif" => {
                 "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b"

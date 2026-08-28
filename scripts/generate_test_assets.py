@@ -6618,6 +6618,57 @@ def gen_avif():
         speed=0,
     )
 
+    def luma_diagonal67_vertical_split_tx4x4_square8():
+        """Generate the split-TX4x4 vertical-following luma witness.
+
+        This is D67V-F02-N00 from the pinned 100-case input-only campaign.
+        The negative diagonal ramp exposes a varying top edge to the
+        following Square8 leaf. Its lower leaf is intentionally encoded with
+        four DCT-DCT TX4x4 payloads and a nonzero AC coefficient while chroma
+        remains neutral and skipped.
+        """
+
+        family = 1
+        candidate = 0
+
+        def pixel(x, y):
+            if y < 8:
+                luma = 80 - 3 * x + y - 7
+            else:
+                local_y = y - 8
+                source_x = min(7, x + (local_y + 1) // 2)
+                luma = 80 - 3 * source_x
+                if x < 4 and local_y < 4:
+                    luma += 5 if (x + local_y) % 2 == 0 else -5
+            luma = clamp_channel(luma)
+            return (luma, luma, luma)
+
+        return image_from_pixels((8, 16), pixel)
+
+    write_campaign_image(
+        "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01",
+        luma_diagonal67_vertical_split_tx4x4_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
     def chroma_diagonal67_vertical_square8():
         """Generate the promoted vertical-following UV mode-8 witness.
 
