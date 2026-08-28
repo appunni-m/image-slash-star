@@ -493,6 +493,23 @@ denominator changes +3,676/+414/+41/+10,301, 7,388 newly covered line
 identities, 39,326 unobserved baseline observations, and zero regressions.
 This is bounded evidence, not the complete four-metric release measurement.
 
+The latest selected AVIF policy run
+`4aae5760-8537-4500-8afd-a92e1235cf5e` passed in 31,512 ms at exact
+implementation commit `fb5497e97daf596b42d36e94ae0cb3f9377417cb` and ingested
+snapshot `1cb3b222-bbf5-4b8e-a0de-ebcf85eec477` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly the active rows
+`decode:avif:animated_error_resilient` and
+`decode:avif:error_animated_repeated_frame_id`; the matrix reported 2/2
+passed, 0 failed, and 0 planned-not-executed. The standalone incremental
+review reports additive baseline-union deltas of +8 lines, +10 branches, +0
+functions, and +1,081 regions; denominator changes are +4,121/+440/+46/+12,367,
+with 1,315 selected-projection newly covered line identities, 74,613 unobserved
+baseline observations, and zero regressions. Merge is conservative and
+named-test attribution is unavailable. The ordinary snapshot projection
+retains metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db`; the durable
+run record is exact for the implementation commit. This is bounded selected
+subset evidence, not a complete four-metric release measurement.
+
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
 decoded in AV1 payload order, then two following top-row 8×8 blocks consume
