@@ -7631,6 +7631,11 @@ def gen_avif():
         (8, 8),
         lambda x, y: 129 if x == y else 127,
     )
+    write_portable_luma_pattern(
+        "portable_lossy_420_q99_luma_eob_bin2_eob3.avif",
+        (4, 4),
+        lambda x, y: 126 if (x, y) == (3, 0) else 127,
+    )
 
     token_boundary_source = d / "portable_lossy_420_q99_gray_0.avif"
     token_boundary_bytes = bytearray(token_boundary_source.read_bytes())

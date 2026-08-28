@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1531,
-      "decode_rows": 1134,
+      "total_rows": 1532,
+      "decode_rows": 1135,
       "encode_rows": 397,
-      "decode_active": 1129,
+      "decode_active": 1130,
       "decode_planned": 5,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 307,
-      "decode_active": 302,
+      "decode_rows": 308,
+      "decode_active": 303,
       "decode_planned": 5,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_237_reconstruction_cases",
+      "no_selector_behavior": "run_all_238_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -3228,7 +3228,7 @@
           "nonzero or non-TX8x4 chroma payloads",
           "other dimensions, sample depths, subsampling, optional tools, and malformed/truncated residuals"
         ],
-        "focused_verification": "The exact AV1 fixture selector passes 1/1; the complete pinned AV1 reconstruction target passes 237/237; the coverage-configured matrix passes 44/44; the selected matrix row passes 1/1. Strict repository gates remain to be run at the implementation commit.",
+        "focused_verification": "The exact AV1 fixture selector passes 1/1; the complete pinned AV1 reconstruction target passes 238/238; the coverage-configured matrix passes 44/44; the selected matrix row passes 1/1. Strict repository gates remain to be run at the implementation commit.",
         "scope": "This closes only the bounded 32x8 following Horizontal16x8 DC/DCT-DCT/unsplit/skipped-chroma class. General following-leaf geometry, alternate transforms, optional tools, high depth, HDR, sequences, encoding, and AVF-STILL-001 remain open.",
         "managed_incremental_coverage": {
           "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
@@ -3272,7 +3272,34 @@
         "status": "partial",
         "depends_on": [],
         "deliverable": "Implement the remaining EOB-bin/base coefficient scans, signs, dequantization, transforms, and typed unsupported boundaries.",
-        "current_evidence": "Legal luma EOB-bin 0, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches, and matrix-10 dequantization are covered. The two one-byte controls are now active malformed-input rows: pinned dav1d 1.5.3 rejects each at the intended EOB stage with no YUV output, and safe Rust preserves the AV1 symbol-coder overread as typed Malformed rather than collapsing it into Unsupported. This classifies invalid arithmetic termination; it does not claim that either mutation is a legal EOB syntax implementation.",
+        "current_evidence": "Legal luma EOB-bin 0, 3, 4, 5, and 6 classes, legal chroma EOB-base/high branches, and matrix-10 dequantization are covered. The two one-byte controls are now active malformed-input rows: pinned dav1d 1.5.3 rejects each at the intended EOB stage with no YUV output, and safe Rust preserves the AV1 symbol-coder overread as typed Malformed rather than collapsing it into Unsupported. This classifies invalid arithmetic termination; it does not claim that either mutation is a legal EOB syntax implementation. A deterministic 100-candidate/10-family input-only campaign qualified exactly one additional positive witness, `luma-eob-bin-f01-n03`, promoted as `portable_lossy_420_q99_luma_eob_bin2_eob3.avif`. It is a 4x4 8-bit 4:2:0 one-tile origin TX8x8 DCT-DCT case with luma EOB-bin two, EOB three, direct EOB-base zero, and a non-empty AC coefficient; the pinned trace has 27 entropy operations and exact Y/U/V plus Pillow RGB hashes. The existing generic safe-Rust luma coefficient path already handles this sentence, so this slice adds independent structural and pixel evidence without widening production support by guesswork.",
+        "positive_witnesses": [
+          {
+            "id": "portable_lossy_420_q99_luma_eob_bin2_eob3",
+            "campaign": "tests/fixtures/outputs/av1_search/coverage_luma_eob_bin_campaign_01.json",
+            "candidate": "luma-eob-bin-f01-n03",
+            "candidate_count": 100,
+            "family_count": 10,
+            "qualified_count": 1,
+            "repository_rust_invoked": false,
+            "fixture": "portable_lossy_420_q99_luma_eob_bin2_eob3.avif",
+            "fixture_sha256": "1e8f492d54742c0662595952247b15cd98054d4f6e11346041d1d7db4cf5b34",
+            "encoded_item_sha256": "5ea52e44a309098f7c8aa847bc47a8bef6f10a8d8774f80eb61ecd7f647cd02b",
+            "rgb_sha256": "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42",
+            "y_plane_sha256": "87dcde7fa6df23e15fa7ba9b2a1f31408eac832f4e615ea815ae92024e3d818b",
+            "uv_plane_sha256": "8d65a89d33fc69d31f85fd8ed396d6dd5672cd59f80bd2ced560d4bbaeb43222",
+            "topology": "8-bit 4:2:0, single frame, one tile, origin unsplit block, no optional prediction syntax",
+            "transform": "TX8x8 DCT_DCT",
+            "luma_eob_bin": 2,
+            "luma_eob": 3,
+            "luma_eob_base": 0,
+            "luma_ac": "non-empty",
+            "chroma": "skipped 4x4 U/V payloads",
+            "independent_decoder": "dav1d 1.5.3, commit b546257f770768b2c88258c533da38b91a06f737",
+            "entropy_operation_count": 27,
+            "status": "promoted_evidence_only"
+          }
+        ],
         "active_negative_controls": [
           {
             "id": "portable_lossy_420_q99_eob_bin_control",

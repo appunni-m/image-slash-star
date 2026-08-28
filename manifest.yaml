@@ -3394,6 +3394,12 @@ formats:
       description: 8x8 lossy 4:2:0 diagonal luma impulse proving the moving 8x8 coefficient-context scratch plane
       test_assets:
       - portable_lossy_420_q99_8x8_diag_eob6.avif
+    - id: portable_lossy_420_q99_luma_eob_bin2_eob3
+      description: 4x4 lossy 4:2:0 luma impulse proving legal TX8x8 EOB-bin-two, EOB-three, and direct EOB-base-zero coefficient syntax
+      test_assets:
+      - portable_lossy_420_q99_luma_eob_bin2_eob3.avif
+      status: active
+      pure_rust_work_item: AVF-ENTROPY-001
     - id: portable_lossy_420_q99_gray_0
       description: 4x4 negative endpoint of the exhaustive quality-99 constant-gray DC domain
       test_assets:
