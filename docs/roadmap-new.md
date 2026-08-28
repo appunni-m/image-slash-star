@@ -599,6 +599,18 @@ the corresponding status is recorded in `roadmap.json`:
   matrix passes 305/305 with 5 explicit planned skips. This closes only this
   split-TX4×4 class; broader split/depth/transform, availability, sequence,
   encoding, and AVF-STILL-001 work remains partial.
+  The managed incremental Coverage MCP run
+  `870a1027-6885-4154-a8d1-698420520772` passed in 76,798 ms at exact
+  implementation commit
+  `175772d882cdb4f2bd1c8e7228d577d0f49bb7d3` and ingested snapshot
+  `33c346b6-73cf-4217-955b-363f706fb57e` against explicit baseline
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its standalone incremental review
+  is supported selected-subset evidence: +670/+17/+1/+5,289 covered
+  line/branch/function/region identities, denominator changes
+  +3,639/+388/+41/+10,275, 7,393 newly covered line identities, 39,306
+  unobserved baseline observations, and zero regressions. Merge is conservative
+  and named-test attribution is unavailable; the snapshot metadata retains
+  commit `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat.
 - The newest bounded following-leaf proof is
   `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
   8-bit 4:2:0 vertical split with origin UV mode 0 (DC) and following UV mode

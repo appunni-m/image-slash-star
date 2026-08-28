@@ -2577,6 +2577,45 @@
           },
           "production_change": "The split luma Diagonal67 helper now receives the actual intra-edge-filter enable flag instead of forcing it on. The following-vertical semantic gate disables filtered upsampling only for top-only/no-left/no-extension, zero-delta resolved-angle-67, DCT-DCT split and unsplit luma contexts; all other split and Diagonal67 contexts retain their prior path. No fixture-name or coordinate special case is used, and no unsafe code was added.",
           "focused_verification": "The selected public reconstruction fixture passes 1/1 alongside the prior unsplit witness; the full coverage-configured integration run passes 44/44, including 305/305 active AVIF rows with 5 explicit planned skips. Locked check, strict workspace Clippy, warnings-as-errors rustdoc, and native/wasm32-unknown-unknown/wasm32-wasip1 feature lanes pass. Managed incremental Coverage MCP validation remains required for the final coverage evidence.",
+          "managed_incremental_coverage": {
+            "project_id": "2b9f48753c80b021b894b600",
+            "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+            "run_id": "870a1027-6885-4154-a8d1-698420520772",
+            "snapshot_id": "33c346b6-73cf-4217-955b-363f706fb57e",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+            "commit_sha": "175772d882cdb4f2bd1c8e7228d577d0f49bb7d3",
+            "duration_ms": 76798,
+            "arguments": [
+              "--",
+              "--skip",
+              "__image_slash_star_av1_fixture_selector__=coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif"
+            ],
+            "selected_fixtures": [
+              "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif"
+            ],
+            "result": "passed; selected reconstruction fixture 1/1",
+            "review": {
+              "claim_status": "supported",
+              "measurement_scope": "selected_subset",
+              "comparison_mode": "additive_union",
+              "covered_lines_delta": 670,
+              "covered_branches_delta": 17,
+              "covered_functions_delta": 1,
+              "covered_regions_delta": 5289,
+              "total_lines_delta": 3639,
+              "total_branches_delta": 388,
+              "total_functions_delta": 41,
+              "total_regions_delta": 10275,
+              "newly_covered_line_identities": 7393,
+              "not_observed": 39306,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable",
+              "snapshot_diff_claim_status": "limited",
+              "note": "Standalone Coverage MCP incremental review measured the ingested snapshot against the explicit complete baseline. The additive baseline-union review reports +670 covered lines, +17 branches, +1 function, and +5,289 regions, with denominator changes of +3,639 lines, +388 branches, +41 functions, and +10,275 regions. It reports 7,393 newly covered line identities, 39,306 unobserved baseline observations, and zero regressions. The merge is conservative rather than exact and named-test attribution is unavailable. The durable run record is exact for implementation commit 175772d882cdb4f2bd1c8e7228d577d0f49bb7d3; the ordinary snapshot metadata retains commit 3272b3ef49a87c2947c08b46596b442195c6a8db as a provenance caveat. This is bounded selected-subset evidence, not a complete four-metric release measurement or global regression claim."
+            }
+          },
           "scope": "This closes only the bounded following-vertical 8x16 4:2:0 Square8 luma Diagonal67 mode-8 zero-delta split-TX4x4 DCT-DCT class. Nonzero angle deltas, other split depths and transforms, left or top-right availability variants, top-row/no-top variants, broader AV1/AVIF still coverage, sequences, encoding, and the four-metric 100% gate remain open."
         },
         "search_evidence": {

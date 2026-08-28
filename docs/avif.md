@@ -444,6 +444,18 @@ The selected reconstruction proof passes 1/1 and the full active AVIF matrix
 passes 305/305 with 5 explicit planned skips; broader split/depth/transform
 and AVF-STILL-001 work remain open.
 The managed incremental Coverage MCP run
+`870a1027-6885-4154-a8d1-698420520772` passed in 76,798 ms at exact
+implementation commit
+`175772d882cdb4f2bd1c8e7228d577d0f49bb7d3` and ingested snapshot
+`33c346b6-73cf-4217-955b-363f706fb57e` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its supported selected-subset review
+reports additive deltas of +670 lines, +17 branches, +1 function, and +5,289
+regions; denominator changes are +3,639/+388/+41/+10,275; 7,393 line
+identities were newly covered, 39,306 baseline observations were not
+observed, and regressions are 0. Merge is conservative and named-test
+attribution is unavailable; this remains bounded evidence rather than the
+complete four-metric release measurement.
+The managed incremental Coverage MCP run
 `f5d16417-a1d5-4947-8c38-0631cf01388b` passed in 75,327 ms at exact
 implementation commit `c69c882cfe45d6a1e534e70ebc5786d687908c15` and ingested
 snapshot `e5252c8c-b8b0-4584-82a8-891dddef1dca` against explicit baseline
