@@ -673,8 +673,8 @@ become more specific, so it is not a substitute for `ImageErrorKind`.
 
 ## Correctness evidence
 
-The generated matrix in this tree contains 1,525 total rows: 1,128 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,123 decode rows and
+The generated matrix in this tree contains 1,526 total rows: 1,129 decode /
+inspect / verify rows and 397 encode rows. Of those, 1,124 decode rows and
 365 encode rows are active; 5 AVIF decode rows and all 32 AVIF encode rows
 are explicit planned pure-Rust gaps. Expected errors that remain active are
 fixture outcomes, and every decode-error class is catalogued in the generated,
@@ -694,15 +694,18 @@ The current accepted Coverage MCP snapshot is recorded in
 branch, function, and region counts. Coverage proves execution under the
 retained suite; it does not prove complete format support or security.
 
-The newest bounded AVIF incremental run
-`ec9eeafa-f383-40f0-a5fb-d938e19de70f` passed in 65,013 ms at exact
-implementation commit `bcb6fa5f205d987434f579c71853a3f3252e0c77` and ingested
-snapshot `0e194d9f-dfa5-4746-b1af-9b6316281d48` against baseline
-`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only
-`decode:avif:coverage_h16x4_tx8x4_split_01`; the additive review adds 686
-covered line identities, no new branch/function/region identities, and no
-regressions. The selected subset is bounded evidence, not a replacement for
-the complete release measurement.
+The newest bounded AVIF incremental reconstruction run
+`44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms at exact
+implementation commit `72759602317c50016a6bf38fc80ee06bb1de9afe` and ingested
+snapshot `5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only the new
+`coverage_h16x4_filter_intra_tx8x4_split_01.avif` fixture; the additive review
+reports +8 covered lines, +7 branches, +0 functions, +281 regions, and no
+reported regressions. The selected subset is bounded evidence, not a
+replacement for the complete release measurement. The matching selected
+matrix-row run `a740718c-1912-4280-8cff-4969d1acf19e` passed in 30,162 ms and
+reports +8 lines, +8 branches, +0 functions, +281 regions, and no reported
+regressions against the same baseline.
 
 The oracle identity, regeneration workflow, exact comparison contract, test
 tiers, current run identifiers, and troubleshooting are in
