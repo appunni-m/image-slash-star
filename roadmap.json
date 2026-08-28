@@ -2262,9 +2262,9 @@
           }
         },
         "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, and split-transform classes recorded in bounded_witnesses, including the bounded origin and following Horizontal16x8 DCT_DCT classes with exact partition, entropy, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and the existing complete 4:2:0 canvas walker to publish the left leaf before reconstructing the following leaf; unproven rectangular geometries/modes retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain open.",
-        "latest_witness": "The latest bounded proof is coverage_square8_luma_diagonal67_vertical_01.avif: an 8x16 8-bit 4:2:0 clipped 16x16 split root with top and following Square8 leaves. The following bottom leaf uses luma mode 8 Diagonal67 at angle symbol 3/resolved 67 degrees, unsplit TX8x8 DCT_DCT with EOB 2, and skipped TX4x4 U/V; safe Rust matches the 67-operation pinned dav1d trace, exact partition, Y/U/V planes, and Pillow RGB8 output.",
+        "latest_witness": "The latest bounded proof is coverage_square8_luma_diagonal67_vertical_01.avif: an 8x16 8-bit 4:2:0 clipped 16x16 split root with top and following Square8 leaves. The following bottom leaf uses luma mode 8 Diagonal67 at angle symbol 3/resolved 67 degrees, unsplit TX8x8 DCT_DCT with EOB 2 and decoded dequantized AC coefficient dq[1] = -77, and skipped TX4x4 U/V; safe Rust matches the 67-operation pinned dav1d trace, exact partition, Y/U/V planes, and Pillow RGB8 output.",
         "latest_slice": "The latest AVF-STILL-001 slice is the following-vertical Square8 luma Diagonal67 class. Its no-left/top-only edge preparation is admitted only for the proven zero-delta 67-degree unsplit DCT-DCT case; transform-split, nonzero-delta, alternate-transform, and other availability contexts remain on their prior or unsupported paths.",
-        "latest_evidence_addition": "The promoted coverage_square8_luma_diagonal67_vertical_01.avif fixture has fixture SHA-256 3bbcb1feb155e38a237e93680f88bc9825cac7300386a8817318b152578364fe, encoded-item SHA-256 3912489d6f3ac34c30345fa0ed52b27d7cdebe120a47767ee406f805bf6c2b21, Pillow RGB SHA-256 1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0, decoded Y/U/V SHA-256 values fc031c4f9e0656a6d88087ba047d41a1b4121184d5257c026b8da10e6bcb3cd3, bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and trace SHA-256 decc9a1bc632f3f00d5dac0da1c035c07f74999f98aa6516f79e996e1f29de2f. The 100-candidate/10-family report tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_campaign_01.json has SHA-256 f1cfde41757a43de1c2b09c6e4ce76069724ee6e1475b450c9debcd089d648ef; it qualified 8, promoted D67V-F06-N01 (seed 12051), and never invoked repository Rust. Managed Coverage MCP run f5d16417-a1d5-4947-8c38-0631cf01388b passed in 75,327 ms at exact implementation commit c69c882cfe45d6a1e534e70ebc5786d687908c15 and ingested snapshot e5252c8c-b8b0-4584-82a8-891dddef1dca against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. Its additive selected-subset review reports +658/+17/+1/+5,289 covered line/branch/function/region identities, denominator changes +3,664/+388/+41/+10,273, 7,381 newly covered line identities, 39,379 unobserved baseline observations, and zero regressions; merge is conservative and named-test attribution unavailable.",
+        "latest_evidence_addition": "The promoted coverage_square8_luma_diagonal67_vertical_01.avif fixture has fixture SHA-256 3bbcb1feb155e38a237e93680f88bc9825cac7300386a8817318b152578364fe, encoded-item SHA-256 3912489d6f3ac34c30345fa0ed52b27d7cdebe120a47767ee406f805bf6c2b21, Pillow RGB SHA-256 1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0, decoded Y/U/V SHA-256 values fc031c4f9e0656a6d88087ba047d41a1b4121184d5257c026b8da10e6bcb3cd3, bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6, and trace SHA-256 decc9a1bc632f3f00d5dac0da1c035c07f74999f98aa6516f79e996e1f29de2f. The corrected 100-candidate/10-family report tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_campaign_01.json has SHA-256 03f31a3a96d208daa431d5759441f61cc4fd876cc59d0018b1c68277238ec613; it qualified 8, promoted D67V-F06-N01 (seed 12051), and proves the promoted bottom block has a nonzero dequantized AC coefficient at dq[1] = -77; repository Rust was not invoked. Managed Coverage MCP run f5d16417-a1d5-4947-8c38-0631cf01388b passed in 75,327 ms at exact implementation commit c69c882cfe45d6a1e534e70ebc5786d687908c15 and ingested snapshot e5252c8c-b8b0-4584-82a8-891dddef1dca against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. Its additive selected-subset review reports +658/+17/+1/+5,289 covered line/branch/function/region identities, denominator changes +3,664/+388/+41/+10,273, 7,381 newly covered line identities, 39,379 unobserved baseline observations, and zero regressions; merge is conservative and named-test attribution unavailable.",
         "current_slice": "The current AVF-STILL-001 slice proves one following-vertical 8x16 8-bit 4:2:0 Square8 luma Diagonal67 mode-8 zero-delta unsplit-DCT-DCT class. It uses the reconstructed top edge with semantic no-left/top-only availability and keeps broader Diagonal67, partition, transform, depth, optional-tool, sequence, encoding, and four-metric coverage work open.",
         "current_slice_update": {
           "target": "following vertical Square8 chroma Diagonal67 mode 8 with ADST-DCT TX4x4 U/V",
@@ -2305,7 +2305,7 @@
           ],
           "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
           "campaign_report": "tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_campaign_01.json",
-          "campaign_report_sha256": "f1cfde41757a43de1c2b09c6e4ce76069724ee6e1475b450c9debcd089d648ef",
+          "campaign_report_sha256": "03f31a3a96d208daa431d5759441f61cc4fd876cc59d0018b1c68277238ec613",
           "campaign": {
             "candidate_count": 100,
             "family_count": 10,
@@ -2324,7 +2324,7 @@
               "D67V-F06-N09"
             ],
             "rejection_counts": {
-              "bottom_luma_angle_symbol_zero_delta_67": 59,
+              "bottom_luma_angle_symbol": 59,
               "bottom_luma_is_unsplit_tx8x8_with_ac": 91,
               "bottom_luma_mode_diagonal67": 0,
               "decoded_yuv_has_expected_size": 0,
@@ -2362,7 +2362,13 @@
               "v": "bd75a82b9957d6d043076dea52262635042693f1fe23bcadadaecc908e1e5cc6"
             },
             "decoded_yuv_sha256": "634af16d6b1cdcd0134d6e7b9c4311f1db4ca0b6dfd35425cfd7f22e72495bf8",
-            "trace_sha256": "decc9a1bc632f3f00d5dac0da1c035c07f74999f98aa6516f79e996e1f29de2f"
+            "trace_sha256": "decc9a1bc632f3f00d5dac0da1c035c07f74999f98aa6516f79e996e1f29de2f",
+            "bottom_luma_dequantized_ac": [
+              {
+                "scan_index": 1,
+                "value": -77
+              }
+            ]
           },
           "syntax_contract": {
             "visible_size": [
@@ -2374,7 +2380,7 @@
             "root": "poc=0,x=0,y=0,level=3,context=0,partition=3",
             "leaves": "top and following bottom Square8 leaves at x=0,y=0 and x=0,y=8",
             "origin_luma": "DC, unsplit TX8x8 DCT-DCT, EOB 6",
-            "following_luma": "Diagonal67 mode 8, angle symbol 3, signed delta 0, resolved angle 67, unsplit TX8x8 DCT-DCT, EOB 2",
+            "following_luma": "Diagonal67 mode 8, angle symbol 3, signed delta 0, resolved angle 67, unsplit TX8x8 DCT-DCT, EOB 2, decoded dq[1] = -77 AC coefficient",
             "chroma": "origin and following U/V are DC-skipped TX4x4",
             "availability": "have_top=true, have_left=false, have_topright=false; origin bottom luma edge [81,85,92,98,103,109,116,120]"
           },
@@ -2430,6 +2436,47 @@
           },
           "focused_verification": "The selected public matrix row passes 1/1; the independent pinned-dav1d reconstruction selector passes 1/1; the complete active AVIF matrix passes 304/304 with 0 failures and 5 explicit planned skips; cargo fmt --check, locked all-feature check, strict workspace Clippy, and warnings-as-errors rustdoc pass.",
           "scope": "This closes only the bounded following-vertical 8x16 4:2:0 Square8 luma Diagonal67 mode-8 zero-delta unsplit-DCT-DCT class. Nonzero angle deltas, split/depth/alternate transforms, left or top-right availability variants, top-row/no-top variants, chroma Diagonal67, broader AV1/AVIF still coverage, sequences, encoding, and the four-metric 100% gate remain open."
+        },
+        "current_slice_update_2026_08_28_luma_diagonal67_symbol2_search": {
+          "status": "completed_bounded_no_hit",
+          "target": "following vertical Square8 luma Diagonal67 mode 8 at angle symbol 2/resolved 64 degrees, with a true Zone-1 top edge, no left context, unsplit TX8x8 DCT-DCT luma, and skipped chroma",
+          "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+          "campaign_report": "tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_angle_symbol2_campaign_01.json",
+          "campaign_report_sha256": "607c7fcd591b7298b9eeafe28cd2724468d2fc627dab55fa471748eb295e242f",
+          "campaign": {
+            "candidate_count": 100,
+            "family_count": 10,
+            "candidates_per_family": 10,
+            "target_angle_symbol": 2,
+            "resolved_angle_degrees": 64,
+            "qualified": 0,
+            "emitted_target_angle_cases": 37,
+            "emitted_target_angle_unsplit_tx8x8_cases": 26,
+            "emitted_target_angle_nonzero_ac_cases": 0,
+            "rejection_counts": {
+              "bottom_luma_angle_symbol": 63,
+              "bottom_luma_is_unsplit_tx8x8_with_ac": 91,
+              "bottom_luma_mode_diagonal67": 0,
+              "decoded_yuv_has_expected_size": 0,
+              "double_color_item_equal": 0,
+              "double_encode_equal": 0,
+              "double_pillow_rgb_equal": 0,
+              "double_trace_equal": 0,
+              "eight_bit_420_frame": 0,
+              "exact_vertical_split_shape": 0,
+              "no_unexpected_angle_or_tool_syntax": 0,
+              "origin_and_bottom_chroma_are_dc_skipped": 0,
+              "origin_bottom_edge_is_not_midpoint": 0,
+              "origin_bottom_edge_varies": 0,
+              "origin_luma_is_unsplit_tx8x8": 0,
+              "origin_luma_mode_dc": 0,
+              "two_visible_square8_groups": 0
+            },
+            "repository_rust_invoked": false
+          },
+          "oracle": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 with deterministic double encoding and independent pinned dav1d 1.5.3 at b546257f770768b2c88258c533da38b91a06f737; qualification requires a 64-entry dequantized luma matrix with a nonzero value outside DC",
+          "decision": "Bounded no-hit evidence only. The maintained corpus emitted 37 angle-symbol-2 cases and 26 unsplit TX8x8 cases, but none had a nonzero decoded AC coefficient; this does not prove the nonzero-delta class unreachable and does not justify a decoder change. Keep the class open and use a separately named split-TX4x4 symbol-3 campaign as the next fallback if it is dependency-ready.",
+          "scope": "This search does not close AVF-STILL-001, nonzero angle deltas, alternate transforms, other edge availability, broader AV1/AVIF still coverage, sequences, encoding, or the four-metric 100% coverage gate."
         },
         "search_evidence": {
           "target": "right-hand Square8, 16x8 8-bit 4:2:0 horizontal split, coded UV mode 8 (Diagonal67), ADST-DCT U/V, split TX4x4 luma, top unavailable and left available",

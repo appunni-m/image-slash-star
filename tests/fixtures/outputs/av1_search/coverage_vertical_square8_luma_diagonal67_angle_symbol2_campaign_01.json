@@ -253,7 +253,7 @@
       },
       "seed": 12000,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -464,7 +464,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -485,6 +485,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -498,7 +499,7 @@
       },
       "seed": 12001,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -794,7 +795,7 @@
       },
       "seed": 12002,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -1055,7 +1056,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -1076,7 +1077,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -1090,7 +1090,7 @@
       },
       "seed": 12003,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -1351,7 +1351,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -1372,7 +1372,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -1386,7 +1385,7 @@
       },
       "seed": 12004,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -1647,7 +1646,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -1668,7 +1667,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -1682,7 +1680,7 @@
       },
       "seed": 12005,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -1893,7 +1891,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -1914,7 +1912,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -1928,7 +1925,7 @@
       },
       "seed": 12006,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -2224,7 +2221,7 @@
       },
       "seed": 12007,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -2435,7 +2432,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -2456,6 +2453,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -2469,7 +2467,7 @@
       },
       "seed": 12008,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -2730,7 +2728,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -2751,7 +2749,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -2765,7 +2762,7 @@
       },
       "seed": 12009,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -2961,7 +2958,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -2982,6 +2979,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -2995,7 +2993,7 @@
       },
       "seed": 12010,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -3256,7 +3254,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -3277,7 +3275,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -3291,7 +3288,7 @@
       },
       "seed": 12011,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -3502,7 +3499,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -3523,6 +3520,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -3536,7 +3534,7 @@
       },
       "seed": 12012,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -3747,7 +3745,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -3768,6 +3766,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -3781,7 +3780,7 @@
       },
       "seed": 12013,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -3992,7 +3991,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -4013,6 +4012,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -4026,7 +4026,7 @@
       },
       "seed": 12014,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -4287,7 +4287,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -4308,7 +4308,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -4322,7 +4321,7 @@
       },
       "seed": 12015,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -4583,7 +4582,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -4604,7 +4603,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -4618,7 +4616,7 @@
       },
       "seed": 12016,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -4829,7 +4827,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -4850,6 +4848,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -4863,7 +4862,7 @@
       },
       "seed": 12017,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -5124,7 +5123,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -5145,7 +5144,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -5159,7 +5157,7 @@
       },
       "seed": 12018,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -5370,7 +5368,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -5391,6 +5389,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -5404,7 +5403,7 @@
       },
       "seed": 12019,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -5650,7 +5649,7 @@
       },
       "seed": 12020,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -5896,7 +5895,7 @@
       },
       "seed": 12021,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -6107,7 +6106,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -6128,6 +6127,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -6141,7 +6141,7 @@
       },
       "seed": 12022,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -6352,7 +6352,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -6373,7 +6373,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -6387,7 +6386,7 @@
       },
       "seed": 12023,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -6598,7 +6597,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -6619,6 +6618,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -6632,7 +6632,7 @@
       },
       "seed": 12024,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -6843,7 +6843,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -6864,7 +6864,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -6878,7 +6877,7 @@
       },
       "seed": 12025,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -7089,7 +7088,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -7110,6 +7109,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -7123,7 +7123,7 @@
       },
       "seed": 12026,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -7369,7 +7369,7 @@
       },
       "seed": 12027,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -7580,7 +7580,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -7601,6 +7601,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -7614,7 +7615,7 @@
       },
       "seed": 12028,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -7860,7 +7861,7 @@
       },
       "seed": 12029,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -8156,7 +8157,7 @@
       },
       "seed": 12030,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -8367,7 +8368,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -8388,6 +8389,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -8401,7 +8403,7 @@
       },
       "seed": 12031,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -8662,7 +8664,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -8683,7 +8685,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -8697,7 +8698,7 @@
       },
       "seed": 12032,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -8993,7 +8994,7 @@
       },
       "seed": 12033,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -9254,7 +9255,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -9275,7 +9276,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -9289,7 +9289,7 @@
       },
       "seed": 12034,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -9585,7 +9585,7 @@
       },
       "seed": 12035,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -9781,7 +9781,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -9802,6 +9802,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -9815,7 +9816,7 @@
       },
       "seed": 12036,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -10111,7 +10112,7 @@
       },
       "seed": 12037,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -10322,7 +10323,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -10343,6 +10344,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -10356,7 +10358,7 @@
       },
       "seed": 12038,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -10652,7 +10654,7 @@
       },
       "seed": 12039,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -10948,7 +10950,7 @@
       },
       "seed": 12040,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -11159,7 +11161,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -11180,6 +11182,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -11193,7 +11196,7 @@
       },
       "seed": 12041,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -11489,7 +11492,7 @@
       },
       "seed": 12042,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -11750,7 +11753,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -11771,7 +11774,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -11785,7 +11787,7 @@
       },
       "seed": 12043,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -12046,7 +12048,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -12067,7 +12069,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -12081,7 +12082,7 @@
       },
       "seed": 12044,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -12342,7 +12343,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -12363,7 +12364,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -12377,7 +12377,7 @@
       },
       "seed": 12045,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -12588,7 +12588,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -12609,7 +12609,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -12623,7 +12622,7 @@
       },
       "seed": 12046,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -12919,7 +12918,7 @@
       },
       "seed": 12047,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -13130,7 +13129,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -13151,6 +13150,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -13164,7 +13164,7 @@
       },
       "seed": 12048,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -13425,7 +13425,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -13446,7 +13446,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -13460,7 +13459,7 @@
       },
       "seed": 12049,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -13688,7 +13687,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -13709,7 +13708,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -13723,7 +13721,7 @@
       },
       "seed": 12050,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -13984,7 +13982,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -14002,9 +14000,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -14016,7 +14016,7 @@
       },
       "seed": 12051,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -14311,7 +14311,7 @@
       },
       "seed": 12052,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -14572,7 +14572,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -14590,9 +14590,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -14604,7 +14606,7 @@
       },
       "seed": 12053,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -14865,7 +14867,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -14883,9 +14885,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -14897,7 +14901,7 @@
       },
       "seed": 12054,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -15158,7 +15162,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -15176,9 +15180,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -15190,7 +15196,7 @@
       },
       "seed": 12055,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -15451,7 +15457,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -15469,9 +15475,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -15483,7 +15491,7 @@
       },
       "seed": 12056,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -15744,7 +15752,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -15762,9 +15770,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -15776,7 +15786,7 @@
       },
       "seed": 12057,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -16037,7 +16047,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -16055,9 +16065,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -16069,7 +16081,7 @@
       },
       "seed": 12058,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -16330,7 +16342,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": true,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -16348,9 +16360,11 @@
         "origin_luma_mode_dc": true,
         "two_visible_square8_groups": true
       },
-      "qualifies": true,
+      "qualifies": false,
       "quality": 76,
-      "rejection_reasons": [],
+      "rejection_reasons": [
+        "bottom_luma_angle_symbol"
+      ],
       "root_partition": {
         "context": 0,
         "level": 3,
@@ -16362,7 +16376,7 @@
       },
       "seed": 12059,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -16573,7 +16587,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -16594,7 +16608,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -16608,7 +16621,7 @@
       },
       "seed": 12060,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -16819,7 +16832,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -16840,6 +16853,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -16853,7 +16867,7 @@
       },
       "seed": 12061,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -17064,7 +17078,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -17085,6 +17099,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -17098,7 +17113,7 @@
       },
       "seed": 12062,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -17309,7 +17324,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -17330,6 +17345,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -17343,7 +17359,7 @@
       },
       "seed": 12063,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -17554,7 +17570,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -17575,7 +17591,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -17589,7 +17604,7 @@
       },
       "seed": 12064,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -17800,7 +17815,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -17821,6 +17836,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -17834,7 +17850,7 @@
       },
       "seed": 12065,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -18045,7 +18061,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -18066,6 +18082,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -18079,7 +18096,7 @@
       },
       "seed": 12066,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -18290,7 +18307,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -18311,6 +18328,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -18324,7 +18342,7 @@
       },
       "seed": 12067,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -18535,7 +18553,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -18556,7 +18574,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -18570,7 +18587,7 @@
       },
       "seed": 12068,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -18781,7 +18798,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -18802,6 +18819,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -18815,7 +18833,7 @@
       },
       "seed": 12069,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -19076,7 +19094,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -19097,7 +19115,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -19111,7 +19128,7 @@
       },
       "seed": 12070,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -19322,7 +19339,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -19343,6 +19360,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -19356,7 +19374,7 @@
       },
       "seed": 12071,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -19617,7 +19635,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -19638,7 +19656,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -19652,7 +19669,7 @@
       },
       "seed": 12072,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -19863,7 +19880,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -19884,6 +19901,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -19897,7 +19915,7 @@
       },
       "seed": 12073,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -20158,7 +20176,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -20179,7 +20197,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -20193,7 +20210,7 @@
       },
       "seed": 12074,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -20404,7 +20421,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -20425,6 +20442,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -20438,7 +20456,7 @@
       },
       "seed": 12075,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -20699,7 +20717,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -20720,7 +20738,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -20734,7 +20751,7 @@
       },
       "seed": 12076,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -20995,7 +21012,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -21016,7 +21033,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -21030,7 +21046,7 @@
       },
       "seed": 12077,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -21291,7 +21307,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -21312,7 +21328,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -21326,7 +21341,7 @@
       },
       "seed": 12078,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -21587,7 +21602,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -21608,7 +21623,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -21622,7 +21636,7 @@
       },
       "seed": 12079,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -21833,7 +21847,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -21854,6 +21868,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -21867,7 +21882,7 @@
       },
       "seed": 12080,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -22078,7 +22093,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -22099,7 +22114,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -22113,7 +22127,7 @@
       },
       "seed": 12081,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -22324,7 +22338,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -22345,6 +22359,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -22358,7 +22373,7 @@
       },
       "seed": 12082,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -22569,7 +22584,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -22590,7 +22605,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -22604,7 +22618,7 @@
       },
       "seed": 12083,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -22815,7 +22829,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -22836,6 +22850,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -22849,7 +22864,7 @@
       },
       "seed": 12084,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -23045,7 +23060,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -23066,7 +23081,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -23080,7 +23094,7 @@
       },
       "seed": 12085,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -23376,7 +23390,7 @@
       },
       "seed": 12086,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -23572,7 +23586,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -23593,7 +23607,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -23607,7 +23620,7 @@
       },
       "seed": 12087,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -23868,7 +23881,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -23889,7 +23902,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -23903,7 +23915,7 @@
       },
       "seed": 12088,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -24114,7 +24126,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -24135,7 +24147,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -24149,7 +24160,7 @@
       },
       "seed": 12089,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -24445,7 +24456,7 @@
       },
       "seed": 12090,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -24656,7 +24667,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -24677,6 +24688,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -24690,7 +24702,7 @@
       },
       "seed": 12091,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -24951,7 +24963,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -24972,7 +24984,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -24986,7 +24997,7 @@
       },
       "seed": 12092,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -25282,7 +25293,7 @@
       },
       "seed": 12093,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -25543,7 +25554,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": false,
+        "bottom_luma_angle_symbol": true,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -25564,7 +25575,6 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
-        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -25578,7 +25588,7 @@
       },
       "seed": 12094,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -25874,7 +25884,7 @@
       },
       "seed": 12095,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -26070,7 +26080,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -26091,6 +26101,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -26104,7 +26115,7 @@
       },
       "seed": 12096,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -26400,7 +26411,7 @@
       },
       "seed": 12097,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -26611,7 +26622,7 @@
         "width": 8
       },
       "predicates": {
-        "bottom_luma_angle_symbol": true,
+        "bottom_luma_angle_symbol": false,
         "bottom_luma_is_unsplit_tx8x8_with_ac": false,
         "bottom_luma_mode_diagonal67": true,
         "decoded_yuv_has_expected_size": true,
@@ -26632,6 +26643,7 @@
       "qualifies": false,
       "quality": 76,
       "rejection_reasons": [
+        "bottom_luma_angle_symbol",
         "bottom_luma_is_unsplit_tx8x8_with_ac"
       ],
       "root_partition": {
@@ -26645,7 +26657,7 @@
       },
       "seed": 12098,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -26941,7 +26953,7 @@
       },
       "seed": 12099,
       "speed": 0,
-      "target": "vertical_following_luma_diagonal67_symbol_3",
+      "target": "vertical_following_luma_diagonal67_symbol_2",
       "top_chroma_payloads": [
         {
           "cbx4": 0,
@@ -26987,7 +26999,7 @@
   ],
   "counts": {
     "by_rejection_reason": {
-      "bottom_luma_angle_symbol": 59,
+      "bottom_luma_angle_symbol": 63,
       "bottom_luma_is_unsplit_tx8x8_with_ac": 91,
       "bottom_luma_mode_diagonal67": 0,
       "decoded_yuv_has_expected_size": 0,
@@ -27005,7 +27017,7 @@
       "origin_luma_mode_dc": 0,
       "two_visible_square8_groups": 0
     },
-    "qualified": 8
+    "qualified": 0
   },
   "encoding": {
     "advanced": {
@@ -27042,17 +27054,8 @@
     "libavif": "1.4.1",
     "pillow": "12.2.0"
   },
-  "promoted_candidate": "D67V-F06-N01",
-  "qualified_candidates": [
-    "D67V-F06-N01",
-    "D67V-F06-N03",
-    "D67V-F06-N04",
-    "D67V-F06-N05",
-    "D67V-F06-N06",
-    "D67V-F06-N07",
-    "D67V-F06-N08",
-    "D67V-F06-N09"
-  ],
+  "promoted_candidate": null,
+  "qualified_candidates": [],
   "search": {
     "candidate_count": 100,
     "families": [
@@ -27069,7 +27072,7 @@
     ],
     "repository_rust_invoked": false,
     "seed_formula": "12000 + 10*family_index + candidate_index",
-    "target": "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom Square8 leaves; bottom following luma mode 8 Diagonal67 at angle symbol 3 (resolved 67 degrees), genuine Zone-1 top edge, unsplit TX8x8 luma with AC, and skipped chroma",
-    "target_id": "luma_diagonal67_angle_symbol_3"
+    "target": "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom Square8 leaves; bottom following luma mode 8 Diagonal67 at angle symbol 2 (resolved 64 degrees), genuine Zone-1 top edge, unsplit TX8x8 luma with AC, and skipped chroma",
+    "target_id": "luma_diagonal67_angle_symbol_2"
   }
 }

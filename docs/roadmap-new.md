@@ -536,12 +536,13 @@ the corresponding status is recorded in `roadmap.json`:
   `coverage_square8_luma_diagonal67_vertical_01.avif`: an 8×16 visible 8-bit
   4:2:0 frame with a clipped 16×16 split root, two vertically stacked Square8
   leaves, and a bottom luma mode-8/angle-symbol-3 (resolved 67°) unsplit
-  TX8×8 DCT-DCT block with EOB 2 and skipped TX4×4 U/V. Its input-only
+  TX8×8 DCT-DCT block with EOB 2, a decoded dequantized AC coefficient
+  `dq[1] = -77`, and skipped TX4×4 U/V. Its input-only
   100-candidate/10-family campaign qualified 8 and promoted `D67V-F06-N01`
   (seed 12051), with `repository_rust_invoked=false`; the durable report is
   `tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_campaign_01.json`
   (SHA-256
-  `f1cfde41757a43de1c2b09c6e4ce76069724ee6e1475b450c9debcd089d648ef`).
+  `03f31a3a96d208daa431d5759441f61cc4fd876cc59d0018b1c68277238ec613`).
   The pinned trace has 67 entropy operations and partition ranges
   `46608/54426/37798`; safe Rust matches exact partition, trace, Y/U/V planes,
   and Pillow RGB bytes. The production correction is gated by semantic
@@ -563,6 +564,13 @@ the corresponding status is recorded in `roadmap.json`:
   unobserved baseline observations, and zero regressions. The merge is
   conservative and named-test attribution is unavailable; this is not a
   complete four-metric release measurement.
+  The follow-up symbol-2/64° campaign is retained as bounded no-hit evidence
+  in `tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_angle_symbol2_campaign_01.json`
+  (SHA-256
+  `607c7fcd591b7298b9eeafe28cd2724468d2fc627dab55fa471748eb295e242f`):
+  100 candidates across 10 families emitted 37 symbol-2 cases and 26 unsplit
+  TX8×8 cases, but zero had a nonzero decoded AC coefficient. It does not
+  prove the nonzero-delta class unreachable and causes no decoder admission.
 - The newest bounded following-leaf proof is
   `coverage_vertical8x16_chroma_horizontal_01.avif`, a deterministic 16x16
   8-bit 4:2:0 vertical split with origin UV mode 0 (DC) and following UV mode

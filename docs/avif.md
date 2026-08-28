@@ -399,7 +399,8 @@ The next reachable luma Diagonal67 class is now also recorded by
 `coverage_square8_luma_diagonal67_vertical_01.avif`. It is an 8×16 visible
 8-bit 4:2:0 frame with a clipped 16×16 split root and two vertically stacked
 Square8 leaves; the bottom leaf has luma mode 8/angle symbol 3 (zero delta,
-resolved 67°), an unsplit TX8×8 DCT-DCT luma block with EOB 2, and skipped
+resolved 67°), an unsplit TX8×8 DCT-DCT luma block with EOB 2 and decoded
+dequantized AC coefficient `dq[1] = -77`, and skipped
 TX4×4 U/V. The input-only campaign evaluated 100 candidates across 10
 families, qualified 8, and promoted `D67V-F06-N01` (seed 12051); repository
 Rust was not invoked. The pinned trace has 67 entropy operations and partition
@@ -414,7 +415,7 @@ trace SHA-256 values are
 The durable report is
 `tests/fixtures/outputs/av1_search/coverage_vertical_square8_luma_diagonal67_campaign_01.json`
 (SHA-256
-`f1cfde41757a43de1c2b09c6e4ce76069724ee6e1475b450c9debcd089d648ef`).
+`03f31a3a96d208daa431d5759441f61cc4fd876cc59d0018b1c68277238ec613`).
 Safe Rust uses the actual reconstructed top edge, `top[0]` as top-left, and
 repeated `top[7]` for the unavailable top-right extension only for this
 semantic no-left/zero-delta/unsplit-DCT-DCT case; transform-split and other

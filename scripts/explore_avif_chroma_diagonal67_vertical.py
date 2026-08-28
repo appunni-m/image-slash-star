@@ -337,6 +337,21 @@ def parse_group(group: list[str]) -> dict[str, object]:
     ]
     luma_payloads = []
     chroma_payloads = []
+    dq_matrices = []
+    for index, line in enumerate(group):
+        if line != "dq":
+            continue
+        matrix = []
+        for row in group[index + 1 :]:
+            values = row.split()
+            if not values:
+                break
+            try:
+                matrix.extend(int(value) for value in values)
+            except ValueError:
+                break
+        if matrix:
+            dq_matrices.append(matrix)
     for line in group:
         if match := LUMA_PATTERN.match(line):
             luma_payloads.append(
@@ -354,6 +369,7 @@ def parse_group(group: list[str]) -> dict[str, object]:
         "uv_angle_symbols": uv_angle_symbols,
         "luma_payloads": luma_payloads,
         "chroma_payloads": chroma_payloads,
+        "dq_matrices": dq_matrices,
     }
 
 
@@ -377,8 +393,9 @@ def classify_luma(
     groups: list[list[str]],
     yuv: bytes,
     portable_color: dict[str, object],
+    angle_symbol: int,
 ) -> dict[str, object]:
-    """Apply exact predicates for the vertical-following luma D67 class."""
+    """Apply exact predicates for one vertical-following luma D67 angle."""
 
     parsed = [parse_group(group) for group in groups]
     shape = [
@@ -397,6 +414,7 @@ def classify_luma(
     uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
     uv_angles = [symbol for group in parsed for symbol in group["uv_angle_symbols"]]
     y_payloads = [group["luma_payloads"] for group in parsed]
+    dq_matrices = [group["dq_matrices"] for group in parsed]
     chroma_payloads = [group["chroma_payloads"] for group in parsed]
     all_lines = [line for group in groups for line in group]
     forbidden_prefixes = (
@@ -423,6 +441,9 @@ def classify_luma(
             and payloads[0]["txtp"] == 0
             and (payloads[0]["eob"] >= 1 if with_ac else payloads[0]["eob"] >= 0)
         )
+
+    def has_nonzero_ac(matrices: list[list[int]]) -> bool:
+        return any(value != 0 for matrix in matrices for value in matrix[1:])
 
     def is_skipped_chroma(payloads: list[dict[str, int]], cbx4: int) -> bool:
         return (
@@ -454,12 +475,17 @@ def classify_luma(
         "two_visible_square8_groups": len(groups) == 2,
         "origin_luma_mode_dc": len(y_modes) == 2 and y_modes[0] == 0,
         "bottom_luma_mode_diagonal67": y_modes[1:2] == [8],
-        "bottom_luma_angle_symbol_zero_delta_67": y_angles == [3],
+        "bottom_luma_angle_symbol": y_angles == [angle_symbol],
         "origin_luma_is_unsplit_tx8x8": (
             len(y_payloads) == 2 and is_tx8x8(y_payloads[0], False)
         ),
         "bottom_luma_is_unsplit_tx8x8_with_ac": (
-            len(y_payloads) == 2 and is_tx8x8(y_payloads[1], True)
+            len(y_payloads) == 2
+            and is_tx8x8(y_payloads[1], True)
+            and len(dq_matrices) == 2
+            and len(dq_matrices[1]) == 1
+            and len(dq_matrices[1][0]) == 64
+            and has_nonzero_ac(dq_matrices[1])
         ),
         "origin_and_bottom_chroma_are_dc_skipped": (
             len(chroma_payloads) == 2
@@ -478,7 +504,7 @@ def classify_luma(
         ),
     }
     return {
-        "target": "vertical_following_luma_diagonal67",
+        "target": f"vertical_following_luma_diagonal67_symbol_{angle_symbol}",
         "effective_predictor": "z1_top_available_left_unavailable",
         "root_partition": blocks[0] if blocks else None,
         "partition_shape": shape,
@@ -492,6 +518,11 @@ def classify_luma(
         "origin_bottom_luma_edge": top_luma_edge,
         "top_luma_payloads": y_payloads[0] if y_payloads else [],
         "bottom_luma_payloads": y_payloads[1] if len(y_payloads) == 2 else [],
+        "bottom_luma_dq_matrix": (
+            dq_matrices[1][0]
+            if len(dq_matrices) == 2 and len(dq_matrices[1]) == 1
+            else []
+        ),
         "top_chroma_payloads": chroma_payloads[0] if chroma_payloads else [],
         "bottom_chroma_payloads": chroma_payloads[1] if len(chroma_payloads) == 2 else [],
         "predicates": predicates,
@@ -506,11 +537,12 @@ def classify(
     yuv: bytes,
     portable_color: dict[str, object],
     target: str,
+    angle_symbol: int,
 ) -> dict[str, object]:
     """Apply exact predicates for the vertical-following mode-8 class."""
 
     if target == "luma_diagonal67":
-        return classify_luma(blocks, groups, yuv, portable_color)
+        return classify_luma(blocks, groups, yuv, portable_color, angle_symbol)
 
     parsed = [parse_group(group) for group in groups]
     shape = [
@@ -675,6 +707,7 @@ def decode_candidate(
     candidate: dict[str, object],
     retain_dir: Path | None,
     target: str,
+    angle_symbol: int,
 ) -> dict[str, object]:
     """Double-encode, double-trace, and classify one candidate."""
 
@@ -702,7 +735,9 @@ def decode_candidate(
         pillow_rgb_a = decoded.convert("RGB").tobytes()
     with Image.open(BytesIO(encoded_b)) as decoded:
         pillow_rgb_b = decoded.convert("RGB").tobytes()
-    classification = classify(blocks_a, groups_a, yuv_a, portable_color, target)
+    classification = classify(
+        blocks_a, groups_a, yuv_a, portable_color, target, angle_symbol
+    )
     classification["predicates"].update(
         {
             "double_encode_equal": encoded_a == encoded_b,
@@ -772,6 +807,13 @@ def main() -> None:
         choices=("chroma_diagonal67", "luma_diagonal67"),
         default="chroma_diagonal67",
     )
+    parser.add_argument(
+        "--luma-angle-symbol",
+        type=int,
+        choices=(2, 3, 4),
+        default=3,
+        help="D67 luma angle symbol to qualify (2=64 degrees, 3=67, 4=70)",
+    )
     args = parser.parse_args()
     if features.version("avif") != "1.4.1":
         raise RuntimeError(f"expected libavif 1.4.1, found {features.version('avif')}")
@@ -808,6 +850,7 @@ def main() -> None:
                 candidate,
                 args.retain_dir,
                 args.target,
+                args.luma_angle_symbol,
             )
             for candidate in candidates(args.target)
         ]
@@ -833,11 +876,16 @@ def main() -> None:
         "search": {
             "candidate_count": len(reports),
             "seed_formula": "12000 + 10*family_index + candidate_index",
-            "target_id": args.target,
+            "target_id": (
+                f"{args.target}_angle_symbol_{args.luma_angle_symbol}"
+                if args.target == "luma_diagonal67"
+                else args.target
+            ),
             "target": (
                 "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
                 "Square8 leaves; bottom following luma mode 8 Diagonal67 at "
-                "angle 67 degrees, genuine Zone-1 top edge, unsplit TX8x8 "
+                f"angle symbol {args.luma_angle_symbol} (resolved "
+                f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 top edge, unsplit TX8x8 "
                 "luma with AC, and skipped chroma"
                 if args.target == "luma_diagonal67"
                 else (
