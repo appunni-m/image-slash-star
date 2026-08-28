@@ -70,10 +70,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 310 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 311 AVIF decode rows and 32 encode
 rows:
 
-- 305 decode rows are active: portable still reconstruction and structural
+- 306 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 5 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and three sequence cases.
@@ -464,8 +464,34 @@ supported selected-subset evidence: additive deltas are +658 lines, +17
 branches, +1 function, and +5,289 regions; denominator deltas are
 +3,664/+388/+41/+10,273; 7,381 line identities were newly covered, 39,379
 baseline observations were not observed, and regressions are 0. Merge is
-conservative and named-test attribution is unavailable; this does not replace
-the complete four-metric release baseline.
+  conservative and named-test attribution is unavailable; this does not replace
+  the complete four-metric release baseline.
+
+The latest bounded angle-delta proof is
+`coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif`: an
+8×16 visible 8-bit 4:2:0 frame with a clipped 16×16 vertical split and
+following Square8 leaf. The bottom leaf uses luma mode 8 Diagonal67 at angle
+symbol 4 (signed delta 1, resolved 70°), four split TX4×4 DCT-DCT payloads
+with EOB values `4/-1/-1/-1`, one decoded dequantized AC at scan index 5 = 84,
+and skipped U/V. The input-only split campaign evaluated 100 candidates across
+10 families, qualified 5, and promoted `D67V-F05-N01` (seed 12041) without
+invoking repository Rust. The pinned dav1d trace has 78 entropy operations and
+partition ranges `46608/54426/34793`; exact fixture, item, planes, trace, and
+Pillow RGB hashes are recorded in `roadmap.json`. A separate 100-candidate
+unsplit symbol-4 campaign qualified zero cases, so it does not admit unsplit
+angle 70. Safe Rust matches the raw-edge predictor and final output after an
+exact top-only/no-left/no-extension, split-TX4×4, DCT-DCT, resolved-70 gate;
+the prior 67° gate remains separate. The selected reconstruction proof passes
+1/1 and the full active AVIF matrix passes 306/306 with 5 planned skips.
+Managed Coverage MCP run `9aec028b-b175-410b-bef9-3ad0ca87c070` passed in
+88,715 ms at implementation commit
+`f027d3366db0ed4b1fa085011561a733916acedc` and ingested snapshot
+`c82ba70d-f026-40c2-aaed-052c7ebb140c` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`; its supported selected-subset review
+reports +665/+17/+1/+5,289 covered line/branch/function/region identities,
+denominator changes +3,676/+414/+41/+10,301, 7,388 newly covered line
+identities, 39,326 unobserved baseline observations, and zero regressions.
+This is bounded evidence, not the complete four-metric release measurement.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
