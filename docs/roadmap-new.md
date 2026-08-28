@@ -721,7 +721,7 @@ the corresponding status is recorded in `roadmap.json`:
   only the origin Vertical8x16/mode-2 evidence class; broader mode-4 classes
   and broader AV1 still remain partial.
 
-- The newest bounded origin proof is
+- The preceding bounded origin proof is
   `coverage_vertical8x16_filter_intra_mode3_01.avif`: an 8x16 8-bit 4:2:0
   origin `Vertical8x16` leaf selecting `FILTER_PRED[13/3]`, one unsplit
   TX8x16 luma transform with EOB 78, and TX4x8 U/V transforms with EOB 6.
@@ -755,6 +755,21 @@ the corresponding status is recorded in `roadmap.json`:
   other modes,
   following-leaf contexts, transform grids, subsampling/depth/HDR/sequence
   cases, encoding, and the four-metric 100% coverage gate remain open.
+
+  Managed Coverage MCP ran this exact fixture selector against complete
+  baseline snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
+  `6b78c91c-d417-4ad0-af44-96d3623e3f64` passed in 32,449 ms at exact
+  implementation commit `520e38284a263a4e07b392bf02f4b6322e6a3e31` and
+  ingested snapshot `75d6b159-3727-4d5b-b7f4-a4252124a171`. It selected
+  exactly `coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif` and
+  passed 1/1 cases. The additive baseline-union review reports +8 covered
+  lines, +7 branches, +0 functions, and +281 regions; denominator changes are
+  +3,459 lines, +162 branches, +35 functions, and +9,984 regions. The
+  selected projection reports 385 newly covered line identities, with zero
+  reported regressions limited to this selected subset. The compact snapshot
+  projection retains metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db`;
+  the exact run record is authoritative for implementation provenance. This
+  is bounded incremental evidence, not a complete release measurement.
 
   Managed Coverage MCP ran the exact fixture selector against baseline
   snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
@@ -2777,7 +2792,7 @@ because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
 `tests/fixtures/coverage_matrix.json`.
 
-The current bounded origin proof is
+The preceding bounded origin proof is
 `coverage_vertical8x16_filter_intra_mode3_01.avif`: an 8x16 8-bit 4:2:0
 `Vertical8x16` leaf with `FILTER_PRED[13/3]`, unsplit TX8x16 luma EOB 78, and
 TX4x8 U/V EOB 6. A 100-candidate/10-family input-only campaign qualified 4
@@ -2800,14 +2815,23 @@ have EOB 0, so they prove geometry and zero residuals only. The input-only
 double-encoded candidate (`f03_color_ramp_08`, seed 309) without invoking
 repository Rust. The pinned 361-operation dav1d trace, exact partition,
 reconstructed Y/U/V planes, and independent Pillow RGB8 bytes match safe Rust;
-the production path uses a dedicated checked eight-child grid and dav1d-
-reconstructed Y/U/V planes, and independent Pillow RGB8 bytes match safe Rust;
 here transform-luma mode 0 names the residual transform/CDF context, not
 ordinary DC prediction—the predictor is `FILTER_PRED` mode 4. The production
 path uses a dedicated checked eight-child grid and dav1d-compatible child-local
 missing-edge propagation. This closes only the proven origin mode-4 grid class
 and does not close general filter-intra, AV1,
 `AVF-STILL-001`, or the four-metric 100% coverage gate.
+
+The managed Coverage MCP result for this exact single-fixture selector is run
+`6b78c91c-d417-4ad0-af44-96d3623e3f64`, snapshot
+`75d6b159-3727-4d5b-b7f4-a4252124a171`, at implementation commit
+`520e38284a263a4e07b392bf02f4b6322e6a3e31`, against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed 1/1 in 32,449 ms. Its
+additive baseline-union deltas are +8 lines, +7 branches, +0 functions, and
++281 regions, with denominator changes of +3,459/+162/+35/+9,984 and zero
+reported regressions limited to the selected subset; the selected projection
+reports 385 newly covered line identities. This is bounded incremental
+evidence, not the complete four-metric release measurement.
 
 The latest bounded rectangular proof is the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and

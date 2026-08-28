@@ -103,13 +103,26 @@ return before doing fixture work; the reconstruction test validates only the
 requested cases and asserts that every requested name ran exactly once. The
 selector is coverage-harness infrastructure, not a new decoder capability.
 
+The newest managed one-fixture reconstruction run
+`6b78c91c-d417-4ad0-af44-96d3623e3f64` passed in 32,449 ms at exact
+implementation commit `520e38284a263a4e07b392bf02f4b6322e6a3e31` and ingested
+snapshot `75d6b159-3727-4d5b-b7f4-a4252124a171` against complete baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+`coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif` and passed 1/1
+cases. The additive baseline-union review reports +8 covered lines, +7
+branches, +0 functions, and +281 regions, with denominator changes of +3,459
+lines, +162 branches, +35 functions, and +9,984 regions. The selected
+projection reports 385 newly covered line identities; zero reported
+regressions are limited to this selected subset. This is bounded incremental
+evidence, not the complete four-metric release measurement.
+
 Selectors are exact and case-sensitive. Empty names, paths, whitespace, commas,
 globs, unknown names, duplicates, planned cases, `--skip=<payload>`, payloads
 outside `--skip`, ordinary libtest skip filters, and matrix-row/AV1-selector
 mixtures are rejected. Selected runs are bounded incremental evidence and do
 not replace the full four-metric release coverage measurement.
 
-The latest managed one-fixture reconstruction run
+An earlier managed one-fixture reconstruction run
 `44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms at implementation
 commit `72759602317c50016a6bf38fc80ee06bb1de9afe` and ingested snapshot
 `5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb` against baseline

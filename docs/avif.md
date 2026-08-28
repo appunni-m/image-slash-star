@@ -228,6 +228,17 @@ path uses a dedicated checked eight-child grid and dav1d-compatible child-local
 missing-edge propagation. This closes only this proven origin mode-4 grid
 class; broader filter-intra, AV1, and AVF-STILL-001 remain partial.
 
+Managed Coverage MCP ran the exact single-fixture selector against complete
+baseline snapshot `7665cda3-f4a7-4568-b871-a9d34afaa92c`: run
+`6b78c91c-d417-4ad0-af44-96d3623e3f64` passed in 32,449 ms at exact
+implementation commit `520e38284a263a4e07b392bf02f4b6322e6a3e31` and ingested
+snapshot `75d6b159-3727-4d5b-b7f4-a4252124a171`. It passed 1/1 cases. The
+additive baseline-union review reports +8 covered lines, +7 branches, +0
+functions, and +281 regions; denominator changes are +3,459/+162/+35/+9,984.
+The selected projection reports 385 newly covered line identities and zero
+reported regressions limited to this selected subset. This is bounded
+incremental evidence, not a complete release measurement.
+
 The newest following-leaf witness is
 `coverage_square8_chroma_diagonal113_01.avif`, a 16x8 8-bit 4:2:0 horizontal
 split whose right-hand `Square8` leaf selects chroma `Diagonal113`, ADST-DCT
