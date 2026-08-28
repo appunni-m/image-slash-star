@@ -98,14 +98,14 @@
       "dispatcher": "test_av1_reconstruction_matches_pinned_dav1d_fixture",
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",
       "latest_evidence": {
-        "commit_sha": "430c5beb39757ce570c2f07ea5fb2e044a580205",
-        "run_id": "096b83e7-ccab-4a2b-93b4-a39d051817cf",
-        "snapshot_id": "f1f52e16-9275-43c0-9e28-7e38bea081e8",
+        "commit_sha": "520e38284a263a4e07b392bf02f4b6322e6a3e31",
+        "run_id": "6b78c91c-d417-4ad0-af44-96d3623e3f64",
+        "snapshot_id": "75d6b159-3727-4d5b-b7f4-a4252124a171",
         "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-        "duration_ms": 36099,
+        "duration_ms": 32449,
         "selected_fixtures": [
-          "coverage_vertical8x16_filter_intra_mode3_01.avif"
+          "coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif"
         ],
         "status": "passed_and_ingested"
       }
@@ -2179,7 +2179,55 @@
             "Decode the proven eight TX4x4 luma sentences in row-major order with the existing 4x4 CDF/context family and keep the independent TX4x8 chroma path.",
             "Reconstruct the origin grid with dav1d-compatible child-local FILTER_PRED mode-4 edge preparation and checked publication of residual-adjusted edges."
           ],
-          "focused_verification": "The exact AV1 fixture selector passes 1/1 with exact partition, all 361 entropy operations, eight-child syntax, Y/U/V planes, and Pillow RGB8; the selected AVIF matrix row passes 1/1; the full AV1 reconstruction target passes 234/234.",
+          "managed_incremental_coverage": {
+            "project_id": "2b9f48753c80b021b894b600",
+            "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+            "run_id": "6b78c91c-d417-4ad0-af44-96d3623e3f64",
+            "snapshot_id": "75d6b159-3727-4d5b-b7f4-a4252124a171",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "commit_sha": "520e38284a263a4e07b392bf02f4b6322e6a3e31",
+            "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+            "duration_ms": 32449,
+            "arguments": [
+              "test",
+              "--test",
+              "coverage_matrix_tests",
+              "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+              "--",
+              "--skip",
+              "__image_slash_star_av1_fixture_selector__=coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif",
+              "--exact",
+              "--nocapture"
+            ],
+            "selected_fixtures": [
+              "coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif"
+            ],
+            "result": {
+              "passed": 1,
+              "failed": 0,
+              "filtered_out": 43,
+              "status": "passed_and_ingested"
+            },
+            "review": {
+              "comparison_mode": "additive_union",
+              "measurement_scope": "selected_subset",
+              "covered_lines_delta": 8,
+              "covered_branches_delta": 7,
+              "covered_functions_delta": 0,
+              "covered_regions_delta": 281,
+              "total_lines_delta": 3459,
+              "total_branches_delta": 162,
+              "total_functions_delta": 35,
+              "total_regions_delta": 9984,
+              "selected_projection_newly_covered_line_identities": 385,
+              "not_observed_baseline_hits": 76066,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable",
+              "note": "The additive baseline-union review reports +8 covered lines, +7 branches, +0 functions, and +281 regions; denominator changes are +3459 lines, +162 branches, +35 functions, and +9984 regions. The selected projection reports 385 newly covered line identities. Unobserved baseline hits are not regressions; this is bounded selected-subset evidence, not a complete release measurement or global regression claim."
+            }
+          },
+          "focused_verification": "The exact AV1 fixture selector passes 1/1 with exact partition, all 361 entropy operations, eight-child syntax, Y/U/V planes, and Pillow RGB8; the selected AVIF matrix row passes 1/1; the full AV1 reconstruction target passes 234/234. Strict fmt, locked check, workspace Clippy, rustdoc, all-feature tests, feature matrix, repository verifiers, package verification, and the managed selected-fixture Coverage MCP run pass at implementation commit 520e38284a263a4e07b392bf02f4b6322e6a3e31.",
           "scope": "This closes only the bounded origin Vertical8x16 8-bit 4:2:0 filter-intra mode-4/depth-two 2x4 TX4x4 luma-grid/TX4x8-chroma class. Other modes, following-leaf contexts, transform grids, subsampling/depth/HDR/sequence cases, encoding, and the four-metric 100% coverage gate remain open."
         },
         "current_slice_update_2026_08_27_h16x4_transform_search": {
