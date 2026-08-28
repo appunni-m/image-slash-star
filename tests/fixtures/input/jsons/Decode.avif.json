@@ -15644,6 +15644,133 @@
       ]
     },
     {
+      "id": "animated_error_resilient",
+      "asset": "animated_error_resilient.avif",
+      "asset_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture",
+        "rust_sequence_contract": "defensive_model"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unsupported",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": true,
+      "rust_sequence_error_kind": "unsupported",
+      "rust_sequence_error_reason": "Pure Rust AVIF still decoding can publish sample zero, but multi-frame error-resilient presentation is not implemented yet.",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_error_resilient.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_animated_repeated_frame_id",
+      "asset": "animated_repeated_frame_id.avif",
+      "asset_sha256": "34ba8322879102ee291f9ec06703f20973c16475a0ebafb1c763e89ee9c73427",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "rust_sequence_contract": "defensive_model"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "defensive_model"
+        }
+      },
+      "expect_error": false,
+      "expect_sequence_error": true,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": true,
+      "rust_sequence_error_kind": "malformed",
+      "rust_sequence_error_reason": "Pure Rust AV1 sequence validation rejects a repeated current frame ID before any sequence frame is published.",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated_repeated_frame_id.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_track_only",
       "asset": "animated_track_only.avif",
       "asset_sha256": "45c85bd7d08261cfcb1a4563150e993d606b5e309b4767d922988ce700587fe4",

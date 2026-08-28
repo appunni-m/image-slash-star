@@ -3738,7 +3738,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         .collect::<Vec<_>>();
     assert_eq!(
         former_native_decode.len(),
-        5,
+        3,
         "the AVIF former-native decode census changed"
     );
     assert!(
@@ -3752,7 +3752,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         planned.len(),
         "every former-native AVIF decode row must remain an explicit planned gap"
     );
-    assert_eq!(planned.len(), 5, "the AVIF planned-gap ledger changed");
+    assert_eq!(planned.len(), 3, "the AVIF planned-gap ledger changed");
     assert_eq!(
         planned.len(),
         matrix.summary.decode_planned,
@@ -3798,9 +3798,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
             | "partitioned_square_16x16_g127" => "AVF-STILL-001",
             "hdr" => "AVF-COLOR-001",
             "grid" => "AVF-COMPOSE-001",
-            "animated" | "animated_error_resilient" | "error_animated_repeated_frame_id" => {
-                "AVF-SEQUENCE-001"
-            }
+            "animated" | "animated_error_resilient" => "AVF-SEQUENCE-001",
             "multitile" => "AVF-TILE-001",
             unexpected => panic!("unexpected planned AVIF decode row: {unexpected}"),
         };
@@ -3912,7 +3910,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
     );
     assert_eq!(
         former_native_decode.len() + former_native_encode.len(),
-        37,
+        35,
         "the complete former-native AVIF census changed"
     );
     assert_eq!(

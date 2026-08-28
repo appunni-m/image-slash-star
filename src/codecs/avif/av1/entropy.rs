@@ -2916,7 +2916,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         &decoded,
                         context.subsampling_x,
                         context.subsampling_y,
-                    )
+                )
                 else {
                     unsupported = true;
                     return Ok(PartitionVisitControl::Stop);

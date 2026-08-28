@@ -2,7 +2,7 @@
   "format_version": 1,
   "schema": "image-slash-star-roadmap-v1",
   "status": "canonical machine-readable roadmap; implementation must update this file first",
-  "reviewed": "2026-08-28",
+  "reviewed": "2026-08-29",
   "claim_ledger_base_revision": "93ec80ec99c42671dce6cf70694bce27ad8a2ef4",
   "objective": "Complete every non-parked roadmap item end to end with pure safe Rust where implementation is required, exact evidence where it is a contract, and no hidden native fallback.",
   "human_rendering": "docs/roadmap-new.md",
@@ -33,19 +33,19 @@
       "total_rows": 1535,
       "decode_rows": 1138,
       "encode_rows": 397,
-      "decode_active": 1133,
-      "decode_planned": 5,
+      "decode_active": 1135,
+      "decode_planned": 3,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
       "decode_rows": 311,
-      "decode_active": 306,
-      "decode_planned": 5,
+      "decode_active": 308,
+      "decode_planned": 3,
       "encode_rows": 32,
       "encode_active": 0,
       "encode_planned": 32,
-      "former_native_remaining": 37
+      "former_native_remaining": 35
     },
     "tests": {
       "coverage_matrix_tests": "44/44 matrix tests",
@@ -1044,7 +1044,7 @@
         "AVF-035"
       ],
       "remaining": [
-        "5 decode rows",
+        "3 decode rows",
         "32 encode rows",
         "sequence presentation",
         "broader grid/tile composition",
@@ -1374,20 +1374,6 @@
         "id": "animated",
         "work_item": "AVF-SEQUENCE-001",
         "gap": "Pure Rust AVIF sequence decoding does not yet implement track timing, frame references, or presentation.",
-        "former_native_only": true,
-        "status": "planned"
-      },
-      {
-        "id": "animated_error_resilient",
-        "work_item": "AVF-SEQUENCE-001",
-        "gap": "Pure Rust AVIF sequence decoding does not yet implement animated tracks, including error-resilient flags.",
-        "former_native_only": true,
-        "status": "planned"
-      },
-      {
-        "id": "error_animated_repeated_frame_id",
-        "work_item": "AVF-SEQUENCE-001",
-        "gap": "Pure Rust AV1 sequence validation now rejects the repeated current frame ID, but first-frame materialization and full sequence presentation remain planned.",
         "former_native_only": true,
         "status": "planned"
       }
@@ -4042,11 +4028,10 @@
         "status": "planned",
         "depends_on": [
           "animated",
-          "animated_error_resilient",
-          "error_animated_repeated_frame_id"
+          "animated_error_resilient"
         ],
         "deliverable": "Parse sample tables, references, timing, disposal/blend/default-image state, limits, and present frames.",
-        "current_evidence": "Safe validation rejects repeated current frame IDs and reserves sequence byte budgets; primary-item validation is now independent from a later movie track, but no AVIF multi-frame presentation exists.",
+        "current_evidence": "Safe validation rejects repeated current frame IDs and reserves sequence byte budgets. The repeated-ID fixture now has exact first-frame RGB8 evidence: ordinary decode publishes its independent first sample while sequence decode rejects the later repeated ID before publishing partial state. The valid error-resilient fixture also has exact first-frame RGB8 evidence while its full multi-frame presentation remains a typed Unsupported gap. Full AVIF multi-frame presentation, timing, references, disposal, and blend behavior remain planned.",
         "next": "Implement one-frame-at-a-time AVIF sequence materialization before eager collection."
       },
       "AVF-TILE-001": {

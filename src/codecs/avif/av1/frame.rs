@@ -1038,7 +1038,6 @@ fn validate_tile_entropy_prefixes(
         reduced_transform_set: header.reduced_transform_set,
         film_grain_present: header.film_grain.is_some(),
     };
-
     let mut first_leaf = None;
     let mut complete_color_leaf = None;
     let mut complete_color_tiles = Vec::new();
@@ -1386,8 +1385,11 @@ fn validate_frame_id_difference(frame_id_bits: u32, previous: u32, frame_id: u32
     } else {
         range.saturating_add(frame_id).saturating_sub(previous)
     };
-    if frame_id == previous || difference >= 1_u32 << frame_id_bits.saturating_sub(1) {
-        return Err(malformed("frame syntax validation failed"));
+    if frame_id == previous {
+        return Err(malformed("current frame ID repeats the previous frame ID"));
+    }
+    if difference >= 1_u32 << frame_id_bits.saturating_sub(1) {
+        return Err(malformed("current frame ID is outside sequence continuity"));
     }
     Ok(())
 }

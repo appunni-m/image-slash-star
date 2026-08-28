@@ -15,7 +15,7 @@ to be done. The manifest and generated matrix provide machine-backed fixture
 status; CI runs `scripts/verify_roadmap.py` to reject drift between those
 records, the JSON roadmap, and this human rendering.
 
-Reviewed: 2026-08-28
+Reviewed: 2026-08-29
 
 - Current claim-ledger implementation anchor: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
@@ -89,12 +89,12 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 311 rows total, 306 active, 5 explicit planned
+- AVIF decode/inspect/verify: 311 rows total, 308 active, 3 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,535 rows total, 1133 active decode rows, 365 active encode
-  rows, 5 planned decode rows, and 32 planned encode rows.
+- Whole matrix: 1,535 rows total, 1135 active decode rows, 365 active encode
+  rows, 3 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
   selects transform depth two, yielding four TX4x4 luma children and
@@ -1218,7 +1218,7 @@ functions, and 2,173 uncovered regions; its first compact ranges are 350, 1,054,
 and 1,348-1,352. This is the next investigation target, not evidence that
 those states are reachable from the current Pillow corpus.
 
-The 5 decode gaps and their pure-Rust dependencies are recorded exactly in
+The 3 decode gaps and their pure-Rust dependencies are recorded exactly in
 the ledger below. A planned row is a real input or operation that must become
 supported by safe Rust, not permission to call libavif, dav1d, libaom, or a C
 shim at runtime. Those libraries remain oracle/provenance material only.
@@ -1775,7 +1775,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,534 total | 1,137 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,132 active decode rows, 365 active encode rows, 5 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,535 total | 1,138 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,135 active decode rows, 365 active encode rows, 3 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 44/44 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
@@ -2801,7 +2801,7 @@ no second accidental cache or sequence model is introduced.
 
 ## AVIF planned-gap ledger (current tree)
 
-These are the exact 5 decode rows currently marked `planned` in the generated
+These are the exact 3 decode rows currently marked `planned` in the generated
 matrix. The child-friendly reason is simple: the safe-Rust decoder can read
 some small AV1 building blocks, but it cannot yet read every kind of AV1
 sentence that an AVIF file may contain. Each row below is a named lesson for
@@ -2814,7 +2814,7 @@ the decoder, not an excuse to route around Rust.
 | Adjacent entropy and tile syntax | No planned row; `portable_lossy_420_q99_eob_bin_control` and `portable_lossy_420_q99_eob_base_control` are active malformed controls | The safe decoder proves legal luma EOB-bin-two, EOB-bin-five, and EOB-bin-six AC classes plus legal chroma EOB-base/high branches, with independent fixtures and exact traces. The two one-byte mutations are independently rejected at EOB-bin/EOB-base with no YUV output, and safe Rust reports the AV1 symbol-coder overread as typed `Malformed`; this is invalid-input evidence, not a claim that the mutations are legal syntax. Empty-tile malformed input and the adjacent lossy DC predictor are also active. |
 | Sample depth and future alpha variants | `high_bitdepth` (the committed `with_alpha` row and bounded 10-bit/12-bit still slices are active) | A picture may use more than 8 bits or carry a second transparency picture. Pure safe Rust now decodes the committed 64×64 alpha pair and bounded 16×16 10-bit and 12-bit 4:4:4 stills to exact public bytes; animated/high-depth sequence materialization, other subsampling, and broader alpha relationships/depths remain explicit future work. |
 | Color | `hdr` | HDR changes how numbers become colors. It needs explicit safe-Rust bounds, declared color conversion, and metadata rules. |
-| Sequences and frame identity | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | A movie is many pictures plus timing and frame IDs. Safe Rust now rejects the repeated current-ID error case and keeps a primary item independently eligible from a later movie track; first-frame materialization, track presentation, and partial-state rules remain. |
+| Sequences and frame identity | `animated` | A movie is many pictures plus timing and frame IDs. The active `animated_error_resilient` row independently materializes its first sample but records a typed sequence-level `Unsupported` gap; the repeated-ID fixture rejects its later repeated current ID before publishing sequence state. Timing, references, and multi-frame presentation remain. |
 | Multi-tile frame payloads | Closed: `multitile` | Large AV1 frames can split work into independently sized tiles. The committed 256×128 two-column fixture now proves checked tile-size parsing, tile-local reconstruction, one-time canvas placement, frame-global deblocking/CDEF, and exact independent pixels; broader tile shapes remain in the implementation work item. |
 
 All 32 AVIF encode rows are also planned: still conversion/modes, quality and
@@ -2834,8 +2834,8 @@ learn that kind of picture before we may call it done.
 
 There were 39 former-native AVIF rows in the cutover census. Two EOB mutation
 controls are now active malformed-input rows with independent rejection and
-typed safe-Rust error evidence. Exactly 37 former-native rows remain planned:
-5 decode rows and 32 encode rows. The executable matrix test rejects any
+typed safe-Rust error evidence. Exactly 35 former-native rows remain planned:
+3 decode rows and 32 encode rows. The executable matrix test rejects any
 remaining former-native row that becomes active without the corresponding
 pure safe-Rust implementation and independent evidence.
 
@@ -2846,7 +2846,7 @@ The exact planned groups are:
   malformed rows; legal positive EOB work remains in `AVF-ENTROPY-001`);
 - 10/12-bit reconstruction and broader auxiliary-alpha composition (1 decode row);
 - HDR conversion (1 decode row);
-- animation, timing, error-resilient tracks, and frame identity (3 rows);
+- animation, timing, and error-resilient track presentation (2 rows); repeated-ID validation and independent first-frame materialization are closed;
 - broader multi-tile reconstruction remains part of the still/tile work items (the committed `multitile` row is closed); and
 - all still/sequence AVIF encoding (32 rows).
 
@@ -2896,7 +2896,7 @@ planes.
 | `AVF-ALPHA-001` auxiliary composition | broader grid and alpha variants | Decode the primary and monochrome auxiliary AV1 items, validate matching dimensions/depth, distinguish unassociated from premultiplied alpha, and emit the correct RGBA result and source descriptor. | Implemented for the committed `alpha.avif` fixture: safe Rust reconstructs all 37 terminal leaves of the 64×64 monochrome auxiliary tile, derives neighbor state by geometry, pairs the primary and auxiliary planes, emits RGBA8 with source alpha `Auxiliary`, and matches the independent 16,384-byte reference exactly. General alpha dimensions, high bit depth, premultiplied relationships, and broader grid pairing remain planned under the named sample/composition work items. |
 | `AVF-COLOR-001` declared color pipeline | `hdr` | Implement transfer, primaries, matrix, range, and sample-position conversion with bounded arithmetic and explicit source metadata. | Planned; current RGB conversion is the narrow 8-bit BT.601 full-range class. |
 | `AVF-COMPOSE-001` grid canvas | broader grid counts, dimensions, and relationships | Decode each referenced color/alpha cell, validate cell geometry, place cells in a bounded canvas, and apply relationships without treating metadata inspection as pixel composition. | Implemented for the committed `grid.avif` fixture: safe Rust decodes both 80×64 color cells and their monochrome auxiliary alpha cells, validates complete 80×80 coverage, crops the second row to 80×16, and matches the exact 25,600-byte RGBA8 reference. Broader grid counts, dimensions, tile-boundary contexts, and relationships remain open. |
-| `AVF-SEQUENCE-001` track presentation | `animated`; `animated_error_resilient`; repeated-ID case | Parse sample tables, retain frame state and references, enforce IDs/timing/limits, and present frames with default-image and disposal/blend rules. | Planned; stateful validation rejects the named repeated-ID error and primary-item validation is independent from a later movie track, but no multi-frame presentation exists. |
+| `AVF-SEQUENCE-001` track presentation | `animated`; `animated_error_resilient` | Parse sample tables, retain frame state and references, enforce IDs/timing/limits, and present frames with default-image and disposal/blend rules. | Planned; both valid multi-frame cases still lack presentation. The repeated-ID error case has exact first-frame RGB8 evidence and stateful validation rejects its later repeated ID; the valid error-resilient case has exact first-frame RGB8 evidence but a typed sequence-level `Unsupported` result. |
 | `AVF-TILE-001` tile raster | broader tile counts/shapes | Decode independently sized tile payloads into one frame canvas with tile-local bounds and shared state only where the AV1 syntax requires it. | Implemented for the committed 256×128 two-column `multitile.avif` fixture: safe Rust decodes and places both tile payloads exactly once, applies frame-global deblocking/CDEF, and matches the independent 98,304-byte RGB reference; the focused reconstruction proof also matches real dav1d all-filter YUV byte-for-byte. Broader tile counts, size combinations, boundary contexts, and full-frame references remain open. |
 | `AVF-ENCODE-001` encoder | all 32 encode rows | Write the AVIF container and a safe Rust AV1 intra encoder, then round-trip emitted bytes through an independent decoder. | Planned; no native or pure-Rust encoder is currently wired. |
 
@@ -3044,8 +3044,8 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 310 AVIF decode/inspect/verify rows exist: 305 are
-active and 5 are explicit planned gaps. All 32 AVIF encode rows are planned
+**Current exact state:** 311 AVIF decode/inspect/verify rows exist: 308 are
+active and 3 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
 `tests/fixtures/coverage_matrix.json`.

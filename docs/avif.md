@@ -73,10 +73,10 @@ and `wasm32-wasip1` do not get different AVIF implementations.
 The checked-in matrix currently contains 311 AVIF decode rows and 32 encode
 rows:
 
-- 306 decode rows are active: portable still reconstruction and structural
+- 308 decode rows are active: portable still reconstruction and structural
   error contracts.
-- 5 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
-  sequence materialization, HDR color handling, and three sequence cases.
+- 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
+  sequence materialization, HDR color handling, and the five-frame sequence.
 - 0 encode rows are active; all 32 are explicit planned gaps.
 
 The committed 12-bit witness is
@@ -566,13 +566,13 @@ safe-Rust `Unsupported` result (with the named repeated-frame-ID sequence case
 intentionally returning `Malformed`). The generated matrix drops that marker
 as soon as a row becomes active, so it cannot silently survive a real closure.
 
-The current matrix contains 37 former-native AVIF rows: 5 decode gaps and 32
+The current matrix contains 35 former-native AVIF rows: 3 decode gaps and 32
 encode gaps. Every remaining row is explicitly planned until pure safe Rust and
 independent compatibility evidence exist.
 
 ## Exact planned gaps
 
-These are the 5 decode rows that must become real safe-Rust behavior before
+These are the 3 decode rows that must become real safe-Rust behavior before
 they can move from `planned` to `active` in `manifest.yaml` and
 `coverage_matrix.json`:
 
@@ -580,7 +580,7 @@ they can move from `planned` to `active` in `manifest.yaml` and
 | --- | --- | --- |
 | Sample depth | `high_bitdepth` | The single-frame 10-bit and 12-bit 4:4:4 still classes are active with exact RGB8 evidence. `high_bitdepth` still needs animated/high-depth sequence materialization, other subsampling, and broader alpha/depth relationships; the 64×64 `with_alpha` primary/auxiliary pair remains active with exact RGBA8 evidence. |
 | Color pipeline | `hdr` | HDR transfer/primaries/matrix application is not implemented; the current public color path is the narrow checked 8-bit BT.601 full-range class. |
-| Animation and tracks | `animated`; `animated_error_resilient`; `error_animated_repeated_frame_id` | Track references, timing, and sequence presentation are not implemented; the safe validator now rejects the repeated current frame ID in the named error fixture. |
+| Animation and tracks | `animated` | Track references, timing, and sequence presentation are not implemented; the active `animated_error_resilient` row independently materializes its first frame but records a typed sequence-level `Unsupported` gap, while the repeated-ID fixture rejects its later repeated current frame ID before publishing sequence state. |
 
 The remaining active AVIF error rows prove that the safe parser rejects
 malformed or forbidden structure with a stable typed result. They are not

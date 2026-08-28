@@ -559,9 +559,78 @@ fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableSti
     Ok(portable)
 }
 
+/// Validate and materialize the first sample of a sequence as a standalone
+/// image.
+///
+/// The sequence validator remains responsible for every sample and for
+/// cross-sample frame-ID/reference continuity. This helper is deliberately
+/// limited to the first sample so ordinary image decoding can preserve the
+/// format's default-image behavior when a later movie sample is malformed.
+/// `validate_plane` still creates the complete AV1 sequence-aware frame state
+/// for that sample; an inter frame that needs an earlier reference therefore
+/// remains rejected instead of being mistaken for an independent still.
+fn validate_first_sequence_sample(
+    extracted: &ExtractedAvif<'_>,
+    sequence: &super::samples::SequencePayload,
+) -> Av1Result<Option<PortableStill>> {
+    let color_sample = sequence
+        .color
+        .samples
+        .first()
+        .ok_or_else(|| malformed("AVIF sequence has no color samples"))?;
+    let color = validate_plane(
+        extracted.input,
+        &super::samples::EncodedPlane {
+            samples: vec![color_sample.clone()],
+        },
+    )?;
+    let Some(color_leaf) = color.first_leaf.as_ref() else {
+        return Ok(None);
+    };
+    if color.frame_dimensions != Some((color_leaf.width, color_leaf.height)) {
+        return Ok(None);
+    }
+    let alpha_plane = if let Some(alpha) = &sequence.alpha {
+        let alpha_sample = alpha
+            .samples
+            .first()
+            .ok_or_else(|| malformed("AVIF sequence has no alpha sample"))?;
+        let alpha = validate_plane(
+            extracted.input,
+            &super::samples::EncodedPlane {
+                samples: vec![alpha_sample.clone()],
+            },
+        )?;
+        let Some(alpha_plane) = alpha.complete_monochrome_plane else {
+            return Ok(None);
+        };
+        if !(alpha.sequence.monochrome
+            && alpha.sequence.bit_depth == color.sequence.bit_depth
+            && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
+            && usize::try_from(color_leaf.width).ok().and_then(|width| {
+                usize::try_from(color_leaf.height)
+                    .ok()
+                    .and_then(|height| width.checked_mul(height))
+            }) == Some(alpha_plane.samples.len()))
+        {
+            return Ok(None);
+        }
+        Some(alpha_plane)
+    } else {
+        None
+    };
+    Ok(Some(portable_still(
+        color_leaf.clone(),
+        color.sequence,
+        alpha_plane,
+    )))
+}
+
 pub(super) fn validate_first(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
     let portable_still = if extracted.still.is_some() {
         validate_still(extracted)?
+    } else if let Some(sequence) = &extracted.sequence {
+        validate_first_sequence_sample(extracted, sequence)?
     } else {
         None
     };
