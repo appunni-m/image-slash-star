@@ -94,6 +94,7 @@ LUMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES = frozenset(
     {
         "coverage_square8_luma_diagonal67_vertical_01.avif",
         "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif",
+        "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif",
     }
 )
 CHROMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES = frozenset(
@@ -1136,6 +1137,11 @@ EXPECTED_FIXTURES = {
     "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif": {
         "file_sha256": "97d00ee7b26556ea9c1e68e11c435727c5224373074cc183ff9c4a7c688809ee",
         "rgb_sha256": "eb2bebe4dbb452c932c1334ec8420fd5b3ca8589641254938dc52d7d41365a2a",
+        "size": [8, 16],
+    },
+    "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif": {
+        "file_sha256": "c92781d7682cccd4569dd4e84bad14f9145f077cd629bc97a943002fff59bf89",
+        "rgb_sha256": "7ba0cab00dbb9d6b9c65788839e471bfe4df2008e47a61ad5bc82ebd5101dce6",
         "size": [8, 16],
     },
     "coverage_square8_chroma_diagonal67_vertical_01.avif": {

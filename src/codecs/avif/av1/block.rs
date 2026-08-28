@@ -36967,6 +36967,21 @@ fn reconstruct_following_lossy_420_vertical_leaf(
         && left_luma_edge.is_none()
         && luma_angle == Some(67)
         && matches!(lossy_luma_transform, LossyTransformKind::DctDct);
+    let unupsampled_diagonal67_split_angle70 = lossy_luma_4x4_split.is_some()
+        && matches!(luma_predictor, LumaPredictor::Diagonal67)
+        && above_right_is_above_left
+        && above_luma_extension.is_none()
+        && above_left_width == 8
+        && above_right_width == 8
+        && above_left_x_offset == 0
+        && above_right_x_offset == 0
+        && left_neighbor.is_none()
+        && left_top_neighbor.is_none()
+        && left_luma_top_neighbor.is_none()
+        && left_luma_edge.is_none()
+        && luma_angle == Some(70)
+        && matches!(lossy_luma_transform, LossyTransformKind::DctDct);
+    let disable_luma_edge_filter = unupsampled_diagonal67 || unupsampled_diagonal67_split_angle70;
 
     let luma = if let Some(split) = lossy_luma_4x4_split {
         match (filter_intra_mode, luma_predictor) {
@@ -37000,7 +37015,7 @@ fn reconstruct_following_lossy_420_vertical_leaf(
                     left_luma_edge,
                     Some(luma_top_left_for_prediction),
                     luma_angle.ok_or(PortableUnavailable)?,
-                    !unupsampled_diagonal67,
+                    !disable_luma_edge_filter,
                     smooth_neighbor_edges,
                     split,
                 )

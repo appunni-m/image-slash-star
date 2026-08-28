@@ -6618,28 +6618,31 @@ def gen_avif():
         speed=0,
     )
 
-    def luma_diagonal67_vertical_split_tx4x4_square8():
-        """Generate the split-TX4x4 vertical-following luma witness.
+    def luma_diagonal67_vertical_split_tx4x4_square8(family=1, candidate=0):
+        """Generate a split-TX4x4 vertical-following luma witness.
 
-        This is D67V-F02-N00 from the pinned 100-case input-only campaign.
-        The negative diagonal ramp exposes a varying top edge to the
-        following Square8 leaf. Its lower leaf is intentionally encoded with
-        four DCT-DCT TX4x4 payloads and a nonzero AC coefficient while chroma
-        remains neutral and skipped.
+        The default is D67V-F02-N00 from the pinned 100-case input-only
+        campaign. The lower leaf is intentionally encoded with four DCT-DCT
+        TX4x4 payloads and a nonzero AC coefficient while chroma remains
+        neutral and skipped. The second promoted case uses family 4/candidate
+        1 (D67V-F05-N01), which resolves to the 70-degree angle symbol.
         """
 
-        family = 1
-        candidate = 0
+        if family not in (1, 4) or candidate not in (0, 1):
+            raise ValueError("only the promoted D67 split witnesses are supported")
 
         def pixel(x, y):
             if y < 8:
-                luma = 80 - 3 * x + y - 7
+                slopes = (3, -3, 2, 3, 3, 6, -2, 4, -4, 3)
+                luma = 80 + slopes[family] * x + (y - 7) * ((family + candidate) % 2)
             else:
                 local_y = y - 8
                 source_x = min(7, x + (local_y + 1) // 2)
-                luma = 80 - 3 * source_x
-                if x < 4 and local_y < 4:
+                luma = 80 + (3 if family == 4 else -3) * source_x
+                if family == 1 and x < 4 and local_y < 4:
                     luma += 5 if (x + local_y) % 2 == 0 else -5
+                elif family == 4 and x < 4 and local_y < 4:
+                    luma += 4 if (x // 2 + local_y // 2) % 2 == 0 else -4
             luma = clamp_channel(luma)
             return (luma, luma, luma)
 
@@ -6648,6 +6651,30 @@ def gen_avif():
     write_campaign_image(
         "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01",
         luma_diagonal67_vertical_split_tx4x4_square8(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "8",
+            "max-partition-size": "8",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=76,
+        speed=0,
+    )
+
+    write_campaign_image(
+        "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01",
+        luma_diagonal67_vertical_split_tx4x4_square8(family=4, candidate=1),
         "4:2:0",
         advanced={
             "min-partition-size": "8",
