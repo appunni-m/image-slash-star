@@ -5865,7 +5865,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 231);
+    assert_eq!(expected.cases.len(), 232);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -8361,6 +8361,92 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 HorizontalFour witness leaf state and chroma ownership"
             );
         }
+        if case.fixture == "coverage_h16x4_filter_intra_tx8x4_split_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 3,
+                    context: 0,
+                    partition: 8,
+                    range: 43_136,
+                }],
+                "AV1 Horizontal16x4 filter-intra TX8x4 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                110,
+                "AV1 Horizontal16x4 filter-intra TX8x4 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-filterintramode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=41704",
+                    "Post-cdef_idx[0]: r=41704",
+                    "Post-ymode[0]: r=39896",
+                    "Post-filterintramode[0/0]: r=51068",
+                    "Post-tx[6]: r=55728",
+                    "Post-y-cf-blk[tx=6,txtp=0,eob=0]: r=51884",
+                    "Post-y-cf-blk[tx=6,txtp=0,eob=-1]: r=57174",
+                    "Post-skip[0]: r=55386",
+                    "Post-ymode[0]: r=54516",
+                    "Post-uvmode[0]: r=34940",
+                    "Post-filterintramode[13/4]: r=34832",
+                    "Post-tx[6]: r=39992",
+                    "Post-y-cf-blk[tx=6,txtp=0,eob=0]: r=62552",
+                    "Post-y-cf-blk[tx=6,txtp=0,eob=2]: r=50440",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=46102 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=42394 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=41153",
+                    "Post-ymode[0]: r=42050",
+                    "Post-filterintramode[13/0]: r=59168",
+                    "Post-tx[14]: r=39088",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=3]: r=60704",
+                    "Post-skip[0]: r=59041",
+                    "Post-ymode[0]: r=61866",
+                    "Post-uvmode[0]: r=42170",
+                    "Post-filterintramode[13/0]: r=33248",
+                    "Post-tx[14]: r=50400",
+                    "Post-y-cf-blk[tx=14,txtp=0,eob=3]: r=37014",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=34060 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=63316 [x=0,cbx4=0]",
+                ],
+                "AV1 Horizontal16x4 filter-intra TX8x4 witness leaf state and edge handoff"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-filterintramode[13/4]:"))
+                    .count(),
+                1,
+                "AV1 split filter-intra witness must select mode 4 once"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-tx[6]:"))
+                    .count(),
+                2,
+                "AV1 split filter-intra witness must select two TX8x4 luma grids"
+            );
+        }
         if case.fixture == "coverage_h16x4_filter_intra_cdf14_false_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -9797,6 +9883,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h16x4_predictor_adst_dct_01.avif" => {
                 "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167"
+            }
+            "coverage_h16x4_filter_intra_tx8x4_split_01.avif" => {
+                "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3"
             }
             "coverage_h16x4_filter_intra_cdf14_false_01.avif" => {
                 "d59a569d0d1c93fb9b2537196cc6a5453691d959e7e67bc6417c9a9a1f7b4fc4"

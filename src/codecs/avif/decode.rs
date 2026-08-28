@@ -713,7 +713,22 @@ mod tests {
         let samples = (0..6)
             .map(|column| libavif_422_bilinear_sample(&plane, 3, 6, column, 1))
             .collect::<Vec<_>>();
-        assert_eq!(samples, [40, 33, 48, 53, 58, 60]);
+        assert_eq!(samples, [40, 43, 48, 53, 58, 60]);
+
+        let equal = (0..6)
+            .map(|column| libavif_422_bilinear_sample(&[42; 6], 3, 6, column, 1))
+            .collect::<Vec<_>>();
+        assert_eq!(equal, [42; 6]);
+
+        let reversed = (0..6)
+            .map(|column| libavif_422_bilinear_sample(&[60, 50, 40, 30, 20, 10], 3, 6, column, 1))
+            .collect::<Vec<_>>();
+        assert_eq!(reversed, [30, 28, 23, 18, 13, 10]);
+
+        let odd_width = (0..5)
+            .map(|column| libavif_422_bilinear_sample(&plane, 3, 5, column, 0))
+            .collect::<Vec<_>>();
+        assert_eq!(odd_width, [10, 13, 18, 23, 28]);
     }
 
     #[test]

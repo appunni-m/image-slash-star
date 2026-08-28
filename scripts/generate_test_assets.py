@@ -5409,6 +5409,58 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal16x4_filter_intra_depth_one_tx8x4():
+        """Generate the following H16x4 FILTER_PRED/TX8x4 witness.
+
+        This is h16x4-f10-n03 at quality 32 from the pinned input-only
+        campaign. The fourth horizontal band is deliberately patterned so
+        the following Horizontal16x4 leaf selects filter-intra mode 4 and
+        transform depth one, with two non-empty TX8x4 luma children.
+        """
+
+        amplitude = 12
+        candidate_index = 3
+        random_state = random.Random(164903)
+        column_prbs = [random_state.choice((-1, 1)) for _ in range(16)]
+        levels = (-amplitude, -amplitude // 3, amplitude // 3, amplitude)
+        bases = (40, 96, 160, 216)
+
+        def pixel(x, y):
+            band = y // 4
+            local_y = y % 4
+            if band < 2:
+                signal = amplitude * column_prbs[x]
+            else:
+                signal = levels[(local_y + candidate_index) % len(levels)]
+            value = clamp_channel(bases[band] + signal)
+            return (value, value, value)
+
+        return image_from_pixels((16, 16), pixel)
+
+    write_campaign_image(
+        "coverage_h16x4_filter_intra_tx8x4_split_01",
+        horizontal16x4_filter_intra_depth_one_tx8x4(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "4",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "1",
+            "enable-filter-intra": "1",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=32,
+        speed=0,
+    )
+
     def horizontal16x4_split_adst_dct():
         """Generate a depth-two TX4x4 child-grid H16x4 witness.
 

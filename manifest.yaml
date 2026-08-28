@@ -4344,6 +4344,12 @@ formats:
       description: 16x16 4:2:0 quality-24 speed-0 PARTITION_H4 witness with one following Horizontal16x4 leaf split into two TX8x4 luma transforms
       test_assets:
       - coverage_h16x4_tx8x4_split_01.avif
+    - id: coverage_h16x4_filter_intra_tx8x4_split_01
+      description: 16x16 4:2:0 quality-32 speed-0 PARTITION_H4 witness with a following Horizontal16x4 filter-intra mode-4 leaf split into two non-empty TX8x4 luma transforms
+      test_assets:
+      - coverage_h16x4_filter_intra_tx8x4_split_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_h16x4_filter_intra_cdf14_false_01
       description: 16x16 4:2:0 quality-12 speed-0 PARTITION_H4 witness with four DC 16x4 luma leaves, false filter-intra decisions selecting CDF index 14, and DCT-DCT 4x8 chroma transforms
       test_assets:

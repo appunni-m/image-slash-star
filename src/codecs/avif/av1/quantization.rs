@@ -776,6 +776,17 @@ pub(super) const Y_8X4_MATRIX_6: [u8; 32] = [
     41, 48, 64, 79, 49, 54, 71, 91, 57, 60, 78, 101, 66, 68, 86, 111,
 ];
 
+/// AV1 quantization matrix 7 for a coded 8×4 luma transform.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[7][0][RTX_8X4]`.
+// The source initializes this rectangular table through the same
+// `qm_tbl_8x4`/`qm_tbl_4x8` transpose used for matrix 6; these values are in
+// the coefficient order consumed by the R8×4 scan.
+#[rustfmt::skip]
+pub(super) const Y_8X4_MATRIX_7: [u8; 32] = [
+    32, 32, 42, 56, 32, 33, 41, 53, 32, 35, 42, 52, 34, 37, 50, 59,
+    38, 40, 58, 68, 44, 45, 66, 78, 50, 50, 71, 86, 61, 58, 79, 97,
+];
+
 /// AV1 quantization matrix 5 for a coded 4×16 luma transform.
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[5][0][RTX_4X16]`.
 #[rustfmt::skip]
@@ -831,10 +842,10 @@ pub(super) const Y_16X4_MATRIX_10: [u8; 64] = [
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[5][0][RTX_16X4]`.
 #[rustfmt::skip]
 pub(super) const Y_16X4_MATRIX_5: [u8; 64] = [
-    31, 36, 53, 81, 32, 35, 51, 76, 32, 35, 49, 73, 32, 37, 49, 71,
-    33, 41, 53, 74, 34, 48, 60, 80, 37, 50, 65, 85, 41, 53, 71, 91,
-    45, 56, 76, 98, 49, 60, 82, 105, 54, 63, 87, 112, 61, 69, 93, 121,
-    68, 75, 100, 130, 74, 80, 105, 137, 78, 84, 109, 142, 83, 88, 114, 148,
+    31, 36, 53, 79, 32, 35, 51, 75, 32, 34, 49, 72, 32, 36, 50, 71,
+    33, 38, 49, 69, 34, 42, 54, 73, 34, 48, 60, 78, 37, 50, 65, 84,
+    41, 53, 71, 90, 45, 56, 76, 96, 49, 60, 82, 103, 54, 63, 87, 110,
+    60, 68, 92, 118, 65, 73, 97, 125, 72, 79, 104, 133, 75, 81, 106, 136,
 ];
 
 /// AV1 quantization matrix 6 for a coded 16×4 luma transform.
@@ -849,6 +860,20 @@ pub(super) const Y_16X4_MATRIX_6: [u8; 64] = [
     32, 37, 43, 58, 34, 39, 48, 63, 34, 42, 53, 67, 36, 44, 57, 71,
     39, 46, 60, 76, 42, 48, 64, 81, 45, 51, 67, 85, 50, 54, 72, 92,
     54, 58, 76, 98, 60, 63, 80, 105, 66, 68, 85, 111, 73, 74, 91, 118,
+];
+
+/// AV1 quantization matrix 7 for a coded 16×4 luma transform.
+///
+/// Rectangular coefficients use dav1d's transposed `qm_tbl_4x16` order:
+/// four consecutive values belong to one horizontal coefficient column. This
+/// is the order consumed by the R16×4 scan's `x * 4 + y` coefficient index.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[7][0][RTX_16X4]`.
+#[rustfmt::skip]
+pub(super) const Y_16X4_MATRIX_7: [u8; 64] = [
+    31, 32, 44, 58, 32, 32, 42, 55, 32, 33, 41, 53, 32, 34, 42, 53,
+    32, 34, 42, 53, 32, 35, 42, 52, 34, 37, 48, 57, 35, 38, 54, 63,
+    37, 40, 57, 67, 39, 41, 60, 70, 41, 43, 63, 74, 45, 46, 67, 79,
+    50, 50, 71, 86, 54, 53, 74, 90, 57, 56, 77, 93, 61, 58, 79, 97,
 ];
 
 /// AV1 quantization matrix 8 for a coded 16×4 luma transform.
@@ -1206,8 +1231,8 @@ mod tests {
         UV_8BIT, UV_8X4_MATRIX_6, UV_8X4_MATRIX_9, UV_8X4_MATRIX_10, UV_8X8_MATRIX_2,
         UV_8X8_MATRIX_9, UV_8X8_MATRIX_10, UV_8X16_MATRIX_9, UV_8X16_MATRIX_10, UV_16X8_MATRIX_2,
         UV_16X8_MATRIX_9, UV_16X8_MATRIX_10, Y_4X4_MATRIX_8, Y_4X4_MATRIX_9, Y_4X4_MATRIX_10,
-        Y_4X16_MATRIX_5, Y_4X16_MATRIX_9, Y_4X16_MATRIX_10, Y_8BIT, Y_8X8_MATRIX_9,
-        Y_16X4_MATRIX_5, Y_16X4_MATRIX_10,
+        Y_4X16_MATRIX_5, Y_4X16_MATRIX_9, Y_4X16_MATRIX_10, Y_8BIT, Y_8X4_MATRIX_6, Y_8X4_MATRIX_7,
+        Y_8X8_MATRIX_9, Y_16X4_MATRIX_5, Y_16X4_MATRIX_7, Y_16X4_MATRIX_10,
     };
 
     #[test]
@@ -1308,10 +1333,10 @@ mod tests {
     #[test]
     fn luma_matrix_5_has_checked_16x4_values() {
         assert_eq!(Y_16X4_MATRIX_5.len(), 64);
-        assert_eq!(&Y_16X4_MATRIX_5[..8], &[31, 36, 53, 81, 32, 35, 51, 76]);
+        assert_eq!(&Y_16X4_MATRIX_5[..8], &[31, 36, 53, 79, 32, 35, 51, 75]);
         assert_eq!(
             &Y_16X4_MATRIX_5[56..],
-            &[78, 84, 109, 142, 83, 88, 114, 148]
+            &[72, 79, 104, 133, 75, 81, 106, 136]
         );
     }
 
@@ -1322,6 +1347,40 @@ mod tests {
         assert_eq!(
             &Y_4X16_MATRIX_5[56..],
             &[90, 96, 103, 110, 118, 125, 133, 136]
+        );
+    }
+
+    #[test]
+    fn luma_rectangular_8x4_matrices_match_dav1d_order() {
+        assert_eq!(Y_8X4_MATRIX_6.len(), 32);
+        assert_eq!(
+            Y_8X4_MATRIX_6,
+            [
+                32, 34, 43, 62, 32, 34, 42, 59, 33, 37, 44, 58, 35, 43, 54, 68, 41, 48, 64, 79, 49,
+                54, 71, 91, 57, 60, 78, 101, 66, 68, 86, 111,
+            ]
+        );
+        assert_eq!(Y_8X4_MATRIX_7.len(), 32);
+        assert_eq!(
+            Y_8X4_MATRIX_7,
+            [
+                32, 32, 42, 56, 32, 33, 41, 53, 32, 35, 42, 52, 34, 37, 50, 59, 38, 40, 58, 68, 44,
+                45, 66, 78, 50, 50, 71, 86, 61, 58, 79, 97,
+            ]
+        );
+    }
+
+    #[test]
+    fn luma_matrix_7_has_checked_16x4_values_in_dav1d_order() {
+        assert_eq!(Y_16X4_MATRIX_7.len(), 64);
+        assert_eq!(
+            Y_16X4_MATRIX_7,
+            [
+                31, 32, 44, 58, 32, 32, 42, 55, 32, 33, 41, 53, 32, 34, 42, 53, 32, 34, 42, 53, 32,
+                35, 42, 52, 34, 37, 48, 57, 35, 38, 54, 63, 37, 40, 57, 67, 39, 41, 60, 70, 41, 43,
+                63, 74, 45, 46, 67, 79, 50, 50, 71, 86, 54, 53, 74, 90, 57, 56, 77, 93, 61, 58, 79,
+                97,
+            ]
         );
     }
 
