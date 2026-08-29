@@ -992,6 +992,11 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "70a7a0107bec2a81f759155aaf760088704eff6de4c628616a5173a3fb0df610",
         "size": [8, 32],
     },
+    "coverage_vertical8x16_following_luma_diagonal67_01.avif": {
+        "file_sha256": "d0b6517966ab8f3a786a7861f43ebf0521f74899ec21eb016c3aaf0a480b0c6b",
+        "rgb_sha256": "62169489fa9dc810e702da26d7ea8309def5ecf07ccf87c0f64b87e8b090813b",
+        "size": [8, 32],
+    },
     "coverage_r16x32_grid_01.avif": {
         "file_sha256": "fb8ee178f58141a3152894c5af033681c871e8562970b2fbab4b89dd487e824a",
         "rgb_sha256": "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac",
@@ -1470,7 +1475,10 @@ def instrument(
           t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 8) || \
          (f->frame_hdr->width[0] == 16 && f->frame_hdr->height == 32 && \
           f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 && \
-          t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 4))
+          t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 4) || \
+         (f->frame_hdr->width[0] == 8 && f->frame_hdr->height == 32 && \
+          f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 && \
+          t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 2))
 #define DEBUG_B_PIXELS 1
 """
     horizontal_square16 = """\
@@ -1538,7 +1546,11 @@ def instrument(
                      (f->frame_hdr->width[0] == 16 &&
                       f->frame_hdr->height == 32 &&
                       f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 &&
-                      t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 4));
+                      t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 4) ||
+                     (f->frame_hdr->width[0] == 8 &&
+                      f->frame_hdr->height == 32 &&
+                      f->cur.p.layout == DAV1D_PIXEL_LAYOUT_I420 &&
+                      t->by >= 0 && t->by < 8 && t->bx >= 0 && t->bx < 2));
 """
     horizontal_square16 = """\
     const int dbg = DEBUG_BLOCK_INFO;

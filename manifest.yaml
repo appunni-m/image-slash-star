@@ -4262,6 +4262,12 @@ formats:
       description: 16x32 4:2:0 quality-76 speed-0 split root with a following lower-left Vertical8x16 leaf using filter-intra mode 2, one TX8x16 luma transform, and TX4x8 U/V transforms
       test_assets:
       - coverage_vertical8x16_following_filter_intra_mode2_01.avif
+    - id: coverage_vertical8x16_following_luma_diagonal67_01
+      description: 8x32 4:2:0 quality-76 speed-0 vertical split with a following Vertical8x16 leaf using luma Diagonal67 mode 8 at angle symbol 3 and resolved angle 67, unsplit TX8x16 DCT-DCT luma with non-empty AC, and skipped TX4x8 U/V transforms
+      test_assets:
+      - coverage_vertical8x16_following_luma_diagonal67_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_square8_chroma_diagonal113_01
       description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using chroma Diagonal113 and ADST-DCT U/V transforms
       test_assets:

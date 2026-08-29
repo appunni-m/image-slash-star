@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 """Search a bounded vertical-following AVIF Diagonal67 corpus.
 
-The campaign creates exactly one hundred deterministic 8x16 RGB candidates in
-ten named families. Each candidate is encoded twice with the pinned
-Pillow/libavif/libaom oracle and decoded twice through an independently
-instrumented scalar dav1d build. The default chroma target qualifies a clipped
-16x16 split with a vertically following bottom Square8 leaf, coded chroma
-Diagonal67 mode 8, ADST-DCT 4x4 U/V transforms, and the required non-empty
-residuals. The luma targets qualify the same topology with coded luma
-Diagonal67 mode 8, a genuine Zone-1 edge, and skipped chroma. The split-luma
-target additionally requires four TX4x4 DCT-DCT luma payloads with a decoded
-nonzero AC coefficient. Repository Rust is never invoked during the search.
+The campaign creates exactly one hundred deterministic candidates in ten named
+families. Each candidate is encoded twice with the pinned Pillow/libavif/libaom
+oracle and decoded twice through an independently instrumented scalar dav1d
+build. The default targets qualify a clipped 16x16 split with a vertically
+following bottom Square8 leaf. The extended luma target qualifies an 8x32
+frame split into two following Vertical8x16 leaves, with bottom luma
+Diagonal67 syntax and a real top edge. Repository Rust is never invoked during
+the search.
 """
 
 from __future__ import annotations
@@ -39,6 +37,7 @@ from generate_av1_reconstruction_refs import (
 
 SIZE = (8, 16)
 SUBSAMPLING = "4:2:0"
+FOLLOWING_VERTICAL_TARGET = "luma_diagonal67_following_vertical"
 ADVANCED = {
     "min-partition-size": "8",
     "max-partition-size": "8",
@@ -60,8 +59,13 @@ LUMA_ADVANCED = {
     "use-intra-dct-only": "1",
 }
 LUMA_TARGETS = frozenset(
-    {"luma_diagonal67", "luma_diagonal67_split_tx4x4"}
+    {"luma_diagonal67", "luma_diagonal67_split_tx4x4", FOLLOWING_VERTICAL_TARGET}
 )
+FOLLOWING_VERTICAL_ADVANCED = {
+    **ADVANCED,
+    "max-partition-size": "16",
+    "use-intra-dct-only": "1",
+}
 FAMILY_NAMES = (
     "positive_diagonal_ramp",
     "negative_diagonal_ramp",
@@ -238,10 +242,11 @@ def luma_residual(family: int, x: int, local_y: int) -> int:
 def luma_sample(family: int, index: int, x: int, y: int, target: str) -> int:
     """Build a top-edge-continuous luma field for the selected target."""
 
-    if y < 8:
+    leaf_height = SIZE[1] // 2
+    if y < leaf_height:
         value = luma_edge_value(family, index, x) + (y - 7) * ((family + index) % 2)
     else:
-        local_y = y - 8
+        local_y = y - leaf_height
         if target in LUMA_TARGETS:
             # D67 is near vertical: each lower row advances only part of one
             # top-edge sample.  The encoder sees a real top edge here.
@@ -257,7 +262,7 @@ def luma_sample(family: int, index: int, x: int, y: int, target: str) -> int:
 
 
 def candidate_pixels(family: int, index: int, target: str) -> bytes:
-    """Create one deterministic 8x16 RGB candidate from synthetic YUV."""
+    """Create one deterministic RGB candidate from synthetic YUV."""
 
     pixels = bytearray()
     for y in range(SIZE[1]):
@@ -569,6 +574,146 @@ def classify_luma(
     }
 
 
+def classify_luma_following_vertical(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    portable_color: dict[str, object],
+    angle_symbol: int,
+) -> dict[str, object]:
+    """Apply exact predicates for the 8x32 following Vertical8x16 class."""
+
+    parsed = [parse_group(group) for group in groups]
+    shape = [
+        (
+            block["poc"],
+            block["x"],
+            block["y"],
+            block["level"],
+            block["context"],
+            block["partition"],
+        )
+        for block in blocks
+    ]
+    y_modes = [mode for group in parsed for mode in group["y_modes"]]
+    y_angles = [symbol for group in parsed for symbol in group["y_angle_symbols"]]
+    uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
+    uv_angles = [symbol for group in parsed for symbol in group["uv_angle_symbols"]]
+    y_payloads = [group["luma_payloads"] for group in parsed]
+    dq_matrices = [group["dq_matrices"] for group in parsed]
+    chroma_payloads = [group["chroma_payloads"] for group in parsed]
+    all_lines = [line for group in groups for line in group]
+    forbidden_prefixes = (
+        "Post-filterintramode[",
+        "Post-y_pal[",
+        "Post-pal[",
+        "Post-y-pal-indices",
+        "y-pal-pred",
+        "Post-uv_pal[",
+        "Post-uv-pal-indices",
+        "uv-pal-pred",
+    )
+    y_length = SIZE[0] * SIZE[1]
+    chroma_width = SIZE[0] // 2
+    chroma_height = SIZE[1] // 2
+    expected_yuv_length = y_length + 2 * chroma_width * chroma_height
+    top_luma_edge = (
+        yuv[(SIZE[1] // 2 - 1) * SIZE[0] : (SIZE[1] // 2) * SIZE[0]]
+        if len(yuv) == expected_yuv_length
+        else b""
+    )
+
+    def is_tx8x16(payloads: list[dict[str, int]], with_ac: bool) -> bool:
+        return (
+            len(payloads) == 1
+            and payloads[0]["tx"] == 7
+            and payloads[0]["txtp"] == 0
+            and (payloads[0]["eob"] > 0 if with_ac else payloads[0]["eob"] >= 0)
+        )
+
+    def has_nonzero_ac(matrices: list[list[int]]) -> bool:
+        return any(value != 0 for matrix in matrices for value in matrix[1:])
+
+    def is_skipped_chroma(payloads: list[dict[str, int]]) -> bool:
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(
+                payload["tx"] == 5
+                and payload["txtp"] == 0
+                and payload["eob"] == -1
+                and payload.get("cbx4") == 0
+                for payload in payloads
+            )
+        )
+
+    predicates = {
+        "exact_vertical_following_shape": shape == [
+            (0, 0, 0, 2, 0, 3),
+            (0, 0, 0, 3, 0, 2),
+            (0, 0, 4, 3, 1, 2),
+        ],
+        "eight_bit_420_frame": (
+            portable_color.get("width") == SIZE[0]
+            and portable_color.get("height") == SIZE[1]
+            and portable_color.get("bit_depth") == 8
+            and portable_color.get("monochrome") is False
+            and portable_color.get("subsampling_x") is True
+            and portable_color.get("subsampling_y") is True
+        ),
+        "two_visible_vertical8x16_groups": len(groups) == 2,
+        "origin_luma_mode_dc": len(y_modes) == 2 and y_modes[0] == 0,
+        "following_luma_mode_diagonal67": y_modes[1:2] == [8],
+        "following_luma_angle_symbol": y_angles == [angle_symbol],
+        "no_uv_angle_symbols": not uv_angles,
+        "origin_luma_is_unsplit_tx8x16": (
+            len(y_payloads) == 2 and is_tx8x16(y_payloads[0], False)
+        ),
+        "following_luma_is_unsplit_tx8x16_with_ac": (
+            len(y_payloads) == 2 and is_tx8x16(y_payloads[1], True)
+        ),
+        "following_luma_has_nonzero_ac": (
+            len(dq_matrices) == 2 and has_nonzero_ac(dq_matrices[1])
+        ),
+        "origin_and_following_chroma_are_dc_skipped": (
+            len(chroma_payloads) == 2
+            and is_skipped_chroma(chroma_payloads[0])
+            and is_skipped_chroma(chroma_payloads[1])
+        ),
+        "no_unexpected_angle_or_tool_syntax": not any(
+            line.startswith(forbidden_prefixes) for line in all_lines
+        ),
+        "decoded_yuv_has_expected_size": len(yuv) == expected_yuv_length,
+        "origin_bottom_edge_varies": (
+            len(top_luma_edge) == SIZE[0] and len(set(top_luma_edge)) > 1
+        ),
+        "origin_bottom_edge_is_not_midpoint": (
+            len(top_luma_edge) == SIZE[0] and top_luma_edge[0] != 128
+        ),
+    }
+    return {
+        "target": FOLLOWING_VERTICAL_TARGET,
+        "effective_predictor": "z1_top_available_left_unavailable",
+        "root_partition": blocks[0] if blocks else None,
+        "partition_shape": shape,
+        "group_count": len(groups),
+        "y_modes": y_modes,
+        "y_angle_symbols": y_angles,
+        "y_angle_deltas": [symbol - 3 for symbol in y_angles],
+        "y_angles": [67 + 3 * (symbol - 3) for symbol in y_angles],
+        "uv_modes": uv_modes,
+        "uv_angle_symbols": uv_angles,
+        "origin_bottom_luma_edge": list(top_luma_edge),
+        "top_luma_payloads": y_payloads[0] if y_payloads else [],
+        "bottom_luma_payloads": y_payloads[1] if len(y_payloads) == 2 else [],
+        "top_chroma_payloads": chroma_payloads[0] if chroma_payloads else [],
+        "bottom_chroma_payloads": chroma_payloads[1] if len(chroma_payloads) == 2 else [],
+        "predicates": predicates,
+        "rejection_reasons": [name for name, passed in predicates.items() if not passed],
+        "qualifies": all(predicates.values()),
+    }
+
+
 def classify(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
@@ -579,6 +724,10 @@ def classify(
 ) -> dict[str, object]:
     """Apply exact predicates for the vertical-following mode-8 class."""
 
+    if target == FOLLOWING_VERTICAL_TARGET:
+        return classify_luma_following_vertical(
+            blocks, groups, yuv, portable_color, angle_symbol
+        )
     if target in LUMA_TARGETS:
         return classify_luma(
             blocks,
@@ -853,6 +1002,7 @@ def main() -> None:
             "chroma_diagonal67",
             "luma_diagonal67",
             "luma_diagonal67_split_tx4x4",
+            FOLLOWING_VERTICAL_TARGET,
         ),
         default="chroma_diagonal67",
     )
@@ -864,6 +1014,11 @@ def main() -> None:
         help="D67 luma angle symbol to qualify (2=64 degrees, 3=67, 4=70)",
     )
     args = parser.parse_args()
+    global SIZE, ADVANCED, LUMA_ADVANCED
+    if args.target == FOLLOWING_VERTICAL_TARGET:
+        SIZE = (8, 32)
+        ADVANCED = FOLLOWING_VERTICAL_ADVANCED
+        LUMA_ADVANCED = {**ADVANCED, "use-intra-dct-only": "1"}
     if args.target in LUMA_TARGETS:
         luma_transform = (
             "four split TX4x4 DCT-DCT luma payloads with decoded AC"
@@ -871,13 +1026,23 @@ def main() -> None:
             else "unsplit TX8x8 luma with AC"
         )
         target_id = f"{args.target}_angle_symbol_{args.luma_angle_symbol}"
-        target_description = (
-            "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
-            "Square8 leaves; bottom following luma mode 8 Diagonal67 at "
-            f"angle symbol {args.luma_angle_symbol} (resolved "
-            f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 "
-            f"top edge, {luma_transform}, and skipped chroma"
-        )
+        if args.target == FOLLOWING_VERTICAL_TARGET:
+            luma_transform = "unsplit TX8x16 DCT-DCT luma with AC"
+            target_description = (
+                "8x32 8-bit 4:2:0 vertical split with top and following "
+                "Vertical8x16 leaves; bottom luma mode 8 Diagonal67 at "
+                f"angle symbol {args.luma_angle_symbol} (resolved "
+                f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 "
+                f"top edge, {luma_transform}, and skipped TX4x8 chroma"
+            )
+        else:
+            target_description = (
+                "8x16 8-bit 4:2:0 clipped 16x16 root split with top and bottom "
+                "Square8 leaves; bottom following luma mode 8 Diagonal67 at "
+                f"angle symbol {args.luma_angle_symbol} (resolved "
+                f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 "
+                f"top edge, {luma_transform}, and skipped chroma"
+            )
     else:
         target_id = args.target
         target_description = (
@@ -924,6 +1089,9 @@ def main() -> None:
             )
             for candidate in candidates(args.target)
         ]
+    instrumentation_path = (
+        Path(__file__).resolve().with_name("generate_av1_reconstruction_refs.py")
+    )
     rejection_reasons = list(reports[0]["predicates"])
     report = {
         "format_version": 1,
@@ -933,6 +1101,14 @@ def main() -> None:
             "codecs": codecs,
             "dav1d": version,
             "dav1d_commit": DAV1D_COMMIT,
+        },
+        "instrumentation": {
+            "script": "scripts/generate_av1_reconstruction_refs.py",
+            "sha256": sha256(instrumentation_path.read_bytes()),
+            "scope": (
+                "pinned scalar dav1d DEBUG_BLOCK_INFO and coefficient guards; "
+                "8x32 I420 visible luma coordinates bx<2, by<8"
+            ),
         },
         "encoding": {
             "size": list(SIZE),

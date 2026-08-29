@@ -5997,7 +5997,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 245);
+    assert_eq!(expected.cases.len(), 246);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7071,6 +7071,40 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 ],
                 "AV1 following Vertical8x16 filter-intra witness partition topology"
             );
+        } else if case.fixture == "coverage_vertical8x16_following_luma_diagonal67_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: 51_878,
+                    },
+                ],
+                "AV1 following Vertical8x16 luma Diagonal67 witness partition topology"
+            );
         } else if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -7788,6 +7822,117 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 ],
                 "AV1 following Vertical8x16 mode-2 witness leaf states"
             );
+        }
+        if case.fixture == "coverage_vertical8x16_following_luma_diagonal67_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                66,
+                "AV1 following Vertical8x16 Diagonal67 witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let syntax_lines = debug_lines
+                .iter()
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-yangle-symbol[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .copied()
+                .collect::<Vec<_>>();
+            assert_eq!(
+                syntax_lines,
+                vec![
+                    "Post-skip[0]: r=50748",
+                    "Post-cdef_idx[0]: r=50748",
+                    "Post-ymode[0]: r=48336",
+                    "Post-uvmode[0]: r=61912",
+                    "Post-tx[7]: r=61912",
+                    "Post-txtp-intra[7->1][0][1->0]: r=44224",
+                    "Post-y-cf-blk[tx=7,txtp=0,eob=6]: r=55048",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=-1]: r=49884 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=-1]: r=45303 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=50258",
+                    "Post-ymode[8]: r=47168",
+                    "Post-yangle-symbol[3]: r=60384",
+                    "Post-uvmode[0]: r=44868",
+                    "Post-tx[7]: r=44868",
+                    "Post-txtp-intra[7->1][8][1->0]: r=37040",
+                    "Post-y-cf-blk[tx=7,txtp=0,eob=1]: r=64952",
+                    "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=-1]: r=59459 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=-1]: r=54756 [x=0,cbx4=0]",
+                ],
+                "AV1 following Vertical8x16 Diagonal67 witness leaf states"
+            );
+
+            let bottom_prediction = debug_lines
+                .iter()
+                .rposition(|line| *line == "y-intra-pred")
+                .expect("AV1 Diagonal67 witness predictor trace");
+            assert_eq!(
+                &debug_lines[bottom_prediction + 1..bottom_prediction + 17],
+                &[
+                    " 51 55 5a 5e 62 66 6a 6c",
+                    " 53 57 5b 5f 63 68 6c 6c",
+                    " 54 59 5d 61 65 6a 6c 6c",
+                    " 56 5b 5f 63 67 6b 6c 6c",
+                    " 58 5c 60 64 69 6c 6c 6c",
+                    " 5a 5e 62 67 6b 6c 6c 6c",
+                    " 5c 60 64 69 6c 6c 6c 6c",
+                    " 5e 62 66 6a 6c 6c 6c 6c",
+                    " 5f 63 68 6b 6c 6c 6c 6c",
+                    " 61 65 6a 6c 6c 6c 6c 6c",
+                    " 63 67 6b 6c 6c 6c 6c 6c",
+                    " 64 69 6c 6c 6c 6c 6c 6c",
+                    " 66 6a 6c 6c 6c 6c 6c 6c",
+                    " 69 6c 6c 6c 6c 6c 6c 6c",
+                    " 6a 6c 6c 6c 6c 6c 6c 6c",
+                    " 6b 6c 6c 6c 6c 6c 6c 6c",
+                ],
+                "AV1 following Vertical8x16 Diagonal67 predictor rows"
+            );
+
+            let bottom_top = debug_lines[..bottom_prediction]
+                .iter()
+                .rposition(|line| *line == "t")
+                .expect("AV1 Diagonal67 witness top edge trace");
+            assert_eq!(
+                &debug_lines[bottom_top - 2..bottom_top + 3],
+                &[
+                    "tl",
+                    " 50",
+                    "t",
+                    " 50 53 58 5c 60 64 69 6c",
+                    " 6c 6c 6c 6c 6c 6c 6c 6c",
+                ],
+                "AV1 following Vertical8x16 Diagonal67 top edge and top-left"
+            );
+
+            let bottom_y_block = debug_lines
+                .iter()
+                .rposition(|line| *line == "Post-y-cf-blk[tx=7,txtp=0,eob=1]: r=64952")
+                .expect("AV1 Diagonal67 witness coefficient trace");
+            let bottom_dq = bottom_y_block
+                + debug_lines[bottom_y_block..]
+                    .iter()
+                    .position(|line| *line == "dq")
+                    .expect("AV1 Diagonal67 witness dequantized coefficient matrix");
+            let actual_dq = debug_lines[bottom_dq + 1..bottom_dq + 9]
+                .iter()
+                .map(|line| line.split_whitespace().collect::<Vec<_>>())
+                .collect::<Vec<_>>();
+            let mut expected_dq = vec![vec!["0"; 16]; 8];
+            expected_dq[1][0] = "77";
+            assert_eq!(actual_dq, expected_dq);
         }
         if case.fixture == "coverage_h16x8_origin_dct_dct_01.avif" {
             assert_eq!(
@@ -11158,6 +11303,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_vertical8x16_following_filter_intra_mode2_01.avif" => {
                 "403dfa0053c7a79267a72b0c4b8aad0462efb45e9baac12dd488468b3d3d924b"
+            }
+            "coverage_vertical8x16_following_luma_diagonal67_01.avif" => {
+                "62169489fa9dc810e702da26d7ea8309def5ecf07ccf87c0f64b87e8b090813b"
             }
             "coverage_r16x8_neighbor_01.avif" => {
                 "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"
