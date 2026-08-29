@@ -3847,6 +3847,58 @@
           }
         }
       },
+      "current_slice_update_2026_08_29_h16x8_origin_h_dct_search": {
+        "status": "completed_bounded_no_hit",
+        "target": "origin Horizontal16x8 16x8 8-bit 4:2:0 leaf with one unsplit TX16x8 H_DCT luma payload, two skipped TX8x4 DC chroma payloads, and direct nonzero luma AC",
+        "campaign": {
+          "script": "scripts/explore_avif_horizontal16x8_h_dct.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_horizontal16x8_h_dct_campaign_01.json",
+          "report_sha256": "184dfc73926ad1e320b0fd356f3a4782b71875a952d38e3c52a1acd0f2aa1940",
+          "candidate_count": 100,
+          "family_count": 10,
+          "qualified": 0,
+          "promoted": null,
+          "repository_rust_invoked": false,
+          "target_predicate": "Require transform CDF symbol 3/dav1d txtp 11, exactly one 128-value luma dequantized coefficient dump, at least one nonzero post-DC coefficient, and two skipped TX8x4 DC chroma payloads.",
+          "rejection_summary": {
+            "by_common_rejection_reason": {
+              "dc_luma_and_chroma_modes": 13,
+              "frame_is_16x8_8bit_420": 0,
+              "full_yuv_output": 0,
+              "no_filter_palette_or_angle_syntax": 0,
+              "one_nonempty_luma_payload": 39,
+              "one_origin_horizontal16x8_root": 13,
+              "one_unsplit_tx16x8": 39,
+              "single_leaf_group": 13,
+              "two_tx8x4_dc_chroma_payloads": 13
+            },
+            "by_target_rejection_reason": {
+              "luma_dequantized_ac": 39,
+              "luma_payload_dav1d_type": 100,
+              "one_luma_transform_record": 39,
+              "one_r16x8_luma_dq_matrix": 39,
+              "transform_cdf_symbol": 100,
+              "transform_dav1d_type": 100,
+              "two_skipped_tx8x4_dc_chroma_payloads": 13
+            }
+          }
+        },
+        "oracle": {
+          "pillow": "12.2.0",
+          "libavif": "1.4.1",
+          "libaom": "3.13.2",
+          "dav1d": "1.5.3",
+          "dav1d_commit": "b546257f770768b2c88258c533da38b91a06f737",
+          "controls": "16x8 8-bit 4:2:0, quality 36/44/52/60/68/76/84/90/94/98, speed 0, one encoder thread, optional tools disabled, min/max partition size 8/16, extended transforms enabled, deterministic double encode/decode and exact YUV/RGB checks"
+        },
+        "decision": "No candidate emitted the required H_DCT transform CDF symbol 3/dav1d txtp 11. Keep origin R16x8 H_DCT out of decoder admission. This is bounded negative evidence for this corpus and predicate, not proof that the syntax is unreachable.",
+        "negative_boundaries": [
+          "the 100 candidates and ten deterministic families in this campaign",
+          "the exact 16x8 origin Horizontal16x8, unsplit TX16x8, skipped-chroma, direct-AC predicate",
+          "the tested Pillow/libavif/libaom encoder controls and pinned scalar dav1d decoder"
+        ],
+        "scope": "No production source, manifest, coverage matrix, reference, or managed Coverage MCP run changes result from this no-hit search. The active origin and following H16x8 DCT_DCT witnesses remain the rectangular classes with positive evidence; broader H_DCT/V_DCT, other predictors, partitions, dimensions, depths, optional tools, sequences, encoding, and AVF-STILL-001 remain open."
+      },
       "current_slice_update_2026_08_28_h16x8_following_dct_dct": {
         "target": "following Horizontal16x8 32x8 8-bit 4:2:0 leaf reached through a root PARTITION_SPLIT",
         "fixture": "coverage_h16x8_following_dct_dct_01.avif",
