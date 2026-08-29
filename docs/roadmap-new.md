@@ -312,6 +312,21 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the observed depth-two split/angle/qindex/matrix/tool
   class; broader split transforms, neighbor states, predictors, dimensions,
   optional tools, sequences, encoding, and `AVF-STILL-001` remain partial.
+- Managed Coverage MCP run `3c888867-7ae2-4196-974a-191a639c0b70` passed the
+  exact split-TX4x4 reconstruction selector in 47,582 ms at implementation
+  commit `54cb372443b2e07864f9187e59c254106a09980b` and ingested snapshot
+  `7f98d0df-f1de-4509-88f4-1f85d9fd0bcd` against explicit baseline
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. The selected test passed 1/1 with
+  44 filtered out. Standalone `coverage_review(task=incremental)` reports
+  additive-union deltas of +8 covered lines, +10 branches, +0 functions, and
+  +937 regions; denominator changes are +4,785/+708/+79/+13,239. The union
+  reports 1,958 newly covered line identities; the selected snapshot diff
+  reports 650 newly covered line identities, 76,058 baseline observations not
+  observed, and zero regressions. Merge exactness is false and named-test
+  attribution is unavailable; the compact snapshot projection retains
+  metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance
+  caveat. This is supported aggregate, bounded selected-subset evidence—not
+  a complete four-metric release measurement or a global regression claim.
 - The bounded H16x4 coefficient-state follow-up is explicit negative evidence,
   not a production admission. `scripts/explore_avif_horizontal16x4_eob.py`
   evaluated 100 deterministic candidates across 10 families in the proven
