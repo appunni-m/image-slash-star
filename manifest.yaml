@@ -4432,6 +4432,38 @@ formats:
       description: 32x32 4:2:0 quality-99 entropy mosaic regression witness with a distinct matrix-10 TX32X32 coefficient stream and EOB profile
       test_assets:
       - coverage_entropy_mosaic_01.avif
+    - id: coverage_entropy_mosaic_03
+      description: 32x32 4:2:0 quality-99 entropy mosaic proving a screen-content-enabled Square32 leaf consumes zero Y/UV palette flags before filter-intra and reconstructs matrix-10 TX32X32 coefficients
+      test_assets:
+      - coverage_entropy_mosaic_03.avif
+    - id: coverage_entropy_mosaic_04
+      description: 32x32 4:2:0 quality-99 entropy mosaic control with screen-content tools disabled and a distinct matrix-10 TX32X32 coefficient stream
+      test_assets:
+      - coverage_entropy_mosaic_04.avif
+    - id: coverage_entropy_mosaic_05
+      description: Independent 32x32 4:2:0 quality-99 entropy mosaic control with screen-content tools disabled and distinct luma/chroma EOB profiles
+      test_assets:
+      - coverage_entropy_mosaic_05.avif
+    - id: coverage_entropy_mosaic_06
+      description: 32x32 4:2:0 quality-99 palette-zero Square32 witness reaching the 513-1023 luma EOB bin and extended coefficient magnitudes
+      test_assets:
+      - coverage_entropy_mosaic_06.avif
+    - id: coverage_entropy_mosaic_07
+      description: 32x32 4:2:0 quality-99 palette-zero Square32 witness with independent extended chroma coefficient magnitudes
+      test_assets:
+      - coverage_entropy_mosaic_07.avif
+    - id: coverage_entropy_mosaic_08
+      description: 32x32 4:2:0 quality-99 palette-zero Square32 witness with a distinct matrix-10 TX32X32 coefficient stream and EOB profile
+      test_assets:
+      - coverage_entropy_mosaic_08.avif
+    - id: coverage_entropy_mosaic_09
+      description: 32x32 4:2:0 quality-99 palette-zero Square32 witness with a compact non-empty luma/chroma coefficient stream
+      test_assets:
+      - coverage_entropy_mosaic_09.avif
+    - id: coverage_entropy_mosaic_10
+      description: Independent 32x32 4:2:0 quality-99 palette-zero Square32 witness with distinct matrix-10 luma/chroma EOB profiles
+      test_assets:
+      - coverage_entropy_mosaic_10.avif
     - id: coverage_v4_vertical_checker
       description: 16x16 4:2:0 quality-76 speed-0 PARTITION_V4 witness with four ordered 4x16 luma leaves and chroma owned by alternating leaves
       test_assets:

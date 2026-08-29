@@ -5957,12 +5957,84 @@ fn assert_entropy_mosaic_candidate(fixture: &str) {
 }
 
 #[cfg(coverage)]
+#[derive(Clone, Copy)]
+struct EntropyMosaicExpectation {
+    fixture: &'static str,
+    screen_content_tools: bool,
+    operations: usize,
+    eob: [u32; 3],
+    final_range: [u32; 3],
+}
+
+#[cfg(coverage)]
+const ENTROPY_MOSAIC_EXPECTATIONS: [EntropyMosaicExpectation; 8] = [
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_03.avif",
+        screen_content_tools: true,
+        operations: 1_105,
+        eob: [436, 149, 174],
+        final_range: [57_864, 59_656, 40_712],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_04.avif",
+        screen_content_tools: false,
+        operations: 1_012,
+        eob: [297, 152, 179],
+        final_range: [40_200, 41_224, 41_736],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_05.avif",
+        screen_content_tools: false,
+        operations: 1_007,
+        eob: [278, 188, 188],
+        final_range: [49_672, 34_824, 56_840],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_06.avif",
+        screen_content_tools: true,
+        operations: 1_201,
+        eob: [526, 163, 188],
+        final_range: [62_472, 45_064, 55_304],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_07.avif",
+        screen_content_tools: true,
+        operations: 1_172,
+        eob: [467, 176, 214],
+        final_range: [57_608, 40_712, 52_744],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_08.avif",
+        screen_content_tools: true,
+        operations: 958,
+        eob: [250, 152, 179],
+        final_range: [37_640, 35_592, 41_736],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_09.avif",
+        screen_content_tools: true,
+        operations: 789,
+        eob: [156, 162, 176],
+        final_range: [50_440, 45_576, 35_080],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_10.avif",
+        screen_content_tools: true,
+        operations: 916,
+        eob: [250, 148, 175],
+        final_range: [49_160, 58_120, 39_944],
+    },
+];
+
+#[cfg(coverage)]
 #[test]
-fn test_av1_entropy_mosaic_01_materializes() {
+fn test_av1_entropy_mosaic_candidates_materialize() {
     if matrix_selection_is_filtered() {
         return;
     }
-    assert_entropy_mosaic_candidate("coverage_entropy_mosaic_01.avif");
+    for candidate in 1..=10 {
+        assert_entropy_mosaic_candidate(&format!("coverage_entropy_mosaic_{candidate:02}.avif"));
+    }
 }
 
 #[cfg(coverage)]
@@ -5997,7 +6069,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 255);
+    assert_eq!(expected.cases.len(), 263);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7754,6 +7826,96 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .count(),
                 2,
                 "AV1 TX32X32 entropy mosaic must decode both chroma planes"
+            );
+        }
+        if let Some(expectation) = ENTROPY_MOSAIC_EXPECTATIONS
+            .iter()
+            .find(|expectation| expectation.fixture == case.fixture)
+        {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 0,
+                    range: 36_920,
+                }],
+                "AV1 entropy mosaic Square32 partition topology: {}",
+                case.fixture
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                expectation.operations,
+                "AV1 entropy mosaic operation count: {}",
+                case.fixture
+            );
+            let event_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let filter_range = if expectation.screen_content_tools {
+                65_174
+            } else {
+                33_310
+            };
+            let mut required_lines = vec![
+                "Post-delta_q[-2->2]: r=40200".to_owned(),
+                "Post-ymode[0]: r=38228".to_owned(),
+                "Post-uvmode[0]: r=48704".to_owned(),
+            ];
+            if expectation.screen_content_tools {
+                required_lines.extend([
+                    "Post-y_pal[0]: r=48035".to_owned(),
+                    "Post-uv_pal[0]: r=47657".to_owned(),
+                ]);
+            } else {
+                assert!(
+                    !event_lines
+                        .iter()
+                        .any(|line| line.starts_with("Post-y_pal[")
+                            || line.starts_with("Post-uv_pal[")),
+                    "screen-content-disabled entropy mosaic must not consume palette symbols: {}",
+                    case.fixture
+                );
+            }
+            required_lines.extend([
+                format!("Post-filterintramode[0/0]: r={filter_range}"),
+                format!("Post-tx[3]: r={filter_range}"),
+                format!(
+                    "Post-y-cf-blk[tx=3,txtp=0,eob={}]: r={}",
+                    expectation.eob[0], expectation.final_range[0]
+                ),
+                format!(
+                    "Post-uv-cf-blk[pl=0,tx=2,txtp=0,eob={}]: r={} [x=0,cbx4=0]",
+                    expectation.eob[1], expectation.final_range[1]
+                ),
+                format!(
+                    "Post-uv-cf-blk[pl=1,tx=2,txtp=0,eob={}]: r={} [x=0,cbx4=0]",
+                    expectation.eob[2], expectation.final_range[2]
+                ),
+            ]);
+            let semantic_positions = required_lines
+                .iter()
+                .map(|required| {
+                    event_lines
+                        .iter()
+                        .position(|line| *line == required)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "missing pinned AV1 entropy line `{required}`: {}",
+                                case.fixture
+                            )
+                        })
+                })
+                .collect::<Vec<_>>();
+            assert!(
+                semantic_positions.windows(2).all(|pair| pair[0] < pair[1]),
+                "AV1 entropy mosaic semantic sentence order: {}",
+                case.fixture
             );
         }
         if case.fixture == "coverage_square32_origin_tx16x16_split_01.avif" {
@@ -11817,6 +11979,30 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_entropy_mosaic_01.avif" => {
                 "52660ed52ff5e28a3bc05d35023875e225f70acd76a1191ecd4f72cc765b8cd7"
+            }
+            "coverage_entropy_mosaic_03.avif" => {
+                "fafd75caa46a673bc0201f8cba7b6add17b09e0257301b86762c78906f94e85b"
+            }
+            "coverage_entropy_mosaic_04.avif" => {
+                "05295c93b4b88873d843df1490b8dd6837398a179b2e46767f7d7f91f0eccf24"
+            }
+            "coverage_entropy_mosaic_05.avif" => {
+                "ceeee3787ba0d828b6c43866bd97dc1f2537e1b5834ea6f467cafe2ebfd74b1f"
+            }
+            "coverage_entropy_mosaic_06.avif" => {
+                "ff8e61edc88b2f0281c934c2f32308c262344b45043fe9449961972b47fb80b9"
+            }
+            "coverage_entropy_mosaic_07.avif" => {
+                "687a954539f9a9d3f1ed33fa1322faa9a955b6122838f22fcb8418aae11c94c0"
+            }
+            "coverage_entropy_mosaic_08.avif" => {
+                "26c4f0adeb8fada605676e3835ea159935ef2e828d49308833e6d8ebcf00648a"
+            }
+            "coverage_entropy_mosaic_09.avif" => {
+                "9ac81a8f72e3f01542e41529833ba253f8d4eca77451da4d88fb4921bd7d1c21"
+            }
+            "coverage_entropy_mosaic_10.avif" => {
+                "754444462592799314130431bbed2e9df516d2d32969683c2cea4d33c6b57d22"
             }
             "coverage_adst_public_02.avif" => {
                 "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"

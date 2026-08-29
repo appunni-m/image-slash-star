@@ -1236,6 +1236,46 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "52660ed52ff5e28a3bc05d35023875e225f70acd76a1191ecd4f72cc765b8cd7",
         "size": [32, 32],
     },
+    "coverage_entropy_mosaic_03.avif": {
+        "file_sha256": "bbf49002958d8b836d30ef5f837168a841b138e67f12ef4f6e73c072b71e65d9",
+        "rgb_sha256": "fafd75caa46a673bc0201f8cba7b6add17b09e0257301b86762c78906f94e85b",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_04.avif": {
+        "file_sha256": "233617a50cfd0a8b2dbd5976e1d4296bd9f6b26b36f416970fe812ba00f79d73",
+        "rgb_sha256": "05295c93b4b88873d843df1490b8dd6837398a179b2e46767f7d7f91f0eccf24",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_05.avif": {
+        "file_sha256": "0509df3919b43398bd7e2bf6d812796113c750094cf7a973d58aa19fbc8d2dc7",
+        "rgb_sha256": "ceeee3787ba0d828b6c43866bd97dc1f2537e1b5834ea6f467cafe2ebfd74b1f",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_06.avif": {
+        "file_sha256": "ea7d7dc634b9ef96069030b6b62b4c5c499152982dc5524f17f5dfe5b58a3028",
+        "rgb_sha256": "ff8e61edc88b2f0281c934c2f32308c262344b45043fe9449961972b47fb80b9",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_07.avif": {
+        "file_sha256": "dcb3689dd4ca134fb7c221140c4e75b13abc39f6fba611ee285f7a003f1c5f2a",
+        "rgb_sha256": "687a954539f9a9d3f1ed33fa1322faa9a955b6122838f22fcb8418aae11c94c0",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_08.avif": {
+        "file_sha256": "561dcfe17d6583e0d9051cd221ea93be152c59479074bc69ff9b038848eb5451",
+        "rgb_sha256": "26c4f0adeb8fada605676e3835ea159935ef2e828d49308833e6d8ebcf00648a",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_09.avif": {
+        "file_sha256": "6d4b2b591d77fa312ac8f98b3478364f01c80852745dae498c48692a1e3a60f8",
+        "rgb_sha256": "9ac81a8f72e3f01542e41529833ba253f8d4eca77451da4d88fb4921bd7d1c21",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_10.avif": {
+        "file_sha256": "aefbe6aab6da76fe7d51bb0fb3e9d7e83fb0622da44d6b1f835e0868662d6558",
+        "rgb_sha256": "754444462592799314130431bbed2e9df516d2d32969683c2cea4d33c6b57d22",
+        "size": [32, 32],
+    },
     "coverage_v4_vertical_checker.avif": {
         "file_sha256": "b0b4dfb60657f4b87254773d6cca9fbc1ab07c742239fa2e0f3b862785163774",
         "rgb_sha256": "cfd11c3f8287b7e78ebf5da228ed44e04ccaac6cc6cb14a89e49f1bc446ab9ff",
