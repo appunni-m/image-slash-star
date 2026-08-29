@@ -4510,7 +4510,7 @@
           "status_note": "Implementation commit 4377ca3e29db98fd1099d00cf8e673727ebe82de passes the exact reconstruction selector and all repository gates. Managed Coverage MCP run 29ab26e8-5069-4d43-bc19-7dadee91cb33 passed and ingested snapshot 5679a889-1feb-48e2-8253-4bf2c5ab020d; the selected-subset review is bounded evidence and does not replace the complete four-metric release measurement."
         },
         "current_slice_update_2026_08_29_r16x8_neighbor_01": {
-          "status": "implementation_verified_pending_commit_and_coverage",
+          "status": "completed_bounded",
           "target": "A valid 32x16 8-bit 4:2:0 reduced-still key frame from the maintained upper-context neighbor campaign",
           "fixture": "coverage_r16x8_neighbor_01.avif",
           "fixture_sha256": "12e2ed4b6327eacb73015c074fcef1b5ba3c3c141ff3de7cc195263c8d9a7b70",
@@ -4534,7 +4534,7 @@
             },
             "pillow_rgb_sha256": "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808",
             "repository_rust_invoked": false,
-            "promotion_state": "canonical generated reference, permanent assertions, and active matrix row are present in the working tree; durable commit and managed incremental coverage evidence remain pending"
+            "promotion_state": "canonical generated reference, permanent assertions, active matrix row, durable implementation commit, and managed incremental coverage evidence are present; this remains bounded selected-subset evidence rather than a complete release measurement"
           },
           "first_divergence": {
             "operation_index": 12,
@@ -4631,7 +4631,68 @@
             "cargo +nightly test --workspace --all-features --locked",
             "repository verifiers except claim-ledger refresh"
           ],
-          "next_action": "Run the remaining locked tests, rustdoc, repository verifiers, and the selected incremental Coverage MCP command after a durable implementation commit; record exact commit/run/snapshot evidence before promoting this slice."
+          "managed_incremental_coverage": {
+            "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+            "managed_coverage_mcp": true,
+            "project_id": "2b9f48753c80b021b894b600",
+            "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+            "commit_sha": "212d273bb757c214ee9079e845cad2e6e033523b",
+            "run_id": "540ac99d-c866-4103-aab8-5ad2990b8ede",
+            "snapshot_id": "4018c9f3-8a2d-4158-8ed4-f136c003b8db",
+            "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+            "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+            "suite": "all-features-lines-branches-nightly",
+            "duration_ms": 42582,
+            "arguments": [
+              "--test",
+              "coverage_matrix_tests",
+              "--",
+              "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+              "--exact",
+              "--nocapture",
+              "--skip",
+              "__image_slash_star_av1_fixture_selector__=coverage_r16x8_neighbor_01.avif"
+            ],
+            "selected_fixtures": [
+              "coverage_r16x8_neighbor_01.avif"
+            ],
+            "result": {
+              "passed": 1,
+              "failed": 0,
+              "filtered_out": 43,
+              "status": "passed_and_ingested",
+              "log_evidence": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 43 filtered out; finished in 0.64s"
+            },
+            "review": {
+              "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+              "measurement_scope": "selected_subset",
+              "comparison_mode": "additive_union",
+              "covered_lines_delta": 8,
+              "covered_branches_delta": 10,
+              "covered_functions_delta": 0,
+              "covered_regions_delta": 979,
+              "total_lines_delta": 4493,
+              "total_branches_delta": 566,
+              "total_functions_delta": 67,
+              "total_regions_delta": 12861,
+              "line_rate_delta": -0.03573440512858672,
+              "branch_rate_delta": -0.033822125698477645,
+              "function_rate_delta": -0.01011156691402837,
+              "region_rate_delta": -0.05932555495292913,
+              "selected_snapshot_diff_newly_covered_line_identities": 660,
+              "selected_snapshot_diff_added_observations": 13471,
+              "selected_snapshot_diff_branch_state_changed": 230,
+              "selected_snapshot_diff_hit_count_only": 4253,
+              "not_observed": 75292,
+              "regressed": 0,
+              "test_attribution": "unavailable",
+              "merge_exact": false,
+              "merge_strategy": "conservative_max_fallback",
+              "snapshot_diff_claim_status": "limited",
+              "note": "The exact selected fixture passed through the registered all-feature command and the artifact was ingested. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +979 regions; denominator changes are +4,493 lines, +566 branches, +67 functions, and +12,861 regions. The selected snapshot diff reports 660 newly covered line identities, 75,292 baseline observations not observed in this selected subset, and zero tool-reported regressions. Because this is a selected subset, not_observed is not a regression and the result is not a complete four-metric release measurement or a global regression claim. The durable run record is exact for implementation commit 212d273bb757c214ee9079e845cad2e6e033523b; the ordinary snapshot metadata retains commit 3272b3ef49a87c2947c08b46596b442195c6a8db as a provenance caveat."
+            }
+          },
+          "next_action": "Retain this as a completed bounded qcat-aware neighbor witness; choose the next AV1 class only from a new requirement packet and source-backed divergence, while the broader AVIF, encoding, optional-tool, sequence, and complete four-metric coverage gaps remain open."
         }
       },
       "AVF-ENTROPY-001": {

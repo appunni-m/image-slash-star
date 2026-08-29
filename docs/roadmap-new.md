@@ -173,10 +173,23 @@ the corresponding status is recorded in `roadmap.json`:
   the Pillow RGB SHA-256 is
   `1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808`.
   The permanent reconstruction suite passes 245/245 cases, all 312 active AVIF
-  rows pass, and the new row is active in the generated matrix; durable commit
-  and selected Coverage MCP evidence are the remaining promotion records for
-  this slice. Broader neighbor geometries, alternate contexts, optional tools,
-  sequences, encoding, and `AVF-STILL-001` remain partial.
+  rows pass, and the new row is active in the generated matrix. The durable
+  implementation commit is `212d273bb757c214ee9079e845cad2e6e033523b`; its
+  managed incremental Coverage MCP run is
+  `540ac99d-c866-4103-aab8-5ad2990b8ede` (42,582 ms), with ingested snapshot
+  `4018c9f3-8a2d-4158-8ed4-f136c003b8db` against explicit baseline
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. The exact selected run passed 1/1,
+  filtered 43, and reports additive-union deltas of +8 lines, +10 branches,
+  +0 functions, and +979 regions; denominator changes are +4,493/+566/+67/
+  +12,861. Its selected snapshot diff reports 660 newly covered line
+  identities, 75,292 baseline observations not observed in this selected
+  subset, and zero tool-reported regressions. Test attribution was unavailable,
+  merge exactness was false with conservative fallback, and the ordinary
+  snapshot metadata retains commit `3272b3ef49a87c2947c08b46596b442195c6a8db`
+  as a provenance caveat. This is supported aggregate, bounded selected-subset
+  evidence—not a complete four-metric release measurement or a global
+  regression claim. Broader neighbor geometries, alternate contexts, optional
+  tools, sequences, encoding, and `AVF-STILL-001` remain partial.
 - The managed incremental Coverage MCP run for this new reconstruction
   selector is `fc9d6269-8fd4-4a6b-9497-14cc6bd28ea3`, with ingested snapshot
   `809c0839-05a7-4cb5-beae-4c059d9405b7` against explicit baseline
