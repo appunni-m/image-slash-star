@@ -25379,9 +25379,30 @@ fn reconstruct_lossy_luma_8x16_diagonal_z1(
     coefficients: Option<LossyRectTransformCoefficients>,
     transform_kind: LossyTransformKind,
 ) -> PortableResult<ReconstructedPlane> {
+    reconstruct_lossy_luma_8x16_diagonal_z1_with_upsample(
+        top,
+        top_left,
+        angle,
+        50 < angle,
+        coefficients,
+        transform_kind,
+    )
+}
+
+fn reconstruct_lossy_luma_8x16_diagonal_z1_with_upsample(
+    top: [u16; 16],
+    top_left: u16,
+    angle: i32,
+    use_upsample: bool,
+    coefficients: Option<LossyRectTransformCoefficients>,
+    transform_kind: LossyTransformKind,
+) -> PortableResult<ReconstructedPlane> {
     // AV1 zone-1 prediction for an R8x16 transform. The top edge spans the
     // block width plus the smaller block dimension; when intra-edge
     // upsampling is enabled, the edge and derivative are doubled together.
+    // The caller supplies the sequence-defined upsample decision because the
+    // same rectangular kernel is used by continuation paths with different
+    // available-edge extents.
     const DR_INTRA_DERIVATIVE: [i32; 44] = [
         0, 1023, 0, 547, 372, 0, 0, 273, 215, 0, 178, 151, 0, 132, 116, 0, 102, 0, 90, 80, 0, 71,
         64, 0, 57, 51, 0, 45, 0, 40, 35, 0, 31, 27, 0, 23, 19, 0, 15, 0, 11, 0, 7, 3,
@@ -25392,9 +25413,8 @@ fn reconstruct_lossy_luma_8x16_diagonal_z1(
         .get(dx_index)
         .filter(|&&value| value > 0)
         .portable()?;
-    let upsample = 50 < angle;
     let upsampled_edge = upsample_intra_top_edge_16(top, top_left);
-    let (edge, max_base_x, dx, base_increment) = if upsample {
+    let (edge, max_base_x, dx, base_increment) = if use_upsample {
         (&upsampled_edge[..], 30, dx.saturating_mul(2), 2)
     } else {
         (&top[..], 15, dx, 1)
@@ -27761,6 +27781,45 @@ fn bottom_edge_at<const N: usize>(
             .get(row_start.saturating_add(index))
             .copied()
             .unwrap_or(128)
+    })
+}
+
+/// Read a positioned bottom edge and extend its final available sample.
+///
+/// AV1 extends an unavailable directional edge by repeating the last sample
+/// that is available on that edge. Keeping the extension in this bounded
+/// accessor is important for a narrow upper leaf feeding a wider rectangular
+/// child: a missing sample must not become the unrelated midpoint sentinel.
+fn bottom_edge_at_with_repeat<const N: usize>(
+    plane: &ReconstructedPlane,
+    row_width: u32,
+    x_offset: u32,
+) -> [u16; N] {
+    let row_width = usize::try_from(row_width).unwrap_or(0);
+    let x_offset = usize::try_from(x_offset).unwrap_or(0);
+    let row_start = row_width
+        .checked_mul(
+            plane
+                .samples
+                .len()
+                .checked_div(row_width)
+                .unwrap_or(0)
+                .saturating_sub(1),
+        )
+        .unwrap_or(0)
+        .saturating_add(x_offset);
+    let available = row_width.saturating_sub(x_offset).min(N);
+    let repeat = available
+        .checked_sub(1)
+        .and_then(|index| plane.samples.get(row_start.saturating_add(index)))
+        .copied()
+        .unwrap_or(128);
+    std::array::from_fn(|index| {
+        plane
+            .samples
+            .get(row_start.saturating_add(index))
+            .copied()
+            .unwrap_or(repeat)
     })
 }
 
@@ -31398,7 +31457,11 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     } = syntax;
 
     let luma_top = if above_right_is_above_left {
-        bottom_edge_at::<16>(&above_left.planes[0], above_left_width, above_left_x_offset)
+        bottom_edge_at_with_repeat::<16>(
+            &above_left.planes[0],
+            above_left_width,
+            above_left_x_offset,
+        )
     } else {
         combined_bottom_edge::<16>(
             &above_left.planes[0],
@@ -31433,7 +31496,14 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     };
     let smooth_neighbor_edges = smooth_edges(above_left.luma_predictor)
         || left_neighbor.is_some_and(|neighbor| smooth_edges(neighbor.luma_predictor));
-    let luma_top_left = if filter_intra_mode.is_some() && !has_left {
+    let luma_top_left = if !has_left
+        && filter_intra_mode.is_none()
+        && matches!(
+            luma_predictor,
+            LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67
+        ) {
+        luma_top[0]
+    } else if filter_intra_mode.is_some() && !has_left {
         // With no left neighbor, filter-intra uses the prepared missing-edge
         // anchor at the first top sample. The upper leaf's final sample is
         // diagonally unrelated to this child-local northwest reference.
@@ -31481,6 +31551,22 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
         )
     } else {
         match (luma_predictor, luma_angle) {
+            (LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67, Some(angle))
+                if !has_left
+                    && above_right_is_above_left
+                    && above_left_width.saturating_sub(above_left_x_offset) < 16
+                    && 0 < angle
+                    && angle < 90 =>
+            {
+                reconstruct_lossy_luma_8x16_diagonal_z1_with_upsample(
+                    luma_top,
+                    luma_top_left,
+                    angle,
+                    false,
+                    lossy_luma_rect_coefficients,
+                    lossy_luma_rect_transform,
+                )?
+            }
             (LumaPredictor::Diagonal157, Some(angle)) => reconstruct_lossy_luma_8x16_diagonal(
                 luma_top,
                 luma_left,
