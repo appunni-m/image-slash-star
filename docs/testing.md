@@ -2,7 +2,7 @@
 
 Status: current contributor reference
 
-Reviewed: 2026-08-28 against the current safe-Rust AVIF cutover working tree;
+Reviewed: 2026-08-29 against the current safe-Rust AVIF cutover working tree;
 the historical pre-cutover checkpoint is
 `2d3e7ecb32b5413b9683061805ff6fc8909ed82e`, and
 benchmark-protocol revision `4415a84463103d3d0916821a3ed8637b832442d6`.
@@ -97,7 +97,7 @@ same arguments to its registered LLVM command, for example:
 ```
 
 With no AV1 fixture selector, the existing reconstruction test still validates
-all 234 oracle cases and all other coverage helpers retain their full-run
+all 243 oracle cases and all other coverage helpers retain their full-run
 behavior. With a selector, matrix dispatch and unrelated AV1 coverage helpers
 return before doing fixture work; the reconstruction test validates only the
 requested cases and asserts that every requested name ran exactly once. The
@@ -121,6 +121,21 @@ globs, unknown names, duplicates, planned cases, `--skip=<payload>`, payloads
 outside `--skip`, ordinary libtest skip filters, and matrix-row/AV1-selector
 mixtures are rejected. Selected runs are bounded incremental evidence and do
 not replace the full four-metric release coverage measurement.
+
+The newest managed one-fixture reconstruction run
+`fc9d6269-8fd4-4a6b-9497-14cc6bd28ea3` passed in 34,607 ms at exact
+implementation commit `a67a00d043b799d94ed0798745b69acb934bc343` and ingested
+snapshot `809c0839-05a7-4cb5-beae-4c059d9405b7` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+`coverage_h16x4_following_h_dct_01.avif` and passed 1/1 cases with 43 filtered
+out. The standalone incremental review reports additive baseline-union deltas
+of +8 covered lines, +10 branches, +0 functions, and +938 regions; denominator
+changes are +4,249/+446/+49/+12,526, and the additive-union projection reports
+2,022 newly covered line identities. The selected snapshot diff reports 661
+newly covered line identities, 75,660 baseline observations were not observed,
+and zero regressions were reported. Merge exactness is false and named-test
+attribution is unavailable, so this is bounded selected-subset evidence rather
+than a complete four-metric release measurement.
 
 An earlier managed one-fixture reconstruction run
 `44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms at implementation

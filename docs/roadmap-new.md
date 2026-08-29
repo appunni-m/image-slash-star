@@ -156,6 +156,20 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the bounded following right-hand H16x4 H_DCT/CFL
   edge-handoff class; V_DCT, broader H16x4 states, other dimensions and
   optional tools, sequences, encoding, and `AVF-STILL-001` remain partial.
+- The managed incremental Coverage MCP run for this new reconstruction
+  selector is `fc9d6269-8fd4-4a6b-9497-14cc6bd28ea3`, with ingested snapshot
+  `809c0839-05a7-4cb5-beae-4c059d9405b7` against explicit baseline
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed in 34,607 ms at exact
+  implementation commit `a67a00d043b799d94ed0798745b69acb934bc343`; the
+  selected test passed 1/1 with 43 filtered out. Its additive baseline-union
+  review reports +8 lines, +10 branches, +0 functions, and +938 regions;
+  denominator changes are +4,249/+446/+49/+12,526, and the additive-union
+  projection reports 2,022 newly covered line identities. The selected
+  snapshot diff reports 661 newly covered line identities, 75,660 baseline
+  observations were not observed, and zero regressions were reported. Merge
+  exactness is false and named-test attribution is unavailable, so this is
+  bounded selected-subset evidence rather than a complete four-metric release
+  measurement.
 - The new bounded AVIF witness is
   `coverage_v4x16_predictor_adst_adst_01.avif`: a deterministic 16x16 8-bit
   4:2:0 `PARTITION_V4` stream with four `Vertical4x16` luma leaves. Its
