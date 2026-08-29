@@ -5422,6 +5422,61 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal16x4_following_h_dct():
+        """Generate the selected following/right H16x4 H_DCT witness.
+
+        The right 16x16 half is the exact promoted H_DCT control.  Only the
+        preceding half is changed, using the F07/n02 edge-bias candidate from
+        the maintained input-only campaign.  This makes the four real left
+        samples consumed by the following Horizontal predictor observable
+        without copying an encoded AVIF bitstream into the asset generator.
+        """
+
+        base = horizontal16x4_h_dct_cfl().tobytes()
+        left = bytearray(base)
+        for y in range(16):
+            for x in range(16):
+                delta = 5 if x in (0, 7, 15) else -1
+                pixel = (y * 16 + x) * 3
+                for channel in range(3):
+                    left[pixel + channel] = clamp_channel(left[pixel + channel] + delta)
+        pixels = bytearray()
+        for y in range(16):
+            row_start = y * 16 * 3
+            pixels.extend(left[row_start : row_start + 16 * 3])
+            pixels.extend(base[row_start : row_start + 16 * 3])
+        pixels = bytes(pixels)
+        expected_sha256 = (
+            "9603e5bb354b29354a11123de6e46d80c22810e11e66aa23bda7fbf79eaeb73d"
+        )
+        if hashlib.sha256(pixels).hexdigest() != expected_sha256:
+            raise RuntimeError("following H16x4 H_DCT source normalization changed")
+        return Image.frombytes("RGB", (32, 16), pixels)
+
+    write_campaign_image(
+        "coverage_h16x4_following_h_dct_01",
+        horizontal16x4_following_h_dct(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "4",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-smooth-intra": "0",
+            "enable-paeth-intra": "0",
+            "enable-directional-intra": "0",
+            "enable-cfl-intra": "1",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=99,
+        speed=0,
+    )
+
     def vertical4x16_predictor_adst_adst():
         """Generate the selected predictor-enabled V4x16 witness.
 

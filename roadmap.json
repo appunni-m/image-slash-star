@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1536,
-      "decode_rows": 1139,
+      "total_rows": 1537,
+      "decode_rows": 1140,
       "encode_rows": 397,
-      "decode_active": 1136,
+      "decode_active": 1137,
       "decode_planned": 3,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 312,
-      "decode_active": 309,
+      "decode_rows": 313,
+      "decode_active": 310,
       "decode_planned": 3,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_242_reconstruction_cases",
+      "no_selector_behavior": "run_all_243_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -1663,7 +1663,7 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence_addendum": "The latest bounded proof is coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif: an 8x16 8-bit 4:2:0 clipped 16x16 split root with top and following Square8 leaves. The following bottom leaf uses luma mode 8 Diagonal67 at angle symbol 4/resolved angle 70 degrees, four split TX4x4 DCT-DCT luma payloads with one decoded AC coefficient at scan index 5, and skipped TX4x4 U/V. Its pinned 78-operation dav1d trace, exact three-record partition, separate Y/U/V planes, and Pillow RGB8 output match safe Rust after the exact semantic split-edge correction; the prior zero-delta/67-degree split witness remains covered separately. The complete walker still admits only proven geometry and mode sequences; broader rectangular states, AVF-STILL-001, encoding, and the four-metric 100% coverage gate remain open.",
+        "current_evidence_addendum": "The latest bounded proof is coverage_h16x4_following_h_dct_01.avif: a 32x16 8-bit 4:2:0 split root with two level-3 H4 children and eight ordered unsplit Horizontal16x4 luma leaves. The top right-hand leaf has no chroma by 4:2:0 geometry, consumes the preceding left group's checked four-sample right edge, and selects H_DCT; the lower right leaves select CFL with nonzero TX6 U/V payloads. Its pinned 7,485-operation dav1d trace, exact three-record partition, separate Y/U/V planes, and Pillow RGB8 output match safe Rust after admitting the missing horizontal-following monochrome H16x4 path. The complete walker still admits only proven geometry and mode sequences; broader rectangular states, AVF-STILL-001, encoding, and the four-metric 100% coverage gate remain open.",
         "bounded_witnesses": {
           "coverage_h16x8_following_dct_dct_01": {
             "fixture": "coverage_h16x8_following_dct_dct_01.avif",
@@ -2362,11 +2362,11 @@
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
         },
-        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, and exact H_DCT/CFL classes recorded in bounded_witnesses, including the bounded origin and following Horizontal16x8 DCT_DCT classes and the following-vertical Square8 luma Diagonal67 classes with exact partition, entropy, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and the existing complete 4:2:0 canvas walker to publish the preceding leaf before reconstructing the following leaf; unproven rectangular geometries/modes retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, V_DCT/general H_DCT states, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain open.",
-        "latest_witness": "The latest bounded proof is coverage_h16x4_h_dct_cfl_01.avif: a 16x16 8-bit 4:2:0 PARTITION_H4 frame with four ordered unsplit Horizontal16x4 luma leaves. All four leaves select H_DCT (CDF symbol 3 -> dav1d txtp 11, EOB 63); leaves 1 and 3 additionally select UV mode 13/CFL with nonzero TX6 U/V payloads. Safe Rust matches the 3,780-operation pinned dav1d trace, exact partition, Y/U/V planes, and Pillow RGB8 output. V_DCT, broader H_DCT predictor/partition/transform classes, and other AVF-STILL-001 states remain open.",
-        "latest_slice": "The latest AVF-STILL-001 slice is the exact origin H4/four-unsplit-H16x4 H_DCT class with the observed two-leaf CFL chroma state. The existing checked safe-Rust rectangular transform and CFL/chroma paths already reconstruct it; this slice adds a deterministic manifest fixture, independent scalar dav1d trace/YUV oracle, exact structural assertions, and incremental coverage evidence without widening admission beyond the proven class.",
-        "latest_evidence_addition": "The latest promoted fixture is coverage_h16x4_h_dct_cfl_01.avif with fixture SHA-256 c7597bf32c95f175e814bc2962e295ee7369b396892cd649d1f623d8a86f881c, encoded-item SHA-256 800f1eeb5dd7a6e11a4550a2a027835fb471654c7728a60937bc48d5994db703, Pillow RGB SHA-256 8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e, decoded Y/U/V SHA-256 values 5c1d776713322a84d761c09b0e38c1b0c4361ea36e1937808e1bef9ac04e1542, 5145273ccbddd0d453273068b4c3f62abf40068a3cfbbd2a8081324b58426819, and 63208eb4bfb5a2d9ffc5ee653b2a7262de9a83d1ad549be77659a0ddbe79196c, decoded YUV SHA-256 458e1af3b7c674d2dbc650a3855747fd76fa05d146c65ab585e88c258a234f24, and pinned trace SHA-256 1ff300824348aa39783bea17d21ac2c33e8b74853f2894e41d56f5deb1ddf796. The maintained generator checks source normalization SHA-256 f3fb754117962b22ac3705b4f18996f1cf6deb1a8728106dfabe65296581dda8. The exact reconstruction test passes 1/1; managed incremental Coverage MCP evidence is recorded in current_slice_update_2026_08_29_h16x4_h_dct_cfl.",
-        "current_slice": "The current AVF-STILL-001 slice proves one following-vertical 8x16 8-bit 4:2:0 Square8 luma Diagonal67 mode-8 angle-symbol-4/resolved-70 split-TX4x4 DCT-DCT class. It uses the reconstructed top edge with semantic no-left/top-only availability and keeps unsplit angle 70, other Diagonal67 angles, partition, transform, depth, optional-tool, sequence, encoding, and four-metric coverage work open.",
+        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, H_DCT/CFL, and following-H16x4 edge-handoff classes recorded in bounded_witnesses, including exact partition, entropy, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and the complete 4:2:0 canvas walker to publish each preceding leaf before reconstructing a following leaf; unproven rectangular geometries/modes retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, V_DCT/general H_DCT states, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain partial.",
+        "latest_witness": "The latest bounded proof is coverage_h16x4_following_h_dct_01.avif: a 32x16 8-bit 4:2:0 PARTITION_SPLIT frame with two level-3 PARTITION_H4 children and eight ordered unsplit Horizontal16x4 luma leaves. The right group's top leaf has no chroma by geometry, consumes the preceding left group's four-sample right edge, and selects H_DCT; lower right leaves select CFL with nonzero TX6 U/V payloads. Safe Rust matches the 7,485-operation pinned dav1d trace, exact partition, Y/U/V planes, and Pillow RGB8 output. Broader H16x4 states, V_DCT, and other AVF-STILL-001 states remain open.",
+        "latest_slice": "The latest AVF-STILL-001 slice implements the missing horizontally following monochrome Horizontal16x4 path for the top row of a 32x16 4:2:0 split frame. The checked safe-Rust luma reconstructor uses the preceding leaf's right edge and synthetic top extension, while lower rows continue through the existing vertical 4:2:0 CFL path; this slice adds an independent campaign, manifest fixture, dav1d trace/YUV oracle, structural assertions, and selected coverage evidence without widening admission beyond proven syntax.",
+        "latest_evidence_addition": "The latest promoted fixture is coverage_h16x4_following_h_dct_01.avif with fixture SHA-256 623d8ac1eb5ecfc846c6d16c503d131109134b7ca6ad248b98155995da27af5f, encoded-item SHA-256 06810448987533c5e4d14a00629c3f609738a5a758edbdebae0c13bbcac0c1d1, Pillow RGB SHA-256 85977d9e8beab45b30906bbe60c7918b332d5e6fa4c4719177e203f92ce82356, decoded Y/U/V SHA-256 values cc97d14d7235b6961969bd904cf324bdbf15d737902792493893463921ae3987, 7b472b670baf699d495a8f97c14e8f04e9a97025874da958f6bb48090309f8d3, and f4540d39b4a5e66e9120d72be1c27bc06c0dc90001f61beeba4bfc9432c3bfdc, decoded YUV SHA-256 394595ee2aeb6da5429a2c774e78f91f79730a25c008edf85a5b0743170d0859, and pinned trace SHA-256 075b55e8045527a5556c35d02ed4843b0f4ed174d26a79893c9eb68dde6f57a5. The input-only campaign report SHA-256 is 33bcdaaca0c559de0efa1d4c01372db3d25212bf63809fd9aff2bf278e67d97a; the exact reconstruction test passes 1/1 and managed incremental Coverage MCP remains to be recorded at the implementation commit.",
+        "current_slice": "The current AVF-STILL-001 slice proves one following right-hand Horizontal16x4 H_DCT/CFL edge-handoff class in a 32x16 8-bit 4:2:0 root split. It keeps V_DCT, broader H_DCT predictors/partitions/transforms, chroma-owned horizontal contexts, optional tools, sequence, encoding, and four-metric coverage work open.",
         "current_slice_update": {
           "target": "following vertical Square8 chroma Diagonal67 mode 8 with ADST-DCT TX4x4 U/V",
           "fixtures": [
@@ -4030,6 +4030,98 @@
           "rustc_wrapper_changed": false
         },
         "scope": "This closes only the exact origin 16x16 8-bit 4:2:0 H4/four-unsplit-H16x4 H_DCT class with the observed two-leaf CFL chroma state. V_DCT, general H_DCT predictor/partition/transform states, other dimensions/depths/subsampling, HDR, sequences, encoding, and the four-metric 100% coverage gate remain open."
+      },
+      "current_slice_update_2026_08_29_h16x4_following_h_dct": {
+        "status": "implemented_pending_coverage",
+        "target": "following right-hand Horizontal16x4 leaf in a 32x16 8-bit 4:2:0 root split, with the top row lacking chroma and the lower rows using the existing vertical CFL path",
+        "fixture": "coverage_h16x4_following_h_dct_01.avif",
+        "generator": "scripts/generate_test_assets.py::horizontal16x4_following_h_dct",
+        "input_only_search": {
+          "script": "scripts/explore_avif_horizontal16x4_following.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_horizontal16x4_following_campaign_01.json",
+          "report_sha256": "33bcdaaca0c559de0efa1d4c01372db3d25212bf63809fd9aff2bf278e67d97a",
+          "candidate_count": 100,
+          "family_count": 10,
+          "qualified": 65,
+          "promoted": "h16x4-following-f07-n02",
+          "seed": 2164602,
+          "repository_rust_invoked": false,
+          "decision": "Promote the deterministic F07/N02 candidate because it satisfies the full 32x16 4:2:0, two-child H4, eight ordered leaf, non-empty following H_DCT, edge-observation, and no-optional-syntax predicates; this does not claim broader H16x4 reachability."
+        },
+        "dimensions": [
+          32,
+          16
+        ],
+        "bit_depth": 8,
+        "subsampling": "4:2:0",
+        "encoding": {
+          "quality": 99,
+          "speed": 0,
+          "root": "PARTITION_SPLIT with two level-3 PARTITION_H4 children",
+          "luma": "eight ordered unsplit TX16x4 H_DCT payloads; CDF symbol 3 -> dav1d txtp 11; EOB 63 on every leaf",
+          "chroma": "right-group rows 1 and 3 select UV mode 13/CFL with U/V TX6 EOB 31; top-row chroma is absent by 4:2:0 geometry",
+          "controls": "min/max partition 4/16, CFL enabled, filter-intra/directional/smooth/Paeth/edge-filter/CDEF/restoration/loop-filter/AQ/delta-Q disabled, one encoder thread"
+        },
+        "following_edge_context": {
+          "has_left": true,
+          "has_top": false,
+          "top_left": 137,
+          "left_luma_edge_x15_rows0_to3": [
+            137,
+            177,
+            65,
+            193
+          ],
+          "top_edge_extension": "sixteen copies of the top-left sample 137",
+          "right_group": 4,
+          "left_correspondent_group": 0,
+          "pixel_origin": [
+            16,
+            0
+          ]
+        },
+        "pinned_dav1d": {
+          "implementation": "dav1d 1.5.3",
+          "commit": "b546257f770768b2c88258c533da38b91a06f737",
+          "partition": [
+            "poc=0,y=0,x=0,level=2,context=0,partition=3,range=38416",
+            "poc=0,y=0,x=0,level=3,context=0,partition=8,range=50528",
+            "poc=0,y=0,x=4,level=3,context=2,partition=8,range=37636"
+          ],
+          "entropy_operation_count": 7485,
+          "trace_sha256": "075b55e8045527a5556c35d02ed4843b0f4ed174d26a79893c9eb68dde6f57a5",
+          "decoded_yuv_sha256": "394595ee2aeb6da5429a2c774e78f91f79730a25c008edf85a5b0743170d0859",
+          "decoded_plane_sha256": {
+            "y": "cc97d14d7235b6961969bd904cf324bdbf15d737902792493893463921ae3987",
+            "u": "7b472b670baf699d495a8f97c14e8f04e9a97025874da958f6bb48090309f8d3",
+            "v": "f4540d39b4a5e66e9120d72be1c27bc06c0dc90001f61beeba4bfc9432c3bfdc"
+          },
+          "evidence": "Pinned Pillow/libavif/libaom encoded the candidate twice with identical bytes; pinned scalar dav1d decoded the trace and Y/U/V planes twice with identical bytes; repository Rust was not invoked by the oracle."
+        },
+        "fixture_sha256": "623d8ac1eb5ecfc846c6d16c503d131109134b7ca6ad248b98155995da27af5f",
+        "input_rgb_sha256": "9603e5bb354b29354a11123de6e46d80c22810e11e66aa23bda7fbf79eaeb73d",
+        "encoded_item": {
+          "bytes": 804,
+          "sha256": "06810448987533c5e4d14a00629c3f609738a5a758edbdebae0c13bbcac0c1d1"
+        },
+        "pillow_rgb": {
+          "bytes": 1536,
+          "mode": "RGB8",
+          "sha256": "85977d9e8beab45b30906bbe60c7918b332d5e6fa4c4719177e203f92ce82356"
+        },
+        "repository_rust_invoked_by_oracle": false,
+        "production_changes": [
+          "Admit Horizontal16x4 in the horizontally following monochrome path used by top-row 4:2:0 leaves with no above neighbor.",
+          "Reconstruct the luma plane from the preceding leaf's checked four-sample right edge, synthetic repeated top extension, and the decoded rectangular transform syntax; preserve the existing neutral chroma sentinel for monochrome canvas placement.",
+          "Reuse the safe split, filter-intra, and directional R16x4 helpers without a fixture-name or coordinate special case."
+        ],
+        "focused_verification": "The exact reconstruction selector passes 1/1 with three partition records, 7,485 entropy operations, eight H_DCT luma records, four CFL marker pairs, exact Y/U/V planes, and Pillow RGB8 output; the full coverage-configured matrix passes 44/44. Managed incremental Coverage MCP, strict gates, and final roadmap evidence remain to be recorded at the implementation commit.",
+        "negative_boundaries": [
+          "V_DCT and other H16x4 transform/predictor combinations not represented by this witness",
+          "following H16x4 chroma-owned horizontal contexts beyond the existing vertical CFL path",
+          "other dimensions, sample depths, subsampling, optional tools, malformed/truncated residuals, sequences, and encoding"
+        ],
+        "scope": "This closes only the bounded following right-hand H16x4 H_DCT/CFL edge-handoff class in a 32x16 4:2:0 split frame; broader H16x4 states, AVF-STILL-001, AVIF encoding, and the four-metric 100% coverage gate remain open."
       },
       "AVF-ENTROPY-001": {
         "status": "partial",

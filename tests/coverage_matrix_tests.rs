@@ -5863,7 +5863,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 242);
+    assert_eq!(expected.cases.len(), 243);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6936,6 +6936,40 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 following Vertical8x16 filter-intra witness partition topology"
+            );
+        } else if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 38_416,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 8,
+                        range: 50_528,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 0,
+                        level: 3,
+                        context: 2,
+                        partition: 8,
+                        range: 37_636,
+                    },
+                ],
+                "AV1 following Horizontal16x4 H_DCT witness partition topology"
             );
         } else {
             assert_eq!(
@@ -9435,6 +9469,93 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 H_DCT/CFL witness must select V CFL prediction twice"
             );
         }
+        if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 38_416,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 8,
+                        range: 50_528,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 0,
+                        level: 3,
+                        context: 2,
+                        partition: 8,
+                        range: 37_636,
+                    },
+                ],
+                "AV1 following Horizontal16x4 H_DCT witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                7_485,
+                "AV1 following Horizontal16x4 H_DCT witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-txtp-intra[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                        || *line == "u-cfl-pred"
+                        || *line == "v-cfl-pred"
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-txtp-intra[14->0][0][3->11]:"))
+                    .count(),
+                8,
+                "AV1 following Horizontal16x4 witness must select H_DCT for all eight luma leaves"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| line.starts_with("Post-uvmode[13]:"))
+                    .count(),
+                4,
+                "AV1 following Horizontal16x4 witness must select CFL for four chroma leaves"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| *line == &"u-cfl-pred")
+                    .count(),
+                4,
+                "AV1 following Horizontal16x4 witness must reconstruct U CFL four times"
+            );
+            assert_eq!(
+                debug_lines
+                    .iter()
+                    .filter(|line| *line == &"v-cfl-pred")
+                    .count(),
+                4,
+                "AV1 following Horizontal16x4 witness must reconstruct V CFL four times"
+            );
+        }
         if case.fixture == "coverage_v4x16_filter_intra_cdf19_false_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -10730,6 +10851,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_h16x4_h_dct_cfl_01.avif" => {
                 "8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e"
+            }
+            "coverage_h16x4_following_h_dct_01.avif" => {
+                "85977d9e8beab45b30906bbe60c7918b332d5e6fa4c4719177e203f92ce82356"
             }
             "coverage_h16x4_filter_intra_tx8x4_split_01.avif" => {
                 "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3"
