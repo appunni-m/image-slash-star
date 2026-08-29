@@ -1518,12 +1518,10 @@
       "why": "Users need installation, upgrade, contribution, security, governance, and recovery guidance.",
       "done_when": "Every material claim has an independent source, revision/date scope, validation command, and proved/planned/unknown label.",
       "source_ids": [
-        "DOC-003",
         "DOC-007",
         "DOC-008"
       ],
       "remaining": [
-        "generated capability/direct-mode tables",
         "revision-bound claim synchronization",
         "release links/changelog",
         "governance and recovery"
@@ -7772,17 +7770,6 @@
     ]
   },
   {
-    "id": "DOC-003",
-    "area": "documentation",
-    "status": "open",
-    "finding": "README feature tables describe formats but cannot express operation-, mode-, sequence-, target-, or verification-level restrictions precisely.",
-    "next": "Generate/link the capability and direct-mode tables from active fixture/cfg data rather than maintaining another prose matrix.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-010"
-    ]
-  },
-  {
     "id": "DOC-007",
     "area": "documentation",
     "status": "open",
@@ -7932,7 +7919,7 @@
   }
 ],
   "open_inventory": {
-    "count": 247,
+    "count": 246,
     "groups": {
       "common_api": [
         "API-008",
@@ -8201,7 +8188,6 @@
         "QA-042"
       ],
       "documentation": [
-        "DOC-003",
         "DOC-007",
         "DOC-008"
       ]
@@ -8451,7 +8437,6 @@
       "QA-040",
       "QA-041",
       "QA-042",
-      "DOC-003",
       "DOC-007",
       "DOC-008"
     ]
@@ -8482,6 +8467,7 @@
     "cargo test --all-features --locked",
     "cargo doc --all-features --no-deps --locked",
     "RUSTDOCFLAGS=-D warnings cargo doc --all-features --no-deps --locked",
+    "python3 scripts/generate_capability_docs.py --check",
     "python3 scripts/verify_claim_ledger.py",
     "python3 scripts/verify_coverage_origins.py",
     "python3 scripts/verify_diagnostic_provenance.py",

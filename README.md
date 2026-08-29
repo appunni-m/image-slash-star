@@ -697,7 +697,10 @@ evidence origin, and specification status.
 Runtime capability tables for every feature lane are emitted per target and
 committed as `tests/fixtures/capability_tables.json`; CI regenerates them in
 memory and rejects drift between the native host and `wasm32-wasip1` tables
-and the committed fixture.
+and the committed fixture. The packaged [Generated capability and direct-mode tables](docs/capabilities.md) render that runtime evidence alongside the
+observed active fixture contracts; they are generated from the committed
+runtime/cfg and matrix sources rather than maintained as a second prose
+matrix.
 Encoded bytes and decoded pixels for a fixed encoder/decoder subset are also
 SHA-256-pinned in `tests/fixtures/determinism.json`, and the same test runs
 natively and in the WASM runtime so cross-target output stays byte-identical.

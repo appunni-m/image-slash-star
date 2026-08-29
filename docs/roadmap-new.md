@@ -3551,11 +3551,11 @@ artifact/result, a clear evidence origin, and no claim is promoted from
 **Why:** Users need to know how to install, upgrade, contribute, report a
 security problem, and understand which promises are real.
 
-**Work:** Keep this file synchronized with code and tests; generate accurate
-capability tables; maintain the claim ledger; maintain changelog and release
-links; define governance and recovery before production reliance.
+**Work:** Keep this file synchronized with code and tests; maintain the claim
+ledger; maintain changelog and release links; define governance and recovery
+before production reliance.
 
-**Source IDs:** `DOC-003`, `DOC-007`, `DOC-008`.
+**Source IDs:** `DOC-007`, `DOC-008`.
 
 **Done when:** every material claim has an independent source, a revision/date
 scope, a validation command, and a visible proved/planned/unknown label.
@@ -3564,7 +3564,7 @@ scope, a validation command, and a visible proved/planned/unknown label.
 
 The following is the exact set of active roadmap IDs at this review. A task is
 not complete until its ID is removed from this list and its current behavior is
-moved into the appropriate contract document. The list contains **247 active
+moved into the appropriate contract document. The list contains **246 active
 finding rows**. Resolved findings are pruned from this rendering and from
 `roadmap.json`; their historical evidence remains in Git history and the
 historical [roadmap](roadmap.md).
@@ -3582,17 +3582,17 @@ historical [roadmap](roadmap.md).
 | AVIF | 30 | `AVF-001`, `AVF-003`–`AVF-006`, `AVF-008`–`AVF-009`, `AVF-011`–`AVF-016`, `AVF-018`–`AVF-020`, `AVF-022`–`AVF-035` |
 | Features/package | 24 | `FTR-001`–`FTR-002`, `FTR-006`, `FTR-009`–`FTR-018`, `FTR-020`–`FTR-024`, `FTR-027`, `FTR-029`, `FTR-034`–`FTR-035`, `FTR-037`–`FTR-038` |
 | Assurance | 30 | `QA-001`, `QA-002`, `QA-003`, `QA-005`, `QA-006`, `QA-009`–`QA-012`, `QA-016`, `QA-019`–`QA-024`, `QA-026`–`QA-028`, `QA-030`, `QA-031`, `QA-033`–`QA-037`, `QA-039`–`QA-042` |
-| Documentation | 3 | `DOC-003`, `DOC-007`, `DOC-008` |
+| Documentation | 2 | `DOC-007`, `DOC-008` |
 
 The shorthand ranges above expand only to the IDs actually present in the
 current audit. The historical roadmap is retained for provenance and original
 finding context; this file is the canonical status inventory, dependency order,
 and acceptance contract.
 
-These 247 rows are not 247 equal-sized coding tasks. A row may be a small
+These 246 rows are not 246 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact 247 active finding rows, the current four-metric coverage
+today are the exact 246 active finding rows, the current four-metric coverage
 result recorded above, and the explicit dependency order; an hour estimate
 would be invented until the
 next slice is chosen and measured.
@@ -3642,6 +3642,7 @@ cargo test --all-features --locked --test coverage_matrix_tests -- --nocapture
 RUSTFLAGS="--cfg coverage" cargo +nightly check --all-features --locked
 RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps --locked
 cargo test --doc --all-features --locked
+python3 scripts/generate_capability_docs.py --check
 python3 scripts/verify_claim_ledger.py
 python3 scripts/verify_coverage_origins.py
 python3 scripts/verify_diagnostic_provenance.py
