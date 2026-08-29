@@ -683,7 +683,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `0068a99aab9c70d3fa3863f9cb9d1ece83edf71d9d61ab3623c493e312e77698`; generated matrix SHA-256: `84ff26313b9ef8e445936869560c816d7617d6834636190511f5aa2f47e1c1e6`.
+- Manifest SHA-256: `1395a8a14d7433f34ed9b51e8fe52e91e7e7f0b32ccf3b472ed194c649f244ab`; generated matrix SHA-256: `056844895df917cf98d8c110a27dfb107fc8834c3f064801decc53dd77ec08da`.
 <!-- current-claim-ledger:end -->
 
 The generated matrix in this tree contains 1,540 total rows: 1,143 decode /

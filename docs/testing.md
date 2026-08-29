@@ -17,7 +17,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `0068a99aab9c70d3fa3863f9cb9d1ece83edf71d9d61ab3623c493e312e77698`; generated matrix SHA-256: `84ff26313b9ef8e445936869560c816d7617d6834636190511f5aa2f47e1c1e6`.
+- Manifest SHA-256: `1395a8a14d7433f34ed9b51e8fe52e91e7e7f0b32ccf3b472ed194c649f244ab`; generated matrix SHA-256: `056844895df917cf98d8c110a27dfb107fc8834c3f064801decc53dd77ec08da`.
 <!-- current-claim-ledger:end -->
 The compact snapshot retains metadata commit
 `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat. The
@@ -104,7 +104,7 @@ same arguments to its registered LLVM command, for example:
 ```
 
 With no AV1 fixture selector, the existing reconstruction test still validates
-all 243 oracle cases and all other coverage helpers retain their full-run
+all 246 oracle cases and all other coverage helpers retain their full-run
 behavior. With a selector, matrix dispatch and unrelated AV1 coverage helpers
 return before doing fixture work; the reconstruction test validates only the
 requested cases and asserts that every requested name ran exactly once. The
@@ -143,6 +143,22 @@ newly covered line identities, 75,660 baseline observations were not observed,
 and zero regressions were reported. Merge exactness is false and named-test
 attribution is unavailable, so this is bounded selected-subset evidence rather
 than a complete four-metric release measurement.
+
+The newest managed one-fixture reconstruction run
+`89a34dfc-e115-4a72-82ef-bebacfed0446` passed in 36,925 ms at exact
+implementation commit `2a62f5b8a179fc3167ba97d5f2e46597b7275047` and ingested
+snapshot `cf633f86-d598-47c3-860d-02b9824a69e3` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected exactly
+`coverage_vertical8x16_following_luma_diagonal67_01.avif` and passed 1/1
+cases with 44 filtered out. The standalone incremental review reports
+additive baseline-union deltas of +8 covered lines, +10 branches, +0 functions,
+and +937 regions; denominator changes are +4,655/+590/+71/+12,937, and the
+additive-union projection reports 1,747 newly covered line identities. The
+selected snapshot diff reports 579 newly covered line identities, 75,971
+baseline observations were not observed, and zero regressions were reported.
+Merge exactness is false and named-test attribution is unavailable, so this is
+bounded selected-subset evidence rather than a complete four-metric release
+measurement.
 
 An earlier managed one-fixture reconstruction run
 `44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms at implementation
