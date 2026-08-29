@@ -22,7 +22,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `78402dabef6f4195244b361949e98177ec92a09b426d6bf1136685dbf2d5f601`; generated matrix SHA-256: `c414ebbcdd67d858bec94f49f4d8ff1360ffdaeea412343d7238326d9fabe78e`.
+- Manifest SHA-256: `cf965d29beff5aceaf8517d8ea0203164358359b754b71a0a09f82887d8e5793`; generated matrix SHA-256: `54671e48b30ab905003be6db3684c912a76ece15bb007b7fab46bf136cb024ae`.
 <!-- current-claim-ledger:end -->
 
 - Current claim-ledger implementation anchor: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`
@@ -97,11 +97,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 317 rows total, 314 active, 3 explicit planned
+- AVIF decode/inspect/verify: 318 rows total, 315 active, 3 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,541 rows total, 1141 active decode rows, 365 active encode
+- Whole matrix: 1,542 rows total, 1142 active decode rows, 365 active encode
   rows, 3 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -180,7 +180,7 @@ the corresponding status is recorded in `roadmap.json`:
   `82523f7f2d713f0ebb5bf42d2c6ebcd01406dee89742afbf25e3ade4dd2c640c`; and
   the Pillow RGB SHA-256 is
   `1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808`.
-  The permanent reconstruction suite passes 247/247 cases, all 314 active AVIF
+  The permanent reconstruction suite passes 248/248 cases, all 315 active AVIF
   rows pass, and the new row is active in the generated matrix. The durable
   implementation commit is `212d273bb757c214ee9079e845cad2e6e033523b`; its
   managed incremental Coverage MCP run is
@@ -283,6 +283,35 @@ the corresponding status is recorded in `roadmap.json`:
   Merge exactness is false and named-test attribution is unavailable. This is
   supported aggregate, bounded selected-subset evidence—not a complete
   four-metric release measurement or a global regression claim.
+- The newest bounded AVIF witness adds a following-Vertical8x16 split-transform
+  state: `coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif`.
+  It is an 8x32 8-bit 4:2:0 one-tile `PARTITION_SPLIT` frame whose lower
+  Vertical8x16 leaf selects mode 8 Diagonal67 with angle symbol 2, delta -1,
+  and resolved angle 64, then transform depth two with eight row-major TX4x4
+  DCT-DCT luma children, all skipped. Both U/V pairs remain skipped TX4x8 DC
+  payloads. The independently parsed frame is base qindex 72/qcat 2 with
+  matrix 9/9/9, delta-Q disabled, transform select, CDEF disabled, and
+  restoration disabled. Safe Rust uses an explicit geometry-derived following
+  Zone-1 context and checked child-local edge publication; it matches the
+  exact 79-operation scalar dav1d trace, partition ranges
+  `40720/52494/39416`, Y/U/V planes, and 768-byte Pillow RGB8 output. The
+  input-only campaign evaluated 100 candidates across 10 families, qualified
+  exactly one, and promoted `D67V-F09-N08` (seed 12088) without invoking
+  repository Rust. Its report is
+  `tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_campaign_01.json`
+  (SHA-256
+  `825e49a8bb67b87062646ac9e2854a5280adda5c5db3f58279526d0ce45167dc`).
+  Fixture/item/trace/YUV/Y/U/V/Pillow RGB SHA-256 values are
+  `574d297068dae1faf5647e752afc7592f8a1107e0fcbbd9b6c262ad8705f92aa`,
+  `a334bb711c0941e05c4a3a53928695212bc3e09e9d77e0f16a2f51199ac0ef0e`,
+  `af967521712c5381b81ddcaf54313bbb8d049d19a03551ebccdec66a5ff71616`,
+  `0e4b44ebbf2cafb11a7815f2c625a88c60295c775bb0603a9538a10b25ab212c`,
+  `54edc17e2021de17e269714df94413932536dc8bed43305ff76db06fbe53e56b`,
+  `1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68`, and
+  `3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731`.
+  This closes only the observed depth-two split/angle/qindex/matrix/tool
+  class; broader split transforms, neighbor states, predictors, dimensions,
+  optional tools, sequences, encoding, and `AVF-STILL-001` remain partial.
 - The bounded H16x4 coefficient-state follow-up is explicit negative evidence,
   not a production admission. `scripts/explore_avif_horizontal16x4_eob.py`
   evaluated 100 deterministic candidates across 10 families in the proven
@@ -981,7 +1010,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  247 reconstruction cases; a selected run reads and executes only the
+  248 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does
@@ -3144,7 +3173,7 @@ planes.
 
 | Pure-Rust work item | Required before | Exact deliverable | Current state |
 | --- | --- | --- | --- |
-| `AVF-STILL-001` frame raster | broader partition/tile states | Walk the AV1 partition tree across every tile, retain syntax/CDF and above/left contexts, reconstruct bounded luma/chroma blocks, and compose the visible frame without native state. The 128×128 lossy 4:2:0 baseline, all three legal accepted-brand orderings, and the 256×128 two-column `multitile.avif` frame are now proven full-frame cases; the committed 64×64 lossless 4:4:4 primary in `alpha.avif` is also exact through the alpha row. | Partial implementation: the safe walker and production path now consume all sixteen partitioned 4:4:4 square fixtures—twelve cropped 12×12 cases and four 16×16 cases—in coded payload order, plus the committed two-column multitile frame, the promoted `coverage_r8x16_band_05.avif`/`_06.avif` 8×32 4:2:0 pair, the pinned `coverage_r32x16_origin_01.avif` 32×16 4:2:0 Horizontal32x16 origin leaf, the `coverage_r32x16_filter_intra_tx8x8_01.avif` 32×16 origin Horizontal32x16 split with filter-intra disabled and four TX8x8 luma children, the new `coverage_r32x32_following_filter_intra_split_mode0_01.avif` 32×32 horizontal split with a following mode-0 filter-intra leaf and a TX16x16 luma split, and the pinned `coverage_r16x64_grid_01.avif` 16×64 4:2:0 Vertical16x64 depth-two TX16x16 luma split. The R8x16, Horizontal32x16, TX8x8 split, following mode-0, and R16x64 fixtures share pinned dav1d topology, checked 4:2:0 plane dimensions, exact entropy traces, and exact public Pillow RGB references; the TX8x8 witness has a 2,328-operation trace and proves split residual placement through the generic safe path, while the following mode-0 witness has a 2,204-operation trace and proves prepared spatial-edge publication for a true following filter-intra leaf. R16x64 additionally verifies the 16×16 matrix-10 luma table and top-only DC prediction for every child without a left neighbor. The promoted `coverage_adst_public_04.avif` adds a 16×4 full-chroma bottom-crop case with two coded 8×8 leaves, an exact 407-operation trace, and exact public RGB/YUV references. The `coverage_i444_rect_01.avif` witness adds a 16×16 full-resolution 4:4:4 split-root/four-leaf case with a 499-operation trace, exact Y/U/V planes, full-resolution chroma residuals, matrix-10 U/V AC deltas, delta-Q, and exact public RGB bytes. The new `coverage_i444_rect_02.avif` witness holds the same topology but adds a 553-operation trace, distinct residual/EOB states, exact Y/U/V planes and RGB bytes, and a filter-intra leaf. The focused `baseline_six_terminal_then_stops_at_vertical_8x16_gap` contract remains a bounded syntax sub-gap. Broader partition/block state, all predictors/residual classes, every filter-intra mode and edge case, additional tile shapes, and independent full-frame proofs remain open. `FrameCanvas::place_cells` validates and atomically places complete reconstructed cells. The new `coverage_vertical8x16_filter_intra_mode0_01.avif` origin witness adds a checked Vertical8x16 filter-intra mode-0/unsplit-TX8x16/TX4x8-chroma class with exact 584-operation entropy, plane, and Pillow RGB evidence; the new `coverage_vertical8x16_following_luma_diagonal67_01.avif` adds a checked following-Vertical8x16 Diagonal67 mode-8/angle-symbol-3/unsplit-TX8x16/skipped-TX4x8 class with exact 66-operation partition, predictor, coefficient, plane, and Pillow RGB evidence; broader classes remain open. |
+| `AVF-STILL-001` frame raster | broader partition/tile states | Walk the AV1 partition tree across every tile, retain syntax/CDF and above/left contexts, reconstruct bounded luma/chroma blocks, and compose the visible frame without native state. The 128×128 lossy 4:2:0 baseline, all three legal accepted-brand orderings, and the 256×128 two-column `multitile.avif` frame are now proven full-frame cases; the committed 64×64 lossless 4:4:4 primary in `alpha.avif` is also exact through the alpha row. | Partial implementation: the safe walker and production path now consume all sixteen partitioned 4:4:4 square fixtures—twelve cropped 12×12 cases and four 16×16 cases—in coded payload order, plus the committed two-column multitile frame, the promoted `coverage_r8x16_band_05.avif`/`_06.avif` 8×32 4:2:0 pair, the pinned `coverage_r32x16_origin_01.avif` 32×16 4:2:0 Horizontal32x16 origin leaf, the `coverage_r32x16_filter_intra_tx8x8_01.avif` 32×16 origin Horizontal32x16 split with filter-intra disabled and four TX8x8 luma children, the new `coverage_r32x32_following_filter_intra_split_mode0_01.avif` 32×32 horizontal split with a following mode-0 filter-intra leaf and a TX16x16 luma split, and the pinned `coverage_r16x64_grid_01.avif` 16×64 4:2:0 Vertical16x64 depth-two TX16x16 luma split. The R8x16, Horizontal32x16, TX8x8 split, following mode-0, and R16x64 fixtures share pinned dav1d topology, checked 4:2:0 plane dimensions, exact entropy traces, and exact public Pillow RGB references; the TX8x8 witness has a 2,328-operation trace and proves split residual placement through the generic safe path, while the following mode-0 witness has a 2,204-operation trace and proves prepared spatial-edge publication for a true following filter-intra leaf. R16x64 additionally verifies the 16×16 matrix-10 luma table and top-only DC prediction for every child without a left neighbor. The promoted `coverage_adst_public_04.avif` adds a 16×4 full-chroma bottom-crop case with two coded 8×8 leaves, an exact 407-operation trace, and exact public RGB/YUV references. The `coverage_i444_rect_01.avif` witness adds a 16×16 full-resolution 4:4:4 split-root/four-leaf case with a 499-operation trace, exact Y/U/V planes, full-resolution chroma residuals, matrix-10 U/V AC deltas, delta-Q, and exact public RGB bytes. The new `coverage_i444_rect_02.avif` witness holds the same topology but adds a 553-operation trace, distinct residual/EOB states, exact Y/U/V planes and RGB bytes, and a filter-intra leaf. The focused `baseline_six_terminal_then_stops_at_vertical_8x16_gap` contract remains a bounded syntax sub-gap. Broader partition/block state, all predictors/residual classes, every filter-intra mode and edge case, additional tile shapes, and independent full-frame proofs remain open. `FrameCanvas::place_cells` validates and atomically places complete reconstructed cells. The new `coverage_vertical8x16_filter_intra_mode0_01.avif` origin witness adds a checked Vertical8x16 filter-intra mode-0/unsplit-TX8x16/TX4x8-chroma class with exact 584-operation entropy, plane, and Pillow RGB evidence; the new `coverage_vertical8x16_following_luma_diagonal67_01.avif` adds a checked following-Vertical8x16 Diagonal67 mode-8/angle-symbol-3/unsplit-TX8x16/skipped-TX4x8 class with exact 66-operation partition, predictor, coefficient, plane, and Pillow RGB evidence; the new `coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif` adds a checked following-Vertical8x16 Diagonal67 mode-8/angle-symbol-2/resolved-64 depth-two 2×4 TX4x4 DCT-DCT grid with eight skipped children, exact qindex/matrix/tool constraints, 79-operation trace, and exact Y/U/V/Pillow RGB evidence; broader classes remain open. |
 | `AVF-ENTROPY-001` adjacent EOB syntax | active malformed controls plus future legal EOB-bin/base classes | Implement the remaining legal EOB-bin and EOB-base branches with their coefficient scans, tokens, signs, dequantization, and transform output; preserve typed `Malformed` for invalid arithmetic termination and typed `Unsupported` for valid syntax not yet proven. | Partial: safe Rust handles legal luma EOB-bin 0, 2, 3, 4, 5, and 6 classes, including the promoted 4×4 4:2:0 TX8×8 DCT-DCT witness `portable_lossy_420_q99_luma_eob_bin2_eob3.avif` (27 entropy operations, EOB-bin two, EOB three, direct EOB-base zero, exact Y/U/V and Pillow RGB hashes), legal chroma EOB-base/high branches including EOB-bin-four, and exact UV dequantization plus matrix-10 data. The 100-candidate/10-family campaign qualified exactly one candidate and did not invoke repository Rust. A follow-up 100-candidate/10-family bin-one campaign qualified 0/100 and is retained as bounded no-hit evidence only; it does not establish unreachability or change admission. The two one-byte controls are active negative evidence: pinned dav1d 1.5.3 rejects them at the recorded EOB stages with no YUV output, and safe Rust reports the symbol-coder overread as `Malformed`. They do not activate unproven positive EOB syntax. |
 | `AVF-SAMPLE-001` sample depth | `high_bitdepth`; later `hdr` | Reconstruct 10/12-bit planes, apply checked sample-to-8-bit conversion at the public boundary, and test overflow, limits, and cancellation. | Partial: `av1/sample_depth.rs` validates 8/10/12-bit nominal ranges and performs explicit high-depth bit truncation. Safe Rust now proves exact public RGB8 parity for the bounded 16×16 10-bit profile-1 and 12-bit AV1 profile-2 full-range 4:4:4 all-lossless still classes. Entropy reconstruction, restoration, 4:2:2 decoding, animated/high-depth alpha and sequence materialization, HDR conversion, and broader 12-bit cases remain open. |
 | `AVF-ALPHA-001` auxiliary composition | broader grid and alpha variants | Decode the primary and monochrome auxiliary AV1 items, validate matching dimensions/depth, distinguish unassociated from premultiplied alpha, and emit the correct RGBA result and source descriptor. | Implemented for the committed `alpha.avif` fixture: safe Rust reconstructs all 37 terminal leaves of the 64×64 monochrome auxiliary tile, derives neighbor state by geometry, pairs the primary and auxiliary planes, emits RGBA8 with source alpha `Auxiliary`, and matches the independent 16,384-byte reference exactly. General alpha dimensions, high bit depth, premultiplied relationships, and broader grid pairing remain planned under the named sample/composition work items. |
@@ -3326,7 +3355,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 317 AVIF decode/inspect/verify rows exist: 314 are
+**Current exact state:** 318 AVIF decode/inspect/verify rows exist: 315 are
 active and 3 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in

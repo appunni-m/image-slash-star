@@ -17556,6 +17556,81 @@
           "error_contracts": {}
         },
         {
+          "id": "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "8x32 4:2:0 quality-76 speed-0 vertical split with a following Vertical8x16 leaf using luma Diagonal67 mode 8 at angle symbol 2 and resolved angle 64, depth-two 2x4 TX4x4 DCT-DCT luma grid with eight skipped children, and skipped TX4x8 U/V transforms",
+          "asset": "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "574d297068dae1faf5647e752afc7592f8a1107e0fcbbd9b6c262ad8705f92aa",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "coverage_square8_chroma_diagonal113_01",
           "type": "decode",
           "format": "avif",
@@ -121333,12 +121408,12 @@
     }
   },
   "summary": {
-    "total_rows": 1541,
-    "decode_rows": 1144,
+    "total_rows": 1542,
+    "decode_rows": 1145,
     "encode_rows": 397,
     "formats": 8,
-    "assets_available": 1143,
-    "decode_active": 1141,
+    "assets_available": 1144,
+    "decode_active": 1142,
     "decode_planned": 3,
     "encode_not_wired": 32
   }

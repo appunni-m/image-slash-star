@@ -5,7 +5,7 @@ The campaign creates exactly one hundred deterministic candidates in ten named
 families. Each candidate is encoded twice with the pinned Pillow/libavif/libaom
 oracle and decoded twice through an independently instrumented scalar dav1d
 build. The default targets qualify a clipped 16x16 split with a vertically
-following bottom Square8 leaf. The extended luma target qualifies an 8x32
+following bottom Square8 leaf. The extended luma targets qualify an 8x32
 frame split into two following Vertical8x16 leaves, with bottom luma
 Diagonal67 syntax and a real top edge. Repository Rust is never invoked during
 the search.
@@ -33,11 +33,13 @@ from generate_av1_reconstruction_refs import (
     run,
     verify_source,
 )
+from inspect_av1_obus import inspect as inspect_av1_obus
 
 
 SIZE = (8, 16)
 SUBSAMPLING = "4:2:0"
 FOLLOWING_VERTICAL_TARGET = "luma_diagonal67_following_vertical"
+FOLLOWING_VERTICAL_SPLIT_TARGET = "luma_diagonal67_following_vertical_split_tx4x4"
 ADVANCED = {
     "min-partition-size": "8",
     "max-partition-size": "8",
@@ -59,7 +61,15 @@ LUMA_ADVANCED = {
     "use-intra-dct-only": "1",
 }
 LUMA_TARGETS = frozenset(
-    {"luma_diagonal67", "luma_diagonal67_split_tx4x4", FOLLOWING_VERTICAL_TARGET}
+    {
+        "luma_diagonal67",
+        "luma_diagonal67_split_tx4x4",
+        FOLLOWING_VERTICAL_TARGET,
+        FOLLOWING_VERTICAL_SPLIT_TARGET,
+    }
+)
+FOLLOWING_VERTICAL_TARGETS = frozenset(
+    {FOLLOWING_VERTICAL_TARGET, FOLLOWING_VERTICAL_SPLIT_TARGET}
 )
 FOLLOWING_VERTICAL_ADVANCED = {
     **ADVANCED,
@@ -103,6 +113,37 @@ def sha256(data: bytes) -> str:
     """Return the lowercase SHA-256 digest of ``data``."""
 
     return hashlib.sha256(data).hexdigest()
+
+
+def av1_frame_reference(path: Path) -> dict[str, object]:
+    """Return independent frame-header constraints for a promoted candidate."""
+
+    report = inspect_av1_obus(path)
+    color_sample = next(
+        sample for sample in report["samples"] if sample["role"] == "item_color"
+    )
+    frame_header = next(
+        obu["frame_header"]
+        for obu in color_sample["obus"]
+        if "frame_header" in obu
+    )
+    quantization = frame_header["quantization"]
+    base_qindex = int(quantization["base"])
+    return {
+        "base_qindex": base_qindex,
+        "qindex_category": int(base_qindex > 20)
+        + int(base_qindex > 60)
+        + int(base_qindex > 120),
+        "delta_q_present": bool(frame_header["delta_q"]["present"]),
+        "delta_q_resolution_log2": int(frame_header["delta_q"]["resolution_log2"]),
+        "using_matrix": bool(quantization["using_matrix"]),
+        "matrix_y": int(quantization["matrix_y"]),
+        "matrix_u": int(quantization["matrix_u"]),
+        "matrix_v": int(quantization["matrix_v"]),
+        "transform_mode": frame_header["transform_mode"],
+        "cdef_bits": int(frame_header["cdef"]["bits"]),
+        "restoration_types": list(frame_header["restoration"]["types"]),
+    }
 
 
 def clamp(value: int) -> int:
@@ -580,6 +621,7 @@ def classify_luma_following_vertical(
     yuv: bytes,
     portable_color: dict[str, object],
     angle_symbol: int,
+    split_tx4x4: bool,
 ) -> dict[str, object]:
     """Apply exact predicates for the 8x32 following Vertical8x16 class."""
 
@@ -631,6 +673,14 @@ def classify_luma_following_vertical(
             and (payloads[0]["eob"] > 0 if with_ac else payloads[0]["eob"] >= 0)
         )
 
+    def is_skipped_tx4x4_grid(payloads: list[dict[str, int]]) -> bool:
+        return len(payloads) == 8 and all(
+            payload["tx"] == 0
+            and payload["txtp"] == 0
+            and payload["eob"] == -1
+            for payload in payloads
+        )
+
     def has_nonzero_ac(matrices: list[list[int]]) -> bool:
         return any(value != 0 for matrix in matrices for value in matrix[1:])
 
@@ -669,11 +719,34 @@ def classify_luma_following_vertical(
         "origin_luma_is_unsplit_tx8x16": (
             len(y_payloads) == 2 and is_tx8x16(y_payloads[0], False)
         ),
-        "following_luma_is_unsplit_tx8x16_with_ac": (
-            len(y_payloads) == 2 and is_tx8x16(y_payloads[1], True)
+        "origin_luma_eob_is_expected": (
+            len(y_payloads) == 2
+            and len(y_payloads[0]) == 1
+            and y_payloads[0][0]["eob"] == 6
         ),
-        "following_luma_has_nonzero_ac": (
-            len(dq_matrices) == 2 and has_nonzero_ac(dq_matrices[1])
+        (
+            "following_luma_is_split_tx4x4_grid"
+            if split_tx4x4
+            else "following_luma_is_unsplit_tx8x16_with_ac"
+        ): (
+            len(y_payloads) == 2
+            and (
+                is_skipped_tx4x4_grid(y_payloads[1])
+                if split_tx4x4
+                else is_tx8x16(y_payloads[1], True)
+            )
+        ),
+        (
+            "following_luma_has_no_coefficients"
+            if split_tx4x4
+            else "following_luma_has_nonzero_ac"
+        ): (
+            len(dq_matrices) == 2
+            and (
+                not dq_matrices[1]
+                if split_tx4x4
+                else has_nonzero_ac(dq_matrices[1])
+            )
         ),
         "origin_and_following_chroma_are_dc_skipped": (
             len(chroma_payloads) == 2
@@ -691,8 +764,23 @@ def classify_luma_following_vertical(
             len(top_luma_edge) == SIZE[0] and top_luma_edge[0] != 128
         ),
     }
+    if split_tx4x4:
+        predicates["origin_bottom_edge_is_expected"] = list(top_luma_edge) == [
+            80,
+            77,
+            72,
+            68,
+            64,
+            60,
+            55,
+            52,
+        ]
     return {
-        "target": FOLLOWING_VERTICAL_TARGET,
+        "target": (
+            FOLLOWING_VERTICAL_SPLIT_TARGET
+            if split_tx4x4
+            else FOLLOWING_VERTICAL_TARGET
+        ),
         "effective_predictor": "z1_top_available_left_unavailable",
         "root_partition": blocks[0] if blocks else None,
         "partition_shape": shape,
@@ -724,9 +812,14 @@ def classify(
 ) -> dict[str, object]:
     """Apply exact predicates for the vertical-following mode-8 class."""
 
-    if target == FOLLOWING_VERTICAL_TARGET:
+    if target in FOLLOWING_VERTICAL_TARGETS:
         return classify_luma_following_vertical(
-            blocks, groups, yuv, portable_color, angle_symbol
+            blocks,
+            groups,
+            yuv,
+            portable_color,
+            angle_symbol,
+            split_tx4x4=target == FOLLOWING_VERTICAL_SPLIT_TARGET,
         )
     if target in LUMA_TARGETS:
         return classify_luma(
@@ -925,6 +1018,7 @@ def decode_candidate(
         executable, environment, work, item_b, str(candidate["id"]), 2
     )
     portable_color = portable_color_reference(path_a)
+    av1_frame = av1_frame_reference(path_a)
     with Image.open(BytesIO(encoded_a)) as decoded:
         pillow_rgb_a = decoded.convert("RGB").tobytes()
     with Image.open(BytesIO(encoded_b)) as decoded:
@@ -945,6 +1039,10 @@ def decode_candidate(
             "double_pillow_rgb_equal": pillow_rgb_a == pillow_rgb_b,
         }
     )
+    if target == FOLLOWING_VERTICAL_SPLIT_TARGET:
+        classification["predicates"]["entropy_operation_count_is_79"] = (
+            entropy_a == 79
+        )
     classification["rejection_reasons"] = [
         name for name, passed in classification["predicates"].items() if not passed
     ]
@@ -980,6 +1078,7 @@ def decode_candidate(
         "partition_blocks": blocks_a,
         "partition_blocks_second": blocks_b,
         "portable_color": portable_color,
+        "av1_frame": av1_frame,
         **classification,
     }
 
@@ -1003,6 +1102,7 @@ def main() -> None:
             "luma_diagonal67",
             "luma_diagonal67_split_tx4x4",
             FOLLOWING_VERTICAL_TARGET,
+            FOLLOWING_VERTICAL_SPLIT_TARGET,
         ),
         default="chroma_diagonal67",
     )
@@ -1015,7 +1115,7 @@ def main() -> None:
     )
     args = parser.parse_args()
     global SIZE, ADVANCED, LUMA_ADVANCED
-    if args.target == FOLLOWING_VERTICAL_TARGET:
+    if args.target in FOLLOWING_VERTICAL_TARGETS:
         SIZE = (8, 32)
         ADVANCED = FOLLOWING_VERTICAL_ADVANCED
         LUMA_ADVANCED = {**ADVANCED, "use-intra-dct-only": "1"}
@@ -1026,8 +1126,12 @@ def main() -> None:
             else "unsplit TX8x8 luma with AC"
         )
         target_id = f"{args.target}_angle_symbol_{args.luma_angle_symbol}"
-        if args.target == FOLLOWING_VERTICAL_TARGET:
-            luma_transform = "unsplit TX8x16 DCT-DCT luma with AC"
+        if args.target in FOLLOWING_VERTICAL_TARGETS:
+            luma_transform = (
+                "depth-two 2x4 TX4x4 DCT-DCT luma grid with skipped children"
+                if args.target == FOLLOWING_VERTICAL_SPLIT_TARGET
+                else "unsplit TX8x16 DCT-DCT luma with AC"
+            )
             target_description = (
                 "8x32 8-bit 4:2:0 vertical split with top and following "
                 "Vertical8x16 leaves; bottom luma mode 8 Diagonal67 at "

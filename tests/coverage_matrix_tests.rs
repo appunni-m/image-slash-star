@@ -5997,7 +5997,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 247);
+    assert_eq!(expected.cases.len(), 248);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7140,6 +7140,59 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 ],
                 "AV1 following Vertical8x16 luma Diagonal67 angle-64 witness partition topology"
             );
+        } else if case.fixture
+            == "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif"
+        {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                ],
+                "AV1 following Vertical8x16 luma Diagonal67 split TX4x4 witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                79,
+                "AV1 following Vertical8x16 split TX4x4 entropy operation count"
+            );
+            for (child_index, pair) in case.entropy_operations[59..75].chunks_exact(2).enumerate() {
+                assert_eq!(pair[0].operation, "fixed", "luma child {child_index} setup");
+                assert_eq!(pair[0].value, 1, "luma child {child_index} setup value");
+                assert_eq!(
+                    pair[1].operation, "adaptive_bool",
+                    "luma child {child_index} skip"
+                );
+                assert_eq!(pair[1].value, 1, "luma child {child_index} skip value");
+            }
+            for (plane_index, pair) in case.entropy_operations[75..79].chunks_exact(2).enumerate() {
+                assert_eq!(
+                    pair[0].operation, "fixed",
+                    "chroma plane {plane_index} setup"
+                );
+                assert_eq!(pair[0].value, 1, "chroma plane {plane_index} setup value");
+                assert_eq!(
+                    pair[1].operation, "adaptive_bool",
+                    "chroma plane {plane_index} skip"
+                );
+                assert_eq!(pair[1].value, 1, "chroma plane {plane_index} skip value");
+            }
         } else if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -11456,6 +11509,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif" => {
                 "55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f"
+            }
+            "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif" => {
+                "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731"
             }
             "coverage_r16x8_neighbor_01.avif" => {
                 "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"
