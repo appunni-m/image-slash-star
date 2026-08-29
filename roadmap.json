@@ -1008,6 +1008,55 @@
             "snapshot_diff_claim_status": "limited",
             "note": "The exact selected public error-policy test passed 1/1 through the registered all-feature command with 65 filtered tests. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +35 covered lines, +0 branches, +0 functions, and +117 regions; denominator changes are +4,543 lines, +566 branches, +67 functions, and +12,861 regions. The additive projection reports 146 newly covered line identities; the selected snapshot diff reports 198 newly covered line identities, 77,894 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit a86126a2ef42e70755d9601c5cf04579faa80549. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-29",
+          "managed_coverage_mcp": true,
+          "project_id": "2b9f48753c80b021b894b600",
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "6b49ddc0e9efc87be30fe07a152610eb6f8f1865",
+          "run_id": "2f5fb961-0c83-4db4-8907-a4200344db18",
+          "snapshot_id": "932557e4-07cc-4f89-96e7-6381c37d1d20",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 38905,
+          "arguments": [
+            "--test",
+            "coverage_matrix_tests",
+            "--",
+            "test_encode_matrix",
+            "--nocapture",
+            "--test-threads=1"
+          ],
+          "selected_rows": [
+            "encode:<all formats>:365 active encode matrix rows"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "the 19 encode-matrix partitions passed with 0 failures; 365 active rows executed, 1,023 counted public encode-side calls completed, and 0 panics were observed; 32 planned AVIF encode rows were excluded",
+          "review": {
+            "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 7,
+            "covered_branches_delta": 2,
+            "covered_functions_delta": 1,
+            "covered_regions_delta": 4012,
+            "total_lines_delta": 4543,
+            "total_branches_delta": 566,
+            "total_functions_delta": 67,
+            "total_regions_delta": 12861,
+            "selected_projection_newly_covered_line_identities": 874,
+            "selected_snapshot_diff_newly_covered_line_identities": 198,
+            "not_observed": 59599,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "snapshot_diff_claim_status": "limited",
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The exact registered all-feature command selected the active encode matrix and passed all 19 partitions: 365 active rows, 1,023 counted public encode-side calls, and 0 observed panics. The standalone coverage_review(task=incremental) measured snapshot 932557e4-07cc-4f89-96e7-6381c37d1d20 against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +7 covered lines, +2 branches, +1 function, and +4,012 regions; denominator changes are +4,543 lines, +566 branches, +67 functions, and +12,861 regions. The additive projection reports 874 newly covered line identities; the selected snapshot diff reports 198 newly covered line identities, 59,599 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge uses conservative fallback and named-test attribution is unavailable. The no-panic claim is bounded to the active native encode matrix and its existing operation subcases; it is not a Cartesian or universal claim, excludes 32 planned AVIF encode rows, and does not replace the complete four-metric release measurement."
+          }
         }
       ],
       "coverage_origin_inventory": {
@@ -1470,7 +1519,6 @@
         "QA-001",
         "QA-002",
         "QA-003",
-        "QA-005",
         "QA-006",
         "QA-009",
         "QA-010",
@@ -1501,7 +1549,6 @@
         "QA-042"
       ],
       "remaining": [
-        "no-panic matrix",
         "fuzz/mutation/differential lanes",
         "determinism scopes",
         "generator regeneration gate",
@@ -7461,17 +7508,6 @@
     ]
   },
   {
-    "id": "QA-005",
-    "area": "assurance",
-    "status": "open",
-    "finding": "No no-panic matrix exists across all valid public modes, formats, options, and sequence shapes.",
-    "next": "Add a compact generated fixture matrix; COR-002 shows validation plus 100% coverage did not guarantee panic freedom.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-009"
-    ]
-  },
-  {
     "id": "QA-006",
     "area": "assurance",
     "status": "open",
@@ -7919,7 +7955,7 @@
   }
 ],
   "open_inventory": {
-    "count": 246,
+    "count": 245,
     "groups": {
       "common_api": [
         "API-008",
@@ -8159,7 +8195,6 @@
         "QA-001",
         "QA-002",
         "QA-003",
-        "QA-005",
         "QA-006",
         "QA-009",
         "QA-010",
@@ -8410,7 +8445,6 @@
       "QA-001",
       "QA-002",
       "QA-003",
-      "QA-005",
       "QA-006",
       "QA-009",
       "QA-010",

@@ -19,10 +19,10 @@
     "capability_tables": "991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
-    "coverage_origins": "3f44f2af434092b8fe274b8566c45bfa7a2bd43217686f76aabcb279c09451e4",
+    "coverage_origins": "1a5acf50130791a655ce5e7e01e8a42a586368b4cecff9b039fe1db226afaf88",
     "unreachable_contract": "b2a5b2fb0869bb96545799084d9789c7df38e91955e3568cb50c430e41aaa9b7",
     "webp_property_map": "1532496b1d5c25746d5dd31ca3a526fe4ee8d18d59545527fa28cf4efe895d48",
     "webp_property_inspector": "8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd",
-    "roadmap": "c9e14fbc019f68eb5ccfe5523c0b846648963d80fadd5a0a9fab79eb611813b2"
+    "roadmap": "a7dfd5366850c496a1154a799d089ea946ea39cb9c0b2b3003ee15e40b107c2f"
   }
 }
