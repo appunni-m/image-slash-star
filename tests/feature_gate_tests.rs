@@ -22500,8 +22500,9 @@ fn verification_scope_requests_fail_when_the_codec_cannot_provide_them()
 #[test]
 fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Error>> {
     use image_slash_star::{
-        ColorType, DecodedFrame, DecodedImage, DecodedSequence, EncodeOptions, FrameBlend,
-        FrameDisposal, FrameDuration, FrameRect, ImageErrorKind, ImageErrorStage, ImageFormat,
+        CodecOperation, ColorType, DecodedFrame, DecodedImage, DecodedSequence, EncodeOptions,
+        FrameBlend, FrameDisposal, FrameDuration, FrameRect, ImageErrorKind, ImageErrorStage,
+        ImageFormat, ResourceLimit,
     };
 
     if !cfg!(feature = "png") || !cfg!(feature = "jpeg") {
@@ -22930,6 +22931,176 @@ fn error_stages_name_the_public_operation() -> Result<(), Box<dyn std::error::Er
         assert_eq!(error.identity(), Some("avif_box"));
         assert!(error.offset().is_some());
     }
+
+    // This is an accessor and diagnostic-policy contract, not an assertion
+    // that callers cannot construct a message-bearing variant with an empty
+    // String. Library-produced message-bearing failures are tested for
+    // non-empty diagnostics; exact prose is intentionally not stable.
+    let assert_diagnostic_policy = |error: &ImageError, kind: ImageErrorKind, has_message: bool| {
+        assert_eq!(error.kind(), kind);
+        assert_eq!(error.message().is_some(), has_message);
+        if has_message {
+            assert!(error.message().is_some_and(|message| !message.is_empty()));
+        }
+        assert!(!error.to_string().trim().is_empty());
+    };
+
+    let unknown = ImageError::UnknownFormat;
+    assert_diagnostic_policy(&unknown, ImageErrorKind::UnknownFormat, false);
+    assert_eq!(unknown.format(), None);
+    assert_eq!(unknown.stage(), None);
+    assert_eq!(unknown.offset(), None);
+    assert_eq!(unknown.identity(), None);
+    assert_eq!(unknown.unsupported_reason(), None);
+    assert_eq!(unknown.minimum_input(), None);
+
+    let feature_disabled = ImageError::FeatureDisabled {
+        format: ImageFormat::Avif,
+        feature: "avif",
+    };
+    assert_diagnostic_policy(&feature_disabled, ImageErrorKind::FeatureDisabled, false);
+    assert_eq!(feature_disabled.format(), Some(ImageFormat::Avif));
+    assert_eq!(feature_disabled.stage(), None);
+    assert_eq!(feature_disabled.offset(), None);
+    assert_eq!(feature_disabled.identity(), None);
+    assert_eq!(feature_disabled.unsupported_reason(), None);
+    assert_eq!(feature_disabled.minimum_input(), None);
+
+    let malformed = ImageError::Malformed {
+        format: ImageFormat::Png,
+        message: "invalid chunk".to_owned(),
+        stage: Some(ImageErrorStage::Inspection),
+        offset: Some(12),
+        identity: Some("png_chunk"),
+    };
+    assert_diagnostic_policy(&malformed, ImageErrorKind::Malformed, true);
+    assert_eq!(malformed.format(), Some(ImageFormat::Png));
+    assert_eq!(malformed.stage(), Some(ImageErrorStage::Inspection));
+    assert_eq!(malformed.offset(), Some(12));
+    assert_eq!(malformed.identity(), Some("png_chunk"));
+    assert_eq!(malformed.unsupported_reason(), None);
+    assert_eq!(malformed.minimum_input(), None);
+
+    let unsupported = ImageError::Unsupported {
+        format: Some(ImageFormat::Jpeg),
+        message: "feature boundary".to_owned(),
+        stage: Some(ImageErrorStage::StillEncode),
+        reason: Some(UnsupportedReason::NotImplemented),
+        offset: Some(7),
+        identity: Some("jpeg_marker"),
+    };
+    assert_diagnostic_policy(&unsupported, ImageErrorKind::Unsupported, true);
+    assert_eq!(unsupported.format(), Some(ImageFormat::Jpeg));
+    assert_eq!(unsupported.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(unsupported.offset(), Some(7));
+    assert_eq!(unsupported.identity(), Some("jpeg_marker"));
+    assert_eq!(
+        unsupported.unsupported_reason(),
+        Some(UnsupportedReason::NotImplemented)
+    );
+    assert_eq!(unsupported.minimum_input(), None);
+
+    let dimensions = ImageError::Dimensions {
+        format: Some(ImageFormat::Png),
+        message: "canvas is too large".to_owned(),
+        stage: Some(ImageErrorStage::StillDecode),
+        offset: Some(24),
+        identity: Some("png_header"),
+    };
+    assert_diagnostic_policy(&dimensions, ImageErrorKind::Dimensions, true);
+    assert_eq!(dimensions.format(), Some(ImageFormat::Png));
+    assert_eq!(dimensions.stage(), Some(ImageErrorStage::StillDecode));
+    assert_eq!(dimensions.offset(), Some(24));
+    assert_eq!(dimensions.identity(), Some("png_header"));
+    assert_eq!(dimensions.unsupported_reason(), None);
+    assert_eq!(dimensions.minimum_input(), None);
+
+    let parameter = ImageError::Parameter {
+        format: Some(ImageFormat::Jpeg),
+        message: "unsupported sampling option".to_owned(),
+        stage: Some(ImageErrorStage::StillEncode),
+        offset: Some(3),
+        identity: Some("jpeg_parameter"),
+    };
+    assert_diagnostic_policy(&parameter, ImageErrorKind::Parameter, true);
+    assert_eq!(parameter.format(), Some(ImageFormat::Jpeg));
+    assert_eq!(parameter.stage(), Some(ImageErrorStage::StillEncode));
+    assert_eq!(parameter.offset(), Some(3));
+    assert_eq!(parameter.identity(), Some("jpeg_parameter"));
+    assert_eq!(parameter.unsupported_reason(), None);
+    assert_eq!(parameter.minimum_input(), None);
+
+    let limit = ImageError::LimitExceeded {
+        format: Some(ImageFormat::Png),
+        operation: CodecOperation::StillDecode,
+        resource: ResourceLimit::Pixels,
+        maximum: 1,
+        observed: 2,
+    };
+    assert_diagnostic_policy(&limit, ImageErrorKind::LimitExceeded, false);
+    assert_eq!(limit.format(), Some(ImageFormat::Png));
+    assert_eq!(limit.stage(), None);
+    assert_eq!(limit.offset(), None);
+    assert_eq!(limit.identity(), None);
+    assert_eq!(limit.unsupported_reason(), None);
+    assert_eq!(limit.minimum_input(), None);
+    match &limit {
+        ImageError::LimitExceeded {
+            format,
+            operation,
+            resource,
+            maximum,
+            observed,
+        } => {
+            assert_eq!(*format, Some(ImageFormat::Png));
+            assert_eq!(*operation, CodecOperation::StillDecode);
+            assert_eq!(*resource, ResourceLimit::Pixels);
+            assert_eq!(*maximum, 1);
+            assert_eq!(*observed, 2);
+        }
+        _ => panic!("limit witness changed variant"),
+    }
+
+    let need_more = ImageError::NeedMoreData {
+        format: Some(ImageFormat::Png),
+        stage: Some(ImageErrorStage::StillDecode),
+        offset: Some(12),
+        identity: Some("png_chunk"),
+        minimum: 64,
+    };
+    assert_diagnostic_policy(&need_more, ImageErrorKind::NeedMoreData, false);
+    assert_eq!(need_more.format(), Some(ImageFormat::Png));
+    assert_eq!(need_more.stage(), Some(ImageErrorStage::StillDecode));
+    assert_eq!(need_more.offset(), Some(12));
+    assert_eq!(need_more.identity(), Some("png_chunk"));
+    assert_eq!(need_more.unsupported_reason(), None);
+    assert_eq!(need_more.minimum_input(), Some(64));
+
+    let cancelled = ImageError::Cancelled {
+        format: Some(ImageFormat::Jpeg),
+        stage: Some(ImageErrorStage::SequenceEncode),
+    };
+    assert_diagnostic_policy(&cancelled, ImageErrorKind::Cancelled, false);
+    assert_eq!(cancelled.format(), Some(ImageFormat::Jpeg));
+    assert_eq!(cancelled.stage(), Some(ImageErrorStage::SequenceEncode));
+    assert_eq!(cancelled.offset(), None);
+    assert_eq!(cancelled.identity(), None);
+    assert_eq!(cancelled.unsupported_reason(), None);
+    assert_eq!(cancelled.minimum_input(), None);
+
+    let output_write = ImageError::OutputWrite {
+        format: Some(ImageFormat::Tiff),
+        message: "destination closed".to_owned(),
+        stage: Some(ImageErrorStage::SequenceEncode),
+    };
+    assert_diagnostic_policy(&output_write, ImageErrorKind::OutputWrite, true);
+    assert_eq!(output_write.format(), Some(ImageFormat::Tiff));
+    assert_eq!(output_write.stage(), Some(ImageErrorStage::SequenceEncode));
+    assert_eq!(output_write.offset(), None);
+    assert_eq!(output_write.identity(), None);
+    assert_eq!(output_write.unsupported_reason(), None);
+    assert_eq!(output_write.minimum_input(), None);
+
     Ok(())
 }
 

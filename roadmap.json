@@ -1424,7 +1424,6 @@
         "QA-003",
         "QA-005",
         "QA-006",
-        "QA-008",
         "QA-009",
         "QA-010",
         "QA-011",
@@ -7438,17 +7437,6 @@
     ]
   },
   {
-    "id": "QA-008",
-    "area": "assurance",
-    "status": "open",
-    "finding": "No exact public error-message policy exists, despite retaining oracle messages.",
-    "next": "Decide whether Rust messages are stable; test kind plus structured fields, and treat Pillow text as diagnostic evidence rather than equality unless intentionally mapped.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-009"
-    ]
-  },
-  {
     "id": "QA-009",
     "area": "assurance",
     "status": "open",
@@ -7896,7 +7884,7 @@
   }
 ],
   "open_inventory": {
-    "count": 248,
+    "count": 247,
     "groups": {
       "common_api": [
         "API-008",
@@ -8138,7 +8126,6 @@
         "QA-003",
         "QA-005",
         "QA-006",
-        "QA-008",
         "QA-009",
         "QA-010",
         "QA-011",
@@ -8391,7 +8378,6 @@
       "QA-003",
       "QA-005",
       "QA-006",
-      "QA-008",
       "QA-009",
       "QA-010",
       "QA-011",

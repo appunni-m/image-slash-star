@@ -330,6 +330,19 @@ def verify() -> str:
     if re.search(r"\bDOC-00[24]\b", inventory):
         fail("resolved documentation work is still listed as an active task")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    error_source = (ROOT / "src" / "types" / "error.rs").read_text(encoding="utf-8")
+    error_policy_marker = "<!-- image-error-policy: typed-recovery-diagnostic-prose -->"
+    if readme.count(error_policy_marker) != 1:
+        fail("README must contain exactly one image error compatibility-policy marker")
+    if not all(
+        fragment in error_source
+        for fragment in (
+            "`message()` nor the [`fmt::Display`] implementation is a parsing or",
+            "equality surface: exact wording, punctuation",
+            "external decoder's diagnostic text are not part of this contract",
+        )
+    ):
+        fail("ImageError::message rustdoc must define diagnostic prose as non-contractual")
     exact_match(
         readme,
         rf"contains {matrix_state['total_rows']:,} total rows: {matrix_state['decode_rows']:,} decode /\s+inspect / verify rows and {matrix_state['encode_rows']:,} encode rows\. Of those, {matrix_state['decode_active']:,} decode rows",
