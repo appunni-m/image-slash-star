@@ -360,6 +360,38 @@ impl FullIntraPlaneEdges {
         have_below_left: bool,
         smooth: bool,
     ) -> PortableResult<Self> {
+        Self::prepare_owned(
+            width,
+            height,
+            sample_depth,
+            top.to_vec(),
+            left.to_vec(),
+            top_left,
+            has_top,
+            has_left,
+            have_above_right,
+            have_below_left,
+            smooth,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "owned edge samples and each AV1 availability fact are independent inputs"
+    )]
+    pub(super) fn prepare_owned(
+        width: usize,
+        height: usize,
+        sample_depth: SampleDepth,
+        mut top: Vec<u16>,
+        mut left: Vec<u16>,
+        top_left: Option<u16>,
+        has_top: bool,
+        has_left: bool,
+        have_above_right: bool,
+        have_below_left: bool,
+        smooth: bool,
+    ) -> PortableResult<Self> {
         let edge_length = width.checked_add(height).portable()?;
         (width != 0 && height != 0 && edge_length <= 128)
             .then_some(())
@@ -377,6 +409,14 @@ impl FullIntraPlaneEdges {
         } else {
             height.min(edge_length)
         };
+        // An available basic edge is the complete coded block edge.  When
+        // the positioned walker also reports an extension available, the
+        // supplied slice must contain that complete contiguous extension.
+        // Repeating an arbitrarily short caller slice here would turn missing
+        // reconstructed neighbors into valid AV1 prediction samples.
+        if (has_top && top.len() < top_input_limit) || (has_left && left.len() < left_input_limit) {
+            return Err(PortableUnavailable);
+        }
         let top_valid = if has_top {
             top.len().min(top_input_limit)
         } else {
@@ -403,20 +443,22 @@ impl FullIntraPlaneEdges {
         } else {
             sample_depth.left_edge_default()
         };
-        let mut prepared_top = vec![top_default; edge_length];
-        let mut prepared_left = vec![left_default; edge_length];
-        if has_top {
-            let count = top_valid;
-            prepared_top[..count].copy_from_slice(&top[..count]);
-            let repeat = prepared_top[count.saturating_sub(1)];
-            prepared_top[count..].fill(repeat);
-        }
-        if has_left {
-            let count = left_valid;
-            prepared_left[..count].copy_from_slice(&left[..count]);
-            let repeat = prepared_left[count.saturating_sub(1)];
-            prepared_left[count..].fill(repeat);
-        }
+        let prepared_top = if has_top {
+            top.truncate(top_valid);
+            let repeat = top[top_valid.saturating_sub(1)];
+            top.resize(edge_length, repeat);
+            top
+        } else {
+            vec![top_default; edge_length]
+        };
+        let prepared_left = if has_left {
+            left.truncate(left_valid);
+            let repeat = left[left_valid.saturating_sub(1)];
+            left.resize(edge_length, repeat);
+            left
+        } else {
+            vec![left_default; edge_length]
+        };
         let top_left = match (has_top, has_left) {
             (true, true) => top_left.ok_or(PortableUnavailable)?,
             (true, false) => first_top.ok_or(PortableUnavailable)?,
@@ -459,14 +501,16 @@ impl FullIntraPlaneEdges {
     reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
 )]
 impl FullIntraEdges {
+    pub(super) const fn from_planes(planes: [FullIntraPlaneEdges; 3]) -> Self {
+        Self { planes }
+    }
+
     fn origin(width: usize, height: usize, sample_depth: SampleDepth) -> PortableResult<Self> {
-        Ok(Self {
-            planes: [
-                FullIntraPlaneEdges::origin(width, height, sample_depth)?,
-                FullIntraPlaneEdges::origin(width, height, sample_depth)?,
-                FullIntraPlaneEdges::origin(width, height, sample_depth)?,
-            ],
-        })
+        Ok(Self::from_planes([
+            FullIntraPlaneEdges::origin(width, height, sample_depth)?,
+            FullIntraPlaneEdges::origin(width, height, sample_depth)?,
+            FullIntraPlaneEdges::origin(width, height, sample_depth)?,
+        ]))
     }
 }
 
@@ -1006,7 +1050,7 @@ const fn chroma_transform_kind(predictor: ChromaPredictor) -> LossyTransformKind
     }
 }
 
-const fn is_smooth_chroma_predictor(predictor: Option<ChromaPredictor>) -> bool {
+pub(super) const fn is_smooth_chroma_predictor(predictor: Option<ChromaPredictor>) -> bool {
     matches!(
         predictor,
         Some(
@@ -1032,7 +1076,7 @@ impl DirectionalEdgePolicy {
     }
 }
 
-const fn is_smooth_luma_predictor(predictor: LumaPredictor) -> bool {
+pub(super) const fn is_smooth_luma_predictor(predictor: LumaPredictor) -> bool {
     matches!(
         predictor,
         LumaPredictor::Smooth | LumaPredictor::SmoothVertical | LumaPredictor::SmoothHorizontal
@@ -20404,6 +20448,20 @@ fn add_prediction_residual(prediction: &[u16], residual: &[i32], output: &mut [u
     }
 }
 
+/// Add a contiguous residual directly into an owned prediction buffer.
+/// Keeping one mutable stream removes a full-plane allocation and gives LLVM
+/// a simple non-aliasing zip over the residual input and reconstructed output.
+fn add_prediction_residual_in_place(output: &mut [u16], residual: &[i32], maximum: u16) {
+    let maximum_sample = maximum;
+    let maximum = i32::from(maximum);
+    for (destination, value) in output.iter_mut().zip(residual.iter().copied()) {
+        let reconstructed = i32::from(*destination)
+            .saturating_add(value)
+            .clamp(0, maximum);
+        *destination = u16::try_from(reconstructed).unwrap_or(maximum_sample);
+    }
+}
+
 fn reconstruct_lossy_luma_16x16(
     predictor: u16,
     coefficients: Option<Lossy16x16TransformCoefficients>,
@@ -28576,17 +28634,17 @@ fn full_directional_zone1(
         .saturating_add(width.min(height))
         .min(edges.top.len())
         .max(1);
-    let (prepared, max_base, increment) = if upsample {
+    let (prepared, max_base, increment): (std::borrow::Cow<'_, [u16]>, _, _) = if upsample {
         derivative = derivative.saturating_mul(2);
         (
-            upsample_full_intra_edge(
+            std::borrow::Cow::Owned(upsample_full_intra_edge(
                 &edges.top,
                 edge_length,
                 edges.top_left,
                 -1,
                 source_limit,
                 maximum,
-            )?,
+            )?),
             edge_length.saturating_mul(2).saturating_sub(2),
             2,
         )
@@ -28598,13 +28656,13 @@ fn full_directional_zone1(
         };
         if strength == 0 {
             (
-                edges.top.clone(),
-                width.saturating_add(width.min(height)).saturating_sub(1),
+                std::borrow::Cow::Borrowed(edges.top.as_slice()),
+                source_limit.saturating_sub(1),
                 1,
             )
         } else {
             (
-                filter_full_intra_edge(
+                std::borrow::Cow::Owned(filter_full_intra_edge(
                     &edges.top,
                     edge_length,
                     0,
@@ -28614,7 +28672,7 @@ fn full_directional_zone1(
                     source_limit,
                     strength,
                     maximum,
-                )?,
+                )?),
                 edge_length.saturating_sub(1),
                 1,
             )
@@ -28624,7 +28682,13 @@ fn full_directional_zone1(
     for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
         for (x, sample) in row.iter_mut().enumerate() {
             *sample = diagonal_z1_predictor_sample_with_max(
-                &prepared, max_base, derivative, increment, x, y, maximum,
+                prepared.as_ref(),
+                max_base,
+                derivative,
+                increment,
+                x,
+                y,
+                maximum,
             )?;
         }
     }
@@ -28653,17 +28717,17 @@ fn full_directional_zone3(
         .saturating_add(width.min(height))
         .min(edges.left.len())
         .max(1);
-    let (prepared, max_base, increment) = if upsample {
+    let (prepared, max_base, increment): (std::borrow::Cow<'_, [u16]>, _, _) = if upsample {
         derivative = derivative.saturating_mul(2);
         (
-            upsample_full_intra_edge(
+            std::borrow::Cow::Owned(upsample_full_intra_edge(
                 &edges.left,
                 edge_length,
                 edges.top_left,
                 -1,
                 source_limit,
                 maximum,
-            )?,
+            )?),
             edge_length.saturating_mul(2).saturating_sub(2),
             2,
         )
@@ -28675,13 +28739,13 @@ fn full_directional_zone3(
         };
         if strength == 0 {
             (
-                edges.left.clone(),
-                height.saturating_add(width.min(height)).saturating_sub(1),
+                std::borrow::Cow::Borrowed(edges.left.as_slice()),
+                source_limit.saturating_sub(1),
                 1,
             )
         } else {
             (
-                filter_full_intra_edge(
+                std::borrow::Cow::Owned(filter_full_intra_edge(
                     &edges.left,
                     edge_length,
                     0,
@@ -28691,7 +28755,7 @@ fn full_directional_zone3(
                     source_limit,
                     strength,
                     maximum,
-                )?,
+                )?),
                 edge_length.saturating_sub(1),
                 1,
             )
@@ -28701,7 +28765,13 @@ fn full_directional_zone3(
     for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
         for (x, sample) in row.iter_mut().enumerate() {
             *sample = diagonal_z3_predictor_sample_with_max(
-                &prepared, max_base, derivative, increment, x, y, maximum,
+                prepared.as_ref(),
+                max_base,
+                derivative,
+                increment,
+                x,
+                y,
+                maximum,
             )?;
         }
     }
@@ -29028,9 +29098,7 @@ fn full_intra_prediction(
             }
             Ok(prediction)
         }
-        LosslessPredictor::Smooth
-        | LosslessPredictor::SmoothVertical
-        | LosslessPredictor::SmoothHorizontal => {
+        LosslessPredictor::Smooth => {
             let horizontal_weights = smooth_weight_table(width)?;
             let vertical_weights = smooth_weight_table(height)?;
             let right = i32::from(edges.top[width.saturating_sub(1)]);
@@ -29042,32 +29110,56 @@ fn full_intra_prediction(
                 for (x, sample) in row.iter_mut().enumerate() {
                     let horizontal_weight = i32::from(horizontal_weights[x]);
                     let top = i32::from(edges.top[x]);
-                    let value = match predictor {
-                        LosslessPredictor::Smooth => {
-                            vertical_weight
-                                .saturating_mul(top)
-                                .saturating_add((256 - vertical_weight).saturating_mul(bottom))
-                                .saturating_add(horizontal_weight.saturating_mul(left))
-                                .saturating_add((256 - horizontal_weight).saturating_mul(right))
-                                .saturating_add(256)
-                                >> 9
-                        }
-                        LosslessPredictor::SmoothVertical => {
-                            vertical_weight
-                                .saturating_mul(top)
-                                .saturating_add((256 - vertical_weight).saturating_mul(bottom))
-                                .saturating_add(128)
-                                >> 8
-                        }
-                        LosslessPredictor::SmoothHorizontal => {
-                            horizontal_weight
-                                .saturating_mul(left)
-                                .saturating_add((256 - horizontal_weight).saturating_mul(right))
-                                .saturating_add(128)
-                                >> 8
-                        }
-                        _ => return Err(PortableUnavailable),
-                    };
+                    let value = vertical_weight
+                        .saturating_mul(top)
+                        .saturating_add((256 - vertical_weight).saturating_mul(bottom))
+                        .saturating_add(horizontal_weight.saturating_mul(left))
+                        .saturating_add((256 - horizontal_weight).saturating_mul(right))
+                        .saturating_add(256)
+                        >> 9;
+                    *sample =
+                        u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?;
+                }
+            }
+            Ok(prediction)
+        }
+        LosslessPredictor::SmoothVertical => {
+            let vertical_weights = smooth_weight_table(height)?;
+            let bottom = i32::from(edges.left[height.saturating_sub(1)]);
+            let mut prediction = vec![0_u16; sample_count];
+            for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
+                let vertical_weight = i32::from(vertical_weights[y]);
+                let inverse_weight = 256_i32.saturating_sub(vertical_weight);
+                for (sample, &top) in row.iter_mut().zip(&edges.top[..width]) {
+                    let value = vertical_weight
+                        .saturating_mul(i32::from(top))
+                        .saturating_add(inverse_weight.saturating_mul(bottom))
+                        .saturating_add(128)
+                        >> 8;
+                    *sample =
+                        u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?;
+                }
+            }
+            Ok(prediction)
+        }
+        LosslessPredictor::SmoothHorizontal => {
+            let horizontal_weights = smooth_weight_table(width)?;
+            let right = i32::from(edges.top[width.saturating_sub(1)]);
+            let mut prediction = vec![0_u16; sample_count];
+            for (row, &left) in prediction
+                .chunks_exact_mut(width)
+                .zip(&edges.left[..height])
+            {
+                let left = i32::from(left);
+                for (sample, &horizontal_weight) in row.iter_mut().zip(horizontal_weights) {
+                    let horizontal_weight = i32::from(horizontal_weight);
+                    let value = horizontal_weight
+                        .saturating_mul(left)
+                        .saturating_add(
+                            (256_i32.saturating_sub(horizontal_weight)).saturating_mul(right),
+                        )
+                        .saturating_add(128)
+                        >> 8;
                     *sample =
                         u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?;
                 }
@@ -29114,7 +29206,7 @@ fn full_palette_prediction(
     reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
 )]
 fn reconstruct_full_unsplit_prediction(
-    prediction: Vec<u16>,
+    mut prediction: Vec<u16>,
     coefficients: CoeffBlockRef<'_>,
     sample_depth: SampleDepth,
 ) -> PortableResult<ReconstructedPlane> {
@@ -29141,27 +29233,23 @@ fn reconstruct_full_unsplit_prediction(
     )
     .portable()?;
     (residual.len() == sample_count).then_some(()).portable()?;
-    Ok(reconstruct_lossy_predicted_plane_with_depth(
-        &prediction,
-        &residual,
-        sample_depth,
-    ))
+    add_prediction_residual_in_place(&mut prediction, &residual, sample_depth.maximum());
+    Ok(ReconstructedPlane {
+        samples: prediction,
+    })
 }
 
 #[allow(
     dead_code,
     reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
 )]
-fn full_cfl_prediction(
+fn full_cfl_ac(
     luma: &ReconstructedPlane,
     coded_width: usize,
     coded_height: usize,
     visible_width: usize,
     visible_height: usize,
-    predictor: u16,
-    alpha: i32,
-    sample_depth: SampleDepth,
-) -> PortableResult<Vec<u16>> {
+) -> PortableResult<Vec<i32>> {
     let count = coded_width.checked_mul(coded_height).portable()?;
     (luma.samples.len() == count
         && visible_width != 0
@@ -29189,16 +29277,25 @@ fn full_cfl_prediction(
     }
     let rounded = sum.saturating_add(i64::try_from(count / 2).unwrap_or(i64::MAX));
     let mean = i32::try_from(rounded >> count.ilog2()).map_err(|_| PortableUnavailable)?;
-    ac.into_iter()
-        .map(|value| {
-            reconstruct_lossless_cfl_sample(
-                predictor,
-                alpha,
-                value.saturating_sub(mean),
-                0,
-                sample_depth,
-            )
-        })
+    for value in &mut ac {
+        *value = value.saturating_sub(mean);
+    }
+    Ok(ac)
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_cfl_prediction(
+    ac: &[i32],
+    predictor: u16,
+    alpha: i32,
+    sample_depth: SampleDepth,
+) -> PortableResult<Vec<u16>> {
+    ac.iter()
+        .copied()
+        .map(|value| reconstruct_lossless_cfl_sample(predictor, alpha, value, 0, sample_depth))
         .collect()
 }
 
@@ -29250,6 +29347,17 @@ fn reconstruct_lossy444_unsplit_leaf(
     };
     let luma =
         reconstruct_full_unsplit_prediction(luma_prediction, luma_coefficients, sample_depth)?;
+    let cfl_ac = if matches!(syntax.chroma_predictor, ChromaPredictor::Cfl { .. }) {
+        Some(full_cfl_ac(
+            &luma,
+            luma_width,
+            luma_height,
+            visible_width,
+            visible_height,
+        )?)
+    } else {
+        None
+    };
 
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
         let coefficients = syntax.unsplit_coefficients(plane)?;
@@ -29281,11 +29389,7 @@ fn reconstruct_lossy444_unsplit_leaf(
                 (false, false) => sample_depth.midpoint(),
             };
             full_cfl_prediction(
-                &luma,
-                luma_width,
-                luma_height,
-                visible_width,
-                visible_height,
+                cfl_ac.as_deref().ok_or(PortableUnavailable)?,
                 dc,
                 alpha,
                 sample_depth,
@@ -29310,6 +29414,65 @@ fn reconstruct_lossy444_unsplit_leaf(
         luma_predictor: syntax.luma_predictor,
         planes: [luma, chroma_u, chroma_v],
     })
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the strict high-depth boundary retains syntax, edges, coded geometry, and transform state"
+)]
+fn reconstruct_visible_lossy444_unsplit_leaf(
+    syntax: &BlockSyntax,
+    edges: &FullIntraEdges,
+    transform_grid: TransformGrid,
+    visible_width: u32,
+    visible_height: u32,
+    enable_intra_edge_filter: bool,
+    tx_context: (u8, u8),
+) -> PortableResult<FirstLeaf> {
+    let (grid_width, grid_height, _) = transform_grid.properties();
+    let coded_width = grid_width.checked_mul(4).portable()?;
+    let coded_height = grid_height.checked_mul(4).portable()?;
+    let visible_width_usize = usize::try_from(visible_width)
+        .map_err(|_| PortableUnavailable)?
+        .min(coded_width);
+    let visible_height_usize = usize::try_from(visible_height)
+        .map_err(|_| PortableUnavailable)?
+        .min(coded_height);
+    let closed = reconstruct_lossy444_unsplit_leaf(
+        syntax,
+        edges,
+        visible_width_usize,
+        visible_height_usize,
+        enable_intra_edge_filter,
+    )?;
+    let luma_context = lossy_luma_context(syntax);
+    let chroma_contexts = lossy_chroma_contexts(syntax);
+    let luma_edge_contexts = luma_edge_contexts_for_syntax(syntax);
+    let (chroma_right, chroma_bottom) = chroma_edge_contexts_for_syntax(syntax);
+    let leaf = visible_leaf(
+        closed,
+        Some(syntax.chroma_predictor),
+        transform_grid,
+        visible_width,
+        visible_height,
+        ChromaSampling::Full,
+        tx_context,
+        false,
+        luma_edge_contexts,
+    );
+    Ok(with_lossy_luma_context(
+        with_lossy_chroma_edge_contexts(
+            with_palette_cache(leaf, syntax.palette.cache_state()),
+            chroma_contexts,
+            chroma_right,
+            chroma_bottom,
+        ),
+        luma_context,
+    ))
 }
 
 fn reconstruct_lossless_cfl_sample(
@@ -44242,6 +44405,7 @@ impl Lossy420Decoder {
             [None; 2],
             combined_luma_edge_contexts(Some(neighbor), None, 16, false),
             neighbor.chroma_right_contexts,
+            None,
         )
     }
 
@@ -44272,14 +44436,15 @@ impl Lossy420Decoder {
         full_chroma_bottom_left_8: [Option<[u16; 8]>; 2],
         left_luma_contexts: [u8; 16],
         left_chroma_contexts: [[u8; 8]; 2],
+        full_edges: Option<&FullIntraEdges>,
     ) -> PortableResult<FirstLeaf> {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
-        if matches!(self.chroma_sampling, ChromaSampling::Full)
-            && quantization.sample_depth != SampleDepth::EIGHT
-        {
+        let full_high_depth = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && quantization.sample_depth != SampleDepth::EIGHT;
+        if full_high_depth && full_edges.is_none() {
             // The strict path requires normalized top/right and left/below
             // extensions assembled from positioned leaves. The legacy
             // geometry-specific carrier cannot represent those edges for all
@@ -44359,6 +44524,17 @@ impl Lossy420Decoder {
             syntax.lossy_luma_8x4_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
+        if full_high_depth {
+            return reconstruct_visible_lossy444_unsplit_leaf(
+                &syntax,
+                full_edges.ok_or(PortableUnavailable)?,
+                transform_grid,
+                width,
+                height,
+                tools.enable_intra_edge_filter,
+                tx_context,
+            );
+        }
         let luma_top_neighbor_is_distinct =
             luma_top_neighbor.is_some_and(|top_neighbor| !std::ptr::eq(top_neighbor, neighbor));
         let neighbor_width = neighbor.width;
@@ -44658,15 +44834,16 @@ impl Lossy420Decoder {
         quantization: LossyQuantization,
         tools: BlockTools,
         neighbors: VerticalNeighbors<'_>,
+        full_edges: Option<&FullIntraEdges>,
     ) -> PortableResult<FirstLeaf> {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
 
-        if matches!(self.chroma_sampling, ChromaSampling::Full)
-            && quantization.sample_depth != SampleDepth::EIGHT
-        {
+        let full_high_depth = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && quantization.sample_depth != SampleDepth::EIGHT;
+        if full_high_depth && full_edges.is_none() {
             return Err(PortableUnavailable);
         }
 
@@ -44831,6 +45008,17 @@ impl Lossy420Decoder {
                 luma_context,
             )
         };
+        if full_high_depth {
+            return reconstruct_visible_lossy444_unsplit_leaf(
+                &syntax,
+                full_edges.ok_or(PortableUnavailable)?,
+                transform_grid,
+                width,
+                height,
+                tools.enable_intra_edge_filter,
+                tx_context,
+            );
+        }
         if syntax.palette.is_present() && matches!(transform_grid, TransformGrid::Square8) {
             let leaf = reconstruct_palette_square8_leaf(syntax).ok_or(PortableUnavailable)?;
             return Ok(visible(leaf));
@@ -46050,48 +46238,20 @@ impl Lossy420Decoder {
             let (grid_width, grid_height, _) = transform_grid.properties();
             let coded_width = grid_width.checked_mul(4).portable()?;
             let coded_height = grid_height.checked_mul(4).portable()?;
-            let visible_width = usize::try_from(width)
-                .map_err(|_| PortableUnavailable)?
-                .min(coded_width);
-            let visible_height = usize::try_from(height)
-                .map_err(|_| PortableUnavailable)?
-                .min(coded_height);
             let edges = FullIntraEdges::origin(
                 coded_width,
                 coded_height,
                 syntax.lossy_quantization.sample_depth,
             )?;
-            let closed = reconstruct_lossy444_unsplit_leaf(
+            return reconstruct_visible_lossy444_unsplit_leaf(
                 &syntax,
                 &edges,
-                visible_width,
-                visible_height,
-                tools.enable_intra_edge_filter,
-            )?;
-            let luma_context = lossy_luma_context(&syntax);
-            let chroma_contexts = lossy_chroma_contexts(&syntax);
-            let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
-            let (chroma_right, chroma_bottom) = chroma_edge_contexts_for_syntax(&syntax);
-            let leaf = visible_leaf(
-                closed,
-                Some(syntax.chroma_predictor),
                 transform_grid,
                 width,
                 height,
-                ChromaSampling::Full,
+                tools.enable_intra_edge_filter,
                 luma_transform_context(transform_grid, false),
-                false,
-                luma_edge_contexts,
             );
-            return Ok(with_lossy_luma_context(
-                with_lossy_chroma_edge_contexts(
-                    with_palette_cache(leaf, syntax.palette.cache_state()),
-                    chroma_contexts,
-                    chroma_right,
-                    chroma_bottom,
-                ),
-                luma_context,
-            ));
         }
         let predictors = origin_predictors_with_depth(
             syntax.luma_predictor,
@@ -46325,6 +46485,7 @@ where
             left_chroma_bottom: [None; 2],
             left_full_chroma_bottom_8: [None; 2],
         },
+        None,
     )?;
     between_leaves(decoder)?;
     let fourth = state.decode_following_vertical(
@@ -46367,6 +46528,7 @@ where
             left_chroma_bottom: [None; 2],
             left_full_chroma_bottom_8: [None; 2],
         },
+        None,
     )?;
     let coded_planes = [
         compose_square_plane_with_width(
@@ -46493,6 +46655,7 @@ where
         quantization,
         tools,
         horizontal_four_split_vertical_neighbors(&first, None),
+        None,
     )?;
     between_leaves(decoder)?;
     let third = state.decode_following_vertical_without_chroma(
@@ -46511,6 +46674,7 @@ where
         quantization,
         tools,
         horizontal_four_split_vertical_neighbors(&third, Some(&second)),
+        None,
     )?;
     let coded_planes = [
         {

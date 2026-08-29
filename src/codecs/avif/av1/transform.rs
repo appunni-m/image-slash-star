@@ -2231,6 +2231,100 @@ const fn transform_intermediate_shift(width: usize, height: usize) -> Option<u32
     }
 }
 
+/// Direct DCT-DCT two-dimensional dispatch for the overwhelmingly common AV1
+/// transform. Width and height are selected once per block, leaving each row
+/// and column loop with a statically sized, inlinable butterfly instead of a
+/// repeated `(length, axis-kind)` match.
+fn inverse_dct_dct_with_ranges<
+    const ROW_MINIMUM: i32,
+    const ROW_MAXIMUM: i32,
+    const COLUMN_MINIMUM: i32,
+    const COLUMN_MAXIMUM: i32,
+>(
+    coefficients: &[i32],
+    width: usize,
+    height: usize,
+) -> Option<Vec<i32>> {
+    let shift = transform_intermediate_shift(width, height)?;
+    let coefficient_width = width.min(32);
+    let coefficient_height = height.min(32);
+    let coefficient_count = coefficient_width.checked_mul(coefficient_height)?;
+    if coefficients.len() != coefficient_count {
+        return None;
+    }
+    let sample_count = width.checked_mul(height)?;
+    let mut rows = vec![0_i32; sample_count];
+    let ratio_two_rectangle =
+        width.saturating_mul(2) == height || height.saturating_mul(2) == width;
+
+    macro_rules! horizontal_pass {
+        ($size:literal, $transform:ident) => {{
+            for row in 0..coefficient_height {
+                let input: [i32; $size] = std::array::from_fn(|column| {
+                    if column >= coefficient_width {
+                        return 0;
+                    }
+                    let coefficient =
+                        coefficients[row.saturating_add(column.saturating_mul(coefficient_height))];
+                    if ratio_two_rectangle {
+                        coefficient.wrapping_mul(181).wrapping_add(128) >> 8
+                    } else {
+                        coefficient
+                    }
+                });
+                let transformed = $transform::<ROW_MINIMUM, ROW_MAXIMUM>(input);
+                let start = row.saturating_mul($size);
+                rows[start..start.saturating_add($size)].copy_from_slice(&transformed);
+            }
+        }};
+    }
+    match width {
+        4 => horizontal_pass!(4, inverse_dct4_with),
+        8 => horizontal_pass!(8, inverse_dct8_with),
+        16 => horizontal_pass!(16, inverse_dct16_with),
+        32 => horizontal_pass!(32, inverse_dct32_with),
+        64 => horizontal_pass!(64, inverse_dct64_with),
+        _ => return None,
+    }
+
+    let rounding = (1_i32 << shift) >> 1;
+    for value in rows
+        .iter_mut()
+        .take(width.saturating_mul(coefficient_height))
+    {
+        *value = clamp_range(
+            value.wrapping_add(rounding) >> shift,
+            COLUMN_MINIMUM,
+            COLUMN_MAXIMUM,
+        );
+    }
+
+    let mut output = vec![0_i32; sample_count];
+    macro_rules! vertical_pass {
+        ($size:literal, $transform:ident) => {{
+            for column in 0..width {
+                let input: [i32; $size] = std::array::from_fn(|row| {
+                    rows[row.saturating_mul(width).saturating_add(column)]
+                });
+                let transformed = $transform::<COLUMN_MINIMUM, COLUMN_MAXIMUM>(input);
+                for (row, value) in transformed.into_iter().enumerate() {
+                    output[row.saturating_mul(width).saturating_add(column)] =
+                        value.wrapping_add(8) >> 4;
+                }
+            }
+        }};
+    }
+    match height {
+        4 => vertical_pass!(4, inverse_dct4_with),
+        8 => vertical_pass!(8, inverse_dct8_with),
+        16 => vertical_pass!(16, inverse_dct16_with),
+        32 => vertical_pass!(32, inverse_dct32_with),
+        64 => vertical_pass!(64, inverse_dct64_with),
+        _ => return None,
+    }
+    Some(output)
+}
+
 fn inverse_transform_with_ranges<
     const ROW_MINIMUM: i32,
     const ROW_MAXIMUM: i32,
@@ -2243,6 +2337,17 @@ fn inverse_transform_with_ranges<
     horizontal: AxisTransform,
     vertical: AxisTransform,
 ) -> Option<Vec<i32>> {
+    if matches!(
+        (horizontal, vertical),
+        (AxisTransform::Dct, AxisTransform::Dct)
+    ) {
+        return inverse_dct_dct_with_ranges::<
+            ROW_MINIMUM,
+            ROW_MAXIMUM,
+            COLUMN_MINIMUM,
+            COLUMN_MAXIMUM,
+        >(coefficients, width, height);
+    }
     let shift = transform_intermediate_shift(width, height)?;
     let coefficient_width = width.min(32);
     let coefficient_height = height.min(32);

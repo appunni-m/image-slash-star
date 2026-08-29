@@ -231,18 +231,18 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         .map_err(|error| error.context("AVIF container validation failed"))
 }
 
+#[derive(Clone, Copy)]
+enum PortableYuvMatrix {
+    Bt601,
+    Bt2020,
+}
+
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
     let plane_length = width.checked_mul(height)?;
-    if !(matches!(still.bit_depth, 8 | 10 | 12)
-        && !still.monochrome
-        && still.color_primaries == 1
-        && still.transfer_characteristics == 13
-        && still.matrix_coefficients == 6
-        && still.color_range)
-    {
+    if !matches!(still.bit_depth, 8 | 10 | 12) || still.monochrome || !still.color_range {
         return None;
     }
     let subsampled = match (still.subsampling_x, still.subsampling_y) {
@@ -250,6 +250,17 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         (true, true) => true,
         (true, false) => false,
         (false, true) => return None,
+    };
+    let matrix = match (
+        still.color_primaries,
+        still.transfer_characteristics,
+        still.matrix_coefficients,
+    ) {
+        (1, 13, 6) => PortableYuvMatrix::Bt601,
+        (9, 16, 9) if still.bit_depth == 10 && !still.subsampling_x && !still.subsampling_y => {
+            PortableYuvMatrix::Bt2020
+        }
+        _ => return None,
     };
     let mut canvas = super::av1::FrameCanvas::new(
         still.width,
@@ -282,58 +293,84 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         return None;
     }
     let has_alpha = still.alpha_plane.is_some();
+    if has_alpha && matches!(matrix, PortableYuvMatrix::Bt2020) {
+        return None;
+    }
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
-    let mut pixels = Vec::with_capacity(pixel_capacity);
-    for (index, &y_sample) in y_plane.samples.iter().enumerate() {
-        let (u_sample, v_sample) = if subsampled {
-            #[allow(clippy::arithmetic_side_effects)]
-            let row = index.wrapping_div(width);
-            // `width` is validated nonzero; remainder matches euclidean
-            // semantics for non-negative operands without an intrinsic branch.
-            #[allow(clippy::arithmetic_side_effects)]
-            let column = index.wrapping_rem(width);
-            (
-                libyuv_420_bilinear_sample(
-                    &u_plane.samples,
-                    chroma_width,
-                    width,
-                    height,
-                    column,
-                    row,
-                ),
-                libyuv_420_bilinear_sample(
-                    &v_plane.samples,
-                    chroma_width,
-                    width,
-                    height,
-                    column,
-                    row,
-                ),
-            )
-        } else if still.subsampling_x {
-            #[allow(clippy::arithmetic_side_effects)]
-            let row = index.wrapping_div(width);
-            #[allow(clippy::arithmetic_side_effects)]
-            let column = index.wrapping_rem(width);
-            (
-                libavif_422_bilinear_sample(&u_plane.samples, chroma_width, width, column, row),
-                libavif_422_bilinear_sample(&v_plane.samples, chroma_width, width, column, row),
-            )
-        } else {
-            (u_plane.samples[index], v_plane.samples[index])
-        };
-        let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
-        let u = super::av1::truncate_to_u8(u_sample, still.bit_depth)?;
-        let v = super::av1::truncate_to_u8(v_sample, still.bit_depth)?;
-        pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
-        if let Some(alpha_plane) = &still.alpha_plane {
-            pixels.push(super::av1::truncate_to_u8(
-                alpha_plane.samples[index],
+    let pixels = if !still.subsampling_x && !still.subsampling_y {
+        match matrix {
+            PortableYuvMatrix::Bt601 => convert_full_resolution_rgb(
+                &y_plane.samples,
+                &u_plane.samples,
+                &v_plane.samples,
+                still
+                    .alpha_plane
+                    .as_ref()
+                    .map(|plane| plane.samples.as_slice()),
                 still.bit_depth,
-            )?);
+                libyuv_bt601_full_range_rgb,
+            )?,
+            PortableYuvMatrix::Bt2020 => convert_full_resolution_rgb(
+                &y_plane.samples,
+                &u_plane.samples,
+                &v_plane.samples,
+                None,
+                still.bit_depth,
+                libyuv_bt2020_full_range_rgb,
+            )?,
         }
-    }
+    } else {
+        let mut pixels = Vec::with_capacity(pixel_capacity);
+        for (index, &y_sample) in y_plane.samples.iter().enumerate() {
+            let (u_sample, v_sample) = if subsampled {
+                #[allow(clippy::arithmetic_side_effects)]
+                let row = index.wrapping_div(width);
+                // `width` is validated nonzero; remainder matches euclidean
+                // semantics for non-negative operands without an intrinsic branch.
+                #[allow(clippy::arithmetic_side_effects)]
+                let column = index.wrapping_rem(width);
+                (
+                    libyuv_420_bilinear_sample(
+                        &u_plane.samples,
+                        chroma_width,
+                        width,
+                        height,
+                        column,
+                        row,
+                    ),
+                    libyuv_420_bilinear_sample(
+                        &v_plane.samples,
+                        chroma_width,
+                        width,
+                        height,
+                        column,
+                        row,
+                    ),
+                )
+            } else {
+                #[allow(clippy::arithmetic_side_effects)]
+                let row = index.wrapping_div(width);
+                #[allow(clippy::arithmetic_side_effects)]
+                let column = index.wrapping_rem(width);
+                (
+                    libavif_422_bilinear_sample(&u_plane.samples, chroma_width, width, column, row),
+                    libavif_422_bilinear_sample(&v_plane.samples, chroma_width, width, column, row),
+                )
+            };
+            let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
+            let u = super::av1::truncate_to_u8(u_sample, still.bit_depth)?;
+            let v = super::av1::truncate_to_u8(v_sample, still.bit_depth)?;
+            pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
+            if let Some(alpha_plane) = &still.alpha_plane {
+                pixels.push(super::av1::truncate_to_u8(
+                    alpha_plane.samples[index],
+                    still.bit_depth,
+                )?);
+            }
+        }
+        pixels
+    };
     Some(DecodedImage {
         width: still.width,
         height: still.height,
@@ -359,6 +396,64 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         metadata: Vec::new(),
         source_color: SourceColor::new(),
     })
+}
+
+/// Convert contiguous I444 planes with all format dispatch hoisted out of the
+/// sample loop. The generic matrix function is monomorphized at each caller,
+/// leaving one predictable checked shift and one fixed integer color kernel.
+fn convert_full_resolution_rgb<F>(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    alpha_plane: Option<&[u16]>,
+    bit_depth: u32,
+    matrix: F,
+) -> Option<Vec<u8>>
+where
+    F: Fn(u8, u8, u8) -> [u8; 3],
+{
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(bit_depth)?;
+    let sample_count = y_plane.len();
+    if u_plane.len() != sample_count
+        || v_plane.len() != sample_count
+        || alpha_plane.is_some_and(|alpha| alpha.len() != sample_count)
+    {
+        return None;
+    }
+    let channels = if alpha_plane.is_some() { 4 } else { 3 };
+    let output_length = sample_count.checked_mul(channels)?;
+    let mut output = vec![0_u8; output_length];
+    if let Some(alpha_plane) = alpha_plane {
+        for ((((pixel, &y), &u), &v), &alpha) in output
+            .chunks_exact_mut(4)
+            .zip(y_plane)
+            .zip(u_plane)
+            .zip(v_plane)
+            .zip(alpha_plane)
+        {
+            let rgb = matrix(
+                sample_depth.truncate_to_u8(y)?,
+                sample_depth.truncate_to_u8(u)?,
+                sample_depth.truncate_to_u8(v)?,
+            );
+            pixel[..3].copy_from_slice(&rgb);
+            pixel[3] = sample_depth.truncate_to_u8(alpha)?;
+        }
+    } else {
+        for (((pixel, &y), &u), &v) in output
+            .chunks_exact_mut(3)
+            .zip(y_plane)
+            .zip(u_plane)
+            .zip(v_plane)
+        {
+            pixel.copy_from_slice(&matrix(
+                sample_depth.truncate_to_u8(y)?,
+                sample_depth.truncate_to_u8(u)?,
+                sample_depth.truncate_to_u8(v)?,
+            ));
+        }
+    }
+    Some(output)
 }
 
 // ✅ VERIFIED: libavif 1.4.1 `src/reformat.c`'s bilinear YUV422 branch. The
@@ -517,6 +612,35 @@ fn libyuv_bt601_full_range_rgb(y: u8, u: u8, v: u8) -> [u8; 3] {
     let red = y_scaled
         .wrapping_add(i32::from(v).wrapping_mul(90))
         .wrapping_sub(11_488);
+    [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
+}
+
+// ✅ VERIFIED: Pillow 12.2.0's bundled libavif 1.4.1 and libyuv 1922
+// (6067afde). RGB24 has no direct 10-bit I410 matrix entry, so libavif first
+// truncates every 10-bit I444 sample with Convert16To8(scale=16384), then
+// selects kYvuV2020 and calls I444ToRGB24Matrix. The constants and channel
+// order below are libyuv's scalar full-range BT.2020-NCL result exactly.
+fn libyuv_bt2020_full_range_rgb(y: u8, u: u8, v: u8) -> [u8; 3] {
+    let y_scaled = u32::from(y)
+        .wrapping_mul(0x0101)
+        .wrapping_mul(16_320)
+        .wrapping_shr(16);
+    #[expect(
+        clippy::cast_possible_wrap,
+        reason = "eight-bit input bounds the libyuv fixed-point luma value below i32::MAX"
+    )]
+    let y_scaled = y_scaled as i32;
+    let blue = y_scaled
+        .wrapping_add(i32::from(u).wrapping_mul(120))
+        .wrapping_sub(15_328);
+    let green = y_scaled.wrapping_add(6_176).wrapping_sub(
+        i32::from(u)
+            .wrapping_mul(11)
+            .wrapping_add(i32::from(v).wrapping_mul(37)),
+    );
+    let red = y_scaled
+        .wrapping_add(i32::from(v).wrapping_mul(94))
+        .wrapping_sub(12_000);
     [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
 }
 

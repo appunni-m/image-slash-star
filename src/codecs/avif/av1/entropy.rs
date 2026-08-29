@@ -1251,17 +1251,25 @@ const AL_PARTITION_CONTEXT: [[[u8; 10]; 5]; 2] = [
 struct PartitionContexts {
     origin_x: u32,
     origin_y: u32,
-    above: [u8; 32],
-    left: [u8; 32],
+    above: Vec<u8>,
+    left: Vec<u8>,
 }
 
 impl PartitionContexts {
     fn new(context: &FirstBlockContext) -> Self {
+        let width = context
+            .block_width
+            .saturating_sub(context.block_x)
+            .div_ceil(2);
+        let height = context
+            .block_height
+            .saturating_sub(context.block_y)
+            .div_ceil(2);
         Self {
             origin_x: context.block_x,
             origin_y: context.block_y,
-            above: [0; 32],
-            left: [0; 32],
+            above: vec![0; usize::try_from(width).unwrap_or(0)],
+            left: vec![0; usize::try_from(height).unwrap_or(0)],
         }
     }
 
@@ -1936,6 +1944,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         context.subsampling_y,
     )?;
     let mut leaves = Vec::<(PartitionNode, super::block::FirstLeaf)>::new();
+    let collect_loop_filter = context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0;
+    let collect_cdef = context.frame_tools.cdef.is_some();
     let mut filter_blocks = Vec::<super::filter::Block>::new();
     let cdef_region_width = usize::try_from(context.frame_width)
         .map_err(|_| malformed("CDEF frame width exceeds usize"))?
@@ -1949,8 +1961,16 @@ pub(super) fn validate_complete_lossy_420_partition(
     let cdef_active_height = usize::try_from(context.frame_height)
         .map_err(|_| malformed("CDEF frame height exceeds usize"))?
         .div_ceil(8);
-    let mut cdef_indices = vec![None; cdef_region_width.saturating_mul(cdef_region_height)];
-    let mut cdef_active = vec![false; cdef_active_width.saturating_mul(cdef_active_height)];
+    let mut cdef_indices = if collect_cdef {
+        vec![None; cdef_region_width.saturating_mul(cdef_region_height)]
+    } else {
+        Vec::new()
+    };
+    let mut cdef_active = if collect_cdef {
+        vec![false; cdef_active_width.saturating_mul(cdef_active_height)]
+    } else {
+        Vec::new()
+    };
     let mut unsupported = false;
 
     for root_y in (0..context.block_height).step_by(root_step) {
@@ -2761,6 +2781,38 @@ pub(super) fn validate_complete_lossy_420_partition(
                     };
                     let following_v8x16_filter_intra_mode =
                         following_v8x16_filter_intra_mode(context, node, &leaves);
+                    let full_edges = if full_resolution
+                        && tools.sample_depth != super::sample_depth::SampleDepth::EIGHT
+                    {
+                        let above = above_left.map(|(_, leaf)| leaf);
+                        let left = left_luma_top.map(|(_, leaf)| leaf);
+                        let smooth_luma = above.is_some_and(|leaf| {
+                            super::block::is_smooth_luma_predictor(leaf.luma_predictor)
+                        }) || left.is_some_and(|leaf| {
+                            super::block::is_smooth_luma_predictor(leaf.luma_predictor)
+                        });
+                        let smooth_chroma = above.is_some_and(|leaf| {
+                            super::block::is_smooth_chroma_predictor(leaf.chroma_predictor)
+                        }) || left.is_some_and(|leaf| {
+                            super::block::is_smooth_chroma_predictor(leaf.chroma_predictor)
+                        });
+                        match canvas.full_intra_edges(
+                            node.x,
+                            node.y,
+                            node.width,
+                            node.height,
+                            tools.sample_depth,
+                            [smooth_luma, smooth_chroma, smooth_chroma],
+                        ) {
+                            Ok(edges) => Some(edges),
+                            Err(_) => {
+                                unsupported = true;
+                                return Ok(PartitionVisitControl::Stop);
+                            }
+                        }
+                    } else {
+                        None
+                    };
 
                     if let Some((above_prior, above)) = above_left {
                         let above_left_width = above.width;
@@ -2837,6 +2889,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                 quantization,
                                 tools,
                                 neighbors,
+                                full_edges.as_ref(),
                             )
                         } else {
                             block_decoder.decode_following_vertical_without_chroma(
@@ -2866,6 +2919,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                 left_full_chroma_bottom_8,
                                 left_luma_contexts,
                                 left_chroma_contexts,
+                                full_edges.as_ref(),
                             )
                         } else {
                             block_decoder.decode_following_horizontal_without_chroma(
@@ -2888,16 +2942,18 @@ pub(super) fn validate_complete_lossy_420_partition(
                         return Ok(PartitionVisitControl::Stop);
                     }
                 };
-                let (cdef_block_active, cdef_index) = block_decoder.cdef_metadata();
-                record_cdef_metadata(
-                    context.frame_width,
-                    context.frame_height,
-                    node,
-                    cdef_block_active,
-                    cdef_index,
-                    &mut cdef_indices,
-                    &mut cdef_active,
-                )?;
+                if collect_cdef {
+                    let (cdef_block_active, cdef_index) = block_decoder.cdef_metadata();
+                    record_cdef_metadata(
+                        context.frame_width,
+                        context.frame_height,
+                        node,
+                        cdef_block_active,
+                        cdef_index,
+                        &mut cdef_indices,
+                        &mut cdef_active,
+                    )?;
+                }
                 let has_chroma = if !context.subsampling_x && !context.subsampling_y {
                     !context.monochrome
                 } else {
@@ -2913,40 +2969,42 @@ pub(super) fn validate_complete_lossy_420_partition(
                     has_chroma,
                     &decoded.planes,
                 )?;
-                let Some((luma_tx, chroma_tx)) =
-                    super::block::filter_transform_dimensions(
+                if collect_loop_filter {
+                    let Some((luma_tx, chroma_tx)) =
+                        super::block::filter_transform_dimensions(
+                            width,
+                            height,
+                            &decoded,
+                            context.subsampling_x,
+                            context.subsampling_y,
+                        )
+                    else {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    };
+                    let x = usize::try_from(node.x)
+                        .ok()
+                        .and_then(|value| value.checked_mul(4))
+                        .ok_or_else(|| malformed("loop-filter x coordinate overflows"))?;
+                    let y = usize::try_from(node.y)
+                        .ok()
+                        .and_then(|value| value.checked_mul(4))
+                        .ok_or_else(|| malformed("loop-filter y coordinate overflows"))?;
+                    let width = usize::try_from(width)
+                        .map_err(|_| malformed("loop-filter width exceeds usize"))?;
+                    let height = usize::try_from(height)
+                        .map_err(|_| malformed("loop-filter height exceeds usize"))?;
+                    filter_blocks.push(super::filter::Block {
+                        x,
+                        y,
                         width,
                         height,
-                        &decoded,
-                        context.subsampling_x,
-                        context.subsampling_y,
-                )
-                else {
-                    unsupported = true;
-                    return Ok(PartitionVisitControl::Stop);
-                };
-                let x = usize::try_from(node.x)
-                    .ok()
-                    .and_then(|value| value.checked_mul(4))
-                    .ok_or_else(|| malformed("loop-filter x coordinate overflows"))?;
-                let y = usize::try_from(node.y)
-                    .ok()
-                    .and_then(|value| value.checked_mul(4))
-                    .ok_or_else(|| malformed("loop-filter y coordinate overflows"))?;
-                let width = usize::try_from(width)
-                    .map_err(|_| malformed("loop-filter width exceeds usize"))?;
-                let height = usize::try_from(height)
-                    .map_err(|_| malformed("loop-filter height exceeds usize"))?;
-                filter_blocks.push(super::filter::Block {
-                    x,
-                    y,
-                    width,
-                    height,
-                    luma_tx_width: luma_tx.0,
-                    luma_tx_height: luma_tx.1,
-                    chroma_tx_width: chroma_tx.0,
-                    chroma_tx_height: chroma_tx.1,
-                });
+                        luma_tx_width: luma_tx.0,
+                        luma_tx_height: luma_tx.1,
+                        chroma_tx_width: chroma_tx.0,
+                        chroma_tx_height: chroma_tx.1,
+                    });
+                }
                 leaves.push((node, decoded));
                 Ok(PartitionVisitControl::Continue)
             })?;
@@ -2996,6 +3054,7 @@ pub(super) fn validate_complete_lossy_420_partition(
 }
 
 fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let high_depth_full = complete_high_depth_full_reconstruction_context(context);
     let simple_422 = context.subsampling_x
         && !context.subsampling_y
         && context.frame_width == 16
@@ -3010,11 +3069,15 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0;
-    closed_base_reconstruction_context(context)
+    (closed_base_reconstruction_context(context) || high_depth_full)
         && !context.all_lossless
-        && ((context.subsampling_x && context.subsampling_y)
-            || (!context.subsampling_x && !context.subsampling_y)
-            || simple_422)
+        && if high_depth_full {
+            !context.subsampling_x && !context.subsampling_y
+        } else {
+            (context.subsampling_x && context.subsampling_y)
+                || (!context.subsampling_x && !context.subsampling_y)
+                || simple_422
+        }
         && context.frame_tools.quantization.is_some()
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.restoration_present
@@ -3033,6 +3096,35 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+}
+
+/// Exact high-depth Full-resolution tranche admitted by the generic unsplit
+/// reconstruction core. Optional post-filters and large implicit transform
+/// tilings stay closed until their high-depth arithmetic/state is connected;
+/// this gate therefore cannot silently route them through eight-bit code.
+fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) -> bool {
+    matches!(context.bit_depth, 10 | 12)
+        && !context.superres_enabled
+        && !context.segmentation_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.monochrome
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.reduced_transform_set
+        && !context
+            .frame_tools
+            .quantization
+            .is_some_and(|quantization| quantization.using_matrix)
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && context.block_x == 0
+        && context.block_y == 0
 }
 
 fn record_cdef_metadata(

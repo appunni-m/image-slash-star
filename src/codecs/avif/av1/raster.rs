@@ -5,9 +5,12 @@
 //! frame; this type supplies that missing boundary without raw pointers or
 //! unchecked slice construction.
 
-use super::block::ReconstructedPlane;
+use super::block::{
+    FullIntraEdges, FullIntraPlaneEdges, PortableResult, PortableUnavailable, ReconstructedPlane,
+};
 use super::cdef::{self, Block as CdefBlock, Parameters as CdefParameters};
 use super::filter;
+use super::sample_depth::SampleDepth;
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 
@@ -282,6 +285,204 @@ impl FrameCanvas {
             planes,
             written,
         })
+    }
+
+    /// Prepare the exact tile-local prefilter edges for one full-resolution
+    /// intra block. The caller invokes this before placing the current leaf,
+    /// so the coverage bitmap is also the AV1 decoded-before relation used by
+    /// above-right and below-left availability.
+    pub(super) fn full_intra_edges(
+        &self,
+        x_units: u32,
+        y_units: u32,
+        width_units: u32,
+        height_units: u32,
+        sample_depth: SampleDepth,
+        smooth: [bool; 3],
+    ) -> PortableResult<FullIntraEdges> {
+        if self.subsampling_x || self.subsampling_y {
+            return Err(PortableUnavailable);
+        }
+        let pixels = |units: u32| {
+            usize::try_from(units)
+                .ok()
+                .and_then(|value| value.checked_mul(4))
+                .ok_or(PortableUnavailable)
+        };
+        let x = pixels(x_units)?;
+        let y = pixels(y_units)?;
+        let width = pixels(width_units)?;
+        let height = pixels(height_units)?;
+        if width == 0 || height == 0 || x >= self.width || y >= self.height {
+            return Err(PortableUnavailable);
+        }
+        Ok(FullIntraEdges::from_planes([
+            self.full_intra_plane_edges(0, x, y, width, height, sample_depth, smooth[0])?,
+            self.full_intra_plane_edges(1, x, y, width, height, sample_depth, smooth[1])?,
+            self.full_intra_plane_edges(2, x, y, width, height, sample_depth, smooth[2])?,
+        ]))
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the checked edge builder keeps plane, geometry, depth, and smooth state explicit"
+    )]
+    fn full_intra_plane_edges(
+        &self,
+        plane: usize,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+        sample_depth: SampleDepth,
+        smooth: bool,
+    ) -> PortableResult<FullIntraPlaneEdges> {
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        if x >= plane_width || y >= plane_height {
+            return Err(PortableUnavailable);
+        }
+
+        let sample_at = |sample_x: usize, sample_y: usize| -> PortableResult<u16> {
+            if sample_x >= plane_width || sample_y >= plane_height {
+                return Err(PortableUnavailable);
+            }
+            let index = sample_y
+                .checked_mul(plane_width)
+                .and_then(|row| row.checked_add(sample_x))
+                .ok_or(PortableUnavailable)?;
+            if !self
+                .written
+                .get(plane)
+                .and_then(|written| written.get(index))
+                .copied()
+                .unwrap_or(false)
+            {
+                return Err(PortableUnavailable);
+            }
+            let sample = self
+                .planes
+                .get(plane)
+                .and_then(|samples| samples.get(index))
+                .copied()
+                .ok_or(PortableUnavailable)?;
+            sample_depth.validate(sample).ok_or(PortableUnavailable)
+        };
+        let row_is_written = |start_x: usize, row: usize, length: usize| {
+            start_x
+                .checked_add(length)
+                .filter(|&end| end <= plane_width)
+                .and_then(|end| {
+                    let start = row.checked_mul(plane_width)?.checked_add(start_x)?;
+                    let end = row.checked_mul(plane_width)?.checked_add(end)?;
+                    self.written
+                        .get(plane)
+                        .and_then(|written| written.get(start..end))
+                })
+                .is_some_and(|written| written.iter().all(|value| *value))
+        };
+        let column_is_written = |column: usize, start_y: usize, length: usize| {
+            start_y
+                .checked_add(length)
+                .filter(|&end| end <= plane_height)
+                .is_some_and(|end| {
+                    (start_y..end).all(|row| {
+                        row.checked_mul(plane_width)
+                            .and_then(|offset| offset.checked_add(column))
+                            .and_then(|index| {
+                                self.written
+                                    .get(plane)
+                                    .and_then(|written| written.get(index))
+                            })
+                            .copied()
+                            .unwrap_or(false)
+                    })
+                })
+        };
+
+        let has_top = y != 0;
+        let has_left = x != 0;
+        let visible_top = plane_width.saturating_sub(x).min(width);
+        let visible_left = plane_height.saturating_sub(y).min(height);
+        if (has_top && (visible_top == 0 || !row_is_written(x, y - 1, visible_top)))
+            || (has_left && (visible_left == 0 || !column_is_written(x - 1, y, visible_left)))
+        {
+            return Err(PortableUnavailable);
+        }
+
+        let extension = width.min(height);
+        let top_extension_x = x.checked_add(width).ok_or(PortableUnavailable)?;
+        let visible_top_extension = plane_width.saturating_sub(top_extension_x).min(extension);
+        let have_above_right = has_top
+            && visible_top_extension != 0
+            && row_is_written(top_extension_x, y - 1, visible_top_extension);
+        let left_extension_y = y.checked_add(height).ok_or(PortableUnavailable)?;
+        let visible_left_extension = plane_height.saturating_sub(left_extension_y).min(extension);
+        let have_below_left = has_left
+            && visible_left_extension != 0
+            && column_is_written(x - 1, left_extension_y, visible_left_extension);
+
+        let top_length = if have_above_right {
+            width.checked_add(extension).ok_or(PortableUnavailable)?
+        } else {
+            width
+        };
+        let left_length = if have_below_left {
+            height.checked_add(extension).ok_or(PortableUnavailable)?
+        } else {
+            height
+        };
+        let edge_capacity = width.checked_add(height).ok_or(PortableUnavailable)?;
+        let mut top = if has_top {
+            Vec::with_capacity(edge_capacity)
+        } else {
+            Vec::new()
+        };
+        if has_top {
+            for offset in 0..top_length {
+                let sample_x = x.checked_add(offset).ok_or(PortableUnavailable)?;
+                let sample = if sample_x < plane_width {
+                    sample_at(sample_x, y - 1)?
+                } else {
+                    top.last().copied().ok_or(PortableUnavailable)?
+                };
+                top.push(sample);
+            }
+        }
+        let mut left = if has_left {
+            Vec::with_capacity(edge_capacity)
+        } else {
+            Vec::new()
+        };
+        if has_left {
+            for offset in 0..left_length {
+                let sample_y = y.checked_add(offset).ok_or(PortableUnavailable)?;
+                let sample = if sample_y < plane_height {
+                    sample_at(x - 1, sample_y)?
+                } else {
+                    left.last().copied().ok_or(PortableUnavailable)?
+                };
+                left.push(sample);
+            }
+        }
+        let top_left = if has_top && has_left {
+            Some(sample_at(x - 1, y - 1)?)
+        } else {
+            None
+        };
+
+        FullIntraPlaneEdges::prepare_owned(
+            width,
+            height,
+            sample_depth,
+            top,
+            left,
+            top_left,
+            has_top,
+            has_left,
+            have_above_right,
+            have_below_left,
+            smooth,
+        )
     }
 
     /// Place a complete set of reconstructed planes at a luma-pixel origin.
