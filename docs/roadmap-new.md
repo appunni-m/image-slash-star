@@ -22,7 +22,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `1395a8a14d7433f34ed9b51e8fe52e91e7e7f0b32ccf3b472ed194c649f244ab`; generated matrix SHA-256: `056844895df917cf98d8c110a27dfb107fc8834c3f064801decc53dd77ec08da`.
+- Manifest SHA-256: `78402dabef6f4195244b361949e98177ec92a09b426d6bf1136685dbf2d5f601`; generated matrix SHA-256: `c414ebbcdd67d858bec94f49f4d8ff1360ffdaeea412343d7238326d9fabe78e`.
 <!-- current-claim-ledger:end -->
 
 - Current claim-ledger implementation anchor: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`
@@ -97,11 +97,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 316 rows total, 313 active, 3 explicit planned
+- AVIF decode/inspect/verify: 317 rows total, 314 active, 3 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,540 rows total, 1140 active decode rows, 365 active encode
+- Whole matrix: 1,541 rows total, 1141 active decode rows, 365 active encode
   rows, 3 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -180,7 +180,7 @@ the corresponding status is recorded in `roadmap.json`:
   `82523f7f2d713f0ebb5bf42d2c6ebcd01406dee89742afbf25e3ade4dd2c640c`; and
   the Pillow RGB SHA-256 is
   `1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808`.
-  The permanent reconstruction suite passes 246/246 cases, all 313 active AVIF
+  The permanent reconstruction suite passes 247/247 cases, all 314 active AVIF
   rows pass, and the new row is active in the generated matrix. The durable
   implementation commit is `212d273bb757c214ee9079e845cad2e6e033523b`; its
   managed incremental Coverage MCP run is
@@ -234,6 +234,28 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only that bounded following-vertical Zone-1 class; other angle
   states, edge policies, predictors, transforms, dimensions, and
   `AVF-STILL-001` remain partial.
+- A second exact witness now covers the same following-Vertical8x16 geometry
+  with a distinct angular state:
+  `coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif`. It is an
+  8x32 8-bit 4:2:0 split frame whose lower leaf selects mode 8 Diagonal67
+  with angle symbol 2, delta -1, and resolved angle 64; the origin and lower
+  luma leaves use unsplit TX8x16 DCT-DCT, with EOB 9 and 2 respectively, and
+  the lower leaf has a nonzero AC coefficient. Both U/V pairs are skipped
+  TX4x8. Safe Rust matches the exact 85-operation pinned scalar dav1d trace,
+  partition ranges `40720/52494/39416`, predictor rows, dequantized
+  coefficient matrix, Y/U/V planes, and 768-byte Pillow RGB8 output. The
+  input-only campaign evaluated 100 candidates across 10 families, qualified
+  4, and promoted `D67V-F06-N00` (seed 12050) without invoking repository
+  Rust. Its report is
+  `tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_diagonal67_angle64_campaign_01.json`
+  (SHA-256
+  `d71683567d26814ab2cc621a81f00009f05a43c12716959b7745845c24e76d1d`).
+  Fixture SHA-256 is
+  `0035a7196b860ebb0dfffe2361cd5921750a45b73cbbdbf459ec6da07fa9dcfb` and
+  Pillow RGB SHA-256 is
+  `55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f`.
+  This is a second bounded angular proof; it does not generalize the
+  following-leaf predictor or close `AVF-STILL-001`.
 - Managed Coverage MCP run `89a34dfc-e115-4a72-82ef-bebacfed0446` then passed
   the exact one-fixture reconstruction selector in 36,925 ms at implementation
   commit `2a62f5b8a179fc3167ba97d5f2e46597b7275047` and ingested snapshot
@@ -945,7 +967,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  246 reconstruction cases; a selected run reads and executes only the
+  247 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does
@@ -3290,7 +3312,7 @@ final promise is one predictable, pure safe-Rust implementation on every
 supported target, with every unsupported case named instead of hidden behind
 a native fallback.
 
-**Current exact state:** 316 AVIF decode/inspect/verify rows exist: 313 are
+**Current exact state:** 317 AVIF decode/inspect/verify rows exist: 314 are
 active and 3 are explicit planned gaps. All 32 AVIF encode rows are planned
 because no pure-Rust encoder is wired. The exact decode gap ledger is below;
 the generated source is `manifest.yaml`, and the generated counts are in
