@@ -937,21 +937,21 @@ def classify_luma_smooth_vertical_following(
 
     smooth_weights = (
         255,
-        240,
         225,
-        210,
         196,
-        182,
-        169,
-        157,
+        170,
         145,
-        133,
-        122,
-        111,
-        101,
-        92,
-        83,
-        74,
+        123,
+        102,
+        84,
+        68,
+        54,
+        43,
+        33,
+        26,
+        20,
+        17,
+        16,
     )
     smooth_prediction = (
         [

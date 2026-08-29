@@ -7193,8 +7193,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 );
                 assert_eq!(pair[1].value, 1, "chroma plane {plane_index} skip value");
             }
-        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_vertical_01.avif"
-        {
+        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_vertical_01.avif" {
             assert_eq!(
                 case.partition_blocks,
                 vec![
@@ -11547,6 +11546,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif" => {
                 "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731"
+            }
+            "coverage_vertical8x16_following_luma_smooth_vertical_01.avif" => {
+                "f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46"
             }
             "coverage_r16x8_neighbor_01.avif" => {
                 "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"
