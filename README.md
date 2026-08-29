@@ -683,11 +683,11 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `ff4821adc6078856781fba533b90d03dc7e34be4fca91eb339527c2b95c14f62`; generated matrix SHA-256: `c59024aff3eea4085eb83bf3e45a55bb0018210a5a34649e873df10aa67e5082`.
+- Manifest SHA-256: `43e7980b5f8a5fe1eb4851d6d0fe4ff3b7cb86c128dac3efcfe3bcab617db297`; generated matrix SHA-256: `77c445312f8ee44c73e40095715d0f6821bd6e15e218c6e84b63dd09ad62c1ff`.
 <!-- current-claim-ledger:end -->
 
-The generated matrix in this tree contains 1,549 total rows: 1,152 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,149 decode rows and
+The generated matrix in this tree contains 1,557 total rows: 1,160 decode /
+inspect / verify rows and 397 encode rows. Of those, 1,157 decode rows and
 365 encode rows are active; 3 AVIF decode rows and all 32 AVIF encode rows
 are explicit planned pure-Rust gaps. Expected errors that remain active are
 fixture outcomes, and every decode-error class is catalogued in the generated,
@@ -710,7 +710,22 @@ The current accepted Coverage MCP snapshot is recorded in
 branch, function, and region counts. Coverage proves execution under the
 retained suite; it does not prove complete format support or security.
 
-The newest bounded AVIF reconstruction evidence covers four exact
+The newest bounded AVIF reconstruction evidence activates
+`coverage_entropy_mosaic_03.avif` through `_10.avif` at implementation commit
+`05ec80ad12312a782184f83b9fa6dbc8325442c8`. All eight are exact 32x32,
+8-bit, full-range 4:2:0 origin-Square32 DC/DC witnesses at effective qindex 2
+and matrix 10, with TX32x32 luma and TX16x16 chroma DCT-DCT residuals. Cases
+03 and 06-10 additionally prove the screen-content-enabled `y_pal=0` then
+`uv_pal=0` syntax path; 04-05 are screen-content-disabled controls. The
+263-case pinned dav1d oracle checks every partition, entropy operation, EOB,
+and Y/U/V plane, while the public matrix checks exact Pillow RGB bytes. This
+does not admit nonzero palettes, palette colors/index maps, palette-neighbor
+contexts, multi-block adaptation, or intrabc. Arithmetic range decoding is
+serial and adaptive; the appropriate measured vectorization targets remain
+the shared inverse-transform, filtering, upsampling, and color-conversion
+kernels.
+
+The preceding bounded AVIF reconstruction evidence covers four exact
 following-Vertical8x16 chroma fixtures at implementation commit
 `98824dd14ab25034017f11ffe5e5ebb5761a5ecb`. Managed Coverage MCP runs
 `9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66`,

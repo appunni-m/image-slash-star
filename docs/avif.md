@@ -9,7 +9,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `ff4821adc6078856781fba533b90d03dc7e34be4fca91eb339527c2b95c14f62`; generated matrix SHA-256: `c59024aff3eea4085eb83bf3e45a55bb0018210a5a34649e873df10aa67e5082`.
+- Manifest SHA-256: `43e7980b5f8a5fe1eb4851d6d0fe4ff3b7cb86c128dac3efcfe3bcab617db297`; generated matrix SHA-256: `77c445312f8ee44c73e40095715d0f6821bd6e15e218c6e84b63dd09ad62c1ff`.
 <!-- current-claim-ledger:end -->
 
 Current claim-ledger implementation anchor:
@@ -78,10 +78,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 325 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 333 AVIF decode rows and 32 encode
 rows:
 
-- 322 decode rows are active: portable still reconstruction and structural
+- 330 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and the five-frame sequence.
@@ -99,7 +99,24 @@ closes only the single-frame 12-bit 4:4:4 still class; the animated
 `high_bitdepth` fixture, other subsampling, restoration, alpha/sequence, HDR,
 and encoding remain planned.
 
-The current newest bounded witness is
+The current newest bounded witness is the eight-case
+`coverage_entropy_mosaic_03.avif` through `_10.avif` corpus. Every fixture is
+32x32, 8-bit, full-range 4:2:0 with one origin `Square32` `PARTITION_NONE`
+leaf, DC luma/chroma prediction, effective qindex 2, matrix 10, TX32x32 luma
+and TX16x16 chroma DCT-DCT residuals, and zero CDEF/restoration. Cases 03 and
+06-10 enable screen-content tools and consume `y_pal=0` followed by
+`uv_pal=0`; cases 04-05 are disabled controls. Exact hardcoded evidence covers
+the common partition, adaptive symbol ordering, 789-1,201 entropy operations,
+all Y/U/V EOBs, final range states, reconstructed planes, and Pillow RGB8
+bytes. The generic safe-Rust path required no fixture-name admission or new
+production branch. This closes only the Square32 qcat-zero DC/DC DCT-DCT and
+palette-use-false sentence; nonzero palettes, colors/index maps, neighbor
+contexts, multi-block palette adaptation, and intrabc remain unsupported or
+unproven. Adaptive arithmetic decoding is inherently serial, so this slice
+does not make a SIMD claim; shared inverse transforms, filtering, upsampling,
+and color conversion remain the meaningful benchmarked vectorization targets.
+
+An earlier bounded witness is
 `coverage_square32_origin_tx16x16_split_01.avif`: a deterministic 32x32
 8-bit 4:2:0 quality-76/speed-0 origin `Square32` leaf with four TX16x16 luma
 DCT children, DC prediction, non-empty luma residuals, and TX16x16 DCT

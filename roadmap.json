@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1549,
-      "decode_rows": 1152,
+      "total_rows": 1557,
+      "decode_rows": 1160,
       "encode_rows": 397,
-      "decode_active": 1149,
+      "decode_active": 1157,
       "decode_planned": 3,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 325,
-      "decode_active": 322,
+      "decode_rows": 333,
+      "decode_active": 330,
       "decode_planned": 3,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_255_reconstruction_cases",
+      "no_selector_behavior": "run_all_263_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -2048,8 +2048,71 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence_addendum": "The latest bounded proofs are coverage_vertical8x16_following_chroma_dc_01.avif, coverage_vertical8x16_following_chroma_smooth_01.avif, coverage_vertical8x16_following_chroma_smooth_vertical_01.avif, and coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif. They prove exact top-only mode 0/9/10/11 reconstruction for the following 4x8 U/V planes in the 8x32 8-bit 4:2:0 Vertical8x16 topology, with non-empty DCT-DCT, ADST-ADST, ADST-DCT, and DCT-ADST residuals. Safe Rust uses the reconstructed upper plane's true row-7 edge, one-sided top DC, and repeated missing-left samples. Four managed Coverage MCP runs passed their exact selectors with zero reported regressions. The complete walker still admits only proven geometry and mode sequences; AVF-STILL-001, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
+        "current_evidence_addendum": "The latest bounded proof activates coverage_entropy_mosaic_03.avif through coverage_entropy_mosaic_10.avif as one exact Square32 corpus. All eight are 32x32 8-bit full-range 4:2:0, one origin PARTITION_NONE leaf, luma/chroma DC, effective qindex 2, matrix 10, TX32x32 Y and TX16x16 U/V DCT-DCT, and zero in-loop filters. Cases 03 and 06-10 enable screen-content tools and prove the exact y_pal=0 then uv_pal=0 syntax path; 04-05 are screen-content-disabled controls. Exact partition, adaptive entropy operations, EOBs, Y/U/V planes, and Pillow RGB bytes are pinned. This evidence does not admit nonzero palettes, palette colors or index maps, palette-neighbor contexts, multi-block palette adaptation, or intrabc. The complete walker still admits only proven geometry and mode sequences; AVF-STILL-001, broader AV1/AVIF support, encoding, and the four-metric 100% coverage gate remain open.",
         "bounded_witnesses": {
+          "coverage_entropy_mosaic_palette_zero_batch": {
+            "fixtures": [
+              "coverage_entropy_mosaic_03.avif",
+              "coverage_entropy_mosaic_04.avif",
+              "coverage_entropy_mosaic_05.avif",
+              "coverage_entropy_mosaic_06.avif",
+              "coverage_entropy_mosaic_07.avif",
+              "coverage_entropy_mosaic_08.avif",
+              "coverage_entropy_mosaic_09.avif",
+              "coverage_entropy_mosaic_10.avif"
+            ],
+            "dimensions": [
+              32,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "range": "full",
+            "topology": "one origin Square32 PARTITION_NONE leaf",
+            "syntax": "DC luma and chroma, effective qindex 2 from base qindex 4 plus delta -2, matrix 10, TX32x32 Y and TX16x16 U/V DCT-DCT, zero CDEF/restoration; 03 and 06-10 additionally consume y_pal=0 then uv_pal=0 with palette size context 4 and origin neighbor contexts 0, while 04-05 are screen-content-disabled controls",
+            "entropy_operation_counts": {
+              "03": 1105,
+              "04": 1012,
+              "05": 1007,
+              "06": 1201,
+              "07": 1172,
+              "08": 958,
+              "09": 789,
+              "10": 916
+            },
+            "eob_y_u_v": {
+              "03": [436, 149, 174],
+              "04": [297, 152, 179],
+              "05": [278, 188, 188],
+              "06": [526, 163, 188],
+              "07": [467, 176, 214],
+              "08": [250, 152, 179],
+              "09": [156, 162, 176],
+              "10": [250, 148, 175]
+            },
+            "fixture_sha256": {
+              "03": "bbf49002958d8b836d30ef5f837168a841b138e67f12ef4f6e73c072b71e65d9",
+              "04": "233617a50cfd0a8b2dbd5976e1d4296bd9f6b26b36f416970fe812ba00f79d73",
+              "05": "0509df3919b43398bd7e2bf6d812796113c750094cf7a973d58aa19fbc8d2dc7",
+              "06": "ea7d7dc634b9ef96069030b6b62b4c5c499152982dc5524f17f5dfe5b58a3028",
+              "07": "dcb3689dd4ca134fb7c221140c4e75b13abc39f6fba611ee285f7a003f1c5f2a",
+              "08": "561dcfe17d6583e0d9051cd221ea93be152c59479074bc69ff9b038848eb5451",
+              "09": "6d4b2b591d77fa312ac8f98b3478364f01c80852745dae498c48692a1e3a60f8",
+              "10": "aefbe6aab6da76fe7d51bb0fb3e9d7e83fb0622da44d6b1f835e0868662d6558"
+            },
+            "pillow_rgb_sha256": {
+              "03": "fafd75caa46a673bc0201f8cba7b6add17b09e0257301b86762c78906f94e85b",
+              "04": "05295c93b4b88873d843df1490b8dd6837398a179b2e46767f7d7f91f0eccf24",
+              "05": "ceeee3787ba0d828b6c43866bd97dc1f2537e1b5834ea6f467cafe2ebfd74b1f",
+              "06": "ff8e61edc88b2f0281c934c2f32308c262344b45043fe9449961972b47fb80b9",
+              "07": "687a954539f9a9d3f1ed33fa1322faa9a955b6122838f22fcb8418aae11c94c0",
+              "08": "26c4f0adeb8fada605676e3835ea159935ef2e828d49308833e6d8ebcf00648a",
+              "09": "9ac81a8f72e3f01542e41529833ba253f8d4eca77451da4d88fb4921bd7d1c21",
+              "10": "754444462592799314130431bbed2e9df516d2d32969683c2cea4d33c6b57d22"
+            },
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json",
+            "scope": "This closes only the bounded origin Square32 qcat-zero DC/DC DCT-DCT class and the screen-content-enabled palette-use-false sentence. Nonzero palettes, palette colors/index maps, palette-neighbor contexts, multi-block adaptation, intrabc, alternate geometries, predictors, transforms, sample depths, filters, sequences, encoding, and AVF-STILL-001 remain open."
+          },
           "coverage_h16x8_following_dct_dct_01": {
             "fixture": "coverage_h16x8_following_dct_dct_01.avif",
             "dimensions": [
@@ -3815,11 +3878,27 @@
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
         },
-        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, H_DCT/CFL, following-leaf angular, following-Vertical8x16 luma smooth family, and following-Vertical8x16 4x8 chroma DC/smooth family recorded in bounded_witnesses, including exact partition, syntax, entropy, predictor, coefficient, Y/U/V, and Pillow RGB evidence. The production path uses checked edges and the complete 4:2:0 canvas walker; unproven states retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition, predictor, transform, sample-depth, sequence, encoding, AVF-STILL-001, and four-metric coverage work remain partial.",
-        "latest_witness": "The latest bounded proofs are coverage_vertical8x16_following_chroma_dc_01.avif, coverage_vertical8x16_following_chroma_smooth_01.avif, coverage_vertical8x16_following_chroma_smooth_vertical_01.avif, and coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif. Their following Vertical8x16 leaves select chroma modes 0, 9, 10, and 11 with non-empty TX4x8 DCT-DCT, ADST-ADST, ADST-DCT, and DCT-ADST residuals. Safe Rust matches the 214-, 211-, 206-, and 211-operation scalar dav1d traces, the true upper row-7 edge, one-sided top DC or repeated missing-left behavior, exact Y/U/V planes, and Pillow RGB8 outputs; the full 255-case pinned reconstruction corpus passes.",
-        "latest_slice": "The latest AVF-STILL-001 slice completes the bounded following-Vertical8x16 4x8-chroma DC/Smooth/SmoothVertical/SmoothHorizontal family. It derives the exact reconstructed upper-plane row-7 edge, uses one-sided top DC or AV1's exact size-4/size-8 smooth weights with repeated missing-left samples, supports the four observed TX4x8 transform types, and retains strict geometry/qindex/tool admission. Four independent campaigns, manifest rows, Pillow references, pinned dav1d cases, predictor assertions, the complete corpus, and separate managed Coverage MCP runs are recorded. Fixed arrays are intentional for the 32-sample predictors; no unmeasured SIMD performance claim is made.",
-        "latest_evidence_addition": "The DC, Smooth, SmoothVertical, and SmoothHorizontal fixture SHA-256 values are 7ff17319c3b2e5c7306908618ecaaa823c734391af286b81e0a68db6af01d35a, be6f22b1988333c303f63a7dddb3d5bbade9211bbfc519c9be51db3b510d0ccd, a29134747ab2e6cb9602b06398fa9b48f7f4bdb2e7f0193e568d0474f54a782c, and c3dd3717c4c639b3558b87344532650caf7f6b4d0f8c6e030250aef7efe3ccee. Their input-only reports qualified 74/100, 57/100, 71/100, and 55/100 candidates. Managed runs 9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66, 2014be25-81a9-4e23-9ea8-39a39e383f8e, ee823300-1126-443b-aa05-ac7b0e380f9b, and 6191b1e2-730f-41a2-a7bd-95d2e9a2fd03 passed and ingested snapshots 4660b226-6e92-43bc-a904-98c74805f5a8, 59cbbf2f-72e2-4496-a1ec-5c1388e79b38, f2906a05-336b-440e-99f7-468be3bca9a3, and e775c345-999e-47e7-a260-996b27f9d54c.",
-        "current_slice": "The current AVF-STILL-001 slice proves following-Vertical8x16 top-only 4x8 chroma modes DC, Smooth, SmoothVertical, and SmoothHorizontal with four observed transform types. Other neighbor availability, geometries, transforms, qindex categories, high depth, HDR, sequences, encoding, and four-metric coverage work remain open.",
+        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, H_DCT/CFL, following-leaf angular, following-Vertical8x16 luma/chroma smooth families, and the origin Square32 screen-content-enabled palette-use-false corpus recorded in bounded_witnesses, including exact partition, syntax, entropy, predictor, coefficient, Y/U/V, and Pillow RGB evidence. The production path uses checked edges and the complete 4:2:0 canvas walker; unproven states retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: nonzero palette syntax, intrabc, broader partition/predictor/transform/sample-depth/sequence/encoding classes, AVF-STILL-001, and four-metric coverage work remain partial.",
+        "latest_witness": "The latest bounded proofs are coverage_entropy_mosaic_03.avif through coverage_entropy_mosaic_10.avif. Safe Rust matches their common origin Square32 PARTITION_NONE DC/DC qindex-2 matrix-10 topology, all eight exact adaptive entropy traces, TX32x32 Y and TX16x16 U/V DCT-DCT coefficients, exact Y/U/V planes, and Pillow RGB8 outputs. Cases 03 and 06-10 additionally consume the screen-content-enabled y_pal=0 and uv_pal=0 symbols in the pinned order; 04-05 are screen-content-disabled controls. The full 263-case pinned reconstruction corpus passes.",
+        "latest_slice": "The latest AVF-STILL-001 slice promotes entropy-mosaic cases 03-10 as one bounded Square32 corpus without widening production admission. The existing generic path already handled their partition, predictor, residual, and palette-use-false syntax, so the slice adds hard exact evidence rather than fixture-specific gates. Arithmetic range decoding remains serial and adaptive; adding SIMD to the two palette booleans would not accelerate this class. Shared transforms, filtering, upsampling, and color conversion remain the measured vectorization targets.",
+        "latest_evidence_addition": "Eight active manifest rows, exact Pillow RGB references, and pinned dav1d partition/entropy/EOB/plane records extend the matrix to 1,557 rows, AVIF decode to 330/333 active, and the reconstruction oracle to 263 cases. Fixture and RGB SHA-256 values are retained in bounded_witnesses and the generator's expected mapping. Managed Coverage MCP evidence is recorded only after an exact committed run ingests successfully.",
+        "current_slice": "The current AVF-STILL-001 slice proves the bounded origin Square32 qcat-zero DC/DC DCT-DCT class plus the screen-content-enabled palette-use-false sentence. Nonzero palettes, palette colors/index maps, neighbor contexts, multi-block adaptation, intrabc, alternate geometries/transforms, high depth, HDR, sequences, encoding, and four-metric coverage work remain open.",
+        "current_slice_update_2026_08_29_entropy_mosaic_palette_zero": {
+          "status": "completed_bounded_pending_exact_managed_ingest",
+          "fixtures": [
+            "coverage_entropy_mosaic_03.avif",
+            "coverage_entropy_mosaic_04.avif",
+            "coverage_entropy_mosaic_05.avif",
+            "coverage_entropy_mosaic_06.avif",
+            "coverage_entropy_mosaic_07.avif",
+            "coverage_entropy_mosaic_08.avif",
+            "coverage_entropy_mosaic_09.avif",
+            "coverage_entropy_mosaic_10.avif"
+          ],
+          "implementation_commit": "05ec80ad12312a782184f83b9fa6dbc8325442c8",
+          "focused_verification": "The all-feature matrix passes 40/40 in the ordinary build, including all 330 active AVIF decode rows. Exact committed managed ingestion is pending the documentation-consistent commit; the earlier worktree execution passed but is not accepted because its artifact became stale while roadmap files changed.",
+          "scope": "bounded selected-subset evidence; nonzero palettes, intrabc, AVF-STILL-001, broader AV1/AVIF support, and the complete four-metric gate remain open"
+        },
         "current_slice_update_following_chroma_smooth_family": {
           "status": "completed_bounded",
           "fixtures": [
