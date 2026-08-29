@@ -256,6 +256,20 @@ the corresponding status is recorded in `roadmap.json`:
   `55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f`.
   This is a second bounded angular proof; it does not generalize the
   following-leaf predictor or close `AVF-STILL-001`.
+- Managed Coverage MCP run `097b4f83-0eb5-4a3e-8e11-183be860645d` then passed
+  the exact angle-64 reconstruction selector in 36,905 ms at implementation
+  commit `a8592b1340361306d254de4c0f518c9a3979bd9f` and ingested snapshot
+  `3221125b-77b9-4b55-9134-50e7cf11b7ae` against explicit baseline
+  `7665cda3-f4a7-4568-b871-a9d34afaa92c`. The central test passed 1/1 with 44
+  filtered tests. Standalone `coverage_review(task=incremental)` reports
+  additive-union deltas of +8 covered lines, +10 branches, +0 functions, and
+  +937 regions; denominator changes are +4,655/+590/+71/+12,937. The union
+  reports 1,746 newly covered line identities; the selected snapshot diff
+  reports 578 newly covered line identities, 75,973 baseline observations not
+  observed, and zero regressions. Merge exactness is false and named-test
+  attribution is unavailable. This is supported aggregate, bounded
+  selected-subset evidence—not a complete four-metric release measurement or
+  a global regression claim.
 - Managed Coverage MCP run `89a34dfc-e115-4a72-82ef-bebacfed0446` then passed
   the exact one-fixture reconstruction selector in 36,925 ms at implementation
   commit `2a62f5b8a179fc3167ba97d5f2e46597b7275047` and ingested snapshot

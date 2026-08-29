@@ -138,14 +138,14 @@
       },
       "latest_evidence": {
         "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
-        "commit_sha": "2a62f5b8a179fc3167ba97d5f2e46597b7275047",
-        "run_id": "89a34dfc-e115-4a72-82ef-bebacfed0446",
-        "snapshot_id": "cf633f86-d598-47c3-860d-02b9824a69e3",
+        "commit_sha": "a8592b1340361306d254de4c0f518c9a3979bd9f",
+        "run_id": "097b4f83-0eb5-4a3e-8e11-183be860645d",
+        "snapshot_id": "3221125b-77b9-4b55-9134-50e7cf11b7ae",
         "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-        "duration_ms": 36925,
+        "duration_ms": 36905,
         "selected_fixtures": [
-          "coverage_vertical8x16_following_luma_diagonal67_01.avif"
+          "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif"
         ],
         "status": "passed_and_ingested",
         "log_evidence": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 44 filtered out; the exact AV1 fixture selector executed one requested fixture",
@@ -168,15 +168,15 @@
           "total_branches_delta": 590,
           "total_functions_delta": 71,
           "total_regions_delta": 12937,
-          "newly_covered_line_identities": 1747,
-          "selected_snapshot_diff_newly_covered_line_identities": 579,
-          "not_observed": 75971,
+          "newly_covered_line_identities": 1746,
+          "selected_snapshot_diff_newly_covered_line_identities": 578,
+          "not_observed": 75973,
           "regressed": 0,
           "merge_exact": false,
           "test_attribution": "unavailable",
           "snapshot_diff_claim_status": "limited",
           "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
-          "note": "The exact selected fixture passed 1/1 through the registered all-feature command with 44 filtered tests. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +937 regions; denominator changes are +4,655 lines, +590 branches, +71 functions, and +12,937 regions. The additive-union selected projection reports 1,747 newly covered line identities; the selected snapshot diff reports 579 newly covered line identities, 75,971 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and the ordinary snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 2a62f5b8a179fc3167ba97d5f2e46597b7275047. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          "note": "The exact selected angle-64 fixture passed 1/1 through the registered all-feature command with 44 filtered tests. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +937 regions; denominator changes are +4,655 lines, +590 branches, +71 functions, and +12,937 regions. The additive-union selected projection reports 1,746 newly covered line identities; the selected snapshot diff reports 578 newly covered line identities, 75,973 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and the ordinary snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit a8592b1340361306d254de4c0f518c9a3979bd9f. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
         }
       }
     },
@@ -1109,6 +1109,57 @@
             "snapshot_diff_claim_status": "limited",
             "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
             "note": "The exact selected fixture passed 1/1 through the registered all-feature command. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +937 regions. Denominator changes are +4,655 lines, +590 branches, +71 functions, and +12,937 regions because this slice adds production AV1 prediction code and its tests. The additive-union selected projection reports 1,747 newly covered line identities; the selected snapshot diff reports 579 newly covered line identities, 75,971 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and the ordinary snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 2a62f5b8a179fc3167ba97d5f2e46597b7275047. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-29",
+          "managed_coverage_mcp": true,
+          "project_id": "2b9f48753c80b021b894b600",
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "a8592b1340361306d254de4c0f518c9a3979bd9f",
+          "run_id": "097b4f83-0eb5-4a3e-8e11-183be860645d",
+          "snapshot_id": "3221125b-77b9-4b55-9134-50e7cf11b7ae",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 36905,
+          "arguments": [
+            "--test",
+            "coverage_matrix_tests",
+            "--",
+            "test_av1_reconstruction_matches_pinned_dav1d_fixture",
+            "--exact",
+            "--nocapture",
+            "--skip",
+            "__image_slash_star_av1_fixture_selector__=coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif"
+          ],
+          "selected_fixtures": [
+            "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 44 filtered out; the exact AV1 fixture selector executed one requested fixture",
+          "review": {
+            "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 8,
+            "covered_branches_delta": 10,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 937,
+            "total_lines_delta": 4655,
+            "total_branches_delta": 590,
+            "total_functions_delta": 71,
+            "total_regions_delta": 12937,
+            "selected_projection_newly_covered_line_identities": 1746,
+            "selected_snapshot_diff_newly_covered_line_identities": 578,
+            "not_observed": 75973,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "snapshot_diff_claim_status": "limited",
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "note": "The exact selected angle-64 fixture passed 1/1 through the registered all-feature command. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +937 regions; denominator changes are +4,655 lines, +590 branches, +71 functions, and +12,937 regions. The additive-union selected projection reports 1,746 newly covered line identities; the selected snapshot diff reports 578 newly covered line identities, 75,973 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and this is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
           }
         }
       ],
@@ -2684,7 +2735,7 @@
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           },
           "coverage_vertical8x16_following_luma_diagonal67_angle64_01": {
-            "status": "selected_bounded_pending_managed_coverage",
+            "status": "completed_bounded",
             "fixture": "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif",
             "dimensions": [
               8,
@@ -2772,7 +2823,41 @@
               "No production change was required: the existing checked geometry-driven non-upsampled Zone-1 predictor path already matched the angle-symbol-2 trace.",
               "This evidence remains safe-Rust-only with no fixture-name branch, native dependency, unsafe code, or widened acceptance boundary."
             ],
-            "focused_verification": "The exact AV1 reconstruction selector passes 1/1 with 44 filtered tests, the exact partition and syntax trace, predictor rows, dequantized coefficient matrix, Y/U/V planes, and Pillow RGB8 output; the adjacent angle-symbol-3 witness also passes. Managed incremental Coverage MCP and strict gates are recorded at the implementation commit.",
+            "implementation_commit": "a8592b1340361306d254de4c0f518c9a3979bd9f",
+            "managed_incremental_coverage": {
+              "project_id": "2b9f48753c80b021b894b600",
+              "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+              "run_id": "097b4f83-0eb5-4a3e-8e11-183be860645d",
+              "snapshot_id": "3221125b-77b9-4b55-9134-50e7cf11b7ae",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+              "duration_ms": 36905,
+              "selected_fixtures": [
+                "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif"
+              ],
+              "status": "passed_and_ingested",
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+              "measurement_scope": "selected_subset",
+              "comparison_mode": "additive_union",
+              "covered_lines_delta": 8,
+              "covered_branches_delta": 10,
+              "covered_functions_delta": 0,
+              "covered_regions_delta": 937,
+              "total_lines_delta": 4655,
+              "total_branches_delta": 590,
+              "total_functions_delta": 71,
+              "total_regions_delta": 12937,
+              "selected_projection_newly_covered_line_identities": 1746,
+              "selected_snapshot_diff_newly_covered_line_identities": 578,
+              "not_observed": 75973,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable",
+              "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+              "note": "The exact selected angle-64 fixture passed through the registered all-feature command. Standalone coverage_review(task=incremental) measured the ingested snapshot against the explicit baseline; selected-subset unobserved baseline hits are not regressions. The additive union is conservative and named-test attribution is unavailable. This is bounded selected-subset evidence, not a complete four-metric release measurement."
+            },
+            "focused_verification": "Implementation commit a8592b1340361306d254de4c0f518c9a3979bd9f passes the exact AV1 reconstruction selector 1/1 with 44 filtered tests, the exact partition and syntax trace, predictor rows, dequantized coefficient matrix, Y/U/V planes, and Pillow RGB8 output; the adjacent angle-symbol-3 witness also passes. Strict fmt, locked AVIF matrix 314/314, roadmap, claim-ledger, capability-document, package-surface, and focused all-feature checks pass. Managed Coverage MCP run 097b4f83-0eb5-4a3e-8e11-183be860645d passed in 36,905 ms and ingested snapshot 3221125b-77b9-4b55-9134-50e7cf11b7ae against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c; its additive review reports +8/+10/+0/+937 covered line/branch/function/region identities, with selected-subset limitations.",
             "negative_boundaries": [
               "other angle symbols or nonzero angle deltas",
               "edge-filter-enabled or filter-intra cases, alternate predictors, split or alternate transforms, and non-skipped chroma payloads",
@@ -2788,7 +2873,7 @@
         "latest_evidence_addition": "The latest promoted fixture is coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif. Its fixture SHA-256 is 0035a7196b860ebb0dfffe2361cd5921750a45b73cbbdbf459ec6da07fa9dcfb, encoded-item SHA-256 62dd39eee50f5eaac872b998a01b816bb9be1d8254799abf392da272b3d2de90, input RGB SHA-256 d0a403659521c7b02f36d1abf6709fc82916f07836a50bb745562dc29a6f41eb, Pillow RGB8 SHA-256 55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f, decoded Y/U/V SHA-256 values 90ced3f5f5334e06d0e38af0cad2a40592815044ebc77e6492d1b9635d0b1437, 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, decoded YUV SHA-256 4725bcf08064f72db1ef068356b0fa4f441b5404d072638dc7bba4e3e8964862, and pinned trace SHA-256 7ad3bc0340cc765aeb7a9dde914b3f2452abe552b82135e27f78bf083e4a7e81. The input-only report SHA-256 is d71683567d26814ab2cc621a81f00009f05a43c12716959b7745845c24e76d1d; its 100 candidates qualified 4 and promoted D67V-F06-N00. The exact reconstruction test and adjacent angle-symbol-3 regression pass; managed incremental Coverage MCP and strict gates are recorded on the implementation commit.",
         "current_slice": "The current AVF-STILL-001 slice proves two following-Vertical8x16 luma Diagonal67 mode-8 Zone-1 classes in an 8x32 8-bit 4:2:0 root split: angle symbol 3/delta 0/resolved angle 67 and angle symbol 2/delta -1/resolved angle 64. It keeps other angle symbols/deltas, neighbor availability, edge policies, predictors, transforms, chroma payloads, dimensions, depths, optional tools, sequences, encoding, and four-metric coverage work open.",
         "current_slice_update": {
-          "status": "selected_bounded_pending_managed_coverage",
+          "status": "completed_bounded",
           "target": "following Vertical8x16 luma Diagonal67 mode 8 with angle symbol 2, delta -1, resolved angle 64, unsplit TX8x16 DCT-DCT luma, and skipped TX4x8 U/V",
           "fixtures": [
             "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif"
@@ -3382,56 +3467,56 @@
           "decision": "The two disjoint campaigns are bounded no-hit evidence, not proof that Diagonal67 is unreachable. No fixture or production decoder edit is justified; keep this class planned and choose the next slice independently."
         },
         "latest_slice_evidence": {
-          "target": "following Vertical8x16 luma Diagonal67 mode 8 with unsplit TX8x16 DCT-DCT luma and skipped TX4x8 U/V",
+          "target": "following Vertical8x16 luma Diagonal67 mode 8 with angle symbol 2, delta -1, resolved angle 64, unsplit TX8x16 DCT-DCT luma and skipped TX4x8 U/V",
           "fixtures": [
-            "coverage_vertical8x16_following_luma_diagonal67_01.avif"
+            "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif"
           ],
           "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
-          "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_diagonal67_campaign_01.json",
-          "report_sha256": "7bce042ad57591ba9a7ed32cc459b5217109a4b93153f1fd9330519c845f8dd5",
+          "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_diagonal67_angle64_campaign_01.json",
+          "report_sha256": "d71683567d26814ab2cc621a81f00009f05a43c12716959b7745845c24e76d1d",
           "candidate_count": 100,
           "family_count": 10,
-          "qualified": 3,
-          "promoted": "D67V-F08-N01",
-          "seed": 12071,
+          "qualified": 4,
+          "promoted": "D67V-F06-N00",
+          "seed": 12050,
           "repository_rust_invoked": false,
-          "entropy_operation_count": 66,
+          "entropy_operation_count": 85,
           "partition_ranges": [
             40720,
             52494,
-            51878
+            39416
           ],
-          "fixture_sha256": "d0b6517966ab8f3a786a7861f43ebf0521f74899ec21eb016c3aaf0a480b0c6b",
-          "encoded_item_sha256": "a9005b3dfda7e0737044b7637e1b2a2c2fedb411594fa437a0c165cd0b5b2d21",
-          "pillow_rgb_sha256": "62169489fa9dc810e702da26d7ea8309def5ecf07ccf87c0f64b87e8b090813b",
+          "fixture_sha256": "0035a7196b860ebb0dfffe2361cd5921750a45b73cbbdbf459ec6da07fa9dcfb",
+          "encoded_item_sha256": "62dd39eee50f5eaac872b998a01b816bb9be1d8254799abf392da272b3d2de90",
+          "pillow_rgb_sha256": "55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f",
           "decoded_plane_sha256": {
-            "y": "1bf2dc41178470891337da187377d07f8983e358dce96331ae6b54d09b67743e",
+            "y": "90ced3f5f5334e06d0e38af0cad2a40592815044ebc77e6492d1b9635d0b1437",
             "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
             "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
           },
-          "trace_sha256": "eb67eafd43b4b8df68dd55e6cc9f5f51d779b4d93d3556dac43a7435dcb80df0",
-          "scope": "This closes only the bounded following-vertical Vertical8x16 luma Diagonal67 mode-8 Zone-1 class; it does not claim general angular prediction, AV1, or AVF-STILL-001 completion."
+          "trace_sha256": "7ad3bc0340cc765aeb7a9dde914b3f2452abe552b82135e27f78bf083e4a7e81",
+          "scope": "This closes only the bounded following-vertical Vertical8x16 luma Diagonal67 mode-8 angle-symbol-2/resolved-64 Zone-1 class; it does not claim general angular prediction, AV1, or AVF-STILL-001 completion."
         },
         "latest_search_evidence": {
-          "target_id": "luma_diagonal67_following_vertical_angle_symbol_3",
-          "target": "8x32 8-bit 4:2:0 vertical split with top and following Vertical8x16 leaves; following luma mode 8 Diagonal67, angle symbol 3/delta 0/resolved angle 67, unsplit TX8x16 DCT-DCT luma with AC, and skipped TX4x8 chroma",
+          "target_id": "luma_diagonal67_following_vertical_angle_symbol_2",
+          "target": "8x32 8-bit 4:2:0 vertical split with top and following Vertical8x16 leaves; following luma mode 8 Diagonal67, angle symbol 2/delta -1/resolved angle 64, unsplit TX8x16 DCT-DCT luma with AC, and skipped TX4x8 chroma",
           "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
-          "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_diagonal67_campaign_01.json",
-          "report_sha256": "7bce042ad57591ba9a7ed32cc459b5217109a4b93153f1fd9330519c845f8dd5",
+          "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_diagonal67_angle64_campaign_01.json",
+          "report_sha256": "d71683567d26814ab2cc621a81f00009f05a43c12716959b7745845c24e76d1d",
           "candidate_count": 100,
           "family_count": 10,
-          "qualified": 3,
-          "promoted": "D67V-F08-N01",
-          "seed": 12071,
-          "entropy_operation_count": 66,
+          "qualified": 4,
+          "promoted": "D67V-F06-N00",
+          "seed": 12050,
+          "entropy_operation_count": 85,
           "partition_ranges": [
             40720,
             52494,
-            51878
+            39416
           ],
           "tool_contract": "Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2, pinned scalar dav1d 1.5.3, 8x32 4:2:0, quality 76, speed 0, one thread, deterministic double encoding/item/trace/YUV/RGB; repository Rust was not invoked",
           "repository_rust_invoked": false,
-          "decision": "The maintained campaign supplies bounded reachability evidence and the promoted fixture supplies exact safe-Rust reconstruction and Pillow RGB evidence; broader angular modes, transforms, predictors, and AV1 states remain open."
+          "decision": "The maintained campaign supplies bounded reachability evidence and the promoted angle-symbol-2 fixture supplies exact safe-Rust reconstruction and Pillow RGB evidence; the adjacent angle-symbol-3 witness remains historical evidence, and broader angular modes, transforms, predictors, and AV1 states remain open."
         },
         "current_slice_update_2026_08_27": {
           "target": "origin Vertical8x16 filter-intra mode 2 with one TX8x16 luma block and one TX4x8 U/V pair",
