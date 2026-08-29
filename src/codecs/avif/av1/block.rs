@@ -25436,6 +25436,34 @@ fn reconstruct_lossy_luma_8x16_from_prediction(
     ReconstructedPlane { samples }
 }
 
+fn reconstruct_lossy_luma_8x16_smooth_vertical(
+    top: [u16; 8],
+    bottom: u16,
+    coefficients: Option<LossyRectTransformCoefficients>,
+    transform_kind: LossyTransformKind,
+) -> ReconstructedPlane {
+    const SMOOTH_WEIGHTS_16: [i32; 16] = [
+        255, 240, 225, 210, 196, 182, 169, 157, 145, 133, 122, 111, 101, 92, 83, 74,
+    ];
+    let bottom = i32::from(bottom);
+    let prediction = std::array::from_fn(|index| {
+        let weight = SMOOTH_WEIGHTS_16[index / 8];
+        let value = weight
+            .saturating_mul(i32::from(top[index % 8]))
+            .saturating_add(256_i32.saturating_sub(weight).saturating_mul(bottom))
+            .saturating_add(128)
+            >> 8;
+        #[expect(
+            clippy::cast_sign_loss,
+            reason = "the smooth predictor is explicitly clamped to eight-bit range"
+        )]
+        {
+            value.clamp(0, 255) as u16
+        }
+    });
+    reconstruct_lossy_luma_8x16_from_prediction(prediction, coefficients, transform_kind)
+}
+
 fn reconstruct_lossy_luma_8x16(
     predictor: u16,
     coefficients: Option<LossyRectTransformCoefficients>,
@@ -31668,6 +31696,12 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
             })?,
             (LumaPredictor::Vertical, _) => reconstruct_lossy_luma_8x16_from_prediction(
                 std::array::from_fn(|index| luma_top[index % 8]),
+                lossy_luma_rect_coefficients,
+                lossy_luma_rect_transform,
+            ),
+            (LumaPredictor::SmoothVertical, _) => reconstruct_lossy_luma_8x16_smooth_vertical(
+                std::array::from_fn(|index| luma_top[index]),
+                luma_left[15],
                 lossy_luma_rect_coefficients,
                 lossy_luma_rect_transform,
             ),

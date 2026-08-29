@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Search a bounded vertical-following AVIF Diagonal67 corpus.
+"""Search bounded vertical-following AVIF intra-prediction corpora.
 
 The campaign creates exactly one hundred deterministic candidates in ten named
 families. Each candidate is encoded twice with the pinned Pillow/libavif/libaom
@@ -7,8 +7,8 @@ oracle and decoded twice through an independently instrumented scalar dav1d
 build. The default targets qualify a clipped 16x16 split with a vertically
 following bottom Square8 leaf. The extended luma targets qualify an 8x32
 frame split into two following Vertical8x16 leaves, with bottom luma
-Diagonal67 syntax and a real top edge. Repository Rust is never invoked during
-the search.
+Diagonal67 or SmoothVertical syntax and a real top edge. Repository Rust is
+never invoked during the search.
 """
 
 from __future__ import annotations
@@ -40,6 +40,7 @@ SIZE = (8, 16)
 SUBSAMPLING = "4:2:0"
 FOLLOWING_VERTICAL_TARGET = "luma_diagonal67_following_vertical"
 FOLLOWING_VERTICAL_SPLIT_TARGET = "luma_diagonal67_following_vertical_split_tx4x4"
+SMOOTH_VERTICAL_TARGET = "luma_smooth_vertical_following"
 ADVANCED = {
     "min-partition-size": "8",
     "max-partition-size": "8",
@@ -66,15 +67,25 @@ LUMA_TARGETS = frozenset(
         "luma_diagonal67_split_tx4x4",
         FOLLOWING_VERTICAL_TARGET,
         FOLLOWING_VERTICAL_SPLIT_TARGET,
+        SMOOTH_VERTICAL_TARGET,
     }
 )
 FOLLOWING_VERTICAL_TARGETS = frozenset(
-    {FOLLOWING_VERTICAL_TARGET, FOLLOWING_VERTICAL_SPLIT_TARGET}
+    {
+        FOLLOWING_VERTICAL_TARGET,
+        FOLLOWING_VERTICAL_SPLIT_TARGET,
+        SMOOTH_VERTICAL_TARGET,
+    }
 )
 FOLLOWING_VERTICAL_ADVANCED = {
     **ADVANCED,
     "max-partition-size": "16",
     "use-intra-dct-only": "1",
+}
+SMOOTH_VERTICAL_ADVANCED = {
+    **FOLLOWING_VERTICAL_ADVANCED,
+    "enable-smooth-intra": "1",
+    "enable-directional-intra": "0",
 }
 FAMILY_NAMES = (
     "positive_diagonal_ramp",
@@ -256,6 +267,29 @@ def luma_edge_value(family: int, index: int, x: int) -> int:
     return 80 + slopes[family] * x
 
 
+def smooth_vertical_edge_value(family: int, index: int, x: int) -> int:
+    """Return a stronger edge that distinguishes SmoothVertical from Smooth."""
+
+    curvature = (
+        (0, 8, -5, 9, -6, 6, -3, 7),
+        (0, -8, 5, -9, 6, -6, 3, -7),
+        (0, 12, -8, 10, -11, 9, -6, 8),
+        (0, -12, 8, -10, 11, -9, 6, -8),
+        (0, 6, 10, -4, -8, 4, 11, -5),
+        (0, -6, -10, 4, 8, -4, -11, 5),
+        (0, 14, -12, 8, -14, 10, -9, 7),
+        (0, -14, 12, -8, 14, -10, 9, -7),
+        (0, 10, 4, -11, -7, 13, -5, -9),
+        (0, -10, -4, 11, 7, -13, 5, 9),
+    )
+    return clamp(
+        96
+        + 3 * (luma_edge_value(family, index, x) - 80)
+        + curvature[family][x]
+        + (index % 5 - 2) * 2
+    )
+
+
 def luma_residual(family: int, x: int, local_y: int) -> int:
     """Return a bounded residual that retains split 4x4 luma syntax."""
 
@@ -284,6 +318,36 @@ def luma_sample(family: int, index: int, x: int, y: int, target: str) -> int:
     """Build a top-edge-continuous luma field for the selected target."""
 
     leaf_height = SIZE[1] // 2
+    if target == SMOOTH_VERTICAL_TARGET:
+        top = smooth_vertical_edge_value(family, index, x)
+        if y < leaf_height:
+            # Keep the top leaf's exposed edge deterministic while retaining a
+            # small vertical slope that makes its reconstruction non-flat.
+            return top + (y - leaf_height) * ((family + index) % 2)
+        local_y = y - leaf_height
+        smooth_weights = (
+            255,
+            240,
+            225,
+            210,
+            196,
+            182,
+            169,
+            157,
+            145,
+            133,
+            122,
+            111,
+            101,
+            92,
+            83,
+            74,
+        )
+        bottom = smooth_vertical_edge_value(family, index, 0)
+        weight = smooth_weights[local_y]
+        interpolation = (weight * top + (256 - weight) * bottom + 128) // 256
+        vertical_offset = (local_y + 1) * (4 + (family + index) % 5)
+        return clamp(interpolation + vertical_offset)
     if y < leaf_height:
         value = luma_edge_value(family, index, x) + (y - 7) * ((family + index) % 2)
     else:
@@ -326,17 +390,18 @@ def candidates(target: str) -> list[dict[str, object]]:
     """Return exactly ten deterministic families with ten cases each."""
 
     result = []
+    identifier_prefix = "SV8x16" if target == SMOOTH_VERTICAL_TARGET else "D67V"
     for family, family_name in enumerate(FAMILY_NAMES):
         for index in range(10):
             result.append(
                 {
-                    "id": f"D67V-F{family + 1:02d}-N{index:02d}",
+                    "id": f"{identifier_prefix}-F{family + 1:02d}-N{index:02d}",
                     "family": family_name,
                     "family_index": family,
                     "candidate_index": index,
                     "seed": 12000 + 10 * family + index,
                     "pixels": candidate_pixels(family, index, target),
-                    "quality": 76,
+                    "quality": 95 if target == SMOOTH_VERTICAL_TARGET else 76,
                     "speed": 0,
                 }
             )
@@ -802,6 +867,183 @@ def classify_luma_following_vertical(
     }
 
 
+def classify_luma_smooth_vertical_following(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    portable_color: dict[str, object],
+) -> dict[str, object]:
+    """Apply exact predicates for following Vertical8x16 SmoothVertical."""
+
+    parsed = [parse_group(group) for group in groups]
+    shape = [
+        (
+            block["poc"],
+            block["x"],
+            block["y"],
+            block["level"],
+            block["context"],
+            block["partition"],
+        )
+        for block in blocks
+    ]
+    y_modes = [mode for group in parsed for mode in group["y_modes"]]
+    y_angles = [symbol for group in parsed for symbol in group["y_angle_symbols"]]
+    uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
+    uv_angles = [symbol for group in parsed for symbol in group["uv_angle_symbols"]]
+    y_payloads = [group["luma_payloads"] for group in parsed]
+    chroma_payloads = [group["chroma_payloads"] for group in parsed]
+    all_lines = [line for group in groups for line in group]
+    forbidden_prefixes = (
+        "Post-filterintramode[",
+        "Post-y_pal[",
+        "Post-pal[",
+        "Post-y-pal-indices",
+        "y-pal-pred",
+        "Post-uv_pal[",
+        "Post-uv-pal-indices",
+        "uv-pal-pred",
+    )
+    y_length = SIZE[0] * SIZE[1]
+    chroma_width = SIZE[0] // 2
+    chroma_height = SIZE[1] // 2
+    expected_yuv_length = y_length + 2 * chroma_width * chroma_height
+    top_luma_edge = (
+        list(yuv[(SIZE[1] // 2 - 1) * SIZE[0] : (SIZE[1] // 2) * SIZE[0]])
+        if len(yuv) == expected_yuv_length
+        else []
+    )
+
+    def is_tx8x16(payloads: list[dict[str, int]]) -> bool:
+        return (
+            len(payloads) == 1
+            and payloads[0]["tx"] == 7
+            and payloads[0]["txtp"] == 0
+            and payloads[0]["eob"] >= 0
+        )
+
+    def is_skipped_chroma(payloads: list[dict[str, int]]) -> bool:
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(
+                payload["tx"] == 5
+                and payload["txtp"] == 0
+                and payload["eob"] == -1
+                and payload.get("cbx4") == 0
+                for payload in payloads
+            )
+        )
+
+    smooth_weights = (
+        255,
+        240,
+        225,
+        210,
+        196,
+        182,
+        169,
+        157,
+        145,
+        133,
+        122,
+        111,
+        101,
+        92,
+        83,
+        74,
+    )
+    smooth_prediction = (
+        [
+            (
+                smooth_weights[row] * top_luma_edge[column]
+                + (256 - smooth_weights[row]) * top_luma_edge[0]
+                + 128
+            )
+            // 256
+            for row in range(16)
+            for column in range(8)
+        ]
+        if len(top_luma_edge) == 8
+        else []
+    )
+    dc_prediction = (
+        (
+            sum(top_luma_edge)
+            + 8 * top_luma_edge[-1]
+            + 16 * top_luma_edge[0]
+            + 16
+        )
+        // 32
+        if len(top_luma_edge) == 8
+        else None
+    )
+    predicates = {
+        "exact_vertical_following_shape": shape == [
+            (0, 0, 0, 2, 0, 3),
+            (0, 0, 0, 3, 0, 2),
+            (0, 0, 4, 3, 1, 2),
+        ],
+        "eight_bit_420_frame": (
+            portable_color.get("width") == SIZE[0]
+            and portable_color.get("height") == SIZE[1]
+            and portable_color.get("bit_depth") == 8
+            and portable_color.get("monochrome") is False
+            and portable_color.get("subsampling_x") is True
+            and portable_color.get("subsampling_y") is True
+        ),
+        "two_visible_vertical8x16_groups": len(groups) == 2,
+        "origin_luma_mode_dc": len(y_modes) == 2 and y_modes[0] == 0,
+        "following_luma_mode_smooth_vertical": y_modes[1:2] == [10],
+        "no_luma_angle_symbols": not y_angles,
+        "no_uv_angle_symbols": not uv_angles,
+        "origin_luma_is_unsplit_tx8x16": (
+            len(y_payloads) == 2 and is_tx8x16(y_payloads[0])
+        ),
+        "following_luma_is_unsplit_tx8x16": (
+            len(y_payloads) == 2 and is_tx8x16(y_payloads[1])
+        ),
+        "origin_and_following_chroma_are_dc_skipped": (
+            len(chroma_payloads) == 2
+            and is_skipped_chroma(chroma_payloads[0])
+            and is_skipped_chroma(chroma_payloads[1])
+        ),
+        "no_unexpected_angle_or_tool_syntax": not any(
+            line.startswith(forbidden_prefixes) for line in all_lines
+        ),
+        "decoded_yuv_has_expected_size": len(yuv) == expected_yuv_length,
+        "origin_bottom_edge_varies": (
+            len(top_luma_edge) == SIZE[0] and len(set(top_luma_edge)) > 1
+        ),
+        "smooth_vertical_prediction_is_not_dc": (
+            bool(smooth_prediction)
+            and dc_prediction is not None
+            and any(value != dc_prediction for value in smooth_prediction)
+        ),
+    }
+    return {
+        "target": SMOOTH_VERTICAL_TARGET,
+        "effective_predictor": "smooth_vertical_top_available_left_unavailable",
+        "root_partition": blocks[0] if blocks else None,
+        "partition_shape": shape,
+        "group_count": len(groups),
+        "y_modes": y_modes,
+        "y_angle_symbols": y_angles,
+        "uv_modes": uv_modes,
+        "uv_angle_symbols": uv_angles,
+        "origin_bottom_luma_edge": top_luma_edge,
+        "smooth_vertical_prediction": smooth_prediction,
+        "dc_prediction": dc_prediction,
+        "top_luma_payloads": y_payloads[0] if y_payloads else [],
+        "bottom_luma_payloads": y_payloads[1] if len(y_payloads) == 2 else [],
+        "top_chroma_payloads": chroma_payloads[0] if chroma_payloads else [],
+        "bottom_chroma_payloads": chroma_payloads[1] if len(chroma_payloads) == 2 else [],
+        "predicates": predicates,
+        "rejection_reasons": [name for name, passed in predicates.items() if not passed],
+        "qualifies": all(predicates.values()),
+    }
+
+
 def classify(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
@@ -812,6 +1054,10 @@ def classify(
 ) -> dict[str, object]:
     """Apply exact predicates for the vertical-following mode-8 class."""
 
+    if target == SMOOTH_VERTICAL_TARGET:
+        return classify_luma_smooth_vertical_following(
+            blocks, groups, yuv, portable_color
+        )
     if target in FOLLOWING_VERTICAL_TARGETS:
         return classify_luma_following_vertical(
             blocks,
@@ -1103,6 +1349,7 @@ def main() -> None:
             "luma_diagonal67_split_tx4x4",
             FOLLOWING_VERTICAL_TARGET,
             FOLLOWING_VERTICAL_SPLIT_TARGET,
+            SMOOTH_VERTICAL_TARGET,
         ),
         default="chroma_diagonal67",
     )
@@ -1117,7 +1364,11 @@ def main() -> None:
     global SIZE, ADVANCED, LUMA_ADVANCED
     if args.target in FOLLOWING_VERTICAL_TARGETS:
         SIZE = (8, 32)
-        ADVANCED = FOLLOWING_VERTICAL_ADVANCED
+        ADVANCED = (
+            SMOOTH_VERTICAL_ADVANCED
+            if args.target == SMOOTH_VERTICAL_TARGET
+            else FOLLOWING_VERTICAL_ADVANCED
+        )
         LUMA_ADVANCED = {**ADVANCED, "use-intra-dct-only": "1"}
     if args.target in LUMA_TARGETS:
         luma_transform = (
@@ -1125,19 +1376,36 @@ def main() -> None:
             if args.target == "luma_diagonal67_split_tx4x4"
             else "unsplit TX8x8 luma with AC"
         )
-        target_id = f"{args.target}_angle_symbol_{args.luma_angle_symbol}"
+        target_id = (
+            args.target
+            if args.target == SMOOTH_VERTICAL_TARGET
+            else f"{args.target}_angle_symbol_{args.luma_angle_symbol}"
+        )
         if args.target in FOLLOWING_VERTICAL_TARGETS:
             luma_transform = (
                 "depth-two 2x4 TX4x4 DCT-DCT luma grid with skipped children"
                 if args.target == FOLLOWING_VERTICAL_SPLIT_TARGET
-                else "unsplit TX8x16 DCT-DCT luma with AC"
+                else (
+                    "unsplit TX8x16 DCT-DCT luma with SmoothVertical prediction"
+                    if args.target == SMOOTH_VERTICAL_TARGET
+                    else "unsplit TX8x16 DCT-DCT luma with AC"
+                )
             )
             target_description = (
-                "8x32 8-bit 4:2:0 vertical split with top and following "
-                "Vertical8x16 leaves; bottom luma mode 8 Diagonal67 at "
-                f"angle symbol {args.luma_angle_symbol} (resolved "
-                f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 "
-                f"top edge, {luma_transform}, and skipped TX4x8 chroma"
+                (
+                    "8x32 8-bit 4:2:0 vertical split with top and following "
+                    "Vertical8x16 leaves; bottom luma mode 10 SmoothVertical, "
+                    "no angle syntax, genuine top edge, "
+                    f"{luma_transform}, and skipped TX4x8 chroma"
+                )
+                if args.target == SMOOTH_VERTICAL_TARGET
+                else (
+                    "8x32 8-bit 4:2:0 vertical split with top and following "
+                    "Vertical8x16 leaves; bottom luma mode 8 Diagonal67 at "
+                    f"angle symbol {args.luma_angle_symbol} (resolved "
+                    f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 "
+                    f"top edge, {luma_transform}, and skipped TX4x8 chroma"
+                )
             )
         else:
             target_description = (
@@ -1217,7 +1485,7 @@ def main() -> None:
         "encoding": {
             "size": list(SIZE),
             "subsampling": SUBSAMPLING,
-            "quality": 76,
+            "quality": 95 if args.target == SMOOTH_VERTICAL_TARGET else 76,
             "speed": 0,
             "max_threads": 1,
             "autotiling": False,
@@ -1246,7 +1514,7 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
-    print(f"Written {len(reports)} deterministic vertical Diagonal67 traces: {args.output}")
+    print(f"Written {len(reports)} deterministic vertical intra traces: {args.output}")
 
 
 if __name__ == "__main__":

@@ -5997,7 +5997,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 248);
+    assert_eq!(expected.cases.len(), 249);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7193,6 +7193,41 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 );
                 assert_eq!(pair[1].value, 1, "chroma plane {plane_index} skip value");
             }
+        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_vertical_01.avif"
+        {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: 36_016,
+                    },
+                ],
+                "AV1 following Vertical8x16 SmoothVertical witness partition topology"
+            );
         } else if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
             assert_eq!(
                 case.partition_blocks,

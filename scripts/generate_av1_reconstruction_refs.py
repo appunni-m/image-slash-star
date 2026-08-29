@@ -40,6 +40,7 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
         "coverage_r16x32_following_filter_intra_split_mode0_01.avif",
         "coverage_r16x32_following_filter_intra_split_mode3_01.avif",
         "coverage_vertical8x16_following_filter_intra_mode2_01.avif",
+        "coverage_vertical8x16_following_luma_smooth_vertical_01.avif",
     }
 )
 H16X8_ORIGIN_TARGET_FIXTURES = frozenset(
@@ -1377,6 +1378,11 @@ EXPECTED_FIXTURES = {
     "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif": {
         "file_sha256": "574d297068dae1faf5647e752afc7592f8a1107e0fcbbd9b6c262ad8705f92aa",
         "rgb_sha256": "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_luma_smooth_vertical_01.avif": {
+        "file_sha256": "6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6",
+        "rgb_sha256": "f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46",
         "size": [8, 32],
     },
 }
