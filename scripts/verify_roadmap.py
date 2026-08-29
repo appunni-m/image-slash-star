@@ -19,6 +19,8 @@ ROOT = Path(__file__).resolve().parent.parent
 ROADMAP_JSON = ROOT / "roadmap.json"
 ROADMAP = ROOT / "docs" / "roadmap-new.md"
 MATRIX = ROOT / "tests" / "fixtures" / "coverage_matrix.json"
+CAPABILITY_TABLES = ROOT / "tests" / "fixtures" / "capability_tables.json"
+CAPABILITY_DOC = ROOT / "docs" / "capabilities.md"
 ORIGIN_MANIFEST = ROOT / "tests" / "fixtures" / "coverage_origin_manifest.json"
 
 
@@ -56,6 +58,65 @@ def matrix_rows(document: object) -> list[dict]:
 def exact_match(document: str, pattern: str, label: str) -> None:
     if re.search(pattern, document, flags=re.MULTILINE) is None:
         fail(f"roadmap is missing the current {label} claim")
+
+
+def verify_capability_document(readme: str, rows: list[dict]) -> None:
+    """Keep the packaged generated capability page tied to its source fixtures."""
+
+    if not CAPABILITY_DOC.is_file():
+        fail("generated capability document is missing")
+    document = CAPABILITY_DOC.read_text(encoding="utf-8")
+    marker = "<!-- generated-capability-docs:v1; do not edit -->"
+    if document.count(marker) != 1:
+        fail("generated capability document must contain exactly one version marker")
+    for source in (
+        "tests/fixtures/capability_tables.json",
+        "tests/fixtures/coverage_matrix.json",
+    ):
+        if f"`{source}`" not in document:
+            fail(f"generated capability document is missing source path {source}")
+    if "no runtime claim for `wasm32-unknown-unknown`" not in document:
+        fail("generated capability document lacks the unrepresented-target caveat")
+    if "Active fixture evidence in the tables below is `native` / `all features`" not in document:
+        fail("generated capability document lacks the active fixture target/lane caveat")
+    if "[Generated capability and direct-mode tables](docs/capabilities.md)" not in readme:
+        fail("README must link the packaged generated capability document")
+
+    capability = read_json(CAPABILITY_TABLES)
+    targets = [target for target in ("native", "wasm32-wasip1") if target in capability]
+    if len(targets) != 2:
+        fail("capability fixture must represent native and wasm32-wasip1 targets")
+    first_lanes = capability[targets[0]].get("lanes", {})
+    lane_count = len(first_lanes)
+    first_lane = next(iter(first_lanes.values()), {})
+    format_count = len(first_lane.get("formats", []))
+    first_format = first_lane.get("formats", [{}])[0]
+    operation_count = len(first_format.get("operations", {}))
+    active_decode = sum(row.get("status") == "active" and row.get("type") == "decode" for row in rows)
+    active_encode = sum(row.get("status") == "active" and row.get("type") == "encode" for row in rows)
+    planned_decode = sum(row.get("status") == "planned" and row.get("type") == "decode" for row in rows)
+    planned_encode = sum(row.get("status") == "planned" and row.get("type") == "encode" for row in rows)
+    not_applicable = 0
+    for row in rows:
+        operations = row.get("operations")
+        if row.get("status") == "active" and isinstance(operations, dict):
+            not_applicable += sum(
+                operations.get(operation) == "not_applicable"
+                for operation in ("decode", "decode_sequence", "encode", "encode_sequence")
+            )
+    required_fragments = (
+        f"- Runtime targets represented: {len(targets)} (`{targets[0]}`, `{targets[1]}`).",
+        f"- Feature lanes represented per target: {lane_count}.",
+        f"- Formats per lane: {format_count}.",
+        f"- Operations per runtime capability row: {operation_count}.",
+        f"- Runtime capability rows rendered: {len(targets) * lane_count * format_count:,}.",
+        f"- Active fixture rows: {active_decode + active_encode:,} ({active_decode:,} decode; {active_encode:,} encode).",
+        f"- Planned fixture rows excluded: {planned_decode + planned_encode:,} ({planned_decode:,} decode; {planned_encode:,} encode).",
+        f"- Active `not_applicable` operation outcomes excluded from evidence groups: {not_applicable:,}.",
+    )
+    for fragment in required_fragments:
+        if fragment not in document:
+            fail(f"generated capability document is missing dynamic count: {fragment}")
 
 
 def verify_avif_safe_rust_cutover() -> None:
@@ -321,7 +382,7 @@ def verify() -> str:
     )
     exact_match(
         roadmap,
-        r"\| Documentation \| 3 \| `DOC-003`, `DOC-007`, `DOC-008` \|",
+        r"\| Documentation \| 2 \| `DOC-007`, `DOC-008` \|",
         "documentation open-task count",
     )
     inventory = roadmap.split("## Complete open-task inventory", 1)[1].split(
@@ -330,6 +391,7 @@ def verify() -> str:
     if re.search(r"\bDOC-00[24]\b", inventory):
         fail("resolved documentation work is still listed as an active task")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    verify_capability_document(readme, rows)
     error_source = (ROOT / "src" / "types" / "error.rs").read_text(encoding="utf-8")
     error_policy_marker = "<!-- image-error-policy: typed-recovery-diagnostic-prose -->"
     if readme.count(error_policy_marker) != 1:

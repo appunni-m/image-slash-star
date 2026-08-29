@@ -522,6 +522,10 @@ run_parallel_jobs run_matrix_lane \
 python3 scripts/generate_capability_tables.py --check \
     --matrix-log-dir "$matrix_log_dir"
 
+# Keep the packaged capability page synchronized with the committed runtime
+# table and active fixture contracts.
+python3 scripts/generate_capability_docs.py --check
+
 # Publish the signature only after every lane and the capability-table check
 # pass. This marker is local build state, not a repository artifact. Recompute
 # it before writing so a source edit made while the matrix was running cannot
