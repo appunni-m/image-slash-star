@@ -287,6 +287,457 @@ struct BlockSyntax {
     reconstruction: ReconstructionPolicy,
 }
 
+/// One normalized unsplit transform payload.
+///
+/// `coefficients` retains AV1's compact column-major coefficient window;
+/// `width` and `height` are the coded transform dimensions.  Keeping both
+/// dimensions beside the slice avoids guessing orientation from legacy field
+/// names such as `lossy_luma_4x8_coefficients`, which intentionally carries
+/// both R4x8 and R8x4 syntax.
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+struct CoeffBlockRef<'a> {
+    width: usize,
+    height: usize,
+    coefficients: Option<&'a [i32]>,
+    transform: Av1TransformType,
+}
+
+/// Normalized AV1 intra edges for one full-resolution plane.
+///
+/// The vectors are prepared once per block and contain enough repeated
+/// extension for every directional zone. Availability and extension flags
+/// remain explicit geometry facts; sample equality is never used to infer
+/// whether a neighbor exists.
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+#[derive(Clone, Debug)]
+pub(super) struct FullIntraPlaneEdges {
+    top: Vec<u16>,
+    left: Vec<u16>,
+    top_left: u16,
+    has_top: bool,
+    has_left: bool,
+    have_above_right: bool,
+    have_below_left: bool,
+    top_valid: usize,
+    left_valid: usize,
+    smooth: bool,
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+#[derive(Clone, Debug)]
+pub(super) struct FullIntraEdges {
+    planes: [FullIntraPlaneEdges; 3],
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+impl FullIntraPlaneEdges {
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "edge samples and each AV1 availability fact are independent inputs"
+    )]
+    pub(super) fn prepare(
+        width: usize,
+        height: usize,
+        sample_depth: SampleDepth,
+        top: &[u16],
+        left: &[u16],
+        top_left: Option<u16>,
+        has_top: bool,
+        has_left: bool,
+        have_above_right: bool,
+        have_below_left: bool,
+        smooth: bool,
+    ) -> PortableResult<Self> {
+        let edge_length = width.checked_add(height).portable()?;
+        (width != 0 && height != 0 && edge_length <= 128)
+            .then_some(())
+            .portable()?;
+        if (has_top && top.is_empty()) || (has_left && left.is_empty()) {
+            return Err(PortableUnavailable);
+        }
+        let top_input_limit = if have_above_right {
+            width.saturating_mul(2).min(edge_length)
+        } else {
+            width.min(edge_length)
+        };
+        let left_input_limit = if have_below_left {
+            height.saturating_mul(2).min(edge_length)
+        } else {
+            height.min(edge_length)
+        };
+        let top_valid = if has_top {
+            top.len().min(top_input_limit)
+        } else {
+            0
+        };
+        let left_valid = if has_left {
+            left.len().min(left_input_limit)
+        } else {
+            0
+        };
+        let first_top = top.first().copied();
+        let first_left = left.first().copied();
+        let top_default = if has_top {
+            first_top.ok_or(PortableUnavailable)?
+        } else if has_left {
+            first_left.ok_or(PortableUnavailable)?
+        } else {
+            sample_depth.top_edge_default()
+        };
+        let left_default = if has_left {
+            first_left.ok_or(PortableUnavailable)?
+        } else if has_top {
+            first_top.ok_or(PortableUnavailable)?
+        } else {
+            sample_depth.left_edge_default()
+        };
+        let mut prepared_top = vec![top_default; edge_length];
+        let mut prepared_left = vec![left_default; edge_length];
+        if has_top {
+            let count = top_valid;
+            prepared_top[..count].copy_from_slice(&top[..count]);
+            let repeat = prepared_top[count.saturating_sub(1)];
+            prepared_top[count..].fill(repeat);
+        }
+        if has_left {
+            let count = left_valid;
+            prepared_left[..count].copy_from_slice(&left[..count]);
+            let repeat = prepared_left[count.saturating_sub(1)];
+            prepared_left[count..].fill(repeat);
+        }
+        let top_left = match (has_top, has_left) {
+            (true, true) => top_left.ok_or(PortableUnavailable)?,
+            (true, false) => first_top.ok_or(PortableUnavailable)?,
+            (false, true) => first_left.ok_or(PortableUnavailable)?,
+            (false, false) => sample_depth.midpoint(),
+        };
+        Ok(Self {
+            top: prepared_top,
+            left: prepared_left,
+            top_left,
+            has_top,
+            has_left,
+            have_above_right,
+            have_below_left,
+            top_valid,
+            left_valid,
+            smooth,
+        })
+    }
+
+    fn origin(width: usize, height: usize, sample_depth: SampleDepth) -> PortableResult<Self> {
+        Self::prepare(
+            width,
+            height,
+            sample_depth,
+            &[],
+            &[],
+            None,
+            false,
+            false,
+            false,
+            false,
+            false,
+        )
+    }
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+impl FullIntraEdges {
+    fn origin(width: usize, height: usize, sample_depth: SampleDepth) -> PortableResult<Self> {
+        Ok(Self {
+            planes: [
+                FullIntraPlaneEdges::origin(width, height, sample_depth)?,
+                FullIntraPlaneEdges::origin(width, height, sample_depth)?,
+                FullIntraPlaneEdges::origin(width, height, sample_depth)?,
+            ],
+        })
+    }
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+impl BlockSyntax {
+    fn reject_split_transform_syntax(&self) -> PortableResult<()> {
+        let split = self.lossy_luma_64x64_split.is_some()
+            || self.lossy_luma_4x4_split.is_some()
+            || self.lossy_luma_4x4_grid_split.is_some()
+            || self.lossy_luma_8x4_split.is_some()
+            || self.lossy_luma_8x8_split.is_some()
+            || self.lossy_luma_8x8_grid_split.is_some()
+            || self.lossy_luma_16x16_split.is_some()
+            || self.lossy_luma_16x16_horizontal_split.is_some()
+            || self.lossy_luma_32x16_horizontal_split.is_some()
+            || self.lossy_luma_16x16_vertical_split.is_some()
+            || self.lossy_chroma_4x4_splits.iter().any(Option::is_some);
+        (!split).then_some(()).portable()
+    }
+
+    fn luma_unsplit_carrier_count(&self) -> usize {
+        [
+            self.lossy_luma_coefficients.is_some(),
+            self.lossy_luma_4x8_coefficients.is_some(),
+            self.lossy_luma_16x16_coefficients.is_some(),
+            self.lossy_luma_32x32_coefficients.is_some(),
+            self.lossy_luma_16x32_coefficients.is_some(),
+            self.lossy_luma_64x64_coefficients.is_some(),
+            self.lossy_luma_8x32_coefficients.is_some(),
+            self.lossy_luma_16x64_coefficients.is_some(),
+            self.lossy_luma_32x16_coefficients.is_some(),
+            self.lossy_luma_32x8_coefficients.is_some(),
+            self.lossy_luma_64x16_coefficients.is_some(),
+            self.lossy_luma_16x8_coefficients.is_some(),
+            self.lossy_luma_rect_coefficients.is_some(),
+        ]
+        .into_iter()
+        .filter(|present| *present)
+        .count()
+    }
+
+    fn chroma_unsplit_carrier_count(&self, plane: usize) -> PortableResult<usize> {
+        let index = plane.checked_sub(1).filter(|&index| index < 2).portable()?;
+        Ok([
+            self.lossy_chroma_coefficients[index].is_some(),
+            self.lossy_chroma_8x8_coefficients[index].is_some(),
+            self.lossy_chroma_8x4_coefficients[index].is_some(),
+            self.lossy_chroma_16x16_coefficients[index].is_some(),
+            self.lossy_chroma_32x32_coefficients[index].is_some(),
+            self.lossy_chroma_8x32_coefficients[index].is_some(),
+            self.lossy_chroma_8x16_coefficients[index].is_some(),
+            self.lossy_chroma_16x32_coefficients[index].is_some(),
+            self.lossy_chroma_32x8_coefficients[index].is_some(),
+            self.lossy_chroma_4x16_coefficients[index].is_some(),
+            self.lossy_chroma_16x4_coefficients[index].is_some(),
+            self.lossy_chroma_16x8_coefficients[index].is_some(),
+        ]
+        .into_iter()
+        .filter(|present| *present)
+        .count())
+    }
+
+    fn luma_unsplit_transform(
+        &self,
+        width: usize,
+        height: usize,
+    ) -> PortableResult<Av1TransformType> {
+        if width.max(height) >= 32 {
+            if matches!(self.transform_grid, TransformGrid::Vertical16x32)
+                && !matches!(
+                    self.lossy_luma_16x32_transform,
+                    Lossy16x16TransformKind::DctDct
+                )
+            {
+                return Err(PortableUnavailable);
+            }
+            return Ok(Av1TransformType::DctDct);
+        }
+        Ok(match self.transform_grid {
+            TransformGrid::Square4 | TransformGrid::Square8 => self.lossy_luma_transform.into(),
+            TransformGrid::Vertical4x8 | TransformGrid::Vertical4x16 => {
+                self.lossy_luma_4x8_transform.into()
+            }
+            TransformGrid::Horizontal8x4 => self.lossy_luma_4x8_transform.into(),
+            TransformGrid::Square16 => self.lossy_luma_16x16_transform.into(),
+            TransformGrid::Horizontal16x4 => self.lossy_luma_16x4_transform.into(),
+            TransformGrid::Horizontal16x8 => self.lossy_luma_16x8_transform.into(),
+            TransformGrid::Vertical8x16 => self.lossy_luma_rect_transform.into(),
+            TransformGrid::Vertical16x32 => self.lossy_luma_16x32_transform.into(),
+            TransformGrid::Vertical16x64
+            | TransformGrid::Horizontal32x16
+            | TransformGrid::Horizontal64x16
+            | TransformGrid::Horizontal32x8
+            | TransformGrid::Vertical8x32
+            | TransformGrid::Square32
+            | TransformGrid::Square64 => Av1TransformType::DctDct,
+        })
+    }
+
+    fn unsplit_coefficients(&self, plane: usize) -> PortableResult<CoeffBlockRef<'_>> {
+        self.reject_split_transform_syntax()?;
+        matches!(self.chroma_sampling, ChromaSampling::Full)
+            .then_some(())
+            .portable()?;
+        let (grid_width, grid_height, _) = self.transform_grid.properties();
+        let width = grid_width.checked_mul(4).portable()?;
+        let height = grid_height.checked_mul(4).portable()?;
+        let compact_count = width.min(32).checked_mul(height.min(32)).portable()?;
+
+        if plane == 0 {
+            let carrier_count = self.luma_unsplit_carrier_count();
+            (carrier_count <= 1).then_some(()).portable()?;
+            let coefficients: Option<&[i32]> = match self.transform_grid {
+                TransformGrid::Square4 => self
+                    .lossy_luma_coefficients
+                    .as_ref()
+                    .map(|values| &values[..16]),
+                TransformGrid::Square8
+                | TransformGrid::Vertical4x16
+                | TransformGrid::Horizontal16x4 => {
+                    self.lossy_luma_coefficients.as_ref().map(AsRef::as_ref)
+                }
+                TransformGrid::Vertical4x8 | TransformGrid::Horizontal8x4 => {
+                    self.lossy_luma_4x8_coefficients.as_ref().map(AsRef::as_ref)
+                }
+                TransformGrid::Square16 => self
+                    .lossy_luma_16x16_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Horizontal16x8 => self
+                    .lossy_luma_16x8_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Vertical8x16 => self
+                    .lossy_luma_rect_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Vertical16x32 => self
+                    .lossy_luma_16x32_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Vertical16x64 => self
+                    .lossy_luma_16x64_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Horizontal32x16 => self
+                    .lossy_luma_32x16_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Horizontal64x16 => self
+                    .lossy_luma_64x16_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Horizontal32x8 => self
+                    .lossy_luma_32x8_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Vertical8x32 => self
+                    .lossy_luma_8x32_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Square32 => self
+                    .lossy_luma_32x32_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+                TransformGrid::Square64 => self
+                    .lossy_luma_64x64_coefficients
+                    .as_ref()
+                    .map(AsRef::as_ref),
+            };
+            coefficients
+                .is_none_or(|values| values.len() == compact_count)
+                .then_some(())
+                .portable()?;
+            (carrier_count == usize::from(coefficients.is_some()))
+                .then_some(())
+                .portable()?;
+            return Ok(CoeffBlockRef {
+                width,
+                height,
+                coefficients,
+                transform: self.luma_unsplit_transform(width, height)?,
+            });
+        }
+
+        let index = plane.checked_sub(1).filter(|&index| index < 2).portable()?;
+        let carrier_count = self.chroma_unsplit_carrier_count(plane)?;
+        (carrier_count <= 1).then_some(()).portable()?;
+        let coefficients: Option<&[i32]> = match self.transform_grid {
+            TransformGrid::Square4 => self.lossy_chroma_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Vertical4x8 | TransformGrid::Horizontal8x4 => self
+                .lossy_chroma_8x4_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Vertical4x16 => self.lossy_chroma_4x16_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Square8 => self.lossy_chroma_8x8_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Square16 => self.lossy_chroma_16x16_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Horizontal16x4 => self.lossy_chroma_16x4_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Horizontal16x8 => self.lossy_chroma_16x8_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Vertical8x16 => self.lossy_chroma_8x16_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Vertical16x32 => self.lossy_chroma_16x32_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Horizontal32x8 => self.lossy_chroma_32x8_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Vertical8x32 => self.lossy_chroma_8x32_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            TransformGrid::Square32 => self.lossy_chroma_32x32_coefficients[index]
+                .as_ref()
+                .map(AsRef::as_ref),
+            // These existing carriers are deliberately half-size. A skipped
+            // residual needs no carrier and is safe; a populated half-size
+            // field has no one-to-one Full-plane owner yet and must not be
+            // stretched or replicated by the strict path.
+            TransformGrid::Vertical16x64 => self.lossy_chroma_8x32_coefficients[index]
+                .is_none()
+                .then_some(None::<&[i32]>)
+                .portable()?,
+            TransformGrid::Horizontal32x16 => self.lossy_chroma_16x8_coefficients[index]
+                .is_none()
+                .then_some(None::<&[i32]>)
+                .portable()?,
+            TransformGrid::Horizontal64x16 => self.lossy_chroma_32x8_coefficients[index]
+                .is_none()
+                .then_some(None::<&[i32]>)
+                .portable()?,
+            TransformGrid::Square64 => self.lossy_chroma_32x32_coefficients[index]
+                .is_none()
+                .then_some(None::<&[i32]>)
+                .portable()?,
+        };
+        coefficients
+            .is_none_or(|values| values.len() == compact_count)
+            .then_some(())
+            .portable()?;
+        (carrier_count == usize::from(coefficients.is_some()))
+            .then_some(())
+            .portable()?;
+        let transform = if width.max(height) >= 32 {
+            Av1TransformType::DctDct
+        } else {
+            Av1TransformType::from(chroma_transform_kind(self.chroma_predictor))
+        };
+        Ok(CoeffBlockRef {
+            width,
+            height,
+            coefficients,
+            transform,
+        })
+    }
+}
+
 #[derive(Clone, Copy)]
 struct CdefMetadata {
     active: bool,
@@ -328,6 +779,80 @@ enum LossyTransformKind {
     AdstDct,
     DctIdentity,
     AdstAdst,
+}
+
+/// AV1's normative two-dimensional transform type.
+///
+/// AV1 names the vertical component first.  The safe transform backend runs
+/// the horizontal pass first, so [`Self::axes`] deliberately returns the
+/// components in execution order.  Keeping the complete sixteen-entry set in
+/// one enum prevents the intra-only carrier enums below from becoming the
+/// transform backend's de-facto public model when inter reconstruction is
+/// added.
+#[allow(
+    dead_code,
+    reason = "the complete transform set is consumed as the high-depth and inter gates are integrated"
+)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Av1TransformType {
+    DctDct,
+    AdstDct,
+    DctAdst,
+    AdstAdst,
+    FlipAdstDct,
+    DctFlipAdst,
+    FlipAdstFlipAdst,
+    AdstFlipAdst,
+    FlipAdstAdst,
+    IdentityIdentity,
+    VerticalDct,
+    HorizontalDct,
+    VerticalAdst,
+    HorizontalAdst,
+    VerticalFlipAdst,
+    HorizontalFlipAdst,
+}
+
+#[allow(
+    dead_code,
+    reason = "the complete transform set is consumed as the high-depth and inter gates are integrated"
+)]
+impl Av1TransformType {
+    const fn axes(self) -> (transform::AxisTransform, transform::AxisTransform) {
+        use transform::AxisTransform::{Adst, Dct, FlipAdst, Identity};
+        match self {
+            Self::DctDct => (Dct, Dct),
+            Self::AdstDct => (Dct, Adst),
+            Self::DctAdst => (Adst, Dct),
+            Self::AdstAdst => (Adst, Adst),
+            Self::FlipAdstDct => (Dct, FlipAdst),
+            Self::DctFlipAdst => (FlipAdst, Dct),
+            Self::FlipAdstFlipAdst => (FlipAdst, FlipAdst),
+            Self::AdstFlipAdst => (FlipAdst, Adst),
+            Self::FlipAdstAdst => (Adst, FlipAdst),
+            Self::IdentityIdentity => (Identity, Identity),
+            Self::VerticalDct => (Identity, Dct),
+            Self::HorizontalDct => (Dct, Identity),
+            Self::VerticalAdst => (Identity, Adst),
+            Self::HorizontalAdst => (Adst, Identity),
+            Self::VerticalFlipAdst => (Identity, FlipAdst),
+            Self::HorizontalFlipAdst => (FlipAdst, Identity),
+        }
+    }
+}
+
+impl From<LossyTransformKind> for Av1TransformType {
+    fn from(value: LossyTransformKind) -> Self {
+        match value {
+            LossyTransformKind::IdentityIdentity => Self::IdentityIdentity,
+            LossyTransformKind::IdentityDct => Self::VerticalDct,
+            LossyTransformKind::DctDct => Self::DctDct,
+            LossyTransformKind::DctAdst => Self::DctAdst,
+            LossyTransformKind::AdstDct => Self::AdstDct,
+            LossyTransformKind::DctIdentity => Self::HorizontalDct,
+            LossyTransformKind::AdstAdst => Self::AdstAdst,
+        }
+    }
 }
 
 impl LossyTransformKind {
@@ -381,6 +906,20 @@ impl Lossy4x8TransformKind {
     }
 }
 
+impl From<Lossy4x8TransformKind> for Av1TransformType {
+    fn from(value: Lossy4x8TransformKind) -> Self {
+        match value {
+            Lossy4x8TransformKind::IdentityIdentity => Self::IdentityIdentity,
+            Lossy4x8TransformKind::DctDct => Self::DctDct,
+            Lossy4x8TransformKind::IdentityDct => Self::VerticalDct,
+            Lossy4x8TransformKind::DctIdentity => Self::HorizontalDct,
+            Lossy4x8TransformKind::AdstAdst => Self::AdstAdst,
+            Lossy4x8TransformKind::AdstDct => Self::AdstDct,
+            Lossy4x8TransformKind::DctAdst => Self::DctAdst,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 enum LossyOneDimensionalGeometry {
     /// The existing R8x16 sentence stores the V/H axis in the reference's
@@ -413,6 +952,18 @@ impl Lossy16x16TransformKind {
             Self::AdstAdst => (Adst, Adst),
             Self::AdstDct => (Dct, Adst),
             Self::DctAdst => (Adst, Dct),
+        }
+    }
+}
+
+impl From<Lossy16x16TransformKind> for Av1TransformType {
+    fn from(value: Lossy16x16TransformKind) -> Self {
+        match value {
+            Lossy16x16TransformKind::IdentityIdentity => Self::IdentityIdentity,
+            Lossy16x16TransformKind::DctDct => Self::DctDct,
+            Lossy16x16TransformKind::AdstAdst => Self::AdstAdst,
+            Lossy16x16TransformKind::AdstDct => Self::AdstDct,
+            Lossy16x16TransformKind::DctAdst => Self::DctAdst,
         }
     }
 }
@@ -15916,9 +16467,14 @@ fn decode_syntax_with_cdef(
         chroma_predictor,
         tools,
     )?;
+    let filter_intra_size_allowed = transform_grid_width
+        .saturating_mul(4)
+        .max(transform_grid_height.saturating_mul(4))
+        <= 32;
     if matches!(luma_predictor, LumaPredictor::Dc)
         && tools.enable_filter_intra
         && !palette.y.is_present()
+        && filter_intra_size_allowed
     {
         let filter_intra_cdf_index = transform_grid.filter_intra_cdf_index();
         let use_filter_intra =
@@ -16354,20 +16910,10 @@ fn decode_syntax_with_cdef(
                             return Ok([[0_i32; 16]; 64]);
                         }
                         if transform_depth == 0 {
-                            let transform_type = decoder.adaptive_symbol(
-                                cdfs.lossy_luma_16x16_transform_type
-                                    .get_mut(transform_luma_mode)
-                                    .portable()?,
-                                4,
-                            );
-                            lossy_luma_16x32_transform = match transform_type {
-                                0 => Lossy16x16TransformKind::IdentityIdentity,
-                                1 => Lossy16x16TransformKind::DctDct,
-                                2 => Lossy16x16TransformKind::AdstAdst,
-                                3 => Lossy16x16TransformKind::AdstDct,
-                                4 => Lossy16x16TransformKind::DctAdst,
-                                _ => return Err(PortableUnavailable),
-                            };
+                            // Intra adds one to RTX_16X32's TX_32X32 maximum,
+                            // reaching TX_64X64. AV1 therefore forces
+                            // DCT_DCT and carries no transform-type symbol.
+                            lossy_luma_16x32_transform = Lossy16x16TransformKind::DctDct;
                             lossy_luma_16x32_coefficients =
                                 Some(decode_lossy_luma_16x32_coefficients(
                                     decoder,
@@ -27861,6 +28407,909 @@ fn reconstruct_lossless_plane(
         }
     }
     Ok(ReconstructedPlane { samples })
+}
+
+const DR_INTRA_DERIVATIVE: [i32; 44] = [
+    0, 1023, 0, 547, 372, 0, 0, 273, 215, 0, 178, 151, 0, 132, 116, 0, 102, 0, 90, 80, 0, 71, 64,
+    0, 57, 51, 0, 45, 0, 40, 35, 0, 31, 27, 0, 23, 19, 0, 15, 0, 11, 0, 7, 3,
+];
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_edge_sample(
+    edge: &[u16],
+    top_left: u16,
+    index: i32,
+    from: i32,
+    to: i32,
+) -> PortableResult<u16> {
+    (from >= -1 && to > from).then_some(()).portable()?;
+    let index = index.clamp(from, to.saturating_sub(1));
+    if index == -1 {
+        return Ok(top_left);
+    }
+    let index = usize::try_from(index).map_err(|_| PortableUnavailable)?;
+    edge.get(index).copied().portable()
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn filter_full_intra_edge(
+    edge: &[u16],
+    output_length: usize,
+    filter_from: usize,
+    filter_to: usize,
+    top_left: u16,
+    from: i32,
+    to: usize,
+    strength: usize,
+    maximum: u16,
+) -> PortableResult<Vec<u16>> {
+    (strength > 0
+        && strength <= 3
+        && filter_from <= filter_to
+        && filter_to <= output_length
+        && to > 0
+        && to <= edge.len())
+    .then_some(())
+    .portable()?;
+    const KERNELS: [[i32; 5]; 3] = [[0, 4, 8, 4, 0], [0, 5, 6, 5, 0], [2, 4, 4, 4, 2]];
+    let kernel = KERNELS[strength.saturating_sub(1)];
+    let filter_from = i32::try_from(filter_from).map_err(|_| PortableUnavailable)?;
+    let filter_to = i32::try_from(filter_to).map_err(|_| PortableUnavailable)?;
+    let to = i32::try_from(to).map_err(|_| PortableUnavailable)?;
+    let mut output = vec![0_u16; output_length];
+    for (index, sample) in output.iter_mut().enumerate() {
+        let index = i32::try_from(index).map_err(|_| PortableUnavailable)?;
+        if index < filter_from || index >= filter_to {
+            *sample = full_edge_sample(edge, top_left, index, from, to)?;
+            continue;
+        }
+        let sum = kernel
+            .into_iter()
+            .enumerate()
+            .try_fold(0_i32, |sum, (tap, weight)| {
+                let tap = i32::try_from(tap).map_err(|_| PortableUnavailable)?;
+                let value = full_edge_sample(
+                    edge,
+                    top_left,
+                    index.saturating_sub(2).saturating_add(tap),
+                    from,
+                    to,
+                )?;
+                Ok::<i32, PortableUnavailable>(
+                    sum.saturating_add(i32::from(value).saturating_mul(weight)),
+                )
+            })?;
+        *sample = u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum)))
+            .map_err(|_| PortableUnavailable)?;
+    }
+    Ok(output)
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn upsample_full_intra_edge(
+    edge: &[u16],
+    half_size: usize,
+    top_left: u16,
+    from: i32,
+    to: usize,
+    maximum: u16,
+) -> PortableResult<Vec<u16>> {
+    (half_size > 0 && to > 0 && to <= edge.len())
+        .then_some(())
+        .portable()?;
+    const KERNEL: [i32; 4] = [-1, 9, 9, -1];
+    let output_length = half_size
+        .checked_mul(2)
+        .and_then(|length| length.checked_sub(1))
+        .portable()?;
+    let to = i32::try_from(to).map_err(|_| PortableUnavailable)?;
+    let mut output = vec![0_u16; output_length];
+    for index in 0..half_size.saturating_sub(1) {
+        let index_i32 = i32::try_from(index).map_err(|_| PortableUnavailable)?;
+        output[index.saturating_mul(2)] = full_edge_sample(edge, top_left, index_i32, from, to)?;
+        let sum = KERNEL
+            .into_iter()
+            .enumerate()
+            .try_fold(0_i32, |sum, (tap, weight)| {
+                let tap = i32::try_from(tap).map_err(|_| PortableUnavailable)?;
+                let value = full_edge_sample(
+                    edge,
+                    top_left,
+                    index_i32.saturating_add(tap).saturating_sub(1),
+                    from,
+                    to,
+                )?;
+                Ok::<i32, PortableUnavailable>(
+                    sum.saturating_add(i32::from(value).saturating_mul(weight)),
+                )
+            })?;
+        output[index.saturating_mul(2).saturating_add(1)] =
+            u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum)))
+                .map_err(|_| PortableUnavailable)?;
+    }
+    let last = i32::try_from(half_size.saturating_sub(1)).map_err(|_| PortableUnavailable)?;
+    output[output_length.saturating_sub(1)] = full_edge_sample(edge, top_left, last, from, to)?;
+    Ok(output)
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_directional_derivative(index: i32) -> PortableResult<i32> {
+    let index = usize::try_from(index).map_err(|_| PortableUnavailable)?;
+    DR_INTRA_DERIVATIVE
+        .get(index)
+        .copied()
+        .filter(|&value| value != 0)
+        .portable()
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_directional_zone1(
+    width: usize,
+    height: usize,
+    angle: i32,
+    edges: &FullIntraPlaneEdges,
+    enable_intra_edge_filter: bool,
+    maximum: u16,
+) -> PortableResult<Vec<u16>> {
+    (0 < angle && angle < 90).then_some(()).portable()?;
+    let edge_length = width.checked_add(height).portable()?;
+    let delta = 90_i32.saturating_sub(angle);
+    let mut derivative = full_directional_derivative(angle >> 1)?;
+    let upsample =
+        enable_intra_edge_filter && intra_edge_upsample(edge_length, delta, edges.smooth);
+    let source_limit = width
+        .saturating_add(width.min(height))
+        .min(edges.top.len())
+        .max(1);
+    let (prepared, max_base, increment) = if upsample {
+        derivative = derivative.saturating_mul(2);
+        (
+            upsample_full_intra_edge(
+                &edges.top,
+                edge_length,
+                edges.top_left,
+                -1,
+                source_limit,
+                maximum,
+            )?,
+            edge_length.saturating_mul(2).saturating_sub(2),
+            2,
+        )
+    } else {
+        let strength = if enable_intra_edge_filter {
+            intra_edge_filter_strength(edge_length, delta, edges.smooth)
+        } else {
+            0
+        };
+        if strength == 0 {
+            (
+                edges.top.clone(),
+                width.saturating_add(width.min(height)).saturating_sub(1),
+                1,
+            )
+        } else {
+            (
+                filter_full_intra_edge(
+                    &edges.top,
+                    edge_length,
+                    0,
+                    edge_length,
+                    edges.top_left,
+                    -1,
+                    source_limit,
+                    strength,
+                    maximum,
+                )?,
+                edge_length.saturating_sub(1),
+                1,
+            )
+        }
+    };
+    let mut prediction = vec![0_u16; width.checked_mul(height).portable()?];
+    for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
+        for (x, sample) in row.iter_mut().enumerate() {
+            *sample = diagonal_z1_predictor_sample_with_max(
+                &prepared, max_base, derivative, increment, x, y, maximum,
+            )?;
+        }
+    }
+    Ok(prediction)
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_directional_zone3(
+    width: usize,
+    height: usize,
+    angle: i32,
+    edges: &FullIntraPlaneEdges,
+    enable_intra_edge_filter: bool,
+    maximum: u16,
+) -> PortableResult<Vec<u16>> {
+    (180 < angle && angle < 270).then_some(()).portable()?;
+    let edge_length = width.checked_add(height).portable()?;
+    let delta = angle.saturating_sub(180);
+    let mut derivative = full_directional_derivative((270_i32.saturating_sub(angle)) >> 1)?;
+    let upsample =
+        enable_intra_edge_filter && intra_edge_upsample(edge_length, delta, edges.smooth);
+    let source_limit = height
+        .saturating_add(width.min(height))
+        .min(edges.left.len())
+        .max(1);
+    let (prepared, max_base, increment) = if upsample {
+        derivative = derivative.saturating_mul(2);
+        (
+            upsample_full_intra_edge(
+                &edges.left,
+                edge_length,
+                edges.top_left,
+                -1,
+                source_limit,
+                maximum,
+            )?,
+            edge_length.saturating_mul(2).saturating_sub(2),
+            2,
+        )
+    } else {
+        let strength = if enable_intra_edge_filter {
+            intra_edge_filter_strength(edge_length, delta, edges.smooth)
+        } else {
+            0
+        };
+        if strength == 0 {
+            (
+                edges.left.clone(),
+                height.saturating_add(width.min(height)).saturating_sub(1),
+                1,
+            )
+        } else {
+            (
+                filter_full_intra_edge(
+                    &edges.left,
+                    edge_length,
+                    0,
+                    edge_length,
+                    edges.top_left,
+                    -1,
+                    source_limit,
+                    strength,
+                    maximum,
+                )?,
+                edge_length.saturating_sub(1),
+                1,
+            )
+        }
+    };
+    let mut prediction = vec![0_u16; width.checked_mul(height).portable()?];
+    for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
+        for (x, sample) in row.iter_mut().enumerate() {
+            *sample = diagonal_z3_predictor_sample_with_max(
+                &prepared, max_base, derivative, increment, x, y, maximum,
+            )?;
+        }
+    }
+    Ok(prediction)
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_directional_zone2(
+    width: usize,
+    height: usize,
+    angle: i32,
+    edges: &FullIntraPlaneEdges,
+    enable_intra_edge_filter: bool,
+    maximum: u16,
+) -> PortableResult<Vec<u16>> {
+    (90 < angle && angle < 180).then_some(()).portable()?;
+    let edge_length = width.checked_add(height).portable()?;
+    let mut top_left = edges.top_left;
+    if enable_intra_edge_filter && edge_length >= 24 {
+        let filtered = i32::from(edges.left[0])
+            .saturating_add(i32::from(edges.top[0]))
+            .saturating_mul(5)
+            .saturating_add(i32::from(top_left).saturating_mul(6))
+            .saturating_add(8)
+            >> 4;
+        top_left = u16::try_from(filtered.clamp(0, i32::from(maximum)))
+            .map_err(|_| PortableUnavailable)?;
+    }
+    let top_delta = angle.saturating_sub(90);
+    let left_delta = 180_i32.saturating_sub(angle);
+    let mut vertical_derivative = full_directional_derivative(top_delta >> 1)?;
+    let mut horizontal_derivative = full_directional_derivative(left_delta >> 1)?;
+    let upsample_top =
+        enable_intra_edge_filter && intra_edge_upsample(edge_length, top_delta, edges.smooth);
+    let upsample_left =
+        enable_intra_edge_filter && intra_edge_upsample(edge_length, left_delta, edges.smooth);
+    let top_filter_length = if edges.has_top {
+        edges.top_valid.min(width)
+    } else {
+        width
+    };
+    let left_filter_length = if edges.has_left {
+        edges.left_valid.min(height)
+    } else {
+        height
+    };
+    let top = if upsample_top {
+        let mut source = Vec::with_capacity(width.saturating_add(1));
+        source.push(top_left);
+        source.extend_from_slice(&edges.top[..width]);
+        horizontal_derivative = horizontal_derivative.saturating_mul(2);
+        let source_length = source.len();
+        upsample_full_intra_edge(&source, source_length, top_left, 0, source_length, maximum)?
+    } else {
+        let strength = if enable_intra_edge_filter {
+            intra_edge_filter_strength(edge_length, top_delta, edges.smooth)
+        } else {
+            0
+        };
+        let filtered = if strength == 0 {
+            edges.top[..width].to_vec()
+        } else {
+            filter_full_intra_edge(
+                &edges.top,
+                width,
+                0,
+                top_filter_length,
+                top_left,
+                -1,
+                width,
+                strength,
+                maximum,
+            )?
+        };
+        let mut source = Vec::with_capacity(width.saturating_add(1));
+        source.push(top_left);
+        source.extend(filtered);
+        source
+    };
+    let left = if upsample_left {
+        let mut source = edges.left[..height]
+            .iter()
+            .copied()
+            .rev()
+            .collect::<Vec<_>>();
+        source.push(top_left);
+        vertical_derivative = vertical_derivative.saturating_mul(2);
+        let source_length = source.len();
+        upsample_full_intra_edge(&source, source_length, top_left, 0, source_length, maximum)?
+    } else {
+        let strength = if enable_intra_edge_filter {
+            intra_edge_filter_strength(edge_length, left_delta, edges.smooth)
+        } else {
+            0
+        };
+        let filtered = if strength == 0 {
+            edges.left[..height].to_vec()
+        } else {
+            filter_full_intra_edge(
+                &edges.left,
+                height,
+                0,
+                left_filter_length,
+                top_left,
+                -1,
+                height,
+                strength,
+                maximum,
+            )?
+        };
+        let mut source = filtered.into_iter().rev().collect::<Vec<_>>();
+        source.push(top_left);
+        source
+    };
+
+    let top_left_index = left.len().saturating_sub(1);
+    let left_index = top_left_index.saturating_sub(1 + usize::from(upsample_left));
+    let mut edge = left;
+    edge.extend_from_slice(&top[1..]);
+    let top_increment = 1_i32 + i32::from(upsample_top);
+    let mut prediction = vec![0_u16; width.checked_mul(height).portable()?];
+    for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
+        let y_i32 = i32::try_from(y).map_err(|_| PortableUnavailable)?;
+        let x_position = top_increment
+            .saturating_mul(64)
+            .saturating_sub(horizontal_derivative.saturating_mul(y_i32.saturating_add(1)));
+        let mut base_x = x_position >> 6;
+        let fraction_x = x_position & 0x3e;
+        let mut y_position = y_i32
+            .saturating_mul(64_i32 << u32::from(upsample_left))
+            .saturating_sub(vertical_derivative);
+        for sample in row {
+            let value = if base_x >= 0 {
+                let first = i32::try_from(top_left_index)
+                    .map_err(|_| PortableUnavailable)?
+                    .saturating_add(base_x);
+                let first = usize::try_from(first).map_err(|_| PortableUnavailable)?;
+                let second = first.checked_add(1).portable()?;
+                i32::from(*edge.get(first).portable()?)
+                    .saturating_mul(64_i32.saturating_sub(fraction_x))
+                    .saturating_add(
+                        i32::from(*edge.get(second).portable()?).saturating_mul(fraction_x),
+                    )
+            } else {
+                let base_y = y_position >> 6;
+                let fraction_y = y_position & 0x3e;
+                let first = i32::try_from(left_index)
+                    .map_err(|_| PortableUnavailable)?
+                    .saturating_sub(base_y);
+                let second = first.saturating_sub(1);
+                let first = usize::try_from(first).map_err(|_| PortableUnavailable)?;
+                let second = usize::try_from(second).map_err(|_| PortableUnavailable)?;
+                i32::from(*edge.get(first).portable()?)
+                    .saturating_mul(64_i32.saturating_sub(fraction_y))
+                    .saturating_add(
+                        i32::from(*edge.get(second).portable()?).saturating_mul(fraction_y),
+                    )
+            };
+            *sample = u16::try_from((value.saturating_add(32) >> 6).clamp(0, i32::from(maximum)))
+                .map_err(|_| PortableUnavailable)?;
+            base_x = base_x.saturating_add(top_increment);
+            y_position = y_position.saturating_sub(vertical_derivative);
+        }
+    }
+    Ok(prediction)
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn one_sided_full_dc(edge: &[u16]) -> PortableResult<u16> {
+    (!edge.is_empty() && edge.len().is_power_of_two())
+        .then_some(())
+        .portable()?;
+    let sum = edge
+        .iter()
+        .fold(0_u32, |sum, sample| sum.saturating_add(u32::from(*sample)));
+    let rounded = sum.saturating_add(u32::try_from(edge.len() / 2).unwrap_or(u32::MAX));
+    u16::try_from(rounded >> edge.len().ilog2()).map_err(|_| PortableUnavailable)
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn rectangular_full_dc(
+    top: &[u16],
+    left: &[u16],
+    sample_depth: SampleDepth,
+) -> PortableResult<u16> {
+    let width = top.len();
+    let height = left.len();
+    let count = width.checked_add(height).portable()?;
+    (width.is_power_of_two() && height.is_power_of_two())
+        .then_some(())
+        .portable()?;
+    let sum = top.iter().chain(left).try_fold(0_u32, |sum, &sample| {
+        sum.checked_add(u32::from(sample)).portable()
+    })?;
+    let rounded = sum
+        .checked_add(u32::try_from(count / 2).map_err(|_| PortableUnavailable)?)
+        .portable()?;
+    let mut predictor = rounded >> count.trailing_zeros();
+    if width != height {
+        // dav1d uses the doubled reciprocal and one extra shift for its
+        // high-bit-depth kernels. The two forms are almost, but not always,
+        // equivalent at rounding boundaries.
+        let (multiplier, shift) = if sample_depth == SampleDepth::EIGHT {
+            (
+                if width > height.saturating_mul(2) || height > width.saturating_mul(2) {
+                    0x3334_u32
+                } else {
+                    0x5556_u32
+                },
+                16,
+            )
+        } else {
+            (
+                if width > height.saturating_mul(2) || height > width.saturating_mul(2) {
+                    0x6667_u32
+                } else {
+                    0xaaab_u32
+                },
+                17,
+            )
+        };
+        predictor = predictor.checked_mul(multiplier).portable()? >> shift;
+    }
+    u16::try_from(predictor)
+        .ok()
+        .filter(|&sample| sample <= sample_depth.maximum())
+        .portable()
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_intra_prediction(
+    predictor: LosslessPredictor,
+    angle: Option<i32>,
+    filter_intra_mode: Option<usize>,
+    width: usize,
+    height: usize,
+    edges: &FullIntraPlaneEdges,
+    sample_depth: SampleDepth,
+    enable_intra_edge_filter: bool,
+) -> PortableResult<Vec<u16>> {
+    if edges.top.len() < width.saturating_add(height)
+        || edges.left.len() < width.saturating_add(height)
+    {
+        return Err(PortableUnavailable);
+    }
+    if let Some(mode) = filter_intra_mode {
+        return reconstruct_filter_intra_prediction_with_max(
+            mode,
+            width,
+            height,
+            edges.top_left,
+            &edges.top[..width],
+            &edges.left[..height],
+            sample_depth.maximum(),
+        );
+    }
+    let predictor = resolve_lossless_predictor(predictor, angle, edges.has_top, edges.has_left);
+    let sample_count = width.checked_mul(height).portable()?;
+    let maximum = i32::from(sample_depth.maximum());
+    match predictor {
+        LosslessPredictor::Diagonal45 | LosslessPredictor::Diagonal67 => full_directional_zone1(
+            width,
+            height,
+            angle.ok_or(PortableUnavailable)?,
+            edges,
+            enable_intra_edge_filter,
+            sample_depth.maximum(),
+        ),
+        LosslessPredictor::DiagonalDownRight
+        | LosslessPredictor::Diagonal113
+        | LosslessPredictor::Diagonal157 => full_directional_zone2(
+            width,
+            height,
+            angle.ok_or(PortableUnavailable)?,
+            edges,
+            enable_intra_edge_filter,
+            sample_depth.maximum(),
+        ),
+        LosslessPredictor::Diagonal203 => full_directional_zone3(
+            width,
+            height,
+            angle.ok_or(PortableUnavailable)?,
+            edges,
+            enable_intra_edge_filter,
+            sample_depth.maximum(),
+        ),
+        LosslessPredictor::Dc => {
+            let predictor = match (edges.has_top, edges.has_left) {
+                (true, true) => {
+                    rectangular_full_dc(&edges.top[..width], &edges.left[..height], sample_depth)?
+                }
+                (true, false) => one_sided_full_dc(&edges.top[..width])?,
+                (false, true) => one_sided_full_dc(&edges.left[..height])?,
+                (false, false) => sample_depth.midpoint(),
+            };
+            Ok(vec![predictor; sample_count])
+        }
+        LosslessPredictor::Vertical => {
+            let mut prediction = vec![0_u16; sample_count];
+            for row in prediction.chunks_exact_mut(width) {
+                row.copy_from_slice(&edges.top[..width]);
+            }
+            Ok(prediction)
+        }
+        LosslessPredictor::Horizontal => {
+            let mut prediction = vec![0_u16; sample_count];
+            for (row, &left) in prediction
+                .chunks_exact_mut(width)
+                .zip(edges.left[..height].iter())
+            {
+                row.fill(left);
+            }
+            Ok(prediction)
+        }
+        LosslessPredictor::Smooth
+        | LosslessPredictor::SmoothVertical
+        | LosslessPredictor::SmoothHorizontal => {
+            let horizontal_weights = smooth_weight_table(width)?;
+            let vertical_weights = smooth_weight_table(height)?;
+            let right = i32::from(edges.top[width.saturating_sub(1)]);
+            let bottom = i32::from(edges.left[height.saturating_sub(1)]);
+            let mut prediction = vec![0_u16; sample_count];
+            for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
+                let vertical_weight = i32::from(vertical_weights[y]);
+                let left = i32::from(edges.left[y]);
+                for (x, sample) in row.iter_mut().enumerate() {
+                    let horizontal_weight = i32::from(horizontal_weights[x]);
+                    let top = i32::from(edges.top[x]);
+                    let value = match predictor {
+                        LosslessPredictor::Smooth => {
+                            vertical_weight
+                                .saturating_mul(top)
+                                .saturating_add((256 - vertical_weight).saturating_mul(bottom))
+                                .saturating_add(horizontal_weight.saturating_mul(left))
+                                .saturating_add((256 - horizontal_weight).saturating_mul(right))
+                                .saturating_add(256)
+                                >> 9
+                        }
+                        LosslessPredictor::SmoothVertical => {
+                            vertical_weight
+                                .saturating_mul(top)
+                                .saturating_add((256 - vertical_weight).saturating_mul(bottom))
+                                .saturating_add(128)
+                                >> 8
+                        }
+                        LosslessPredictor::SmoothHorizontal => {
+                            horizontal_weight
+                                .saturating_mul(left)
+                                .saturating_add((256 - horizontal_weight).saturating_mul(right))
+                                .saturating_add(128)
+                                >> 8
+                        }
+                        _ => return Err(PortableUnavailable),
+                    };
+                    *sample =
+                        u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?;
+                }
+            }
+            Ok(prediction)
+        }
+        LosslessPredictor::Paeth => {
+            let mut prediction = vec![0_u16; sample_count];
+            for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
+                for (x, sample) in row.iter_mut().enumerate() {
+                    *sample = paeth_predictor(edges.top[x], edges.left[y], edges.top_left);
+                }
+            }
+            Ok(prediction)
+        }
+    }
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_palette_prediction(
+    palette: PalettePlane,
+    indices: &[u8],
+    sample_count: usize,
+) -> PortableResult<Vec<u16>> {
+    let size = usize::from(palette.size);
+    ((2..=PALETTE_CAPACITY).contains(&size) && indices.len() >= sample_count)
+        .then_some(())
+        .portable()?;
+    indices[..sample_count]
+        .iter()
+        .map(|&index| {
+            let index = usize::from(index);
+            (index < size).then_some(()).portable()?;
+            palette.colors.get(index).copied().portable()
+        })
+        .collect()
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn reconstruct_full_unsplit_prediction(
+    prediction: Vec<u16>,
+    coefficients: CoeffBlockRef<'_>,
+    sample_depth: SampleDepth,
+) -> PortableResult<ReconstructedPlane> {
+    let sample_count = coefficients
+        .width
+        .checked_mul(coefficients.height)
+        .portable()?;
+    (prediction.len() == sample_count)
+        .then_some(())
+        .portable()?;
+    let Some(values) = coefficients.coefficients else {
+        return Ok(ReconstructedPlane {
+            samples: prediction,
+        });
+    };
+    let (horizontal, vertical) = coefficients.transform.axes();
+    let residual = transform::inverse_transform_with_depth(
+        values,
+        coefficients.width,
+        coefficients.height,
+        horizontal,
+        vertical,
+        sample_depth,
+    )
+    .portable()?;
+    (residual.len() == sample_count).then_some(()).portable()?;
+    Ok(reconstruct_lossy_predicted_plane_with_depth(
+        &prediction,
+        &residual,
+        sample_depth,
+    ))
+}
+
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn full_cfl_prediction(
+    luma: &ReconstructedPlane,
+    coded_width: usize,
+    coded_height: usize,
+    visible_width: usize,
+    visible_height: usize,
+    predictor: u16,
+    alpha: i32,
+    sample_depth: SampleDepth,
+) -> PortableResult<Vec<u16>> {
+    let count = coded_width.checked_mul(coded_height).portable()?;
+    (luma.samples.len() == count
+        && visible_width != 0
+        && visible_width <= coded_width
+        && visible_height != 0
+        && visible_height <= coded_height
+        && count.is_power_of_two())
+    .then_some(())
+    .portable()?;
+    let mut ac = Vec::with_capacity(count);
+    let mut sum = 0_i64;
+    for y in 0..coded_height {
+        let source_y = y.min(visible_height.saturating_sub(1));
+        let row_start = source_y.checked_mul(coded_width).portable()?;
+        for x in 0..coded_width {
+            let source_x = x.min(visible_width.saturating_sub(1));
+            let sample = *luma
+                .samples
+                .get(row_start.checked_add(source_x).portable()?)
+                .portable()?;
+            let value = i32::from(sample).saturating_mul(8);
+            ac.push(value);
+            sum = sum.saturating_add(i64::from(value));
+        }
+    }
+    let rounded = sum.saturating_add(i64::try_from(count / 2).unwrap_or(i64::MAX));
+    let mean = i32::try_from(rounded >> count.ilog2()).map_err(|_| PortableUnavailable)?;
+    ac.into_iter()
+        .map(|value| {
+            reconstruct_lossless_cfl_sample(
+                predictor,
+                alpha,
+                value.saturating_sub(mean),
+                0,
+                sample_depth,
+            )
+        })
+        .collect()
+}
+
+/// Reconstruct one unsplit lossy I444 leaf at any AV1 sample depth.
+///
+/// This entry point is intentionally fallible and never substitutes a DC or
+/// constant plane. The public high-depth admission gate remains closed until
+/// the complete spatial walker can supply these normalized edges for every
+/// leaf in coded order.
+#[allow(
+    dead_code,
+    reason = "the high-depth Full walker is integrated after the closed-gate reconstruction core"
+)]
+fn reconstruct_lossy444_unsplit_leaf(
+    syntax: &BlockSyntax,
+    edges: &FullIntraEdges,
+    visible_width: usize,
+    visible_height: usize,
+    enable_intra_edge_filter: bool,
+) -> PortableResult<ClosedLeaf> {
+    matches!(syntax.chroma_sampling, ChromaSampling::Full)
+        .then_some(())
+        .portable()?;
+    syntax.reject_split_transform_syntax()?;
+    let sample_depth = syntax.lossy_quantization.sample_depth;
+    let luma_coefficients = syntax.unsplit_coefficients(0)?;
+    let luma_width = luma_coefficients.width;
+    let luma_height = luma_coefficients.height;
+    let sample_count = luma_width.checked_mul(luma_height).portable()?;
+    (visible_width != 0
+        && visible_width <= luma_width
+        && visible_height != 0
+        && visible_height <= luma_height)
+        .then_some(())
+        .portable()?;
+    let luma_prediction = if syntax.palette.y.is_present() {
+        full_palette_prediction(syntax.palette.y, &syntax.palette.y_indices, sample_count)?
+    } else {
+        full_intra_prediction(
+            lossless_luma_predictor(syntax.luma_predictor),
+            syntax.luma_angle,
+            syntax.filter_intra_mode,
+            luma_width,
+            luma_height,
+            &edges.planes[0],
+            sample_depth,
+            enable_intra_edge_filter,
+        )?
+    };
+    let luma =
+        reconstruct_full_unsplit_prediction(luma_prediction, luma_coefficients, sample_depth)?;
+
+    let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
+        let coefficients = syntax.unsplit_coefficients(plane)?;
+        (coefficients.width == luma_width && coefficients.height == luma_height)
+            .then_some(())
+            .portable()?;
+        let palette = if plane == 1 {
+            syntax.palette.u
+        } else {
+            syntax.palette.v
+        };
+        let prediction = if palette.is_present() {
+            (!matches!(syntax.chroma_predictor, ChromaPredictor::Cfl { .. }))
+                .then_some(())
+                .portable()?;
+            full_palette_prediction(palette, &syntax.palette.uv_indices, sample_count)?
+        } else if let ChromaPredictor::Cfl { alpha_u, alpha_v } = syntax.chroma_predictor {
+            let alpha = if plane == 1 { alpha_u } else { alpha_v };
+            let dc = match (edges.planes[plane].has_top, edges.planes[plane].has_left) {
+                (true, true) => rectangular_full_dc(
+                    &edges.planes[plane].top[..coefficients.width],
+                    &edges.planes[plane].left[..coefficients.height],
+                    sample_depth,
+                )?,
+                (true, false) => one_sided_full_dc(&edges.planes[plane].top[..coefficients.width])?,
+                (false, true) => {
+                    one_sided_full_dc(&edges.planes[plane].left[..coefficients.height])?
+                }
+                (false, false) => sample_depth.midpoint(),
+            };
+            full_cfl_prediction(
+                &luma,
+                luma_width,
+                luma_height,
+                visible_width,
+                visible_height,
+                dc,
+                alpha,
+                sample_depth,
+            )?
+        } else {
+            full_intra_prediction(
+                lossless_chroma_predictor(syntax.chroma_predictor),
+                syntax.chroma_angle,
+                None,
+                coefficients.width,
+                coefficients.height,
+                &edges.planes[plane],
+                sample_depth,
+                enable_intra_edge_filter,
+            )?
+        };
+        reconstruct_full_unsplit_prediction(prediction, coefficients, sample_depth)
+    };
+    let chroma_u = chroma(1)?;
+    let chroma_v = chroma(2)?;
+    Ok(ClosedLeaf {
+        luma_predictor: syntax.luma_predictor,
+        planes: [luma, chroma_u, chroma_v],
+    })
 }
 
 fn reconstruct_lossless_cfl_sample(
@@ -40306,11 +41755,17 @@ fn smooth_weight_table(size: usize) -> PortableResult<&'static [u16]> {
         255, 240, 225, 210, 196, 182, 169, 157, 145, 133, 122, 111, 101, 92, 83, 74, 66, 59, 52,
         45, 39, 34, 29, 25, 21, 17, 14, 12, 10, 9, 8, 8,
     ];
+    const WEIGHTS_64: [u16; 64] = [
+        255, 248, 240, 233, 225, 218, 210, 203, 196, 189, 182, 176, 169, 163, 156, 150, 144, 138,
+        133, 127, 121, 116, 111, 106, 101, 96, 91, 86, 82, 77, 73, 69, 65, 61, 57, 54, 50, 47, 44,
+        41, 38, 35, 32, 29, 27, 25, 22, 20, 18, 16, 15, 13, 12, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 4,
+    ];
     match size {
         4 => Ok(&WEIGHTS_4),
         8 => Ok(&WEIGHTS_8),
         16 => Ok(&WEIGHTS_16),
         32 => Ok(&WEIGHTS_32),
+        64 => Ok(&WEIGHTS_64),
         _ => Err(PortableUnavailable),
     }
 }
@@ -41043,6 +42498,14 @@ fn intra_edge_filter_strength(edge_length: usize, angle: i32, smooth: bool) -> u
         if angle >= 8 {
             return 1;
         }
+    } else if edge_length <= 32 {
+        if angle >= 32 {
+            return 3;
+        }
+        if angle >= 4 {
+            return 2;
+        }
+        return 1;
     } else {
         return 3;
     }
@@ -41056,7 +42519,7 @@ fn intra_edge_filter_strength(edge_length: usize, angle: i32, smooth: bool) -> u
 /// the sixteen-pixel limit after the reference's one-bit size adjustment.
 fn intra_edge_upsample(edge_length: usize, angle: i32, smooth: bool) -> bool {
     let maximum_length = 16_usize >> usize::from(smooth);
-    angle < 40 && edge_length <= maximum_length
+    angle != 0 && angle < 40 && edge_length <= maximum_length
 }
 
 /// Build the AV1 Zone-2 predictor for one lossless 4×4 transform.
@@ -42358,6 +43821,9 @@ impl Lossy420Decoder {
         tools: BlockTools,
         neighbor: &FirstLeaf,
     ) -> PortableResult<FirstLeaf> {
+        (tools.sample_depth == quantization.sample_depth)
+            .then_some(())
+            .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
 
         let quantization = self.prepare_quantization(quantization);
@@ -42516,6 +43982,9 @@ impl Lossy420Decoder {
         tools: BlockTools,
         neighbors: VerticalNeighbors<'_>,
     ) -> PortableResult<FirstLeaf> {
+        (tools.sample_depth == quantization.sample_depth)
+            .then_some(())
+            .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
 
         let quantization = self.prepare_quantization(quantization);
@@ -42804,7 +44273,20 @@ impl Lossy420Decoder {
         left_luma_contexts: [u8; 16],
         left_chroma_contexts: [[u8; 8]; 2],
     ) -> PortableResult<FirstLeaf> {
+        (tools.sample_depth == quantization.sample_depth)
+            .then_some(())
+            .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
+        if matches!(self.chroma_sampling, ChromaSampling::Full)
+            && quantization.sample_depth != SampleDepth::EIGHT
+        {
+            // The strict path requires normalized top/right and left/below
+            // extensions assembled from positioned leaves. The legacy
+            // geometry-specific carrier cannot represent those edges for all
+            // Full block sizes, so never let high-depth data fall through to
+            // its eight-bit substitutions.
+            return Err(PortableUnavailable);
+        }
         let quantization = self.prepare_quantization(quantization);
         let mut tools = tools;
         // `get_tx_ctx` counts whether the already decoded left transform is
@@ -43177,7 +44659,16 @@ impl Lossy420Decoder {
         tools: BlockTools,
         neighbors: VerticalNeighbors<'_>,
     ) -> PortableResult<FirstLeaf> {
+        (tools.sample_depth == quantization.sample_depth)
+            .then_some(())
+            .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
+
+        if matches!(self.chroma_sampling, ChromaSampling::Full)
+            && quantization.sample_depth != SampleDepth::EIGHT
+        {
+            return Err(PortableUnavailable);
+        }
 
         let quantization = self.prepare_quantization(quantization);
         let mut tools = tools;
@@ -44348,6 +45839,9 @@ impl Lossy420Decoder {
         tools: BlockTools,
         neighbors: RectangularNeighbors<'_>,
     ) -> PortableResult<FirstLeaf> {
+        (tools.sample_depth == quantization.sample_depth)
+            .then_some(())
+            .portable()?;
         let quantization = self.prepare_quantization(quantization);
         let cdef_index_bits = self.take_cdef_index_bits();
         let syntax = self.decode_syntax_with_cdef(
@@ -44480,8 +45974,32 @@ impl Lossy420Decoder {
         quantization: LossyQuantization,
         tools: BlockTools,
     ) -> PortableResult<FirstLeaf> {
+        (tools.sample_depth == quantization.sample_depth)
+            .then_some(())
+            .portable()?;
+        let full_high_depth = matches!(syntax_chroma_sampling, ChromaSampling::Full)
+            && quantization.sample_depth != SampleDepth::EIGHT;
+        if full_high_depth
+            && matches!(
+                transform_grid,
+                TransformGrid::Vertical16x64
+                    | TransformGrid::Horizontal32x16
+                    | TransformGrid::Horizontal64x16
+                    | TransformGrid::Square64
+            )
+        {
+            // These four legacy syntax arms own only their 4:2:0 half-size
+            // chroma carriers. Reject before consuming delta-q, CDEF, or
+            // entropy until Full-resolution carriers are wired explicitly.
+            return Err(PortableUnavailable);
+        }
         let quantization = self.prepare_quantization(quantization);
         let cdef_index_bits = self.take_cdef_index_bits();
+        // The established eight-bit paths retain their deliberately narrow
+        // fixture-backed policy. Full-resolution high-depth syntax uses the
+        // complete legal intra-mode alphabet; reconstruction remains behind
+        // the public high-depth admission gate until its spatial walker is
+        // connected.
         let syntax = self.decode_syntax_with_cdef(
             decoder,
             transform_grid,
@@ -44509,14 +46027,16 @@ impl Lossy420Decoder {
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
                 },
-                allow_horizontal_chroma: false,
-                allow_diagonal_chroma: matches!(
-                    (syntax_chroma_sampling, transform_grid),
-                    (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
-                ),
+                allow_horizontal_chroma: full_high_depth,
+                allow_diagonal_chroma: full_high_depth
+                    || matches!(
+                        (syntax_chroma_sampling, transform_grid),
+                        (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
+                    ),
                 allow_diagonal_luma: true,
-                allow_smooth_chroma: false,
-                allow_smooth_luma: matches!(transform_grid, TransformGrid::Horizontal16x4),
+                allow_smooth_chroma: full_high_depth,
+                allow_smooth_luma: full_high_depth
+                    || matches!(transform_grid, TransformGrid::Horizontal16x4),
             },
             tools,
             cdef_index_bits,
@@ -44526,6 +46046,53 @@ impl Lossy420Decoder {
             Err(_) => return Err(PortableUnavailable),
         };
         self.remember_qindex(&syntax, decoder);
+        if full_high_depth {
+            let (grid_width, grid_height, _) = transform_grid.properties();
+            let coded_width = grid_width.checked_mul(4).portable()?;
+            let coded_height = grid_height.checked_mul(4).portable()?;
+            let visible_width = usize::try_from(width)
+                .map_err(|_| PortableUnavailable)?
+                .min(coded_width);
+            let visible_height = usize::try_from(height)
+                .map_err(|_| PortableUnavailable)?
+                .min(coded_height);
+            let edges = FullIntraEdges::origin(
+                coded_width,
+                coded_height,
+                syntax.lossy_quantization.sample_depth,
+            )?;
+            let closed = reconstruct_lossy444_unsplit_leaf(
+                &syntax,
+                &edges,
+                visible_width,
+                visible_height,
+                tools.enable_intra_edge_filter,
+            )?;
+            let luma_context = lossy_luma_context(&syntax);
+            let chroma_contexts = lossy_chroma_contexts(&syntax);
+            let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
+            let (chroma_right, chroma_bottom) = chroma_edge_contexts_for_syntax(&syntax);
+            let leaf = visible_leaf(
+                closed,
+                Some(syntax.chroma_predictor),
+                transform_grid,
+                width,
+                height,
+                ChromaSampling::Full,
+                luma_transform_context(transform_grid, false),
+                false,
+                luma_edge_contexts,
+            );
+            return Ok(with_lossy_luma_context(
+                with_lossy_chroma_edge_contexts(
+                    with_palette_cache(leaf, syntax.palette.cache_state()),
+                    chroma_contexts,
+                    chroma_right,
+                    chroma_bottom,
+                ),
+                luma_context,
+            ));
+        }
         let predictors = origin_predictors_with_depth(
             syntax.luma_predictor,
             syntax.lossy_quantization.sample_depth,
