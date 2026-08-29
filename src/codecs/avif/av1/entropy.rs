@@ -2173,7 +2173,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             super::block::combined_full_chroma_edge_contexts_from_positioned_neighbors(
                                 &neighbors,
                                 plane,
-                                usize::try_from(node.width).unwrap_or(0).min(8),
+                                usize::try_from(node.width).unwrap_or(0).min(16),
                                 true,
                             )
                         })
@@ -2642,7 +2642,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             super::block::combined_full_chroma_edge_contexts_from_positioned_neighbors(
                                 &neighbors,
                                 plane,
-                                usize::try_from(node.height).unwrap_or(0).min(8),
+                                usize::try_from(node.height).unwrap_or(0).min(16),
                                 false,
                             )
                         })
@@ -3030,8 +3030,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
-        chroma_right_contexts: [[0x40; 8]; 2],
-        chroma_bottom_contexts: [[0x40; 8]; 2],
+        chroma_right_contexts: [[0x40; 16]; 2],
+        chroma_bottom_contexts: [[0x40; 16]; 2],
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
@@ -3409,8 +3409,8 @@ pub(super) fn validate_complete_lossless_444_partition(
         chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
-        chroma_right_contexts: [[0x40; 8]; 2],
-        chroma_bottom_contexts: [[0x40; 8]; 2],
+        chroma_right_contexts: [[0x40; 16]; 2],
+        chroma_bottom_contexts: [[0x40; 16]; 2],
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
