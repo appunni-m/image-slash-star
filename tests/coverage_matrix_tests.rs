@@ -3,9 +3,11 @@
 //! Decode: load asset → decode → compare pixel bytes with PIL reference bytes.
 //! Encode: decode reference → encode with params → decode → compare pixel bytes.
 
+use std::any::Any;
 use std::collections::{HashMap, HashSet, hash_map::Entry};
 use std::ffi::OsString;
 use std::fs;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -1243,6 +1245,20 @@ mod matrix_row_selection_tests {
         assert!(try_claim_selected_matrix_dispatch(&claimed));
         assert!(!try_claim_selected_matrix_dispatch(&claimed));
     }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn public_encode_unwind_reports_string_and_non_string_payloads() {
+        let string_panic = catch_public_encode_call(|| -> img::ImageResult<()> {
+            panic!("test encode panic");
+        });
+        assert_eq!(string_panic, Err("test encode panic".to_owned()));
+
+        let non_string_panic = catch_public_encode_call(|| -> img::ImageResult<()> {
+            std::panic::panic_any(7_u8);
+        });
+        assert_eq!(non_string_panic, Err("non-string panic payload".to_owned()));
+    }
 }
 
 #[cfg(coverage)]
@@ -1812,6 +1828,46 @@ fn option_text(value: &Value) -> String {
     value
         .as_str()
         .map_or_else(|| value.to_string(), str::to_owned)
+}
+
+/// Run one public encode-side call while retaining the matrix's ordinary
+/// result contract.
+///
+/// The unwind boundary belongs only to this assurance test. It does not make
+/// production codec calls unwind-safe, and the matrix deliberately leaves
+/// fixture loading, source preparation, and assertions outside the boundary so
+/// harness failures cannot be misreported as codec panics.
+fn catch_public_encode_call<T>(
+    call: impl FnOnce() -> img::ImageResult<T>,
+) -> Result<img::ImageResult<T>, String> {
+    catch_unwind(AssertUnwindSafe(call)).map_err(panic_payload_message)
+}
+
+fn panic_payload_message(payload: Box<dyn Any + Send>) -> String {
+    if let Some(message) = payload.downcast_ref::<String>() {
+        return message.clone();
+    }
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        return (*message).to_owned();
+    }
+    "non-string panic payload".to_owned()
+}
+
+fn run_counted_public_encode_call<T>(
+    calls: &mut u64,
+    panics: &mut u64,
+    label: &str,
+    call: impl FnOnce() -> img::ImageResult<T>,
+) -> Option<img::ImageResult<T>> {
+    *calls = (*calls).saturating_add(1);
+    match catch_public_encode_call(call) {
+        Ok(result) => Some(result),
+        Err(message) => {
+            *panics = (*panics).saturating_add(1);
+            eprintln!("  FAIL [{label}]: public encode call panicked: {message}");
+            None
+        }
+    }
 }
 
 fn legacy_encode_options(format: &str, params: &HashMap<String, Value>) -> Vec<(String, String)> {
@@ -4734,6 +4790,8 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
     let mut failed = 0u32;
     let mut skipped = 0u32;
     let mut planned_not_executed = 0u32;
+    let mut public_encode_calls = 0u64;
+    let mut public_encode_panics = 0u64;
     let assets_dir = manifest_dir
         .join("tests")
         .join("fixtures")
@@ -5217,7 +5275,15 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                 }
             };
             let legacy_pairs = legacy_encode_options(fmt_name, &row.params);
-            let mut opts = img::EncodeOptions::try_from_legacy_pairs(format, &legacy_pairs);
+            let Some(mut opts) = run_counted_public_encode_call(
+                &mut public_encode_calls,
+                &mut public_encode_panics,
+                &format!("encode:{fmt_name}:{}:options", row.id),
+                || img::EncodeOptions::try_from_legacy_pairs(format, &legacy_pairs),
+            ) else {
+                failed += 1;
+                continue;
+            };
             if let Ok(img::EncodeOptions::Avif(options)) = &mut opts {
                 options.advanced = advanced_encode_options(&row.params);
             }
@@ -5254,7 +5320,15 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         zero_image_for_mode(base.width, base.height, mode),
                         "public-mode contract image must be constructible",
                     );
-                    let result = img::encode(&image, format, options);
+                    let Some(result) = run_counted_public_encode_call(
+                        &mut public_encode_calls,
+                        &mut public_encode_panics,
+                        &format!("encode:{fmt_name}:{}:mode:{name}", row.id),
+                        || img::encode(&image, format, options),
+                    ) else {
+                        contract_failures.push(format!("{name}: panic"));
+                        continue;
+                    };
                     if !matches!(
                         result,
                         Err(img::ImageError::Unsupported {
@@ -5276,9 +5350,20 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         "invalid-state contract image must be constructible",
                     );
                     invalid.color = img::ColorType::Rgb8;
-                    let result = img::encode(&invalid, format, options);
-                    if !matches!(result, Err(img::ImageError::Parameter { .. })) {
-                        contract_failures.push(format!("inconsistent color/mode: {result:?}"));
+                    let result = run_counted_public_encode_call(
+                        &mut public_encode_calls,
+                        &mut public_encode_panics,
+                        &format!("encode:{fmt_name}:{}:invalid-color-mode", row.id),
+                        || img::encode(&invalid, format, options),
+                    );
+                    match result {
+                        Some(Err(img::ImageError::Parameter { .. })) => {}
+                        Some(result) => {
+                            contract_failures.push(format!("inconsistent color/mode: {result:?}"));
+                        }
+                        None => {
+                            contract_failures.push("inconsistent color/mode: panic".to_owned());
+                        }
                     }
                 }
                 let fixture_has_oracle_success = row.rust_expect_error
@@ -5330,7 +5415,18 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     )
                     .clone();
                     malformed.pixels.pop();
-                    img::encode(&malformed, format, options)
+                    match run_counted_public_encode_call(
+                        &mut public_encode_calls,
+                        &mut public_encode_panics,
+                        &format!("encode:{fmt_name}:{}:malformed-pixels", row.id),
+                        || img::encode(&malformed, format, options),
+                    ) {
+                        Some(result) => result,
+                        None => {
+                            failed += 1;
+                            continue;
+                        }
+                    }
                 }
                 Ok(options) => {
                     if let Some(dimensions) = row.params.get("source_dimensions") {
@@ -5357,9 +5453,31 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                             )),
                             "source height must fit u32",
                         );
-                        img::encode(&malformed, format, options)
+                        match run_counted_public_encode_call(
+                            &mut public_encode_calls,
+                            &mut public_encode_panics,
+                            &format!("encode:{fmt_name}:{}:source-dimensions", row.id),
+                            || img::encode(&malformed, format, options),
+                        ) {
+                            Some(result) => result,
+                            None => {
+                                failed += 1;
+                                continue;
+                            }
+                        }
                     } else {
-                        img::encode_sequence(decoded, format, options)
+                        match run_counted_public_encode_call(
+                            &mut public_encode_calls,
+                            &mut public_encode_panics,
+                            &format!("encode:{fmt_name}:{}:sequence", row.id),
+                            || img::encode_sequence(decoded, format, options),
+                        ) {
+                            Some(result) => result,
+                            None => {
+                                failed += 1;
+                                continue;
+                            }
+                        }
                     }
                 }
             };
@@ -5472,14 +5590,28 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     failed += 1;
                     continue;
                 }
-                match img::encode(
-                    require_some(
-                        decoded.first_image(),
-                        "encoded sequence must have a first frame",
-                    ),
-                    format,
-                    require_ok(opts.as_ref(), "typed encode options"),
+                let still = match run_counted_public_encode_call(
+                    &mut public_encode_calls,
+                    &mut public_encode_panics,
+                    &format!("encode:{fmt_name}:{}:one-frame-still", row.id),
+                    || {
+                        img::encode(
+                            require_some(
+                                decoded.first_image(),
+                                "encoded sequence must have a first frame",
+                            ),
+                            format,
+                            require_ok(opts.as_ref(), "typed encode options"),
+                        )
+                    },
                 ) {
+                    Some(result) => result,
+                    None => {
+                        failed += 1;
+                        continue;
+                    }
+                };
+                match still {
                     Ok(still) if still == encoded => {}
                     Ok(_) => {
                         eprintln!(
@@ -5654,11 +5786,13 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
     if filtered {
         if total > 0 || planned_not_executed > 0 {
             eprintln!(
-                "\nencode matrix (selected): {passed}/{total} active rows passed, {failed} failed, {planned_not_executed} planned-not-executed"
+                "\nencode matrix (selected): {passed}/{total} active rows passed, {failed} failed, {planned_not_executed} planned-not-executed; public encode calls={public_encode_calls}, panics={public_encode_panics}"
             );
         }
     } else {
-        eprintln!("\nencode matrix: {passed}/{total} passed, {failed} failed, {skipped} skipped");
+        eprintln!(
+            "\nencode matrix: {passed}/{total} passed, {failed} failed, {skipped} skipped; public encode calls={public_encode_calls}, panics={public_encode_panics}"
+        );
     }
     if failed > 0 {
         panic!("{failed} encode test(s) failed");
