@@ -151,7 +151,23 @@ promotes only the observed predictor/edge-policy and matrix-9 class; broader
 angles, predictors, transforms, matrices, qcats, following-leaf states, and
 AVF-STILL-001 remain partial.
 
-The managed incremental Coverage MCP run for this exact reconstruction selector
+The managed incremental Coverage MCP run for this exact predictor reconstruction
+selector is `29ab26e8-5069-4d43-bc19-7dadee91cb33`, with ingested snapshot
+`5679a889-1feb-48e2-8253-4bf2c5ab020d` and explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed in 41,734 ms at exact
+implementation commit `4377ca3e29db98fd1099d00cf8e673727ebe82de`; the managed
+test log reports 1 passed, 0 failed, and 43 filtered out. Its additive
+baseline-union review reports +8 lines, +10 branches, +0 functions, and +937
+regions; denominator changes are +4,492/+562/+67/+12,846. The additive-union
+projection reports 1,966 newly covered line identities; the selected snapshot
+diff reports 633 newly covered line identities, 75,764 baseline observations
+were not observed, and zero regressions were reported. Merge exactness is false
+and named-test attribution is unavailable. Snapshot metadata retains commit
+`3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat; the durable
+run record is exact for the implementation commit. This is bounded selected-
+subset evidence, not a complete four-metric release measurement.
+
+The managed incremental Coverage MCP run for the preceding H_DCT/CFL witness
 is `90d68af5-f06f-4392-b5e6-b2fda4a74c1c`, with ingested snapshot
 `9467e718-f36b-4910-bace-d04d89ebc5c8` and explicit baseline
 `7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed in 38,688 ms at exact
