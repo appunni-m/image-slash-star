@@ -24892,6 +24892,164 @@ fn reconstruct_following_lossy_monochrome_square4_horizontal_leaf(
     )
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R16x4 prediction keeps the complete edge state and rectangular transform syntax explicit"
+)]
+fn reconstruct_lossy_luma_16x4_from_edges(
+    luma_predictor: LumaPredictor,
+    luma_angle: Option<i32>,
+    filter_intra_mode: Option<usize>,
+    luma_top: [u16; 16],
+    luma_left: [u16; 4],
+    top_left: u16,
+    has_top: bool,
+    has_left: bool,
+    lossy_luma_coefficients: Option<LossyTransformCoefficients>,
+    lossy_luma_16x4_transform: Lossy4x8TransformKind,
+    lossy_luma_4x4_split: Option<LossyLuma4x4Split>,
+    lossy_luma_8x4_split: Option<LossyLuma8x4Split>,
+) -> PortableResult<ReconstructedPlane> {
+    if let Some(split) = lossy_luma_8x4_split {
+        return reconstruct_lossy_luma_16x4_8x4_split(
+            luma_predictor,
+            luma_angle,
+            filter_intra_mode,
+            luma_top,
+            luma_left,
+            top_left,
+            has_top,
+            has_left,
+            split,
+        );
+    }
+    if let Some(split) = lossy_luma_4x4_split {
+        return reconstruct_lossy_luma_16x4_split(
+            luma_predictor,
+            luma_angle,
+            filter_intra_mode,
+            luma_top,
+            luma_left,
+            top_left,
+            has_top,
+            has_left,
+            split,
+        );
+    }
+    if let Some(mode) = filter_intra_mode {
+        let prediction: [u16; 64] =
+            reconstruct_filter_intra_prediction(mode, 16, 4, top_left, &luma_top, &luma_left)?
+                .try_into()
+                .map_err(|_| PortableUnavailable)?;
+        return Ok(reconstruct_lossy_luma_16x4_from_prediction(
+            prediction,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ));
+    }
+
+    let luma = match luma_predictor {
+        LumaPredictor::Dc => reconstruct_lossy_luma_16x4(
+            match (has_top, has_left) {
+                (true, true) => rectangular_dc_predictor(&luma_top, &luma_left),
+                (true, false) => one_sided_dc_predictor_16(luma_top),
+                (false, true) => one_sided_dc_predictor_4(luma_left),
+                (false, false) => 128,
+            },
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ),
+        LumaPredictor::Vertical => reconstruct_lossy_luma_16x4_vertical(
+            luma_top,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ),
+        LumaPredictor::Horizontal => reconstruct_lossy_luma_16x4_horizontal(
+            luma_left,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ),
+        LumaPredictor::Smooth => reconstruct_lossy_luma_16x4_smooth(
+            luma_top,
+            luma_top[15],
+            luma_left,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ),
+        LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_16x4_smooth_horizontal(
+            luma_left,
+            luma_top[15],
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ),
+        LumaPredictor::Paeth => reconstruct_lossy_luma_16x4_from_prediction(
+            std::array::from_fn(|index| {
+                paeth_predictor(luma_top[index % 16], luma_left[index / 16], top_left)
+            }),
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ),
+        LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
+            reconstruct_lossy_luma_16x4_diagonal_z1(
+                luma_top,
+                top_left,
+                luma_angle.ok_or(PortableUnavailable)?,
+                lossy_luma_coefficients,
+                lossy_luma_16x4_transform,
+            )?
+        }
+        LumaPredictor::DiagonalDownRight
+        | LumaPredictor::Diagonal113
+        | LumaPredictor::Diagonal157 => reconstruct_lossy_luma_16x4_diagonal_z2(
+            luma_top,
+            luma_left,
+            top_left,
+            luma_angle.ok_or(PortableUnavailable)?,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        )?,
+        LumaPredictor::Diagonal203 => reconstruct_lossy_luma_16x4_diagonal_z3(
+            luma_left,
+            top_left,
+            luma_angle.ok_or(PortableUnavailable)?,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        )?,
+        _ => return Err(PortableUnavailable),
+    };
+    Ok(luma)
+}
+
+fn reconstruct_following_lossy_monochrome_horizontal_16x4_leaf(
+    syntax: BlockSyntax,
+    neighbor: &ClosedLeaf,
+    neighbor_width: u32,
+    neighbor_height: u32,
+) -> PortableResult<ClosedLeaf> {
+    let luma_left = right_edge_at::<4>(&neighbor.planes[0], neighbor_width, neighbor_height, 0);
+    let luma = reconstruct_lossy_luma_16x4_from_edges(
+        syntax.luma_predictor,
+        syntax.luma_angle,
+        syntax.filter_intra_mode,
+        [luma_left[0]; 16],
+        luma_left,
+        luma_left[0],
+        false,
+        true,
+        syntax.lossy_luma_coefficients,
+        syntax.lossy_luma_16x4_transform,
+        syntax.lossy_luma_4x4_split,
+        syntax.lossy_luma_8x4_split,
+    )?;
+    let empty_chroma = ReconstructedPlane {
+        samples: vec![128; 64],
+    };
+    Ok(ClosedLeaf {
+        luma_predictor: syntax.luma_predictor,
+        planes: [luma, empty_chroma.clone(), empty_chroma],
+    })
+}
+
 // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:1176-1545. For the accepted
 // first-frame leaves, dav1d visits the 2x2, 4x2, 2x4, or 4x4 transform grid in
 // row-major order. The first DC-only transform reconstructs one constant
@@ -41257,7 +41415,7 @@ impl Lossy420Decoder {
         let quantization = self.prepare_quantization(quantization);
         matches!(
             transform_grid,
-            TransformGrid::Square4 | TransformGrid::Vertical4x16
+            TransformGrid::Square4 | TransformGrid::Vertical4x16 | TransformGrid::Horizontal16x4
         )
         .then_some(())
         .portable()?;
@@ -41327,12 +41485,21 @@ impl Lossy420Decoder {
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
 
+        let neighbor_width = neighbor.width;
+        let neighbor_height = neighbor.height;
         let neighbor = ClosedLeaf {
             luma_predictor: neighbor.luma_predictor,
             planes: neighbor.planes.clone(),
         };
         let leaf = if matches!(transform_grid, TransformGrid::Square4) {
             reconstruct_following_lossy_monochrome_square4_horizontal_leaf(syntax, &neighbor)?
+        } else if matches!(transform_grid, TransformGrid::Horizontal16x4) {
+            reconstruct_following_lossy_monochrome_horizontal_16x4_leaf(
+                syntax,
+                &neighbor,
+                neighbor_width,
+                neighbor_height,
+            )?
         } else if matches!(transform_grid, TransformGrid::Vertical4x16) {
             let luma_left = right_edge_4x16(&neighbor.planes[0]);
             let luma = reconstruct_lossy_luma_4x16_from_edges(

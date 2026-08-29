@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 312 rows total, 309 active, 3 explicit planned
+- AVIF decode/inspect/verify: 313 rows total, 310 active, 3 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,536 rows total, 1136 active decode rows, 365 active encode
+- Whole matrix: 1,537 rows total, 1137 active decode rows, 365 active encode
   rows, 3 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -132,6 +132,30 @@ the corresponding status is recorded in `roadmap.json`:
   This promotes only the exact observed H_DCT/CFL class; broader H_DCT,
   V_DCT, other predictor/partition/transform states, and `AVF-STILL-001`
   remain partial.
+- The newest bounded following-leaf proof is
+  `coverage_h16x4_following_h_dct_01.avif`: a deterministic 32x16 8-bit
+  4:2:0 `PARTITION_SPLIT` frame with two level-3 `PARTITION_H4` children and
+  eight ordered unsplit `Horizontal16x4` luma leaves. The top right-hand leaf
+  has no chroma by 4:2:0 geometry, consumes the preceding left group's
+  four-sample right edge, and selects H_DCT (CDF symbol 3, dav1d `txtp=11`,
+  EOB 63); the lower right leaves select UV mode 13/CFL with nonzero TX6 U/V
+  payloads. Safe Rust now admits the missing horizontally following
+  monochrome H16x4 path and matches the pinned 7,485-operation scalar dav1d
+  trace, exact partition and Y/U/V planes, and the independent 1,536-byte
+  Pillow RGB8 reference. The input-only campaign evaluated 100 candidates
+  across 10 families, qualified 65, and promoted
+  `h16x4-following-f07-n02` (seed 2,164,602) without invoking repository Rust;
+  its report is
+  `tests/fixtures/outputs/av1_search/coverage_horizontal16x4_following_campaign_01.json`
+  (SHA-256
+  `33bcdaaca0c559de0efa1d4c01372db3d25212bf63809fd9aff2bf278e67d97a`).
+  Fixture, encoded-item, and Pillow RGB SHA-256 values are
+  `623d8ac1eb5ecfc846c6d16c503d131109134b7ca6ad248b98155995da27af5f`,
+  `06810448987533c5e4d14a00629c3f609738a5a758edbdebae0c13bbcac0c1d1`, and
+  `85977d9e8beab45b30906bbe60c7918b332d5e6fa4c4719177e203f92ce82356`.
+  This closes only the bounded following right-hand H16x4 H_DCT/CFL
+  edge-handoff class; V_DCT, broader H16x4 states, other dimensions and
+  optional tools, sequences, encoding, and `AVF-STILL-001` remain partial.
 - The new bounded AVIF witness is
   `coverage_v4x16_predictor_adst_adst_01.avif`: a deterministic 16x16 8-bit
   4:2:0 `PARTITION_V4` stream with four `Vertical4x16` luma leaves. Its
@@ -798,7 +822,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  238 reconstruction cases; a selected run reads and executes only the
+  243 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does
@@ -1826,7 +1850,7 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,536 total | 1,139 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,136 active decode rows, 365 active encode rows, 3 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,537 total | 1,140 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,137 active decode rows, 365 active encode rows, 3 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
 | Current native all-feature ordinary contracts | 44/44 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |

@@ -2,7 +2,7 @@
 
 Status: safe Rust runtime, bounded still-decoder subset, explicit planned gaps
 
-Reviewed: 2026-08-27
+Reviewed: 2026-08-29
 
 Current claim-ledger implementation anchor:
 `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
@@ -70,10 +70,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 312 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 313 AVIF decode rows and 32 encode
 rows:
 
-- 309 decode rows are active: portable still reconstruction and structural
+- 310 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and the five-frame sequence.
@@ -141,6 +141,29 @@ review reports +8 lines, +10 branches, +0 functions, and +938 regions, with
 zero regressions; 1,867 selected line identities were newly covered. Merge
 exactness is false and named-test attribution is unavailable, so this remains
 bounded selected-subset evidence rather than a full-release coverage claim.
+
+The newest bounded following-leaf witness is
+`coverage_h16x4_following_h_dct_01.avif`: a deterministic 32x16 8-bit 4:2:0
+`PARTITION_SPLIT` frame with two level-3 `PARTITION_H4` children and eight
+ordered unsplit `Horizontal16x4` luma leaves. The top right-hand leaf has no
+chroma by geometry, consumes the preceding left group's four-sample right edge,
+and selects H_DCT (CDF symbol 3, dav1d `txtp=11`, EOB 63); the lower right
+leaves select UV mode 13/CFL with nonzero TX6 U/V payloads. Safe Rust matches
+the pinned 7,485-operation scalar dav1d trace, exact partition and Y/U/V
+planes, and the independent 1,536-byte Pillow RGB8 reference. The input-only
+campaign evaluated 100 candidates across 10 families, qualified 65, and
+promoted `h16x4-following-f07-n02` (seed 2,164,602) without invoking repository
+Rust. Its report is
+`tests/fixtures/outputs/av1_search/coverage_horizontal16x4_following_campaign_01.json`
+(SHA-256
+`33bcdaaca0c559de0efa1d4c01372db3d25212bf63809fd9aff2bf278e67d97a`). Fixture,
+encoded-item, and Pillow RGB SHA-256 values are
+`623d8ac1eb5ecfc846c6d16c503d131109134b7ca6ad248b98155995da27af5f`,
+`06810448987533c5e4d14a00629c3f609738a5a758edbdebae0c13bbcac0c1d1`, and
+`85977d9e8beab45b30906bbe60c7918b332d5e6fa4c4719177e203f92ce82356`.
+This closes only the bounded following right-hand H16x4 H_DCT/CFL
+edge-handoff class; V_DCT, broader H16x4 states, other dimensions and
+optional tools, sequences, encoding, and AVF-STILL-001 remain partial.
 
 The preceding bounded witnesses are the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
