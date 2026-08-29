@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1537,
-      "decode_rows": 1140,
+      "total_rows": 1538,
+      "decode_rows": 1141,
       "encode_rows": 397,
-      "decode_active": 1137,
+      "decode_active": 1138,
       "decode_planned": 3,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 313,
-      "decode_active": 310,
+      "decode_rows": 314,
+      "decode_active": 311,
       "decode_planned": 3,
       "encode_rows": 32,
       "encode_active": 0,
@@ -4336,6 +4336,60 @@
             "V_DCT, R16x8 H_DCT, other H_DCT geometries/contexts, alternate transforms, unverified matrices/qcats, optional tools, depth/subsampling/alpha/sequence/encoding remain outside this campaign."
           ],
           "next_action": "Retain AVF-STILL-001 and AVF-ENTROPY-001 as partial; choose the next target only from newly verified source-backed evidence rather than coverage rankings."
+        },
+        "current_slice_update_2026_08_29_h16x4_predictor_f02_n08": {
+          "status": "in_progress",
+          "target": "A distinct origin 16x16 8-bit 4:2:0 PARTITION_H4 witness from the maintained predictor campaign: four unsplit Horizontal16x4 luma leaves with luma modes [10, 1, 1, 3] and ADST_DCT only in leaf 2",
+          "source_campaign": "tests/fixtures/outputs/av1_search/coverage_horizontal16x4_predictor_transform_campaign_01.json",
+          "source_candidate": "h16x4-f02-n08",
+          "candidate": {
+            "quality": 74,
+            "speed": 0,
+            "seed": 164108,
+            "input_rgb_sha256": "cc593e8dcadcc51d2c00347443650283b75d96a137e03399479827b056e9cdfc",
+            "encoded_file_sha256": "e0ce541fcc43eba37dda21550ad16b7f346aa67676bf64d9511720d968e3a879",
+            "encoded_item_sha256": "059619a3bffe07a6747014349d5dc408f25d57045c8872d07cb1d7489a234edb",
+            "decoded_yuv_sha256": "56dee3ef62664fba5ce946211502d8cb1c3215ae3112274433d166d1e78cfb65",
+            "pillow_rgb_sha256": "3881e6c66c26ad39ae3f08c5f4391a3db0d2cdaa95895fb25cb57c557e48f46d"
+          },
+          "required_invariants": [
+            "The generator must reproduce the candidate input and the exact encoded file/item bytes; expected artifacts are generated, never hand-edited.",
+            "The pinned origin H4 tree has four ordered unsplit H16x4 leaves with modes [10, 1, 1, 3].",
+            "Leaf 2 records CDF transform symbol 5 -> dav1d txtp 1 (ADST_DCT), TX14, EOB21, proving an AC outside DC; the other luma leaves retain their exact DCT_DCT records and EOBs 21, 25, and 12.",
+            "The exact chroma-owning leaves retain skipped TX6/txtp=0 U/V records; no generic skipped-chroma claim is substituted.",
+            "Pinned dav1d partition/entropy/YUV and Pillow RGB evidence matches the generated fixture, with repository_rust_invoked=false."
+          ],
+          "active_duplicate_audit": {
+            "encoded_file_or_item_hash_matches": 0,
+            "exact_active_reconstruction_syntax_matches": 0,
+            "only_active_four_leaf_origin_adst_dct_fixture": "coverage_h16x4_predictor_adst_dct_01.avif"
+          },
+          "production_decision": "Evidence-only unless the current safe-Rust decoder exposes a first divergence in this already-supported H16x4 ADST_DCT semantic path; no production change is justified by coverage alone.",
+          "touchpoints": [
+            "scripts/generate_test_assets.py",
+            "scripts/generate_av1_reconstruction_refs.py",
+            "manifest.yaml",
+            "tests/fixtures/coverage_matrix.json",
+            "tests/fixtures/outputs/av1_reconstruction.json",
+            "tests/coverage_matrix_tests.rs",
+            "docs/roadmap-new.md",
+            "docs/avif.md",
+            "tests/fixtures/claim_ledger.json"
+          ],
+          "oracle": {
+            "pillow": "12.2.0",
+            "libavif": "1.4.1",
+            "libaom": "3.13.2",
+            "dav1d": "1.5.3-0-gb546257f",
+            "dav1d_commit": "b546257f770768b2c88258c533da38b91a06f737"
+          },
+          "validation": "First run current safe Rust against the generated candidate. If it passes, add exact generated references/assertions, run the selected reconstruction case plus existing ADST_DCT regression and all strict repository gates, then run one managed incremental Coverage MCP selector against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. Record all four deltas, denominator changes, regressions, run/snapshot IDs, duration, exact commit, and selected-subset limitations.",
+          "negative_boundaries": [
+            "Other ADST_DCT predictor vectors, transform sizes, matrices, qcats, EOB sentences, and chroma states",
+            "H16x4 following leaves, V_DCT/H_DCT variants, split/depth variants, and optional tools",
+            "High-bit-depth, HDR, animation/sequence, alpha, other subsampling, malformed/truncated residuals, and all AVIF encoding rows"
+          ],
+          "status_note": "Requirement packet accepted by the read-only Sol clarifier; implementation and generated evidence are not yet verified."
         }
       },
       "AVF-ENTROPY-001": {

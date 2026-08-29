@@ -5374,6 +5374,59 @@ def gen_avif():
         speed=0,
     )
 
+    def horizontal16x4_predictor_adst_dct_f02_n08():
+        """Generate the second independent H16x4 ADST-DCT witness.
+
+        This is ``h16x4-f02-n08`` from the pinned predictor campaign.  Its
+        third Horizontal16x4 luma leaf selects ADST-DCT while the other three
+        leaves remain DCT-DCT.  The formula is kept here so the promoted
+        fixture is regenerated from pixels rather than copied AVIF bytes.
+        """
+
+        amplitude = 20
+        phase = 9
+        bases = (48, 104, 160, 216)
+
+        def pixel(x, y):
+            band = y // 4
+            local_y = y % 4
+            signal = ((2 * x - 15) * amplitude) // 4
+            signal += (local_y - 1) * amplitude // 3
+            value = clamp_channel(bases[band] + signal)
+            return (value, value, value)
+
+        pixels = image_from_pixels((16, 16), pixel)
+        expected_sha256 = (
+            "cc593e8dcadcc51d2c00347443650283b75d96a137e03399479827b056e9cdfc"
+        )
+        if hashlib.sha256(pixels.tobytes()).hexdigest() != expected_sha256:
+            raise RuntimeError("H16x4 predictor F02/n08 source changed")
+        return pixels
+
+    write_campaign_image(
+        "coverage_h16x4_predictor_adst_dct_f02_n08",
+        horizontal16x4_predictor_adst_dct_f02_n08(),
+        "4:2:0",
+        advanced={
+            "min-partition-size": "4",
+            "max-partition-size": "16",
+            "use-intra-dct-only": "0",
+            "enable-filter-intra": "0",
+            "enable-intra-edge-filter": "0",
+            "enable-directional-intra": "1",
+            "enable-smooth-intra": "1",
+            "enable-paeth-intra": "1",
+            "enable-cfl-intra": "0",
+            "enable-cdef": "0",
+            "enable-restoration": "0",
+            "loopfilter-control": "0",
+            "aq-mode": "0",
+            "deltaq-mode": "0",
+        },
+        quality=74,
+        speed=0,
+    )
+
     def horizontal16x4_h_dct_cfl():
         """Generate the exact bounded H_DCT/CFL witness.
 
