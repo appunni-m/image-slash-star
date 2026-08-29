@@ -683,11 +683,11 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `bdbeee0bd3b391f4c355d21c0faa998e48dce244c6dcd64cdf0d5071b6e7fd19`; generated matrix SHA-256: `12fe7f40b318d523c9730a00fd9d080a262155b4f251a4bcabf75de51cfa210f`.
+- Manifest SHA-256: `ff4821adc6078856781fba533b90d03dc7e34be4fca91eb339527c2b95c14f62`; generated matrix SHA-256: `c59024aff3eea4085eb83bf3e45a55bb0018210a5a34649e873df10aa67e5082`.
 <!-- current-claim-ledger:end -->
 
-The generated matrix in this tree contains 1,545 total rows: 1,148 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,145 decode rows and
+The generated matrix in this tree contains 1,549 total rows: 1,152 decode /
+inspect / verify rows and 397 encode rows. Of those, 1,149 decode rows and
 365 encode rows are active; 3 AVIF decode rows and all 32 AVIF encode rows
 are explicit planned pure-Rust gaps. Expected errors that remain active are
 fixture outcomes, and every decode-error class is catalogued in the generated,
@@ -710,18 +710,22 @@ The current accepted Coverage MCP snapshot is recorded in
 branch, function, and region counts. Coverage proves execution under the
 retained suite; it does not prove complete format support or security.
 
-The newest bounded AVIF incremental reconstruction run
-`44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms at exact
-implementation commit `72759602317c50016a6bf38fc80ee06bb1de9afe` and ingested
-snapshot `5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb` against baseline
-`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only the new
-`coverage_h16x4_filter_intra_tx8x4_split_01.avif` fixture; the additive review
-reports +8 covered lines, +7 branches, +0 functions, +281 regions, and no
-reported regressions. The selected subset is bounded evidence, not a
-replacement for the complete release measurement. The matching selected
-matrix-row run `a740718c-1912-4280-8cff-4969d1acf19e` passed in 30,162 ms and
-reports +8 lines, +8 branches, +0 functions, +281 regions, and no reported
-regressions against the same baseline.
+The newest bounded AVIF reconstruction evidence covers four exact
+following-Vertical8x16 chroma fixtures at implementation commit
+`98824dd14ab25034017f11ffe5e5ebb5761a5ecb`. Managed Coverage MCP runs
+`9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66`,
+`2014be25-81a9-4e23-9ea8-39a39e383f8e`,
+`ee823300-1126-443b-aa05-ac7b0e380f9b`, and
+`6191b1e2-730f-41a2-a7bd-95d2e9a2fd03` passed their exact DC, Smooth,
+SmoothVertical, and SmoothHorizontal selectors and ingested snapshots
+`4660b226-6e92-43bc-a904-98c74805f5a8`,
+`59cbbf2f-72e2-4496-a1ec-5c1388e79b38`,
+`f2906a05-336b-440e-99f7-468be3bca9a3`, and
+`e775c345-999e-47e7-a260-996b27f9d54c` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. Each additive review reports
++8 lines, +10 branches, +0 functions, +938 regions, and no reported
+regressions. These selected subsets are bounded evidence, not replacements
+for the complete release measurement or claims of general AV1 completion.
 
 The oracle identity, regeneration workflow, exact comparison contract, test
 tiers, current run identifiers, and troubleshooting are in

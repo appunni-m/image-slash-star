@@ -9,7 +9,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `bdbeee0bd3b391f4c355d21c0faa998e48dce244c6dcd64cdf0d5071b6e7fd19`; generated matrix SHA-256: `12fe7f40b318d523c9730a00fd9d080a262155b4f251a4bcabf75de51cfa210f`.
+- Manifest SHA-256: `ff4821adc6078856781fba533b90d03dc7e34be4fca91eb339527c2b95c14f62`; generated matrix SHA-256: `c59024aff3eea4085eb83bf3e45a55bb0018210a5a34649e873df10aa67e5082`.
 <!-- current-claim-ledger:end -->
 
 Current claim-ledger implementation anchor:
@@ -78,10 +78,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 317 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 325 AVIF decode rows and 32 encode
 rows:
 
-- 314 decode rows are active: portable still reconstruction and structural
+- 322 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and the five-frame sequence.
@@ -731,6 +731,50 @@ ingested snapshots `3491ed87-e1a3-4bf2-ad18-f0797227bd58` and
 baseline. This proves only the declared rectangular family; other geometries,
 neighbor states, transforms, depths, sequences, encoding, and the complete
 four-metric coverage target remain open.
+
+The following-Vertical8x16 chroma family now has four additional exact
+witnesses: `coverage_vertical8x16_following_chroma_dc_01.avif`,
+`coverage_vertical8x16_following_chroma_smooth_01.avif`,
+`coverage_vertical8x16_following_chroma_smooth_vertical_01.avif`, and
+`coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif`. Their
+lower leaves keep luma DC with two skipped TX8x8 DCT-DCT children while both
+4x8 chroma planes carry non-empty residuals. Chroma mode/transform pairs are
+DC/DCT-DCT, Smooth/ADST-ADST, SmoothVertical/ADST-DCT, and
+SmoothHorizontal/DCT-ADST. The exact admission requires qindex 16, qcat zero,
+matrix 10, transform-mode select, 4:2:0 Vertical8x16 geometry, no angle or
+palette syntax, and no CDEF or restoration.
+
+Safe Rust reconstructs the upper leaf before deriving the lower leaf's true
+chroma top edge from row 7. The campaigns deliberately vary rows 6 and 7, so
+using the wrong row cannot accidentally pass. With no left neighbor, DC uses
+AV1's one-sided top average and the smooth predictors repeat the top-left
+sample for the missing left edge. Exact partitions, syntax, predictors,
+coefficients, Y/U/V planes, and Pillow RGB8 bytes are pinned in the now
+255-case reconstruction corpus. These 4x8 predictors cover only 32 output
+samples, so the production implementation uses checked fixed arrays rather
+than adding SIMD dispatch/setup overhead; larger shared color-conversion,
+upsampling, and transform kernels remain the appropriate measured
+vectorization targets.
+
+The four input-only campaigns each evaluated 100 deterministic candidates
+across 10 families and qualified 74, 57, 71, and 55 candidates. Report
+SHA-256 values are
+`e16c6410c48f4b22bb884cdad4b609431ef6604359714bb63bb1e0ccee93d282`,
+`22734ed045a34209876ff4ce984b4f9209cd28e1df2d07deffbd74a100dd7432`,
+`e510f2669a6dd6f8ed21555d17fd097e6e238c8ebf4df196907476e87b65dfd0`,
+and `c834f57c1c1cf320b549fe6c4fc81a3631ca883fa84d3a90f7ed1a2aacf0e00e`.
+Managed Coverage MCP runs
+`9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66`,
+`2014be25-81a9-4e23-9ea8-39a39e383f8e`,
+`ee823300-1126-443b-aa05-ac7b0e380f9b`, and
+`6191b1e2-730f-41a2-a7bd-95d2e9a2fd03` passed their exact selectors and
+ingested snapshots `4660b226-6e92-43bc-a904-98c74805f5a8`,
+`59cbbf2f-72e2-4496-a1ec-5c1388e79b38`,
+`f2906a05-336b-440e-99f7-468be3bca9a3`, and
+`e775c345-999e-47e7-a260-996b27f9d54c`. Each additive review reports
++8/+10/+0/+938 covered line/branch/function/region identities and zero
+regressions. These are bounded selected-subset results, not general AV1,
+AVIF, SIMD-performance, or complete four-metric coverage claims.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is

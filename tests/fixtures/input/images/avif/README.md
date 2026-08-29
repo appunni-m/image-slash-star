@@ -261,6 +261,30 @@ checked for determinism without invoking repository Rust.
 This fixture set proves only the declared smooth-family class; it is not a
 general AV1/AVIF or performance claim.
 
+The following four repository-generated fixtures extend the same 8x32,
+8-bit 4:2:0 following-Vertical8x16 topology to the lower leaf's 4x8 U/V
+planes. The lower luma leaf remains DC with two skipped TX8x8 DCT-DCT
+children. Both chroma planes carry non-empty TX4x8 residuals: DC uses
+DCT-DCT, Smooth uses ADST-ADST, SmoothVertical uses ADST-DCT, and
+SmoothHorizontal uses DCT-ADST. Generation is pinned to Pillow 12.2.0,
+libavif 1.4.1, libaom 3.13.2, and scalar dav1d 1.5.3; each 100-candidate
+campaign retained deterministic AV1 item, trace, decoded YUV, and Pillow RGB
+evidence without invoking repository Rust.
+
+| Fixture | Lower chroma mode / transform | Fixture SHA-256 | Campaign report and SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| `coverage_vertical8x16_following_chroma_dc_01.avif` | DC (0) / DCT-DCT | `7ff17319c3b2e5c7306908618ecaaa823c734391af286b81e0a68db6af01d35a` | `coverage_vertical8x16_following_chroma_dc_campaign_01.json`, `e16c6410c48f4b22bb884cdad4b609431ef6604359714bb63bb1e0ccee93d282` | `46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6` |
+| `coverage_vertical8x16_following_chroma_smooth_01.avif` | Smooth (9) / ADST-ADST | `be6f22b1988333c303f63a7dddb3d5bbade9211bbfc519c9be51db3b510d0ccd` | `coverage_vertical8x16_following_chroma_smooth_campaign_01.json`, `22734ed045a34209876ff4ce984b4f9209cd28e1df2d07deffbd74a100dd7432` | `f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18` |
+| `coverage_vertical8x16_following_chroma_smooth_vertical_01.avif` | SmoothVertical (10) / ADST-DCT | `a29134747ab2e6cb9602b06398fa9b48f7f4bdb2e7f0193e568d0474f54a782c` | `coverage_vertical8x16_following_chroma_smooth_vertical_campaign_01.json`, `e510f2669a6dd6f8ed21555d17fd097e6e238c8ebf4df196907476e87b65dfd0` | `ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a` |
+| `coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif` | SmoothHorizontal (11) / DCT-ADST | `c3dd3717c4c639b3558b87344532650caf7f6b4d0f8c6e030250aef7efe3ccee` | `coverage_vertical8x16_following_chroma_smooth_horizontal_campaign_01.json`, `c834f57c1c1cf320b549fe6c4fc81a3631ca883fa84d3a90f7ed1a2aacf0e00e` | `f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a` |
+
+The varying upper-leaf chroma rows make the lower predictor's true top edge
+observable: it is row 7 of the 4x8 upper plane, not row 6 or a synthetic
+rectangular endpoint. Because the lower leaf has no left neighbor, DC is
+one-sided top DC and the smooth modes repeat the top-left sample for the
+missing left edge. These 32-pixel predictors intentionally use checked fixed
+arrays; this evidence does not claim that SIMD setup would improve them.
+
 `coverage_i444_palette2_square8_four_leaves.avif`
 (`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
 is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated
