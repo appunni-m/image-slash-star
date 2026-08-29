@@ -316,6 +316,33 @@ are full-resolution lossy 4:4:4 cases with exact dav1d Y/U/V and Pillow RGB
 references. Their evidence is intentionally bounded to these observed syntax
 classes, not a claim of general I444 support.
 
+The `coverage_i444_square8_01.avif` through `_10.avif` batch keeps that
+16x16 full-range 4:4:4 split-root/four-Square8 topology fixed while varying
+all four row-major leaves. Every leaf uses DC chroma and TX8x8 DCT-DCT on
+all coded planes. The batch proves origin, left-neighbor, top-neighbor with
+top-right extension, and combined top/left/upper-left contexts; luma covers
+DC, Vertical, Horizontal, and Smooth, including the zero-delta directional
+angle symbol. Cases 05-10 enable screen-content tools and consume only
+palette-use false: all four UV decisions are false, while luma decisions are
+present only on palette-eligible DC leaves. No fixture claims a nonzero
+palette, palette cache entry, intra block copy, CFL, non-DC chroma,
+filter-intra selection, transform split, or non-DCT transform. Exact
+partition ranges, adaptive entropy operations, coefficient endpoints, Y/U/V
+planes, and Pillow RGB bytes are pinned by the reconstruction oracle.
+
+| Fixture | Fixture SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- |
+| `coverage_i444_square8_01.avif` | `29a9a67c2719046b5d9aa6ebe9e6666377c298a1f60e2f1b4cbf56aa757d0d61` | `e2d9ba964c5ec53a4032198999f2d96a6c04f764827521c4d8266dfd63183a8d` |
+| `coverage_i444_square8_02.avif` | `c76fd9908087d9025e5eac621d2fa7dc3e5aa2cbbe902e7df9baec31934a16fe` | `52cf14c15d3016015816a5097d48ed7b32210911f00e6533d65fc07aad401360` |
+| `coverage_i444_square8_03.avif` | `bf79a86725d4e78286972e0688a6e9551850f7b476c7febe06c5c62b7d27cadc` | `23e0828c4691405b5616f2d3d1ce2452c8643ef941ff888fdcdb08d9ddbae07b` |
+| `coverage_i444_square8_04.avif` | `7fe339ea07a4efc8592250f973f37eebd91878b64b48ef5da6ff0d928b259212` | `6af78ef081a21691dac3dbe080e0e74a4666df7c401975857a88d31be170c8d2` |
+| `coverage_i444_square8_05.avif` | `88ad2e5488e80cbeba53625826b0f90a6fb96a8f9ac9f314f11ec8b4b505f2bc` | `956047973e698d18fe70a45f57a797c94f38bdf12ee2c6b5dcbf706971763cbf` |
+| `coverage_i444_square8_06.avif` | `ce43e1768fa0d92d6821c4971ea071dedb6aeaa92b054e5cfb368a2ea903af67` | `69d96e28e665d2570868fce3d2e30aaa891a46afffc55146c8511fd3e2fe1f7d` |
+| `coverage_i444_square8_07.avif` | `f7780936d03e09920e206942151ae9378abbf4100216644316da0624f5bf437e` | `ed89a1e09548a12cf5953f812af87b33d7047922a81f71359a949fdad1378b9b` |
+| `coverage_i444_square8_08.avif` | `7ea976064f08dde24c28842e3fe3d3af3d01310f896b346fe179622d0da5322c` | `861d107c5e7958cf4bb38cc63f8c19d6460e16e7418f2e3fe4856c74d82910a2` |
+| `coverage_i444_square8_09.avif` | `f1cf6c7fa5ddec16583f99e1ad5318f9c731386f9038071e1ba51f0b2d854737` | `7df3e53c1af05ddc0e53f6c59a2e0b3433da621fc44f0c0f4714d66fe4876aaa` |
+| `coverage_i444_square8_10.avif` | `a8942600752ed77d7ecbca6b726e589d1c106963bd4bca4eca6bbbb18cc9978c` | `c9f06d709276d78fc43bc11d9712d4ea29faea7b0d52655175e827d15b1d3ced` |
+
 | Fixture | Size | File SHA-256 | Pillow RGB SHA-256 |
 | --- | ---: | --- | --- |
 | `coverage_adst_public_03.avif` | 4×16 | `b6d15fa1ceb3eedcd3636ed660c0ed6755ce3a2af3ff6a3b2dcf6fa0b1adcc25` | `c4cbd418d7f72de0fd778268c0a4c40ac6c30b982987a3a4bfa84372c3c102e9` |

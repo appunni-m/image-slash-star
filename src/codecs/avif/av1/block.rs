@@ -30503,6 +30503,18 @@ fn reconstruct_following_lossy_420_leaf(
     )
 }
 
+fn square8_vertical_top_edge(adjacent_edge: [u16; 8], orientation: SplitOrientation) -> [u16; 8] {
+    match orientation {
+        // ✅ VERIFIED: dav1d 1.5.3 `ipred_prepare_tmpl.c` fills an unavailable
+        // top edge from `dst[-1]` when the left edge is available. For a
+        // horizontally following block, `adjacent_edge[0]` is that sample.
+        SplitOrientation::Horizontal => [adjacent_edge[0]; 8],
+        // For a vertically following block, the adjacent edge is the real
+        // reconstructed top edge and must retain all eight samples.
+        SplitOrientation::Vertical => adjacent_edge,
+    }
+}
+
 fn reconstruct_following_lossy_420_leaf_with_luma_edge(
     syntax: BlockSyntax,
     neighbor: &ClosedLeaf,
@@ -30676,11 +30688,14 @@ fn reconstruct_following_lossy_420_leaf_with_luma_edge(
                 lossy_luma_coefficients,
                 lossy_luma_transform,
             ),
-            LumaPredictor::Vertical => reconstruct_lossy_luma_8x8_vertical(
-                luma_edge,
-                lossy_luma_coefficients,
-                lossy_luma_transform,
-            ),
+            LumaPredictor::Vertical => {
+                let top = square8_vertical_top_edge(luma_edge, orientation);
+                reconstruct_lossy_luma_8x8_vertical(
+                    top,
+                    lossy_luma_coefficients,
+                    lossy_luma_transform,
+                )
+            }
             LumaPredictor::Horizontal => match (orientation, luma_angle) {
                 (SplitOrientation::Horizontal, None | Some(180)) => {
                     reconstruct_lossy_luma_8x8_horizontal(
@@ -45566,6 +45581,21 @@ mod tests {
             [
                 254, 224, 195, 169, 144, 123, 102, 84, 68, 54, 43, 33, 26, 20, 17, 16
             ]
+        );
+    }
+
+    #[test]
+    fn horizontal_following_square8_vertical_repeats_missing_top_edge() {
+        let varying_left = [131, 129, 127, 125, 123, 121, 119, 117];
+        let top = square8_vertical_top_edge(varying_left, SplitOrientation::Horizontal);
+        assert_eq!(top, [131; 8]);
+
+        let plane = reconstruct_lossy_luma_8x8_vertical(top, None, LossyTransformKind::DctDct);
+        assert_eq!(plane.samples, vec![131; 64]);
+
+        assert_eq!(
+            square8_vertical_top_edge(varying_left, SplitOrientation::Vertical),
+            varying_left
         );
     }
 

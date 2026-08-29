@@ -4464,6 +4464,66 @@ formats:
       description: Independent 32x32 4:2:0 quality-99 palette-zero Square32 witness with distinct matrix-10 luma/chroma EOB profiles
       test_assets:
       - coverage_entropy_mosaic_10.avif
+    - id: coverage_i444_square8_01
+      description: 16x16 full-range 4:4:4 four-Square8 witness with Vertical/DC/Vertical/Vertical luma, DC chroma, TX8x8 DCT-DCT residuals, and mixed skipped luma leaves
+      test_assets:
+      - coverage_i444_square8_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_02
+      description: 16x16 full-range 4:4:4 four-Square8 witness with Vertical/Horizontal/DC/Horizontal luma, directional angle syntax, DC chroma, and TX8x8 DCT-DCT residuals
+      test_assets:
+      - coverage_i444_square8_02.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_03
+      description: 16x16 full-range 4:4:4 four-Square8 witness with Vertical/DC/DC/DC luma and non-empty TX8x8 DCT-DCT residuals on all full-resolution planes
+      test_assets:
+      - coverage_i444_square8_03.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_04
+      description: 16x16 full-range 4:4:4 four-Square8 witness with Vertical/Vertical/Horizontal/Smooth luma, directional angle syntax, DC chroma, and a luma EOB-59 tail
+      test_assets:
+      - coverage_i444_square8_04.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_05
+      description: 16x16 full-range 4:4:4 screen-content-enabled four-Square8 stress witness with palette-use false on every plane and TX8x8 EOB 63 throughout
+      test_assets:
+      - coverage_i444_square8_05.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_06
+      description: 16x16 full-range 4:4:4 screen-content-enabled four-Square8 witness with Vertical/Smooth/Smooth/Smooth luma, palette-use-false UV syntax, and high TX8x8 EOBs
+      test_assets:
+      - coverage_i444_square8_06.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_07
+      description: 16x16 full-range 4:4:4 screen-content-enabled four-Square8 witness with DC/Horizontal/DC/DC luma, palette-use-false syntax, and mixed coded/skipped TX8x8 residuals
+      test_assets:
+      - coverage_i444_square8_07.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_08
+      description: 16x16 full-range 4:4:4 screen-content-enabled four-Square8 witness with DC/DC/Vertical/DC luma, palette-use-false syntax, and alternating coded/skipped full-resolution chroma
+      test_assets:
+      - coverage_i444_square8_08.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_09
+      description: 16x16 full-range 4:4:4 screen-content-enabled four-Square8 stress witness with DC luma, palette-use false, and high non-empty TX8x8 EOBs on every plane
+      test_assets:
+      - coverage_i444_square8_09.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_i444_square8_10
+      description: 16x16 full-range 4:4:4 screen-content-enabled four-Square8 DC-only coefficient control with Vertical/DC/DC/Horizontal luma and palette-use-false syntax
+      test_assets:
+      - coverage_i444_square8_10.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_v4_vertical_checker
       description: 16x16 4:2:0 quality-76 speed-0 PARTITION_V4 witness with four ordered 4x16 luma leaves and chroma owned by alternating leaves
       test_assets:

@@ -145,6 +145,9 @@ SQUARE16_CFL_TARGET_FIXTURES = frozenset(
         "coverage_i444_square16_cfl_03.avif",
     }
 )
+I444_SQUARE8_TARGET_FIXTURES = frozenset(
+    {f"coverage_i444_square8_{index:02d}.avif" for index in range(1, 11)}
+)
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
         "file_sha256": "ccc84752237af0549d7310af7a5b948435b07c78f9b20c322240a18f1667c411",
@@ -1336,6 +1339,56 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b",
         "size": [16, 16],
     },
+    "coverage_i444_square8_01.avif": {
+        "file_sha256": "29a9a67c2719046b5d9aa6ebe9e6666377c298a1f60e2f1b4cbf56aa757d0d61",
+        "rgb_sha256": "e2d9ba964c5ec53a4032198999f2d96a6c04f764827521c4d8266dfd63183a8d",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_02.avif": {
+        "file_sha256": "c76fd9908087d9025e5eac621d2fa7dc3e5aa2cbbe902e7df9baec31934a16fe",
+        "rgb_sha256": "52cf14c15d3016015816a5097d48ed7b32210911f00e6533d65fc07aad401360",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_03.avif": {
+        "file_sha256": "bf79a86725d4e78286972e0688a6e9551850f7b476c7febe06c5c62b7d27cadc",
+        "rgb_sha256": "23e0828c4691405b5616f2d3d1ce2452c8643ef941ff888fdcdb08d9ddbae07b",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_04.avif": {
+        "file_sha256": "7fe339ea07a4efc8592250f973f37eebd91878b64b48ef5da6ff0d928b259212",
+        "rgb_sha256": "6af78ef081a21691dac3dbe080e0e74a4666df7c401975857a88d31be170c8d2",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_05.avif": {
+        "file_sha256": "88ad2e5488e80cbeba53625826b0f90a6fb96a8f9ac9f314f11ec8b4b505f2bc",
+        "rgb_sha256": "956047973e698d18fe70a45f57a797c94f38bdf12ee2c6b5dcbf706971763cbf",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_06.avif": {
+        "file_sha256": "ce43e1768fa0d92d6821c4971ea071dedb6aeaa92b054e5cfb368a2ea903af67",
+        "rgb_sha256": "69d96e28e665d2570868fce3d2e30aaa891a46afffc55146c8511fd3e2fe1f7d",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_07.avif": {
+        "file_sha256": "f7780936d03e09920e206942151ae9378abbf4100216644316da0624f5bf437e",
+        "rgb_sha256": "ed89a1e09548a12cf5953f812af87b33d7047922a81f71359a949fdad1378b9b",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_08.avif": {
+        "file_sha256": "7ea976064f08dde24c28842e3fe3d3af3d01310f896b346fe179622d0da5322c",
+        "rgb_sha256": "861d107c5e7958cf4bb38cc63f8c19d6460e16e7418f2e3fe4856c74d82910a2",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_09.avif": {
+        "file_sha256": "f1cf6c7fa5ddec16583f99e1ad5318f9c731386f9038071e1ba51f0b2d854737",
+        "rgb_sha256": "7df3e53c1af05ddc0e53f6c59a2e0b3433da621fc44f0c0f4714d66fe4876aaa",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_10.avif": {
+        "file_sha256": "a8942600752ed77d7ecbca6b726e589d1c106963bd4bca4eca6bbbb18cc9978c",
+        "rgb_sha256": "c9f06d709276d78fc43bc11d9712d4ea29faea7b0d52655175e827d15b1d3ced",
+        "size": [16, 16],
+    },
     "coverage_i444_full_chroma_top_left_paeth_01.avif": {
         "file_sha256": "695fd9288686eec0cfa8abb174eead2d745ac3155f755222e05cefd694695dd6",
         "rgb_sha256": "41fed0113dd24525e6c094748beb78a75b94f2825bacdf7dc5d009375f32dd89",
@@ -2287,6 +2340,7 @@ def generate(
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 or name in LUMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
+                or name in I444_SQUARE8_TARGET_FIXTURES
                 else angle_executable
                 if name in CHROMA_DIAGONAL45_TARGET_FIXTURES
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
@@ -2320,6 +2374,7 @@ def generate(
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 or name in LUMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
+                or name in I444_SQUARE8_TARGET_FIXTURES
                 else angle_env
                 if name in CHROMA_DIAGONAL45_TARGET_FIXTURES
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
