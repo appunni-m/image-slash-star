@@ -31658,6 +31658,8 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     above_left_x_offset: u32,
     above_right_x_offset: u32,
     following_v8x16_filter_intra_mode: Option<usize>,
+    exact_top_only_context: bool,
+    above_chroma_is_dc: bool,
     enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
     let smooth_quantization = syntax.lossy_quantization;
@@ -31689,6 +31691,51 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
         && smooth_quantization.matrix_y == 10
         && smooth_quantization.matrix_u == 10
         && smooth_quantization.matrix_v == 10;
+    let exact_chroma_smooth_syntax_class = exact_top_only_context
+        && matches!(syntax.luma_predictor, LumaPredictor::Dc)
+        && syntax.luma_angle.is_none()
+        && syntax.filter_intra_mode.is_none()
+        && matches!(
+            syntax.chroma_predictor,
+            ChromaPredictor::Smooth
+                | ChromaPredictor::SmoothVertical
+                | ChromaPredictor::SmoothHorizontal
+        )
+        && syntax.chroma_angle.is_none()
+        && syntax.lossy_luma_rect_coefficients.is_none()
+        && syntax.lossy_luma_4x4_grid_split.is_none()
+        && syntax.lossy_luma_8x8_grid_split.is_none()
+        && syntax.lossy_luma_8x8_split.is_some_and(|split| {
+            split.coefficients.iter().all(Option::is_none)
+                && split
+                    .transforms
+                    .iter()
+                    .all(|transform| matches!(transform, LossyTransformKind::DctDct))
+        })
+        && syntax
+            .lossy_chroma_8x4_coefficients
+            .iter()
+            .all(Option::is_some)
+        && matches!(syntax.transform_grid, TransformGrid::Vertical8x16)
+        && matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+        && !syntax.palette.is_present()
+        && smooth_quantization.qindex == 16
+        && !smooth_quantization.delta_q_present
+        && smooth_quantization.resolution_log2 == 0
+        && smooth_quantization.y_dc_delta == 0
+        && smooth_quantization.y_ac_delta == 0
+        && smooth_quantization.u_dc_delta == 0
+        && smooth_quantization.u_ac_delta == 0
+        && smooth_quantization.v_dc_delta == 0
+        && smooth_quantization.v_ac_delta == 0
+        && smooth_quantization.using_matrix
+        && smooth_quantization.matrix_y == 10
+        && smooth_quantization.matrix_u == 10
+        && smooth_quantization.matrix_v == 10
+        && matches!(above_left.luma_predictor, LumaPredictor::Dc)
+        && above_chroma_is_dc
+        && following_v8x16_filter_intra_mode.is_none()
+        && !enable_intra_edge_filter;
     let BlockSyntax {
         luma_predictor,
         luma_angle,
@@ -31911,8 +31958,13 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
         }
     };
 
-    let chroma = |plane: usize| -> ReconstructedPlane {
-        let top = if std::ptr::eq(above_left, above_right) {
+    let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
+        let top = if exact_top_only_context {
+            let edge = bottom_edge_4_for_4x8(&above_left.planes[plane]);
+            [
+                edge[0], edge[1], edge[2], edge[3], edge[3], edge[3], edge[3], edge[3],
+            ]
+        } else if std::ptr::eq(above_left, above_right) {
             bottom_edge_8_for_16x4_chroma(&above_left.planes[plane])
         } else {
             let left = bottom_edge_4(&above_left.planes[plane]);
@@ -31927,35 +31979,71 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
         let coefficients = lossy_chroma_8x4_coefficients[plane.saturating_sub(1)];
         let transform = chroma_rect_transform_kind(chroma_predictor);
         match chroma_predictor {
-            ChromaPredictor::Vertical => reconstruct_lossy_luma_4x8_from_prediction(
+            ChromaPredictor::Vertical => Ok(reconstruct_lossy_luma_4x8_from_prediction(
                 std::array::from_fn(|index| top[index % 4]),
                 coefficients,
                 transform,
-            ),
-            ChromaPredictor::Horizontal => reconstruct_lossy_luma_4x8_from_prediction(
+            )),
+            ChromaPredictor::Horizontal => Ok(reconstruct_lossy_luma_4x8_from_prediction(
                 std::array::from_fn(|index| left[index / 4]),
                 coefficients,
                 transform,
-            ),
-            ChromaPredictor::Paeth => reconstruct_lossy_luma_4x8_from_prediction(
+            )),
+            ChromaPredictor::Paeth => Ok(reconstruct_lossy_luma_4x8_from_prediction(
                 std::array::from_fn(|index| {
                     paeth_predictor(top[index % 4], left[index / 4], left[0])
                 }),
                 coefficients,
                 transform,
+            )),
+            ChromaPredictor::Dc => {
+                // DC availability is independent of quantization and
+                // transform syntax. When this following block has no left
+                // chroma neighbor, AV1 selects TOP_DC and averages only the
+                // four prepared top samples; the dedicated varying-edge
+                // witness distinguishes this from the old synthetic-left
+                // rectangular average.
+                let predictor = if left_neighbor.is_none() {
+                    one_sided_dc_predictor_4([top[0], top[1], top[2], top[3]])
+                } else {
+                    rectangular_dc_predictor(&top[..4], &left)
+                };
+                Ok(reconstruct_lossy_luma_4x8_from_prediction(
+                    [predictor; 32],
+                    coefficients,
+                    transform,
+                ))
+            }
+            ChromaPredictor::Smooth if exact_chroma_smooth_syntax_class => {
+                Ok(reconstruct_lossy_luma_4x8_smooth(
+                    [top[0], top[1], top[2], top[3]],
+                    top[3],
+                    left,
+                    coefficients,
+                    transform,
+                ))
+            }
+            ChromaPredictor::SmoothVertical if exact_chroma_smooth_syntax_class => {
+                Ok(reconstruct_lossy_luma_4x8_smooth_vertical(
+                    [top[0], top[1], top[2], top[3]],
+                    left[7],
+                    coefficients,
+                    transform,
+                ))
+            }
+            ChromaPredictor::SmoothHorizontal if exact_chroma_smooth_syntax_class => Ok(
+                reconstruct_lossy_luma_4x8_smooth_horizontal(left, top[3], coefficients, transform),
             ),
-            _ => reconstruct_lossy_luma_4x8(
-                [rectangular_dc_predictor(&top[..4], &left); 4],
-                [rectangular_dc_predictor(&top[..4], &left); 8],
-                coefficients,
-                transform,
-            ),
+            _ => Err(PortableUnavailable),
         }
     };
 
+    let chroma_u = chroma(1)?;
+    let chroma_v = chroma(2)?;
+
     Ok(ClosedLeaf {
         luma_predictor,
-        planes: [luma, chroma(1), chroma(2)],
+        planes: [luma, chroma_u, chroma_v],
     })
 }
 
@@ -43899,8 +43987,16 @@ impl Lossy420Decoder {
                 let smooth_chroma_edges =
                     is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
                         || is_smooth_chroma_predictor(left_chroma_mode);
+                // This shared helper supplies only the full-chroma branch's
+                // luma plane. Build disposable DC chroma here so unsupported
+                // 4:2:0 modes cannot reject the branch before the exact 4:4:4
+                // reconstruction below replaces both chroma planes.
+                let base_syntax = BlockSyntax {
+                    chroma_predictor: ChromaPredictor::Dc,
+                    ..syntax
+                };
                 let mut leaf = reconstruct_following_lossy_420_vertical_8x16_leaf(
-                    syntax,
+                    base_syntax,
                     &above_left,
                     &above_right,
                     left_neighbor.as_ref(),
@@ -43916,6 +44012,11 @@ impl Lossy420Decoder {
                     neighbors.above_left_x_offset,
                     neighbors.above_right_x_offset,
                     neighbors.following_v8x16_filter_intra_mode,
+                    following_vertical_zone1_context,
+                    matches!(
+                        neighbors.above_left.chroma_predictor,
+                        Some(ChromaPredictor::Dc)
+                    ),
                     tools.enable_intra_edge_filter,
                 )?;
                 for plane in 1..=2 {
@@ -44014,6 +44115,11 @@ impl Lossy420Decoder {
                 neighbors.above_left_x_offset,
                 neighbors.above_right_x_offset,
                 neighbors.following_v8x16_filter_intra_mode,
+                following_vertical_zone1_context,
+                matches!(
+                    neighbors.above_left.chroma_predictor,
+                    Some(ChromaPredictor::Dc)
+                ),
                 tools.enable_intra_edge_filter,
             );
 

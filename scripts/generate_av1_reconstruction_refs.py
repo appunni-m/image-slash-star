@@ -43,6 +43,10 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
         "coverage_vertical8x16_following_luma_smooth_01.avif",
         "coverage_vertical8x16_following_luma_smooth_vertical_01.avif",
         "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif",
+        "coverage_vertical8x16_following_chroma_dc_01.avif",
+        "coverage_vertical8x16_following_chroma_smooth_01.avif",
+        "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif",
+        "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif",
     }
 )
 H16X8_ORIGIN_TARGET_FIXTURES = frozenset(
@@ -1395,6 +1399,26 @@ EXPECTED_FIXTURES = {
     "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif": {
         "file_sha256": "ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e",
         "rgb_sha256": "e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_dc_01.avif": {
+        "file_sha256": "7ff17319c3b2e5c7306908618ecaaa823c734391af286b81e0a68db6af01d35a",
+        "rgb_sha256": "46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_smooth_01.avif": {
+        "file_sha256": "be6f22b1988333c303f63a7dddb3d5bbade9211bbfc519c9be51db3b510d0ccd",
+        "rgb_sha256": "f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif": {
+        "file_sha256": "a29134747ab2e6cb9602b06398fa9b48f7f4bdb2e7f0193e568d0474f54a782c",
+        "rgb_sha256": "ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif": {
+        "file_sha256": "c3dd3717c4c639b3558b87344532650caf7f6b4d0f8c6e030250aef7efe3ccee",
+        "rgb_sha256": "f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a",
         "size": [8, 32],
     },
 }

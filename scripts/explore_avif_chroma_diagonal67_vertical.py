@@ -8,7 +8,10 @@ build. The default targets qualify a clipped 16x16 split with a vertically
 following bottom Square8 leaf. The extended luma targets qualify an 8x32
 frame split into two following Vertical8x16 leaves, with bottom luma
 Diagonal67, Smooth, SmoothVertical, or SmoothHorizontal syntax and a real top
-edge. Repository Rust is never invoked during the search.
+edge. The chroma-following targets retain that 8x32 topology while selecting
+bottom UV DC, Smooth, SmoothVertical, or SmoothHorizontal against independently
+reconstructed U/V top edges. Repository Rust is never invoked during the
+search.
 """
 
 from __future__ import annotations
@@ -44,6 +47,10 @@ FOLLOWING_VERTICAL_SPLIT_TARGET = "luma_diagonal67_following_vertical_split_tx4x
 SMOOTH_TARGET = "luma_smooth_following"
 SMOOTH_VERTICAL_TARGET = "luma_smooth_vertical_following"
 SMOOTH_HORIZONTAL_TARGET = "luma_smooth_horizontal_following"
+CHROMA_DC_TARGET = "chroma_dc_following_vertical"
+CHROMA_SMOOTH_TARGET = "chroma_smooth_following_vertical"
+CHROMA_SMOOTH_VERTICAL_TARGET = "chroma_smooth_vertical_following_vertical"
+CHROMA_SMOOTH_HORIZONTAL_TARGET = "chroma_smooth_horizontal_following_vertical"
 SMOOTH_TARGETS = frozenset(
     {SMOOTH_TARGET, SMOOTH_VERTICAL_TARGET, SMOOTH_HORIZONTAL_TARGET}
 )
@@ -51,6 +58,27 @@ SMOOTH_TARGET_MODES = {
     SMOOTH_TARGET: 9,
     SMOOTH_VERTICAL_TARGET: 10,
     SMOOTH_HORIZONTAL_TARGET: 11,
+}
+CHROMA_FOLLOWING_TARGETS = frozenset(
+    {
+        CHROMA_DC_TARGET,
+        CHROMA_SMOOTH_TARGET,
+        CHROMA_SMOOTH_VERTICAL_TARGET,
+        CHROMA_SMOOTH_HORIZONTAL_TARGET,
+    }
+)
+CHROMA_SMOOTH_TARGETS = CHROMA_FOLLOWING_TARGETS - {CHROMA_DC_TARGET}
+CHROMA_TARGET_MODES = {
+    CHROMA_DC_TARGET: 0,
+    CHROMA_SMOOTH_TARGET: 9,
+    CHROMA_SMOOTH_VERTICAL_TARGET: 10,
+    CHROMA_SMOOTH_HORIZONTAL_TARGET: 11,
+}
+CHROMA_TARGET_TRANSFORMS = {
+    CHROMA_DC_TARGET: 0,
+    CHROMA_SMOOTH_TARGET: 3,
+    CHROMA_SMOOTH_VERTICAL_TARGET: 1,
+    CHROMA_SMOOTH_HORIZONTAL_TARGET: 2,
 }
 ADVANCED = {
     "min-partition-size": "8",
@@ -90,6 +118,10 @@ FOLLOWING_VERTICAL_TARGETS = frozenset(
         SMOOTH_TARGET,
         SMOOTH_VERTICAL_TARGET,
         SMOOTH_HORIZONTAL_TARGET,
+        CHROMA_DC_TARGET,
+        CHROMA_SMOOTH_TARGET,
+        CHROMA_SMOOTH_VERTICAL_TARGET,
+        CHROMA_SMOOTH_HORIZONTAL_TARGET,
     }
 )
 FOLLOWING_VERTICAL_ADVANCED = {
@@ -101,6 +133,16 @@ SMOOTH_VERTICAL_ADVANCED = {
     **FOLLOWING_VERTICAL_ADVANCED,
     "enable-smooth-intra": "1",
     "enable-directional-intra": "0",
+}
+CHROMA_DC_ADVANCED = {
+    **ADVANCED,
+    "max-partition-size": "16",
+    "use-intra-dct-only": "0",
+    "enable-directional-intra": "0",
+}
+CHROMA_SMOOTH_ADVANCED = {
+    **CHROMA_DC_ADVANCED,
+    "enable-smooth-intra": "1",
 }
 FAMILY_NAMES = (
     "positive_diagonal_ramp",
@@ -274,6 +316,72 @@ def chroma_sample(family: int, index: int, cx: int, cy: int) -> tuple[int, int]:
     return u, v
 
 
+def chroma_following_edge_value(
+    family: int, index: int, x: int, plane: int
+) -> int:
+    """Return one independently varying U/V edge delta for a 4x8 top leaf."""
+
+    magnitude = 7 + 2 * (family % 4)
+    direction = -1 if (family + plane) % 2 else 1
+    slope = direction * magnitude * (x - 1)
+    curve = (((x * x + 3 * family + 5 * plane) % 7) - 3) * (1 + family % 3)
+    offset = 2 * (index % 5 - 2) + (5 if plane else -3)
+    return max(-72, min(72, slope + curve + offset))
+
+
+def chroma_following_sample(
+    family: int, index: int, cx: int, cy: int, target: str
+) -> tuple[int, int]:
+    """Build one top-edge-driven following 4x8 chroma predictor field."""
+
+    width_weights = (255, 149, 85, 64)
+    height_weights = (255, 197, 146, 105, 73, 50, 37, 32)
+    result = []
+    for plane in (0, 1):
+        top = [
+            chroma_following_edge_value(family, index, x, plane)
+            for x in range(4)
+        ]
+        if cy < 8:
+            # Row seven is the exact edge consumed by the following leaf.
+            vertical = (cy - 7) * (1 + (family + index + plane) % 2)
+            value = top[cx] + vertical
+        else:
+            local_y = cy - 8
+            left = top[0]
+            right = top[3]
+            if target == CHROMA_DC_TARGET:
+                value = (sum(top) + 2) // 4
+            elif target == CHROMA_SMOOTH_TARGET:
+                value = (
+                    height_weights[local_y] * top[cx]
+                    + (256 - height_weights[local_y]) * left
+                    + width_weights[cx] * left
+                    + (256 - width_weights[cx]) * right
+                    + 256
+                ) >> 9
+            elif target == CHROMA_SMOOTH_VERTICAL_TARGET:
+                value = (
+                    height_weights[local_y] * top[cx]
+                    + (256 - height_weights[local_y]) * left
+                    + 128
+                ) >> 8
+            elif target == CHROMA_SMOOTH_HORIZONTAL_TARGET:
+                value = (
+                    width_weights[cx] * left
+                    + (256 - width_weights[cx]) * right
+                    + 128
+                ) >> 8
+            else:
+                raise ValueError(f"unsupported following chroma target: {target}")
+            residual = 2 * (
+                (3 * cx + 5 * local_y + 7 * family + index + 2 * plane) % 7 - 3
+            )
+            value += residual
+        result.append(value)
+    return result[0], result[1]
+
+
 def luma_edge_value(family: int, index: int, x: int) -> int:
     """Return the varying bottom edge exposed by the top Square8 leaf."""
 
@@ -331,6 +439,9 @@ def luma_residual(family: int, x: int, local_y: int) -> int:
 
 def luma_sample(family: int, index: int, x: int, y: int, target: str) -> int:
     """Build a top-edge-continuous luma field for the selected target."""
+
+    if target in CHROMA_FOLLOWING_TARGETS:
+        return 128
 
     leaf_height = SIZE[1] // 2
     if target in SMOOTH_TARGETS:
@@ -406,6 +517,10 @@ def candidate_pixels(family: int, index: int, target: str) -> bytes:
         for x in range(SIZE[0]):
             if target in LUMA_TARGETS:
                 u_delta = v_delta = 0
+            elif target in CHROMA_FOLLOWING_TARGETS:
+                u_delta, v_delta = chroma_following_sample(
+                    family, index, x // 2, y // 2, target
+                )
             else:
                 u_delta, v_delta = chroma_sample(family, index, x // 2, y // 2)
             pixels.extend(
@@ -426,6 +541,10 @@ def candidates(target: str) -> list[dict[str, object]]:
         SMOOTH_TARGET: "S8x16",
         SMOOTH_VERTICAL_TARGET: "SV8x16",
         SMOOTH_HORIZONTAL_TARGET: "SH8x16",
+        CHROMA_DC_TARGET: "CDC8x16",
+        CHROMA_SMOOTH_TARGET: "CS8x16",
+        CHROMA_SMOOTH_VERTICAL_TARGET: "CSV8x16",
+        CHROMA_SMOOTH_HORIZONTAL_TARGET: "CSH8x16",
     }.get(target, "D67V")
     for family, family_name in enumerate(FAMILY_NAMES):
         for index in range(10):
@@ -437,7 +556,11 @@ def candidates(target: str) -> list[dict[str, object]]:
                     "candidate_index": index,
                     "seed": 12000 + 10 * family + index,
                     "pixels": candidate_pixels(family, index, target),
-                    "quality": 95 if target in SMOOTH_TARGETS else 76,
+                    "quality": (
+                        95
+                        if target in SMOOTH_TARGETS | CHROMA_FOLLOWING_TARGETS
+                        else 76
+                    ),
                     "speed": 0,
                 }
             )
@@ -536,7 +659,11 @@ def top_edge(yuv: bytes, plane: int) -> list[int]:
     else:
         raise ValueError(f"unsupported plane {plane}")
     width = SIZE[0] // 2
-    return [yuv[offset + 3 * width + x] for x in range(width)]
+    top_leaf_height = SIZE[1] // 4
+    return [
+        yuv[offset + (top_leaf_height - 1) * width + x]
+        for x in range(width)
+    ]
 
 
 def classify_luma(
@@ -1168,6 +1295,239 @@ def classify_luma_smooth_following(
     }
 
 
+def classify_chroma_following(
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    portable_color: dict[str, object],
+    target: str,
+) -> dict[str, object]:
+    """Apply exact predicates for one top-only following 4x8 chroma mode."""
+
+    expected_mode = CHROMA_TARGET_MODES[target]
+    expected_transform = CHROMA_TARGET_TRANSFORMS[target]
+    parsed = [parse_group(group) for group in groups]
+    shape = [
+        (
+            block["poc"],
+            block["x"],
+            block["y"],
+            block["level"],
+            block["context"],
+            block["partition"],
+        )
+        for block in blocks
+    ]
+    y_modes = [mode for group in parsed for mode in group["y_modes"]]
+    y_angles = [symbol for group in parsed for symbol in group["y_angle_symbols"]]
+    uv_modes = [mode for group in parsed for mode in group["uv_modes"]]
+    uv_angles = [symbol for group in parsed for symbol in group["uv_angle_symbols"]]
+    y_payloads = [group["luma_payloads"] for group in parsed]
+    chroma_payloads = [group["chroma_payloads"] for group in parsed]
+    all_lines = [line for group in groups for line in group]
+    forbidden_prefixes = (
+        "Post-filterintramode[",
+        "Post-y_pal[",
+        "Post-pal[",
+        "Post-y-pal-indices",
+        "y-pal-pred",
+        "Post-uv_pal[",
+        "Post-uv-pal-indices",
+        "uv-pal-pred",
+        "Post-cfl",
+    )
+    y_length = SIZE[0] * SIZE[1]
+    chroma_width = SIZE[0] // 2
+    chroma_height = SIZE[1] // 2
+    expected_yuv_length = y_length + 2 * chroma_width * chroma_height
+    u_edge = top_edge(yuv, 0) if len(yuv) == expected_yuv_length else []
+    v_edge = top_edge(yuv, 1) if len(yuv) == expected_yuv_length else []
+
+    def is_split_tx8x8(payloads: list[dict[str, int]]) -> bool:
+        return (
+            len(payloads) == 2
+            and all(
+                payload["tx"] == 1
+                and payload["txtp"] == 0
+                and payload["eob"] >= -1
+                for payload in payloads
+            )
+        )
+
+    def is_chroma_tx4x8(
+        payloads: list[dict[str, int]], transform: int, *, require_ac: bool
+    ) -> bool:
+        return (
+            len(payloads) == 2
+            and {payload["plane"] for payload in payloads} == {0, 1}
+            and all(
+                payload["tx"] == 5
+                and payload["txtp"] == transform
+                and payload.get("cbx4") == 0
+                and (payload["eob"] > 0 if require_ac else payload["eob"] >= -1)
+                for payload in payloads
+            )
+        )
+
+    def predictions(top: list[int]) -> dict[str, object]:
+        if len(top) != 4:
+            return {}
+        width_weights = (255, 149, 85, 64)
+        height_weights = (255, 197, 146, 105, 73, 50, 37, 32)
+        left = [top[0]] * 8
+        right = top[3]
+        bottom = left[7]
+        dc = (sum(top) + 2) // 4
+        legacy_sum = sum(top) + sum(left)
+        legacy_dc = (((legacy_sum + 6) >> 2) * 0x5556) >> 16
+        vertical = [top[x] for _y in range(8) for x in range(4)]
+        horizontal = [left[y] for y in range(8) for _x in range(4)]
+        smooth = [
+            (
+                height_weights[y] * top[x]
+                + (256 - height_weights[y]) * bottom
+                + width_weights[x] * left[y]
+                + (256 - width_weights[x]) * right
+                + 256
+            )
+            >> 9
+            for y in range(8)
+            for x in range(4)
+        ]
+        smooth_vertical = [
+            (
+                height_weights[y] * top[x]
+                + (256 - height_weights[y]) * bottom
+                + 128
+            )
+            >> 8
+            for y in range(8)
+            for x in range(4)
+        ]
+        smooth_horizontal = [
+            (
+                width_weights[x] * left[y]
+                + (256 - width_weights[x]) * right
+                + 128
+            )
+            >> 8
+            for y in range(8)
+            for x in range(4)
+        ]
+        return {
+            "dc": [dc] * 32,
+            "legacy_synthetic_two_sided_dc": [legacy_dc] * 32,
+            "vertical": vertical,
+            "horizontal": horizontal,
+            "smooth": smooth,
+            "smooth_vertical": smooth_vertical,
+            "smooth_horizontal": smooth_horizontal,
+        }
+
+    u_predictions = predictions(u_edge)
+    v_predictions = predictions(v_edge)
+    prediction_key = {
+        CHROMA_DC_TARGET: "dc",
+        CHROMA_SMOOTH_TARGET: "smooth",
+        CHROMA_SMOOTH_VERTICAL_TARGET: "smooth_vertical",
+        CHROMA_SMOOTH_HORIZONTAL_TARGET: "smooth_horizontal",
+    }[target]
+
+    def predictor_is_distinct(values: dict[str, object]) -> bool:
+        prediction = values.get(prediction_key)
+        if not isinstance(prediction, list):
+            return False
+        if target == CHROMA_DC_TARGET:
+            return prediction != values.get("legacy_synthetic_two_sided_dc")
+        return all(
+            prediction != values.get(other)
+            for other in ("dc", "vertical", "horizontal")
+        )
+
+    mode_name = {
+        CHROMA_DC_TARGET: "dc",
+        CHROMA_SMOOTH_TARGET: "smooth",
+        CHROMA_SMOOTH_VERTICAL_TARGET: "smooth_vertical",
+        CHROMA_SMOOTH_HORIZONTAL_TARGET: "smooth_horizontal",
+    }[target]
+    predicates = {
+        "exact_vertical_following_shape": shape
+        == [
+            (0, 0, 0, 2, 0, 3),
+            (0, 0, 0, 3, 0, 2),
+            (0, 0, 4, 3, 1, 2),
+        ],
+        "eight_bit_420_frame": (
+            portable_color.get("width") == SIZE[0]
+            and portable_color.get("height") == SIZE[1]
+            and portable_color.get("bit_depth") == 8
+            and portable_color.get("monochrome") is False
+            and portable_color.get("subsampling_x") is True
+            and portable_color.get("subsampling_y") is True
+        ),
+        "two_visible_vertical8x16_groups": len(groups) == 2,
+        "both_luma_modes_dc": y_modes == [0, 0],
+        "origin_chroma_mode_dc": len(uv_modes) == 2 and uv_modes[0] == 0,
+        f"following_chroma_mode_{mode_name}": uv_modes[1:2] == [expected_mode],
+        "no_luma_angle_symbols": not y_angles,
+        "no_uv_angle_symbols": not uv_angles,
+        "both_luma_payloads_are_split_tx8x8": (
+            len(y_payloads) == 2
+            and is_split_tx8x8(y_payloads[0])
+            and is_split_tx8x8(y_payloads[1])
+        ),
+        "origin_chroma_is_tx4x8_dct_dct": (
+            len(chroma_payloads) == 2
+            and is_chroma_tx4x8(chroma_payloads[0], 0, require_ac=False)
+        ),
+        f"following_chroma_is_tx4x8_{mode_name}": (
+            len(chroma_payloads) == 2
+            and is_chroma_tx4x8(
+                chroma_payloads[1], expected_transform, require_ac=True
+            )
+        ),
+        "no_unexpected_angle_or_tool_syntax": not any(
+            line.startswith(forbidden_prefixes) for line in all_lines
+        ),
+        "decoded_yuv_has_expected_size": len(yuv) == expected_yuv_length,
+        "origin_u_bottom_edge_varies": len(u_edge) == 4 and len(set(u_edge)) > 1,
+        "origin_v_bottom_edge_varies": len(v_edge) == 4 and len(set(v_edge)) > 1,
+        "origin_u_bottom_edge_endpoints_differ": (
+            len(u_edge) == 4 and u_edge[0] != u_edge[3]
+        ),
+        "origin_v_bottom_edge_endpoints_differ": (
+            len(v_edge) == 4 and v_edge[0] != v_edge[3]
+        ),
+        "u_v_edges_are_independent": bool(u_edge) and u_edge != v_edge,
+        f"u_{mode_name}_prediction_is_distinct": predictor_is_distinct(u_predictions),
+        f"v_{mode_name}_prediction_is_distinct": predictor_is_distinct(v_predictions),
+    }
+    return {
+        "target": target,
+        "effective_predictor": f"{mode_name}_top_available_left_unavailable",
+        "root_partition": blocks[0] if blocks else None,
+        "partition_shape": shape,
+        "group_count": len(groups),
+        "y_modes": y_modes,
+        "y_angle_symbols": y_angles,
+        "uv_modes": uv_modes,
+        "uv_angle_symbols": uv_angles,
+        "origin_u_bottom_edge": u_edge,
+        "origin_v_bottom_edge": v_edge,
+        "u_predictions": u_predictions,
+        "v_predictions": v_predictions,
+        "top_luma_payloads": y_payloads[0] if y_payloads else [],
+        "bottom_luma_payloads": y_payloads[1] if len(y_payloads) == 2 else [],
+        "top_chroma_payloads": chroma_payloads[0] if chroma_payloads else [],
+        "bottom_chroma_payloads": (
+            chroma_payloads[1] if len(chroma_payloads) == 2 else []
+        ),
+        "predicates": predicates,
+        "rejection_reasons": [name for name, passed in predicates.items() if not passed],
+        "qualifies": all(predicates.values()),
+    }
+
+
 def classify(
     blocks: list[dict[str, int]],
     groups: list[list[str]],
@@ -1178,6 +1538,10 @@ def classify(
 ) -> dict[str, object]:
     """Apply exact predicates for the vertical-following mode-8 class."""
 
+    if target in CHROMA_FOLLOWING_TARGETS:
+        return classify_chroma_following(
+            blocks, groups, yuv, portable_color, target
+        )
     if target in SMOOTH_TARGETS:
         return classify_luma_smooth_following(
             blocks, groups, yuv, portable_color, target
@@ -1396,8 +1760,16 @@ def decode_candidate(
     classification = classify(
         blocks_a, groups_a, yuv_a, portable_color, target, angle_symbol
     )
-    if target in SMOOTH_TARGETS:
-        classification["predicates"]["exact_smooth_frame_tools"] = av1_frame == {
+    if target in SMOOTH_TARGETS | CHROMA_FOLLOWING_TARGETS:
+        frame_predicate = (
+            "exact_smooth_frame_tools"
+            if target in SMOOTH_TARGETS
+            else "exact_q16_matrix10_frame_tools"
+        )
+        expected_transform_mode = (
+            "largest" if target in SMOOTH_TARGETS else "select"
+        )
+        classification["predicates"][frame_predicate] = av1_frame == {
             "base_qindex": 16,
             "qindex_category": 0,
             "delta_q_present": False,
@@ -1406,7 +1778,7 @@ def decode_candidate(
             "matrix_y": 10,
             "matrix_u": 10,
             "matrix_v": 10,
-            "transform_mode": "largest",
+            "transform_mode": expected_transform_mode,
             "cdef_bits": 0,
             "restoration_types": [0, 0, 0],
         }
@@ -1495,6 +1867,10 @@ def main() -> None:
             SMOOTH_TARGET,
             SMOOTH_VERTICAL_TARGET,
             SMOOTH_HORIZONTAL_TARGET,
+            CHROMA_DC_TARGET,
+            CHROMA_SMOOTH_TARGET,
+            CHROMA_SMOOTH_VERTICAL_TARGET,
+            CHROMA_SMOOTH_HORIZONTAL_TARGET,
         ),
         default="chroma_diagonal67",
     )
@@ -1509,11 +1885,14 @@ def main() -> None:
     global SIZE, ADVANCED, LUMA_ADVANCED
     if args.target in FOLLOWING_VERTICAL_TARGETS:
         SIZE = (8, 32)
-        ADVANCED = (
-            SMOOTH_VERTICAL_ADVANCED
-            if args.target in SMOOTH_TARGETS
-            else FOLLOWING_VERTICAL_ADVANCED
-        )
+        if args.target in SMOOTH_TARGETS:
+            ADVANCED = SMOOTH_VERTICAL_ADVANCED
+        elif args.target in CHROMA_SMOOTH_TARGETS:
+            ADVANCED = CHROMA_SMOOTH_ADVANCED
+        elif args.target == CHROMA_DC_TARGET:
+            ADVANCED = CHROMA_DC_ADVANCED
+        else:
+            ADVANCED = FOLLOWING_VERTICAL_ADVANCED
         LUMA_ADVANCED = {**ADVANCED, "use-intra-dct-only": "1"}
     if args.target in LUMA_TARGETS:
         luma_transform = (
@@ -1560,6 +1939,21 @@ def main() -> None:
                 f"{67 + 3 * (args.luma_angle_symbol - 3)} degrees), genuine Zone-1 "
                 f"top edge, {luma_transform}, and skipped chroma"
             )
+    elif args.target in CHROMA_FOLLOWING_TARGETS:
+        mode_name = {
+            CHROMA_DC_TARGET: "DC",
+            CHROMA_SMOOTH_TARGET: "Smooth",
+            CHROMA_SMOOTH_VERTICAL_TARGET: "SmoothVertical",
+            CHROMA_SMOOTH_HORIZONTAL_TARGET: "SmoothHorizontal",
+        }[args.target]
+        target_id = args.target
+        target_description = (
+            "8x32 8-bit 4:2:0 vertical split with top and following "
+            "Vertical8x16 leaves; both luma modes DC; top UV mode DC; "
+            f"bottom UV mode {CHROMA_TARGET_MODES[args.target]} {mode_name}; "
+            "independent varying U/V top edges, missing left edge, one TX4x8 "
+            "U/V pair per leaf, and non-empty bottom U/V AC"
+        )
     else:
         target_id = args.target
         target_description = (
@@ -1637,7 +2031,11 @@ def main() -> None:
         "encoding": {
             "size": list(SIZE),
             "subsampling": SUBSAMPLING,
-            "quality": 95 if args.target in SMOOTH_TARGETS else 76,
+            "quality": (
+                95
+                if args.target in SMOOTH_TARGETS | CHROMA_FOLLOWING_TARGETS
+                else 76
+            ),
             "speed": 0,
             "max_threads": 1,
             "autotiling": False,

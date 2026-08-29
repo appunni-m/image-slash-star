@@ -5997,7 +5997,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 251);
+    assert_eq!(expected.cases.len(), 255);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7305,6 +7305,304 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 154,
                 "AV1 following Vertical8x16 SmoothHorizontal entropy operation count"
             );
+        } else if matches!(
+            case.fixture.as_str(),
+            "coverage_vertical8x16_following_chroma_dc_01.avif"
+                | "coverage_vertical8x16_following_chroma_smooth_01.avif"
+                | "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif"
+                | "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif"
+        ) {
+            let (last_range, entropy_count, expected_lines, u_top_edge, v_top_edge) =
+                match case.fixture.as_str() {
+                    "coverage_vertical8x16_following_chroma_dc_01.avif" => (
+                        45_560,
+                        214,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=3]: r=37384 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=9]: r=39944 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=44140",
+                            "Post-ymode[0]: r=43464",
+                            "Post-uvmode[0]: r=59404",
+                            "Post-tx[1]: r=64968",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=61989",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=59536",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=28]: r=41224 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=30]: r=49416 [x=0,cbx4=0]",
+                        ],
+                        "6f778085",
+                        "89837970",
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_01.avif" => (
+                        40_304,
+                        211,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=9]: r=62472 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=3]: r=35336 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=39044",
+                            "Post-ymode[0]: r=38472",
+                            "Post-uvmode[9]: r=37832",
+                            "Post-tx[1]: r=41168",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=39204",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=37642",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=3,eob=31]: r=50696 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=3,eob=28]: r=46344 [x=0,cbx4=0]",
+                        ],
+                        "71798287",
+                        "8a847a71",
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif" => (
+                        40_304,
+                        206,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=9]: r=62472 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=3]: r=35336 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=39044",
+                            "Post-ymode[0]: r=38472",
+                            "Post-uvmode[10]: r=62656",
+                            "Post-tx[1]: r=34164",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=65178",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=62488",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=1,eob=28]: r=61704 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=1,eob=28]: r=43528 [x=0,cbx4=0]",
+                        ],
+                        "71798287",
+                        "8a847a71",
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif" => (
+                        40_304,
+                        211,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=9]: r=62472 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=3]: r=35336 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=39044",
+                            "Post-ymode[0]: r=38472",
+                            "Post-uvmode[11]: r=52928",
+                            "Post-tx[1]: r=57688",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=55129",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=52894",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=2,eob=28]: r=38664 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=2,eob=28]: r=44040 [x=0,cbx4=0]",
+                        ],
+                        "71798287",
+                        "8a847a71",
+                    ),
+                    _ => unreachable!("guarded following chroma fixture"),
+                };
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: last_range,
+                    },
+                ],
+                "AV1 following Vertical8x16 chroma witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                entropy_count,
+                "AV1 following Vertical8x16 chroma witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines, expected_lines,
+                "AV1 following Vertical8x16 chroma witness leaf states"
+            );
+            assert_eq!(
+                case.decoded_planes[1].row_bytes[7], u_top_edge,
+                "AV1 following Vertical8x16 U predictor must use the true upper row-seven edge"
+            );
+            assert_eq!(
+                case.decoded_planes[2].row_bytes[7], v_top_edge,
+                "AV1 following Vertical8x16 V predictor must use its independent true upper row-seven edge"
+            );
+            let (u_left_edge, v_left_edge, expected_u_prediction, expected_v_prediction) =
+                match case.fixture.as_str() {
+                    "coverage_vertical8x16_following_chroma_dc_01.avif" => (
+                        " 00 00 00 00 00 00 00 00",
+                        " 00 00 00 00 00 00 00 00",
+                        vec![" 7b 7b 7b 7b"; 8],
+                        vec![" 7d 7d 7d 7d"; 8],
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_01.avif" => (
+                        " 71 71 71 71 71 71 71 71",
+                        " 8a 8a 8a 8a 8a 8a 8a 8a",
+                        vec![
+                            " 71 7a 81 84",
+                            " 71 79 7f 82",
+                            " 71 78 7d 80",
+                            " 71 77 7c 7e",
+                            " 71 77 7b 7c",
+                            " 71 76 7a 7b",
+                            " 71 76 7a 7b",
+                            " 71 76 79 7b",
+                        ],
+                        vec![
+                            " 8a 82 7a 74",
+                            " 8a 82 7b 77",
+                            " 8a 83 7d 79",
+                            " 8a 84 7e 7b",
+                            " 8a 84 7f 7d",
+                            " 8a 84 80 7e",
+                            " 8a 84 80 7f",
+                            " 8a 84 81 7f",
+                        ],
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif" => (
+                        " 71 71 71 71 71 71 71 71",
+                        " 8a 8a 8a 8a 8a 8a 8a 8a",
+                        vec![
+                            " 71 79 82 87",
+                            " 71 77 7e 82",
+                            " 71 76 7b 7e",
+                            " 71 74 78 7a",
+                            " 71 73 76 77",
+                            " 71 73 74 75",
+                            " 71 72 73 74",
+                            " 71 72 73 74",
+                        ],
+                        vec![
+                            " 8a 84 7a 71",
+                            " 8a 85 7e 77",
+                            " 8a 87 81 7c",
+                            " 8a 88 83 80",
+                            " 8a 88 85 83",
+                            " 8a 89 87 85",
+                            " 8a 89 88 86",
+                            " 8a 89 88 87",
+                        ],
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif" => (
+                        " 71 71 71 71 71 71 71 71",
+                        " 8a 8a 8a 8a 8a 8a 8a 8a",
+                        vec![" 71 7a 80 82"; 8],
+                        vec![" 8a 80 79 77"; 8],
+                    ),
+                    _ => unreachable!("guarded following chroma fixture"),
+                };
+            let event_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let u_prediction_index = event_lines
+                .iter()
+                .rposition(|line| *line == "u-intra-pred")
+                .expect("following Vertical8x16 U predictor trace");
+            let v_prediction_index = event_lines
+                .iter()
+                .rposition(|line| *line == "v-intra-pred")
+                .expect("following Vertical8x16 V predictor trace");
+            assert_eq!(
+                &event_lines[u_prediction_index + 1..u_prediction_index + 9],
+                expected_u_prediction.as_slice(),
+                "AV1 following Vertical8x16 U predictor samples"
+            );
+            assert_eq!(
+                &event_lines[v_prediction_index + 1..v_prediction_index + 9],
+                expected_v_prediction.as_slice(),
+                "AV1 following Vertical8x16 V predictor samples"
+            );
+            for (prediction_index, expected_left, expected_top, plane_name) in [
+                (u_prediction_index, u_left_edge, u_top_edge, "U"),
+                (v_prediction_index, v_left_edge, v_top_edge, "V"),
+            ] {
+                let left_index = event_lines[..prediction_index]
+                    .iter()
+                    .rposition(|line| *line == "l")
+                    .expect("following Vertical8x16 prepared left edge");
+                let top_index = event_lines[..prediction_index]
+                    .iter()
+                    .rposition(|line| *line == "t")
+                    .expect("following Vertical8x16 prepared top edge");
+                assert_eq!(
+                    event_lines[left_index + 1],
+                    expected_left,
+                    "AV1 following Vertical8x16 {plane_name} prepared left edge"
+                );
+                assert_eq!(
+                    event_lines[top_index + 1].replace(' ', ""),
+                    expected_top,
+                    "AV1 following Vertical8x16 {plane_name} prepared top edge"
+                );
+            }
+            if case.fixture == "coverage_vertical8x16_following_chroma_dc_01.avif" {
+                assert_eq!(case.decoded_planes[2].row_bytes[6], "8781776e");
+                assert_ne!(
+                    case.decoded_planes[2].row_bytes[6], case.decoded_planes[2].row_bytes[7],
+                    "DC witness must distinguish the penultimate and true bottom V rows"
+                );
+            } else {
+                assert_eq!(case.decoded_planes[1].row_bytes[6], "6f778085");
+                assert_ne!(
+                    case.decoded_planes[1].row_bytes[6], case.decoded_planes[1].row_bytes[7],
+                    "smooth witness must distinguish the penultimate and true bottom U rows"
+                );
+            }
         } else if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -11633,6 +11931,18 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif" => {
                 "e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6"
+            }
+            "coverage_vertical8x16_following_chroma_dc_01.avif" => {
+                "46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6"
+            }
+            "coverage_vertical8x16_following_chroma_smooth_01.avif" => {
+                "f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18"
+            }
+            "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif" => {
+                "ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a"
+            }
+            "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif" => {
+                "f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a"
             }
             "coverage_r16x8_neighbor_01.avif" => {
                 "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"

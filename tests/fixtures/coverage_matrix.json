@@ -17856,6 +17856,306 @@
           "error_contracts": {}
         },
         {
+          "id": "coverage_vertical8x16_following_chroma_dc_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma DC mode 0 leaf using non-empty TX4x8 DCT-DCT U/V transforms, and exact top-only chroma edges",
+          "asset": "coverage_vertical8x16_following_chroma_dc_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "7ff17319c3b2e5c7306908618ecaaa823c734391af286b81e0a68db6af01d35a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_vertical8x16_following_chroma_dc_01_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "coverage_vertical8x16_following_chroma_smooth_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma Smooth mode 9 leaf using non-empty TX4x8 ADST-ADST U/V transforms, and exact top-only chroma edges",
+          "asset": "coverage_vertical8x16_following_chroma_smooth_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "be6f22b1988333c303f63a7dddb3d5bbade9211bbfc519c9be51db3b510d0ccd",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_vertical8x16_following_chroma_smooth_01_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "coverage_vertical8x16_following_chroma_smooth_vertical_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma SmoothVertical mode 10 leaf using non-empty TX4x8 ADST-DCT U/V transforms, and exact top-only chroma edges",
+          "asset": "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "a29134747ab2e6cb9602b06398fa9b48f7f4bdb2e7f0193e568d0474f54a782c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_vertical8x16_following_chroma_smooth_vertical_01_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "coverage_vertical8x16_following_chroma_smooth_horizontal_01",
+          "type": "decode",
+          "format": "avif",
+          "category": "coverage",
+          "description": "8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma SmoothHorizontal mode 11 leaf using non-empty TX4x8 DCT-ADST U/V transforms, and exact top-only chroma edges",
+          "asset": "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "status": "active",
+          "asset_sha256": "c3dd3717c4c639b3558b87344532650caf7f6b4d0f8c6e030250aef7efe3ccee",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_coverage_vertical8x16_following_chroma_smooth_horizontal_01_avif.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            8,
+            32
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "coverage_square8_chroma_diagonal113_01",
           "type": "decode",
           "format": "avif",
@@ -121633,12 +121933,12 @@
     }
   },
   "summary": {
-    "total_rows": 1545,
-    "decode_rows": 1148,
+    "total_rows": 1549,
+    "decode_rows": 1152,
     "encode_rows": 397,
     "formats": 8,
-    "assets_available": 1147,
-    "decode_active": 1145,
+    "assets_available": 1151,
+    "decode_active": 1149,
     "decode_planned": 3,
     "encode_not_wired": 32
   }

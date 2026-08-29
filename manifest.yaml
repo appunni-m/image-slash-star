@@ -4298,6 +4298,30 @@ formats:
       - coverage_vertical8x16_following_luma_smooth_horizontal_01.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: coverage_vertical8x16_following_chroma_dc_01
+      description: 8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma DC mode 0 leaf using non-empty TX4x8 DCT-DCT U/V transforms, and exact top-only chroma edges
+      test_assets:
+      - coverage_vertical8x16_following_chroma_dc_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_vertical8x16_following_chroma_smooth_01
+      description: 8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma Smooth mode 9 leaf using non-empty TX4x8 ADST-ADST U/V transforms, and exact top-only chroma edges
+      test_assets:
+      - coverage_vertical8x16_following_chroma_smooth_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_vertical8x16_following_chroma_smooth_vertical_01
+      description: 8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma SmoothVertical mode 10 leaf using non-empty TX4x8 ADST-DCT U/V transforms, and exact top-only chroma edges
+      test_assets:
+      - coverage_vertical8x16_following_chroma_smooth_vertical_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_vertical8x16_following_chroma_smooth_horizontal_01
+      description: 8x32 4:2:0 quality-95 speed-0 vertical split with two luma-DC Vertical8x16 leaves using skipped split TX8x8 DCT-DCT luma, a following chroma SmoothHorizontal mode 11 leaf using non-empty TX4x8 DCT-ADST U/V transforms, and exact top-only chroma edges
+      test_assets:
+      - coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_square8_chroma_diagonal113_01
       description: 16x8 4:2:0 quality-76 speed-0 visible right-hand Square8 leaf using chroma Diagonal113 and ADST-DCT U/V transforms
       test_assets:
