@@ -663,13 +663,18 @@ Non-fatal recovery is not an error: successful `Decoded<T>` values expose
 The diagnostic fixture contract is intentionally separate from Pillow parity,
 because Pillow has no equivalent structured warning field.
 
-Use `error.kind()` for stable recovery policy and `error.format()` for the
-selected input/output format when one is known. `error.message()` returns
-retained high-level codec/parameter/destination diagnostics; `LimitExceeded` instead
-exposes typed fields directly and has no prose message. In particular,
-`Dimensions` and `Parameter` retain both optional format and diagnostic
-context; callers do not need to parse `Display` output. Diagnostic prose may
-become more specific, so it is not a substitute for `ImageErrorKind`.
+<!-- image-error-policy: typed-recovery-diagnostic-prose -->
+Use `error.kind()` and applicable typed fields for stable recovery policy, and
+`error.format()` for the selected input/output format when one is known.
+Neither `error.message()` nor `Display` is a parsing or equality surface:
+their exact wording may change and must not be compared with Pillow or other
+external decoder text. For library-produced failures, `message()` is
+non-empty for `Malformed`, `Unsupported`, `Dimensions`, `Parameter`, and
+`OutputWrite`; it is absent for `UnknownFormat`, `FeatureDisabled`,
+`LimitExceeded`, `NeedMoreData`, and `Cancelled`. `LimitExceeded` instead
+exposes typed fields directly. In particular, `Dimensions` and `Parameter`
+retain both optional format and diagnostic context; callers do not need to
+parse `Display` output.
 
 ## Correctness evidence
 

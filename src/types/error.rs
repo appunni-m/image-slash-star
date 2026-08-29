@@ -281,10 +281,13 @@ impl ImageError {
         }
     }
 
-    /// Return the stable high-level diagnostic retained by the failure.
+    /// Return the high-level diagnostic retained by the failure.
     ///
     /// The error kind and format are the compatibility surface for recovery;
-    /// this message is intended for logs and troubleshooting.
+    /// this message is intended for logs and troubleshooting. Neither
+    /// `message()` nor the [`fmt::Display`] implementation is a parsing or
+    /// equality surface: exact wording, punctuation, and equivalence to an
+    /// external decoder's diagnostic text are not part of this contract.
     #[must_use]
     pub fn message(&self) -> Option<&str> {
         match self {

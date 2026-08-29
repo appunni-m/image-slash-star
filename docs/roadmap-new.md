@@ -3534,10 +3534,10 @@ fuzz resilience, deterministic output, generator provenance, or API stability.
 
 **Work:** Add the compact no-panic matrix, fuzz/mutation/differential lanes,
 determinism policy, generator regeneration gate, debug-vs-optimized comparison,
-concurrency checks, metamorphic container variants, error-message policy,
-public API diff, and release package verification.
+concurrency checks, metamorphic container variants, public API diff, and
+release package verification.
 
-**Source IDs:** `QA-005`, `QA-006`, `QA-008`, `QA-009`, `QA-011`, `QA-012`,
+**Source IDs:** `QA-005`, `QA-006`, `QA-009`, `QA-011`, `QA-012`,
 `QA-013`, `QA-021`, `QA-024`, `QA-027`, `QA-028`, `QA-031`, `QA-033`,
 `QA-034`, `QA-035`, `QA-036`, `QA-037`, `QA-039`, `QA-040`, `QA-041`,
 `QA-042`.
@@ -3564,7 +3564,7 @@ scope, a validation command, and a visible proved/planned/unknown label.
 
 The following is the exact set of active roadmap IDs at this review. A task is
 not complete until its ID is removed from this list and its current behavior is
-moved into the appropriate contract document. The list contains **248 active
+moved into the appropriate contract document. The list contains **247 active
 finding rows**. Resolved findings are pruned from this rendering and from
 `roadmap.json`; their historical evidence remains in Git history and the
 historical [roadmap](roadmap.md).
@@ -3581,7 +3581,7 @@ historical [roadmap](roadmap.md).
 | WebP | 20 | `WEP-001`, `WEP-003`–`WEP-005`, `WEP-007`–`WEP-022` |
 | AVIF | 30 | `AVF-001`, `AVF-003`–`AVF-006`, `AVF-008`–`AVF-009`, `AVF-011`–`AVF-016`, `AVF-018`–`AVF-020`, `AVF-022`–`AVF-035` |
 | Features/package | 24 | `FTR-001`–`FTR-002`, `FTR-006`, `FTR-009`–`FTR-018`, `FTR-020`–`FTR-024`, `FTR-027`, `FTR-029`, `FTR-034`–`FTR-035`, `FTR-037`–`FTR-038` |
-| Assurance | 31 | `QA-001`, `QA-002`, `QA-003`, `QA-005`, `QA-006`, `QA-008`, `QA-009`–`QA-012`, `QA-016`, `QA-019`–`QA-024`, `QA-026`–`QA-028`, `QA-030`, `QA-031`, `QA-033`–`QA-037`, `QA-039`–`QA-042` |
+| Assurance | 30 | `QA-001`, `QA-002`, `QA-003`, `QA-005`, `QA-006`, `QA-009`–`QA-012`, `QA-016`, `QA-019`–`QA-024`, `QA-026`–`QA-028`, `QA-030`, `QA-031`, `QA-033`–`QA-037`, `QA-039`–`QA-042` |
 | Documentation | 3 | `DOC-003`, `DOC-007`, `DOC-008` |
 
 The shorthand ranges above expand only to the IDs actually present in the
@@ -3589,10 +3589,10 @@ current audit. The historical roadmap is retained for provenance and original
 finding context; this file is the canonical status inventory, dependency order,
 and acceptance contract.
 
-These 248 rows are not 248 equal-sized coding tasks. A row may be a small
+These 247 rows are not 247 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact 248 active finding rows, the current four-metric coverage
+today are the exact 247 active finding rows, the current four-metric coverage
 result recorded above, and the explicit dependency order; an hour estimate
 would be invented until the
 next slice is chosen and measured.
