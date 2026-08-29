@@ -9,7 +9,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `43e7980b5f8a5fe1eb4851d6d0fe4ff3b7cb86c128dac3efcfe3bcab617db297`; generated matrix SHA-256: `77c445312f8ee44c73e40095715d0f6821bd6e15e218c6e84b63dd09ad62c1ff`.
+- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `002f1a6293a0913d6a010f325db64a82258d5b5f7ae8e778e37b008af22ecc71`.
 <!-- current-claim-ledger:end -->
 
 Current claim-ledger implementation anchor:
@@ -78,10 +78,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 333 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 343 AVIF decode rows and 32 encode
 rows:
 
-- 330 decode rows are active: portable still reconstruction and structural
+- 340 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and the five-frame sequence.
@@ -99,7 +99,32 @@ closes only the single-frame 12-bit 4:4:4 still class; the animated
 `high_bitdepth` fixture, other subsampling, restoration, alpha/sequence, HDR,
 and encoding remain planned.
 
-The current newest bounded witness is the eight-case
+The current newest bounded witness is the ten-case
+`coverage_i444_square8_01.avif` through `_10.avif` corpus. Every fixture is
+16x16, 8-bit, full-range 4:4:4 with one split root and four row-major Square8
+leaves, effective qindex 2, matrix 10, unsplit TX8x8 DCT-DCT Y/U/V
+transforms, exact directional-angle ownership, and no nonzero palette or true
+filter-intra state. Cases 05-10 additionally exercise screen-content
+palette-use-false adaptation across multiple leaves. Case 04 exposed a generic
+edge-preparation defect in the top-right Vertical leaf: with top unavailable
+and left present, safe Rust now repeats the first left sample across the top
+edge, matching pinned dav1d instead of copying the varying left edge. The full
+273-case reconstruction oracle and exact public Pillow RGB8 checks pass.
+Managed Coverage MCP run `792e4884-8f4a-4c67-92e6-65eaa0e11a13` selected
+exactly the ten cases at committed tree
+`2c59a53c4602e585c34f1b41c9d13b2813e9c9d5`, passed in 44,901 ms, and
+ingested snapshot `44d4499a-77fd-4c6a-a764-e138ec57c9d5` against explicit
+baseline `e775c345-999e-47e7-a260-996b27f9d54c`. The supported additive union
+adds 1,297 covered lines, 213 branches, 106 functions, and 1,896 regions;
+denominators change by +6 lines, +0 branches, +1 function, and +9 regions.
+Its selected projection adds 2,238 line identities. The replacement-style
+diff is limited: it adds 2,291 identities and records 4,744 baseline
+observations as not observed, which is not a regression claim. Merge exactness
+is false and named-test attribution is unavailable. This closes only the
+bounded four-Square8 I444 classes and the generic missing-top Vertical rule;
+general AV1 remains open.
+
+An earlier bounded witness is the eight-case
 `coverage_entropy_mosaic_03.avif` through `_10.avif` corpus. Every fixture is
 32x32, 8-bit, full-range 4:2:0 with one origin `Square32` `PARTITION_NONE`
 leaf, DC luma/chroma prediction, effective qindex 2, matrix 10, TX32x32 luma

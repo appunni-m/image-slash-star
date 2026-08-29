@@ -683,11 +683,11 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `43e7980b5f8a5fe1eb4851d6d0fe4ff3b7cb86c128dac3efcfe3bcab617db297`; generated matrix SHA-256: `77c445312f8ee44c73e40095715d0f6821bd6e15e218c6e84b63dd09ad62c1ff`.
+- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `002f1a6293a0913d6a010f325db64a82258d5b5f7ae8e778e37b008af22ecc71`.
 <!-- current-claim-ledger:end -->
 
-The generated matrix in this tree contains 1,557 total rows: 1,160 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,157 decode rows and
+The generated matrix in this tree contains 1,567 total rows: 1,170 decode /
+inspect / verify rows and 397 encode rows. Of those, 1,167 decode rows and
 365 encode rows are active; 3 AVIF decode rows and all 32 AVIF encode rows
 are explicit planned pure-Rust gaps. Expected errors that remain active are
 fixture outcomes, and every decode-error class is catalogued in the generated,
@@ -711,6 +711,30 @@ branch, function, and region counts. Coverage proves execution under the
 retained suite; it does not prove complete format support or security.
 
 The newest bounded AVIF reconstruction evidence activates
+`coverage_i444_square8_01.avif` through `_10.avif` at implementation commit
+`2c59a53c4602e585c34f1b41c9d13b2813e9c9d5`. All ten are exact 16x16,
+8-bit, full-range 4:4:4 frames with a split root, four row-major Square8
+leaves, effective qindex 2, matrix 10, and unsplit TX8x8 DCT-DCT Y/U/V
+transforms. The corpus covers DC, Vertical, Horizontal, and Smooth luma modes,
+directional-angle ownership, skipped and coded residuals, and serial
+palette-use-false adaptation when screen-content tools are enabled. Case 04
+also proves the generic missing-top rule for a horizontally following Vertical
+leaf: the first left sample is repeated across the unavailable top edge. The
+273-case pinned dav1d oracle checks every partition, entropy operation, EOB,
+and Y/U/V plane, while the public matrix checks exact Pillow RGB bytes.
+Managed Coverage MCP run `792e4884-8f4a-4c67-92e6-65eaa0e11a13` selected
+exactly all ten fixtures and ingested snapshot
+`44d4499a-77fd-4c6a-a764-e138ec57c9d5` against explicit baseline
+`e775c345-999e-47e7-a260-996b27f9d54c`. Its supported additive union adds
+1,297 covered lines, 213 branches, 106 functions, and 1,896 regions;
+denominators change by +6 lines, +0 branches, +1 function, and +9 regions.
+The limited selected-subset diff records 2,291 newly covered line identities
+and 4,744 baseline observations not observed; those absences are not
+regressions. Merge exactness is false and named-test attribution is
+unavailable. This is bounded evidence, not general AV1 completion or a speed
+claim.
+
+The preceding bounded AVIF reconstruction evidence activates
 `coverage_entropy_mosaic_03.avif` through `_10.avif` at implementation commit
 `05ec80ad12312a782184f83b9fa6dbc8325442c8`. All eight are exact 32x32,
 8-bit, full-range 4:2:0 origin-Square32 DC/DC witnesses at effective qindex 2
