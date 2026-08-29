@@ -11,9 +11,51 @@
 // access anywhere in the transform module.
 #![allow(clippy::arithmetic_side_effects, clippy::precedence)]
 
+use super::sample_depth::SampleDepth;
+
+const I16_MINIMUM: i32 = -32_768;
+const I16_MAXIMUM: i32 = 32_767;
+
+/// AV1's signed intermediate ranges for the two inverse-transform passes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct TransformRange {
+    row_minimum: i32,
+    row_maximum: i32,
+    column_minimum: i32,
+    column_maximum: i32,
+}
+
+impl TransformRange {
+    /// Derive the normative row/column transform domains for one sample depth.
+    pub(super) const fn for_depth(sample_depth: SampleDepth) -> Self {
+        let row_magnitude = 1_i32 << sample_depth.bits().saturating_add(7);
+        let column_bits = if sample_depth.bits() == 12 { 17 } else { 15 };
+        let column_magnitude = 1_i32 << column_bits;
+        Self {
+            row_minimum: row_magnitude.saturating_neg(),
+            row_maximum: row_magnitude.saturating_sub(1),
+            column_minimum: column_magnitude.saturating_neg(),
+            column_maximum: column_magnitude.saturating_sub(1),
+        }
+    }
+
+    const fn row(self) -> (i32, i32) {
+        (self.row_minimum, self.row_maximum)
+    }
+
+    const fn column(self) -> (i32, i32) {
+        (self.column_minimum, self.column_maximum)
+    }
+}
+
+#[inline]
+fn clamp_range(value: i32, minimum: i32, maximum: i32) -> i32 {
+    value.clamp(minimum, maximum)
+}
+
 #[inline]
 fn clamp_intermediate(value: i32) -> i32 {
-    value.clamp(i32::from(i16::MIN), i32::from(i16::MAX))
+    clamp_range(value, i32::from(i16::MIN), i32::from(i16::MAX))
 }
 
 #[inline]
@@ -24,7 +66,8 @@ fn rounded_dot(terms: &[(i32, i32)], bits: u32) -> i32 {
     product.wrapping_add(1_i32.wrapping_shl(bits.saturating_sub(1))) >> bits
 }
 
-fn inverse_dct4(input: [i32; 4]) -> [i32; 4] {
+fn inverse_dct4_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 4]) -> [i32; 4] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     // Keep the reduced 181/256 butterflies exactly as dav1d does. Using the
     // equivalent 12-bit cosine constants changes the rounding at this stage.
     let even_sum = input[0]
@@ -57,8 +100,9 @@ fn inverse_dct4(input: [i32; 4]) -> [i32; 4] {
     ]
 }
 
-fn inverse_dct8(input: [i32; 8]) -> [i32; 8] {
-    let even = inverse_dct4([input[0], input[2], input[4], input[6]]);
+fn inverse_dct8_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 8]) -> [i32; 8] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
+    let even = inverse_dct4_with::<MINIMUM, MAXIMUM>([input[0], input[2], input[4], input[6]]);
     let t4a = (input[1]
         .wrapping_mul(799)
         .wrapping_sub(input[7].wrapping_mul(4017 - 4096))
@@ -116,8 +160,9 @@ fn inverse_dct8(input: [i32; 8]) -> [i32; 8] {
     dead_code,
     reason = "the exact rectangular coefficient decoder is a separate planned gap; retain this safe primitive for its integration"
 )]
-pub(crate) fn inverse_dct16(input: [i32; 16]) -> [i32; 16] {
-    let even = inverse_dct8([
+fn inverse_dct16_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 16]) -> [i32; 16] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
+    let even = inverse_dct8_with::<MINIMUM, MAXIMUM>([
         input[0], input[2], input[4], input[6], input[8], input[10], input[12], input[14],
     ]);
     let in1 = input[1];
@@ -266,8 +311,9 @@ fn rounded_linear(
 // The fixed-array transcription keeps the reference butterfly order while
 // making malformed test inputs total through wrapping arithmetic and the AV1
 // intermediate clamp.
-fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
-    let even = inverse_dct16([
+fn inverse_dct32_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 32]) -> [i32; 32] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
+    let even = inverse_dct16_with::<MINIMUM, MAXIMUM>([
         input[0], input[2], input[4], input[6], input[8], input[10], input[12], input[14],
         input[16], input[18], input[20], input[22], input[24], input[26], input[28], input[30],
     ]);
@@ -419,7 +465,8 @@ fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
     ]
 }
 
-fn inverse_dct4_tx64(input: [i32; 4]) -> [i32; 4] {
+fn inverse_dct4_tx64_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 4]) -> [i32; 4] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     let mut c = input.map(clamp_intermediate);
     let clip = |v: i32| clamp_intermediate(v);
     let in0 = c[0];
@@ -438,9 +485,11 @@ fn inverse_dct4_tx64(input: [i32; 4]) -> [i32; 4] {
     c
 }
 
-fn inverse_dct8_tx64(input: [i32; 8]) -> [i32; 8] {
+fn inverse_dct8_tx64_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 8]) -> [i32; 8] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     let clip = |v: i32| clamp_intermediate(v);
-    let even = inverse_dct4_tx64(std::array::from_fn(|index| input[index * 2]));
+    let even =
+        inverse_dct4_tx64_with::<MINIMUM, MAXIMUM>(std::array::from_fn(|index| input[index * 2]));
     let mut c = input.map(clamp_intermediate);
     for (index, value) in even.into_iter().enumerate() {
         c[index * 2] = value;
@@ -479,9 +528,11 @@ fn inverse_dct8_tx64(input: [i32; 8]) -> [i32; 8] {
     c
 }
 
-fn inverse_dct16_tx64(input: [i32; 16]) -> [i32; 16] {
+fn inverse_dct16_tx64_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 16]) -> [i32; 16] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     let clip = |v: i32| clamp_intermediate(v);
-    let even = inverse_dct8_tx64(std::array::from_fn(|index| input[index * 2]));
+    let even =
+        inverse_dct8_tx64_with::<MINIMUM, MAXIMUM>(std::array::from_fn(|index| input[index * 2]));
     let mut c = input.map(clamp_intermediate);
     for (index, value) in even.into_iter().enumerate() {
         c[index * 2] = value;
@@ -557,9 +608,11 @@ fn inverse_dct16_tx64(input: [i32; 16]) -> [i32; 16] {
     c
 }
 
-fn inverse_dct32_tx64(input: [i32; 32]) -> [i32; 32] {
+fn inverse_dct32_tx64_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 32]) -> [i32; 32] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     let clip = |v: i32| clamp_intermediate(v);
-    let even = inverse_dct16_tx64(std::array::from_fn(|index| input[index * 2]));
+    let even =
+        inverse_dct16_tx64_with::<MINIMUM, MAXIMUM>(std::array::from_fn(|index| input[index * 2]));
     let mut c = input.map(clamp_intermediate);
     for (index, value) in even.into_iter().enumerate() {
         c[index * 2] = value;
@@ -722,9 +775,11 @@ fn inverse_dct32_tx64(input: [i32; 32]) -> [i32; 32] {
     c
 }
 
-fn inverse_dct64(input: [i32; 64]) -> [i32; 64] {
+fn inverse_dct64_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 64]) -> [i32; 64] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     let clip = |v: i32| clamp_intermediate(v);
-    let even = inverse_dct32_tx64(std::array::from_fn(|index| input[index * 2]));
+    let even =
+        inverse_dct32_tx64_with::<MINIMUM, MAXIMUM>(std::array::from_fn(|index| input[index * 2]));
     let mut c = input.map(clamp_intermediate);
     for (index, value) in even.into_iter().enumerate() {
         c[index * 2] = value;
@@ -1081,6 +1136,32 @@ fn inverse_dct64(input: [i32; 64]) -> [i32; 64] {
     c
 }
 
+#[inline]
+fn inverse_dct4(input: [i32; 4]) -> [i32; 4] {
+    inverse_dct4_with::<I16_MINIMUM, I16_MAXIMUM>(input)
+}
+
+#[inline]
+fn inverse_dct8(input: [i32; 8]) -> [i32; 8] {
+    inverse_dct8_with::<I16_MINIMUM, I16_MAXIMUM>(input)
+}
+
+/// Apply one AV1 16-point inverse DCT pass in the eight-bit transform range.
+#[inline]
+pub(crate) fn inverse_dct16(input: [i32; 16]) -> [i32; 16] {
+    inverse_dct16_with::<I16_MINIMUM, I16_MAXIMUM>(input)
+}
+
+#[inline]
+fn inverse_dct32(input: [i32; 32]) -> [i32; 32] {
+    inverse_dct32_with::<I16_MINIMUM, I16_MAXIMUM>(input)
+}
+
+#[inline]
+fn inverse_dct64(input: [i32; 64]) -> [i32; 64] {
+    inverse_dct64_with::<I16_MINIMUM, I16_MAXIMUM>(input)
+}
+
 fn inverse_identity16(input: [i32; 16]) -> [i32; 16] {
     input.map(|value| {
         value
@@ -1095,6 +1176,10 @@ fn inverse_identity4(input: [i32; 4]) -> [i32; 4] {
 
 fn inverse_identity8(input: [i32; 8]) -> [i32; 8] {
     input.map(|value| value.wrapping_mul(2))
+}
+
+fn inverse_identity32(input: [i32; 32]) -> [i32; 32] {
+    input.map(|value| value.wrapping_mul(4))
 }
 
 fn inverse_rectangular_16x4(
@@ -1854,7 +1939,8 @@ fn inverse_adst4(input: [i32; 4]) -> [i32; 4] {
     ]
 }
 
-fn inverse_adst8(input: [i32; 8]) -> [i32; 8] {
+fn inverse_adst8_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 8]) -> [i32; 8] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     let [
         input0,
         input1,
@@ -1909,7 +1995,8 @@ fn inverse_adst8(input: [i32; 8]) -> [i32; 8] {
 // ✅ VERIFIED: rav1d 1.1.0 src/itx_1d.rs:943-1085. The checked scalar
 // transcription keeps the reference's clipping points and fixed-point
 // rounding while using fixed-size arrays and wrapping arithmetic for totality.
-fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
+fn inverse_adst16_with<const MINIMUM: i32, const MAXIMUM: i32>(input: [i32; 16]) -> [i32; 16] {
+    let clamp_intermediate = |value| clamp_range(value, MINIMUM, MAXIMUM);
     let [
         in0,
         in1,
@@ -2033,6 +2120,251 @@ fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
         output14,
         output15,
     ]
+}
+
+#[inline]
+fn inverse_adst8(input: [i32; 8]) -> [i32; 8] {
+    inverse_adst8_with::<I16_MINIMUM, I16_MAXIMUM>(input)
+}
+
+#[inline]
+fn inverse_adst16(input: [i32; 16]) -> [i32; 16] {
+    inverse_adst16_with::<I16_MINIMUM, I16_MAXIMUM>(input)
+}
+
+/// One one-dimensional component of an AV1 inverse transform.
+///
+/// Keeping the axis kind separate from the two-dimensional transform name
+/// lets the high-depth path dispatch on depth once, while the inner
+/// butterflies remain monomorphized for their exact clipping range.
+#[allow(
+    dead_code,
+    reason = "flip-ADST is exposed for the complete transform-set integration"
+)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum AxisTransform {
+    Dct,
+    Adst,
+    FlipAdst,
+    Identity,
+}
+
+fn apply_axis_with<const MINIMUM: i32, const MAXIMUM: i32>(
+    kind: AxisTransform,
+    input: &[i32],
+    output: &mut [i32],
+) -> bool {
+    if input.len() != output.len() {
+        return false;
+    }
+    macro_rules! apply {
+        ($size:literal, $transform:expr) => {{
+            let values: [i32; $size] = std::array::from_fn(|index| input[index]);
+            let transformed: [i32; $size] = ($transform)(values);
+            output.copy_from_slice(&transformed);
+            true
+        }};
+    }
+    macro_rules! apply_flipped {
+        ($size:literal, $transform:expr) => {{
+            let values: [i32; $size] = std::array::from_fn(|index| input[index]);
+            let transformed: [i32; $size] = ($transform)(values);
+            for (destination, value) in output.iter_mut().zip(transformed.into_iter().rev()) {
+                *destination = value;
+            }
+            true
+        }};
+    }
+
+    match (input.len(), kind) {
+        (4, AxisTransform::Dct) => {
+            apply!(4, inverse_dct4_with::<MINIMUM, MAXIMUM>)
+        }
+        (8, AxisTransform::Dct) => {
+            apply!(8, inverse_dct8_with::<MINIMUM, MAXIMUM>)
+        }
+        (16, AxisTransform::Dct) => {
+            apply!(16, inverse_dct16_with::<MINIMUM, MAXIMUM>)
+        }
+        (32, AxisTransform::Dct) => {
+            apply!(32, inverse_dct32_with::<MINIMUM, MAXIMUM>)
+        }
+        (64, AxisTransform::Dct) => {
+            apply!(64, inverse_dct64_with::<MINIMUM, MAXIMUM>)
+        }
+        (4, AxisTransform::Adst) => apply!(4, inverse_adst4),
+        (8, AxisTransform::Adst) => {
+            apply!(8, inverse_adst8_with::<MINIMUM, MAXIMUM>)
+        }
+        (16, AxisTransform::Adst) => {
+            apply!(16, inverse_adst16_with::<MINIMUM, MAXIMUM>)
+        }
+        (4, AxisTransform::FlipAdst) => apply_flipped!(4, inverse_adst4),
+        (8, AxisTransform::FlipAdst) => {
+            apply_flipped!(8, inverse_adst8_with::<MINIMUM, MAXIMUM>)
+        }
+        (16, AxisTransform::FlipAdst) => {
+            apply_flipped!(16, inverse_adst16_with::<MINIMUM, MAXIMUM>)
+        }
+        (4, AxisTransform::Identity) => apply!(4, inverse_identity4),
+        (8, AxisTransform::Identity) => apply!(8, inverse_identity8),
+        (16, AxisTransform::Identity) => apply!(16, inverse_identity16),
+        (32, AxisTransform::Identity) => apply!(32, inverse_identity32),
+        _ => false,
+    }
+}
+
+const fn transform_intermediate_shift(width: usize, height: usize) -> Option<u32> {
+    match (width, height) {
+        (4, 4) | (4, 8) | (8, 4) => Some(0),
+        (4, 16)
+        | (8, 8)
+        | (8, 16)
+        | (16, 4)
+        | (16, 8)
+        | (16, 32)
+        | (32, 16)
+        | (32, 64)
+        | (64, 32) => Some(1),
+        (8, 32) | (16, 16) | (16, 64) | (32, 8) | (32, 32) | (64, 16) | (64, 64) => Some(2),
+        _ => None,
+    }
+}
+
+fn inverse_transform_with_ranges<
+    const ROW_MINIMUM: i32,
+    const ROW_MAXIMUM: i32,
+    const COLUMN_MINIMUM: i32,
+    const COLUMN_MAXIMUM: i32,
+>(
+    coefficients: &[i32],
+    width: usize,
+    height: usize,
+    horizontal: AxisTransform,
+    vertical: AxisTransform,
+) -> Option<Vec<i32>> {
+    let shift = transform_intermediate_shift(width, height)?;
+    let coefficient_width = width.min(32);
+    let coefficient_height = height.min(32);
+    let coefficient_count = coefficient_width.checked_mul(coefficient_height)?;
+    if coefficients.len() != coefficient_count {
+        return None;
+    }
+
+    let sample_count = width.checked_mul(height)?;
+    let mut rows = vec![0_i32; sample_count];
+    let mut axis_input = [0_i32; 64];
+    let mut axis_output = [0_i32; 64];
+    let ratio_two_rectangle =
+        width.saturating_mul(2) == height || height.saturating_mul(2) == width;
+
+    for row in 0..coefficient_height {
+        axis_input[..width].fill(0);
+        for column in 0..coefficient_width {
+            let coefficient =
+                coefficients[row.saturating_add(column.saturating_mul(coefficient_height))];
+            axis_input[column] = if ratio_two_rectangle {
+                coefficient.wrapping_mul(181).wrapping_add(128) >> 8
+            } else {
+                coefficient
+            };
+        }
+        if !apply_axis_with::<ROW_MINIMUM, ROW_MAXIMUM>(
+            horizontal,
+            &axis_input[..width],
+            &mut axis_output[..width],
+        ) {
+            return None;
+        }
+        let start = row.saturating_mul(width);
+        rows[start..start.saturating_add(width)].copy_from_slice(&axis_output[..width]);
+    }
+
+    let rounding = (1_i32 << shift) >> 1;
+    for value in rows
+        .iter_mut()
+        .take(width.saturating_mul(coefficient_height))
+    {
+        *value = clamp_range(
+            value.wrapping_add(rounding) >> shift,
+            COLUMN_MINIMUM,
+            COLUMN_MAXIMUM,
+        );
+    }
+
+    let mut output = vec![0_i32; sample_count];
+    for column in 0..width {
+        for row in 0..height {
+            axis_input[row] = rows[row.saturating_mul(width).saturating_add(column)];
+        }
+        if !apply_axis_with::<COLUMN_MINIMUM, COLUMN_MAXIMUM>(
+            vertical,
+            &axis_input[..height],
+            &mut axis_output[..height],
+        ) {
+            return None;
+        }
+        for (row, value) in axis_output[..height].iter().copied().enumerate() {
+            output[row.saturating_mul(width).saturating_add(column)] = value.wrapping_add(8) >> 4;
+        }
+    }
+    Some(output)
+}
+
+/// Apply any normative AV1 inverse transform using depth-specific ranges.
+///
+/// Coefficients use AV1's compact column-major window. The result is
+/// row-major residual data. Unsupported size/type combinations return
+/// `None` instead of silently selecting a different transform.
+#[allow(
+    dead_code,
+    reason = "the high-depth gate remains closed until the complete walker consumes this backend"
+)]
+pub(super) fn inverse_transform_with_depth(
+    coefficients: &[i32],
+    width: usize,
+    height: usize,
+    horizontal: AxisTransform,
+    vertical: AxisTransform,
+    sample_depth: SampleDepth,
+) -> Option<Vec<i32>> {
+    let ranges = TransformRange::for_depth(sample_depth);
+    match sample_depth.bits() {
+        8 => {
+            debug_assert_eq!(ranges.row(), (-32_768, 32_767));
+            debug_assert_eq!(ranges.column(), (-32_768, 32_767));
+            inverse_transform_with_ranges::<-32_768, 32_767, -32_768, 32_767>(
+                coefficients,
+                width,
+                height,
+                horizontal,
+                vertical,
+            )
+        }
+        10 => {
+            debug_assert_eq!(ranges.row(), (-131_072, 131_071));
+            debug_assert_eq!(ranges.column(), (-32_768, 32_767));
+            inverse_transform_with_ranges::<-131_072, 131_071, -32_768, 32_767>(
+                coefficients,
+                width,
+                height,
+                horizontal,
+                vertical,
+            )
+        }
+        12 => {
+            debug_assert_eq!(ranges.row(), (-524_288, 524_287));
+            debug_assert_eq!(ranges.column(), (-131_072, 131_071));
+            inverse_transform_with_ranges::<-524_288, 524_287, -131_072, 131_071>(
+                coefficients,
+                width,
+                height,
+                horizontal,
+                vertical,
+            )
+        }
+        _ => None,
+    }
 }
 
 fn inverse_rectangular_4x8(

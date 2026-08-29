@@ -1765,6 +1765,8 @@ pub(super) fn validate_complete_monochrome_partition(
                     transform_grid,
                 };
                 let tools = super::block::BlockTools {
+                    sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                        .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
                     allow_screen_content_tools: context.allow_screen_content_tools,
                     enable_filter_intra: context.enable_filter_intra,
                     enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -1902,8 +1904,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         return Ok(None);
     }
 
-    let quantization = lossy_quantization_for_context(context);
+    let quantization = lossy_quantization_for_context(context)?;
     let tools = super::block::BlockTools {
+        sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+            .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
         allow_screen_content_tools: context.allow_screen_content_tools,
         enable_filter_intra: context.enable_filter_intra,
         enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -3214,6 +3218,8 @@ pub(super) fn validate_complete_lossless_444_partition(
                 transform_grid,
             };
             let tools = super::block::BlockTools {
+                sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                    .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
                 allow_screen_content_tools: context.allow_screen_content_tools,
                 enable_filter_intra: context.enable_filter_intra,
                 enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -3352,7 +3358,9 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
         && context.restoration_types == [None; 3]
 }
 
-fn lossy_quantization_for_context(context: &FirstBlockContext) -> super::block::LossyQuantization {
+fn lossy_quantization_for_context(
+    context: &FirstBlockContext,
+) -> Av1Result<super::block::LossyQuantization> {
     let frame_quantization = context
         .frame_tools
         .quantization
@@ -3369,7 +3377,10 @@ fn lossy_quantization_for_context(context: &FirstBlockContext) -> super::block::
             matrix_u: 0,
             matrix_v: 0,
         });
-    super::block::LossyQuantization {
+    let sample_depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+        .ok_or_else(|| malformed("AV1 lossy sample depth is unsupported"))?;
+    Ok(super::block::LossyQuantization {
+        sample_depth,
         qindex: context.frame_tools.segment_qindex,
         delta_q_present: context.frame_tools.delta_q_present,
         resolution_log2: context.frame_tools.delta_q_resolution_log2,
@@ -3383,7 +3394,7 @@ fn lossy_quantization_for_context(context: &FirstBlockContext) -> super::block::
         matrix_y: frame_quantization.matrix_y,
         matrix_u: frame_quantization.matrix_u,
         matrix_v: frame_quantization.matrix_v,
-    }
+    })
 }
 
 fn monochrome_transform_geometry(
@@ -4011,6 +4022,8 @@ fn decode_closed_leaf(
         context.frame_height,
         transform_grid,
         super::block::BlockTools {
+            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
             allow_screen_content_tools: context.allow_screen_content_tools,
             enable_filter_intra: context.enable_filter_intra,
             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4033,6 +4046,8 @@ fn decode_closed_420_leaf(
         context.frame_height,
         transform_grid,
         super::block::BlockTools {
+            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
             allow_screen_content_tools: context.allow_screen_content_tools,
             enable_filter_intra: context.enable_filter_intra,
             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4048,13 +4063,15 @@ fn decode_closed_lossy_420_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     context: &FirstBlockContext,
 ) -> Av1Result<Option<super::block::FirstLeaf>> {
-    let quantization = lossy_quantization_for_context(context);
+    let quantization = lossy_quantization_for_context(context)?;
     let reconstructed = super::block::decode_first_lossy_420_leaf(
         decoder,
         context.frame_width,
         context.frame_height,
         quantization,
         super::block::BlockTools {
+            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
             allow_screen_content_tools: context.allow_screen_content_tools,
             enable_filter_intra: context.enable_filter_intra,
             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4070,11 +4087,13 @@ fn decode_closed_lossy_444_16x16_leaf(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     context: &FirstBlockContext,
 ) -> Av1Result<Option<super::block::FirstLeaf>> {
-    let quantization = lossy_quantization_for_context(context);
+    let quantization = lossy_quantization_for_context(context)?;
     let reconstructed = super::block::decode_first_lossy_444_16x16_leaf(
         decoder,
         quantization,
         super::block::BlockTools {
+            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
             allow_screen_content_tools: context.allow_screen_content_tools,
             enable_filter_intra: context.enable_filter_intra,
             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4136,6 +4155,10 @@ pub(super) fn validate_first_partition(
                         node.height.saturating_mul(4),
                         super::block::TransformGrid::Square8,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4178,6 +4201,8 @@ pub(super) fn validate_first_partition(
                 _ => return Ok(PartitionVisitControl::Stop),
             };
             let tools = super::block::BlockTools {
+                sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                    .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
                 allow_screen_content_tools: context.allow_screen_content_tools,
                 enable_filter_intra: context.enable_filter_intra,
                 enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4372,6 +4397,10 @@ pub(super) fn validate_first_partition(
                         context.frame_width,
                         context.frame_height,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4409,6 +4438,10 @@ pub(super) fn validate_first_partition(
                         context.frame_width,
                         context.frame_height,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4437,13 +4470,17 @@ pub(super) fn validate_first_partition(
                     if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
                         return Ok(None);
                     }
-                    let quantization = lossy_quantization_for_context(context);
+                    let quantization = lossy_quantization_for_context(context)?;
                     let reconstructed = super::block::decode_four_lossy_420_leaves(
                         &mut decoder,
                         context.frame_width,
                         context.frame_height,
                         quantization,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4466,13 +4503,17 @@ pub(super) fn validate_first_partition(
                     // PARTITION_VERT places two 8x16 leaves side by side.
                     // Unlike PARTITION_SPLIT, the direct two-axis form has no
                     // child partition CDF sentence between the leaf payloads.
-                    let quantization = lossy_quantization_for_context(context);
+                    let quantization = lossy_quantization_for_context(context)?;
                     let reconstructed = super::block::decode_two_lossy_420_leaves(
                         &mut decoder,
                         context.frame_width,
                         context.frame_height,
                         quantization,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4493,13 +4534,17 @@ pub(super) fn validate_first_partition(
                     // four 16x4 leaves vertically. Each child carries the
                     // rectangular transform syntax directly; no child
                     // partition CDF symbol is present between the leaves.
-                    let quantization = lossy_quantization_for_context(context);
+                    let quantization = lossy_quantization_for_context(context)?;
                     let reconstructed = super::block::decode_four_lossy_420_horizontal_leaves(
                         &mut decoder,
                         context.frame_width,
                         context.frame_height,
                         quantization,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4584,6 +4629,10 @@ pub(super) fn validate_first_partition(
                         context.frame_height,
                         orientation,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4620,6 +4669,10 @@ pub(super) fn validate_first_partition(
                         context.frame_height,
                         orientation,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -4645,13 +4698,17 @@ pub(super) fn validate_first_partition(
                     if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
                         return Ok(None);
                     }
-                    let quantization = lossy_quantization_for_context(context);
+                    let quantization = lossy_quantization_for_context(context)?;
                     let reconstructed = super::block::decode_two_lossy_420_leaves(
                         &mut decoder,
                         context.frame_width,
                         context.frame_height,
                         quantization,
                         super::block::BlockTools {
+                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
+                                .ok_or_else(|| {
+                                    malformed("AV1 block sample depth is unsupported")
+                                })?,
                             allow_screen_content_tools: context.allow_screen_content_tools,
                             enable_filter_intra: context.enable_filter_intra,
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
@@ -5348,6 +5405,8 @@ mod tests {
                 transform_grid,
             };
             let tools = super::super::block::BlockTools {
+                sample_depth: super::super::sample_depth::SampleDepth::new(8)
+                    .ok_or_else(|| malformed("eight-bit alpha sample depth is unsupported"))?,
                 allow_screen_content_tools: false,
                 enable_filter_intra: true,
                 enable_intra_edge_filter: true,
@@ -5410,6 +5469,10 @@ mod tests {
                 8,
                 8,
                 crate::codecs::avif::av1::block::LossyQuantization {
+                    sample_depth: crate::codecs::avif::av1::sample_depth::SampleDepth::new(8)
+                        .ok_or_else(|| {
+                            malformed("eight-bit coverage sample depth is unsupported")
+                        })?,
                     qindex: 120,
                     delta_q_present: false,
                     resolution_log2: 0,
@@ -5425,6 +5488,10 @@ mod tests {
                     matrix_v: 0,
                 },
                 crate::codecs::avif::av1::block::BlockTools {
+                    sample_depth: crate::codecs::avif::av1::sample_depth::SampleDepth::new(8)
+                        .ok_or_else(|| {
+                            malformed("eight-bit coverage sample depth is unsupported")
+                        })?,
                     allow_screen_content_tools: false,
                     enable_filter_intra: true,
                     enable_intra_edge_filter: true,

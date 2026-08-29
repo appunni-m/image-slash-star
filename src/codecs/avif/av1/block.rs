@@ -330,6 +330,27 @@ enum LossyTransformKind {
     AdstAdst,
 }
 
+impl LossyTransformKind {
+    #[allow(
+        dead_code,
+        reason = "the depth-aware transform backend is integrated after the arithmetic gate"
+    )]
+    const fn axes(self) -> (transform::AxisTransform, transform::AxisTransform) {
+        use transform::AxisTransform::{Adst, Dct, Identity};
+        match self {
+            Self::IdentityIdentity => (Identity, Identity),
+            Self::IdentityDct => (Identity, Dct),
+            Self::DctDct => (Dct, Dct),
+            // The internal name follows AV1's vertical/horizontal transform
+            // spelling; the scalar backend executes horizontal first.
+            Self::DctAdst => (Adst, Dct),
+            Self::AdstDct => (Dct, Adst),
+            Self::DctIdentity => (Dct, Identity),
+            Self::AdstAdst => (Adst, Adst),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Lossy4x8TransformKind {
     IdentityIdentity,
@@ -339,6 +360,25 @@ enum Lossy4x8TransformKind {
     AdstAdst,
     AdstDct,
     DctAdst,
+}
+
+impl Lossy4x8TransformKind {
+    #[allow(
+        dead_code,
+        reason = "the depth-aware transform backend is integrated after the arithmetic gate"
+    )]
+    const fn axes(self) -> (transform::AxisTransform, transform::AxisTransform) {
+        use transform::AxisTransform::{Adst, Dct, Identity};
+        match self {
+            Self::IdentityIdentity => (Identity, Identity),
+            Self::DctDct => (Dct, Dct),
+            Self::IdentityDct => (Identity, Dct),
+            Self::DctIdentity => (Dct, Identity),
+            Self::AdstAdst => (Adst, Adst),
+            Self::AdstDct => (Dct, Adst),
+            Self::DctAdst => (Adst, Dct),
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -358,6 +398,23 @@ enum Lossy16x16TransformKind {
     AdstAdst,
     AdstDct,
     DctAdst,
+}
+
+impl Lossy16x16TransformKind {
+    #[allow(
+        dead_code,
+        reason = "the depth-aware transform backend is integrated after the arithmetic gate"
+    )]
+    const fn axes(self) -> (transform::AxisTransform, transform::AxisTransform) {
+        use transform::AxisTransform::{Adst, Dct, Identity};
+        match self {
+            Self::IdentityIdentity => (Identity, Identity),
+            Self::DctDct => (Dct, Dct),
+            Self::AdstAdst => (Adst, Adst),
+            Self::AdstDct => (Dct, Adst),
+            Self::DctAdst => (Adst, Dct),
+        }
+    }
 }
 
 fn lossy_transform_kind_from_intra1(symbol: u32) -> PortableResult<LossyTransformKind> {
@@ -729,20 +786,24 @@ pub(super) enum LumaPredictor {
 
 impl LumaPredictor {
     const fn sample(self) -> u16 {
+        self.sample_with_depth(SampleDepth::EIGHT)
+    }
+
+    const fn sample_with_depth(self, sample_depth: SampleDepth) -> u16 {
         match self {
-            Self::Dc => 128,
-            Self::Vertical => 127,
-            Self::Horizontal => 129,
-            Self::Diagonal45 => 128,
-            Self::DiagonalDownRight => 128,
-            Self::Diagonal113 => 128,
-            Self::Diagonal157 => 128,
-            Self::Diagonal203 => 128,
-            Self::Diagonal67 => 128,
-            Self::Smooth => 128,
-            Self::SmoothVertical => 128,
-            Self::SmoothHorizontal => 128,
-            Self::Paeth => 128,
+            Self::Vertical => sample_depth.top_edge_default(),
+            Self::Horizontal => sample_depth.left_edge_default(),
+            Self::Dc
+            | Self::Diagonal45
+            | Self::DiagonalDownRight
+            | Self::Diagonal113
+            | Self::Diagonal157
+            | Self::Diagonal203
+            | Self::Diagonal67
+            | Self::Smooth
+            | Self::SmoothVertical
+            | Self::SmoothHorizontal
+            | Self::Paeth => sample_depth.midpoint(),
         }
     }
 
@@ -897,6 +958,7 @@ enum QuantizationSyntax {
 
 #[derive(Clone, Copy)]
 pub(super) struct LossyQuantization {
+    pub(super) sample_depth: SampleDepth,
     pub(super) qindex: u32,
     pub(super) delta_q_present: bool,
     pub(super) resolution_log2: u32,
@@ -953,6 +1015,7 @@ enum LossyLuma16x16SkipMode {
 /// Frame-level coding tools that change one intra leaf's entropy syntax.
 #[derive(Clone, Copy)]
 pub(super) struct BlockTools {
+    pub(super) sample_depth: SampleDepth,
     pub(super) allow_screen_content_tools: bool,
     pub(super) enable_filter_intra: bool,
     pub(super) enable_intra_edge_filter: bool,
@@ -14469,13 +14532,15 @@ fn dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
     matrix_values: Option<&[u8]>,
     dequant_shift: u32,
 ) -> PortableResult<(i32, u32)> {
-    let token = if token == 15 {
+    let golomb_extended = token == 15;
+    let token = if golomb_extended {
         read_golomb(decoder).wrapping_add(15)
     } else {
         token
     } & 0x000f_ffff;
     let qindex = coefficient_qindex(quantization, 0, index);
-    let mut quantizer = u32::from(quantization::Y_8BIT[qindex][usize::from(index != 0)]);
+    let dequant_table = quantization::table(quantization.sample_depth);
+    let mut quantizer = u32::from(dequant_table[qindex][usize::from(index != 0)]);
     // The admitted lossy leaf is the closed 4:2:0 frame class, whose frame
     // header selects luma matrix 10. AV1 scales the DC/AC dequantizer before
     // multiplying by the coefficient token; applying the matrix afterwards
@@ -14497,8 +14562,19 @@ fn dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
     // clamp. The order matters for the pinned Golomb and twenty-bit token
     // controls, and keeps this boundary equivalent to the safe fixed-width
     // arithmetic used by the reference decoder.
-    let dequantized = quantizer.wrapping_mul(token) & 0x00ff_ffff;
-    let coefficient_max = 32_767_u32.wrapping_add(u32::from(negative));
+    let product = quantizer.wrapping_mul(token);
+    let dequantized = if golomb_extended {
+        product & 0x00ff_ffff
+    } else {
+        product
+    };
+    let coefficient_max = if negative {
+        quantization
+            .sample_depth
+            .coefficient_negative_magnitude_max()
+    } else {
+        quantization.sample_depth.coefficient_positive_max()
+    };
     let magnitude = (dequantized >> dequant_shift).min(coefficient_max) as i32;
     let coefficient = if negative {
         magnitude.wrapping_neg()
@@ -14801,13 +14877,15 @@ fn dequantize_lossy_chroma_coefficient_with_token_using_matrix_and_shift(
     matrix_values: Option<&[u8]>,
     dequant_shift: u32,
 ) -> PortableResult<(i32, u32)> {
-    let token = if token == 15 {
+    let golomb_extended = token == 15;
+    let token = if golomb_extended {
         read_golomb(decoder).wrapping_add(15)
     } else {
         token
     } & 0x000f_ffff;
     let qindex = coefficient_qindex(quantization, plane, index);
-    let mut quantizer = u32::from(quantization::UV_8BIT[qindex][usize::from(index != 0)]);
+    let dequant_table = quantization::table(quantization.sample_depth);
+    let mut quantizer = u32::from(dequant_table[qindex][usize::from(index != 0)]);
     if quantization.using_matrix {
         let matrix_index = match plane {
             1 => quantization.matrix_u,
@@ -14832,8 +14910,19 @@ fn dequantize_lossy_chroma_coefficient_with_token_using_matrix_and_shift(
         );
         quantizer = quantizer.saturating_mul(matrix).saturating_add(16) >> 5;
     }
-    let dequantized = (quantizer.wrapping_mul(token) & 0x00ff_ffff) >> dequant_shift;
-    let coefficient_max = 32_767_u32.wrapping_add(u32::from(negative));
+    let product = quantizer.wrapping_mul(token);
+    let dequantized = (if golomb_extended {
+        product & 0x00ff_ffff
+    } else {
+        product
+    }) >> dequant_shift;
+    let coefficient_max = if negative {
+        quantization
+            .sample_depth
+            .coefficient_negative_magnitude_max()
+    } else {
+        quantization.sample_depth.coefficient_positive_max()
+    };
     let magnitude = dequantized.min(coefficient_max) as i32;
     let coefficient = if negative {
         magnitude.wrapping_neg()
@@ -15009,6 +15098,7 @@ fn palette_cache_entries(
 fn decode_palette_plane(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
+    sample_depth: SampleDepth,
     plane: usize,
     size_context: usize,
     neighbors: PalettePlaneContext,
@@ -15049,13 +15139,16 @@ fn decode_palette_plane(
     let mut new_colors = [0_u16; PALETTE_CAPACITY];
     let mut new_count = used_count;
     if new_count < size {
-        let max_color = u32::from(u8::MAX);
+        let max_color = u32::from(sample_depth.maximum());
         let increment = u32::from(plane == 0);
-        let mut previous = decoder.bits(8).min(max_color);
+        let mut previous = decoder.bits(sample_depth.bits()).min(max_color);
         new_colors[new_count] = u16::try_from(previous).map_err(|_| PortableUnavailable)?;
         new_count = new_count.saturating_add(1);
         if new_count < size {
-            let mut delta_bits = 5_u32.saturating_add(decoder.bits(2));
+            let mut delta_bits = sample_depth
+                .bits()
+                .saturating_sub(3)
+                .saturating_add(decoder.bits(2));
             while new_count < size {
                 let delta = decoder.bits(delta_bits);
                 previous = previous
@@ -15100,14 +15193,18 @@ fn decode_palette_plane(
 
 fn decode_palette_v_plane(
     decoder: &mut RangeDecoder<'_, '_, '_>,
+    sample_depth: SampleDepth,
     size: u8,
 ) -> PortableResult<PalettePlane> {
     let size = usize::from(size);
     let delta_coded = decoder.equal();
     let mut colors = [0_u16; PALETTE_CAPACITY];
     if delta_coded {
-        let delta_bits = 4_u32.saturating_add(decoder.bits(2));
-        let mut previous = i32::try_from(decoder.bits(8)).unwrap_or(i32::MAX);
+        let delta_bits = sample_depth
+            .bits()
+            .saturating_sub(4)
+            .saturating_add(decoder.bits(2));
+        let mut previous = i32::try_from(decoder.bits(sample_depth.bits())).unwrap_or(i32::MAX);
         colors[0] = u16::try_from(previous).map_err(|_| PortableUnavailable)?;
         for color in colors.iter_mut().take(size).skip(1) {
             let magnitude = i32::try_from(decoder.bits(delta_bits)).unwrap_or(i32::MAX);
@@ -15116,12 +15213,12 @@ fn decode_palette_v_plane(
             } else {
                 magnitude
             };
-            previous = previous.saturating_add(delta) & i32::from(u8::MAX);
+            previous = previous.saturating_add(delta) & i32::from(sample_depth.maximum());
             *color = u16::try_from(previous).map_err(|_| PortableUnavailable)?;
         }
     } else {
         for color in colors.iter_mut().take(size) {
-            *color = u16::try_from(decoder.bits(8)).unwrap_or(u16::MAX);
+            *color = u16::try_from(decoder.bits(sample_depth.bits())).unwrap_or(u16::MAX);
         }
     }
     Ok(PalettePlane {
@@ -15282,6 +15379,7 @@ fn decode_palette_syntax(
         decode_palette_plane(
             decoder,
             cdfs,
+            tools.sample_depth,
             0,
             size_context,
             PalettePlaneContext {
@@ -15308,6 +15406,7 @@ fn decode_palette_syntax(
         let u = decode_palette_plane(
             decoder,
             cdfs,
+            tools.sample_depth,
             1,
             size_context,
             PalettePlaneContext {
@@ -15317,7 +15416,7 @@ fn decode_palette_syntax(
                 left_available: palette_context.left_available,
             },
         )?;
-        let v = decode_palette_v_plane(decoder, u.size)?;
+        let v = decode_palette_v_plane(decoder, tools.sample_depth, u.size)?;
         (u, v)
     } else {
         (PalettePlane::default(), PalettePlane::default())
@@ -15429,6 +15528,7 @@ fn decode_syntax_with_cdef(
     };
 
     let mut lossy_quantization = LossyQuantization {
+        sample_depth: tools.sample_depth,
         qindex: 0,
         delta_q_present: false,
         resolution_log2: 0,
@@ -15466,6 +15566,7 @@ fn decode_syntax_with_cdef(
                 initial_qindex
             };
             lossy_quantization = LossyQuantization {
+                sample_depth: tools.sample_depth,
                 qindex,
                 delta_q_present,
                 resolution_log2,
@@ -19689,38 +19790,72 @@ fn reconstruct_lossy_luma_8x8_from_prediction(
 }
 
 fn reconstruct_lossy_residual_plane(predictor: u16, residual: &[i32]) -> ReconstructedPlane {
-    let samples = residual
-        .iter()
-        .map(|&value| {
-            let reconstructed = i32::from(predictor).saturating_add(value).clamp(0, 255);
-            #[expect(
-                clippy::cast_sign_loss,
-                reason = "the reconstructed eight-bit sample is explicitly clamped to 0..=255"
-            )]
-            {
-                reconstructed as u16
-            }
-        })
-        .collect();
-    ReconstructedPlane { samples }
+    reconstruct_lossy_residual_plane_with_depth(predictor, residual, SampleDepth::EIGHT)
 }
 
 fn reconstruct_lossy_predicted_plane(prediction: &[u16], residual: &[i32]) -> ReconstructedPlane {
-    let samples = prediction
-        .iter()
-        .zip(residual)
-        .map(|(&predictor, &value)| {
-            let reconstructed = i32::from(predictor).saturating_add(value).clamp(0, 255);
-            #[expect(
-                clippy::cast_sign_loss,
-                reason = "the reconstructed eight-bit sample is explicitly clamped to eight-bit range"
-            )]
-            {
-                reconstructed as u16
-            }
-        })
-        .collect();
+    reconstruct_lossy_predicted_plane_with_depth(prediction, residual, SampleDepth::EIGHT)
+}
+
+fn reconstruct_lossy_residual_plane_with_depth(
+    predictor: u16,
+    residual: &[i32],
+    sample_depth: SampleDepth,
+) -> ReconstructedPlane {
+    let mut samples = vec![0_u16; residual.len()];
+    add_constant_prediction_residual(predictor, residual, &mut samples, sample_depth.maximum());
     ReconstructedPlane { samples }
+}
+
+fn reconstruct_lossy_predicted_plane_with_depth(
+    prediction: &[u16],
+    residual: &[i32],
+    sample_depth: SampleDepth,
+) -> ReconstructedPlane {
+    let sample_count = prediction.len().min(residual.len());
+    let mut samples = vec![0_u16; sample_count];
+    add_prediction_residual(
+        &prediction[..sample_count],
+        &residual[..sample_count],
+        &mut samples,
+        sample_depth.maximum(),
+    );
+    ReconstructedPlane { samples }
+}
+
+/// Add one broadcast predictor to a contiguous residual row/block.
+///
+/// The maximum is hoisted out of the loop and the operation has no aliasing
+/// between inputs and output, which keeps this safe scalar reference friendly
+/// to LLVM's lane vectorizer.
+fn add_constant_prediction_residual(
+    predictor: u16,
+    residual: &[i32],
+    output: &mut [u16],
+    maximum: u16,
+) {
+    let predictor = i32::from(predictor);
+    let maximum_sample = maximum;
+    let maximum = i32::from(maximum);
+    for (destination, value) in output.iter_mut().zip(residual.iter().copied()) {
+        let reconstructed = predictor.saturating_add(value).clamp(0, maximum);
+        *destination = u16::try_from(reconstructed).unwrap_or(maximum_sample);
+    }
+}
+
+/// Add contiguous predictor and residual vectors with one final sample clip.
+fn add_prediction_residual(prediction: &[u16], residual: &[i32], output: &mut [u16], maximum: u16) {
+    let maximum_i32 = i32::from(maximum);
+    for ((destination, predictor), value) in output
+        .iter_mut()
+        .zip(prediction.iter().copied())
+        .zip(residual.iter().copied())
+    {
+        let reconstructed = i32::from(predictor)
+            .saturating_add(value)
+            .clamp(0, maximum_i32);
+        *destination = u16::try_from(reconstructed).unwrap_or(maximum);
+    }
 }
 
 fn reconstruct_lossy_luma_16x16(
@@ -26931,7 +27066,18 @@ fn reconstruct_leaf_with_luma_override(
 }
 
 fn origin_predictors(luma_predictor: LumaPredictor) -> [u16; 3] {
-    [luma_predictor.sample(), 128, 128]
+    origin_predictors_with_depth(luma_predictor, SampleDepth::EIGHT)
+}
+
+fn origin_predictors_with_depth(
+    luma_predictor: LumaPredictor,
+    sample_depth: SampleDepth,
+) -> [u16; 3] {
+    [
+        luma_predictor.sample_with_depth(sample_depth),
+        sample_depth.midpoint(),
+        sample_depth.midpoint(),
+    ]
 }
 
 #[derive(Clone, Copy)]
@@ -44380,7 +44526,10 @@ impl Lossy420Decoder {
             Err(_) => return Err(PortableUnavailable),
         };
         self.remember_qindex(&syntax, decoder);
-        let predictors = origin_predictors(syntax.luma_predictor);
+        let predictors = origin_predictors_with_depth(
+            syntax.luma_predictor,
+            syntax.lossy_quantization.sample_depth,
+        );
         let luma_override = if matches!(transform_grid, TransformGrid::Square8)
             && syntax.filter_intra_mode.is_none()
             && matches!(syntax.luma_predictor, LumaPredictor::Dc)
