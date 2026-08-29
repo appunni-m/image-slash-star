@@ -3125,6 +3125,34 @@ class, and wires dav1d-verified luma matrix 6 for `RTX_16X4`. This closes only
 the predictor-enabled H16x4 ADST-DCT class; ADST-ADST, IDTX, V_DCT, H_DCT,
 broader rectangular states, and AVF-STILL-001 remain partial.
 
+The independent follow-up witness
+`coverage_h16x4_predictor_adst_dct_f02_n08.avif` is a 16x16 8-bit 4:2:0
+`PARTITION_H4` frame with four unsplit `Horizontal16x4` luma leaves and modes
+`[10, 1, 1, 3]`; the third leaf selects ADST-DCT and the other three select
+DCT-DCT. Its second leaf's coded Vertical mode resolves to 81 degrees from
+angle delta -3. The pure safe-Rust decoder applies the native, non-upsampled
+Zone-1 edge policy and repeats the final available top sample. The pinned
+origin trace records partition range `43136` and 251 entropy operations, and
+the exact YUV/Pillow RGB references match. This closes only the observed
+predictor/edge-policy and matrix-9 class; broader angles, predictors,
+transforms, matrices, qcats, following-leaf states, and AVF-STILL-001 remain
+partial.
+
+The managed incremental Coverage MCP run for this exact follow-up selector
+`29ab26e8-5069-4d43-bc19-7dadee91cb33` passed in 41,734 ms at exact
+implementation commit `4377ca3e29db98fd1099d00cf8e673727ebe82de` and ingested
+snapshot `5679a889-1feb-48e2-8253-4bf2c5ab020d` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. The managed test log reports 1 passed,
+0 failed, and 43 filtered out. Its additive baseline-union review reports +8
+covered lines, +10 branches, +0 functions, and +937 regions; denominator
+changes are +4,492/+562/+67/+12,846, with 1,966 selected-projection newly
+covered line identities. The selected snapshot diff reports 633 newly covered
+line identities, 75,764 unobserved baseline observations, and zero regressions.
+Merge is conservative and named-test attribution is unavailable; the snapshot
+metadata retains commit `3272b3ef49a87c2947c08b46596b442195c6a8db` as a
+provenance caveat. This is bounded selected-subset evidence, not a complete
+four-metric release measurement.
+
 Every row in this map is a pure safe-Rust task. A native oracle may explain a
 bitstream or provide an independent pixel reference, but it cannot satisfy the
 deliverable, change a `planned` row to `active`, or become a target-specific
