@@ -179,6 +179,21 @@ and zero regressions were reported. Merge exactness is false and named-test
 attribution is unavailable, so this remains bounded selected-subset evidence
 rather than a full-release coverage claim.
 
+The bounded origin R16x8 H_DCT follow-up search is retained as explicit
+negative evidence, not a completion claim. It evaluated 100 deterministic
+Pillow/libavif/libaom candidates across 10 families under the pinned scalar
+dav1d `b546257f770768b2c88258c533da38b91a06f737` oracle. The predicate required
+H_DCT CDF symbol 3/dav1d `txtp=11`, one 128-value luma dequantized dump with
+direct nonzero AC, and two skipped TX8x4 DC chroma payloads; 0 candidates
+qualified and no repository Rust was invoked. The durable report is
+`tests/fixtures/outputs/av1_search/coverage_horizontal16x8_h_dct_campaign_01.json`
+(SHA-256
+`184dfc73926ad1e320b0fd356f3a4782b71875a952d38e3c52a1acd0f2aa1940`). No
+production, fixture, matrix, or Coverage MCP change follows because the
+nearby following-H16x8 DCT-DCT class is already active and no unpromoted
+positive class was found. This bounds only the tested corpus and predicate;
+it does not prove H_DCT unreachable.
+
 The preceding bounded witnesses are the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
 `coverage_v4x16_filter_intra_cdf19_false_01.avif` fixtures. They are 16x16

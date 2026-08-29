@@ -255,6 +255,22 @@ the corresponding status is recorded in `roadmap.json`:
   the common DCT-DCT witness, not identity/V_DCT, following H16x8, split/depth
   variants, alternate transforms, nonzero chroma, or `AVF-STILL-001`.
 
+  The bounded origin R16x8 H_DCT follow-up search is retained as explicit
+  negative evidence, not a completion claim. The deterministic input-only
+  campaign ran 100 candidates across 10 families, required the exact H_DCT
+  transform CDF symbol 3/dav1d `txtp=11`, one 128-value luma dequantized dump
+  with direct nonzero AC, and two skipped TX8x4 DC chroma payloads; it
+  qualified 0 candidates and promoted none. The report is
+  `tests/fixtures/outputs/av1_search/coverage_horizontal16x8_h_dct_campaign_01.json`
+  (SHA-256
+  `184dfc73926ad1e320b0fd356f3a4782b71875a952d38e3c52a1acd0f2aa1940`).
+  It used Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 and pinned dav1d
+  `b546257f770768b2c88258c533da38b91a06f737`, without invoking repository
+  Rust. No production, matrix, fixture, or Coverage MCP change follows: the
+  nearby following-H16x8 DCT-DCT class is already active, and no genuinely
+  unpromoted positive class was found. This result bounds only this search
+  corpus and predicate; it does not prove H_DCT unreachable.
+
   Managed Coverage MCP recorded the exact selected-fixture incremental run
   `a399cf98-f51b-48ac-a248-6c267fe56d8b` against explicit baseline snapshot
   `7665cda3-f4a7-4568-b871-a9d34afaa92c`. It passed in 78,479 ms at exact
