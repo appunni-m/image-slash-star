@@ -684,6 +684,19 @@ with SHA-256
 This remains bounded angular evidence; it does not close general AV1 or
 `AVF-STILL-001` support.
 
+Managed Coverage MCP run `097b4f83-0eb5-4a3e-8e11-183be860645d` passed the
+exact angle-64 reconstruction selector in 36,905 ms at implementation commit
+`a8592b1340361306d254de4c0f518c9a3979bd9f` and ingested snapshot
+`3221125b-77b9-4b55-9134-50e7cf11b7ae` against explicit baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. The central test passed 1/1 with 44
+filtered tests. Standalone `coverage_review(task=incremental)` reports
+additive-union deltas of +8 covered lines, +10 branches, +0 functions, and
++937 regions, with denominator changes of +4,655/+590/+71/+12,937; the union
+adds 1,746 newly covered line identities and the selected snapshot diff adds
+578, with 75,973 baseline observations not observed and zero regressions.
+Merge is conservative and named-test attribution is unavailable, so this is
+bounded selected-subset evidence rather than a complete release measurement.
+
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
 decoded in AV1 payload order, then two following top-row 8×8 blocks consume
