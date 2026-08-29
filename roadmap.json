@@ -4293,7 +4293,50 @@
           "following H16x4 chroma-owned horizontal contexts beyond the existing vertical CFL path",
           "other dimensions, sample depths, subsampling, optional tools, malformed/truncated residuals, sequences, and encoding"
         ],
-        "scope": "This closes only the bounded following right-hand H16x4 H_DCT/CFL edge-handoff class in a 32x16 4:2:0 split frame; broader H16x4 states, AVF-STILL-001, AVIF encoding, and the four-metric 100% coverage gate remain open."
+        "scope": "This closes only the bounded following right-hand H16x4 H_DCT/CFL edge-handoff class in a 32x16 4:2:0 split frame; broader H16x4 states, AVF-STILL-001, AVIF encoding, and the four-metric 100% coverage gate remain open.",
+        "current_slice_update_2026_08_29_h16x4_eob_search": {
+          "status": "completed_bounded_no_hit",
+          "target": "A new legal luma EOB-bin/base coefficient sentence inside the already-proven 32x16 8-bit 4:2:0 PARTITION_SPLIT / two H4 children / eight unsplit Horizontal16x4 H_DCT topology",
+          "script": "scripts/explore_avif_horizontal16x4_eob.py",
+          "report": "tests/fixtures/outputs/av1_search/coverage_horizontal16x4_eob_campaign_01.json",
+          "report_sha256": "bf8c89e10086caeb5983e2ccfb313793c0f42246aa7db4734efd40e3b7b9f79c",
+          "script_sha256": "c871f9b2863925063f48aa4380f94a601f7e290227b4a1ebd843726b841fc6a8",
+          "campaign": {
+            "candidate_count": 100,
+            "family_count": 10,
+            "candidates_per_family": 10,
+            "topology_qualified": 16,
+            "novel_sentence_candidates": 13,
+            "qualified": 0,
+            "repository_rust_invoked": false,
+            "known_active_luma_eob_signature_count": 2,
+            "rejection_counts": {
+              "all_leaves_unsplit_h16x4": 84,
+              "eight_ordered_leaf_groups": 21,
+              "following_target_h_dct_nonempty": 40,
+              "following_target_is_top_right_correspondent": 21,
+              "root_is_32x16_partition_split": 17,
+              "target_luma_eob_sentence_already_represented": 87,
+              "target_luma_h_dct_nonempty": 27,
+              "two_16x16_h4_children": 28
+            }
+          },
+          "oracle": {
+            "pillow": "12.2.0",
+            "libavif": "1.4.1",
+            "libaom": "3.13.2",
+            "dav1d": "1.5.3-0-gb546257f",
+            "dav1d_commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "active_reference_sha256": "830af57014af076279a618f530d847195074bf4dddb5750c6a0a9700a5eb936c"
+          },
+          "decision": "Bounded no-hit. The 16 candidates with the complete required topology reused the active H_DCT/EOB signatures; the 13 novel signatures occurred only on candidates that failed one or more topology predicates. No fixture, manifest, production decoder, or coverage denominator change is justified.",
+          "negative_boundaries": [
+            "This is evidence for the declared 100-case, 10-family, q99 single-threaded Pillow/libavif/libaom corpus only; it does not prove any EOB sentence unreachable.",
+            "Do not infer a new H16x4 coefficient admission from the novel but topologically invalid candidates.",
+            "V_DCT, R16x8 H_DCT, other H_DCT geometries/contexts, alternate transforms, unverified matrices/qcats, optional tools, depth/subsampling/alpha/sequence/encoding remain outside this campaign."
+          ],
+          "next_action": "Retain AVF-STILL-001 and AVF-ENTROPY-001 as partial; choose the next target only from newly verified source-backed evidence rather than coverage rankings."
+        }
       },
       "AVF-ENTROPY-001": {
         "status": "partial",
