@@ -194,6 +194,22 @@ nearby following-H16x8 DCT-DCT class is already active and no unpromoted
 positive class was found. This bounds only the tested corpus and predicate;
 it does not prove H_DCT unreachable.
 
+The H16x4 coefficient-state follow-up is also retained as bounded negative
+evidence. `scripts/explore_avif_horizontal16x4_eob.py` evaluated 100
+deterministic candidates across 10 families in the proven 32x16 8-bit 4:2:0
+following-H16x4 H_DCT topology with Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2
+and scalar dav1d 1.5.3 at commit
+`b546257f770768b2c88258c533da38b91a06f737`; repository Rust was not invoked.
+Sixteen candidates retained the complete topology and 13 emitted a novel
+EOB-bin/base signature, but no candidate satisfied both predicates because the
+topology-qualified candidates reused the two active signatures. The durable
+report is
+`tests/fixtures/outputs/av1_search/coverage_horizontal16x4_eob_campaign_01.json`
+(SHA-256
+`bf8c89e10086caeb5983e2ccfb313793c0f42246aa7db4734efd40e3b7b9f79c`). No
+production, fixture, matrix, or decoder-admission change follows; this bounds
+only the declared corpus and does not prove any EOB sentence unreachable.
+
 The preceding bounded witnesses are the paired
 `coverage_h16x4_filter_intra_cdf14_false_01.avif` and
 `coverage_v4x16_filter_intra_cdf19_false_01.avif` fixtures. They are 16x16

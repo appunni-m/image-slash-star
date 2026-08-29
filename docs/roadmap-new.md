@@ -170,6 +170,22 @@ the corresponding status is recorded in `roadmap.json`:
   exactness is false and named-test attribution is unavailable, so this is
   bounded selected-subset evidence rather than a complete four-metric release
   measurement.
+- The bounded H16x4 coefficient-state follow-up is explicit negative evidence,
+  not a production admission. `scripts/explore_avif_horizontal16x4_eob.py`
+  evaluated 100 deterministic candidates across 10 families in the proven
+  32x16 8-bit 4:2:0 following-H16x4 H_DCT topology, using Pillow 12.2.0,
+  libavif 1.4.1, libaom 3.13.2, and scalar dav1d 1.5.3 at commit
+  `b546257f770768b2c88258c533da38b91a06f737`; repository Rust was not invoked.
+  Sixteen candidates retained the complete topology and 13 candidates emitted
+  a novel EOB-bin/base signature, but no candidate satisfied both predicates;
+  the 16 topology-qualified candidates reused the two active signatures. The
+  durable report is
+  `tests/fixtures/outputs/av1_search/coverage_horizontal16x4_eob_campaign_01.json`
+  (SHA-256
+  `bf8c89e10086caeb5983e2ccfb313793c0f42246aa7db4734efd40e3b7b9f79c`).
+  This bounds only the declared corpus and does not prove any EOB sentence
+  unreachable; no fixture, manifest, decoder admission, or denominator change
+  follows.
 - The new bounded AVIF witness is
   `coverage_v4x16_predictor_adst_adst_01.avif`: a deterministic 16x16 8-bit
   4:2:0 `PARTITION_V4` stream with four `Vertical4x16` luma leaves. Its
