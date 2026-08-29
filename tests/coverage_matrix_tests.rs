@@ -5863,7 +5863,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 244);
+    assert_eq!(expected.cases.len(), 245);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6971,6 +6971,31 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 ],
                 "AV1 following Horizontal16x4 H_DCT witness partition topology"
             );
+        } else if case.fixture == "coverage_r16x8_neighbor_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 38_416,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 0,
+                        range: 36_560,
+                    },
+                ],
+                "AV1 upper-context R16x8 neighbor witness partition topology"
+            );
         } else {
             assert_eq!(
                 case.partition_blocks.len(),
@@ -7324,37 +7349,6 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                         || line.starts_with("Post-uv-cf-blk[")
                 })
                 .collect::<Vec<_>>();
-            let y_intra_pred_index = case
-                .decoder_events
-                .iter()
-                .enumerate()
-                .filter_map(|(index, event)| {
-                    (event
-                        .as_object()
-                        .and_then(|object| object.get("line"))
-                        .and_then(Value::as_str)
-                        == Some("y-intra-pred"))
-                    .then_some(index)
-                })
-                .nth(1)
-                .expect("AV1 independent Horizontal16x4 witness must contain y-intra-pred");
-            let y_intra_pred_rows = case
-                .decoder_events
-                .iter()
-                .skip(y_intra_pred_index.saturating_add(1))
-                .filter_map(|event| event.as_object()?.get("line")?.as_str())
-                .take(4)
-                .collect::<Vec<_>>();
-            assert_eq!(
-                y_intra_pred_rows,
-                vec![
-                    " 00 01 05 0f 1b 29 33 3b 44 4d 55 5e 68 75 81 88",
-                    " 00 02 07 11 1e 2b 35 3d 46 4f 57 60 6a 77 83 88",
-                    " 01 03 09 13 20 2d 36 3f 48 50 59 62 6d 7a 84 88",
-                    " 01 03 0a 15 23 2f 38 40 49 52 5a 63 6f 7c 86 88",
-                ],
-                "AV1 independent Horizontal16x4 witness directional predictor rows"
-            );
             assert_eq!(
                 debug_lines,
                 vec![
@@ -9436,6 +9430,37 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                         || line.starts_with("Post-uv-cf-blk[")
                 })
                 .collect::<Vec<_>>();
+            let y_intra_pred_index = case
+                .decoder_events
+                .iter()
+                .enumerate()
+                .filter_map(|(index, event)| {
+                    (event
+                        .as_object()
+                        .and_then(|object| object.get("line"))
+                        .and_then(Value::as_str)
+                        == Some("y-intra-pred"))
+                    .then_some(index)
+                })
+                .nth(1)
+                .expect("AV1 independent Horizontal16x4 witness must contain y-intra-pred");
+            let y_intra_pred_rows = case
+                .decoder_events
+                .iter()
+                .skip(y_intra_pred_index.saturating_add(1))
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .take(4)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                y_intra_pred_rows,
+                vec![
+                    " 00 01 05 0f 1b 29 33 3b 44 4d 55 5e 68 75 81 88",
+                    " 00 02 07 11 1e 2b 35 3d 46 4f 57 60 6a 77 83 88",
+                    " 01 03 09 13 20 2d 36 3f 48 50 59 62 6d 7a 84 88",
+                    " 01 03 0a 15 23 2f 38 40 49 52 5a 63 6f 7c 86 88",
+                ],
+                "AV1 independent Horizontal16x4 witness directional predictor rows"
+            );
             assert_eq!(
                 debug_lines,
                 vec![
@@ -10999,6 +11024,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             }
             "coverage_vertical8x16_following_filter_intra_mode2_01.avif" => {
                 "403dfa0053c7a79267a72b0c4b8aad0462efb45e9baac12dd488468b3d3d924b"
+            }
+            "coverage_r16x8_neighbor_01.avif" => {
+                "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"
             }
             fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };
