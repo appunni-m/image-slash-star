@@ -22,7 +22,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `cf965d29beff5aceaf8517d8ea0203164358359b754b71a0a09f82887d8e5793`; generated matrix SHA-256: `54671e48b30ab905003be6db3684c912a76ece15bb007b7fab46bf136cb024ae`.
+- Manifest SHA-256: `7d376966bc38272d865c410b41e953b7a143d0714676ed8d282179c050acf1aa`; generated matrix SHA-256: `0e9a6fe634da98a4fa28d1819fb08a42718955ca196b91c342237910dc3c78a4`.
 <!-- current-claim-ledger:end -->
 
 - Current claim-ledger implementation anchor: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`
@@ -97,11 +97,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 318 rows total, 315 active, 3 explicit planned
+- AVIF decode/inspect/verify: 319 rows total, 316 active, 3 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,542 rows total, 1142 active decode rows, 365 active encode
+- Whole matrix: 1,543 rows total, 1143 active decode rows, 365 active encode
   rows, 3 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -180,7 +180,7 @@ the corresponding status is recorded in `roadmap.json`:
   `82523f7f2d713f0ebb5bf42d2c6ebcd01406dee89742afbf25e3ade4dd2c640c`; and
   the Pillow RGB SHA-256 is
   `1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808`.
-  The permanent reconstruction suite passes 248/248 cases, all 315 active AVIF
+  The permanent reconstruction suite passes 249/249 cases, all 316 active AVIF
   rows pass, and the new row is active in the generated matrix. The durable
   implementation commit is `212d273bb757c214ee9079e845cad2e6e033523b`; its
   managed incremental Coverage MCP run is
@@ -327,6 +327,39 @@ the corresponding status is recorded in `roadmap.json`:
   metadata commit `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance
   caveat. This is supported aggregate, bounded selected-subset evidence—not
   a complete four-metric release measurement or a global regression claim.
+- The newest bounded AV1 witness is
+  `coverage_vertical8x16_following_luma_smooth_vertical_01.avif`: an 8x32
+  8-bit 4:2:0 one-tile `PARTITION_SPLIT` frame with two ordered
+  Vertical8x16 leaves. The origin is DC with unsplit TX8x16 DCT-DCT luma EOB
+  28; the following leaf selects mode 10 SmoothVertical with no angle syntax,
+  unsplit TX8x16 DCT-DCT luma EOB 51, qindex 16/qcat zero, and matrix 10.
+  Both U/V pairs are skipped TX4x8. Safe Rust now selects the qcat-specific
+  transform-context-two skip state for direct TX8x16, owns the qcat-zero
+  two-dimensional EOB-bin row without changing qcat-one/two/three behavior,
+  and uses AV1's exact height-16 SmoothVertical weights. It matches all 284
+  pinned scalar dav1d entropy operations, the partition, predictor rows,
+  coefficients, Y/U/V planes, and the 768-byte Pillow RGB8 output. The full
+  249-case pinned reconstruction corpus and five adjacent direct/split/qcat
+  witnesses pass. Fixture, encoded-item, trace, decoded-Y, and Pillow RGB
+  SHA-256 values are
+  `6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6`,
+  `5e46c56f8e512ca56228aadf3f10cd8ae27ea34d91584b8512f53c1ffd99c7b8`,
+  `21da40433e99b28330d3168a937cd6e65f7b32178f2369d87db993c22f954f60`,
+  `83ebf72921b574041082298ffb5d3a54bba104430de95fd1193bb4e78edbe5bb`, and
+  `f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46`.
+  The final input-only campaign contains 100 candidates across 10 families,
+  qualifies 21, and promotes `SV8x16-F01-N05`; report SHA-256 is
+  `977167794eaae213b6ae5a9bf39a7495c9c36b5ee06331c7dabbcf4172d99799`.
+  Implementation commit `4ddeacb20624d9b656554d5de5431388ade62f87` is covered by managed
+  run `b58d0297-11d4-4ab3-8994-a44d8776a91d`, which passed in 38,207 ms and
+  ingested snapshot `84cc7081-3b9c-46ed-b549-bf34c7187ae2` against explicit
+  complete baseline `7665cda3-f4a7-4568-b871-a9d34afaa92c`. Its additive
+  review reports +8/+10/+0/+938 covered line/branch/function/region identities
+  and +4,800/+708/+83/+13,277 denominator changes. The selected snapshot diff
+  reports 616 newly covered line identities, 76,145 baseline observations not
+  observed rather than regressed, and zero regressions. This is bounded
+  selected-subset evidence; broader smooth/geometry/transform/depth states,
+  `AVF-STILL-001`, encoding, and the complete four-metric gate remain open.
 - The bounded H16x4 coefficient-state follow-up is explicit negative evidence,
   not a production admission. `scripts/explore_avif_horizontal16x4_eob.py`
   evaluated 100 deterministic candidates across 10 families in the proven
