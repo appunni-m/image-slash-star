@@ -40,7 +40,9 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
         "coverage_r16x32_following_filter_intra_split_mode0_01.avif",
         "coverage_r16x32_following_filter_intra_split_mode3_01.avif",
         "coverage_vertical8x16_following_filter_intra_mode2_01.avif",
+        "coverage_vertical8x16_following_luma_smooth_01.avif",
         "coverage_vertical8x16_following_luma_smooth_vertical_01.avif",
+        "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif",
     }
 )
 H16X8_ORIGIN_TARGET_FIXTURES = frozenset(
@@ -1383,6 +1385,16 @@ EXPECTED_FIXTURES = {
     "coverage_vertical8x16_following_luma_smooth_vertical_01.avif": {
         "file_sha256": "6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6",
         "rgb_sha256": "f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_luma_smooth_01.avif": {
+        "file_sha256": "54fcb046a23c062c08a7a1ed75637bb43bc497bcea59a8ae10db8c093a8d8d24",
+        "rgb_sha256": "6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif": {
+        "file_sha256": "ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e",
+        "rgb_sha256": "e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6",
         "size": [8, 32],
     },
 }

@@ -4280,10 +4280,22 @@ formats:
       - coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: coverage_vertical8x16_following_luma_smooth_01
+      description: 8x32 4:2:0 quality-95 speed-0 vertical split with a following Vertical8x16 leaf using luma Smooth mode 9 without angle syntax, unsplit TX8x16 DCT-DCT luma with non-empty AC, and skipped TX4x8 U/V transforms
+      test_assets:
+      - coverage_vertical8x16_following_luma_smooth_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_vertical8x16_following_luma_smooth_vertical_01
       description: 8x32 4:2:0 quality-95 speed-0 vertical split with a following Vertical8x16 leaf using luma SmoothVertical mode 10 without angle syntax, unsplit TX8x16 DCT-DCT luma with non-empty AC, and skipped TX4x8 U/V transforms
       test_assets:
       - coverage_vertical8x16_following_luma_smooth_vertical_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: coverage_vertical8x16_following_luma_smooth_horizontal_01
+      description: 8x32 4:2:0 quality-95 speed-0 vertical split with a following Vertical8x16 leaf using luma SmoothHorizontal mode 11 without angle syntax, unsplit TX8x16 DCT-DCT luma with non-empty AC, and skipped TX4x8 U/V transforms
+      test_assets:
+      - coverage_vertical8x16_following_luma_smooth_horizontal_01.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
     - id: coverage_square8_chroma_diagonal113_01

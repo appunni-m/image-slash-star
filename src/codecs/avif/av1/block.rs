@@ -25455,18 +25455,59 @@ fn reconstruct_lossy_luma_8x16_from_prediction(
     ReconstructedPlane { samples }
 }
 
+const R8X16_SMOOTH_WIDTH_WEIGHTS: [i32; 8] = [255, 197, 146, 105, 73, 50, 37, 32];
+const R8X16_SMOOTH_HEIGHT_WEIGHTS: [i32; 16] = [
+    255, 225, 196, 170, 145, 123, 102, 84, 68, 54, 43, 33, 26, 20, 17, 16,
+];
+
+fn reconstruct_lossy_luma_8x16_smooth(
+    top: [u16; 8],
+    left: [u16; 16],
+    coefficients: Option<LossyRectTransformCoefficients>,
+    transform_kind: LossyTransformKind,
+) -> ReconstructedPlane {
+    let bottom = i32::from(left[15]);
+    let right = i32::from(top[7]);
+    let prediction = std::array::from_fn(|index| {
+        let y = index / 8;
+        let x = index % 8;
+        let vertical_weight = R8X16_SMOOTH_HEIGHT_WEIGHTS[y];
+        let horizontal_weight = R8X16_SMOOTH_WIDTH_WEIGHTS[x];
+        let value = vertical_weight
+            .saturating_mul(i32::from(top[x]))
+            .saturating_add(
+                256_i32
+                    .saturating_sub(vertical_weight)
+                    .saturating_mul(bottom),
+            )
+            .saturating_add(horizontal_weight.saturating_mul(i32::from(left[y])))
+            .saturating_add(
+                256_i32
+                    .saturating_sub(horizontal_weight)
+                    .saturating_mul(right),
+            )
+            .saturating_add(256)
+            >> 9;
+        #[expect(
+            clippy::cast_sign_loss,
+            reason = "the smooth predictor is explicitly clamped to eight-bit range"
+        )]
+        {
+            value.clamp(0, 255) as u16
+        }
+    });
+    reconstruct_lossy_luma_8x16_from_prediction(prediction, coefficients, transform_kind)
+}
+
 fn reconstruct_lossy_luma_8x16_smooth_vertical(
     top: [u16; 8],
     bottom: u16,
     coefficients: Option<LossyRectTransformCoefficients>,
     transform_kind: LossyTransformKind,
 ) -> ReconstructedPlane {
-    const SMOOTH_WEIGHTS_16: [i32; 16] = [
-        255, 225, 196, 170, 145, 123, 102, 84, 68, 54, 43, 33, 26, 20, 17, 16,
-    ];
     let bottom = i32::from(bottom);
     let prediction = std::array::from_fn(|index| {
-        let weight = SMOOTH_WEIGHTS_16[index / 8];
+        let weight = R8X16_SMOOTH_HEIGHT_WEIGHTS[index / 8];
         let value = weight
             .saturating_mul(i32::from(top[index % 8]))
             .saturating_add(256_i32.saturating_sub(weight).saturating_mul(bottom))
@@ -25481,6 +25522,62 @@ fn reconstruct_lossy_luma_8x16_smooth_vertical(
         }
     });
     reconstruct_lossy_luma_8x16_from_prediction(prediction, coefficients, transform_kind)
+}
+
+fn reconstruct_lossy_luma_8x16_smooth_horizontal(
+    top: [u16; 8],
+    left: [u16; 16],
+    coefficients: Option<LossyRectTransformCoefficients>,
+    transform_kind: LossyTransformKind,
+) -> ReconstructedPlane {
+    let right = i32::from(top[7]);
+    let prediction = std::array::from_fn(|index| {
+        let x = index % 8;
+        let weight = R8X16_SMOOTH_WIDTH_WEIGHTS[x];
+        let value = weight
+            .saturating_mul(i32::from(left[index / 8]))
+            .saturating_add(256_i32.saturating_sub(weight).saturating_mul(right))
+            .saturating_add(128)
+            >> 8;
+        #[expect(
+            clippy::cast_sign_loss,
+            reason = "the smooth predictor is explicitly clamped to eight-bit range"
+        )]
+        {
+            value.clamp(0, 255) as u16
+        }
+    });
+    reconstruct_lossy_luma_8x16_from_prediction(prediction, coefficients, transform_kind)
+}
+
+fn reconstruct_lossy_luma_8x16_smooth_family(
+    predictor: LumaPredictor,
+    top: [u16; 8],
+    left: [u16; 16],
+    coefficients: Option<LossyRectTransformCoefficients>,
+    transform_kind: LossyTransformKind,
+) -> PortableResult<ReconstructedPlane> {
+    match predictor {
+        LumaPredictor::Smooth => Ok(reconstruct_lossy_luma_8x16_smooth(
+            top,
+            left,
+            coefficients,
+            transform_kind,
+        )),
+        LumaPredictor::SmoothVertical => Ok(reconstruct_lossy_luma_8x16_smooth_vertical(
+            top,
+            left[15],
+            coefficients,
+            transform_kind,
+        )),
+        LumaPredictor::SmoothHorizontal => Ok(reconstruct_lossy_luma_8x16_smooth_horizontal(
+            top,
+            left,
+            coefficients,
+            transform_kind,
+        )),
+        _ => Err(PortableUnavailable),
+    }
 }
 
 fn reconstruct_lossy_luma_8x16(
@@ -31563,6 +31660,35 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     following_v8x16_filter_intra_mode: Option<usize>,
     enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
+    let smooth_quantization = syntax.lossy_quantization;
+    let exact_smooth_syntax_class = syntax.luma_angle.is_none()
+        && syntax.filter_intra_mode.is_none()
+        && matches!(syntax.chroma_predictor, ChromaPredictor::Dc)
+        && syntax.chroma_angle.is_none()
+        && syntax.lossy_luma_rect_coefficients.is_some()
+        && matches!(syntax.lossy_luma_rect_transform, LossyTransformKind::DctDct)
+        && syntax.lossy_luma_4x4_grid_split.is_none()
+        && syntax.lossy_luma_8x8_split.is_none()
+        && syntax
+            .lossy_chroma_8x4_coefficients
+            .iter()
+            .all(Option::is_none)
+        && matches!(syntax.transform_grid, TransformGrid::Vertical8x16)
+        && matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+        && !syntax.palette.is_present()
+        && smooth_quantization.qindex == 16
+        && !smooth_quantization.delta_q_present
+        && smooth_quantization.resolution_log2 == 0
+        && smooth_quantization.y_dc_delta == 0
+        && smooth_quantization.y_ac_delta == 0
+        && smooth_quantization.u_dc_delta == 0
+        && smooth_quantization.u_ac_delta == 0
+        && smooth_quantization.v_dc_delta == 0
+        && smooth_quantization.v_ac_delta == 0
+        && smooth_quantization.using_matrix
+        && smooth_quantization.matrix_y == 10
+        && smooth_quantization.matrix_u == 10
+        && smooth_quantization.matrix_v == 10;
     let BlockSyntax {
         luma_predictor,
         luma_angle,
@@ -31594,6 +31720,19 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     };
     let has_left = left_luma_edge_16.is_some()
         || (left_neighbor.is_some() && left_y_offset.saturating_add(16) <= left_neighbor_height);
+    let exact_smooth_witness_class = exact_smooth_syntax_class
+        && !has_left
+        && left_neighbor.is_none()
+        && left_luma_edge_16.is_none()
+        && left_luma_bottom.is_none()
+        && above_right_is_above_left
+        && above_left_width == 8
+        && above_right_width == 8
+        && above_left_x_offset == 0
+        && above_right_x_offset == 0
+        && matches!(above_left.luma_predictor, LumaPredictor::Dc)
+        && following_v8x16_filter_intra_mode.is_none()
+        && !enable_intra_edge_filter;
     let luma_left = left_luma_edge_16.unwrap_or_else(|| {
         if has_left {
             left_neighbor.map_or([luma_top[0]; 16], |neighbor| {
@@ -31718,12 +31857,18 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                 lossy_luma_rect_coefficients,
                 lossy_luma_rect_transform,
             ),
-            (LumaPredictor::SmoothVertical, _) => reconstruct_lossy_luma_8x16_smooth_vertical(
+            (
+                predictor @ (LumaPredictor::Smooth
+                | LumaPredictor::SmoothVertical
+                | LumaPredictor::SmoothHorizontal),
+                None,
+            ) if exact_smooth_witness_class => reconstruct_lossy_luma_8x16_smooth_family(
+                predictor,
                 std::array::from_fn(|index| luma_top[index]),
-                luma_left[15],
+                luma_left,
                 lossy_luma_rect_coefficients,
                 lossy_luma_rect_transform,
-            ),
+            )?,
             (LumaPredictor::Horizontal | LumaPredictor::Diagonal203, Some(angle))
                 if 180 < angle && angle < 270 =>
             {
@@ -31757,11 +31902,12 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                     lossy_luma_rect_transform,
                 )
             }
-            _ => reconstruct_lossy_luma_8x16(
+            (LumaPredictor::Dc, None) => reconstruct_lossy_luma_8x16(
                 rectangular_dc_predictor(&luma_top, &luma_left),
                 lossy_luma_rect_coefficients,
                 lossy_luma_rect_transform,
             ),
+            _ => return Err(PortableUnavailable),
         }
     };
 
@@ -45314,6 +45460,60 @@ mod tests {
             [
                 254, 224, 195, 169, 144, 123, 102, 84, 68, 54, 43, 33, 26, 20, 17, 16
             ]
+        );
+    }
+
+    #[test]
+    fn lossy_luma_8x16_smooth_matches_rectangular_weights() {
+        let plane = reconstruct_lossy_luma_8x16_smooth(
+            [40, 60, 90, 120, 150, 180, 210, 240],
+            [40; 16],
+            None,
+            LossyTransformKind::DctDct,
+        );
+
+        assert_eq!(
+            plane.samples,
+            [
+                40, 73, 108, 139, 166, 190, 210, 227, 40, 72, 105, 134, 160, 182, 200, 215, 40, 71,
+                102, 130, 154, 174, 191, 204, 40, 70, 100, 126, 148, 167, 182, 194, 40, 69, 97,
+                122, 143, 160, 174, 184, 40, 68, 95, 118, 138, 154, 166, 176, 40, 67, 93, 115, 133,
+                148, 159, 167, 40, 66, 91, 112, 130, 143, 153, 160, 40, 66, 90, 110, 126, 139, 148,
+                154, 40, 65, 88, 107, 123, 135, 143, 149, 40, 65, 87, 106, 121, 132, 140, 144, 40,
+                64, 86, 104, 119, 129, 137, 140, 40, 64, 86, 103, 117, 128, 134, 138, 40, 64, 85,
+                102, 116, 126, 132, 135, 40, 64, 85, 102, 115, 125, 131, 134, 40, 64, 85, 101, 115,
+                125, 131, 134,
+            ]
+        );
+    }
+
+    #[test]
+    fn lossy_luma_8x16_smooth_horizontal_repeats_exact_rows() {
+        let plane = reconstruct_lossy_luma_8x16_smooth_horizontal(
+            [40, 60, 90, 120, 150, 180, 210, 240],
+            [40; 16],
+            None,
+            LossyTransformKind::DctDct,
+        );
+        let expected_row = [41, 86, 126, 158, 183, 201, 211, 215];
+
+        assert_eq!(plane.samples.len(), 128);
+        for row in plane.samples.chunks_exact(8) {
+            assert_eq!(row, expected_row);
+        }
+    }
+
+    #[test]
+    fn lossy_luma_8x16_smooth_family_rejects_other_predictors() {
+        assert!(
+            reconstruct_lossy_luma_8x16_smooth_family(
+                LumaPredictor::Dc,
+                [128; 8],
+                [128; 16],
+                None,
+                LossyTransformKind::DctDct,
+            )
+            .is_err()
         );
     }
 

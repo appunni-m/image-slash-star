@@ -5997,7 +5997,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 249);
+    assert_eq!(expected.cases.len(), 251);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -7193,6 +7193,45 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 );
                 assert_eq!(pair[1].value, 1, "chroma plane {plane_index} skip value");
             }
+        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: 59_240,
+                    },
+                ],
+                "AV1 following Vertical8x16 Smooth witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                155,
+                "AV1 following Vertical8x16 Smooth entropy operation count"
+            );
         } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_vertical_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -7226,6 +7265,45 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 following Vertical8x16 SmoothVertical witness partition topology"
+            );
+        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: 59_240,
+                    },
+                ],
+                "AV1 following Vertical8x16 SmoothHorizontal witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                154,
+                "AV1 following Vertical8x16 SmoothHorizontal entropy operation count"
             );
         } else if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
             assert_eq!(
@@ -11547,8 +11625,14 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif" => {
                 "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731"
             }
+            "coverage_vertical8x16_following_luma_smooth_01.avif" => {
+                "6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5"
+            }
             "coverage_vertical8x16_following_luma_smooth_vertical_01.avif" => {
                 "f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46"
+            }
+            "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif" => {
+                "e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6"
             }
             "coverage_r16x8_neighbor_01.avif" => {
                 "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"
