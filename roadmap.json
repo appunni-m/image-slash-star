@@ -960,6 +960,54 @@
             "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
             "note": "The exact selected fixture passed 1/1 through the registered all-feature command. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +937 regions. Denominator changes are +4,492 lines, +562 branches, +67 functions, and +12,846 regions because this slice adds production AV1/CDF and validation code. The additive-union selected projection reports 1,966 newly covered line identities; the selected snapshot diff reports 633 newly covered line identities, 75,764 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and the ordinary snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 4377ca3e29db98fd1099d00cf8e673727ebe82de. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
           }
+        },
+        {
+          "kind": "managed Coverage MCP selected-subset incremental LLVM run",
+          "measured": "2026-08-29",
+          "managed_coverage_mcp": true,
+          "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+          "commit_sha": "a86126a2ef42e70755d9601c5cf04579faa80549",
+          "run_id": "ee19e423-461b-42b5-be96-f649ea0043b1",
+          "snapshot_id": "53d31fe0-8e72-46d8-a4cb-2df18d638910",
+          "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+          "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+          "suite": "all-features-lines-branches-nightly",
+          "duration_ms": 38160,
+          "arguments": [
+            "--test",
+            "feature_gate_tests",
+            "--",
+            "error_stages_name_the_public_operation",
+            "--exact",
+            "--nocapture"
+          ],
+          "selected_rows": [
+            "error_stages_name_the_public_operation (1 exact public error-policy contract test)"
+          ],
+          "status": "passed_and_ingested",
+          "log_evidence": "running 1 test; test error_stages_name_the_public_operation ... ok; test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 65 filtered out",
+          "review": {
+            "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+            "measurement_scope": "selected_subset",
+            "comparison_mode": "additive_union",
+            "covered_lines_delta": 35,
+            "covered_branches_delta": 0,
+            "covered_functions_delta": 0,
+            "covered_regions_delta": 117,
+            "total_lines_delta": 4543,
+            "total_branches_delta": 566,
+            "total_functions_delta": 67,
+            "total_regions_delta": 12861,
+            "selected_projection_newly_covered_line_identities": 146,
+            "selected_snapshot_diff_newly_covered_line_identities": 198,
+            "not_observed": 77894,
+            "regressed": 0,
+            "test_attribution": "unavailable",
+            "merge_exact": false,
+            "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
+            "snapshot_diff_claim_status": "limited",
+            "note": "The exact selected public error-policy test passed 1/1 through the registered all-feature command with 65 filtered tests. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +35 covered lines, +0 branches, +0 functions, and +117 regions; denominator changes are +4,543 lines, +566 branches, +67 functions, and +12,861 regions. The additive projection reports 146 newly covered line identities; the selected snapshot diff reports 198 newly covered line identities, 77,894 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit a86126a2ef42e70755d9601c5cf04579faa80549. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          }
         }
       ],
       "coverage_origin_inventory": {
