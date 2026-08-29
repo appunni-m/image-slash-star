@@ -244,6 +244,23 @@ Pillow RGB SHA-256 is
 This is bounded origin Vertical8x16 mode-2 evidence, not general filter-intra
 support.
 
+The following three repository-generated fixtures form one bounded 8x32,
+8-bit 4:2:0 following-Vertical8x16 luma smooth family. Their lower leaf uses
+qindex 16/qcat zero, matrix 10, an unsplit TX8x16 DCT-DCT luma transform, and
+skipped TX4x8 U/V transforms. Generation is pinned to Pillow 12.2.0,
+libavif 1.4.1, libaom 3.13.2, and scalar dav1d 1.5.3; each promoted input was
+double-encoded and its AV1 item, trace, decoded YUV, and Pillow RGB output were
+checked for determinism without invoking repository Rust.
+
+| Fixture | Lower luma mode | Fixture SHA-256 | Campaign report and SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| `coverage_vertical8x16_following_luma_smooth_01.avif` | Smooth (9) | `54fcb046a23c062c08a7a1ed75637bb43bc497bcea59a8ae10db8c093a8d8d24` | `coverage_vertical8x16_following_luma_smooth_campaign_01.json`, `ee10e865a3acfcb2d716af436d1501f51896ae4e70e7fbe2342ace515211364c` | `6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5` |
+| `coverage_vertical8x16_following_luma_smooth_vertical_01.avif` | SmoothVertical (10) | `6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6` | `coverage_vertical8x16_following_luma_smooth_vertical_campaign_06.json`, `977167794eaae213b6ae5a9bf39a7495c9c36b5ee06331c7dabbcf4172d99799` | `f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46` |
+| `coverage_vertical8x16_following_luma_smooth_horizontal_01.avif` | SmoothHorizontal (11) | `ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e` | `coverage_vertical8x16_following_luma_smooth_horizontal_campaign_01.json`, `6199718ea2f3f4e579feb0319000db455c70022e039071f90c8f7682394b5422` | `e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6` |
+
+This fixture set proves only the declared smooth-family class; it is not a
+general AV1/AVIF or performance claim.
+
 `coverage_i444_palette2_square8_four_leaves.avif`
 (`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
 is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated

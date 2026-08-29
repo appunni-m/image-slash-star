@@ -22,7 +22,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `7d376966bc38272d865c410b41e953b7a143d0714676ed8d282179c050acf1aa`; generated matrix SHA-256: `0e9a6fe634da98a4fa28d1819fb08a42718955ca196b91c342237910dc3c78a4`.
+- Manifest SHA-256: `bdbeee0bd3b391f4c355d21c0faa998e48dce244c6dcd64cdf0d5071b6e7fd19`; generated matrix SHA-256: `12fe7f40b318d523c9730a00fd9d080a262155b4f251a4bcabf75de51cfa210f`.
 <!-- current-claim-ledger:end -->
 
 - Current claim-ledger implementation anchor: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`
@@ -97,11 +97,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 319 rows total, 316 active, 3 explicit planned
+- AVIF decode/inspect/verify: 321 rows total, 318 active, 3 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,543 rows total, 1143 active decode rows, 365 active encode
+- Whole matrix: 1,545 rows total, 1145 active decode rows, 365 active encode
   rows, 3 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -180,7 +180,7 @@ the corresponding status is recorded in `roadmap.json`:
   `82523f7f2d713f0ebb5bf42d2c6ebcd01406dee89742afbf25e3ade4dd2c640c`; and
   the Pillow RGB SHA-256 is
   `1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808`.
-  The permanent reconstruction suite passes 249/249 cases, all 316 active AVIF
+  The permanent reconstruction suite passes 251/251 cases, all 318 active AVIF
   rows pass, and the new row is active in the generated matrix. The durable
   implementation commit is `212d273bb757c214ee9079e845cad2e6e033523b`; its
   managed incremental Coverage MCP run is
@@ -339,7 +339,7 @@ the corresponding status is recorded in `roadmap.json`:
   and uses AV1's exact height-16 SmoothVertical weights. It matches all 284
   pinned scalar dav1d entropy operations, the partition, predictor rows,
   coefficients, Y/U/V planes, and the 768-byte Pillow RGB8 output. The full
-  249-case pinned reconstruction corpus and five adjacent direct/split/qcat
+  251-case pinned reconstruction corpus and five adjacent direct/split/qcat
   witnesses pass. Fixture, encoded-item, trace, decoded-Y, and Pillow RGB
   SHA-256 values are
   `6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6`,
@@ -360,6 +360,36 @@ the corresponding status is recorded in `roadmap.json`:
   observed rather than regressed, and zero regressions. This is bounded
   selected-subset evidence; broader smooth/geometry/transform/depth states,
   `AVF-STILL-001`, encoding, and the complete four-metric gate remain open.
+- The following-Vertical8x16 smooth-family checkpoint now also includes
+  `coverage_vertical8x16_following_luma_smooth_01.avif` and
+  `coverage_vertical8x16_following_luma_smooth_horizontal_01.avif`. Together
+  with the preceding SmoothVertical witness, these close modes 9/10/11 only
+  for the exact 8x32 8-bit 4:2:0, qindex-16/qcat-zero, matrix-10, unsplit
+  TX8x16 DCT-DCT, skipped-TX4x8-chroma class. Safe Rust uses AV1's exact
+  rectangular width-8/height-16 weights, the reconstructed origin bottom row
+  as the following top edge, and the repeated top-left sample for the missing
+  left edge; unproved modes now return typed unsupported behavior instead of
+  silently using DC. The 251-case pinned reconstruction corpus, all 318 active
+  AVIF rows, and the full all-feature test suite pass. The two input-only
+  100-candidate campaigns qualified 67 and 66 candidates; report SHA-256
+  values are
+  `ee10e865a3acfcb2d716af436d1501f51896ae4e70e7fbe2342ace515211364c`
+  and
+  `6199718ea2f3f4e579feb0319000db455c70022e039071f90c8f7682394b5422`.
+  Fixture/Pillow RGB SHA-256 pairs are
+  `54fcb046a23c062c08a7a1ed75637bb43bc497bcea59a8ae10db8c093a8d8d24` /
+  `6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5`
+  and
+  `ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e` /
+  `e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6`.
+  Managed Coverage MCP runs
+  `30cfecd4-7ab0-4188-afc2-381a5b19ca37` and
+  `ee2a7b4d-de50-4e03-b946-13d43f3fb349` passed their exact 1/1 selectors
+  and ingested snapshots `3491ed87-e1a3-4bf2-ad18-f0797227bd58` and
+  `0f9eb54d-9ef7-44a9-9aab-6dda040819d3`. Each additive review reports
+  +8/+10/+0/+938 covered line/branch/function/region identities and no
+  regressions. This is bounded selected-subset evidence, not general AV1,
+  AVIF, SIMD-performance, or four-metric coverage completion.
 - The bounded H16x4 coefficient-state follow-up is explicit negative evidence,
   not a production admission. `scripts/explore_avif_horizontal16x4_eob.py`
   evaluated 100 deterministic candidates across 10 families in the proven
@@ -1029,7 +1059,7 @@ the corresponding status is recorded in `roadmap.json`:
   double-YUV/double-RGB checks and no repository Rust invocation. This closes
   only the bounded following-Square16/chroma-Smooth/ADST-ADST class; broader
   AV1 and AVF-STILL-001 remain partial.
-- Current local Rust contracts: 44/44 matrix tests and 66/66 feature-gate
+- Current local Rust contracts: 45/45 matrix tests and 66/66 feature-gate
   tests pass with all features enabled; the dedicated animation-loop contract
   suite is 4/4.
 - The current loop-contract slice closes `API-050` and `GIF-013`. Public
@@ -2106,10 +2136,10 @@ were the same unit.
 | --- | ---: | --- |
 | Confirmed correction records | `COR-001`–`COR-072` closed | The original reproduced defects and over-broad claims were corrected. |
 | Test-system correction records | `TST-001`–`TST-010` closed | The original test/coverage-system defects were corrected. |
-| Fixture rows | 1,538 total | 1,141 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,138 active decode rows, 365 active encode rows, 3 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
+| Fixture rows | 1,545 total | 1,148 decode/inspect/verify rows plus 397 encode rows exist. Current status is 1,145 active decode rows, 365 active encode rows, 3 planned decode rows, and 32 planned encode rows; the planned rows are explicit rather than mislabeled malformed cases. |
 | Managed Pillow checks | 1,449/1,449 passed | Managed parity run `84716077-aee7-4396-8328-e6735202b044` is bound to revision `36b9396`. |
 | Immediate correction queue | 0 | No newly confirmed defect is waiting ahead of capability work. |
-| Current native all-feature ordinary contracts | 44/44 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
+| Current native all-feature ordinary contracts | 45/45 matrix tests and 66/66 feature-gate tests passed | The current local tree is behaviorally green for these Rust integration contracts. |
 | Historical source-quality checkpoint | reviewed revision `2d3e7ec` | Strict fmt, locked check, Clippy, rustdoc, full tests, verifiers, managed coverage, and the production JPEG comparison are recorded in the historical checkpoint above. |
 | Accepted product-claim baseline | revision `36b9396` | The managed Pillow claim ledger remains bound to this source/evidence revision. |
 

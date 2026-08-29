@@ -27,7 +27,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `7d376966bc38272d865c410b41e953b7a143d0714676ed8d282179c050acf1aa`; generated matrix SHA-256: `0e9a6fe634da98a4fa28d1819fb08a42718955ca196b91c342237910dc3c78a4`.
+- Manifest SHA-256: `bdbeee0bd3b391f4c355d21c0faa998e48dce244c6dcd64cdf0d5071b6e7fd19`; generated matrix SHA-256: `12fe7f40b318d523c9730a00fd9d080a262155b4f251a4bcabf75de51cfa210f`.
 <!-- current-claim-ledger:end -->
 Historical run
 records elsewhere in this document retain their original revision scope.

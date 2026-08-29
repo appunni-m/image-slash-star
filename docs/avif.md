@@ -9,7 +9,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `7d376966bc38272d865c410b41e953b7a143d0714676ed8d282179c050acf1aa`; generated matrix SHA-256: `0e9a6fe634da98a4fa28d1819fb08a42718955ca196b91c342237910dc3c78a4`.
+- Manifest SHA-256: `bdbeee0bd3b391f4c355d21c0faa998e48dce244c6dcd64cdf0d5071b6e7fd19`; generated matrix SHA-256: `12fe7f40b318d523c9730a00fd9d080a262155b4f251a4bcabf75de51cfa210f`.
 <!-- current-claim-ledger:end -->
 
 Current claim-ledger implementation anchor:
@@ -696,6 +696,41 @@ adds 1,746 newly covered line identities and the selected snapshot diff adds
 578, with 75,973 baseline observations not observed and zero regressions.
 Merge is conservative and named-test attribution is unavailable, so this is
 bounded selected-subset evidence rather than a complete release measurement.
+
+The bounded following-Vertical8x16 smooth-family set now contains
+`coverage_vertical8x16_following_luma_smooth_01.avif`,
+`coverage_vertical8x16_following_luma_smooth_vertical_01.avif`, and
+`coverage_vertical8x16_following_luma_smooth_horizontal_01.avif`. Their lower
+leaves select luma modes 9, 10, and 11 respectively in the same 8x32 8-bit
+4:2:0 split geometry. The admitted class is deliberately narrow: qindex 16,
+qcat zero, matrix 10, unsplit TX8x16 DCT-DCT luma, skipped TX4x8 chroma, no
+angle syntax, and no optional filtering tools. Safe Rust uses AV1's exact
+width-8/height-16 smooth weights, the reconstructed upper leaf's bottom row
+as the lower leaf's top edge, and a repeated top-left sample for its missing
+left edge. The pinned scalar dav1d traces contain 155, 284, and 154 entropy
+operations; exact partition, predictor, coefficient, Y/U/V, and Pillow RGB8
+evidence is retained in the reconstruction oracle. The complete generated
+corpus contains 251 cases.
+
+The new Smooth and SmoothHorizontal campaigns each evaluated 100 deterministic
+input candidates without invoking repository Rust, qualifying 67 and 66. Their
+report SHA-256 values are
+`ee10e865a3acfcb2d716af436d1501f51896ae4e70e7fbe2342ace515211364c`
+and
+`6199718ea2f3f4e579feb0319000db455c70022e039071f90c8f7682394b5422`;
+fixture/Pillow RGB SHA-256 pairs are
+`54fcb046a23c062c08a7a1ed75637bb43bc497bcea59a8ae10db8c093a8d8d24` /
+`6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5`
+and
+`ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e` /
+`e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6`.
+Managed Coverage MCP runs `30cfecd4-7ab0-4188-afc2-381a5b19ca37` and
+`ee2a7b4d-de50-4e03-b946-13d43f3fb349` passed the exact selectors and
+ingested snapshots `3491ed87-e1a3-4bf2-ad18-f0797227bd58` and
+`0f9eb54d-9ef7-44a9-9aab-6dda040819d3` against the explicit complete
+baseline. This proves only the declared rectangular family; other geometries,
+neighbor states, transforms, depths, sequences, encoding, and the complete
+four-metric coverage target remain open.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is
