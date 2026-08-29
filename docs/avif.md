@@ -9,7 +9,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `1395a8a14d7433f34ed9b51e8fe52e91e7e7f0b32ccf3b472ed194c649f244ab`; generated matrix SHA-256: `056844895df917cf98d8c110a27dfb107fc8834c3f064801decc53dd77ec08da`.
+- Manifest SHA-256: `78402dabef6f4195244b361949e98177ec92a09b426d6bf1136685dbf2d5f601`; generated matrix SHA-256: `c414ebbcdd67d858bec94f49f4d8ff1360ffdaeea412343d7238326d9fabe78e`.
 <!-- current-claim-ledger:end -->
 
 Current claim-ledger implementation anchor:
@@ -78,10 +78,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 316 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 317 AVIF decode rows and 32 encode
 rows:
 
-- 313 decode rows are active: portable still reconstruction and structural
+- 314 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and the five-frame sequence.
@@ -666,6 +666,23 @@ Y/U/V planes, and Pillow RGB8 output. Managed Coverage MCP run
 selected-projection newly covered line identities, 75,971 unobserved baseline
 observations, and zero regressions. This is bounded selected-subset evidence,
 not the complete four-metric release measurement.
+
+A second exact following-Vertical8x16 witness is
+`coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif`: an 8x32
+8-bit 4:2:0 split frame whose lower leaf selects mode-8 Diagonal67 with angle
+symbol 2, delta -1, and resolved angle 64. The two luma leaves use unsplit
+TX8x16 DCT-DCT with EOB 9 and 2, the lower leaf has a nonzero AC coefficient,
+and both U/V pairs are skipped TX4x8. Safe Rust matches the exact
+85-operation pinned scalar dav1d trace, partition ranges
+`40720/52494/39416`, predictor rows, dequantized coefficient matrix, Y/U/V
+planes, and Pillow RGB8 bytes. The input-only campaign evaluated 100
+candidates across 10 families, qualified 4, and promoted `D67V-F06-N00`
+(seed 12050) without invoking repository Rust. Its report is
+`tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_diagonal67_angle64_campaign_01.json`
+with SHA-256
+`d71683567d26814ab2cc621a81f00009f05a43c12716959b7745845c24e76d1d`.
+This remains bounded angular evidence; it does not close general AV1 or
+`AVF-STILL-001` support.
 
 One narrow internal regression contract now consumes six terminal blocks of
 the 128×128 lossy baseline in safe Rust: the first exact 16×16 coded square is

@@ -95,6 +95,8 @@ LUMA_DIAGONAL45_TARGET_FIXTURES = frozenset(
 )
 LUMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES = frozenset(
     {
+        "coverage_vertical8x16_following_luma_diagonal67_01.avif",
+        "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif",
         "coverage_square8_luma_diagonal67_vertical_01.avif",
         "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif",
         "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif",
@@ -992,11 +994,6 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "70a7a0107bec2a81f759155aaf760088704eff6de4c628616a5173a3fb0df610",
         "size": [8, 32],
     },
-    "coverage_vertical8x16_following_luma_diagonal67_01.avif": {
-        "file_sha256": "d0b6517966ab8f3a786a7861f43ebf0521f74899ec21eb016c3aaf0a480b0c6b",
-        "rgb_sha256": "62169489fa9dc810e702da26d7ea8309def5ecf07ccf87c0f64b87e8b090813b",
-        "size": [8, 32],
-    },
     "coverage_r16x32_grid_01.avif": {
         "file_sha256": "fb8ee178f58141a3152894c5af033681c871e8562970b2fbab4b89dd487e824a",
         "rgb_sha256": "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac",
@@ -1366,6 +1363,16 @@ EXPECTED_FIXTURES = {
         "file_sha256": "12e2ed4b6327eacb73015c074fcef1b5ba3c3c141ff3de7cc195263c8d9a7b70",
         "rgb_sha256": "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808",
         "size": [32, 16],
+    },
+    "coverage_vertical8x16_following_luma_diagonal67_01.avif": {
+        "file_sha256": "d0b6517966ab8f3a786a7861f43ebf0521f74899ec21eb016c3aaf0a480b0c6b",
+        "rgb_sha256": "62169489fa9dc810e702da26d7ea8309def5ecf07ccf87c0f64b87e8b090813b",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif": {
+        "file_sha256": "0035a7196b860ebb0dfffe2361cd5921750a45b73cbbdbf459ec6da07fa9dcfb",
+        "rgb_sha256": "55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f",
+        "size": [8, 32],
     },
 }
 DEBUG_BLOCK_PATTERN = re.compile(
