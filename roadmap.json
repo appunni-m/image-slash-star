@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1538,
-      "decode_rows": 1141,
+      "total_rows": 1539,
+      "decode_rows": 1142,
       "encode_rows": 397,
-      "decode_active": 1138,
+      "decode_active": 1139,
       "decode_planned": 3,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 314,
-      "decode_active": 311,
+      "decode_rows": 315,
+      "decode_active": 312,
       "decode_planned": 3,
       "encode_rows": 32,
       "encode_active": 0,
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_243_reconstruction_cases",
+      "no_selector_behavior": "run_all_245_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -4508,6 +4508,130 @@
             }
           },
           "status_note": "Implementation commit 4377ca3e29db98fd1099d00cf8e673727ebe82de passes the exact reconstruction selector and all repository gates. Managed Coverage MCP run 29ab26e8-5069-4d43-bc19-7dadee91cb33 passed and ingested snapshot 5679a889-1feb-48e2-8253-4bf2c5ab020d; the selected-subset review is bounded evidence and does not replace the complete four-metric release measurement."
+        },
+        "current_slice_update_2026_08_29_r16x8_neighbor_01": {
+          "status": "implementation_verified_pending_commit_and_coverage",
+          "target": "A valid 32x16 8-bit 4:2:0 reduced-still key frame from the maintained upper-context neighbor campaign",
+          "fixture": "coverage_r16x8_neighbor_01.avif",
+          "fixture_sha256": "12e2ed4b6327eacb73015c074fcef1b5ba3c3c141ff3de7cc195263c8d9a7b70",
+          "current_behavior": "The safe-Rust public path now decodes the valid fixture and matches the independent Pillow RGB reference, reconstructed Y/U/V planes, partition topology, and all 416 entropy operations. The original tile-padding overread was caused by two proven qcat-0 CDF-selection/table-order mismatches and is fixed without a fixture-specific exception. The decoder keeps direct TX16X16 skip syntax qcat-aware: qcat 0 and 2 use contextual transform-context-two state, qcat 1 and 3 retain their scalar sentences, and qcat 2 context zero shares the scalar adaptive state used by its equivalent transform-context-two terminals.",
+          "independent_oracle_diagnostic": {
+            "implementation": "dav1d",
+            "version": "1.5.3-0-gb546257f",
+            "commit": "b546257f770768b2c88258c533da38b91a06f737",
+            "encoded_item_bytes": 67,
+            "encoded_item_sha256": "82523f7f2d713f0ebb5bf42d2c6ebcd01406dee89742afbf25e3ade4dd2c640c",
+            "tile_payload_bytes": 43,
+            "dimensions": [32, 16],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "partition_blocks": 2,
+            "entropy_operations": 416,
+            "decoded_plane_sha256": {
+              "y": "8d5092877555762e7ccae1a9473412b793f2e4c3141722c802aec3946de50bff",
+              "u": "43921c635db595051ed840d765371c32f6385177a858fd8ed4db9f2cd7e460ef",
+              "v": "ec4651577c727b4cf6ed09b4f1a5dd5a9c10087b8765119b387b9f3fb239b493"
+            },
+            "pillow_rgb_sha256": "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808",
+            "repository_rust_invoked": false,
+            "promotion_state": "canonical generated reference, permanent assertions, and active matrix row are present in the working tree; durable commit and managed incremental coverage evidence remain pending"
+          },
+          "first_divergence": {
+            "operation_index": 12,
+            "rust": "The direct Square16 luma coefficient-skip sentence reads the scalar CDF [405, 0].",
+            "dav1d": "The qcat-0 transform-context-two skip sentence reads skip-context row 0 [2811, 0], followed by the matching adaptive update state [2636, 1].",
+            "cause_class": "direct transform-size coefficient-skip CDF selection",
+            "downstream_symptoms": [
+              "The next adaptive CDF update diverges.",
+              "Subsequent entropy symbols no longer describe the same syntax.",
+              "The Rust decoder eventually reports tile-padding overread."
+            ],
+            "confirmed_scope": "The current implementation slice changes only the proven direct Square16 qcat-0 luma call. Existing split decoders retain their geometry-derived rows 1..6; rectangular scalar call sites remain diagnostic until separately evidenced."
+          },
+          "post_skip_first_divergence": {
+            "status": "fixed_and_verified",
+            "operation_index": 16,
+            "rust": "After the direct Square16 skip-CDF correction, the corrected source-ordered qcat-0 16x16 EOB-high table reads fixed parameter 20732 at eob_symbol-2=6.",
+            "dav1d": "The same sentence reads fixed parameter 20732 from eob_hi_bit[t_dim.ctx=2][chroma=0][eob_symbol-2=6].",
+            "cause_class": "qcat-zero 16x16 EOB-high CDF table indexing representation",
+            "source_evidence": {
+              "dav1d_recon_rule": "recon_tmpl.c computes eob_bin = eob - 2 and indexes eob_hi_bit[t_dim.ctx][chroma][eob_bin]",
+              "dav1d_qcat_zero_complemented_rows": [8863, 15574, 16598, 15073, 18942, 16958, 20732, 16384, 16384],
+              "rust_previous_rows": [16384, 16384, 8863, 15574, 16598, 15073, 18942, 16958, 20732],
+              "rust_corrected_rows": [8863, 15574, 16598, 15073, 18942, 16958, 20732, 16384, 16384]
+            },
+            "trace_state": {
+              "rust_operations_before_table_fix": 395,
+              "rust_operations_after_table_fix": 416,
+              "dav1d_operations": 416,
+              "matching_prefix_operations": 16,
+              "matching_operations_after_fix": 416,
+              "rust_downstream_result_before_fix": "The temporary trace reached unsupported node (4,0,2,4); this was downstream of the EOB-high divergence and was not a separate promoted gap.",
+              "rust_result_after_fix": "The Rust trace matches all 416 dav1d operations and reconstructs the expected planes and RGB frame."
+            },
+            "confirmed_scope": "Change only the qcat-0 LOSSY_LUMA_16X16_EOB_HIGH table ordering. Retain eob_symbol-2 indexing and direct EOB 0/1 handling. Do not change qcat1/qcat2/qcat3, split-transform, rectangular, or chroma paths without separate evidence."
+          },
+          "required_first_divergence_order": [
+            "tile bounds and initial arithmetic state",
+            "partition tree and leaf order",
+            "frame/block qindex and delta-q propagation",
+            "matrix and coefficient CDF contexts",
+            "transform, EOB, scan, coefficient tokens, and dequantization",
+            "upper-neighbor edge state",
+            "Y/U/V planes",
+            "public RGB conversion"
+          ],
+          "constraints": [
+            "Find and fix a reusable generic safe-Rust cause; no fixture-name, coordinate, or byte special case",
+            "Keep Malformed for genuinely invalid/truncated arithmetic and Unsupported for valid syntax outside the proven class",
+            "No native AVIF/AV1 dependency, FFI, or unsafe production code",
+            "Do not claim promotion, coverage closure, or overall AVF-STILL-001 completion until exact canonical evidence and gates pass"
+          ],
+          "implementation_evidence": {
+            "production_files": [
+              "src/codecs/avif/av1/block.rs",
+              "tests/coverage_matrix_tests.rs"
+            ],
+            "reference_files": [
+              "scripts/generate_av1_reconstruction_refs.py",
+              "tests/fixtures/outputs/av1_reconstruction.json"
+            ],
+            "matrix_files": [
+              "manifest.yaml",
+              "tests/fixtures/coverage_matrix.json",
+              "tests/fixtures/input/jsons/Decode.avif.json",
+              "tests/fixtures/outputs/jsons/Decode.avif.json",
+              "tests/fixtures/outputs/raws/Decode.avif_coverage_r16x8_neighbor_01_avif.bin"
+            ],
+            "trace_comparison": "416/416 entropy operations match the pinned dav1d trace; partition topology, Y/U/V planes, and Pillow RGB SHA-256 match exactly.",
+            "focused_reconstruction_test": "passed 1/1 selected case",
+            "full_reconstruction_test": "passed 245/245 canonical cases",
+            "matrix_row": "decode:avif:coverage_r16x8_neighbor_01 is active",
+            "regression_follow_up": {
+              "status": "fixed_and_verified",
+              "baseline_revision": "9b691722696c2bc7a4c1e13a72db8eb144919acb",
+              "baseline_active_avif_rows": "311/311",
+              "initial_regressions": [
+                "grid",
+                "animated_error_resilient",
+                "error_animated_repeated_frame_id"
+              ],
+              "selector": "qcat 0/2 contextual; qcat 1/3 scalar; selector is explicit state, never inferred from mutable CDF values",
+              "adaptive_state_fix": "qcat 2 contextual skip row zero aliases its scalar transform-context-two adaptive state; qcat 0 retains an independent contextual row zero",
+              "post_fix_result": "312/312 active AVIF matrix rows pass, including all three prior regressions; all workspace tests pass"
+            }
+          },
+          "strict_verification_before_commit": [
+            "cargo +nightly fmt --all -- --check",
+            "cargo +nightly check --workspace --all-features --locked",
+            "cargo +nightly clippy --workspace --all-targets --all-features --locked -- -D warnings",
+            "RUSTFLAGS=--cfg coverage cargo +nightly check --workspace --all-features --locked",
+            "RUSTDOCFLAGS=-D warnings cargo +nightly doc --workspace --all-features --no-deps --locked",
+            "cargo +nightly test --workspace --doc --all-features --locked",
+            "cargo +nightly test --workspace --all-features --locked",
+            "repository verifiers except claim-ledger refresh"
+          ],
+          "next_action": "Run the remaining locked tests, rustdoc, repository verifiers, and the selected incremental Coverage MCP command after a durable implementation commit; record exact commit/run/snapshot evidence before promoting this slice."
         }
       },
       "AVF-ENTROPY-001": {

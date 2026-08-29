@@ -935,6 +935,16 @@ enum CoefficientSkipCdf {
     },
 }
 
+/// Selects the qcat-specific skip sentence for a direct lossy luma 16×16
+/// transform. The scalar and contextual CDFs are distinct AV1 syntax paths;
+/// selecting one by inspecting a mutable CDF value would be incorrect after
+/// adaptive updates.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LossyLuma16x16SkipMode {
+    Contextual,
+    Scalar,
+}
+
 /// Frame-level coding tools that change one intra leaf's entropy syntax.
 #[derive(Clone, Copy)]
 pub(super) struct BlockTools {
@@ -1500,6 +1510,11 @@ struct BlockCdfs {
     lossy_luma_8x8_coefficient_skip: [[u16; 2]; 7],
     lossy_luma_16x16_coefficient_skip: [u16; 2],
     lossy_luma_16x16_coefficient_skip_contexts: [[u16; 2]; 7],
+    /// qcat-specific syntax selector for the direct TX_16X16 luma path.
+    lossy_luma_16x16_skip_mode: LossyLuma16x16SkipMode,
+    /// qcat-two's contextual row zero shares the adaptive state used by the
+    /// transform-context-two scalar terminals.
+    lossy_luma_16x16_context_zero_uses_scalar_state: bool,
     lossy_luma_32x16_coefficient_skip_contexts: [[u16; 2]; 7],
     lossy_luma_32x32_coefficient_skip_contexts: [[u16; 2]; 7],
     lossy_luma_32x32_coefficient_skip: [u16; 2],
@@ -1586,13 +1601,11 @@ struct BlockCdfs {
     last_lossy_chroma_residual_context: Option<u8>,
 }
 
-// ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` qcat-zero coefficient contexts for
-// `t_dim.ctx == 2`, luma. The portable decoder stores the complemented CDF
-// representation used by `RangeDecoder`; each row ends with the explicit
-// zero sentinel required by its adaptive-symbol helpers.
+// ✅ VERIFIED: dav1d 1.5.3 `src/cdf.c` qcat-zero `eob_hi_bit[2][0]`,
+// complemented for the portable range decoder. The decoder indexes this
+// sentence by `eob_symbol - 2`, so the rows are kept in source order without
+// leading padding entries.
 const LOSSY_LUMA_16X16_EOB_HIGH: [[u16; 2]; 9] = [
-    [16_384, 0],
-    [16_384, 0],
     [8_863, 0],
     [15_574, 0],
     [16_598, 0],
@@ -1600,6 +1613,8 @@ const LOSSY_LUMA_16X16_EOB_HIGH: [[u16; 2]; 9] = [
     [18_942, 0],
     [16_958, 0],
     [20_732, 0],
+    [16_384, 0],
+    [16_384, 0],
 ];
 
 const LOSSY_LUMA_16X16_EOB_BASE: [[u16; 3]; 4] = [
@@ -4605,6 +4620,8 @@ impl BlockCdfs {
             // is `CDF1(32363)`; the range decoder stores its complement.
             lossy_luma_16x16_coefficient_skip: [405, 0],
             lossy_luma_16x16_coefficient_skip_contexts: QCAT0_LUMA_16X16_SKIP_CONTEXTS,
+            lossy_luma_16x16_skip_mode: LossyLuma16x16SkipMode::Contextual,
+            lossy_luma_16x16_context_zero_uses_scalar_state: false,
             lossy_luma_32x16_coefficient_skip_contexts: QCAT0_LUMA_32X16_SKIP_CONTEXTS,
             lossy_luma_32x32_coefficient_skip_contexts: QCAT0_LUMA_32X32_SKIP_CONTEXTS,
             // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].skip[3][0]`
@@ -4996,9 +5013,10 @@ impl BlockCdfs {
     /// AV1's mode CDFs are shared across quantizer categories, while its
     /// coefficient CDFs select one of four qcat tables. Qcat one has
     /// evidence-backed square 8x8 and direct 16x16 lossy 4:2:0 paths; the
-    /// decoder marks that narrow geometry so callers cannot accidentally use
-    /// qcat-one CDFs for an unproven transform size. Qcat two and the proven
-    /// qcat-three terminals retain their existing geometry-specific tables.
+    /// direct 16x16 skip sentence is scalar for qcat one and three, while
+    /// qcat zero and two use their contextual transform-context-two rows.
+    /// Qcat two and the proven qcat-three terminals retain their existing
+    /// geometry-specific tables.
     fn defaults_for_qindex(use_filter_intra: [u16; 2], qindex: u32) -> Option<Self> {
         let qcat = usize::from(qindex > 20)
             .saturating_add(usize::from(qindex > 60))
@@ -5031,6 +5049,7 @@ impl BlockCdfs {
                 cdfs.lossy_luma_8x8_base_1d = QCAT1_LUMA_8X8_BASE_1D;
                 cdfs.lossy_luma_8x8_high_tokens = QCAT1_LUMA_8X8_HIGH;
                 cdfs.lossy_luma_16x16_coefficient_skip = [867, 0];
+                cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Scalar;
                 cdfs.lossy_luma_16x16_eob_bin = QCAT1_LUMA_16X16_EOB_BIN;
                 cdfs.lossy_luma_16x16_eob_high = QCAT1_LUMA_16X16_EOB_HIGH;
                 cdfs.lossy_luma_16x16_eob_base = QCAT1_LUMA_16X16_EOB_BASE;
@@ -5071,6 +5090,8 @@ impl BlockCdfs {
                 cdfs.high_chroma = QCAT2_GENERIC_HIGH_CHROMA;
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT2_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_16x16_coefficient_skip_contexts = QCAT2_LUMA_16X16_SKIP_CONTEXTS;
+                cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Contextual;
+                cdfs.lossy_luma_16x16_context_zero_uses_scalar_state = true;
                 cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_32x32_coefficient_skip_contexts = QCAT2_LUMA_32X32_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT2_LUMA_8X8_EOB_BIN;
@@ -5142,6 +5163,7 @@ impl BlockCdfs {
             }
             3 => {
                 cdfs.lossy_luma_16x16_coefficient_skip = QCAT3_LUMA_16X16_SKIP;
+                cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Scalar;
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT3_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT3_LUMA_32X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_32x32_coefficient_skip_contexts = QCAT3_LUMA_32X32_SKIP_CONTEXTS;
@@ -6770,7 +6792,16 @@ fn decode_contextual_skip(
             decoder.adaptive_bool(&mut cdfs.lossy_luma_8x8_coefficient_skip[context])
         }
         CoefficientSkipCdf::LossyLuma16x16Context(context) => {
-            decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip_contexts[context])
+            // qcat two exposes the same AV1 skip[2][0] sentence through both
+            // the contextual and scalar Rust paths. Keep one adaptive state
+            // for that qcat so a preceding TX32X8/TX16X8 leaf cannot leave a
+            // later direct TX16X16 leaf reading a stale duplicate. Qcat zero
+            // retains its independently evidenced contextual row zero.
+            if context == 0 && cdfs.lossy_luma_16x16_context_zero_uses_scalar_state {
+                decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip)
+            } else {
+                decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip_contexts[context])
+            }
         }
         CoefficientSkipCdf::LossyLuma32x16Context(context) => {
             decoder.adaptive_bool(&mut cdfs.lossy_luma_32x16_coefficient_skip_contexts[context])
@@ -13693,7 +13724,24 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
     let luma_skipped = match transform_grid {
         TransformGrid::Square4 => decoder.adaptive_bool(&mut cdfs.luma_coefficient_skip[0]),
         TransformGrid::Square16 => {
-            decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip)
+            match cdfs.lossy_luma_16x16_skip_mode {
+                LossyLuma16x16SkipMode::Contextual => {
+                    // A direct TX_16X16 block has the same block and
+                    // transform geometry, so dav1d's get_skip_ctx() selects
+                    // row zero of the transform-context-two luma CDF family.
+                    // The selector is qcat-specific; the CDF row remains
+                    // adaptive for the rest of the frame.
+                    decode_contextual_skip(
+                        decoder,
+                        0,
+                        CoefficientSkipCdf::LossyLuma16x16Context(0),
+                        cdfs,
+                    )
+                }
+                LossyLuma16x16SkipMode::Scalar => {
+                    decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip)
+                }
+            }
         }
         TransformGrid::Square32 => {
             decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip)
@@ -44830,13 +44878,47 @@ mod tests {
         let Some(qcat_three) = BlockCdfs::defaults_for_qindex([0, 0], 121) else {
             panic!("qcat three");
         };
+        assert_eq!(qcat_zero.lossy_luma_16x16_coefficient_skip, [405, 0]);
         assert_eq!(qcat_zero.lossy_luma_32x32_coefficient_skip, [14_848, 0]);
+        assert_eq!(
+            qcat_zero.lossy_luma_16x16_skip_mode,
+            LossyLuma16x16SkipMode::Contextual
+        );
+        assert!(!qcat_zero.lossy_luma_16x16_context_zero_uses_scalar_state);
+        assert_eq!(
+            qcat_zero.lossy_luma_16x16_eob_high,
+            [
+                [8_863, 0],
+                [15_574, 0],
+                [16_598, 0],
+                [15_073, 0],
+                [18_942, 0],
+                [16_958, 0],
+                [20_732, 0],
+                [16_384, 0],
+                [16_384, 0],
+            ]
+        );
         assert_eq!(qcat_one.lossy_luma_8x8_coefficient_skip[0], [986, 0]);
         assert_eq!(qcat_one.lossy_luma_16x16_coefficient_skip, [867, 0]);
+        assert_eq!(
+            qcat_one.lossy_luma_16x16_skip_mode,
+            LossyLuma16x16SkipMode::Scalar
+        );
         assert_eq!(qcat_one.eob_bin_luma, [30_643, 30_217, 27_603, 23_822, 0]);
         assert_eq!(qcat_one.dc_sign[1][2], [15_488, 0]);
+        assert_eq!(qcat_two.lossy_luma_16x16_coefficient_skip, [405, 0]);
         assert_eq!(qcat_two.lossy_luma_32x32_coefficient_skip, [2_099, 0]);
+        assert_eq!(
+            qcat_two.lossy_luma_16x16_skip_mode,
+            LossyLuma16x16SkipMode::Contextual
+        );
+        assert!(qcat_two.lossy_luma_16x16_context_zero_uses_scalar_state);
         assert_eq!(qcat_three.lossy_luma_16x16_coefficient_skip, [258, 0]);
+        assert_eq!(
+            qcat_three.lossy_luma_16x16_skip_mode,
+            LossyLuma16x16SkipMode::Scalar
+        );
     }
 
     #[test]

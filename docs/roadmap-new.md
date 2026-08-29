@@ -89,11 +89,11 @@ fallback, and the same dispatch path is used on native and WASM targets.
 The generated matrix is the executable numerical projection of this cutover;
 the corresponding status is recorded in `roadmap.json`:
 
-- AVIF decode/inspect/verify: 314 rows total, 311 active, 3 explicit planned
+- AVIF decode/inspect/verify: 315 rows total, 312 active, 3 explicit planned
   gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps; no encoder is
   wired yet.
-- Whole matrix: 1,538 rows total, 1138 active decode rows, 365 active encode
+- Whole matrix: 1,539 rows total, 1139 active decode rows, 365 active encode
   rows, 3 planned decode rows, and 32 planned encode rows.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
@@ -156,6 +156,27 @@ the corresponding status is recorded in `roadmap.json`:
   This closes only the bounded following right-hand H16x4 H_DCT/CFL
   edge-handoff class; V_DCT, broader H16x4 states, other dimensions and
   optional tools, sequences, encoding, and `AVF-STILL-001` remain partial.
+- The newest bounded upper-context witness is
+  `coverage_r16x8_neighbor_01.avif`: a valid 32x16 8-bit 4:2:0 reduced-still
+  frame whose two-block partition places a 16x8 neighbor below the upper
+  context. The safe-Rust fix is generic: direct `Square16` luma skip decoding
+  selects contextual transform-context-two rows for qcat 0/2 and the scalar
+  sentence for qcat 1/3; qcat 2 context zero shares the equivalent scalar
+  adaptive state, while qcat 0 retains its independently evidenced row. The
+  qcat-0 16x16 EOB-high rows are stored in dav1d source order while retaining
+  `eob_symbol - 2` indexing. The corrected trace matches all 416 pinned dav1d
+  entropy operations, partition records, Y/U/V planes, and the independent Pillow
+  RGB8 hash. Fixture SHA-256 is
+  `12e2ed4b6327eacb73015c074fcef1b5ba3c3c141ff3de7cc195263c8d9a7b70`; the
+  encoded-item SHA-256 is
+  `82523f7f2d713f0ebb5bf42d2c6ebcd01406dee89742afbf25e3ade4dd2c640c`; and
+  the Pillow RGB SHA-256 is
+  `1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808`.
+  The permanent reconstruction suite passes 245/245 cases, all 312 active AVIF
+  rows pass, and the new row is active in the generated matrix; durable commit
+  and selected Coverage MCP evidence are the remaining promotion records for
+  this slice. Broader neighbor geometries, alternate contexts, optional tools,
+  sequences, encoding, and `AVF-STILL-001` remain partial.
 - The managed incremental Coverage MCP run for this new reconstruction
   selector is `fc9d6269-8fd4-4a6b-9497-14cc6bd28ea3`, with ingested snapshot
   `809c0839-05a7-4cb5-beae-4c059d9405b7` against explicit baseline
@@ -868,7 +889,7 @@ the corresponding status is recorded in `roadmap.json`:
   fast incremental campaigns: repeat `--skip` with the reserved prefix
   `__image_slash_star_av1_fixture_selector__=` and a bare, case-sensitive
   `.avif` basename from `av1_reconstruction.json`. No selector still runs all
-  243 reconstruction cases; a selected run reads and executes only the
+  245 reconstruction cases; a selected run reads and executes only the
   requested active fixtures, reports the exact set, and rejects malformed,
   empty, duplicate, unknown, planned, path, glob, ordinary-skip-mixed, and
   matrix-selector-mixed arguments. This is test-system filtering only; it does

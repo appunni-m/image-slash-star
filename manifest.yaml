@@ -4144,6 +4144,10 @@ formats:
       description: 16x16 4:2:0 quality-99 horizontal bands for following 16x8 transforms
       test_assets:
       - coverage_r16x8_band_10.avif
+    - id: coverage_r16x8_neighbor_01
+      description: 32x16 4:2:0 quality-99 upper-context mosaic with a positioned 16x8 neighbor
+      test_assets:
+      - coverage_r16x8_neighbor_01.avif
     - id: coverage_r16x8_neighbor_02
       description: 32x16 4:2:0 quality-99 upper-context mosaics for positioned 16x8 neighbors
       test_assets:
