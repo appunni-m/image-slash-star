@@ -138,84 +138,62 @@
       },
       "latest_evidence": {
         "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
-        "commit_sha": "98824dd14ab25034017f11ffe5e5ebb5761a5ecb",
-        "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+        "commit_sha": "ded00aae53e223fd4a6dff2bc2bac9cde692dca1",
+        "implementation_commit_sha": "05ec80ad12312a782184f83b9fa6dbc8325442c8",
+        "baseline_snapshot_id": "e775c345-999e-47e7-a260-996b27f9d54c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
         "selected_fixtures": [
-          "coverage_vertical8x16_following_chroma_dc_01.avif",
-          "coverage_vertical8x16_following_chroma_smooth_01.avif",
-          "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif",
-          "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif"
+          "coverage_entropy_mosaic_03.avif",
+          "coverage_entropy_mosaic_04.avif",
+          "coverage_entropy_mosaic_05.avif",
+          "coverage_entropy_mosaic_06.avif",
+          "coverage_entropy_mosaic_07.avif",
+          "coverage_entropy_mosaic_08.avif",
+          "coverage_entropy_mosaic_09.avif",
+          "coverage_entropy_mosaic_10.avif"
         ],
         "runs": [
           {
-            "fixture": "coverage_vertical8x16_following_chroma_dc_01.avif",
-            "run_id": "9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66",
-            "snapshot_id": "4660b226-6e92-43bc-a904-98c74805f5a8",
-            "duration_ms": 45478,
+            "run_id": "11a453ea-e11d-4857-9c9d-aa255fcfd13f",
+            "snapshot_id": "066a1865-082d-43f8-95d7-f06e7802335d",
+            "duration_ms": 41313,
             "test_result": "1 passed; 0 failed; 44 filtered out",
-            "selected_projection_newly_covered_line_identities": 1768,
-            "selected_snapshot_diff_newly_covered_line_identities": 581,
-            "not_observed": 76135
-          },
-          {
-            "fixture": "coverage_vertical8x16_following_chroma_smooth_01.avif",
-            "run_id": "2014be25-81a9-4e23-9ea8-39a39e383f8e",
-            "snapshot_id": "59cbbf2f-72e2-4496-a1ec-5c1388e79b38",
-            "duration_ms": 45023,
-            "test_result": "1 passed; 0 failed; 44 filtered out",
-            "selected_projection_newly_covered_line_identities": 1796,
-            "selected_snapshot_diff_newly_covered_line_identities": 594,
-            "not_observed": 76033
-          },
-          {
-            "fixture": "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif",
-            "run_id": "ee823300-1126-443b-aa05-ac7b0e380f9b",
-            "snapshot_id": "f2906a05-336b-440e-99f7-468be3bca9a3",
-            "duration_ms": 47895,
-            "test_result": "1 passed; 0 failed; 44 filtered out",
-            "selected_projection_newly_covered_line_identities": 1798,
-            "selected_snapshot_diff_newly_covered_line_identities": 595,
-            "not_observed": 76072
-          },
-          {
-            "fixture": "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif",
-            "run_id": "6191b1e2-730f-41a2-a7bd-95d2e9a2fd03",
-            "snapshot_id": "e775c345-999e-47e7-a260-996b27f9d54c",
-            "duration_ms": 42633,
-            "test_result": "1 passed; 0 failed; 44 filtered out",
-            "selected_projection_newly_covered_line_identities": 1798,
-            "selected_snapshot_diff_newly_covered_line_identities": 602,
-            "not_observed": 76094
+            "selected_fixtures": 8,
+            "selected_projection_newly_covered_line_identities": 989,
+            "selected_snapshot_diff_newly_covered_line_identities": 1016,
+            "not_observed": 1329
           }
         ],
         "status": "passed_and_ingested",
-        "log_evidence": "Each exact AV1 fixture selector ran one requested case and reported 1 passed, 0 failed, and 44 filtered out.",
+        "log_evidence": "The exact AV1 fixture selector reported selected=8 with precisely coverage_entropy_mosaic_03.avif through coverage_entropy_mosaic_10.avif; the reconstruction test reported 1 passed, 0 failed, and 44 filtered out.",
         "result": {
-          "passed": 4,
+          "passed": 1,
           "failed": 0,
-          "selected_fixtures": 4,
-          "filtered_tests_per_run": 44,
+          "selected_fixture_cases": 8,
+          "filtered_tests": 44,
           "status": "passed_and_ingested"
         },
         "review": {
-          "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+          "claim_status": "supported",
           "measurement_scope": "selected_subset",
           "comparison_mode": "additive_union",
-          "covered_lines_delta": 8,
-          "covered_branches_delta": 10,
-          "covered_functions_delta": 0,
-          "covered_regions_delta": 938,
-          "total_lines_delta": 4969,
-          "total_branches_delta": 838,
-          "total_functions_delta": 90,
-          "total_regions_delta": 13534,
+          "covered_lines_delta": 334,
+          "covered_branches_delta": 34,
+          "covered_functions_delta": 11,
+          "covered_regions_delta": 1060,
+          "total_lines_delta": 0,
+          "total_branches_delta": 0,
+          "total_functions_delta": 0,
+          "total_regions_delta": 0,
+          "selected_projection_newly_covered_line_identities": 989,
+          "selected_snapshot_diff_newly_covered_line_identities": 1016,
+          "not_observed": 1329,
           "regressed": 0,
           "merge_exact": false,
           "test_attribution": "unavailable",
           "snapshot_diff_claim_status": "limited",
-          "automatic_review": "standalone coverage_review measured every ingested snapshot",
-          "note": "The exact DC, Smooth, SmoothVertical, and SmoothHorizontal chroma fixtures each passed 1/1 in separate serialized managed runs. Every additive baseline union reports +8 covered lines, +10 branches, +0 functions, and +938 regions, with denominator changes of +4,969 lines, +838 branches, +90 functions, and +13,534 regions. Per-run selected projections, replacement-style diffs, and not-observed counts are retained above; absent baseline observations are not regressions, and zero regressions are reported. The merge is conservative, named-test attribution is unavailable, and the compact snapshot projections retain metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable runs are exact for implementation commit 98824dd14ab25034017f11ffe5e5ebb5761a5ecb. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          "automatic_review": "standalone coverage_review measured the ingested snapshot",
+          "note": "The exact eight-fixture entropy-mosaic batch passed in one selected managed run at committed tree ded00aae53e223fd4a6dff2bc2bac9cde692dca1. The additive baseline union reports +334 covered lines, +34 branches, +11 functions, and +1,060 regions with unchanged denominators. The selected projection reports 989 newly covered line identities; the replacement-style selected-subset diff reports 1,016 newly covered identities and 1,329 baseline observations not observed. Those absences are not regressions, and the reported zero regressions is not a global claim. The merge is conservative, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db. This is bounded selected-subset evidence, not a complete four-metric release measurement."
         }
       }
     },
@@ -1254,7 +1232,7 @@
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 513,
+        "guards": 515,
         "files": 86
       },
       "status": "open_until_all_four_metrics_are_100_percent"
@@ -3881,10 +3859,10 @@
         "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, H_DCT/CFL, following-leaf angular, following-Vertical8x16 luma/chroma smooth families, and the origin Square32 screen-content-enabled palette-use-false corpus recorded in bounded_witnesses, including exact partition, syntax, entropy, predictor, coefficient, Y/U/V, and Pillow RGB evidence. The production path uses checked edges and the complete 4:2:0 canvas walker; unproven states retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: nonzero palette syntax, intrabc, broader partition/predictor/transform/sample-depth/sequence/encoding classes, AVF-STILL-001, and four-metric coverage work remain partial.",
         "latest_witness": "The latest bounded proofs are coverage_entropy_mosaic_03.avif through coverage_entropy_mosaic_10.avif. Safe Rust matches their common origin Square32 PARTITION_NONE DC/DC qindex-2 matrix-10 topology, all eight exact adaptive entropy traces, TX32x32 Y and TX16x16 U/V DCT-DCT coefficients, exact Y/U/V planes, and Pillow RGB8 outputs. Cases 03 and 06-10 additionally consume the screen-content-enabled y_pal=0 and uv_pal=0 symbols in the pinned order; 04-05 are screen-content-disabled controls. The full 263-case pinned reconstruction corpus passes.",
         "latest_slice": "The latest AVF-STILL-001 slice promotes entropy-mosaic cases 03-10 as one bounded Square32 corpus without widening production admission. The existing generic path already handled their partition, predictor, residual, and palette-use-false syntax, so the slice adds hard exact evidence rather than fixture-specific gates. Arithmetic range decoding remains serial and adaptive; adding SIMD to the two palette booleans would not accelerate this class. Shared transforms, filtering, upsampling, and color conversion remain the measured vectorization targets.",
-        "latest_evidence_addition": "Eight active manifest rows, exact Pillow RGB references, and pinned dav1d partition/entropy/EOB/plane records extend the matrix to 1,557 rows, AVIF decode to 330/333 active, and the reconstruction oracle to 263 cases. Fixture and RGB SHA-256 values are retained in bounded_witnesses and the generator's expected mapping. Managed Coverage MCP evidence is recorded only after an exact committed run ingests successfully.",
+        "latest_evidence_addition": "Eight active manifest rows, exact Pillow RGB references, and pinned dav1d partition/entropy/EOB/plane records extend the matrix to 1,557 rows, AVIF decode to 330/333 active, and the reconstruction oracle to 263 cases. Managed Coverage MCP run 11a453ea-e11d-4857-9c9d-aa255fcfd13f passed the exact eight-fixture selector at committed tree ded00aae53e223fd4a6dff2bc2bac9cde692dca1 and ingested snapshot 066a1865-082d-43f8-95d7-f06e7802335d against explicit baseline e775c345-999e-47e7-a260-996b27f9d54c.",
         "current_slice": "The current AVF-STILL-001 slice proves the bounded origin Square32 qcat-zero DC/DC DCT-DCT class plus the screen-content-enabled palette-use-false sentence. Nonzero palettes, palette colors/index maps, neighbor contexts, multi-block adaptation, intrabc, alternate geometries/transforms, high depth, HDR, sequences, encoding, and four-metric coverage work remain open.",
         "current_slice_update_2026_08_29_entropy_mosaic_palette_zero": {
-          "status": "completed_bounded_pending_exact_managed_ingest",
+          "status": "completed_bounded",
           "fixtures": [
             "coverage_entropy_mosaic_03.avif",
             "coverage_entropy_mosaic_04.avif",
@@ -3896,7 +3874,11 @@
             "coverage_entropy_mosaic_10.avif"
           ],
           "implementation_commit": "05ec80ad12312a782184f83b9fa6dbc8325442c8",
-          "focused_verification": "The all-feature matrix passes 40/40 in the ordinary build, including all 330 active AVIF decode rows. Exact committed managed ingestion is pending the documentation-consistent commit; the earlier worktree execution passed but is not accepted because its artifact became stale while roadmap files changed.",
+          "focused_verification": "The all-feature matrix passes 40/40 in the ordinary build, including all 330 active AVIF decode rows. Managed run 11a453ea-e11d-4857-9c9d-aa255fcfd13f selected exactly all eight fixtures, passed the reconstruction test with 1 passed, 0 failed, and 44 filtered out in 41,313 ms, and ingested snapshot 066a1865-082d-43f8-95d7-f06e7802335d against explicit baseline e775c345-999e-47e7-a260-996b27f9d54c.",
+          "managed_coverage_run": "11a453ea-e11d-4857-9c9d-aa255fcfd13f",
+          "managed_coverage_snapshot": "066a1865-082d-43f8-95d7-f06e7802335d",
+          "managed_coverage_baseline": "e775c345-999e-47e7-a260-996b27f9d54c",
+          "managed_coverage_review": "Supported additive union: +334 covered lines, +34 branches, +11 functions, and +1,060 regions with unchanged denominators. The selected projection reports 989 newly covered line identities. The limited replacement-style diff reports 1,016 newly covered identities and 1,329 baseline observations not observed; those absences are not regressions. Merge exactness is false and named-test attribution is unavailable.",
           "scope": "bounded selected-subset evidence; nonzero palettes, intrabc, AVF-STILL-001, broader AV1/AVIF support, and the complete four-metric gate remain open"
         },
         "current_slice_update_following_chroma_smooth_family": {

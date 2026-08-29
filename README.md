@@ -723,7 +723,15 @@ does not admit nonzero palettes, palette colors/index maps, palette-neighbor
 contexts, multi-block adaptation, or intrabc. Arithmetic range decoding is
 serial and adaptive; the appropriate measured vectorization targets remain
 the shared inverse-transform, filtering, upsampling, and color-conversion
-kernels.
+kernels. Managed Coverage MCP run
+`11a453ea-e11d-4857-9c9d-aa255fcfd13f` selected exactly all eight fixtures,
+passed at committed tree `ded00aae53e223fd4a6dff2bc2bac9cde692dca1`, and
+ingested snapshot `066a1865-082d-43f8-95d7-f06e7802335d` against explicit
+baseline `e775c345-999e-47e7-a260-996b27f9d54c`. Its supported additive
+union adds 334 covered lines, 34 branches, 11 functions, and 1,060 regions.
+The limited selected-subset diff records 1,329 baseline observations as not
+observed, not as regressions; merge exactness is false and named-test
+attribution is unavailable.
 
 The preceding bounded AVIF reconstruction evidence covers four exact
 following-Vertical8x16 chroma fixtures at implementation commit

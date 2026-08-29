@@ -115,6 +115,15 @@ contexts, multi-block palette adaptation, and intrabc remain unsupported or
 unproven. Adaptive arithmetic decoding is inherently serial, so this slice
 does not make a SIMD claim; shared inverse transforms, filtering, upsampling,
 and color conversion remain the meaningful benchmarked vectorization targets.
+Managed Coverage MCP run `11a453ea-e11d-4857-9c9d-aa255fcfd13f` selected all
+eight cases at committed tree `ded00aae53e223fd4a6dff2bc2bac9cde692dca1`,
+passed in 41,313 ms, and ingested snapshot
+`066a1865-082d-43f8-95d7-f06e7802335d` against explicit baseline
+`e775c345-999e-47e7-a260-996b27f9d54c`. The supported additive union records
++334 lines, +34 branches, +11 functions, and +1,060 regions with unchanged
+denominators. Its replacement-style diff is limited to the selected subset;
+1,329 baseline observations were not observed and are not regressions. Merge
+exactness is false and named-test attribution is unavailable.
 
 An earlier bounded witness is
 `coverage_square32_origin_tx16x16_split_01.avif`: a deterministic 32x32

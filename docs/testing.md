@@ -110,6 +110,21 @@ return before doing fixture work; the reconstruction test validates only the
 requested cases and asserts that every requested name ran exactly once. The
 selector is coverage-harness infrastructure, not a new decoder capability.
 
+The current managed AV1 batch run
+`11a453ea-e11d-4857-9c9d-aa255fcfd13f` selected exactly
+`coverage_entropy_mosaic_03.avif` through `_10.avif`, passed the one
+reconstruction dispatcher with 1 passed, 0 failed, and 44 filtered out in
+41,313 ms at committed tree `ded00aae53e223fd4a6dff2bc2bac9cde692dca1`,
+and ingested snapshot `066a1865-082d-43f8-95d7-f06e7802335d` against explicit
+baseline `e775c345-999e-47e7-a260-996b27f9d54c`. Standalone incremental review
+reports a supported additive union of +334 covered lines, +34 branches, +11
+functions, and +1,060 regions with unchanged denominators. The selected
+projection reports 989 newly covered line identities. The replacement-style
+diff is limited to the selected subset: it reports 1,016 newly covered
+identities and 1,329 baseline observations not observed, so the latter are not
+regressions. Merge exactness is false, named-test attribution is unavailable,
+and this run does not replace the complete four-metric release measurement.
+
 The newest managed one-fixture reconstruction run
 `6b78c91c-d417-4ad0-af44-96d3623e3f64` passed in 32,449 ms at exact
 implementation commit `520e38284a263a4e07b392bf02f4b6322e6a3e31` and ingested
