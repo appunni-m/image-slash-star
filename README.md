@@ -673,6 +673,14 @@ become more specific, so it is not a substitute for `ImageErrorKind`.
 
 ## Correctness evidence
 
+<!-- current-claim-ledger:begin -->
+Current claim-ledger baseline (not current `HEAD`):
+- Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
+- Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
+- Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
+- Manifest SHA-256: `0068a99aab9c70d3fa3863f9cb9d1ece83edf71d9d61ab3623c493e312e77698`; generated matrix SHA-256: `84ff26313b9ef8e445936869560c816d7617d6834636190511f5aa2f47e1c1e6`.
+<!-- current-claim-ledger:end -->
+
 The generated matrix in this tree contains 1,539 total rows: 1,142 decode /
 inspect / verify rows and 397 encode rows. Of those, 1,139 decode rows and
 365 encode rows are active; 3 AVIF decode rows and all 32 AVIF encode rows

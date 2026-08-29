@@ -207,6 +207,28 @@ def verify() -> str:
     ]
     if len(detail_ids) != len(finding_details) or len(detail_ids) != len(set(detail_ids)):
         fail("roadmap.json finding detail IDs are missing or duplicated")
+    allowed_detail_statuses = {"open", "parked"}
+    unexpected_statuses = {
+        detail.get("status")
+        for detail in finding_details
+        if isinstance(detail, dict)
+        and detail.get("status") not in allowed_detail_statuses
+    }
+    if unexpected_statuses:
+        fail(
+            "roadmap.json finding details may only be open or parked; "
+            f"found {sorted(unexpected_statuses)}"
+        )
+    if "resolved" in roadmap_data:
+        fail(
+            "roadmap.json must prune resolved findings; "
+            "historical resolution evidence belongs in Git history and docs/roadmap.md"
+        )
+    if any(
+        isinstance(detail, dict) and "resolution" in detail
+        for detail in finding_details
+    ):
+        fail("roadmap.json finding details must not retain resolution records")
     detail_by_id = {detail["id"]: detail for detail in finding_details}
     open_id_set = set(open_ids)
     if not open_id_set.issubset(detail_by_id):
@@ -217,7 +239,7 @@ def verify() -> str:
             for detail in finding_details
             if detail.get("status") == status
         }
-        for status in ("open", "resolved", "parked")
+        for status in ("open", "parked")
     }
     if open_id_set != status_ids["open"]:
         missing = sorted(status_ids["open"] - open_id_set)
@@ -232,29 +254,13 @@ def verify() -> str:
         if isinstance(value, list)
         for task_id in value
     }
-    resolved_entries = set(roadmap_data.get("resolved", []))
-    if not status_ids["resolved"].issubset(resolved_entries):
-        fail(
-            "roadmap resolved detail IDs are missing from resolved: "
-            f"{sorted(status_ids['resolved'] - resolved_entries)}"
-        )
     if not status_ids["parked"].issubset(parked_entries):
         fail(
             "roadmap parked detail IDs are missing from parked: "
             f"{sorted(status_ids['parked'] - parked_entries)}"
         )
-    if (status_ids["open"] & status_ids["resolved"]) or (
-        status_ids["open"] & status_ids["parked"]
-    ) or (status_ids["resolved"] & status_ids["parked"]):
+    if status_ids["open"] & status_ids["parked"]:
         fail("roadmap open, resolved, and parked finding sets overlap")
-    for task_id in status_ids["resolved"]:
-        resolution = detail_by_id[task_id].get("resolution")
-        if not isinstance(resolution, dict):
-            fail(f"roadmap resolved finding {task_id} has no resolution object")
-        if not isinstance(resolution.get("kind"), str) or not resolution["kind"].strip():
-            fail(f"roadmap resolved finding {task_id} has no resolution kind")
-        if not isinstance(resolution.get("evidence"), str) or not resolution["evidence"].strip():
-            fail(f"roadmap resolved finding {task_id} has no resolution evidence")
     group_area = {
         "common_api": "common_api",
         "jpeg": "jpeg",
@@ -315,7 +321,7 @@ def verify() -> str:
     )
     exact_match(
         roadmap,
-        r"\| Documentation \| 5 \| `DOC-003`, `DOC-005`–`DOC-008` \|",
+        r"\| Documentation \| 3 \| `DOC-003`, `DOC-007`, `DOC-008` \|",
         "documentation open-task count",
     )
     inventory = roadmap.split("## Complete open-task inventory", 1)[1].split(

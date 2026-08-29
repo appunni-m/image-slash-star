@@ -43,6 +43,7 @@ HASHED_FILES = {
 }
 
 DOCS = [
+    "README.md",
     "roadmap.json",
     "docs/roadmap.md",
     "docs/roadmap-new.md",
@@ -51,12 +52,63 @@ DOCS = [
     "docs/avif.md",
 ]
 
+CURRENT_CLAIM_DOCS = [
+    "README.md",
+    "docs/roadmap-new.md",
+    "docs/testing.md",
+    "docs/architecture.md",
+    "docs/avif.md",
+]
+CURRENT_CLAIM_BEGIN = "<!-- current-claim-ledger:begin -->"
+CURRENT_CLAIM_END = "<!-- current-claim-ledger:end -->"
+
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def current_claim_lines(ledger: dict, coverage: dict, measurement: dict) -> list[str]:
+    plural = {"line": "lines", "branch": "branches", "function": "functions"}
+    metrics = ", ".join(
+        f"{coverage[name]['covered']:,}/{coverage[name]['total']:,} {plural[name]} "
+        f"({coverage[name]['percent']:.4f}%)"
+        for name in ("line", "branch", "function")
+    )
+    region = coverage["region"]
+    metrics += (
+        f", and {region['covered']:,}/{region['total']:,} regions "
+        f"({region['percent']:.4f}%)"
+    )
+    return [
+        "Current claim-ledger baseline (not current `HEAD`):",
+        f"- Measured revision: `{ledger['base_revision']}`.",
+        f"- Coverage MCP run: `{measurement['run_id']}`; snapshot: `{measurement['snapshot_id']}`.",
+        f"- Coverage: {metrics}.",
+        f"- Manifest SHA-256: `{ledger['manifest_sha256']}`; generated matrix SHA-256: `{ledger['matrix_sha256']}`.",
+    ]
+
+
+def verify_current_claim_blocks(
+    ledger: dict, coverage: dict, measurement: dict, errors: list[str]
+) -> None:
+    expected = current_claim_lines(ledger, coverage, measurement)
+    for relative in CURRENT_CLAIM_DOCS:
+        path = ROOT / relative
+        text = path.read_text()
+        if text.count(CURRENT_CLAIM_BEGIN) != 1 or text.count(CURRENT_CLAIM_END) != 1:
+            errors.append(
+                f"{relative} must contain exactly one current claim-ledger block"
+            )
+            continue
+        begin = text.index(CURRENT_CLAIM_BEGIN)
+        end = text.index(CURRENT_CLAIM_END, begin)
+        block = text[begin:end]
+        for line in expected:
+            if line not in block:
+                errors.append(f"{relative} current claim block is missing: {line}")
 
 
 def failures() -> list[str]:
@@ -128,6 +180,11 @@ def failures() -> list[str]:
                 errors.append(f"coverage.{field} does not match roadmap current measurement")
         if revision != measurement.get("commit_sha"):
             errors.append("base_revision does not match roadmap current measurement commit_sha")
+        current_coverage = roadmap.get("current_state", {}).get("coverage")
+        if isinstance(current_coverage, dict):
+            verify_current_claim_blocks(ledger, current_coverage, measurement, errors)
+        else:
+            errors.append("roadmap current coverage metrics are missing")
 
     for doc in DOCS:
         text = (ROOT / doc).read_text()

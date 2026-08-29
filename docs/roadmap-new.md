@@ -17,6 +17,14 @@ records, the JSON roadmap, and this human rendering.
 
 Reviewed: 2026-08-29
 
+<!-- current-claim-ledger:begin -->
+Current claim-ledger baseline (not current `HEAD`):
+- Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
+- Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
+- Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
+- Manifest SHA-256: `0068a99aab9c70d3fa3863f9cb9d1ece83edf71d9d61ab3623c493e312e77698`; generated matrix SHA-256: `84ff26313b9ef8e445936869560c816d7617d6834636190511f5aa2f47e1c1e6`.
+<!-- current-claim-ledger:end -->
+
 - Current claim-ledger implementation anchor: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`
 - Managed Pillow parity run: `84716077-aee7-4396-8328-e6735202b044`
   (1,449/1,449 passed at its recorded revision `36b9396`; the current
@@ -1360,8 +1368,9 @@ evidence, not a complete four-metric release measurement.
 The pure-Rust cutover also closes the obsolete native-path findings
 `AVF-002`, `AVF-007`, `AVF-017`, `FTR-003`, `FTR-004`, `FTR-005`, `FTR-007`,
 `FTR-008`, `FTR-019`, `FTR-030`, `FTR-031`, `FTR-033`, `QA-013`, and `QA-038`.
-The current active inventory is therefore 250 findings; the closed rows retain
-their original finding text and explicit resolution evidence in `roadmap.json`.
+The current active inventory is therefore 248 findings. Resolved rows are
+removed from the canonical JSON and this rendering; historical resolution
+evidence remains in Git history and `docs/roadmap.md`.
 The next implementation item selected by the JSON dependency order is
 `AVF-STILL-001`: broaden the safe AV1 walker beyond the now-proven baseline,
 accepted-brand variants, grid fixture, and two-column multitile fixture. The
@@ -2049,7 +2058,7 @@ symbol-3/delta-0/45-degree cases were observed. Its exact 119-operation
 reconstruction covers `src/codecs/avif/av1/block.rs:345` and matches the
 independent Y/U/V and Pillow RGB evidence without a production code edit.
 
-**Source IDs:** `QA-003`, `QA-010`, `QA-020`, `QA-030`, `DOC-005`.
+**Source IDs:** `QA-003`, `QA-010`, `QA-020`, `QA-030`.
 
 **Done:** not yet. The accepted current managed report keeps Pillow, Rust-only,
 and private-model origins distinct, but it reports 90.6954% lines, 90.1201%
@@ -3543,35 +3552,22 @@ artifact/result, a clear evidence origin, and no claim is promoted from
 security problem, and understand which promises are real.
 
 **Work:** Keep this file synchronized with code and tests; generate accurate
-capability tables; add a clean-consumer package smoke test; maintain changelog
-and release links; define governance and recovery before production reliance.
+capability tables; maintain the claim ledger; maintain changelog and release
+links; define governance and recovery before production reliance.
 
-**Source IDs:** `DOC-003`, `DOC-005`–`DOC-008`.
+**Source IDs:** `DOC-003`, `DOC-007`, `DOC-008`.
 
 **Done when:** every material claim has an independent source, a revision/date
 scope, a validation command, and a visible proved/planned/unknown label.
-
-Documentation audit closure for `DOC-002` (2026-08-13): the retained
-`third_party/image-webp/README.md` command transcript now has an explicit
-`text` fence, and the open-source documentation audit reports no unlabeled
-code fences or other documentation findings. `DOC-002` is therefore removed
-from the active inventory; it is not a codec capability claim.
-
-Package-consumer closure for `DOC-004` (2026-08-13):
-`examples/package_smoke.rs` is included in the release archive, and
-`scripts/verify_package_consumer.py` creates the archive, extracts it into a
-fresh temporary directory, installs it as a path dependency in a separate
-consumer with default features disabled, and decodes a real PNG. The check
-also creates the consumer lockfile and runs the package with `--locked`; it is
-the release-package first-use proof, not a repository integration test.
-`DOC-004` is therefore removed from the active inventory.
 
 ## Complete open-task inventory
 
 The following is the exact set of active roadmap IDs at this review. A task is
 not complete until its ID is removed from this list and its current behavior is
-moved into the appropriate contract document. The list contains **250 active
-finding rows**.
+moved into the appropriate contract document. The list contains **248 active
+finding rows**. Resolved findings are pruned from this rendering and from
+`roadmap.json`; their historical evidence remains in Git history and the
+historical [roadmap](roadmap.md).
 
 | Area | Count | Open IDs |
 | --- | ---: | --- |
@@ -3586,17 +3582,17 @@ finding rows**.
 | AVIF | 30 | `AVF-001`, `AVF-003`–`AVF-006`, `AVF-008`–`AVF-009`, `AVF-011`–`AVF-016`, `AVF-018`–`AVF-020`, `AVF-022`–`AVF-035` |
 | Features/package | 24 | `FTR-001`–`FTR-002`, `FTR-006`, `FTR-009`–`FTR-018`, `FTR-020`–`FTR-024`, `FTR-027`, `FTR-029`, `FTR-034`–`FTR-035`, `FTR-037`–`FTR-038` |
 | Assurance | 31 | `QA-001`, `QA-002`, `QA-003`, `QA-005`, `QA-006`, `QA-008`, `QA-009`–`QA-012`, `QA-016`, `QA-019`–`QA-024`, `QA-026`–`QA-028`, `QA-030`, `QA-031`, `QA-033`–`QA-037`, `QA-039`–`QA-042` |
-| Documentation | 5 | `DOC-003`, `DOC-005`–`DOC-008` |
+| Documentation | 3 | `DOC-003`, `DOC-007`, `DOC-008` |
 
 The shorthand ranges above expand only to the IDs actually present in the
 current audit. The historical roadmap is retained for provenance and original
 finding context; this file is the canonical status inventory, dependency order,
 and acceptance contract.
 
-These 250 rows are not 250 equal-sized coding tasks. A row may be a small
+These 248 rows are not 248 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact 250 active finding rows, the current four-metric coverage
+today are the exact 248 active finding rows, the current four-metric coverage
 result recorded above, and the explicit dependency order; an hour estimate
 would be invented until the
 next slice is chosen and measured.

@@ -1058,8 +1058,7 @@
         "QA-003",
         "QA-010",
         "QA-020",
-        "QA-030",
-        "DOC-005"
+        "QA-030"
       ],
       "current_evidence": "The current complete managed measurement is run ec4c4bbd-dbda-4e49-8109-d7da07722dc0, snapshot 7665cda3-f4a7-4568-b871-a9d34afaa92c, at implementation commit 93ec80ec99c42671dce6cf70694bce27ad8a2ef4. It records 100,389/110,015 lines, 12,861/14,246 branches, 5,125/5,794 functions, and 150,221/166,375 regions; all four release metrics remain open. Snapshot metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db is retained as a provenance caveat. The selected incremental JPEG run de02b397-48fa-44ed-bdaf-df4487b096bf added bounded coverage for the standard AC table builder. The selected incremental AVIF run 6ff67b6a-f8e8-4b32-97cb-48e4ce3bd8ae at exact implementation commit 9f333de8096faaa4e0f9d8bb2eddde41dbbc2727 ingested snapshot b8793e3c-91bf-4bd6-a927-fe0091ccfadb against baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c; its additive review adds 192 covered line identities, no newly covered branch/function/region identities, and no regressions. Both selected runs are bounded evidence, not replacements for the complete release measurement; the native-path cutover closures and unresolved AV1 capability work remain separate.",
       "evidence": "Managed Coverage MCP run a90eb75b-d62d-4c80-a75f-a753990fdea6 passed at exact implementation commit f92b3d6896e7e03a46396d53ad44dba96866de0e in 149,159 ms and ingested snapshot bd67106e-6a28-41c2-9947-5c278e929f83. It reports 90.6882% lines (10,162 uncovered), 90.2225% branches (1,362 uncovered), 87.8308% functions (699 uncovered), and 89.7010% regions (17,004 uncovered). Direct aggregate comparison with prior snapshot 6fa9ab92 records +5 covered lines, +0 branches, +1 function, and +5 regions with no denominator changes; named-test attribution is unavailable. The following-Horizontal AVIF witness adds real safe-Rust coverage; the four-metric release target remains open until all reach 100%."
@@ -1473,8 +1472,6 @@
       "done_when": "Every material claim has an independent source, revision/date scope, validation command, and proved/planned/unknown label.",
       "source_ids": [
         "DOC-003",
-        "DOC-005",
-        "DOC-006",
         "DOC-007",
         "DOC-008"
       ],
@@ -5198,20 +5195,6 @@
     ]
   },
   {
-    "id": "API-038",
-    "area": "common_api",
-    "status": "resolved",
-    "resolution": {
-      "kind": "implemented_safe_rust_contract",
-      "implementation_commit": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
-      "evidence": "The allow-list contract is covered by the current feature-gated tests and the current all-feature target matrix."
-    },
-    "finding": "Closed in the current tree: `DecodeFormatSet` is an optional `DecodePolicy` allow-list enforced after signature detection across inspection, still/sequence decode, prefix, token-aware, and owned/borrowed source flows; explicit-format dispatch remains separate.",
-    "next": "Keep the allow-list contract stable as new formats or policy stages are added; add each new format to the all-format constructor and its policy tests.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Detection policy"
-  },
-  {
     "id": "API-041",
     "area": "common_api",
     "status": "open",
@@ -5290,23 +5273,6 @@
     ]
   },
   {
-    "id": "API-050",
-    "area": "common_api",
-    "status": "resolved",
-    "resolution": {
-      "kind": "implemented_safe_rust_contract",
-      "implementation_commit": "c7704f81fa83dd6d272a028ef0800b7ab5999f34",
-      "evidence": "AnimationLoop now distinguishes Unspecified, Finite { total_plays }, Infinite, and source-only Unknown. GIF, APNG, and WebP decoders normalize their format fields explicitly; GIF/WebP encoders perform checked target conversion, and TIFF/unsupported Unknown states reject instead of being dropped. The all-feature suite and managed Coverage MCP run 576b9aa4-c43f-45a9-b5aa-525dbfa4968e passed the focused animation-loop contract tests."
-    },
-    "finding": "`Option<u32>` does not name whether a value means total plays, additional repetitions, a file-format loop field, unknown repetition, or infinity. GIF/WebP convention and libavif's `n + 1` repetition contract differ.",
-    "next": "Introduce explicit `Unspecified`, `Finite { total_plays }`, `Infinite`, and, if an oracle exposes it, `Unknown` states with checked per-format conversion.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Loop-count ambiguity",
-    "workstreams": [
-      "RN-005"
-    ]
-  },
-  {
     "id": "API-051",
     "area": "common_api",
     "status": "open",
@@ -5352,22 +5318,6 @@
     "finding_class": "Mixed-frame contract",
     "workstreams": [
       "RN-005"
-    ]
-  },
-  {
-    "id": "JPG-001",
-    "area": "jpeg",
-    "status": "resolved",
-    "resolution": {
-      "kind": "implemented_safe_rust_contract",
-      "implementation_commit": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
-      "evidence": "The current manifest, encoded-byte fixture, and managed parity contract retain the CMYK JPEG implementation."
-    },
-    "finding": "Closed in the current v1 tree: the encoder accepts decoded `Cmyk8`, emits Pillow-compatible Adobe CMYK JPEG bytes, and the `enc_cmyk` fixture asserts component layout, marker, pixels, and encoded bytes.",
-    "next": "Keep progressive-CMYK and broader JPEG source-color/metadata work separate; do not reopen this row unless the accepted Pillow contract changes.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "JPG-001"
     ]
   },
   {
@@ -5832,22 +5782,6 @@
     "status": "open",
     "finding": "Quantizer, dither, palette reuse, transparency index, disposal optimization, and interlace choices are not typed controls.",
     "next": "Mirror only deterministic Pillow 12.2.0 choices that can be isolated into exact fixtures.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-007"
-    ]
-  },
-  {
-    "id": "GIF-013",
-    "area": "gif",
-    "status": "resolved",
-    "resolution": {
-      "kind": "implemented_safe_rust_contract",
-      "implementation_commit": "c7704f81fa83dd6d272a028ef0800b7ab5999f34",
-      "evidence": "GIF omission, infinite zero sentinel, finite repeat conversion, one-play omission, zero-count rejection, and Unknown rejection are covered by the public animation-loop tests and the existing GIF metadata/matrix contracts. Managed Coverage MCP run 576b9aa4-c43f-45a9-b5aa-525dbfa4968e passed the focused contract suite."
-    },
-    "finding": "Zero and missing delays now retain exact rational fields, but absent loop metadata, finite repeats, and infinite repeats still share an underspecified cross-format loop model.",
-    "next": "Complete the API-050 loop-semantics contract before adding another animation encoder.",
     "source": "docs/roadmap.md historical finding context",
     "workstreams": [
       "RN-007"
@@ -6906,19 +6840,6 @@
     ]
   },
   {
-    "id": "AVF-002",
-    "area": "avif",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "The current tree has no build.rs, AVIF native wrapper, copied C header, Cargo build/link declaration, or native AVIF dependency; scripts/verify_roadmap.py enforces the cutover."
-    },
-    "finding": "Native AVIF requires C compiler, archiver, dynamic libavif, dav1d, and libaom despite the repository-wide no-dependency end goal.",
-    "next": "Treat native support only as the oracle bridge to be removed, not a permanent exception.",
-    "source": "docs/roadmap.md historical finding context"
-  },
-  {
     "id": "AVF-003",
     "area": "avif",
     "status": "open",
@@ -6952,22 +6873,6 @@
     "status": "open",
     "finding": "AV1 support is validated by many narrow reverse-mapped fixtures, not the AV1 bitstream specification or conformance suite.",
     "next": "Continue slice-by-slice first-divergence work, then add licensed libavif/AOM corpus classes with independent references.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-006"
-    ]
-  },
-  {
-    "id": "AVF-007",
-    "area": "avif",
-    "status": "resolved",
-    "resolution": {
-      "kind": "portable_target_contract",
-      "implementation_commit": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
-      "evidence": "scripts/test_feature_matrix.sh passed every native and wasm32-wasip1 feature lane and reported matching capability tables; wasm32-unknown-unknown remains explicitly compile/rustdoc-only."
-    },
-    "finding": "`avif` on native and WASM is one Cargo feature with materially different operations.",
-    "next": "Capability discovery and runtime WASM gates must make the difference machine-readable until eliminated.",
     "source": "docs/roadmap.md historical finding context",
     "workstreams": [
       "RN-006"
@@ -7045,19 +6950,6 @@
     "status": "open",
     "finding": "Unknown top-level boxes and free/skip padding are retained raw in scan order, recognized EXIF/XMP item payloads are retained in item order, unknown and known associated non-primary `clli`/`mdcv`/`irot`/`imir`/`pasp`/`clap` properties retain exact source-local kind/payload records through `SourceDescriptor::avif_item_properties()`, known non-primary/auxiliary `ispe`/`pixi` declarations retain typed source-local dimensions/depth through `SourceDescriptor::avif_item_plane_properties()`, and non-primary/auxiliary `av1C` declarations retain exact source-local payloads plus typed depth/chroma fields through `SourceDescriptor::avif_item_codec_properties()`. The portable and inspection parsers independently reject an `ipco` table after 2,048 property entries and a FileTypeBox after 1,024 compatible-brand entries. Compatible-brand declaration retention is now governed by `SourceDescriptor::avif_file_type()`; remaining known item properties and broader item/property graph limits are not.",
     "next": "Keep the property-table and compatible-brand ceilings separate from box, association, and graph budgets; use ordered opaque preservation under API-040 for remaining item-level boxes/properties and add the other graph limits independently.",
-    "source": "docs/roadmap.md historical finding context"
-  },
-  {
-    "id": "AVF-017",
-    "area": "avif",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "One safe-Rust AVIF implementation now owns the supported native and WASM path; structured diagnostics and unsupported-feature results are tested without a native fallback."
-    },
-    "finding": "Native and portable decoders have no common strictness/diagnostic contract, making graceful fallback and parity differences hard to classify.",
-    "next": "Normalize error stage, offset/box/OBU identity, unsupported feature, warning, and limit states.",
     "source": "docs/roadmap.md historical finding context"
   },
   {
@@ -7224,57 +7116,6 @@
     ]
   },
   {
-    "id": "FTR-003",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "Enabling avif no longer introduces a native build or link requirement; the cutover verifier rejects such a regression."
-    },
-    "finding": "A transitive dependency enabling `avif` enables its native build requirements for the entire resolved package.",
-    "next": "Document prominently for library integrators and expose target capabilities; portable AVIF ultimately removes the surprise.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Feature unification",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
-    "id": "FTR-004",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "AVIF inspection and supported decode use the in-tree safe-Rust implementation without compiling a bridge before the operation."
-    },
-    "finding": "Enabling `avif` compiles the C bridge before the caller performs any operation; inspect-only native users still need C tools and libavif.",
-    "next": "Portable implementation or additive operation features must make inspection truly Rust-only.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Native build coupling",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
-    "id": "FTR-005",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "The Windows-specific native linker code and its panic path were removed with the native AVIF build system."
-    },
-    "finding": "`build.rs` recognizes Windows `.dll`/`.lib` candidates, but `link_library_file` supports only macOS, Linux, and Android and panics for Windows. CI runs only Ubuntu.",
-    "next": "Add Windows-native build fixtures or declare native AVIF unsupported there until portable AVIF replaces it.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Platform defect",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
     "id": "FTR-006",
     "area": "features_package",
     "status": "open",
@@ -7282,40 +7123,6 @@
     "next": "Add documented target-tool lookup tests for representative cross targets; fail with the exact missing tool variable.",
     "source": "docs/roadmap.md historical finding context",
     "finding_class": "Cross-compile fragility",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
-    "id": "FTR-007",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "No runtime library-name search or directory-based native AVIF selection remains in the crate."
-    },
-    "finding": "`IMAGE_SLASH_STAR_AVIF_LIB_NAME` affects fallback linking, while directory scanning selects the first filename beginning `libavif`; multiple candidates can select unexpectedly.",
-    "next": "Resolve the requested exact name/version deterministically and report the selected path.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Library selection",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
-    "id": "FTR-008",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "The dynamic-library copy/rpath distribution path was deleted; pinned native sources remain oracle/provenance material only."
-    },
-    "finding": "Native builds copy or link a dynamic library into Cargo output and use build-directory rpaths. This does not define how a released downstream executable ships the pinned stack.",
-    "next": "Add a release-binary relocation test or remove the native distribution path after portable parity.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Runtime redistribution",
     "workstreams": [
       "RN-008"
     ]
@@ -7441,23 +7248,6 @@
     ]
   },
   {
-    "id": "FTR-019",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "portable_target_contract",
-      "implementation_commit": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
-      "evidence": "No threaded native AVIF backend remains; scripts/test_feature_matrix.sh passed every native and wasm32-wasip1 lane with matching capability tables. Worker/browser binding policy remains open under FTR-023, FTR-035, and QA-022."
-    },
-    "finding": "Native AVIF libraries may use threads, while plain browser WASM has different shared-memory and cross-origin requirements. The public capability model does not expose this.",
-    "next": "Make single-thread execution complete first; add threaded WASM only as a separately measured artifact/capability.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Threading policy",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
     "id": "FTR-020",
     "area": "features_package",
     "status": "open",
@@ -7537,57 +7327,6 @@
     "next": "Produce additive singleton/default/all artifacts with identical compiler flags and report deltas without claiming they sum linearly.",
     "source": "docs/roadmap.md historical finding context",
     "finding_class": "Size attribution",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
-    "id": "FTR-030",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "The crate no longer resolves or links an AVIF native stack; oracle component version checks remain provenance for fixture generation, not runtime package selection."
-    },
-    "finding": "The `.oracle-venv` fallback recursively selects a filename beginning with `libavif` but does not verify libavif, dav1d, or libaom versions. The pkg-config path verifies only libavif's version, not its backend versions.",
-    "next": "Query and record every native component version at build/test time and reject a mismatch before parity evidence is produced.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Native oracle provenance",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
-    "id": "FTR-031",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "The native dynamic/static/musl/relocatable distribution problem no longer applies because no native AVIF runtime is distributed by the crate."
-    },
-    "finding": "Native AVIF searches only dynamic-library forms and embeds/builds runtime search behavior. There is no static, musl, self-contained, or relocatable downstream artifact contract.",
-    "next": "Keep this temporary oracle bridge explicitly unsupported for distribution; portable AVIF is the accepted solution rather than expanding native packaging.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Linkage model",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
-    "id": "FTR-033",
-    "area": "features_package",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "Native AVIF target discovery and unsupported-OS linker side effects were removed; portable target capability is tested separately."
-    },
-    "finding": "Library discovery recognizes Windows files, while linking panics outside macOS/Linux/Android. FreeBSD and other Unix targets are also unclassified; CI proves only Ubuntu.",
-    "next": "Generate an explicit native-AVIF target table from build logic and fail capability discovery before compiler/linker side effects.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Target-OS classification",
     "workstreams": [
       "RN-008"
     ]
@@ -7749,22 +7488,6 @@
     "status": "open",
     "finding": "Test fixtures prove Pillow 12.2.0 behavior, not every legal file accepted by the format specification.",
     "next": "Maintain a separate format-completeness corpus and classify divergences rather than relabeling them Pillow parity.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-009"
-    ]
-  },
-  {
-    "id": "QA-013",
-    "area": "assurance",
-    "status": "resolved",
-    "resolution": {
-      "kind": "release_package",
-      "implementation_commit": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
-      "evidence": "scripts/verify_package_surface.py and scripts/verify_package_consumer.py passed; the packaged archive compiled and decoded a real PNG in a clean consumer."
-    },
-    "finding": "`cargo package` could not complete locally during this audit because the sandbox could not reach the registry index; file-list and ignored-test warnings were still captured.",
-    "next": "Re-run package verification in networked CI and install/use the produced archive in a clean temporary consumer.",
     "source": "docs/roadmap.md historical finding context",
     "workstreams": [
       "RN-009"
@@ -7969,23 +7692,6 @@
     ]
   },
   {
-    "id": "QA-038",
-    "area": "assurance",
-    "status": "resolved",
-    "resolution": {
-      "kind": "removed_by_pure_rust_cutover",
-      "implementation_commit": "cc4a458fd2c99763a10c31698e9c9265323dee80",
-      "evidence": "The unsafe native AVIF bridge and its runtime stack are absent; the crate enforces unsafe_code = deny and the cutover verifier rejects C/FFI AVIF source."
-    },
-    "finding": "The native AVIF C bridge and pinned native stack are outside Rust's `unsafe_code = deny` evidence and are not run under sanitizer instrumentation in this project.",
-    "next": "Run the oracle bridge under ASan/UBSan in a dedicated native lane until it is removed; do not present that as proof of the portable implementation.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-008",
-      "RN-009"
-    ]
-  },
-  {
     "id": "QA-039",
     "area": "assurance",
     "status": "open",
@@ -8030,60 +7736,11 @@
     ]
   },
   {
-    "id": "DOC-002",
-    "area": "documentation",
-    "status": "resolved",
-    "resolution": {
-      "kind": "documentation_audit",
-      "implementation_commit": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
-      "evidence": "The documentation fence audit is recorded as clean."
-    },
-    "finding": "The documentation audit reports one unlabeled fence in the retained `third_party/image-webp/README.md`.",
-    "next": "If the file is maintained locally, label it; if it is an upstream verbatim artifact, exclude third-party documents from style lint and preserve its checksum/provenance.",
-    "source": "docs/roadmap.md historical finding context"
-  },
-  {
     "id": "DOC-003",
     "area": "documentation",
     "status": "open",
     "finding": "README feature tables describe formats but cannot express operation-, mode-, sequence-, target-, or verification-level restrictions precisely.",
     "next": "Generate/link the capability and direct-mode tables from active fixture/cfg data rather than maintaining another prose matrix.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-010"
-    ]
-  },
-  {
-    "id": "DOC-004",
-    "area": "documentation",
-    "status": "resolved",
-    "resolution": {
-      "kind": "release_package",
-      "implementation_commit": "17f548e91b83b61fbc071787ef8285d3d621c0ee",
-      "evidence": "The packaged archive compiled and decoded a real PNG in the clean consumer verification."
-    },
-    "finding": "README examples are source snippets, not a separately installed clean-consumer test; Cargo package currently excludes the integration targets.",
-    "next": "Turn the shortest first-use path into a packaged smoke test and keep its source synchronized with README/rustdoc.",
-    "source": "docs/roadmap.md historical finding context"
-  },
-  {
-    "id": "DOC-005",
-    "area": "documentation",
-    "status": "open",
-    "finding": "Coverage/parity numbers are revision-bound but can look current after later docs-only or implementation commits.",
-    "next": "The claim ledger (COR-039) now pins the revision/hash/coverage tuple; keep every numeric claim consistent with it.",
-    "source": "docs/roadmap.md historical finding context",
-    "workstreams": [
-      "RN-001",
-      "RN-010"
-    ]
-  },
-  {
-    "id": "DOC-006",
-    "area": "documentation",
-    "status": "open",
-    "finding": "This exhaustive roadmap is intentionally large and will become unmaintainable if completed findings accumulate.",
-    "next": "Delete resolved rows during each slice and move only current behavior to README/architecture/rustdoc/testing; never create a second issue ledger.",
     "source": "docs/roadmap.md historical finding context",
     "workstreams": [
       "RN-010"
@@ -8239,7 +7896,7 @@
   }
 ],
   "open_inventory": {
-    "count": 250,
+    "count": 248,
     "groups": {
       "common_api": [
         "API-008",
@@ -8510,8 +8167,6 @@
       ],
       "documentation": [
         "DOC-003",
-        "DOC-005",
-        "DOC-006",
         "DOC-007",
         "DOC-008"
       ]
@@ -8763,8 +8418,6 @@
       "QA-041",
       "QA-042",
       "DOC-003",
-      "DOC-005",
-      "DOC-006",
       "DOC-007",
       "DOC-008"
     ]
@@ -8814,32 +8467,8 @@
     "Coverage is not closed by excluding files, suppressing instrumentation, or synthetic unreachable tests.",
     "A native library, C build step, FFI boundary, fixture special case, or widened acceptance boundary cannot close a pure-Rust AVIF gap.",
     "Update roadmap.json before changing status; update docs/roadmap-new.md as the human rendering.",
-    "Do not mark a planned row active until implementation, fixture, independent evidence, and target checks exist."
-  ],
-    "resolved": [
-      "COR-001..COR-072",
-      "TST-001..TST-010",
-      "DOC-002",
-      "DOC-004",
-      "RN-002",
-      "JPG-001",
-      "API-038",
-      "AVF-002",
-      "AVF-007",
-      "AVF-017",
-      "FTR-003",
-      "FTR-004",
-      "FTR-005",
-      "FTR-007",
-      "FTR-008",
-      "FTR-019",
-      "FTR-030",
-      "FTR-031",
-    "FTR-033",
-    "QA-013",
-    "QA-038",
-    "API-050",
-    "GIF-013"
+    "Do not mark a planned row active until implementation, fixture, independent evidence, and target checks exist.",
+    "Resolved findings are pruned from roadmap.json; historical resolution evidence remains in Git history and docs/roadmap.md."
   ],
   "open_ids_are_authoritative": true
 }

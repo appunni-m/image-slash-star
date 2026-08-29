@@ -12,6 +12,13 @@ Coverage MCP record is run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`, snapshot
 `7665cda3-f4a7-4568-b871-a9d34afaa92c`, executed at that exact commit. It
 records 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%),
 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
+<!-- current-claim-ledger:begin -->
+Current claim-ledger baseline (not current `HEAD`):
+- Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
+- Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
+- Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
+- Manifest SHA-256: `0068a99aab9c70d3fa3863f9cb9d1ece83edf71d9d61ab3623c493e312e77698`; generated matrix SHA-256: `84ff26313b9ef8e445936869560c816d7617d6834636190511f5aa2f47e1c1e6`.
+<!-- current-claim-ledger:end -->
 The compact snapshot retains metadata commit
 `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat. The
 historical Pillow parity record below remains bound to
@@ -5695,13 +5702,13 @@ evidence at below/at/above and `u64::MAX`/`u32::MAX` extremes.
 
 The claim ledger (`tests/fixtures/claim_ledger.json`) pins the current
 implementation anchor `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`, manifest
-SHA-256 `252849fccefbb30ad3e763896547bd0b6e83ad61f9282a159a4b1eb74bce172d`,
+SHA-256 `0068a99aab9c70d3fa3863f9cb9d1ece83edf71d9d61ab3623c493e312e77698`,
 generated-matrix SHA-256
-`dce8210fdc14977a71df506ebb9d3a7b0247b6d6bea09c4c6173ba39594a33bd`,
+`84ff26313b9ef8e445936869560c816d7617d6834636190511f5aa2f47e1c1e6`,
 Coverage MCP run `ec4c4bbd-dbda-4e49-8109-d7da07722dc0` and snapshot
 `7665cda3-f4a7-4568-b871-a9d34afaa92c`, every fixture-manifest SHA-256, the
 VP8L property-map SHA-256
-`a7b0c6af0b8aef455d6794cdd8302af1c3ca97332c4856e50eb0fa535f23ff91`, and
+`1532496b1d5c25746d5dd31ca3a526fe4ee8d18d59545527fa28cf4efe895d48`, and
 the inspector SHA-256
 `8fbe5bbbf50f80bc89fbaa9df6c51a25ba09b6c1c395d8e59404764a70a77acd`.
 `scripts/verify_claim_ledger.py` recomputes every hash, validates the revision
