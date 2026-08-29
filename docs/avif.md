@@ -70,10 +70,10 @@ The capability table intentionally reports still decode as restricted and
 still/sequence encode as not implemented. Native, `wasm32-unknown-unknown`,
 and `wasm32-wasip1` do not get different AVIF implementations.
 
-The checked-in matrix currently contains 313 AVIF decode rows and 32 encode
+The checked-in matrix currently contains 314 AVIF decode rows and 32 encode
 rows:
 
-- 310 decode rows are active: portable still reconstruction and structural
+- 311 decode rows are active: portable still reconstruction and structural
   error contracts.
 - 3 decode rows are planned pure-Rust gaps: 12-bit animation/high-depth
   sequence materialization, HDR color handling, and the five-frame sequence.
@@ -130,6 +130,26 @@ SHA-256 values are
 This closes only the exact observed origin H_DCT/CFL class; broader H_DCT,
 V_DCT, other predictor/partition/transform states, and AVF-STILL-001 remain
 open.
+
+The independent predictor follow-up witness is
+`coverage_h16x4_predictor_adst_dct_f02_n08.avif`, generated from the
+`h16x4-f02-n08` campaign candidate. It is a 16x16 8-bit 4:2:0 `PARTITION_H4`
+frame with four unsplit `Horizontal16x4` luma leaves and modes `[10, 1, 1,
+3]`; the third leaf (zero-based index 2) selects ADST-DCT while the other
+leaves select DCT-DCT. The second leaf's coded Vertical mode resolves to 81
+degrees from angle delta -3. Safe Rust applies the native, non-upsampled
+Zone-1 edge policy and repeats the final available top sample when the
+top-right reference is absent. The pinned trace has partition range `43136`
+and 251 entropy operations, and safe Rust matches the exact Y/U/V planes and
+Pillow RGB8 bytes. Fixture SHA-256 is
+`e0ce541fcc43eba37dda21550ad16b7f346aa67676bf64d9511720d968e3a879`, decoded
+YUV SHA-256 is
+`56dee3ef62664fba5ce946211502d8cb1c3215ae3112274433d166d1e78cfb65b`, and
+Pillow RGB SHA-256 is
+`3881e6c66c26ad39ae3f08c5f4391a3db0d2cdaa95895fb25cb57c557e48f46d`. This
+promotes only the observed predictor/edge-policy and matrix-9 class; broader
+angles, predictors, transforms, matrices, qcats, following-leaf states, and
+AVF-STILL-001 remain partial.
 
 The managed incremental Coverage MCP run for this exact reconstruction selector
 is `90d68af5-f06f-4392-b5e6-b2fda4a74c1c`, with ingested snapshot

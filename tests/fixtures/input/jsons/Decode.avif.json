@@ -13567,6 +13567,58 @@
       ]
     },
     {
+      "id": "coverage_h16x4_predictor_adst_dct_f02_n08",
+      "asset": "coverage_h16x4_predictor_adst_dct_f02_n08.avif",
+      "asset_sha256": "e0ce541fcc43eba37dda21550ad16b7f346aa67676bf64d9511720d968e3a879",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/coverage_h16x4_predictor_adst_dct_f02_n08.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "coverage_h16x4_h_dct_cfl_01",
       "asset": "coverage_h16x4_h_dct_cfl_01.avif",
       "asset_sha256": "c7597bf32c95f175e814bc2962e295ee7369b396892cd649d1f623d8a86f881c",

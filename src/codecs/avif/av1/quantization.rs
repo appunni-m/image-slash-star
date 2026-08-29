@@ -886,6 +886,20 @@ pub(super) const Y_16X4_MATRIX_8: [u8; 64] = [
     45, 45, 58, 75, 47, 47, 60, 77, 51, 50, 63, 82, 55, 54, 67, 87,
 ];
 
+/// AV1 quantization matrix 9 for a coded 16×4 luma transform.
+///
+/// Rectangular coefficients use dav1d's transposed `qm_tbl_4x16` order:
+/// four consecutive values belong to one horizontal coefficient column. This
+/// is the order consumed by the R16×4 scan's `x * 4 + y` coefficient index.
+// ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][0][RTX_16X4]`.
+#[rustfmt::skip]
+pub(super) const Y_16X4_MATRIX_9: [u8; 64] = [
+    31, 32, 36, 44, 32, 32, 35, 42, 32, 32, 35, 41, 32, 33, 34, 41,
+    32, 34, 36, 42, 32, 34, 36, 42, 32, 35, 38, 42, 33, 36, 40, 44,
+    34, 37, 42, 48, 35, 38, 47, 52, 35, 38, 48, 54, 38, 40, 50, 58,
+    40, 41, 51, 60, 42, 43, 53, 63, 45, 45, 56, 66, 46, 46, 56, 67,
+];
+
 /// AV1 quantization matrix 9 for a coded 8×16 luma transform.
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][0][RTX_8X16]`.
 pub(super) const Y_8X16_MATRIX_9: [u8; 128] = [
@@ -1246,7 +1260,7 @@ mod tests {
         UV_8X8_MATRIX_9, UV_8X8_MATRIX_10, UV_8X16_MATRIX_9, UV_8X16_MATRIX_10, UV_16X8_MATRIX_2,
         UV_16X8_MATRIX_9, UV_16X8_MATRIX_10, Y_4X4_MATRIX_8, Y_4X4_MATRIX_9, Y_4X4_MATRIX_10,
         Y_4X16_MATRIX_5, Y_4X16_MATRIX_9, Y_4X16_MATRIX_10, Y_8BIT, Y_8X4_MATRIX_6, Y_8X4_MATRIX_7,
-        Y_8X8_MATRIX_9, Y_16X4_MATRIX_5, Y_16X4_MATRIX_7, Y_16X4_MATRIX_10,
+        Y_8X8_MATRIX_9, Y_16X4_MATRIX_5, Y_16X4_MATRIX_7, Y_16X4_MATRIX_9, Y_16X4_MATRIX_10,
     };
 
     #[test]
@@ -1335,6 +1349,7 @@ mod tests {
         for x in 0..16 {
             for y in 0..4 {
                 assert_eq!(Y_16X4_MATRIX_10[x * 4 + y], Y_4X16_MATRIX_10[y * 16 + x]);
+                assert_eq!(Y_16X4_MATRIX_9[x * 4 + y], Y_4X16_MATRIX_9[y * 16 + x]);
             }
         }
         for x in 0..4 {

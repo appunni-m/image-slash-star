@@ -409,6 +409,28 @@ const fn is_smooth_chroma_predictor(predictor: Option<ChromaPredictor>) -> bool 
     )
 }
 
+#[derive(Clone, Copy)]
+struct DirectionalEdgePolicy {
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+}
+
+impl DirectionalEdgePolicy {
+    const fn from_sequence(enable_intra_edge_filter: bool, smooth_edges: bool) -> Self {
+        Self {
+            enable_intra_edge_filter,
+            smooth_edges,
+        }
+    }
+}
+
+const fn is_smooth_luma_predictor(predictor: LumaPredictor) -> bool {
+    matches!(
+        predictor,
+        LumaPredictor::Smooth | LumaPredictor::SmoothVertical | LumaPredictor::SmoothHorizontal
+    )
+}
+
 const fn chroma_rect_transform_kind(predictor: ChromaPredictor) -> Lossy4x8TransformKind {
     match predictor {
         ChromaPredictor::Dc | ChromaPredictor::Cfl { .. } | ChromaPredictor::Diagonal45 => {
@@ -14487,6 +14509,7 @@ fn luma_16x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         5 => Ok(Some(&quantization::Y_16X4_MATRIX_5)),
         7 => Ok(Some(&quantization::Y_16X4_MATRIX_7)),
         8 => Ok(Some(&quantization::Y_16X4_MATRIX_8)),
+        9 => Ok(Some(&quantization::Y_16X4_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_16X4_MATRIX_10)),
         _ => Err(PortableUnavailable),
     }
@@ -18378,6 +18401,32 @@ fn reconstruct_lossy_luma_16x4_smooth(
     reconstruct_lossy_luma_16x4_from_prediction(prediction, coefficients, transform_kind)
 }
 
+fn reconstruct_lossy_luma_16x4_smooth_vertical(
+    top: [u16; 16],
+    bottom: u16,
+    coefficients: Option<LossyTransformCoefficients>,
+    transform_kind: Lossy4x8TransformKind,
+) -> ReconstructedPlane {
+    const SMOOTH_WEIGHTS_4: [i32; 4] = [255, 149, 85, 64];
+    let bottom = i32::from(bottom);
+    let prediction = std::array::from_fn(|index| {
+        let weight = SMOOTH_WEIGHTS_4[index / 16];
+        let value = weight
+            .saturating_mul(i32::from(top[index % 16]))
+            .saturating_add(256_i32.saturating_sub(weight).saturating_mul(bottom))
+            .saturating_add(128)
+            >> 8;
+        #[expect(
+            clippy::cast_sign_loss,
+            reason = "the smooth predictor is explicitly clamped to eight-bit range"
+        )]
+        {
+            value.clamp(0, 255) as u16
+        }
+    });
+    reconstruct_lossy_luma_16x4_from_prediction(prediction, coefficients, transform_kind)
+}
+
 fn reconstruct_lossy_luma_16x4_smooth_horizontal(
     left: [u16; 4],
     right: u16,
@@ -18461,6 +18510,93 @@ fn reconstruct_lossy_luma_16x4_diagonal_z1(
         coefficients,
         transform_kind,
     ))
+}
+
+fn reconstruct_lossy_luma_16x4_diagonal_z1_with_policy(
+    top: [u16; 16],
+    top_left: u16,
+    angle: i32,
+    edge_policy: DirectionalEdgePolicy,
+    coefficients: Option<LossyTransformCoefficients>,
+    transform_kind: Lossy4x8TransformKind,
+) -> PortableResult<ReconstructedPlane> {
+    const DR_INTRA_DERIVATIVE: [i32; 44] = [
+        0, 1023, 0, 547, 372, 0, 0, 273, 215, 0, 178, 151, 0, 132, 116, 0, 102, 0, 90, 80, 0, 71,
+        64, 0, 57, 51, 0, 45, 0, 40, 35, 0, 31, 27, 0, 23, 19, 0, 15, 0, 11, 0, 7, 3,
+    ];
+    (0 < angle && angle < 90).then_some(()).portable()?;
+    let dx_index = usize::try_from(angle / 2).map_err(|_| PortableUnavailable)?;
+    let dx = *DR_INTRA_DERIVATIVE
+        .get(dx_index)
+        .filter(|&&value| value > 0)
+        .portable()?;
+    let angle_delta = 90_i32.saturating_sub(angle);
+    let upsample = edge_policy.enable_intra_edge_filter
+        && intra_edge_upsample(20, angle_delta, edge_policy.smooth_edges);
+    // AV1's complete directional edge is width + height samples. For R16x4,
+    // that is twenty samples, so the sequence-defined upsample threshold can
+    // never be met (the maximum is sixteen, or eight after the smooth-edge
+    // adjustment). Keep the impossible branch explicit so a future threshold
+    // change cannot silently use the wrong edge layout.
+    if upsample {
+        return Err(PortableUnavailable);
+    }
+    let edge = if edge_policy.enable_intra_edge_filter {
+        let strength = intra_edge_filter_strength(20, angle_delta, edge_policy.smooth_edges);
+        if strength == 0 {
+            let mut edge = [0_u16; 20];
+            edge[..16].copy_from_slice(&top);
+            edge[16..].fill(top[15]);
+            edge
+        } else {
+            filter_intra_top_edge_16x4(top, top_left, strength)
+        }
+    } else {
+        let mut edge = [0_u16; 20];
+        edge[..16].copy_from_slice(&top);
+        edge[16..].fill(top[15]);
+        edge
+    };
+    let mut prediction = [0_u16; 64];
+    for y in 0_usize..4 {
+        for x in 0_usize..16 {
+            prediction[y.saturating_mul(16).saturating_add(x)] =
+                diagonal_z1_predictor_sample(&edge, 19, dx, 1, x, y)?;
+        }
+    }
+    Ok(reconstruct_lossy_luma_16x4_from_prediction(
+        prediction,
+        coefficients,
+        transform_kind,
+    ))
+}
+
+fn reconstruct_lossy_luma_16x4_vertical_with_policy(
+    top: [u16; 16],
+    top_left: u16,
+    luma_angle: Option<i32>,
+    edge_policy: DirectionalEdgePolicy,
+    coefficients: Option<LossyTransformCoefficients>,
+    transform_kind: Lossy4x8TransformKind,
+) -> PortableResult<ReconstructedPlane> {
+    match luma_angle {
+        None | Some(90) => Ok(reconstruct_lossy_luma_16x4_vertical(
+            top,
+            coefficients,
+            transform_kind,
+        )),
+        Some(angle) if 0 < angle && angle < 90 => {
+            reconstruct_lossy_luma_16x4_diagonal_z1_with_policy(
+                top,
+                top_left,
+                angle,
+                edge_policy,
+                coefficients,
+                transform_kind,
+            )
+        }
+        _ => Err(PortableUnavailable),
+    }
 }
 
 fn reconstruct_lossy_luma_16x4_diagonal_z2(
@@ -24905,6 +25041,7 @@ fn reconstruct_lossy_luma_16x4_from_edges(
     top_left: u16,
     has_top: bool,
     has_left: bool,
+    edge_policy: DirectionalEdgePolicy,
     lossy_luma_coefficients: Option<LossyTransformCoefficients>,
     lossy_luma_16x4_transform: Lossy4x8TransformKind,
     lossy_luma_4x4_split: Option<LossyLuma4x4Split>,
@@ -24959,11 +25096,14 @@ fn reconstruct_lossy_luma_16x4_from_edges(
             lossy_luma_coefficients,
             lossy_luma_16x4_transform,
         ),
-        LumaPredictor::Vertical => reconstruct_lossy_luma_16x4_vertical(
+        LumaPredictor::Vertical => reconstruct_lossy_luma_16x4_vertical_with_policy(
             luma_top,
+            top_left,
+            luma_angle,
+            edge_policy,
             lossy_luma_coefficients,
             lossy_luma_16x4_transform,
-        ),
+        )?,
         LumaPredictor::Horizontal => reconstruct_lossy_luma_16x4_horizontal(
             luma_left,
             lossy_luma_coefficients,
@@ -24973,6 +25113,12 @@ fn reconstruct_lossy_luma_16x4_from_edges(
             luma_top,
             luma_top[15],
             luma_left,
+            lossy_luma_coefficients,
+            lossy_luma_16x4_transform,
+        ),
+        LumaPredictor::SmoothVertical => reconstruct_lossy_luma_16x4_smooth_vertical(
+            luma_top,
+            luma_left[3],
             lossy_luma_coefficients,
             lossy_luma_16x4_transform,
         ),
@@ -24990,10 +25136,11 @@ fn reconstruct_lossy_luma_16x4_from_edges(
             lossy_luma_16x4_transform,
         ),
         LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
-            reconstruct_lossy_luma_16x4_diagonal_z1(
+            reconstruct_lossy_luma_16x4_diagonal_z1_with_policy(
                 luma_top,
                 top_left,
                 luma_angle.ok_or(PortableUnavailable)?,
+                edge_policy,
                 lossy_luma_coefficients,
                 lossy_luma_16x4_transform,
             )?
@@ -25015,7 +25162,6 @@ fn reconstruct_lossy_luma_16x4_from_edges(
             lossy_luma_coefficients,
             lossy_luma_16x4_transform,
         )?,
-        _ => return Err(PortableUnavailable),
     };
     Ok(luma)
 }
@@ -25025,6 +25171,7 @@ fn reconstruct_following_lossy_monochrome_horizontal_16x4_leaf(
     neighbor: &ClosedLeaf,
     neighbor_width: u32,
     neighbor_height: u32,
+    edge_policy: DirectionalEdgePolicy,
 ) -> PortableResult<ClosedLeaf> {
     let luma_left = right_edge_at::<4>(&neighbor.planes[0], neighbor_width, neighbor_height, 0);
     let luma = reconstruct_lossy_luma_16x4_from_edges(
@@ -25036,6 +25183,7 @@ fn reconstruct_following_lossy_monochrome_horizontal_16x4_leaf(
         luma_left[0],
         false,
         true,
+        edge_policy,
         syntax.lossy_luma_coefficients,
         syntax.lossy_luma_16x4_transform,
         syntax.lossy_luma_4x4_split,
@@ -29248,6 +29396,7 @@ fn reconstruct_following_lossy_420_vertical_16x4_leaf(
     above_left: &ClosedLeaf,
     luma_top: [u16; 16],
     luma_left: Option<[u16; 4]>,
+    edge_policy: DirectionalEdgePolicy,
     chroma_top: [Option<[u16; 8]>; 2],
     chroma_left: [Option<[u16; 4]>; 2],
 ) -> PortableResult<ClosedLeaf> {
@@ -29323,11 +29472,14 @@ fn reconstruct_following_lossy_420_vertical_16x4_leaf(
                 lossy_luma_coefficients,
                 lossy_luma_16x4_transform,
             ),
-            LumaPredictor::Vertical => reconstruct_lossy_luma_16x4_vertical(
+            LumaPredictor::Vertical => reconstruct_lossy_luma_16x4_vertical_with_policy(
                 luma_top,
+                luma_top[0],
+                luma_angle,
+                edge_policy,
                 lossy_luma_coefficients,
                 lossy_luma_16x4_transform,
-            ),
+            )?,
             LumaPredictor::Horizontal => reconstruct_lossy_luma_16x4_horizontal(
                 luma_left,
                 lossy_luma_coefficients,
@@ -29354,10 +29506,11 @@ fn reconstruct_following_lossy_420_vertical_16x4_leaf(
                 lossy_luma_16x4_transform,
             ),
             LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
-                reconstruct_lossy_luma_16x4_diagonal_z1(
+                reconstruct_lossy_luma_16x4_diagonal_z1_with_policy(
                     luma_top,
                     luma_top[0],
                     luma_angle.ok_or(PortableUnavailable)?,
+                    edge_policy,
                     lossy_luma_coefficients,
                     lossy_luma_16x4_transform,
                 )?
@@ -40025,6 +40178,35 @@ fn filter_intra_top_edge_16(edge: [u16; 16], top_left: u16, strength: usize) -> 
     })
 }
 
+fn filter_intra_top_edge_16x4(edge: [u16; 16], top_left: u16, strength: usize) -> [u16; 20] {
+    const KERNELS: [[i32; 5]; 3] = [[0, 4, 8, 4, 0], [0, 5, 6, 5, 0], [2, 4, 4, 4, 2]];
+    let kernel = KERNELS[strength.saturating_sub(1).min(2)];
+    let source: [u16; 21] = std::array::from_fn(|index| match index {
+        0 => top_left,
+        1..=16 => edge[index - 1],
+        _ => edge[15],
+    });
+    std::array::from_fn(|index| {
+        let sum = kernel
+            .into_iter()
+            .enumerate()
+            .fold(0_i32, |sum, (tap, weight)| {
+                let source_index = index
+                    .saturating_add(tap)
+                    .saturating_sub(1)
+                    .min(source.len().saturating_sub(1));
+                sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight))
+            });
+        #[expect(
+            clippy::cast_sign_loss,
+            reason = "the filtered intra edge is explicitly clamped to eight-bit range"
+        )]
+        {
+            ((sum.saturating_add(8) >> 4).clamp(0, 255)) as u16
+        }
+    })
+}
+
 fn filter_intra_top_edge_8(edge: [u16; 8], top_left: u16, strength: usize) -> [u16; 8] {
     filter_intra_top_edge_8_with_max(edge, top_left, strength, 255)
 }
@@ -41487,6 +41669,10 @@ impl Lossy420Decoder {
 
         let neighbor_width = neighbor.width;
         let neighbor_height = neighbor.height;
+        let edge_policy = DirectionalEdgePolicy::from_sequence(
+            tools.enable_intra_edge_filter,
+            is_smooth_luma_predictor(neighbor.luma_predictor),
+        );
         let neighbor = ClosedLeaf {
             luma_predictor: neighbor.luma_predictor,
             planes: neighbor.planes.clone(),
@@ -41499,6 +41685,7 @@ impl Lossy420Decoder {
                 &neighbor,
                 neighbor_width,
                 neighbor_height,
+                edge_policy,
             )?
         } else if matches!(transform_grid, TransformGrid::Vertical4x16) {
             let luma_left = right_edge_4x16(&neighbor.planes[0]);
@@ -41722,11 +41909,25 @@ impl Lossy420Decoder {
                     neighbors.left_y_offset,
                 )
             });
+            let edge_policy = DirectionalEdgePolicy::from_sequence(
+                tools.enable_intra_edge_filter,
+                is_smooth_luma_predictor(neighbors.above_left.luma_predictor)
+                    || neighbors
+                        .left_top
+                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
+                    || neighbors
+                        .left_luma_top
+                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
+                    || neighbors
+                        .left
+                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor)),
+            );
             reconstruct_following_lossy_420_vertical_16x4_leaf(
                 syntax,
                 &above_left,
                 luma_top,
                 luma_left,
+                edge_policy,
                 [None; 2],
                 [None; 2],
             )?
@@ -43063,11 +43264,25 @@ impl Lossy420Decoder {
                     )
                 })
             });
+            let edge_policy = DirectionalEdgePolicy::from_sequence(
+                tools.enable_intra_edge_filter,
+                is_smooth_luma_predictor(neighbors.above_left.luma_predictor)
+                    || neighbors
+                        .left_top
+                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
+                    || neighbors
+                        .left_luma_top
+                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
+                    || neighbors
+                        .left
+                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor)),
+            );
             return reconstruct_following_lossy_420_vertical_16x4_leaf(
                 syntax,
                 &above_left,
                 vertical_16x4_luma_top,
                 vertical_16x4_luma_left,
+                edge_policy,
                 vertical_16x4_chroma_top,
                 vertical_16x4_chroma_left,
             )
@@ -43478,7 +43693,7 @@ impl Lossy420Decoder {
                 ),
                 allow_diagonal_luma: true,
                 allow_smooth_chroma: false,
-                allow_smooth_luma: false,
+                allow_smooth_luma: matches!(transform_grid, TransformGrid::Horizontal16x4),
             },
             tools,
             cdef_index_bits,
@@ -43498,7 +43713,11 @@ impl Lossy420Decoder {
                 .lossy_luma_4x4_split
                 .map(|split| reconstruct_lossy_luma_8x8_split_dc(None, None, split))
         } else {
-            reconstruct_origin_luma_override(transform_grid, &syntax)?
+            reconstruct_origin_luma_override(
+                transform_grid,
+                &syntax,
+                DirectionalEdgePolicy::from_sequence(tools.enable_intra_edge_filter, false),
+            )?
         };
         if matches!(transform_grid, TransformGrid::Square32)
             && syntax.lossy_luma_16x16_split.is_some()
@@ -44881,6 +45100,7 @@ mod tests {
 fn reconstruct_origin_luma_override(
     transform_grid: TransformGrid,
     syntax: &BlockSyntax,
+    edge_policy: DirectionalEdgePolicy,
 ) -> PortableResult<Option<ReconstructedPlane>> {
     if matches!(transform_grid, TransformGrid::Square8)
         && !syntax.palette.is_present()
@@ -45010,6 +45230,30 @@ fn reconstruct_origin_luma_override(
             false,
             false,
             split,
+        )
+        .map(Some);
+    }
+
+    if matches!(transform_grid, TransformGrid::Horizontal16x4) && !syntax.palette.is_present() {
+        // The origin R16x4 block has no spatial neighbors. AV1 prepares its
+        // missing top/left edges as 127/129 and the top-left sample as 128;
+        // use the same edge-aware predictor dispatch as following H16x4
+        // leaves instead of reducing Smooth/Paeth/angular modes to a scalar
+        // predictor.
+        return reconstruct_lossy_luma_16x4_from_edges(
+            syntax.luma_predictor,
+            syntax.luma_angle,
+            syntax.filter_intra_mode,
+            [127_u16; 16],
+            [129_u16; 4],
+            128,
+            false,
+            false,
+            edge_policy,
+            syntax.lossy_luma_coefficients,
+            syntax.lossy_luma_16x4_transform,
+            syntax.lossy_luma_4x4_split,
+            syntax.lossy_luma_8x4_split,
         )
         .map(Some);
     }
