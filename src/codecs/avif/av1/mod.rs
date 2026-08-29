@@ -6,6 +6,7 @@ mod cdef;
 mod entropy;
 mod filter;
 mod frame;
+mod large_cdfs;
 mod quantization;
 mod raster;
 pub(super) mod sample_depth;

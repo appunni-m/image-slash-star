@@ -1990,6 +1990,28 @@ pub(super) fn validate_complete_lossy_420_partition(
                 let mut tools = tools;
                 tools.palette_context =
                     super::block::PaletteNeighborContext::from_neighbors(node.y, None, None);
+                let full_resolution = !context.subsampling_x && !context.subsampling_y;
+                let full_large = full_resolution
+                    && matches!(
+                        (node.width, node.height),
+                        (4, 16) | (8, 4) | (16, 4) | (16, 16)
+                    );
+                if full_large {
+                    let fully_visible = node
+                        .x
+                        .checked_add(node.width)
+                        .and_then(|right| right.checked_mul(4))
+                        .is_some_and(|right| right <= context.frame_width)
+                        && node
+                            .y
+                            .checked_add(node.height)
+                            .and_then(|bottom| bottom.checked_mul(4))
+                            .is_some_and(|bottom| bottom <= context.frame_height);
+                    if !fully_visible {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    }
+                }
                 let decoded = if leaves.is_empty() {
                     // A standalone 4x4 image is the one cropped-frame case in
                     // which AV1 codes an 8x8 origin block for a 4x4 visible
@@ -2093,7 +2115,6 @@ pub(super) fn validate_complete_lossy_420_partition(
                     } else {
                         None
                     };
-                    let full_resolution = !context.subsampling_x && !context.subsampling_y;
                     let chroma_above_y = if full_resolution {
                         node.y
                     } else {
@@ -2782,7 +2803,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     let following_v8x16_filter_intra_mode =
                         following_v8x16_filter_intra_mode(context, node, &leaves);
                     let full_edges = if full_resolution
-                        && tools.sample_depth != super::sample_depth::SampleDepth::EIGHT
+                        && (tools.sample_depth != super::sample_depth::SampleDepth::EIGHT
+                            || full_large)
                     {
                         let above = above_left.map(|(_, leaf)| leaf);
                         let left = left_luma_top.map(|(_, leaf)| leaf);

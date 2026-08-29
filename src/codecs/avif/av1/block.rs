@@ -11,6 +11,9 @@
 #![allow(clippy::arithmetic_side_effects)]
 
 use super::entropy::RangeDecoder;
+use super::large_cdfs::{
+    LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
+};
 use super::quantization;
 use super::sample_depth::SampleDepth;
 use super::transform;
@@ -221,39 +224,82 @@ enum FullLargeChromaShape {
     Square32,
 }
 
-/// Uniform storage avoids a large-enum layout while keeping `BlockSyntax`
-/// copyable for the existing reconstruction dispatch. Rectangle payloads use
-/// the first 512 entries; S32x32 uses all 1024 entries.
+impl FullLargeChromaShape {
+    const fn coefficient_count(self) -> usize {
+        match self {
+            Self::Vertical16x32 | Self::Horizontal32x16 => 512,
+            Self::Square32 => 1024,
+        }
+    }
+}
+
+/// Checked ownership descriptor for one transform stored in the decoder's
+/// reusable large-coefficient arena. Keeping the payload out of `BlockSyntax`
+/// avoids copying up to 32 KiB every time syntax is dispatched while the
+/// generation prevents a descriptor from observing a later leaf's storage.
 #[derive(Clone, Copy)]
 struct FullLargeChromaCoefficients {
     shape: FullLargeChromaShape,
-    values: Lossy32x32TransformCoefficients,
+    offset: u16,
+    len: u16,
+    generation: u32,
 }
 
-impl FullLargeChromaCoefficients {
-    fn vertical_16x32(values: Lossy16x32TransformCoefficients) -> Self {
-        let mut storage = [0_i32; 1024];
-        storage[..values.len()].copy_from_slice(&values);
+struct LargeCoefficientScratch {
+    tokens: Vec<u32>,
+    levels: Vec<u8>,
+    nonzero_positions: Vec<usize>,
+}
+
+impl LargeCoefficientScratch {
+    fn new() -> Self {
         Self {
-            shape: FullLargeChromaShape::Vertical16x32,
-            values: storage,
+            tokens: Vec::new(),
+            levels: Vec::new(),
+            nonzero_positions: Vec::new(),
+        }
+    }
+}
+
+/// One allocation-backed arena is reused for every leaf decoded by a tile
+/// walker. A Full S64 block has at most eight active 1024-coefficient chroma
+/// children (four U, then four V), so 8192 entries is the exact bounded peak.
+struct LargeCoefficientArena {
+    generation: u32,
+    coefficients: Vec<i32>,
+    scratch: LargeCoefficientScratch,
+}
+
+impl LargeCoefficientArena {
+    const MAX_COEFFICIENTS: usize = 8192;
+
+    fn new() -> Self {
+        Self {
+            generation: 0,
+            coefficients: Vec::new(),
+            scratch: LargeCoefficientScratch::new(),
         }
     }
 
-    fn horizontal_32x16(values: Lossy32x16TransformCoefficients) -> Self {
-        let mut storage = [0_i32; 1024];
-        storage[..values.len()].copy_from_slice(&values);
-        Self {
-            shape: FullLargeChromaShape::Horizontal32x16,
-            values: storage,
+    fn begin_leaf(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
+        if self.generation == 0 {
+            self.generation = 1;
         }
+        self.coefficients.clear();
+        self.scratch.tokens.clear();
+        self.scratch.levels.clear();
+        self.scratch.nonzero_positions.clear();
     }
 
-    fn square_32(values: Lossy32x32TransformCoefficients) -> Self {
-        Self {
-            shape: FullLargeChromaShape::Square32,
-            values,
-        }
+    fn coefficients(&self, span: FullLargeChromaCoefficients) -> PortableResult<&[i32]> {
+        (span.generation == self.generation
+            && usize::from(span.len) == span.shape.coefficient_count())
+        .then_some(())
+        .portable()?;
+        let start = usize::from(span.offset);
+        let end = start.checked_add(usize::from(span.len)).portable()?;
+        self.coefficients.get(start..end).portable()
     }
 }
 
@@ -2263,12 +2309,9 @@ struct BlockCdfs {
     /// qcat-two's contextual row zero shares the adaptive state used by the
     /// transform-context-two scalar terminals.
     lossy_luma_16x16_context_zero_uses_scalar_state: bool,
-    lossy_luma_32x16_coefficient_skip_contexts: [[u16; 2]; 7],
-    lossy_luma_32x32_coefficient_skip_contexts: [[u16; 2]; 7],
-    lossy_luma_32x32_coefficient_skip: [u16; 2],
+    lossy_luma_context_three_coefficient_skip: [[u16; 2]; 7],
     lossy_luma_64x64_coefficient_skip: [u16; 2],
     lossy_luma_32x32_eob_bin: [u16; 11],
-    lossy_luma_64x64_eob_bin: [u16; 11],
     lossy_luma_16x64_eob_bin: [u16; 10],
     lossy_luma_8x8_transform_type: [[u16; 7]; 13],
     lossy_luma_4x8_transform_type: [[u16; 7]; 13],
@@ -2281,14 +2324,12 @@ struct BlockCdfs {
     lossy_luma_16x16_base: [[u16; 4]; 41],
     lossy_luma_16x16_high_tokens: [[u16; 4]; 21],
     lossy_luma_32x32_eob_high: [[u16; 2]; 11],
-    lossy_luma_32x16_eob_high: [[u16; 2]; 11],
     lossy_luma_32x32_eob_base: [[u16; 3]; 4],
     lossy_luma_32x32_base: [[u16; 4]; 41],
     lossy_luma_32x32_high_tokens: [[u16; 4]; 21],
     lossy_luma_64x64_eob_high: [[u16; 2]; 11],
     lossy_luma_64x64_eob_base: [[u16; 3]; 4],
     lossy_luma_64x64_base: [[u16; 4]; 41],
-    lossy_luma_64x64_high_tokens: [[u16; 4]; 21],
     lossy_luma_8x8_eob_bin: [u16; 7],
     lossy_luma_8x8_eob_bin_1d: [u16; 7],
     lossy_luma_8x8_eob_high: [[u16; 2]; 7],
@@ -2316,7 +2357,6 @@ struct BlockCdfs {
     lossy_chroma_16x8_eob_bin: [u16; 8],
     lossy_chroma_16x32_eob_bin: [u16; 10],
     lossy_chroma_32x32_eob_bin: [u16; 11],
-    lossy_chroma_8x32_eob_bin: [u16; 9],
     lossy_chroma_4x16_eob_bin: [u16; 7],
     lossy_chroma_4x16_eob_high: [[u16; 2]; 7],
     lossy_chroma_16x16_eob_high: [[u16; 2]; 9],
@@ -2454,23 +2494,6 @@ const LOSSY_LUMA_32X32_EOB_HIGH: [[u16; 2]; 11] = [
     [23_963, 0],
     [16_384, 0],
     [16_384, 0],
-];
-
-// ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` qcat-zero R32x16 coefficient
-// sentence. The 512-coefficient EOB-high sentence is distinct from the
-// 1024-coefficient TX32X32 sentence above.
-const LOSSY_LUMA_32X16_EOB_HIGH: [[u16; 2]; 11] = [
-    [16_384, 0],
-    [16_384, 0],
-    [5_369, 0],
-    [16_441, 0],
-    [14_697, 0],
-    [13_184, 0],
-    [12_047, 0],
-    [14_336, 0],
-    [13_208, 0],
-    [22_618, 0],
-    [23_963, 0],
 ];
 
 const LOSSY_LUMA_32X32_EOB_BASE: [[u16; 3]; 4] = [
@@ -2614,30 +2637,6 @@ const LOSSY_LUMA_64X64_BASE: [[u16; 4]; 41] = [
     [24_576, 16_384, 8_192, 0],
     [24_576, 16_384, 8_192, 0],
     [24_576, 16_384, 8_192, 0],
-];
-
-const LOSSY_LUMA_64X64_HIGH: [[u16; 4]; 21] = [
-    [30_437, 29_106, 27_524, 0],
-    [29_877, 27_997, 26_623, 0],
-    [28_170, 25_145, 23_039, 0],
-    [29_248, 25_923, 23_569, 0],
-    [29_351, 26_649, 23_444, 0],
-    [30_167, 27_356, 25_383, 0],
-    [32_168, 31_595, 31_024, 0],
-    [25_096, 19_482, 15_299, 0],
-    [28_536, 24_976, 21_975, 0],
-    [29_853, 27_451, 25_371, 0],
-    [30_450, 28_412, 26_616, 0],
-    [30_641, 28_768, 27_214, 0],
-    [30_918, 29_290, 27_493, 0],
-    [31_791, 30_835, 29_925, 0],
-    [14_488, 8_381, 4_779, 0],
-    [16_916, 10_097, 6_583, 0],
-    [18_923, 11_817, 7_979, 0],
-    [21_713, 14_802, 10_639, 0],
-    [23_630, 17_346, 12_967, 0],
-    [25_314, 19_623, 15_312, 0],
-    [29_398, 26_375, 23_755, 0],
 ];
 
 // ✅ VERIFIED: rav1d 1.1.0 qcat-zero coefficient context one, chroma.
@@ -3419,10 +3418,6 @@ const QCAT0_CHROMA_16X32_EOB_BIN: [u16; 10] = [
 const QCAT2_CHROMA_16X32_EOB_BIN: [u16; 10] = [
     20_753, 17_999, 13_180, 10_716, 8_546, 6_956, 5_468, 3_549, 654, 0,
 ];
-const QCAT3_CHROMA_16X32_EOB_BIN: [u16; 10] = [
-    11_675, 9_725, 7_026, 5_110, 3_671, 3_052, 2_695, 1_948, 812, 0,
-];
-
 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[1]` from the pinned
 // `b546257f770768b2c88258c533da38b91a06f737` source. AV1 stores these CDFs
 // as complements of the source probabilities; the trailing zero in each
@@ -4528,23 +4523,6 @@ const QCAT2_LUMA_32X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
     [1_438, 0],
 ];
 
-const QCAT3_LUMA_32X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
-    [1_097, 0],
-    [30_712, 0],
-    [21_022, 0],
-    [15_916, 0],
-    [14_133, 0],
-    [8_053, 0],
-    [1_284, 0],
-];
-
-// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[*].skip[3][0..=6]`, complemented
-// for the safe inverse-CDF range decoder. A depth-one S64x64 luma split has
-// TX32x32 children but uses the same transform-context-three skip sentence.
-const QCAT0_LUMA_32X32_SKIP_CONTEXTS: [[u16; 2]; 7] = QCAT0_LUMA_32X16_SKIP_CONTEXTS;
-const QCAT2_LUMA_32X32_SKIP_CONTEXTS: [[u16; 2]; 7] = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
-const QCAT3_LUMA_32X32_SKIP_CONTEXTS: [[u16; 2]; 7] = QCAT3_LUMA_32X16_SKIP_CONTEXTS;
-
 // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:277-290 (`txsz`). AV1 stores these
 // probabilities in the source form; the portable range decoder keeps their
 // complements. The final slot in every row is the adaptive-update count.
@@ -5383,23 +5361,16 @@ impl BlockCdfs {
             lossy_luma_16x16_coefficient_skip_contexts: QCAT0_LUMA_16X16_SKIP_CONTEXTS,
             lossy_luma_16x16_skip_mode: LossyLuma16x16SkipMode::Contextual,
             lossy_luma_16x16_context_zero_uses_scalar_state: false,
-            lossy_luma_32x16_coefficient_skip_contexts: QCAT0_LUMA_32X16_SKIP_CONTEXTS,
-            lossy_luma_32x32_coefficient_skip_contexts: QCAT0_LUMA_32X32_SKIP_CONTEXTS,
-            // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].skip[3][0]`
-            // for the shared transform-context-three luma family. The
-            // range decoder stores the complemented CDF value used by the
-            // trace; R16x32/R32x16/TX32x32 all adapt this same sentence.
-            lossy_luma_32x32_coefficient_skip: [14_848, 0],
+            // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].skip[3]`.
+            // Every transform-context-three luma geometry mutates this one
+            // normative adaptive state.
+            lossy_luma_context_three_coefficient_skip: QCAT0_LUMA_32X16_SKIP_CONTEXTS,
             // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` `skip[4][0]` for
             // S64x64. The range decoder stores the complemented CDF.
             lossy_luma_64x64_coefficient_skip: [26_460, 0],
             // ✅ VERIFIED: rav1d 1.1.0 qcat-zero
             // `eob_bin_1024[luma][two-dimensional]`.
             lossy_luma_32x32_eob_bin: [
-                32_375, 32_347, 32_017, 31_145, 29_608, 26_416, 19_423, 14_721, 10_197, 6_938, 0,
-            ],
-            // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` `eob_bin_1024[0]`.
-            lossy_luma_64x64_eob_bin: [
                 32_375, 32_347, 32_017, 31_145, 29_608, 26_416, 19_423, 14_721, 10_197, 6_938, 0,
             ],
             // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` `eob_bin_512[0]`.
@@ -5459,14 +5430,12 @@ impl BlockCdfs {
             lossy_luma_16x16_base: LOSSY_LUMA_16X16_BASE,
             lossy_luma_16x16_high_tokens: LOSSY_LUMA_16X16_HIGH,
             lossy_luma_32x32_eob_high: LOSSY_LUMA_32X32_EOB_HIGH,
-            lossy_luma_32x16_eob_high: LOSSY_LUMA_32X16_EOB_HIGH,
             lossy_luma_32x32_eob_base: LOSSY_LUMA_32X32_EOB_BASE,
             lossy_luma_32x32_base: LOSSY_LUMA_32X32_BASE,
             lossy_luma_32x32_high_tokens: LOSSY_LUMA_32X32_HIGH,
             lossy_luma_64x64_eob_high: LOSSY_LUMA_64X64_EOB_HIGH,
             lossy_luma_64x64_eob_base: LOSSY_LUMA_64X64_EOB_BASE,
             lossy_luma_64x64_base: LOSSY_LUMA_64X64_BASE,
-            lossy_luma_64x64_high_tokens: LOSSY_LUMA_64X64_HIGH,
             lossy_luma_8x8_eob_bin: [32_439, 32_270, 31_667, 30_984, 29_503, 25_010, 0],
             // `eob_bin_64[0][1]`: the one-dimensional H/V transform row.
             lossy_luma_8x8_eob_bin_1d: [32_433, 32_038, 31_309, 27_274, 24_013, 19_771, 0],
@@ -5588,10 +5557,6 @@ impl BlockCdfs {
             // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` `eob_bin_1024[1]`.
             lossy_chroma_32x32_eob_bin: [
                 30_903, 30_780, 29_838, 28_526, 22_235, 16_230, 11_414, 5_513, 4_222, 984, 0,
-            ],
-            // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` `eob_bin_256[1][0]`.
-            lossy_chroma_8x32_eob_bin: [
-                30_248, 29_528, 26_816, 23_898, 20_191, 15_210, 12_814, 8_600, 0,
             ],
             lossy_chroma_4x16_eob_bin: LOSSY_CHROMA_4X16_EOB_BIN,
             lossy_chroma_4x16_eob_high: LOSSY_CHROMA_4X16_EOB_HIGH,
@@ -5769,6 +5734,32 @@ impl BlockCdfs {
         }
     }
 
+    fn install_large_coefficient_defaults(&mut self, defaults: LargeCoefficientCdfDefaults) {
+        self.lossy_luma_context_three_coefficient_skip = defaults.luma_skip_contexts;
+        self.lossy_luma_64x64_coefficient_skip = defaults.luma_64x64_skip;
+        self.lossy_luma_16x16_eob_bin = defaults.eob_256[0];
+        self.lossy_chroma_16x16_eob_bin = defaults.eob_256[1];
+        self.lossy_chroma_16x16_eob_high = defaults.chroma_context_two_eob_high;
+        self.lossy_chroma_16x16_eob_base = defaults.chroma_context_two_eob_base;
+        self.lossy_chroma_16x16_base = defaults.chroma_context_two_base;
+        self.lossy_chroma_16x16_high_tokens = defaults.chroma_context_two_br;
+        self.lossy_luma_16x64_eob_bin = defaults.eob_512[0];
+        self.lossy_chroma_16x32_eob_bin = defaults.eob_512[1];
+        self.lossy_luma_32x32_eob_bin = defaults.eob_1024[0];
+        self.lossy_chroma_32x32_eob_bin = defaults.eob_1024[1];
+        self.lossy_luma_32x32_eob_high = defaults.luma_eob_high[0];
+        self.lossy_luma_64x64_eob_high = defaults.luma_eob_high[1];
+        self.lossy_chroma_32x32_eob_high = defaults.chroma_eob_high;
+        self.lossy_luma_32x32_eob_base = defaults.luma_eob_base[0];
+        self.lossy_luma_64x64_eob_base = defaults.luma_eob_base[1];
+        self.lossy_chroma_32x32_eob_base = defaults.chroma_eob_base;
+        self.lossy_luma_32x32_base = defaults.luma_base[0];
+        self.lossy_luma_64x64_base = defaults.luma_base[1];
+        self.lossy_chroma_32x32_base = defaults.chroma_base;
+        self.lossy_luma_32x32_high_tokens = defaults.br[0];
+        self.lossy_chroma_32x32_high_tokens = defaults.br[1];
+    }
+
     /// Build the coefficient CDF state for a frame qindex.
     ///
     /// AV1's mode CDFs are shared across quantizer categories, while its
@@ -5824,6 +5815,7 @@ impl BlockCdfs {
                 cdfs.lossy_chroma_8x8_high_tokens = QCAT1_CHROMA_8X8_HIGH;
                 cdfs.subsampled_chroma_coefficient_skip = QCAT1_SUBSAMPLED_CHROMA_SKIP;
                 cdfs.dc_sign = QCAT1_DC_SIGN;
+                cdfs.install_large_coefficient_defaults(QCAT1_LARGE_COEFFICIENT_CDFS);
                 Some(cdfs)
             }
             2 => {
@@ -5854,8 +5846,7 @@ impl BlockCdfs {
                 cdfs.lossy_luma_16x16_coefficient_skip_contexts = QCAT2_LUMA_16X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Contextual;
                 cdfs.lossy_luma_16x16_context_zero_uses_scalar_state = true;
-                cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
-                cdfs.lossy_luma_32x32_coefficient_skip_contexts = QCAT2_LUMA_32X32_SKIP_CONTEXTS;
+                cdfs.lossy_luma_context_three_coefficient_skip = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT2_LUMA_8X8_EOB_BIN;
                 cdfs.lossy_luma_8x8_eob_bin_1d = QCAT2_LUMA_8X8_EOB_BIN_1D;
                 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].eob_bin_32`
@@ -5879,7 +5870,6 @@ impl BlockCdfs {
                 cdfs.lossy_luma_8x16_base_1d = QCAT2_LUMA_16X16_BASE;
                 cdfs.lossy_luma_16x16_high_tokens = cdfs.lossy_luma_8x16_high_tokens;
                 cdfs.lossy_luma_32x32_eob_high = QCAT2_LUMA_32X32_EOB_HIGH;
-                cdfs.lossy_luma_32x16_eob_high = QCAT2_LUMA_32X32_EOB_HIGH;
                 cdfs.lossy_luma_32x32_eob_base = QCAT2_LUMA_32X32_EOB_BASE;
                 cdfs.lossy_luma_32x32_base = QCAT2_LUMA_32X32_BASE;
                 // The TX32 children of a depth-one S64x64 split use the
@@ -5887,9 +5877,6 @@ impl BlockCdfs {
                 // CDF exposes this row with the S64 family because it is
                 // shared by the split's terminal children.
                 cdfs.lossy_luma_32x32_eob_bin = QCAT2_LUMA_64X64_EOB_BIN;
-                // qcat two has its own initial value for the shared
-                // transform-context-three luma skip sentence.
-                cdfs.lossy_luma_32x32_coefficient_skip = [2_099, 0];
                 // dav1d caps `br_tok` at transform context three, so the
                 // 32x32 and 64x64 luma paths share this high-token table.
                 cdfs.lossy_luma_32x32_high_tokens = QCAT2_LUMA_64X64_HIGH;
@@ -5910,11 +5897,9 @@ impl BlockCdfs {
                 cdfs.lossy_chroma_16x16_base = QCAT2_CHROMA_16X16_BASE;
                 cdfs.lossy_chroma_16x16_high_tokens = QCAT2_CHROMA_16X16_HIGH;
                 cdfs.lossy_luma_64x64_coefficient_skip = QCAT2_LUMA_64X64_SKIP;
-                cdfs.lossy_luma_64x64_eob_bin = QCAT2_LUMA_64X64_EOB_BIN;
                 cdfs.lossy_luma_64x64_eob_high = QCAT2_LUMA_64X64_EOB_HIGH;
                 cdfs.lossy_luma_64x64_eob_base = QCAT2_LUMA_64X64_EOB_BASE;
                 cdfs.lossy_luma_64x64_base = QCAT2_LUMA_64X64_BASE;
-                cdfs.lossy_luma_64x64_high_tokens = QCAT2_LUMA_64X64_HIGH;
                 cdfs.subsampled_chroma_coefficient_skip = QCAT2_SUBSAMPLED_CHROMA_SKIP;
                 cdfs.lossy_chroma_16x32_eob_bin = QCAT2_CHROMA_16X32_EOB_BIN;
                 cdfs.lossy_chroma_32x32_eob_bin = QCAT2_CHROMA_32X32_EOB_BIN;
@@ -5928,8 +5913,6 @@ impl BlockCdfs {
                 cdfs.lossy_luma_16x16_coefficient_skip = QCAT3_LUMA_16X16_SKIP;
                 cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Scalar;
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT3_LUMA_8X8_SKIP;
-                cdfs.lossy_luma_32x16_coefficient_skip_contexts = QCAT3_LUMA_32X16_SKIP_CONTEXTS;
-                cdfs.lossy_luma_32x32_coefficient_skip_contexts = QCAT3_LUMA_32X32_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x16_eob_bin = QCAT3_LUMA_8X16_EOB_BIN;
                 cdfs.lossy_luma_16x16_eob_high = QCAT3_LUMA_16X16_EOB_HIGH;
                 cdfs.lossy_luma_16x16_eob_base = QCAT3_LUMA_16X16_EOB_BASE;
@@ -5953,7 +5936,7 @@ impl BlockCdfs {
                 cdfs.lossy_chroma_8x4_base = QCAT3_CHROMA_8X4_BASE;
                 cdfs.lossy_chroma_8x4_high_tokens = QCAT3_CHROMA_8X4_HIGH;
                 cdfs.subsampled_chroma_coefficient_skip = QCAT3_SUBSAMPLED_CHROMA_SKIP;
-                cdfs.lossy_chroma_16x32_eob_bin = QCAT3_CHROMA_16X32_EOB_BIN;
+                cdfs.install_large_coefficient_defaults(QCAT3_LARGE_COEFFICIENT_CDFS);
                 Some(cdfs)
             }
             _ => None,
@@ -7567,10 +7550,10 @@ fn decode_contextual_skip(
             }
         }
         CoefficientSkipCdf::LossyLuma32x16Context(context) => {
-            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x16_coefficient_skip_contexts[context])
+            decoder.adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[context])
         }
         CoefficientSkipCdf::LossyLuma32x32Context(context) => {
-            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip_contexts[context])
+            decoder.adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[context])
         }
         CoefficientSkipCdf::Base => {
             decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
@@ -9219,7 +9202,7 @@ fn decode_lossy_luma_32x32_coefficients(
             1,
         )?
         .0;
-        let residual_context = coefficient_residual_context(&coefficients);
+        let residual_context = lossy_coefficient_residual_context(token, token, negative);
         return Ok((coefficients, residual_context));
     }
 
@@ -9345,8 +9328,11 @@ fn decode_lossy_luma_32x32_coefficients(
     };
 
     let mut coefficients = [0_i32; 1024];
+    let mut coefficient_magnitude = 0_u32;
+    let mut dc_negative = false;
     if dc_token != 0 {
         let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
+        dc_negative = negative;
         coefficients[0] = dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
             decoder,
             dc_token,
@@ -9357,6 +9343,7 @@ fn decode_lossy_luma_32x32_coefficients(
             1,
         )?
         .0;
+        coefficient_magnitude = coefficient_magnitude.saturating_add(dc_token);
     }
     for &position in nonzero_positions[..nonzero_count].iter().rev() {
         let negative = decoder.equal();
@@ -9370,8 +9357,10 @@ fn decode_lossy_luma_32x32_coefficients(
             1,
         )?
         .0;
+        coefficient_magnitude = coefficient_magnitude.saturating_add(tokens[position]);
     }
-    let residual_context = coefficient_residual_context(&coefficients);
+    let residual_context =
+        lossy_coefficient_residual_context(coefficient_magnitude, dc_token, dc_negative);
     Ok((coefficients, residual_context))
 }
 
@@ -12990,6 +12979,8 @@ fn decode_lossy_chroma_4x4_coefficients(
 enum LossyLargeCdfSet {
     Luma4x16,
     Luma16x16,
+    Luma16x32,
+    Luma8x32,
     Luma32x8,
     Luma32x16,
     Luma64x16,
@@ -13004,6 +12995,8 @@ enum LossyLargeCdfSet {
     Chroma16x4,
     Chroma16x8,
     Chroma8x16,
+    Chroma8x32,
+    Chroma32x8,
     Chroma8x4,
 }
 
@@ -13019,14 +13012,81 @@ struct LossyLargeCoefficientLayout<'a> {
     cdf_set: LossyLargeCdfSet,
 }
 
-fn decode_lossy_large_two_d_coefficients(
+impl LargeCoefficientArena {
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the arena entry keeps entropy, quantization, sign context, shape, and transform layout explicit"
+    )]
+    fn decode_transform(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        plane: usize,
+        cdfs: &mut BlockCdfs,
+        quantization: LossyQuantization,
+        dc_sign_context: usize,
+        shape: FullLargeChromaShape,
+        layout: LossyLargeCoefficientLayout<'_>,
+    ) -> PortableResult<FullLargeChromaCoefficients> {
+        let coefficient_count = shape.coefficient_count();
+        (self.generation != 0 && layout.coefficient_count == coefficient_count)
+            .then_some(())
+            .portable()?;
+        if self.coefficients.capacity() < Self::MAX_COEFFICIENTS {
+            self.coefficients
+                .reserve_exact(Self::MAX_COEFFICIENTS - self.coefficients.len());
+        }
+        if self.scratch.tokens.capacity() < 1024 {
+            self.scratch
+                .tokens
+                .reserve_exact(1024 - self.scratch.tokens.len());
+        }
+        if self.scratch.levels.capacity() < 1156 {
+            self.scratch
+                .levels
+                .reserve_exact(1156 - self.scratch.levels.len());
+        }
+        if self.scratch.nonzero_positions.capacity() < 1024 {
+            self.scratch
+                .nonzero_positions
+                .reserve_exact(1024 - self.scratch.nonzero_positions.len());
+        }
+        let offset = self.coefficients.len();
+        let end = offset.checked_add(coefficient_count).portable()?;
+        (end <= Self::MAX_COEFFICIENTS).then_some(()).portable()?;
+        self.coefficients.resize(end, 0);
+        let decoded = decode_lossy_large_two_d_coefficients_into(
+            decoder,
+            plane,
+            cdfs,
+            quantization,
+            Some(dc_sign_context),
+            layout,
+            self.coefficients.get_mut(offset..end).portable()?,
+            &mut self.scratch,
+        );
+        if decoded.is_err() {
+            self.coefficients.truncate(offset);
+        }
+        decoded?;
+        Ok(FullLargeChromaCoefficients {
+            shape,
+            offset: u16::try_from(offset).map_err(|_| PortableUnavailable)?,
+            len: u16::try_from(coefficient_count).map_err(|_| PortableUnavailable)?,
+            generation: self.generation,
+        })
+    }
+}
+
+fn decode_lossy_large_two_d_coefficients_into(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
     dc_sign_context: Option<usize>,
     layout: LossyLargeCoefficientLayout<'_>,
-) -> PortableResult<Vec<i32>> {
+    coefficients: &mut [i32],
+    scratch: &mut LargeCoefficientScratch,
+) -> PortableResult<()> {
     let LossyLargeCoefficientLayout {
         eob_bin,
         scan,
@@ -13038,6 +13098,11 @@ fn decode_lossy_large_two_d_coefficients(
         eob_thresholds,
         cdf_set,
     } = layout;
+    (coefficients.len() == coefficient_count)
+        .then_some(())
+        .portable()?;
+    // Both entry points create this destination with zero-initialized
+    // storage. Avoid clearing it a second time on the coefficient hot path.
     let chroma = matches!(
         cdf_set,
         LossyLargeCdfSet::Chroma16x16
@@ -13048,6 +13113,8 @@ fn decode_lossy_large_two_d_coefficients(
             | LossyLargeCdfSet::Chroma16x4
             | LossyLargeCdfSet::Chroma16x8
             | LossyLargeCdfSet::Chroma8x16
+            | LossyLargeCdfSet::Chroma8x32
+            | LossyLargeCdfSet::Chroma32x8
             | LossyLargeCdfSet::Chroma8x4
     );
     let dc_sign_context = dc_sign_context.unwrap_or(0);
@@ -13063,6 +13130,18 @@ fn decode_lossy_large_two_d_coefficients(
             ],
             26,
         ),
+        LossyLargeCdfSet::Luma16x32 | LossyLargeCdfSet::Luma8x32 | LossyLargeCdfSet::Chroma8x32 => {
+            (
+                &[
+                    [0, 11, 11, 11, 11],
+                    [11, 11, 11, 11, 11],
+                    [6, 6, 21, 21, 21],
+                    [6, 21, 21, 21, 21],
+                    [21, 21, 21, 21, 21],
+                ],
+                41,
+            )
+        }
         LossyLargeCdfSet::Luma8x16 => (
             &[
                 [0, 16, 6, 6, 21],
@@ -13073,7 +13152,7 @@ fn decode_lossy_large_two_d_coefficients(
             ],
             26,
         ),
-        LossyLargeCdfSet::Luma32x8 => (
+        LossyLargeCdfSet::Luma32x8 | LossyLargeCdfSet::Chroma32x8 => (
             &[
                 [0, 16, 6, 6, 21],
                 [16, 16, 6, 21, 21],
@@ -13155,10 +13234,19 @@ fn decode_lossy_large_two_d_coefficients(
             ],
             26,
         ),
-        LossyLargeCdfSet::Luma16x16
-        | LossyLargeCdfSet::Luma32x32
-        | LossyLargeCdfSet::Luma64x64
-        | LossyLargeCdfSet::Chroma8x4 => (
+        LossyLargeCdfSet::Luma16x16 | LossyLargeCdfSet::Luma32x32 | LossyLargeCdfSet::Luma64x64 => {
+            (
+                &[
+                    [0, 1, 6, 6, 21],
+                    [1, 6, 6, 21, 21],
+                    [6, 6, 21, 21, 21],
+                    [6, 21, 21, 21, 21],
+                    [21, 21, 21, 21, 21],
+                ],
+                41,
+            )
+        }
+        LossyLargeCdfSet::Chroma8x4 => (
             &[
                 [0, 11, 11, 11, 11],
                 [11, 11, 11, 11, 11],
@@ -13176,7 +13264,7 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_8x8_base[..],
             &mut cdfs.lossy_luma_8x8_high_tokens[..],
         ),
-        LossyLargeCdfSet::Luma16x16 => (
+        LossyLargeCdfSet::Luma16x16 | LossyLargeCdfSet::Luma8x32 => (
             &mut cdfs.lossy_luma_16x16_eob_high[..],
             &mut cdfs.lossy_luma_16x16_eob_base[..],
             &mut cdfs.lossy_luma_16x16_base[..],
@@ -13189,7 +13277,7 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_16x16_high_tokens[..],
         ),
         LossyLargeCdfSet::Luma32x16 => (
-            &mut cdfs.lossy_luma_32x16_eob_high[..],
+            &mut cdfs.lossy_luma_32x32_eob_high[..],
             &mut cdfs.lossy_luma_32x32_eob_base[..],
             &mut cdfs.lossy_luma_32x32_base[..],
             &mut cdfs.lossy_luma_32x32_high_tokens[..],
@@ -13210,7 +13298,13 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_luma_64x64_eob_high[..],
             &mut cdfs.lossy_luma_64x64_eob_base[..],
             &mut cdfs.lossy_luma_64x64_base[..],
-            &mut cdfs.lossy_luma_64x64_high_tokens[..],
+            &mut cdfs.lossy_luma_32x32_high_tokens[..],
+        ),
+        LossyLargeCdfSet::Luma16x32 => (
+            &mut cdfs.lossy_luma_32x32_eob_high[..],
+            &mut cdfs.lossy_luma_32x32_eob_base[..],
+            &mut cdfs.lossy_luma_32x32_base[..],
+            &mut cdfs.lossy_luma_32x32_high_tokens[..],
         ),
         LossyLargeCdfSet::Luma8x16 => (
             &mut cdfs.lossy_luma_16x16_eob_high[..],
@@ -13224,7 +13318,9 @@ fn decode_lossy_large_two_d_coefficients(
             &mut cdfs.lossy_chroma_8x8_base[..],
             &mut cdfs.lossy_chroma_8x8_high_tokens[..],
         ),
-        LossyLargeCdfSet::Chroma16x16 => (
+        LossyLargeCdfSet::Chroma16x16
+        | LossyLargeCdfSet::Chroma8x32
+        | LossyLargeCdfSet::Chroma32x8 => (
             &mut cdfs.lossy_chroma_16x16_eob_high[..],
             &mut cdfs.lossy_chroma_16x16_eob_base[..],
             &mut cdfs.lossy_chroma_16x16_base[..],
@@ -13275,12 +13371,17 @@ fn decode_lossy_large_two_d_coefficients(
         LossyLargeCdfSet::Chroma32x16 => chroma_32x16_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x8 => chroma_16x8_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma8x16 => chroma_8x16_matrix(quantization, plane)?,
+        LossyLargeCdfSet::Chroma8x32 | LossyLargeCdfSet::Chroma32x8 => {
+            unavailable_256_rect_matrix(quantization)?
+        }
         _ => None,
     };
     let luma_matrix_values = match cdf_set {
         LossyLargeCdfSet::Luma4x16 => luma_4x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma8x16 => luma_16x8_matrix(quantization)?,
+        LossyLargeCdfSet::Luma8x32 => unavailable_256_rect_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x8 => luma_32x8_matrix(quantization)?,
+        LossyLargeCdfSet::Luma16x32 => luma_32x32_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma64x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x32 => luma_32x32_matrix(quantization)?,
@@ -13288,6 +13389,7 @@ fn decode_lossy_large_two_d_coefficients(
     };
     let dequant_shift = match cdf_set {
         LossyLargeCdfSet::Luma32x16 => 1,
+        LossyLargeCdfSet::Luma16x32 => 1,
         LossyLargeCdfSet::Luma64x16 => 1,
         LossyLargeCdfSet::Luma32x32 => 1,
         LossyLargeCdfSet::Luma64x64 => 2,
@@ -13335,13 +13437,14 @@ fn decode_lossy_large_two_d_coefficients(
         };
         let negative =
             decoder.adaptive_bool(&mut cdfs.dc_sign[usize::from(chroma)][dc_sign_context]);
-        let mut coefficients = vec![0_i32; coefficient_count];
         coefficients[0] = dequantize(decoder, token, negative, 0)?;
+        let residual_context = lossy_coefficient_residual_context(token, token, negative);
         if chroma {
-            cdfs.last_lossy_chroma_residual_context =
-                Some(lossy_coefficient_residual_context(token, token, negative));
+            cdfs.last_lossy_chroma_residual_context = Some(residual_context);
+        } else {
+            cdfs.last_lossy_luma_residual_context = Some(residual_context);
         }
-        return Ok(coefficients);
+        return Ok(());
     }
 
     let eob = if eob_bin > 1 {
@@ -13351,6 +13454,7 @@ fn decode_lossy_large_two_d_coefficients(
         // symbol, matching dav1d's `eob_hi_bit[...][eob_bin]` access.
         let eob_bin_index = match cdf_set {
             LossyLargeCdfSet::Luma4x16
+            | LossyLargeCdfSet::Luma64x64
             | LossyLargeCdfSet::Chroma16x32
             | LossyLargeCdfSet::Chroma32x16
             | LossyLargeCdfSet::Chroma32x32 => {
@@ -13387,9 +13491,19 @@ fn decode_lossy_large_two_d_coefficients(
     } else {
         eob_base_token.saturating_add(1)
     };
-    let mut tokens = vec![0_u32; coefficient_count];
-    let mut levels = vec![0_u8; levels_len];
-    let mut nonzero_positions = Vec::with_capacity(eob);
+    scratch.tokens.clear();
+    scratch.tokens.resize(coefficient_count, 0);
+    scratch.levels.clear();
+    scratch.levels.resize(levels_len, 0);
+    scratch.nonzero_positions.clear();
+    if scratch.nonzero_positions.capacity() < eob {
+        scratch
+            .nonzero_positions
+            .reserve(eob.saturating_sub(scratch.nonzero_positions.capacity()));
+    }
+    let tokens = &mut scratch.tokens;
+    let levels = &mut scratch.levels;
+    let nonzero_positions = &mut scratch.nonzero_positions;
     tokens[eob_rc] = eob_token;
     let eob_level = if eob_base_token == 2 {
         eob_token.saturating_add(192)
@@ -13477,7 +13591,6 @@ fn decode_lossy_large_two_d_coefficients(
     } else {
         dc_base
     };
-    let mut coefficients = vec![0_i32; coefficient_count];
     let mut coefficient_magnitude = 0_u32;
     let mut dc_negative = false;
     if dc_token != 0 {
@@ -13493,13 +13606,37 @@ fn decode_lossy_large_two_d_coefficients(
         coefficients[position] = coefficient?;
         coefficient_magnitude = coefficient_magnitude.saturating_add(tokens[position]);
     }
+    let residual_context =
+        lossy_coefficient_residual_context(coefficient_magnitude, dc_token, dc_negative);
     if chroma {
-        cdfs.last_lossy_chroma_residual_context = Some(lossy_coefficient_residual_context(
-            coefficient_magnitude,
-            dc_token,
-            dc_negative,
-        ));
+        cdfs.last_lossy_chroma_residual_context = Some(residual_context);
+    } else {
+        cdfs.last_lossy_luma_residual_context = Some(residual_context);
     }
+    Ok(())
+}
+
+fn decode_lossy_large_two_d_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+    quantization: LossyQuantization,
+    dc_sign_context: Option<usize>,
+    layout: LossyLargeCoefficientLayout<'_>,
+) -> PortableResult<Vec<i32>> {
+    let coefficient_count = layout.coefficient_count;
+    let mut coefficients = vec![0_i32; coefficient_count];
+    let mut scratch = LargeCoefficientScratch::new();
+    decode_lossy_large_two_d_coefficients_into(
+        decoder,
+        plane,
+        cdfs,
+        quantization,
+        dc_sign_context,
+        layout,
+        &mut coefficients,
+        &mut scratch,
+    )?;
     Ok(coefficients)
 }
 
@@ -13508,13 +13645,14 @@ fn decode_lossy_luma_8x32_coefficients(
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
     eob_bin: u32,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy8x32TransformCoefficients> {
     let coefficients = decode_lossy_large_two_d_coefficients(
         decoder,
         0,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_8X32_SCAN,
@@ -13524,7 +13662,7 @@ fn decode_lossy_luma_8x32_coefficients(
             levels_stride: LOSSY_LUMA_8X32_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_8X32_LEVELS,
             eob_thresholds: (32, 64),
-            cdf_set: LossyLargeCdfSet::Luma16x16,
+            cdf_set: LossyLargeCdfSet::Luma8x32,
         },
     )?;
     coefficients.try_into().map_err(|_| PortableUnavailable)
@@ -13534,6 +13672,7 @@ fn decode_lossy_luma_16x32_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy16x32TransformCoefficients> {
     // RTX_16X32 uses the 512-coefficient EOB sentence. Its coefficient
     // window, scan, and level scratch geometry are the same bounded window
@@ -13544,7 +13683,7 @@ fn decode_lossy_luma_16x32_coefficients(
         0,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_16X32_SCAN,
@@ -13554,7 +13693,7 @@ fn decode_lossy_luma_16x32_coefficients(
             levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_32X32_LEVELS,
             eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Luma32x32,
+            cdf_set: LossyLargeCdfSet::Luma16x32,
         },
     )?;
     coefficients.try_into().map_err(|_| PortableUnavailable)
@@ -13564,6 +13703,7 @@ fn decode_lossy_luma_16x64_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy16x64TransformCoefficients> {
     let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x64_eob_bin, 9);
     let coefficients = decode_lossy_large_two_d_coefficients(
@@ -13571,7 +13711,7 @@ fn decode_lossy_luma_16x64_coefficients(
         0,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_16X32_SCAN,
@@ -13581,7 +13721,7 @@ fn decode_lossy_luma_16x64_coefficients(
             levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_32X32_LEVELS,
             eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Luma32x32,
+            cdf_set: LossyLargeCdfSet::Luma16x32,
         },
     )?;
     coefficients.try_into().map_err(|_| PortableUnavailable)
@@ -13684,14 +13824,15 @@ fn decode_lossy_chroma_8x32_coefficients(
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy8x32TransformCoefficients> {
-    let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_8x32_eob_bin, 8);
+    let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x16_eob_bin, 8);
     let coefficients = decode_lossy_large_two_d_coefficients(
         decoder,
         plane,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_8X32_SCAN,
@@ -13701,7 +13842,7 @@ fn decode_lossy_chroma_8x32_coefficients(
             levels_stride: LOSSY_LUMA_8X32_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_8X32_LEVELS,
             eob_thresholds: (32, 64),
-            cdf_set: LossyLargeCdfSet::Chroma16x16,
+            cdf_set: LossyLargeCdfSet::Chroma8x32,
         },
     )?;
     coefficients.try_into().map_err(|_| PortableUnavailable)
@@ -13712,14 +13853,15 @@ fn decode_lossy_chroma_32x8_coefficients(
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy32x8TransformCoefficients> {
-    let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_8x32_eob_bin, 8);
+    let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x16_eob_bin, 8);
     let coefficients = decode_lossy_large_two_d_coefficients(
         decoder,
         plane,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_32X8_SCAN,
@@ -13729,7 +13871,7 @@ fn decode_lossy_chroma_32x8_coefficients(
             levels_stride: LOSSY_LUMA_32X8_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_32X8_LEVELS,
             eob_thresholds: (32, 64),
-            cdf_set: LossyLargeCdfSet::Chroma16x16,
+            cdf_set: LossyLargeCdfSet::Chroma32x8,
         },
     )?;
     coefficients.try_into().map_err(|_| PortableUnavailable)
@@ -13966,14 +14108,15 @@ fn decode_lossy_luma_64x64_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy32x32TransformCoefficients> {
-    let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_64x64_eob_bin, 10);
+    let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10);
     let coefficients = decode_lossy_large_two_d_coefficients(
         decoder,
         0,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_LUMA_32X32_SCAN,
@@ -13994,8 +14137,15 @@ fn decode_lossy_chroma_32x32_coefficients(
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy32x32TransformCoefficients> {
-    decode_lossy_chroma_32x32_coefficients_with_context(decoder, plane, cdfs, quantization, None)
+    decode_lossy_chroma_32x32_coefficients_with_context(
+        decoder,
+        plane,
+        cdfs,
+        quantization,
+        Some(dc_sign_context),
+    )
 }
 
 fn decode_lossy_chroma_32x32_coefficients_with_context(
@@ -14060,33 +14210,83 @@ fn decode_lossy_chroma_16x32_coefficients(
     coefficients.try_into().map_err(|_| PortableUnavailable)
 }
 
-fn decode_lossy_chroma_32x16_coefficients(
+#[expect(
+    clippy::too_many_arguments,
+    reason = "large Full chroma decoding keeps arena ownership, plane, CDF state, quantization, geometry, and sign context explicit"
+)]
+fn decode_full_large_chroma_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    child_width: usize,
+    child_height: usize,
     dc_sign_context: usize,
-) -> PortableResult<Lossy32x16TransformCoefficients> {
-    let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x32_eob_bin, 9);
-    let coefficients = decode_lossy_large_two_d_coefficients(
+    arena: &mut LargeCoefficientArena,
+) -> PortableResult<FullLargeChromaCoefficients> {
+    let (shape, layout) = match (child_width, child_height) {
+        (4, 8) => {
+            let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x32_eob_bin, 9);
+            (
+                FullLargeChromaShape::Vertical16x32,
+                LossyLargeCoefficientLayout {
+                    eob_bin,
+                    scan: &LOSSY_LUMA_16X32_SCAN,
+                    coefficient_count: 512,
+                    shift: 5,
+                    mask: 31,
+                    levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
+                    levels_len: LOSSY_LUMA_32X32_LEVELS,
+                    eob_thresholds: (64, 128),
+                    cdf_set: LossyLargeCdfSet::Chroma16x32,
+                },
+            )
+        }
+        (8, 4) => {
+            let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x32_eob_bin, 9);
+            (
+                FullLargeChromaShape::Horizontal32x16,
+                LossyLargeCoefficientLayout {
+                    eob_bin,
+                    scan: &LOSSY_LUMA_32X16_SCAN,
+                    coefficient_count: 512,
+                    shift: 4,
+                    mask: 15,
+                    levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
+                    levels_len: LOSSY_LUMA_32X16_LEVELS,
+                    eob_thresholds: (64, 128),
+                    cdf_set: LossyLargeCdfSet::Chroma32x16,
+                },
+            )
+        }
+        (8, 8) => {
+            let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_32x32_eob_bin, 10);
+            (
+                FullLargeChromaShape::Square32,
+                LossyLargeCoefficientLayout {
+                    eob_bin,
+                    scan: &LOSSY_LUMA_32X32_SCAN,
+                    coefficient_count: 1024,
+                    shift: 5,
+                    mask: 31,
+                    levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
+                    levels_len: LOSSY_LUMA_32X32_LEVELS,
+                    eob_thresholds: (128, 256),
+                    cdf_set: LossyLargeCdfSet::Chroma32x32,
+                },
+            )
+        }
+        _ => return Err(PortableUnavailable),
+    };
+    arena.decode_transform(
         decoder,
         plane,
         cdfs,
         quantization,
-        Some(dc_sign_context),
-        LossyLargeCoefficientLayout {
-            eob_bin,
-            scan: &LOSSY_LUMA_32X16_SCAN,
-            coefficient_count: 512,
-            shift: 4,
-            mask: 15,
-            levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_32X16_LEVELS,
-            eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Chroma32x16,
-        },
-    )?;
-    coefficients.try_into().map_err(|_| PortableUnavailable)
+        dc_sign_context,
+        shape,
+        layout,
+    )
 }
 
 fn decode_lossy_chroma_4x16_coefficients(
@@ -14094,6 +14294,7 @@ fn decode_lossy_chroma_4x16_coefficients(
     plane: usize,
     cdfs: &mut BlockCdfs,
     quantization: LossyQuantization,
+    dc_sign_context: usize,
 ) -> PortableResult<Lossy4x16TransformCoefficients> {
     let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_chroma_4x16_eob_bin, 6);
     let coefficients = decode_lossy_large_two_d_coefficients(
@@ -14101,7 +14302,7 @@ fn decode_lossy_chroma_4x16_coefficients(
         plane,
         cdfs,
         quantization,
-        None,
+        Some(dc_sign_context),
         LossyLargeCoefficientLayout {
             eob_bin,
             scan: &LOSSY_CHROMA_4X16_SCAN,
@@ -14290,7 +14491,7 @@ fn lossy_full_chroma_skip_cdf(
         | TransformGrid::Horizontal16x8
         | TransformGrid::Horizontal32x8
         | TransformGrid::Square16 => 2,
-        TransformGrid::Vertical8x32 => 3,
+        TransformGrid::Vertical8x32 => 2,
         TransformGrid::Vertical16x32
         | TransformGrid::Horizontal32x16
         | TransformGrid::Vertical16x64
@@ -14393,6 +14594,7 @@ fn decode_full_large_chroma_grid(
     transform_grid: TransformGrid,
     mut above: [u8; 16],
     mut left: [u8; 16],
+    arena: &mut LargeCoefficientArena,
 ) -> PortableResult<FullLargeChromaGrid> {
     (!quantization.using_matrix && (1..=2).contains(&plane))
         .then_some(())
@@ -14438,36 +14640,16 @@ fn decode_full_large_chroma_grid(
                         left_edge,
                     )
                 };
-                Some(match (child_width, child_height) {
-                    (4, 8) => FullLargeChromaCoefficients::vertical_16x32(
-                        decode_lossy_chroma_16x32_coefficients(
-                            decoder,
-                            plane,
-                            cdfs,
-                            quantization,
-                            dc_sign_context,
-                        )?,
-                    ),
-                    (8, 4) => FullLargeChromaCoefficients::horizontal_32x16(
-                        decode_lossy_chroma_32x16_coefficients(
-                            decoder,
-                            plane,
-                            cdfs,
-                            quantization,
-                            dc_sign_context,
-                        )?,
-                    ),
-                    (8, 8) => FullLargeChromaCoefficients::square_32(
-                        decode_lossy_chroma_32x32_coefficients_with_context(
-                            decoder,
-                            plane,
-                            cdfs,
-                            quantization,
-                            Some(dc_sign_context),
-                        )?,
-                    ),
-                    _ => return Err(PortableUnavailable),
-                })
+                Some(decode_full_large_chroma_coefficients(
+                    decoder,
+                    plane,
+                    cdfs,
+                    quantization,
+                    child_width,
+                    child_height,
+                    dc_sign_context,
+                    arena,
+                )?)
             };
             let residual_context = if skipped {
                 0x40
@@ -14593,7 +14775,18 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
             ));
         }
         if matches!(transform_grid, TransformGrid::Vertical8x32) {
-            let chroma = decode_lossy_chroma_4x16_coefficients(decoder, plane, cdfs, quantization)?;
+            let chroma = decode_lossy_chroma_4x16_coefficients(
+                decoder,
+                plane,
+                cdfs,
+                quantization,
+                coefficient_dc_sign_context_for_dimensions(
+                    1,
+                    4,
+                    &above_chroma_contexts,
+                    &left_chroma_contexts,
+                ),
+            )?;
             return Ok((
                 [[0_i32; 16]; 64],
                 None,
@@ -14735,11 +14928,9 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
         TransformGrid::Square4 => decoder.adaptive_bool(&mut cdfs.luma_coefficient_skip[0]),
         TransformGrid::Square16 => decode_lossy_luma_tx_context_two_skip(decoder, cdfs),
         TransformGrid::Square32 => {
-            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip)
+            decoder.adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[0])
         }
-        TransformGrid::Vertical8x32 => {
-            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip)
-        }
+        TransformGrid::Vertical8x32 => decode_lossy_luma_tx_context_two_skip(decoder, cdfs),
         _ => decoder.adaptive_bool(&mut cdfs.lossy_luma_8x8_coefficient_skip[0]),
     };
 
@@ -14887,8 +15078,18 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
 
     if matches!(transform_grid, TransformGrid::Square32) {
         let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10);
-        let (coefficients, _) =
-            decode_lossy_luma_32x32_coefficients(decoder, cdfs, quantization, eob_bin, 0)?;
+        let (coefficients, residual_context) = decode_lossy_luma_32x32_coefficients(
+            decoder,
+            cdfs,
+            quantization,
+            eob_bin,
+            coefficient_dc_sign_context_for_grid(
+                transform_grid,
+                &above_luma_contexts,
+                &left_luma_contexts,
+            ),
+        )?;
+        cdfs.last_lossy_luma_residual_context = Some(residual_context);
         return Ok((
             [[0_i32; 16]; 64],
             None,
@@ -14909,8 +15110,17 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
 
     if matches!(transform_grid, TransformGrid::Vertical8x32) {
         let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x16_eob_bin, 8);
-        let coefficients =
-            decode_lossy_luma_8x32_coefficients(decoder, cdfs, quantization, eob_bin)?;
+        let coefficients = decode_lossy_luma_8x32_coefficients(
+            decoder,
+            cdfs,
+            quantization,
+            eob_bin,
+            coefficient_dc_sign_context_for_grid(
+                transform_grid,
+                &above_luma_contexts,
+                &left_luma_contexts,
+            ),
+        )?;
         return Ok((
             [[0_i32; 16]; 64],
             None,
@@ -15492,6 +15702,18 @@ fn luma_4x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'s
         10 => Ok(Some(&quantization::Y_4X4_MATRIX_10)),
         _ => Err(PortableUnavailable),
     }
+}
+
+fn unavailable_256_rect_matrix(
+    quantization: LossyQuantization,
+) -> PortableResult<Option<&'static [u8]>> {
+    // TX_8X32 and TX_32X8 have distinct pre-transposed AV1 matrix tables;
+    // their shared coefficient-CDF context does not make a 16x16 matrix a
+    // valid substitute. Keep these geometries explicit and fail closed until
+    // their complete matrix-index tables are installed.
+    (!quantization.using_matrix)
+        .then_some(None::<&'static [u8]>)
+        .portable()
 }
 
 fn luma_4x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
@@ -16396,6 +16618,7 @@ fn decode_syntax(
         policy,
         tools,
         0,
+        None,
     )
     .map(|(syntax, _)| syntax)
 }
@@ -16408,6 +16631,7 @@ fn decode_syntax_with_cdef(
     policy: SyntaxPolicy,
     tools: BlockTools,
     cdef_index_bits: u32,
+    large_coeff_arena: Option<&mut LargeCoefficientArena>,
 ) -> PortableResult<(BlockSyntax, CdefMetadata)> {
     // The current pure-Rust 4:2:2 path is deliberately limited to the
     // reference-proven Square16 terminal. Reject other geometries before
@@ -16415,6 +16639,12 @@ fn decode_syntax_with_cdef(
     // implemented yet and must not be decoded with an accidental context.
     if matches!(chroma_sampling, ChromaSampling::Subsampled422)
         && !matches!(transform_grid, TransformGrid::Square16)
+    {
+        return Err(PortableUnavailable);
+    }
+    if matches!(chroma_sampling, ChromaSampling::Full)
+        && full_large_chroma_geometry(transform_grid).is_ok()
+        && large_coeff_arena.is_none()
     {
         return Err(PortableUnavailable);
     }
@@ -16904,17 +17134,8 @@ fn decode_syntax_with_cdef(
         }
     }
     if matches!(chroma_sampling, ChromaSampling::Full)
-        && tools.sample_depth != SampleDepth::EIGHT
         && let Ok((_, _, columns, rows)) = full_large_chroma_geometry(transform_grid)
     {
-        // Qcat zero has the complete default large-transform state and qcat
-        // two installs every large luma/chroma family explicitly. Qcat one
-        // and three are still missing at least one 512/1024 coefficient
-        // family, so reject them before the first child coefficient symbol
-        // rather than reading a stale qcat-zero table.
-        let qcat = usize::from(lossy_quantization.qindex > 20)
-            .saturating_add(usize::from(lossy_quantization.qindex > 60))
-            .saturating_add(usize::from(lossy_quantization.qindex > 120));
         let directional_chroma = matches!(
             chroma_predictor,
             ChromaPredictor::Diagonal45
@@ -16924,8 +17145,7 @@ fn decode_syntax_with_cdef(
                 | ChromaPredictor::Diagonal203
                 | ChromaPredictor::Diagonal67
         );
-        if !matches!(qcat, 0 | 2)
-            || transform_depth != 0
+        if transform_depth != 0
             || palette.is_present()
             || filter_intra_mode.is_some()
             || lossy_quantization.using_matrix
@@ -17003,6 +17223,7 @@ fn decode_syntax_with_cdef(
             && lossy_quantization.matrix_y == 9
             && lossy_quantization.matrix_u == 9
             && lossy_quantization.matrix_v == 9;
+    let mut large_coeff_arena = large_coeff_arena;
     let mut decode_plane = |decoder: &mut RangeDecoder<'_, '_, '_>, plane, cdfs: &mut BlockCdfs| {
         if plane != 0 && matches!(chroma_sampling, ChromaSampling::Monochrome) {
             return Ok([[0_i32; 16]; 64]);
@@ -17062,7 +17283,6 @@ fn decode_syntax_with_cdef(
 
                 if plane != 0
                     && matches!(chroma_sampling, ChromaSampling::Full)
-                    && tools.sample_depth != SampleDepth::EIGHT
                     && full_large_chroma_geometry(transform_grid).is_ok()
                 {
                     let grid = decode_full_large_chroma_grid(
@@ -17073,6 +17293,7 @@ fn decode_syntax_with_cdef(
                         transform_grid,
                         above_chroma_edge_contexts,
                         left_chroma_edge_contexts,
+                        large_coeff_arena.as_deref_mut().portable()?,
                     )?;
                     let active = usize::from(grid.columns)
                         .checked_mul(usize::from(grid.rows))
@@ -17327,8 +17548,8 @@ fn decode_syntax_with_cdef(
                             lossy_luma_16x16_vertical_split = Some(split);
                             return Ok([[0_i32; 16]; 64]);
                         }
-                        let skipped =
-                            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip);
+                        let skipped = decoder
+                            .adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[0]);
                         if skipped {
                             return Ok([[0_i32; 16]; 64]);
                         }
@@ -17342,6 +17563,11 @@ fn decode_syntax_with_cdef(
                                     decoder,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_grid(
+                                        transform_grid,
+                                        &above_luma_contexts,
+                                        &left_luma_contexts,
+                                    ),
                                 )?);
                         } else {
                             return Err(PortableUnavailable);
@@ -17507,14 +17733,19 @@ fn decode_syntax_with_cdef(
                         if transform_depth != 0 {
                             return Err(PortableUnavailable);
                         }
-                        let skipped =
-                            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip);
+                        let skipped = decoder
+                            .adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[0]);
                         if !skipped {
                             lossy_luma_16x64_coefficients =
                                 Some(decode_lossy_luma_16x64_coefficients(
                                     decoder,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_grid(
+                                        transform_grid,
+                                        &above_luma_contexts,
+                                        &left_luma_contexts,
+                                    ),
                                 )?);
                         }
                     } else {
@@ -17536,7 +17767,17 @@ fn decode_syntax_with_cdef(
                                     plane,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_dimensions(
+                                        plane_grid_width,
+                                        plane_grid_height,
+                                        &above_chroma_edge_contexts,
+                                        &left_chroma_edge_contexts,
+                                    ),
                                 )?);
+                            lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
+                                .last_lossy_chroma_residual_context
+                                .take()
+                                .unwrap_or(0x40);
                         }
                     }
                     return Ok([[0_i32; 16]; 64]);
@@ -17554,6 +17795,11 @@ fn decode_syntax_with_cdef(
                                     decoder,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_grid(
+                                        transform_grid,
+                                        &above_luma_contexts,
+                                        &left_luma_contexts,
+                                    ),
                                 )?);
                         }
                     } else {
@@ -17575,7 +17821,17 @@ fn decode_syntax_with_cdef(
                                     plane,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_dimensions(
+                                        plane_grid_width,
+                                        plane_grid_height,
+                                        &above_chroma_edge_contexts,
+                                        &left_chroma_edge_contexts,
+                                    ),
                                 )?);
+                            lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
+                                .last_lossy_chroma_residual_context
+                                .take()
+                                .unwrap_or(0x40);
                         }
                     }
                     return Ok([[0_i32; 16]; 64]);
@@ -17640,8 +17896,8 @@ fn decode_syntax_with_cdef(
                         if transform_depth != 0 {
                             return Err(PortableUnavailable);
                         }
-                        let skipped =
-                            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip);
+                        let skipped = decoder
+                            .adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[0]);
 
                         if !skipped {
                             let result = decode_lossy_luma_32x16_coefficients(
@@ -17782,6 +18038,12 @@ fn decode_syntax_with_cdef(
                                 plane,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_dimensions(
+                                    plane_grid_width,
+                                    plane_grid_height,
+                                    &above_chroma_edge_contexts,
+                                    &left_chroma_edge_contexts,
+                                ),
                             );
                             lossy_chroma_32x8_coefficients[plane.saturating_sub(1)] = Some(result?);
                             lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
@@ -17840,8 +18102,8 @@ fn decode_syntax_with_cdef(
                         if transform_depth != 0 {
                             return Err(PortableUnavailable);
                         }
-                        let skipped =
-                            decoder.adaptive_bool(&mut cdfs.lossy_luma_32x32_coefficient_skip);
+                        let skipped = decoder
+                            .adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[0]);
 
                         if !skipped {
                             lossy_luma_64x16_coefficients = Some(
@@ -17878,9 +18140,19 @@ fn decode_syntax_with_cdef(
                                     plane,
                                     cdfs,
                                     lossy_quantization,
+                                    coefficient_dc_sign_context_for_dimensions(
+                                        plane_grid_width,
+                                        plane_grid_height,
+                                        &above_chroma_edge_contexts,
+                                        &left_chroma_edge_contexts,
+                                    ),
                                 )
                                 .map_err(|_| PortableUnavailable)?,
                             );
+                            lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
+                                .last_lossy_chroma_residual_context
+                                .take()
+                                .unwrap_or(0x40);
                         }
                     }
                     return Ok([[0_i32; 16]; 64]);
@@ -18118,6 +18390,12 @@ fn decode_syntax_with_cdef(
                                 plane,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_dimensions(
+                                    plane_grid_width,
+                                    plane_grid_height,
+                                    &above_chroma_edge_contexts,
+                                    &left_chroma_edge_contexts,
+                                ),
                             )?);
                         lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
                             .last_lossy_chroma_residual_context
@@ -18182,6 +18460,12 @@ fn decode_syntax_with_cdef(
                                 plane,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_dimensions(
+                                    plane_grid_width,
+                                    plane_grid_height,
+                                    &above_chroma_edge_contexts,
+                                    &left_chroma_edge_contexts,
+                                ),
                             )?);
                         lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
                             .last_lossy_chroma_residual_context
@@ -18317,6 +18601,12 @@ fn decode_syntax_with_cdef(
                                 plane,
                                 cdfs,
                                 lossy_quantization,
+                                coefficient_dc_sign_context_for_dimensions(
+                                    plane_grid_width,
+                                    plane_grid_height,
+                                    &above_chroma_edge_contexts,
+                                    &left_chroma_edge_contexts,
+                                ),
                             )?);
                         lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
                             .last_lossy_chroma_residual_context
@@ -18554,7 +18844,6 @@ fn decode_syntax_with_cdef(
     };
     if skip
         && matches!(chroma_sampling, ChromaSampling::Full)
-        && tools.sample_depth != SampleDepth::EIGHT
         && full_large_chroma_geometry(transform_grid).is_ok()
     {
         let skipped_grid = skipped_full_large_chroma_grid(transform_grid)?;
@@ -29688,21 +29977,22 @@ fn full_cfl_prediction(
         .collect()
 }
 
-fn full_large_chroma_child_coefficients(
+fn full_large_chroma_child_coefficients<'a>(
     child: &FullLargeChromaChild,
+    arena: &'a LargeCoefficientArena,
     width: usize,
     height: usize,
-) -> PortableResult<CoeffBlockRef<'_>> {
-    let coefficients: Option<&[i32]> = match (child.coefficients.as_ref(), width, height) {
+) -> PortableResult<CoeffBlockRef<'a>> {
+    let coefficients: Option<&[i32]> = match (child.coefficients, width, height) {
         (None, 16, 32) | (None, 32, 16) | (None, 32, 32) => None,
-        (Some(values), 16, 32) if values.shape == FullLargeChromaShape::Vertical16x32 => {
-            Some(&values.values[..512])
+        (Some(span), 16, 32) if span.shape == FullLargeChromaShape::Vertical16x32 => {
+            Some(arena.coefficients(span)?)
         }
-        (Some(values), 32, 16) if values.shape == FullLargeChromaShape::Horizontal32x16 => {
-            Some(&values.values[..512])
+        (Some(span), 32, 16) if span.shape == FullLargeChromaShape::Horizontal32x16 => {
+            Some(arena.coefficients(span)?)
         }
-        (Some(values), 32, 32) if values.shape == FullLargeChromaShape::Square32 => {
-            Some(values.values.as_slice())
+        (Some(span), 32, 32) if span.shape == FullLargeChromaShape::Square32 => {
+            Some(arena.coefficients(span)?)
         }
         _ => return Err(PortableUnavailable),
     };
@@ -29833,6 +30123,7 @@ fn full_large_chroma_child_edges(
 fn reconstruct_full_large_chroma_plane(
     syntax: &BlockSyntax,
     plane: usize,
+    arena: &LargeCoefficientArena,
     external: &FullIntraPlaneEdges,
     grid: &FullLargeChromaGrid,
     cfl_ac: Option<&[i32]>,
@@ -29918,7 +30209,7 @@ fn reconstruct_full_large_chroma_plane(
                 )?
             };
             let coefficients =
-                full_large_chroma_child_coefficients(child, child_width, child_height)?;
+                full_large_chroma_child_coefficients(child, arena, child_width, child_height)?;
             let reconstructed =
                 reconstruct_full_unsplit_prediction(prediction, coefficients, sample_depth)?;
             for (local_y, source_row) in reconstructed.samples.chunks_exact(child_width).enumerate()
@@ -29960,6 +30251,7 @@ fn reconstruct_full_large_chroma_plane(
 )]
 fn reconstruct_lossy444_unsplit_leaf(
     syntax: &BlockSyntax,
+    arena: &LargeCoefficientArena,
     edges: &FullIntraEdges,
     visible_width: usize,
     visible_height: usize,
@@ -30017,6 +30309,7 @@ fn reconstruct_lossy444_unsplit_leaf(
             return reconstruct_full_large_chroma_plane(
                 syntax,
                 plane,
+                arena,
                 &edges.planes[plane],
                 grid,
                 cfl_ac.as_deref(),
@@ -30089,6 +30382,7 @@ fn reconstruct_lossy444_unsplit_leaf(
 )]
 fn reconstruct_visible_lossy444_unsplit_leaf(
     syntax: &BlockSyntax,
+    arena: &LargeCoefficientArena,
     edges: &FullIntraEdges,
     transform_grid: TransformGrid,
     visible_width: u32,
@@ -30107,6 +30401,7 @@ fn reconstruct_visible_lossy444_unsplit_leaf(
         .min(coded_height);
     let closed = reconstruct_lossy444_unsplit_leaf(
         syntax,
+        arena,
         edges,
         visible_width_usize,
         visible_height_usize,
@@ -44423,6 +44718,7 @@ fn reject_unhandled_lossy_luma_64x64_split(syntax: &BlockSyntax) -> PortableResu
 /// machinery; it is not exposed as a public codec API.
 pub(super) struct Lossy420Decoder {
     cdfs: BlockCdfs,
+    large_coeff_arena: LargeCoefficientArena,
     chroma_sampling: ChromaSampling,
     qcat_one_square_only: bool,
     pending_cdef_index_bits: u32,
@@ -44436,6 +44732,7 @@ impl Lossy420Decoder {
     pub(super) fn new() -> Self {
         Self {
             cdfs: BlockCdfs::defaults([0, 0]),
+            large_coeff_arena: LargeCoefficientArena::new(),
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: false,
             pending_cdef_index_bits: 0,
@@ -44449,6 +44746,7 @@ impl Lossy420Decoder {
     pub(super) fn with_qindex(qindex: u32) -> Option<Self> {
         Some(Self {
             cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
+            large_coeff_arena: LargeCoefficientArena::new(),
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             pending_cdef_index_bits: 0,
@@ -44465,6 +44763,7 @@ impl Lossy420Decoder {
     ) -> Option<Self> {
         Some(Self {
             cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
+            large_coeff_arena: LargeCoefficientArena::new(),
             chroma_sampling,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             pending_cdef_index_bits: 0,
@@ -44526,14 +44825,18 @@ impl Lossy420Decoder {
         tools: BlockTools,
         cdef_index_bits: u32,
     ) -> PortableResult<BlockSyntax> {
+        let full_large = matches!(chroma_sampling, ChromaSampling::Full)
+            && full_large_chroma_geometry(transform_grid).is_ok();
         if self.qcat_one_square_only
             && !matches!(
                 transform_grid,
                 TransformGrid::Square8 | TransformGrid::Square16
             )
+            && !full_large
         {
             return Err(PortableUnavailable);
         }
+        self.large_coeff_arena.begin_leaf();
         let (syntax, metadata) = super::block::decode_syntax_with_cdef(
             decoder,
             &mut self.cdfs,
@@ -44542,6 +44845,7 @@ impl Lossy420Decoder {
             policy,
             tools,
             cdef_index_bits,
+            Some(&mut self.large_coeff_arena),
         )?;
         self.remember_cdef(metadata);
         Ok(syntax)
@@ -45109,9 +45413,11 @@ impl Lossy420Decoder {
             .then_some(())
             .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
-        let full_high_depth = matches!(self.chroma_sampling, ChromaSampling::Full)
-            && quantization.sample_depth != SampleDepth::EIGHT;
-        if full_high_depth && full_edges.is_none() {
+        let full_large = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && full_large_chroma_geometry(transform_grid).is_ok();
+        let full_strict = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && (quantization.sample_depth != SampleDepth::EIGHT || full_large);
+        if full_strict && full_edges.is_none() {
             // The strict path requires normalized top/right and left/below
             // extensions assembled from positioned leaves. The legacy
             // geometry-specific carrier cannot represent those edges for all
@@ -45119,7 +45425,7 @@ impl Lossy420Decoder {
             // its eight-bit substitutions.
             return Err(PortableUnavailable);
         }
-        if full_high_depth {
+        if full_strict {
             validate_full_large_entry(transform_grid, width, height, quantization.using_matrix)?;
         }
         let quantization = self.prepare_quantization(quantization);
@@ -45194,9 +45500,10 @@ impl Lossy420Decoder {
             syntax.lossy_luma_8x4_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
-        if full_high_depth {
+        if full_strict {
             return reconstruct_visible_lossy444_unsplit_leaf(
                 &syntax,
+                &self.large_coeff_arena,
                 full_edges.ok_or(PortableUnavailable)?,
                 transform_grid,
                 width,
@@ -45511,12 +45818,14 @@ impl Lossy420Decoder {
             .portable()?;
         let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
 
-        let full_high_depth = matches!(self.chroma_sampling, ChromaSampling::Full)
-            && quantization.sample_depth != SampleDepth::EIGHT;
-        if full_high_depth && full_edges.is_none() {
+        let full_large = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && full_large_chroma_geometry(transform_grid).is_ok();
+        let full_strict = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && (quantization.sample_depth != SampleDepth::EIGHT || full_large);
+        if full_strict && full_edges.is_none() {
             return Err(PortableUnavailable);
         }
-        if full_high_depth {
+        if full_strict {
             validate_full_large_entry(transform_grid, width, height, quantization.using_matrix)?;
         }
 
@@ -45681,9 +45990,10 @@ impl Lossy420Decoder {
                 luma_context,
             )
         };
-        if full_high_depth {
+        if full_strict {
             return reconstruct_visible_lossy444_unsplit_leaf(
                 &syntax,
+                &self.large_coeff_arena,
                 full_edges.ok_or(PortableUnavailable)?,
                 transform_grid,
                 width,
@@ -46838,9 +47148,11 @@ impl Lossy420Decoder {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
-        let full_high_depth = matches!(syntax_chroma_sampling, ChromaSampling::Full)
-            && quantization.sample_depth != SampleDepth::EIGHT;
-        if full_high_depth {
+        let full_large = matches!(syntax_chroma_sampling, ChromaSampling::Full)
+            && full_large_chroma_geometry(transform_grid).is_ok();
+        let full_strict = matches!(syntax_chroma_sampling, ChromaSampling::Full)
+            && (quantization.sample_depth != SampleDepth::EIGHT || full_large);
+        if full_strict {
             validate_full_large_entry(transform_grid, width, height, quantization.using_matrix)?;
         }
         let quantization = self.prepare_quantization(quantization);
@@ -46877,15 +47189,15 @@ impl Lossy420Decoder {
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
                 },
-                allow_horizontal_chroma: full_high_depth,
-                allow_diagonal_chroma: full_high_depth
+                allow_horizontal_chroma: full_strict,
+                allow_diagonal_chroma: full_strict
                     || matches!(
                         (syntax_chroma_sampling, transform_grid),
                         (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
                     ),
                 allow_diagonal_luma: true,
-                allow_smooth_chroma: full_high_depth,
-                allow_smooth_luma: full_high_depth
+                allow_smooth_chroma: full_strict,
+                allow_smooth_luma: full_strict
                     || matches!(transform_grid, TransformGrid::Horizontal16x4),
             },
             tools,
@@ -46896,7 +47208,7 @@ impl Lossy420Decoder {
             Err(_) => return Err(PortableUnavailable),
         };
         self.remember_qindex(&syntax, decoder);
-        if full_high_depth {
+        if full_strict {
             let (grid_width, grid_height, _) = transform_grid.properties();
             let coded_width = grid_width.checked_mul(4).portable()?;
             let coded_height = grid_height.checked_mul(4).portable()?;
@@ -46907,6 +47219,7 @@ impl Lossy420Decoder {
             )?;
             return reconstruct_visible_lossy444_unsplit_leaf(
                 &syntax,
+                &self.large_coeff_arena,
                 &edges,
                 transform_grid,
                 width,
@@ -48050,7 +48363,10 @@ mod tests {
             panic!("qcat three");
         };
         assert_eq!(qcat_zero.lossy_luma_16x16_coefficient_skip, [405, 0]);
-        assert_eq!(qcat_zero.lossy_luma_32x32_coefficient_skip, [14_848, 0]);
+        assert_eq!(
+            qcat_zero.lossy_luma_context_three_coefficient_skip[0],
+            [14_848, 0]
+        );
         assert_eq!(
             qcat_zero.lossy_luma_16x16_skip_mode,
             LossyLuma16x16SkipMode::Contextual
@@ -48087,7 +48403,10 @@ mod tests {
         assert_eq!(qcat_one.eob_bin_luma, [30_643, 30_217, 27_603, 23_822, 0]);
         assert_eq!(qcat_one.dc_sign[1][2], [15_488, 0]);
         assert_eq!(qcat_two.lossy_luma_16x16_coefficient_skip, [405, 0]);
-        assert_eq!(qcat_two.lossy_luma_32x32_coefficient_skip, [2_099, 0]);
+        assert_eq!(
+            qcat_two.lossy_luma_context_three_coefficient_skip[0],
+            [2_099, 0]
+        );
         assert_eq!(
             qcat_two.lossy_luma_16x16_skip_mode,
             LossyLuma16x16SkipMode::Contextual
