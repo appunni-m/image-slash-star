@@ -5,11 +5,19 @@
 //! can be dropped after placement and neighbor lookup never scans frame
 //! history.
 
+#![allow(
+    dead_code,
+    reason = "inter and variable-transform metadata is wired incrementally"
+)]
+
 use std::num::NonZeroU32;
 
 use super::block::{ChromaPredictor, FirstLeaf, LumaPredictor, PaletteCacheState};
 use super::entropy::PartitionNode;
-use super::geometry::TxSize;
+use super::geometry::{BlockSize, TxSize};
+use super::motion::{
+    CompoundType, InterMode, InterpolationFilter, MotionMode, MotionVector, ReferencePair,
+};
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 
@@ -36,8 +44,13 @@ struct TileCell {
     owner: Option<OwnerId>,
     right_context: u8,
     bottom_context: u8,
+    tx_context_width: u8,
+    tx_context_height: u8,
     segment_id: u8,
     segment_pred: bool,
+    skip: bool,
+    skip_mode: bool,
+    intra: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -63,8 +76,48 @@ impl Default for TileCell {
             owner: None,
             right_context: 0x40,
             bottom_context: 0x40,
+            tx_context_width: 0,
+            tx_context_height: 0,
             segment_id: 0,
             segment_pred: false,
+            skip: false,
+            skip_mode: false,
+            intra: true,
+        }
+    }
+}
+
+/// Stable inter syntax used by MV scans, OBMC, sub-8 chroma, and filtering.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct InterBlockMeta {
+    pub(super) references: ReferencePair,
+    pub(super) motion_vectors: [MotionVector; 2],
+    pub(super) mode: InterMode,
+    pub(super) compound_type: CompoundType,
+    pub(super) motion_mode: MotionMode,
+    /// Horizontal then vertical filter, matching bitstream syntax order.
+    pub(super) filters: [InterpolationFilter; 2],
+    pub(super) global: [bool; 2],
+    pub(super) new_mv: [bool; 2],
+}
+
+/// Reconstruction class published by one complete block.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum BlockCoding {
+    Intra,
+    IntraBc { motion_vector: MotionVector },
+    Inter(InterBlockMeta),
+}
+
+impl BlockCoding {
+    pub(super) const fn is_intra(self) -> bool {
+        matches!(self, Self::Intra)
+    }
+
+    pub(super) const fn inter(self) -> Option<InterBlockMeta> {
+        match self {
+            Self::Inter(inter) => Some(inter),
+            Self::Intra | Self::IntraBc { .. } => None,
         }
     }
 }
@@ -72,6 +125,9 @@ impl Default for TileCell {
 /// Stable scalar metadata for one successfully reconstructed block.
 #[derive(Clone, Copy)]
 pub(super) struct DecodedBlockMeta {
+    pub(super) origin_x: u32,
+    pub(super) origin_y: u32,
+    pub(super) block_size: BlockSize,
     pub(super) entropy_width: u32,
     pub(super) entropy_height: u32,
     pub(super) luma_predictor: LumaPredictor,
@@ -81,6 +137,8 @@ pub(super) struct DecodedBlockMeta {
     pub(super) tx_context_width: u8,
     pub(super) tx_context_height: u8,
     pub(super) block_skipped: bool,
+    pub(super) skip_mode: bool,
+    pub(super) coding: BlockCoding,
 }
 
 /// Copy-only neighbor facts consumed while decoding a following block.
@@ -91,6 +149,9 @@ pub(super) struct DecodedBlockMeta {
 #[derive(Clone, Copy)]
 pub(super) struct NeighborMeta {
     pub(super) owner: OwnerId,
+    pub(super) origin_x: u32,
+    pub(super) origin_y: u32,
+    pub(super) block_size: BlockSize,
     pub(super) pixel_width: u32,
     pub(super) pixel_height: u32,
     pub(super) luma_predictor: LumaPredictor,
@@ -99,12 +160,17 @@ pub(super) struct NeighborMeta {
     pub(super) tx_context_width: u8,
     pub(super) tx_context_height: u8,
     pub(super) block_skipped: bool,
+    pub(super) skip_mode: bool,
+    pub(super) coding: BlockCoding,
 }
 
 impl NeighborMeta {
     fn from_block(owner: OwnerId, block: &DecodedBlockMeta) -> Av1Result<Self> {
         Ok(Self {
             owner,
+            origin_x: block.origin_x,
+            origin_y: block.origin_y,
+            block_size: block.block_size,
             pixel_width: block
                 .entropy_width
                 .checked_mul(4)
@@ -119,8 +185,21 @@ impl NeighborMeta {
             tx_context_width: block.tx_context_width,
             tx_context_height: block.tx_context_height,
             block_skipped: block.block_skipped,
+            skip_mode: block.skip_mode,
+            coding: block.coding,
         })
     }
+}
+
+/// Per-cell contexts that cannot be reconstructed from one block-wide value
+/// after a variable-transform tree splits differently along an edge.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct CellContexts {
+    pub(super) tx_width: u8,
+    pub(super) tx_height: u8,
+    pub(super) skip: bool,
+    pub(super) skip_mode: bool,
+    pub(super) intra: bool,
 }
 
 /// Bounded O(1)-indexed state for one tile's padded four-pixel grid.
@@ -216,6 +295,24 @@ impl TileState {
         self.cells
             .get(index)
             .map(|cell| (cell.segment_id, cell.segment_pred))
+    }
+
+    pub(super) fn contexts_at(&self, x: u32, y: u32) -> Option<CellContexts> {
+        let x = usize::try_from(x).ok()?;
+        let y = usize::try_from(y).ok()?;
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let index = y.checked_mul(self.width)?.checked_add(x)?;
+        let cell = self.cells.get(index)?;
+        cell.owner?;
+        Some(CellContexts {
+            tx_width: cell.tx_context_width,
+            tx_height: cell.tx_context_height,
+            skip: cell.skip,
+            skip_mode: cell.skip_mode,
+            intra: cell.intra,
+        })
     }
 
     pub(super) fn block_at(&self, x: u32, y: u32) -> Option<(OwnerId, &DecodedBlockMeta)> {
@@ -563,6 +660,9 @@ impl TileState {
             CodecError::Dimensions("unable to allocate AV1 tile block metadata".to_owned())
         })?;
         self.blocks.push(DecodedBlockMeta {
+            origin_x: node.x,
+            origin_y: node.y,
+            block_size: node.block_size,
             entropy_width: node.width,
             entropy_height: node.height,
             luma_predictor: leaf.luma_predictor,
@@ -572,6 +672,8 @@ impl TileState {
             tx_context_width: leaf.tx_context_width,
             tx_context_height: leaf.tx_context_height,
             block_skipped: leaf.block_skipped,
+            skip_mode: false,
+            coding: BlockCoding::Intra,
         });
 
         let edge_contextual = leaf.luma_transform_split || leaf.wide_coefficient_contexts.is_some();
@@ -616,8 +718,13 @@ impl TileState {
                 cell.owner = Some(owner);
                 cell.right_context = row_context(y, luma_right_contexts, node.y);
                 cell.bottom_context = bottom_context;
+                cell.tx_context_width = leaf.tx_context_width;
+                cell.tx_context_height = leaf.tx_context_height;
                 cell.segment_id = segment_id;
                 cell.segment_pred = segment_pred;
+                cell.skip = leaf.block_skipped;
+                cell.skip_mode = false;
+                cell.intra = true;
             }
         }
         if let Some((chroma_x, chroma_y, chroma_end_x, chroma_end_y)) = chroma_geometry {

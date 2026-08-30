@@ -322,6 +322,93 @@ impl FrameCanvas {
         })
     }
 
+    /// Copy one fully reconstructed current-frame rectangle into caller-owned
+    /// scratch without exposing the mutable canvas backing storage.
+    ///
+    /// IntraBC uses this transaction boundary: source coverage and every
+    /// coordinate are proved before any destination block is mutated, so an
+    /// overlapping source/destination pair can never depend on copy order.
+    #[allow(
+        dead_code,
+        reason = "wired by the intraBC reconstruction branch in the inter slice"
+    )]
+    pub(super) fn stage_written_rect(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+        output: &mut [u16],
+    ) -> Av1Result<()> {
+        let x = usize::try_from(x).map_err(|_| malformed("intraBC source x exceeds usize"))?;
+        let y = usize::try_from(y).map_err(|_| malformed("intraBC source y exceeds usize"))?;
+        let width =
+            usize::try_from(width).map_err(|_| malformed("intraBC source width exceeds usize"))?;
+        let height = usize::try_from(height)
+            .map_err(|_| malformed("intraBC source height exceeds usize"))?;
+        let length = width
+            .checked_mul(height)
+            .filter(|&length| length != 0)
+            .ok_or_else(|| malformed("intraBC source rectangle has an invalid extent"))?;
+        if output.len() != length {
+            return Err(malformed("intraBC staging buffer has the wrong extent"));
+        }
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let end_x = x
+            .checked_add(width)
+            .ok_or_else(|| malformed("intraBC source x extent overflows"))?;
+        let end_y = y
+            .checked_add(height)
+            .ok_or_else(|| malformed("intraBC source y extent overflows"))?;
+        if plane >= self.planes.len() || end_x > plane_width || end_y > plane_height {
+            return Err(malformed(
+                "intraBC source rectangle exceeds the current tile",
+            ));
+        }
+        for row in 0..height {
+            let source_start = y
+                .checked_add(row)
+                .and_then(|row| row.checked_mul(plane_width))
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("intraBC source row offset overflows"))?;
+            let source_end = source_start
+                .checked_add(width)
+                .ok_or_else(|| malformed("intraBC source row end overflows"))?;
+            if self
+                .written
+                .get(plane)
+                .and_then(|coverage| coverage.get(source_start..source_end))
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed("intraBC source contains undecoded samples"));
+            }
+        }
+        for row in 0..height {
+            let source_start = y
+                .checked_add(row)
+                .and_then(|row| row.checked_mul(plane_width))
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("intraBC source row offset overflows"))?;
+            let source_end = source_start
+                .checked_add(width)
+                .ok_or_else(|| malformed("intraBC source row end overflows"))?;
+            let destination_start = row
+                .checked_mul(width)
+                .ok_or_else(|| malformed("intraBC staging row offset overflows"))?;
+            let destination_end = destination_start
+                .checked_add(width)
+                .ok_or_else(|| malformed("intraBC staging row end overflows"))?;
+            let source = self
+                .planes
+                .get(plane)
+                .and_then(|samples| samples.get(source_start..source_end))
+                .ok_or_else(|| malformed("intraBC source samples exceed the current tile"))?;
+            output[destination_start..destination_end].copy_from_slice(source);
+        }
+        Ok(())
+    }
+
     /// Prepare the exact tile-local prefilter edges for one intra block.
     ///
     /// The caller invokes this before placing the current leaf, so coverage

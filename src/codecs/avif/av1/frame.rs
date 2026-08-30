@@ -5,10 +5,12 @@ use std::{ops::Range, sync::Arc};
 use super::bit_reader::{BitReader, SegmentedData};
 use super::entropy;
 use super::geometry::PixelLayout;
+use super::motion::{GlobalMotion, GlobalMotionType, TemporalMotionField, relative_distance};
 use super::sample_depth::SampleDepth;
 use super::sequence::SequenceHeader;
 #[cfg(coverage)]
 use super::sequence::{DecoderParameters, OperatingPoint, Timing};
+use super::surface::{FramePlane, FrameSurface};
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 #[cfg(coverage)]
@@ -143,29 +145,6 @@ impl LoopFilter {
             delta_enabled: true,
             delta_update: true,
             deltas: LoopFilterDeltas::defaults(),
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum GlobalMotionType {
-    Identity,
-    Translation,
-    RotZoom,
-    Affine,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-struct GlobalMotion {
-    kind: GlobalMotionType,
-    matrix: [i32; 6],
-}
-
-impl GlobalMotion {
-    const fn identity() -> Self {
-        Self {
-            kind: GlobalMotionType::Identity,
-            matrix: [0, 0, 1 << 16, 0, 0, 1 << 16],
         }
     }
 }
@@ -369,110 +348,7 @@ impl FrameHeader {
     }
 }
 
-/// One checked owned plane of an AV1 decoded frame.
-#[derive(Clone)]
-struct FramePlane {
-    width: u32,
-    height: u32,
-    stride: usize,
-    samples: Vec<u16>,
-}
-
-impl FramePlane {
-    fn validate_reconstructed(
-        source: &super::block::ReconstructedPlane,
-        width: u32,
-        height: u32,
-        depth: SampleDepth,
-    ) -> Av1Result<usize> {
-        let stride =
-            usize::try_from(width).map_err(|_| malformed("reference plane width exceeds usize"))?;
-        let height_usize = usize::try_from(height)
-            .map_err(|_| malformed("reference plane height exceeds usize"))?;
-        let length = stride
-            .checked_mul(height_usize)
-            .ok_or_else(|| malformed("reference plane size overflows usize"))?;
-        if width == 0
-            || height == 0
-            || source.samples.len() != length
-            || source
-                .samples
-                .iter()
-                .any(|&sample| depth.validate(sample).is_none())
-        {
-            return Err(malformed("reference plane has invalid samples or extent"));
-        }
-        Ok(stride)
-    }
-
-    fn from_validated(
-        source: super::block::ReconstructedPlane,
-        width: u32,
-        height: u32,
-        stride: usize,
-    ) -> Self {
-        Self {
-            width,
-            height,
-            stride,
-            samples: source.samples,
-        }
-    }
-
-    fn reconstructed_copy(&self) -> Av1Result<super::block::ReconstructedPlane> {
-        let width = usize::try_from(self.width)
-            .map_err(|_| malformed("display plane width exceeds usize"))?;
-        let height = usize::try_from(self.height)
-            .map_err(|_| malformed("display plane height exceeds usize"))?;
-        let length = self
-            .stride
-            .checked_mul(height)
-            .ok_or_else(|| malformed("display plane size overflows usize"))?;
-        if self.stride < width || self.samples.len() != length {
-            return Err(malformed("display plane has invalid retained geometry"));
-        }
-        let mut samples = Vec::new();
-        samples.try_reserve_exact(length).map_err(|_| {
-            CodecError::Dimensions("unable to allocate AV1 display plane".to_owned())
-        })?;
-        samples.extend_from_slice(&self.samples);
-        Ok(super::block::ReconstructedPlane { samples })
-    }
-}
-
-/// Restored, upscaled, ungrained AV1 picture retained by reference slots.
-/// Render dimensions are presentation metadata and never redefine storage.
-struct FrameSurface {
-    depth: SampleDepth,
-    layout: PixelLayout,
-    coded_width: u32,
-    upscaled_width: u32,
-    frame_height: u32,
-    render_width: u32,
-    render_height: u32,
-    planes: [Option<FramePlane>; 3],
-    #[cfg(coverage)]
-    entropy_operations: Vec<crate::Av1EntropyOperationState>,
-}
-
 impl FrameSurface {
-    fn plane_dimensions(
-        layout: PixelLayout,
-        width: u32,
-        height: u32,
-        plane: usize,
-    ) -> Option<(u32, u32)> {
-        if plane == 0 {
-            return Some((width, height));
-        }
-        match layout {
-            PixelLayout::Monochrome => None,
-            PixelLayout::I420 => Some((width.div_ceil(2), height.div_ceil(2))),
-            PixelLayout::I422 => Some((width.div_ceil(2), height)),
-            PixelLayout::I444 => Some((width, height)),
-        }
-    }
-
     fn validate_color_leaf(
         leaf: &super::block::FirstLeaf,
         header: &FrameHeader,
@@ -512,6 +388,7 @@ impl FrameSurface {
         depth: SampleDepth,
         layout: PixelLayout,
         strides: [usize; 3],
+        motion: TemporalMotionField,
     ) -> Self {
         let chroma_width = if matches!(layout, PixelLayout::I420 | PixelLayout::I422) {
             header.upscaled_width.div_ceil(2)
@@ -556,6 +433,7 @@ impl FrameSurface {
             render_width: header.render_width,
             render_height: header.render_height,
             planes,
+            motion,
             #[cfg(coverage)]
             entropy_operations,
         }
@@ -591,6 +469,7 @@ impl FrameSurface {
         header: &FrameHeader,
         depth: SampleDepth,
         stride: usize,
+        motion: TemporalMotionField,
     ) -> Self {
         Self {
             depth,
@@ -610,48 +489,10 @@ impl FrameSurface {
                 None,
                 None,
             ],
+            motion,
             #[cfg(coverage)]
             entropy_operations: Vec::new(),
         }
-    }
-
-    fn validate(&self) -> Av1Result<()> {
-        if !matches!(self.depth.bits(), 8 | 10 | 12)
-            || self.coded_width == 0
-            || self.coded_width > self.upscaled_width
-            || self.upscaled_width == 0
-            || self.frame_height == 0
-            || self.render_width == 0
-            || self.render_height == 0
-        {
-            return Err(malformed("retained frame surface has invalid metadata"));
-        }
-        for (plane, retained) in self.planes.iter().enumerate() {
-            let expected =
-                Self::plane_dimensions(self.layout, self.upscaled_width, self.frame_height, plane);
-            match (expected, retained) {
-                (None, None) => {}
-                (Some((width, height)), Some(retained)) => {
-                    let width_usize = usize::try_from(width)
-                        .map_err(|_| malformed("retained plane width exceeds usize"))?;
-                    let height_usize = usize::try_from(height)
-                        .map_err(|_| malformed("retained plane height exceeds usize"))?;
-                    let length = retained
-                        .stride
-                        .checked_mul(height_usize)
-                        .ok_or_else(|| malformed("retained plane size overflows usize"))?;
-                    if retained.width != width
-                        || retained.height != height
-                        || retained.stride < width_usize
-                        || retained.samples.len() != length
-                    {
-                        return Err(malformed("retained frame plane has invalid geometry"));
-                    }
-                }
-                _ => return Err(malformed("retained frame surface has invalid plane layout")),
-            }
-        }
-        Ok(())
     }
 
     fn materialize(&self) -> Av1Result<SelectedDisplay> {
@@ -747,6 +588,31 @@ struct ReferenceState {
     header: FrameHeader,
     decode: Option<Arc<ReferenceDecodeState>>,
     surface: Option<Arc<FrameSurface>>,
+}
+
+fn new_temporal_motion_field(
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    references: &[Option<ReferenceState>; REFERENCE_SLOTS],
+) -> Av1Result<TemporalMotionField> {
+    let mut reference_order_hints = [0_u32; 7];
+    if header.frame_type.is_inter() {
+        for (logical, output) in reference_order_hints.iter_mut().enumerate() {
+            let slot = header.reference_indices[logical];
+            let reference = references
+                .get(slot)
+                .and_then(Option::as_ref)
+                .ok_or_else(|| malformed("decoded inter frame references an empty slot"))?;
+            *output = reference.header.order_hint;
+        }
+    }
+    TemporalMotionField::new(
+        header.frame_width,
+        header.frame_height,
+        header.order_hint,
+        sequence.order_hint_bits,
+        reference_order_hints,
+    )
 }
 
 fn invalidate_reference_slots(
@@ -1396,10 +1262,12 @@ impl FrameState {
                 depth: SampleDepth,
                 layout: PixelLayout,
                 strides: [usize; 3],
+                motion: TemporalMotionField,
             },
             Monochrome {
                 depth: SampleDepth,
                 stride: usize,
+                motion: TemporalMotionField,
             },
             None,
         }
@@ -1418,15 +1286,24 @@ impl FrameState {
         let surface_plan = if let Some(leaf) = color_leaf {
             let (depth, layout, strides) =
                 FrameSurface::validate_color_leaf(leaf, &pending.header, sequence)?;
+            let motion =
+                new_temporal_motion_field(&pending.header, sequence, &pending.staged_references)?;
             SurfacePlan::Color {
                 depth,
                 layout,
                 strides,
+                motion,
             }
         } else if let Some(plane) = monochrome_plane {
             let (depth, stride) =
                 FrameSurface::validate_monochrome_plane(plane, &pending.header, sequence)?;
-            SurfacePlan::Monochrome { depth, stride }
+            let motion =
+                new_temporal_motion_field(&pending.header, sequence, &pending.staged_references)?;
+            SurfacePlan::Monochrome {
+                depth,
+                stride,
+                motion,
+            }
         } else {
             SurfacePlan::None
         };
@@ -1470,14 +1347,19 @@ impl FrameState {
                 depth,
                 layout,
                 strides,
+                motion,
             } => complete_color_leaf.map(|leaf| {
                 Arc::new(FrameSurface::from_validated_color_leaf(
-                    leaf, &completed, depth, layout, strides,
+                    leaf, &completed, depth, layout, strides, motion,
                 ))
             }),
-            SurfacePlan::Monochrome { depth, stride } => complete_monochrome_plane.map(|plane| {
+            SurfacePlan::Monochrome {
+                depth,
+                stride,
+                motion,
+            } => complete_monochrome_plane.map(|plane| {
                 Arc::new(FrameSurface::from_validated_monochrome_plane(
-                    plane, &completed, depth, stride,
+                    plane, &completed, depth, stride, motion,
                 ))
             }),
             SurfacePlan::None => None,
@@ -2554,22 +2436,6 @@ fn derive_short_references(
         }
     }
     Ok(result)
-}
-
-fn relative_distance(bits: u32, first: u32, second: u32) -> i32 {
-    if bits == 0 {
-        return 0;
-    }
-    let sign = 1_i64 << bits.saturating_sub(1);
-    let difference = i64::from(first).saturating_sub(i64::from(second));
-    let distance = (difference & sign.saturating_sub(1)).saturating_sub(difference & sign);
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "AV1 order hints use at most eight bits, so the signed distance fits i32"
-    )]
-    {
-        distance as i32
-    }
 }
 
 fn tile_log2(block_size: u32, target: u32) -> u32 {

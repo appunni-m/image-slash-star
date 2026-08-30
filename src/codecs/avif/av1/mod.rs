@@ -10,11 +10,14 @@ mod frame;
 mod frame_cdfs;
 mod geometry;
 mod large_cdfs;
+mod mc;
+mod motion;
 mod quantization;
 mod quantization_matrices;
 mod raster;
 pub(super) mod sample_depth;
 mod sequence;
+mod surface;
 mod tile_state;
 mod transform;
 
