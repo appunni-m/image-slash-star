@@ -16,7 +16,8 @@ use super::block::{ChromaPredictor, FirstLeaf, LumaPredictor, PaletteCacheState}
 use super::entropy::PartitionNode;
 use super::geometry::{BlockSize, TxSize};
 use super::motion::{
-    CompoundType, InterMode, InterpolationFilter, MotionMode, MotionVector, ReferencePair,
+    CompoundType, InterMode, InterpolationFilter, MotionMode, MotionVector, ReferenceFrame,
+    ReferencePair, RetainedTemporalEntry, SpatialMotionSource, SpatialRefBlock,
 };
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
@@ -107,6 +108,32 @@ pub(super) enum BlockCoding {
     Intra,
     IntraBc { motion_vector: MotionVector },
     Inter(InterBlockMeta),
+}
+
+/// Per-MI transform dimensions published by a generalized block commit. The
+/// existing intra leaf path uses one uniform value; variable-transform blocks
+/// provide one entry for every coded 4x4 cell.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct TxCellUpdate {
+    pub(super) width_log2: u8,
+    pub(super) height_log2: u8,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct BlockCommitMetadata<'a> {
+    pub(super) coding: BlockCoding,
+    pub(super) skip_mode: bool,
+    pub(super) tx_cells: Option<&'a [TxCellUpdate]>,
+}
+
+impl BlockCommitMetadata<'_> {
+    pub(super) const fn intra() -> Self {
+        Self {
+            coding: BlockCoding::Intra,
+            skip_mode: false,
+            tx_cells: None,
+        }
+    }
 }
 
 impl BlockCoding {
@@ -556,6 +583,25 @@ impl TileState {
         segment_id: u8,
         segment_pred: bool,
     ) -> Av1Result<OwnerId> {
+        self.commit_with_metadata(
+            node,
+            has_chroma,
+            leaf,
+            segment_id,
+            segment_pred,
+            BlockCommitMetadata::intra(),
+        )
+    }
+
+    pub(super) fn commit_with_metadata(
+        &mut self,
+        node: PartitionNode,
+        has_chroma: bool,
+        leaf: &FirstLeaf,
+        segment_id: u8,
+        segment_pred: bool,
+        metadata: BlockCommitMetadata<'_>,
+    ) -> Av1Result<OwnerId> {
         let (coded_width, coded_height) = node.block_size.mi_dimensions();
         if coded_width != node.coded_width
             || coded_height != node.coded_height
@@ -655,6 +701,41 @@ impl TileState {
             .ok_or_else(|| malformed("luma transform height context overflows"))?;
         TxSize::from_mi_dimensions(tx_width, tx_height)
             .ok_or_else(|| malformed("leaf publishes a non-normative transform size"))?;
+        let cell_count = usize::try_from(node.width)
+            .ok()
+            .and_then(|width| {
+                usize::try_from(node.height)
+                    .ok()
+                    .and_then(|height| width.checked_mul(height))
+            })
+            .ok_or_else(|| malformed("block transform cell count overflows"))?;
+        if let Some(tx_cells) = metadata.tx_cells {
+            if tx_cells.is_empty() {
+                return Err(malformed("variable-transform cell plan is empty"));
+            }
+            if tx_cells.len() != cell_count {
+                return Err(malformed(
+                    "variable-transform cell plan has the wrong extent",
+                ));
+            }
+            for update in tx_cells {
+                let width = 1_u32
+                    .checked_shl(u32::from(update.width_log2))
+                    .ok_or_else(|| malformed("variable-transform width context overflows"))?;
+                let height = 1_u32
+                    .checked_shl(u32::from(update.height_log2))
+                    .ok_or_else(|| malformed("variable-transform height context overflows"))?;
+                TxSize::from_mi_dimensions(width, height)
+                    .ok_or_else(|| malformed("variable-transform cell size is invalid"))?;
+            }
+        }
+        let first_tx = metadata.tx_cells.map_or(
+            TxCellUpdate {
+                width_log2: leaf.tx_context_width,
+                height_log2: leaf.tx_context_height,
+            },
+            |cells| cells[0],
+        );
 
         self.blocks.try_reserve(1).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 tile block metadata".to_owned())
@@ -669,11 +750,11 @@ impl TileState {
             chroma_predictor: leaf.chroma_predictor,
             palette_cache: leaf.palette_cache,
             has_chroma,
-            tx_context_width: leaf.tx_context_width,
-            tx_context_height: leaf.tx_context_height,
+            tx_context_width: first_tx.width_log2,
+            tx_context_height: first_tx.height_log2,
             block_skipped: leaf.block_skipped,
-            skip_mode: false,
-            coding: BlockCoding::Intra,
+            skip_mode: metadata.skip_mode,
+            coding: metadata.coding,
         });
 
         let edge_contextual = leaf.luma_transform_split || leaf.wide_coefficient_contexts.is_some();
@@ -718,13 +799,33 @@ impl TileState {
                 cell.owner = Some(owner);
                 cell.right_context = row_context(y, luma_right_contexts, node.y);
                 cell.bottom_context = bottom_context;
-                cell.tx_context_width = leaf.tx_context_width;
-                cell.tx_context_height = leaf.tx_context_height;
+                let offset = usize::try_from(y.saturating_sub(node.y))
+                    .ok()
+                    .and_then(|row| {
+                        usize::try_from(node.width)
+                            .ok()
+                            .and_then(|width| row.checked_mul(width))
+                    })
+                    .and_then(|row| {
+                        usize::try_from(x.saturating_sub(node.x))
+                            .ok()
+                            .and_then(|column| row.checked_add(column))
+                    })
+                    .ok_or_else(|| malformed("transform cell offset overflows"))?;
+                let tx = metadata.tx_cells.map_or(
+                    TxCellUpdate {
+                        width_log2: leaf.tx_context_width,
+                        height_log2: leaf.tx_context_height,
+                    },
+                    |cells| cells[offset],
+                );
+                cell.tx_context_width = tx.width_log2;
+                cell.tx_context_height = tx.height_log2;
                 cell.segment_id = segment_id;
                 cell.segment_pred = segment_pred;
                 cell.skip = leaf.block_skipped;
-                cell.skip_mode = false;
-                cell.intra = true;
+                cell.skip_mode = metadata.skip_mode;
+                cell.intra = metadata.coding.is_intra();
             }
         }
         if let Some((chroma_x, chroma_y, chroma_end_x, chroma_end_y)) = chroma_geometry {
@@ -783,5 +884,76 @@ impl TileState {
             .and_then(|row| row.checked_add(x))
             .filter(|&index| index < self.chroma_cells.len())
             .ok_or_else(|| malformed("tile chroma cell index overflows"))
+    }
+
+    /// Select the temporal-MV entry dav1d saves for one local 8x8 cell. The
+    /// source sample is intentionally the top-right 4x4 cell `(2*x8+1,2*y8)`
+    /// and the second future-facing reference has priority over the first.
+    pub(super) fn temporal_entry_at(
+        &self,
+        x8: u32,
+        y8: u32,
+        sign_bias: [bool; 7],
+    ) -> Av1Result<Option<RetainedTemporalEntry>> {
+        let x4 = x8
+            .checked_mul(2)
+            .and_then(|value| value.checked_add(1))
+            .ok_or_else(|| malformed("temporal sample x coordinate overflows"))?;
+        let y4 = y8
+            .checked_mul(2)
+            .ok_or_else(|| malformed("temporal sample y coordinate overflows"))?;
+        let Some(block) = self.spatial_block(x4, y4)? else {
+            return Ok(None);
+        };
+        for index in [1_usize, 0] {
+            let encoded = block.references[index];
+            if encoded <= 0 {
+                continue;
+            }
+            let reference_index = usize::try_from(encoded - 1)
+                .map_err(|_| malformed("temporal sample reference exceeds seven"))?;
+            if !sign_bias.get(reference_index).copied().unwrap_or(false) {
+                continue;
+            }
+            let vector = block.vectors[index];
+            if vector.y > -4096 && vector.y < 4096 && vector.x > -4096 && vector.x < 4096 {
+                let reference = ReferenceFrame::from_index(reference_index)
+                    .ok_or_else(|| malformed("temporal sample reference is invalid"))?;
+                return Ok(Some(RetainedTemporalEntry { vector, reference }));
+            }
+        }
+        Ok(None)
+    }
+}
+
+impl SpatialMotionSource for TileState {
+    fn spatial_block(&self, x_b4: u32, y_b4: u32) -> Av1Result<Option<SpatialRefBlock>> {
+        let Some((_owner, block)) = self.block_at_checked(x_b4, y_b4)? else {
+            return Ok(None);
+        };
+        let spatial = match block.coding {
+            BlockCoding::Intra => SpatialRefBlock::ordinary_intra(block.block_size),
+            BlockCoding::IntraBc { motion_vector } => {
+                SpatialRefBlock::intra_bc(block.block_size, motion_vector)
+            }
+            BlockCoding::Inter(inter) => match inter.references.second {
+                Some(second) => SpatialRefBlock::compound(
+                    block.block_size,
+                    inter.references.first,
+                    second,
+                    inter.motion_vectors,
+                    inter.global,
+                    inter.new_mv,
+                ),
+                None => SpatialRefBlock::single(
+                    block.block_size,
+                    inter.references.first,
+                    inter.motion_vectors[0],
+                    inter.global[0],
+                    inter.new_mv[0],
+                ),
+            },
+        };
+        Ok(Some(spatial))
     }
 }
