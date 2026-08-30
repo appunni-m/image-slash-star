@@ -6,11 +6,13 @@ mod cdef;
 mod entropy;
 mod filter;
 mod frame;
+mod geometry;
 mod large_cdfs;
 mod quantization;
 mod raster;
 pub(super) mod sample_depth;
 mod sequence;
+mod tile_state;
 mod transform;
 
 pub(super) use sample_depth::truncate_to_u8;

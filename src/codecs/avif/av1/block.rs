@@ -11,6 +11,7 @@
 #![allow(clippy::arithmetic_side_effects)]
 
 use super::entropy::RangeDecoder;
+use super::geometry::BlockSize;
 use super::large_cdfs::{
     LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
 };
@@ -1389,27 +1390,66 @@ pub(super) enum TransformGrid {
 }
 
 impl TransformGrid {
-    pub(super) fn from_luma_dimensions(width: u32, height: u32) -> PortableResult<Self> {
-        match (width, height) {
-            (4, 4) => Ok(Self::Square4),
-            (4, 8) => Ok(Self::Vertical4x8),
-            (4, 16) => Ok(Self::Vertical4x16),
-            (8, 4) => Ok(Self::Horizontal8x4),
-            (16, 4) => Ok(Self::Horizontal16x4),
-            (8, 8) => Ok(Self::Square8),
-            (16, 16) => Ok(Self::Square16),
-            (32, 32) => Ok(Self::Square32),
-            (64, 64) => Ok(Self::Square64),
-            (16, 64) => Ok(Self::Vertical16x64),
-            (8, 16) => Ok(Self::Vertical8x16),
-            (8, 32) => Ok(Self::Vertical8x32),
-            (16, 8) => Ok(Self::Horizontal16x8),
-            (16, 32) => Ok(Self::Vertical16x32),
-            (32, 16) => Ok(Self::Horizontal32x16),
-            (64, 16) => Ok(Self::Horizontal64x16),
-            (32, 8) => Ok(Self::Horizontal32x8),
-            _ => Err(PortableUnavailable),
+    /// Compatibility adapter for the 17 block families represented by the
+    /// existing carrier-specific decoder. The five larger AV1 block sizes
+    /// remain semantic `BlockSize` values and require explicit transform
+    /// tiling rather than pretending the block itself is one transform grid.
+    pub(super) const fn from_block_size(block_size: BlockSize) -> PortableResult<Self> {
+        match block_size {
+            BlockSize::B4x4 => Ok(Self::Square4),
+            BlockSize::B4x8 => Ok(Self::Vertical4x8),
+            BlockSize::B8x4 => Ok(Self::Horizontal8x4),
+            BlockSize::B8x8 => Ok(Self::Square8),
+            BlockSize::B8x16 => Ok(Self::Vertical8x16),
+            BlockSize::B16x8 => Ok(Self::Horizontal16x8),
+            BlockSize::B16x16 => Ok(Self::Square16),
+            BlockSize::B16x32 => Ok(Self::Vertical16x32),
+            BlockSize::B32x16 => Ok(Self::Horizontal32x16),
+            BlockSize::B32x32 => Ok(Self::Square32),
+            BlockSize::B64x64 => Ok(Self::Square64),
+            BlockSize::B4x16 => Ok(Self::Vertical4x16),
+            BlockSize::B16x4 => Ok(Self::Horizontal16x4),
+            BlockSize::B8x32 => Ok(Self::Vertical8x32),
+            BlockSize::B32x8 => Ok(Self::Horizontal32x8),
+            BlockSize::B16x64 => Ok(Self::Vertical16x64),
+            BlockSize::B64x16 => Ok(Self::Horizontal64x16),
+            BlockSize::B32x64
+            | BlockSize::B64x32
+            | BlockSize::B64x128
+            | BlockSize::B128x64
+            | BlockSize::B128x128 => Err(PortableUnavailable),
         }
+    }
+
+    pub(super) const fn block_size(self) -> BlockSize {
+        match self {
+            Self::Square4 => BlockSize::B4x4,
+            Self::Vertical4x8 => BlockSize::B4x8,
+            Self::Horizontal8x4 => BlockSize::B8x4,
+            Self::Square8 => BlockSize::B8x8,
+            Self::Vertical8x16 => BlockSize::B8x16,
+            Self::Horizontal16x8 => BlockSize::B16x8,
+            Self::Square16 => BlockSize::B16x16,
+            Self::Vertical16x32 => BlockSize::B16x32,
+            Self::Horizontal32x16 => BlockSize::B32x16,
+            Self::Square32 => BlockSize::B32x32,
+            Self::Square64 => BlockSize::B64x64,
+            Self::Vertical4x16 => BlockSize::B4x16,
+            Self::Horizontal16x4 => BlockSize::B16x4,
+            Self::Vertical8x32 => BlockSize::B8x32,
+            Self::Horizontal32x8 => BlockSize::B32x8,
+            Self::Vertical16x64 => BlockSize::B16x64,
+            Self::Horizontal64x16 => BlockSize::B64x16,
+        }
+    }
+
+    pub(super) fn from_luma_dimensions(width: u32, height: u32) -> PortableResult<Self> {
+        (width % 4 == 0 && height % 4 == 0)
+            .then_some(())
+            .portable()?;
+        let block_size =
+            BlockSize::from_mi_dimensions(width / 4, height / 4).ok_or(PortableUnavailable)?;
+        Self::from_block_size(block_size)
     }
 
     pub(super) const fn properties(self) -> (usize, usize, [u16; 2]) {
@@ -1503,25 +1543,7 @@ impl TransformGrid {
     /// retaining the bitstream's block-size index keeps CDF history correct
     /// when a partition mixes 16×16 and 8×8 leaves.
     const fn filter_intra_cdf_index(self) -> usize {
-        match self {
-            Self::Square32 => 7,
-            Self::Square64 => 3,
-            Self::Vertical16x64 => 10,
-            Self::Horizontal32x16 => 8,
-            Self::Horizontal64x16 => 5,
-            Self::Horizontal32x8 => 9,
-            Self::Vertical16x32 => 11,
-            Self::Square16 => 12,
-            Self::Horizontal16x8 => 13,
-            Self::Horizontal16x4 => 14,
-            Self::Vertical8x32 => 15,
-            Self::Vertical8x16 => 16,
-            Self::Square8 => 17,
-            Self::Horizontal8x4 => 18,
-            Self::Vertical4x16 => 19,
-            Self::Vertical4x8 => 20,
-            Self::Square4 => 21,
-        }
+        self.block_size().cdf_index()
     }
 }
 
@@ -1884,20 +1906,30 @@ pub(in crate::codecs::avif) struct FirstLeaf {
 }
 
 impl PaletteNeighborContext {
+    pub(super) fn from_cache_states(
+        by4: u32,
+        above: Option<PaletteCacheState>,
+        left: Option<PaletteCacheState>,
+    ) -> Self {
+        let above_available = above.is_some() && by4 & 15 != 0;
+        Self {
+            above: above.filter(|_| above_available).unwrap_or_default(),
+            left: left.unwrap_or_default(),
+            above_available,
+            left_available: left.is_some(),
+        }
+    }
+
     pub(super) fn from_neighbors(
         by4: u32,
         above: Option<&FirstLeaf>,
         left: Option<&FirstLeaf>,
     ) -> Self {
-        let above_available = above.is_some() && by4 & 15 != 0;
-        Self {
-            above: above
-                .filter(|_| above_available)
-                .map_or_else(PaletteCacheState::default, |leaf| leaf.palette_cache),
-            left: left.map_or_else(PaletteCacheState::default, |leaf| leaf.palette_cache),
-            above_available,
-            left_available: left.is_some(),
-        }
+        Self::from_cache_states(
+            by4,
+            above.map(|leaf| leaf.palette_cache),
+            left.map(|leaf| leaf.palette_cache),
+        )
     }
 }
 
@@ -42314,24 +42346,26 @@ pub(super) fn combined_luma_edge_contexts_from_neighbors(
     needed: usize,
     bottom_edge: bool,
 ) -> [u8; 16] {
-    let positioned: Vec<_> = neighbors
-        .iter()
-        .copied()
-        .flatten()
-        .map(|neighbor| (neighbor, 0))
-        .collect();
-    combined_luma_edge_contexts_from_positioned_neighbors(&positioned, needed, bottom_edge)
+    combined_luma_edge_contexts_from_positioned_neighbors(
+        neighbors
+            .iter()
+            .copied()
+            .flatten()
+            .map(|neighbor| (neighbor, 0)),
+        needed,
+        bottom_edge,
+    )
 }
 
-pub(super) fn combined_luma_edge_contexts_from_positioned_neighbors(
-    neighbors: &[(&FirstLeaf, usize)],
+fn combined_luma_edge_contexts_from_positioned_neighbors<'a>(
+    neighbors: impl IntoIterator<Item = (&'a FirstLeaf, usize)>,
     needed: usize,
     bottom_edge: bool,
 ) -> [u8; 16] {
     let mut contexts = [0x40_u8; 16];
     let mut offset = 0_usize;
     let mut previous = None;
-    for &(neighbor, edge_offset) in neighbors {
+    for (neighbor, edge_offset) in neighbors {
         if previous.is_some_and(|prior| std::ptr::eq(prior, neighbor)) {
             continue;
         }
@@ -42393,23 +42427,12 @@ pub(super) fn combined_chroma_edge_contexts_from_neighbors(
     needed: usize,
     bottom_edge: bool,
 ) -> [u8; 16] {
-    let positioned: Vec<_> = neighbors
-        .iter()
-        .copied()
-        .flatten()
-        .map(|neighbor| (neighbor, 0))
-        .collect();
-    combined_chroma_edge_contexts_from_positioned_neighbors(&positioned, plane, needed, bottom_edge)
-}
-
-pub(super) fn combined_chroma_edge_contexts_from_positioned_neighbors(
-    neighbors: &[(&FirstLeaf, usize)],
-    plane: usize,
-    needed: usize,
-    bottom_edge: bool,
-) -> [u8; 16] {
     combined_chroma_edge_contexts_from_positioned_neighbors_with_stride(
-        neighbors,
+        neighbors
+            .iter()
+            .copied()
+            .flatten()
+            .map(|neighbor| (neighbor, 0)),
         plane,
         needed,
         bottom_edge,
@@ -42417,29 +42440,8 @@ pub(super) fn combined_chroma_edge_contexts_from_positioned_neighbors(
     )
 }
 
-/// Combine positioned full-resolution chroma edge contexts.
-///
-/// Full-resolution I444 keeps one chroma transform context for every 4-pixel
-/// edge segment. The existing chroma combiner intentionally uses an 8-pixel
-/// stride for 4:2:0, so this named entry point keeps the two coordinate
-/// systems distinct at the call site.
-pub(super) fn combined_full_chroma_edge_contexts_from_positioned_neighbors(
-    neighbors: &[(&FirstLeaf, usize)],
-    plane: usize,
-    needed: usize,
-    bottom_edge: bool,
-) -> [u8; 16] {
-    combined_chroma_edge_contexts_from_positioned_neighbors_with_stride(
-        neighbors,
-        plane,
-        needed,
-        bottom_edge,
-        4,
-    )
-}
-
-fn combined_chroma_edge_contexts_from_positioned_neighbors_with_stride<const COUNT: usize>(
-    neighbors: &[(&FirstLeaf, usize)],
+fn combined_chroma_edge_contexts_from_positioned_neighbors_with_stride<'a, const COUNT: usize>(
+    neighbors: impl IntoIterator<Item = (&'a FirstLeaf, usize)>,
     plane: usize,
     needed: usize,
     bottom_edge: bool,
@@ -42448,7 +42450,7 @@ fn combined_chroma_edge_contexts_from_positioned_neighbors_with_stride<const COU
     let mut contexts = [0x40_u8; COUNT];
     let mut offset = 0_usize;
     let mut previous = None;
-    for &(neighbor, edge_offset) in neighbors {
+    for (neighbor, edge_offset) in neighbors {
         if previous.is_some_and(|prior| std::ptr::eq(prior, neighbor)) {
             continue;
         }
@@ -45824,16 +45826,17 @@ impl Lossy420Decoder {
                 &neighbor,
                 Some(&neighbor),
             )?;
-            let luma = leaf.planes[0].clone();
-            for plane in 1..=2 {
+            let [luma, chroma_u, chroma_v] = &mut leaf.planes;
+            for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
+                let plane = plane_index.saturating_add(1);
                 let top = bottom_edge_4_for_4x8(&neighbor.planes[plane]);
                 let left = chroma_left_edges_16[plane - 1]
                     .unwrap_or_else(|| right_edge_16(&neighbor.planes[plane]));
-                leaf.planes[plane] = match syntax.chroma_predictor {
+                *chroma = match syntax.chroma_predictor {
                     ChromaPredictor::Cfl { alpha_u, alpha_v } => {
                         let alpha = if plane == 1 { alpha_u } else { alpha_v };
                         reconstruct_lossy_full_4x16_cfl(
-                            &luma,
+                            luma,
                             rectangular_dc_predictor(&top, &left),
                             alpha,
                             syntax.lossy_chroma_4x16_coefficients[plane - 1],
@@ -45894,8 +45897,9 @@ impl Lossy420Decoder {
                 luma_left_edge_8,
                 luma_bottom_left_8,
             )?;
-            let luma = leaf.planes[0].clone();
-            for plane in 1..=2 {
+            let [luma, chroma_u, chroma_v] = &mut leaf.planes;
+            for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
+                let plane = plane_index.saturating_add(1);
                 let assembled_left = chroma_left_edges_8[plane - 1];
                 let left = assembled_left.unwrap_or_else(|| right_edge(&neighbor.planes[plane]));
                 let bottom_left = assembled_left
@@ -45908,8 +45912,8 @@ impl Lossy420Decoder {
                     }
                     _ => None,
                 };
-                leaf.planes[plane] = reconstruct_lossy_full_8x8_chroma(
-                    &luma,
+                *chroma = reconstruct_lossy_full_8x8_chroma(
+                    luma,
                     syntax.chroma_predictor,
                     cfl_alpha,
                     syntax.chroma_angle,
@@ -46463,17 +46467,18 @@ impl Lossy420Decoder {
                 left_top_neighbor.as_ref(),
                 left_neighbor.as_ref(),
             )?;
-            let luma_for_chroma = leaf.planes[0].clone();
-            for plane in 1..=2 {
+            let [luma_for_chroma, chroma_u, chroma_v] = &mut leaf.planes;
+            for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
+                let plane = plane_index.saturating_add(1);
                 let top = bottom_edge_4_for_4x8(&above_left.planes[plane]);
                 let left = left_neighbor.as_ref().map_or([top[0]; 8], |neighbor| {
                     right_edge_for_4x8(&neighbor.planes[plane])
                 });
-                leaf.planes[plane] = match syntax.chroma_predictor {
+                *chroma = match syntax.chroma_predictor {
                     ChromaPredictor::Cfl { alpha_u, alpha_v } => {
                         let alpha = if plane == 1 { alpha_u } else { alpha_v };
                         reconstruct_lossy_full_4x8_cfl(
-                            &luma_for_chroma,
+                            luma_for_chroma,
                             rectangular_dc_predictor(&top, &left),
                             alpha,
                             syntax.lossy_chroma_8x4_coefficients[plane - 1],
@@ -46530,7 +46535,7 @@ impl Lossy420Decoder {
                 left_chroma_edges,
                 tools.enable_intra_edge_filter,
             )?;
-            let luma = leaf.planes[0].clone();
+            let [luma, chroma_u, chroma_v] = &mut leaf.planes;
             let left_chroma_mode = neighbors
                 .left_chroma
                 .or(neighbors.left_luma_top)
@@ -46539,7 +46544,8 @@ impl Lossy420Decoder {
             let smooth_chroma_edges =
                 is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
                     || is_smooth_chroma_predictor(left_chroma_mode);
-            for plane in 1..=2 {
+            for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
+                let plane = plane_index.saturating_add(1);
                 let top = positioned_top_edge::<8>(
                     plane,
                     neighbors.above_left,
@@ -46579,8 +46585,8 @@ impl Lossy420Decoder {
                     }
                     _ => None,
                 };
-                leaf.planes[plane] = reconstruct_lossy_full_8x8_chroma(
-                    &luma,
+                *chroma = reconstruct_lossy_full_8x8_chroma(
+                    luma,
                     syntax.chroma_predictor,
                     cfl_alpha,
                     syntax.chroma_angle,
@@ -46703,17 +46709,18 @@ impl Lossy420Decoder {
             && matches!(transform_grid, TransformGrid::Vertical8x32)
         {
             let mut leaf = reconstruct_following_lossy_420_vertical_8x32_leaf(syntax, &above_left);
-            let luma = leaf.planes[0].clone();
-            for plane in 1..=2 {
+            let [luma, chroma_u, chroma_v] = &mut leaf.planes;
+            for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
+                let plane = plane_index.saturating_add(1);
                 let top = bottom_edge_8x32(&above_left.planes[plane]);
                 let left = left_neighbor.as_ref().map_or([top[0]; 32], |neighbor| {
                     right_edge_8x32(&neighbor.planes[plane])
                 });
-                leaf.planes[plane] = match syntax.chroma_predictor {
+                *chroma = match syntax.chroma_predictor {
                     ChromaPredictor::Cfl { alpha_u, alpha_v } => {
                         let alpha = if plane == 1 { alpha_u } else { alpha_v };
                         reconstruct_lossy_full_8x32_cfl(
-                            &luma,
+                            luma,
                             rectangular_dc_predictor(&top, &left),
                             alpha,
                             syntax.lossy_chroma_8x32_coefficients[plane - 1],
@@ -46968,17 +46975,18 @@ impl Lossy420Decoder {
                     &above_left,
                     left_neighbor.as_ref(),
                 )?;
-                let luma = leaf.planes[0].clone();
-                for plane in 1..=2 {
+                let [luma, chroma_u, chroma_v] = &mut leaf.planes;
+                for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
+                    let plane = plane_index.saturating_add(1);
                     let top = bottom_edge_4_for_4x8(&above_left.planes[plane]);
                     let left = left_neighbor.as_ref().map_or([top[0]; 16], |neighbor| {
                         right_edge_16(&neighbor.planes[plane])
                     });
-                    leaf.planes[plane] = match syntax.chroma_predictor {
+                    *chroma = match syntax.chroma_predictor {
                         ChromaPredictor::Cfl { alpha_u, alpha_v } => {
                             let alpha = if plane == 1 { alpha_u } else { alpha_v };
                             reconstruct_lossy_full_4x16_cfl(
-                                &luma,
+                                luma,
                                 rectangular_dc_predictor(&top, &left),
                                 alpha,
                                 syntax.lossy_chroma_4x16_coefficients[plane - 1],

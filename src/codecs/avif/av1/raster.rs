@@ -10,12 +10,15 @@ use super::block::{
 };
 use super::cdef::{self, Block as CdefBlock, Parameters as CdefParameters};
 use super::filter;
+use super::geometry::{IntraEdgeFlags, PixelLayout};
 use super::sample_depth::SampleDepth;
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 
 /// A checked row-major canvas for one AV1 frame.
 pub(in crate::codecs::avif) struct FrameCanvas {
+    visible_width: usize,
+    visible_height: usize,
     width: usize,
     height: usize,
     subsampling_x: bool,
@@ -246,10 +249,39 @@ impl FrameCanvas {
         subsampling_x: bool,
         subsampling_y: bool,
     ) -> Av1Result<Self> {
-        let width = usize::try_from(width).map_err(|_| malformed("frame width exceeds usize"))?;
+        Self::new_padded(width, height, width, height, subsampling_x, subsampling_y)
+    }
+
+    /// Allocate a coded/padded tile canvas while retaining the raw-visible
+    /// crop returned to the AVIF frame assembler.
+    ///
+    /// AV1 entropy and intra prediction operate through the 8-pixel-rounded
+    /// frame boundary. Keeping those samples until all filters complete lets
+    /// the tile-state path drop reconstructed leaves without losing the
+    /// invisible edge pixels needed by later blocks.
+    pub(super) fn new_padded(
+        visible_width: u32,
+        visible_height: u32,
+        padded_width: u32,
+        padded_height: u32,
+        subsampling_x: bool,
+        subsampling_y: bool,
+    ) -> Av1Result<Self> {
+        let visible_width = usize::try_from(visible_width)
+            .map_err(|_| malformed("visible frame width exceeds usize"))?;
+        let visible_height = usize::try_from(visible_height)
+            .map_err(|_| malformed("visible frame height exceeds usize"))?;
+        let width =
+            usize::try_from(padded_width).map_err(|_| malformed("frame width exceeds usize"))?;
         let height =
-            usize::try_from(height).map_err(|_| malformed("frame height exceeds usize"))?;
-        if width == 0 || height == 0 {
+            usize::try_from(padded_height).map_err(|_| malformed("frame height exceeds usize"))?;
+        if visible_width == 0
+            || visible_height == 0
+            || width == 0
+            || height == 0
+            || visible_width > width
+            || visible_height > height
+        {
             return Err(malformed("frame canvas has an empty extent"));
         }
         let chroma_width = if subsampling_x {
@@ -278,6 +310,8 @@ impl FrameCanvas {
             allocate_zeroed(dimensions[2], "second chroma coverage")?,
         ];
         Ok(Self {
+            visible_width,
+            visible_height,
             width,
             height,
             subsampling_x,
@@ -289,8 +323,9 @@ impl FrameCanvas {
 
     /// Prepare the exact tile-local prefilter edges for one full-resolution
     /// intra block. The caller invokes this before placing the current leaf,
-    /// so the coverage bitmap is also the AV1 decoded-before relation used by
-    /// above-right and below-left availability.
+    /// so coverage proves that an authorized edge sample was decoded first;
+    /// the partition flags independently prove whether that extension is
+    /// legal for the current block and pixel layout.
     pub(super) fn full_intra_edges(
         &self,
         x_units: u32,
@@ -298,6 +333,7 @@ impl FrameCanvas {
         width_units: u32,
         height_units: u32,
         sample_depth: SampleDepth,
+        intra_edges: IntraEdgeFlags,
         smooth: [bool; 3],
     ) -> PortableResult<FullIntraEdges> {
         if self.subsampling_x || self.subsampling_y {
@@ -316,11 +352,182 @@ impl FrameCanvas {
         if width == 0 || height == 0 || x >= self.width || y >= self.height {
             return Err(PortableUnavailable);
         }
+        let layout = PixelLayout::from_sequence(false, self.subsampling_x, self.subsampling_y)
+            .ok_or(PortableUnavailable)?;
         Ok(FullIntraEdges::from_planes([
-            self.full_intra_plane_edges(0, x, y, width, height, sample_depth, smooth[0])?,
-            self.full_intra_plane_edges(1, x, y, width, height, sample_depth, smooth[1])?,
-            self.full_intra_plane_edges(2, x, y, width, height, sample_depth, smooth[2])?,
+            self.full_intra_plane_edges(
+                0,
+                x,
+                y,
+                width,
+                height,
+                sample_depth,
+                intra_edges.top_has_right(PixelLayout::I444),
+                intra_edges.left_has_bottom(PixelLayout::I444),
+                smooth[0],
+            )?,
+            self.full_intra_plane_edges(
+                1,
+                x,
+                y,
+                width,
+                height,
+                sample_depth,
+                intra_edges.top_has_right(layout),
+                intra_edges.left_has_bottom(layout),
+                smooth[1],
+            )?,
+            self.full_intra_plane_edges(
+                2,
+                x,
+                y,
+                width,
+                height,
+                sample_depth,
+                intra_edges.top_has_right(layout),
+                intra_edges.left_has_bottom(layout),
+                smooth[2],
+            )?,
         ]))
+    }
+
+    /// Copy a contiguous reconstructed column immediately left of `x` into
+    /// fixed stack storage. Coordinates are plane pixels, not luma units.
+    pub(super) fn written_column_before<const COUNT: usize>(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+    ) -> PortableResult<[u16; COUNT]> {
+        let x = usize::try_from(x).map_err(|_| PortableUnavailable)?;
+        let y = usize::try_from(y).map_err(|_| PortableUnavailable)?;
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let column = x.checked_sub(1).ok_or(PortableUnavailable)?;
+        let end_y = y.checked_add(COUNT).ok_or(PortableUnavailable)?;
+        if column >= plane_width || end_y > plane_height {
+            return Err(PortableUnavailable);
+        }
+        let mut edge = [0_u16; COUNT];
+        for (offset, sample) in edge.iter_mut().enumerate() {
+            let index = y
+                .checked_add(offset)
+                .and_then(|row| row.checked_mul(plane_width))
+                .and_then(|row| row.checked_add(column))
+                .ok_or(PortableUnavailable)?;
+            if !self
+                .written
+                .get(plane)
+                .and_then(|written| written.get(index))
+                .copied()
+                .unwrap_or(false)
+            {
+                return Err(PortableUnavailable);
+            }
+            *sample = self
+                .planes
+                .get(plane)
+                .and_then(|samples| samples.get(index))
+                .copied()
+                .ok_or(PortableUnavailable)?;
+        }
+        Ok(edge)
+    }
+
+    /// Copy the available reconstructed prefix of the column immediately
+    /// left of `x`, substituting `default` for every unavailable sample.
+    ///
+    /// A few retained compatibility predictors historically distinguish an
+    /// absent edge from a present fixed-size edge whose unavailable suffix is
+    /// the neutral 8-bit midpoint. Keep that policy explicit at those call
+    /// sites while strict edge readers continue to use
+    /// [`Self::written_column_before`].
+    pub(super) fn column_before_or_default<const COUNT: usize>(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+        default: u16,
+    ) -> [u16; COUNT] {
+        let mut edge = [default; COUNT];
+        let Ok(x) = usize::try_from(x) else {
+            return edge;
+        };
+        let Ok(y) = usize::try_from(y) else {
+            return edge;
+        };
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let Some(column) = x.checked_sub(1).filter(|&column| column < plane_width) else {
+            return edge;
+        };
+        for (offset, sample) in edge.iter_mut().enumerate() {
+            let Some(row) = y.checked_add(offset).filter(|&row| row < plane_height) else {
+                continue;
+            };
+            let Some(index) = row
+                .checked_mul(plane_width)
+                .and_then(|row| row.checked_add(column))
+            else {
+                continue;
+            };
+            if self
+                .written
+                .get(plane)
+                .and_then(|written| written.get(index))
+                .copied()
+                .unwrap_or(false)
+                && let Some(value) = self
+                    .planes
+                    .get(plane)
+                    .and_then(|samples| samples.get(index))
+                    .copied()
+            {
+                *sample = value;
+            }
+        }
+        edge
+    }
+
+    /// Copy a contiguous reconstructed row immediately above `y` into fixed
+    /// stack storage. Coordinates are plane pixels, not luma units.
+    #[allow(
+        dead_code,
+        reason = "top-edge readers migrate after the current left-edge compatibility callers"
+    )]
+    pub(super) fn written_row_above<const COUNT: usize>(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+    ) -> PortableResult<[u16; COUNT]> {
+        let x = usize::try_from(x).map_err(|_| PortableUnavailable)?;
+        let y = usize::try_from(y).map_err(|_| PortableUnavailable)?;
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let row = y.checked_sub(1).ok_or(PortableUnavailable)?;
+        let end_x = x.checked_add(COUNT).ok_or(PortableUnavailable)?;
+        if row >= plane_height || end_x > plane_width {
+            return Err(PortableUnavailable);
+        }
+        let start = row
+            .checked_mul(plane_width)
+            .and_then(|row| row.checked_add(x))
+            .ok_or(PortableUnavailable)?;
+        let end = start.checked_add(COUNT).ok_or(PortableUnavailable)?;
+        if !self
+            .written
+            .get(plane)
+            .and_then(|written| written.get(start..end))
+            .is_some_and(|written| written.iter().all(|value| *value))
+        {
+            return Err(PortableUnavailable);
+        }
+        let source = self
+            .planes
+            .get(plane)
+            .and_then(|samples| samples.get(start..end))
+            .ok_or(PortableUnavailable)?;
+        let mut edge = [0_u16; COUNT];
+        edge.copy_from_slice(source);
+        Ok(edge)
     }
 
     #[expect(
@@ -335,6 +542,8 @@ impl FrameCanvas {
         width: usize,
         height: usize,
         sample_depth: SampleDepth,
+        top_has_right: bool,
+        left_has_bottom: bool,
         smooth: bool,
     ) -> PortableResult<FullIntraPlaneEdges> {
         let (plane_width, plane_height) = self.plane_dimensions(plane);
@@ -412,12 +621,14 @@ impl FrameCanvas {
         let extension = width.min(height);
         let top_extension_x = x.checked_add(width).ok_or(PortableUnavailable)?;
         let visible_top_extension = plane_width.saturating_sub(top_extension_x).min(extension);
-        let have_above_right = has_top
+        let have_above_right = top_has_right
+            && has_top
             && visible_top_extension != 0
             && row_is_written(top_extension_x, y - 1, visible_top_extension);
         let left_extension_y = y.checked_add(height).ok_or(PortableUnavailable)?;
         let visible_left_extension = plane_height.saturating_sub(left_extension_y).min(extension);
-        let have_below_left = has_left
+        let have_below_left = left_has_bottom
+            && has_left
             && visible_left_extension != 0
             && column_is_written(x - 1, left_extension_y, visible_left_extension);
 
@@ -899,12 +1110,32 @@ impl FrameCanvas {
         cdef_indices: &[Option<usize>],
         cdef_active: &[bool],
     ) -> Av1Result<[ReconstructedPlane; 3]> {
-        if self
-            .written
-            .iter()
-            .any(|plane| plane.iter().any(|written| !written))
-        {
-            return Err(malformed("frame canvas is missing reconstructed samples"));
+        let visible_dimensions = self.visible_plane_dimensions();
+        let filters_present = loop_parameters.is_some()
+            || frame_parameters.is_some()
+            || luma_parameters.is_some()
+            || chroma_parameters.is_some();
+        for (plane, &visible_dimensions) in visible_dimensions.iter().enumerate() {
+            let coded_dimensions = self.plane_dimensions(plane);
+            let (required_width, required_height) = if filters_present {
+                coded_dimensions
+            } else {
+                visible_dimensions
+            };
+            for row in 0..required_height {
+                let start = row
+                    .checked_mul(coded_dimensions.0)
+                    .ok_or_else(|| malformed("frame coverage row offset overflows"))?;
+                let end = start
+                    .checked_add(required_width)
+                    .ok_or_else(|| malformed("frame coverage row end overflows"))?;
+                if self.written[plane]
+                    .get(start..end)
+                    .is_none_or(|coverage| coverage.iter().any(|written| !written))
+                {
+                    return Err(malformed("frame canvas is missing reconstructed samples"));
+                }
+            }
         }
 
         if let Some(parameters) = loop_parameters {
@@ -933,7 +1164,17 @@ impl FrameCanvas {
                 cdef_active,
             )?;
         }
-        Ok(self.planes.map(|samples| ReconstructedPlane { samples }))
+        let coded_dimensions = [
+            self.plane_dimensions(0),
+            self.plane_dimensions(1),
+            self.plane_dimensions(2),
+        ];
+        let [luma, chroma_u, chroma_v] = self.planes;
+        Ok([
+            crop_canvas_plane(luma, coded_dimensions[0], visible_dimensions[0])?,
+            crop_canvas_plane(chroma_u, coded_dimensions[1], visible_dimensions[1])?,
+            crop_canvas_plane(chroma_v, coded_dimensions[2], visible_dimensions[2])?,
+        ])
     }
 
     fn apply_cdef(
@@ -1231,6 +1472,66 @@ impl FrameCanvas {
             )
         }
     }
+
+    fn visible_plane_dimensions(&self) -> [(usize, usize); 3] {
+        let chroma_width = if self.subsampling_x {
+            self.visible_width.div_ceil(2)
+        } else {
+            self.visible_width
+        };
+        let chroma_height = if self.subsampling_y {
+            self.visible_height.div_ceil(2)
+        } else {
+            self.visible_height
+        };
+        [
+            (self.visible_width, self.visible_height),
+            (chroma_width, chroma_height),
+            (chroma_width, chroma_height),
+        ]
+    }
+}
+
+fn crop_canvas_plane(
+    samples: Vec<u16>,
+    (coded_width, coded_height): (usize, usize),
+    (visible_width, visible_height): (usize, usize),
+) -> Av1Result<ReconstructedPlane> {
+    let coded_length = coded_width
+        .checked_mul(coded_height)
+        .ok_or_else(|| malformed("coded canvas plane size overflows usize"))?;
+    if samples.len() != coded_length
+        || visible_width == 0
+        || visible_height == 0
+        || visible_width > coded_width
+        || visible_height > coded_height
+    {
+        return Err(malformed("canvas crop has an invalid extent"));
+    }
+    if coded_width == visible_width && coded_height == visible_height {
+        return Ok(ReconstructedPlane { samples });
+    }
+    let mut visible = allocate_zeroed(
+        (visible_width, visible_height),
+        "visible reconstructed plane",
+    )?;
+    for row in 0..visible_height {
+        let source_start = row
+            .checked_mul(coded_width)
+            .ok_or_else(|| malformed("canvas crop source offset overflows"))?;
+        let source_end = source_start
+            .checked_add(visible_width)
+            .ok_or_else(|| malformed("canvas crop source end overflows"))?;
+        let destination_start = row
+            .checked_mul(visible_width)
+            .ok_or_else(|| malformed("canvas crop destination offset overflows"))?;
+        let destination_end = destination_start
+            .checked_add(visible_width)
+            .ok_or_else(|| malformed("canvas crop destination end overflows"))?;
+        visible[destination_start..destination_end]
+            .copy_from_slice(&samples[source_start..source_end]);
+    }
+    Ok(ReconstructedPlane { samples: visible })
 }
 
 struct CellGeometry {
