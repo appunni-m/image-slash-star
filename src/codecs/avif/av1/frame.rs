@@ -1,6 +1,6 @@
 //! Complete AV1 uncompressed-frame-header syntax and reference state.
 
-use std::ops::Range;
+use std::{ops::Range, sync::Arc};
 
 use super::bit_reader::{BitReader, SegmentedData};
 use super::entropy;
@@ -43,6 +43,7 @@ impl FrameType {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Segment {
+    features: u8,
     delta_q: i32,
     delta_lf_y_vertical: i32,
     delta_lf_y_horizontal: i32,
@@ -56,6 +57,7 @@ struct Segment {
 impl Segment {
     const fn empty() -> Self {
         Self {
+            features: 0,
             delta_q: 0,
             delta_lf_y_vertical: 0,
             delta_lf_y_horizontal: 0,
@@ -75,6 +77,8 @@ struct Segmentation {
     temporal: bool,
     update_data: bool,
     segments: [Segment; 8],
+    preskip: bool,
+    last_active_id: i32,
 }
 
 impl Segmentation {
@@ -85,9 +89,20 @@ impl Segmentation {
             temporal: false,
             update_data: false,
             segments: [Segment::empty(); 8],
+            preskip: false,
+            last_active_id: 0,
         }
     }
 }
+
+const SEG_ALT_Q: u8 = 1 << 0;
+const SEG_ALT_LF_Y_VERTICAL: u8 = 1 << 1;
+const SEG_ALT_LF_Y_HORIZONTAL: u8 = 1 << 2;
+const SEG_ALT_LF_U: u8 = 1 << 3;
+const SEG_ALT_LF_V: u8 = 1 << 4;
+const SEG_REFERENCE: u8 = 1 << 5;
+const SEG_SKIP: u8 = 1 << 6;
+const SEG_GLOBAL_MOTION: u8 = 1 << 7;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct LoopFilterDeltas {
@@ -351,17 +366,74 @@ impl FrameHeader {
     }
 }
 
+#[derive(Clone)]
+struct ReferenceDecodeState {
+    cdfs: entropy::FrameCdfs,
+    segmentation_map: Option<entropy::SegmentMap>,
+    #[expect(
+        dead_code,
+        reason = "retained reference pixels are consumed by the following inter-prediction slice"
+    )]
+    surface: Option<super::block::FirstLeaf>,
+}
+
+#[derive(Clone)]
+struct ReferenceState {
+    header: FrameHeader,
+    decode: Option<Arc<ReferenceDecodeState>>,
+}
+
+fn invalidate_reference_slots(
+    references: &mut [Option<ReferenceState>; REFERENCE_SLOTS],
+    frame_id: u32,
+    delta_frame_id_bits: u32,
+    frame_id_bits: u32,
+) {
+    let difference_range = 1_u32 << delta_frame_id_bits;
+    let frame_id_range = 1_u32 << frame_id_bits;
+    for reference in references {
+        let Some(retained) = reference else {
+            continue;
+        };
+        let invalid = if frame_id >= difference_range {
+            retained.header.frame_id > frame_id
+                || retained.header.frame_id < frame_id.saturating_sub(difference_range)
+        } else {
+            retained.header.frame_id > frame_id
+                && retained.header.frame_id
+                    < frame_id_range
+                        .saturating_add(frame_id)
+                        .saturating_sub(difference_range)
+        };
+        if invalid {
+            *reference = None;
+        }
+    }
+}
+
+struct PendingFrame {
+    header: FrameHeader,
+    next_tile: u32,
+    input_cdfs: Option<entropy::FrameCdfs>,
+    selected_cdfs: Option<entropy::FrameCdfs>,
+    previous_segment_map: Option<entropy::SegmentMap>,
+    segment_map: Option<entropy::SegmentMap>,
+    decode_complete: bool,
+    first_leaf: Option<super::block::FirstLeaf>,
+    complete_color_leaf: Option<super::block::FirstLeaf>,
+    complete_color_tiles: Vec<ReconstructedColorTile>,
+    complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+}
+
 pub(super) struct FrameState {
     sequence: Option<SequenceHeader>,
-    references: [Option<FrameHeader>; REFERENCE_SLOTS],
-    pending: Option<FrameHeader>,
-    next_tile: u32,
+    references: [Option<ReferenceState>; REFERENCE_SLOTS],
+    pending: Option<PendingFrame>,
     current_frame_id: Option<u32>,
     frame_dimensions: Option<(u32, u32)>,
     multi_tile: bool,
     first_leaf: Option<super::block::FirstLeaf>,
     complete_color_leaf: Option<super::block::FirstLeaf>,
-    complete_color_tiles: Vec<ReconstructedColorTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
 }
 
@@ -371,13 +443,11 @@ impl FrameState {
             sequence: None,
             references: std::array::from_fn(|_| None),
             pending: None,
-            next_tile: 0,
             current_frame_id: None,
             frame_dimensions: None,
             multi_tile: false,
             first_leaf: None,
             complete_color_leaf: None,
-            complete_color_tiles: Vec::new(),
             complete_monochrome_plane: None,
         }
     }
@@ -445,7 +515,7 @@ impl FrameState {
         if self
             .pending
             .as_ref()
-            .is_some_and(|header| header.show_existing_frame)
+            .is_some_and(|pending| pending.header.show_existing_frame)
         {
             return Err(malformed("frame syntax validation failed"));
         }
@@ -495,16 +565,17 @@ impl FrameState {
             let Some(pending) = self.pending.as_ref() else {
                 return Err(malformed("redundant frame header has no pending frame"));
             };
+            let references = self.reference_headers();
             let (header, reader) = parse(
                 data,
                 start,
                 end,
                 sequence,
-                &self.references,
+                &references,
                 temporal_id,
                 spatial_id,
             )?;
-            if &header != pending {
+            if header != pending.header {
                 return Err(malformed("frame syntax validation failed"));
             }
             return Ok(reader);
@@ -512,12 +583,13 @@ impl FrameState {
         if self.pending.is_some() {
             return Err(malformed("frame syntax validation failed"));
         }
+        let references = self.reference_headers();
         let (header, reader) = parse(
             data,
             start,
             end,
             sequence,
-            &self.references,
+            &references,
             temporal_id,
             spatial_id,
         )?;
@@ -535,25 +607,95 @@ impl FrameState {
         frame_id_bits: u32,
         header: FrameHeader,
     ) -> Av1Result<()> {
+        let mut references = self.references.clone();
+        let mut current_frame_id = self.current_frame_id;
         if frame_id_numbers_present && !header.show_existing_frame {
             validate_current_frame_id(frame_id_bits, self.current_frame_id, &header)?;
-            self.invalidate_old_references(header.frame_id);
-            self.current_frame_id = Some(header.frame_id);
+            let sequence = self
+                .sequence
+                .as_ref()
+                .ok_or(malformed("frame header has no sequence state"))?;
+            invalidate_reference_slots(
+                &mut references,
+                header.frame_id,
+                sequence.delta_frame_id_bits,
+                sequence.frame_id_bits,
+            );
+            current_frame_id = Some(header.frame_id);
         }
+        let block_width = (header.frame_width.saturating_add(7) >> 3).wrapping_shl(1);
+        let block_height = (header.frame_height.saturating_add(7) >> 3).wrapping_shl(1);
+        let primary_decode = if header.primary_ref_frame == PRIMARY_REF_NONE {
+            None
+        } else {
+            let slot = header.reference_indices[header.primary_ref_frame];
+            references
+                .get(slot)
+                .and_then(Option::as_ref)
+                .and_then(|reference| reference.decode.as_ref())
+        };
+        let previous_segment_map = primary_decode
+            .and_then(|decode| decode.segmentation_map.as_ref())
+            .filter(|map| map.compatible_with(block_width, block_height))
+            .cloned();
+        let segment_map = if header.segmentation.enabled {
+            if header.segmentation.update_map {
+                Some(entropy::SegmentMap::new(block_width, block_height)?)
+            } else {
+                Some(match previous_segment_map.as_ref() {
+                    Some(previous) => previous.clone(),
+                    None => entropy::SegmentMap::new(block_width, block_height)?,
+                })
+            }
+        } else {
+            None
+        };
+        let input_cdfs = if header.primary_ref_frame == PRIMARY_REF_NONE {
+            let qindex = header
+                .quantization
+                .as_ref()
+                .map_or(0, |quantization| quantization.base);
+            Some(entropy::FrameCdfs::defaults(qindex)?)
+        } else {
+            primary_decode
+                .filter(|decode| decode.cdfs.supports_primary_reference())
+                .map(|decode| decode.cdfs.clone())
+        };
+        self.references = references;
+        self.current_frame_id = current_frame_id;
         self.frame_dimensions = Some((header.frame_width, header.frame_height));
-        self.pending = Some(header);
-        self.next_tile = 0;
+        self.pending = Some(PendingFrame {
+            header,
+            next_tile: 0,
+            input_cdfs,
+            selected_cdfs: None,
+            previous_segment_map,
+            segment_map,
+            decode_complete: true,
+            first_leaf: None,
+            complete_color_leaf: None,
+            complete_color_tiles: Vec::new(),
+            complete_monochrome_plane: None,
+        });
         self.first_leaf = None;
         self.complete_color_leaf = None;
-        self.complete_color_tiles.clear();
         self.complete_monochrome_plane = None;
         Ok(())
     }
 
+    fn reference_headers(&self) -> [Option<FrameHeader>; REFERENCE_SLOTS] {
+        std::array::from_fn(|index| {
+            self.references[index]
+                .as_ref()
+                .map(|reference| reference.header.clone())
+        })
+    }
+
     fn complete_show_existing(&mut self) -> Av1Result<()> {
-        let Some(header) = self.pending.as_ref() else {
+        let Some(pending) = self.pending.as_ref() else {
             return Err(malformed("show-existing completion has no pending frame"));
         };
+        let header = &pending.header;
         if !header.show_existing_frame {
             return Ok(());
         }
@@ -565,12 +707,12 @@ impl FrameState {
             return Err(malformed("show-existing frame references an empty slot"));
         };
         let reference = reference.clone();
-        if !reference.showable_frame {
+        if !reference.header.showable_frame {
             return Err(malformed("frame syntax validation failed"));
         }
-        if reference.frame_type == FrameType::Key {
+        if reference.header.frame_type == FrameType::Key {
             let mut hidden = reference;
-            hidden.showable_frame = false;
+            hidden.header.showable_frame = false;
             self.references = std::array::from_fn(|_| Some(hidden.clone()));
         }
         self.pending = None;
@@ -583,26 +725,12 @@ impl FrameState {
         let Some(sequence) = self.sequence.as_ref() else {
             return;
         };
-        let difference_range = 1_u32 << sequence.delta_frame_id_bits;
-        let frame_id_range = 1_u32 << sequence.frame_id_bits;
-        for reference in &mut self.references {
-            let Some(retained) = reference else {
-                continue;
-            };
-            let invalid = if frame_id >= difference_range {
-                retained.frame_id > frame_id
-                    || retained.frame_id < frame_id.saturating_sub(difference_range)
-            } else {
-                retained.frame_id > frame_id
-                    && retained.frame_id
-                        < frame_id_range
-                            .saturating_add(frame_id)
-                            .saturating_sub(difference_range)
-            };
-            if invalid {
-                *reference = None;
-            }
-        }
+        invalidate_reference_slots(
+            &mut self.references,
+            frame_id,
+            sequence.delta_frame_id_bits,
+            sequence.frame_id_bits,
+        );
     }
 
     // ✅ VERIFIED: AV1 specification section 5.11.1; dav1d 1.5.3
@@ -616,9 +744,10 @@ impl FrameState {
         let Some(sequence) = self.sequence.as_ref() else {
             return Err(malformed("tile group appears before a sequence header"));
         };
-        let Some(header) = self.pending.as_ref() else {
+        let Some(pending) = self.pending.as_ref() else {
             return Err(malformed("tile group appears without a pending frame"));
         };
+        let header = &pending.header;
         let Some(tiling) = header.tiling.as_ref() else {
             return Err(malformed("pending frame has no tile layout"));
         };
@@ -644,8 +773,17 @@ impl FrameState {
             end,
             tiling.tile_size_bytes,
         )?;
-        let validation =
-            validate_tile_entropy_prefixes(data, &tile_ranges, start, header, sequence, tiling)?;
+        let validation = validate_tile_entropy_prefixes(
+            data,
+            &tile_ranges,
+            start,
+            header,
+            sequence,
+            tiling,
+            pending.input_cdfs.as_ref(),
+            pending.segment_map.as_ref(),
+            pending.previous_segment_map.as_ref(),
+        )?;
         Ok(TileGroup {
             start,
             end,
@@ -653,58 +791,121 @@ impl FrameState {
             complete_color_leaf: validation.complete_color_leaf,
             complete_color_tiles: validation.complete_color_tiles,
             complete_monochrome_plane: validation.complete_monochrome_plane,
+            selected_cdfs: validation.selected_cdfs,
+            segment_map: validation.segment_map,
+            decode_complete: validation.decode_complete,
         })
     }
 
     fn accept_tile_group(&mut self, group: TileGroup) -> Av1Result<()> {
-        let header = self
+        let pending = self
             .pending
             .as_ref()
             .ok_or(malformed("accepted tile group has no pending frame"))?;
-        if group.start != self.next_tile {
+        if group.start != pending.next_tile {
             return Err(malformed("frame syntax validation failed"));
         }
-        let tile_count = header
+        let tile_count = pending
+            .header
             .tiling
             .as_ref()
             .ok_or(malformed("pending frame has no tile layout"))?
             .tile_count();
-        self.multi_tile |= tile_count > 1;
-        self.next_tile = group.end.saturating_add(1);
-        self.first_leaf = self.first_leaf.take().or(group.first_leaf);
-        self.complete_color_leaf = self
-            .complete_color_leaf
+        let next_tile = group.end.saturating_add(1);
+        if next_tile != tile_count {
+            let pending = self
+                .pending
+                .as_mut()
+                .ok_or(malformed("accepted tile group disappeared"))?;
+            pending.next_tile = next_tile;
+            pending.first_leaf = pending.first_leaf.take().or(group.first_leaf);
+            pending.complete_color_leaf = pending
+                .complete_color_leaf
+                .take()
+                .or(group.complete_color_leaf);
+            pending
+                .complete_color_tiles
+                .extend(group.complete_color_tiles);
+            pending.complete_monochrome_plane = pending
+                .complete_monochrome_plane
+                .take()
+                .or(group.complete_monochrome_plane);
+            pending.selected_cdfs = pending.selected_cdfs.take().or(group.selected_cdfs);
+            let previous_segment_map = pending.segment_map.take();
+            pending.segment_map = group.segment_map.or(previous_segment_map);
+            pending.decode_complete &= group.decode_complete;
+            self.multi_tile |= tile_count > 1;
+            return Ok(());
+        }
+
+        let mut assembled_color_leaf = None;
+        if tile_count > 1
+            && pending
+                .complete_color_tiles
+                .len()
+                .saturating_add(group.complete_color_tiles.len())
+                == usize::try_from(tile_count).unwrap_or(0)
+        {
+            let sequence = self
+                .sequence
+                .as_ref()
+                .ok_or(malformed("assembled tile frame has no sequence"))?;
+            assembled_color_leaf = assemble_color_tiles(
+                &pending.complete_color_tiles,
+                &group.complete_color_tiles,
+                &pending.header,
+                sequence,
+            )?;
+        }
+        // All fallible assembly is complete, so ownership can now move out of
+        // the pending frame without compromising tile-group rollback.
+        let pending = self
+            .pending
             .take()
+            .ok_or(malformed("completed frame disappeared"))?;
+        let first_leaf = pending.first_leaf.or(group.first_leaf);
+        let complete_color_leaf = assembled_color_leaf
+            .or(pending.complete_color_leaf)
             .or(group.complete_color_leaf);
-        self.complete_color_tiles.extend(group.complete_color_tiles);
-        self.complete_monochrome_plane = self
+        let complete_monochrome_plane = pending
             .complete_monochrome_plane
-            .take()
             .or(group.complete_monochrome_plane);
-        if self.next_tile == tile_count {
-            if tile_count > 1
-                && self.complete_color_tiles.len() == usize::try_from(tile_count).unwrap_or(0)
-            {
-                let sequence = self
-                    .sequence
-                    .as_ref()
-                    .ok_or(malformed("assembled tile frame has no sequence"))?;
-                self.complete_color_leaf =
-                    assemble_color_tiles(&self.complete_color_tiles, header, sequence)?;
-            }
-            // `header` was borrowed from `pending` above, so the value cannot
-            // disappear before this synchronous completion step.
-            let completed = header.clone();
-            self.pending = None;
-            for (slot, reference) in self.references.iter_mut().enumerate() {
+        let selected_cdfs = pending.selected_cdfs.or(group.selected_cdfs);
+        let segment_map = group.segment_map.or(pending.segment_map);
+        let decode_complete = pending.decode_complete && group.decode_complete;
+        let completed = pending.header;
+        if completed.refresh_frame_flags != 0 {
+            let retained_cdfs = if completed.refresh_frame_context {
+                selected_cdfs
+            } else {
+                pending.input_cdfs
+            };
+            let decode = if decode_complete {
+                retained_cdfs.map(|cdfs| {
+                    Arc::new(ReferenceDecodeState {
+                        cdfs,
+                        segmentation_map: segment_map,
+                        surface: complete_color_leaf.clone(),
+                    })
+                })
+            } else {
+                None
+            };
+            let reference = ReferenceState {
+                header: completed.clone(),
+                decode,
+            };
+            for (slot, retained) in self.references.iter_mut().enumerate() {
                 let mask = 1_u8 << slot;
                 if completed.refresh_frame_flags & mask != 0 {
-                    *reference = Some(completed.clone());
+                    *retained = Some(reference.clone());
                 }
             }
-            self.next_tile = 0;
-            self.complete_color_tiles.clear();
         }
+        self.first_leaf = first_leaf;
+        self.complete_color_leaf = complete_color_leaf;
+        self.complete_monochrome_plane = complete_monochrome_plane;
+        self.multi_tile |= tile_count > 1;
         Ok(())
     }
 }
@@ -716,6 +917,9 @@ struct TileGroup {
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+    selected_cdfs: Option<entropy::FrameCdfs>,
+    segment_map: Option<entropy::SegmentMap>,
+    decode_complete: bool,
 }
 
 struct TileValidation {
@@ -723,6 +927,9 @@ struct TileValidation {
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+    selected_cdfs: Option<entropy::FrameCdfs>,
+    segment_map: Option<entropy::SegmentMap>,
+    decode_complete: bool,
 }
 
 struct ReconstructedColorTile {
@@ -735,10 +942,11 @@ struct ReconstructedColorTile {
 
 fn assemble_color_tiles(
     tiles: &[ReconstructedColorTile],
+    trailing_tiles: &[ReconstructedColorTile],
     header: &FrameHeader,
     sequence: &SequenceHeader,
 ) -> Av1Result<Option<super::block::FirstLeaf>> {
-    if tiles.is_empty() {
+    if tiles.is_empty() && trailing_tiles.is_empty() {
         return Ok(None);
     }
     let frame_width = usize::try_from(header.frame_width)
@@ -760,7 +968,7 @@ fn assemble_color_tiles(
     let mut cdef_active = vec![false; active_width.saturating_mul(active_height)];
     let mut loop_parameters: Option<super::filter::Parameters> = None;
     let mut cdef_parameters: Option<super::cdef::FrameParameters> = None;
-    for tile in tiles {
+    for tile in tiles.iter().chain(trailing_tiles) {
         let tile_x = usize::try_from(tile.x)
             .map_err(|_| malformed("assembled tile x origin exceeds usize"))?;
         let tile_y = usize::try_from(tile.y)
@@ -975,6 +1183,9 @@ fn validate_tile_entropy_prefixes(
     header: &FrameHeader,
     sequence: &SequenceHeader,
     tiling: &Tiling,
+    input_cdfs: Option<&entropy::FrameCdfs>,
+    current_segment_map: Option<&entropy::SegmentMap>,
+    previous_segment_map: Option<&entropy::SegmentMap>,
 ) -> Av1Result<TileValidation> {
     let root_level = u32::from(!sequence.use_128x128_superblock);
     // Frame dimensions and superblock mode were validated while parsing the
@@ -1039,22 +1250,49 @@ fn validate_tile_entropy_prefixes(
         transform_mode: header.transform_mode,
         reduced_transform_set: header.reduced_transform_set,
         film_grain_present: header.film_grain.is_some(),
+        segmentation: entropy::SegmentationContext {
+            enabled: header.segmentation.enabled,
+            update_map: header.segmentation.update_map,
+            temporal: header.segmentation.temporal,
+            preskip: header.segmentation.preskip,
+            last_active_id: header.segmentation.last_active_id,
+            segments: std::array::from_fn(|index| {
+                let segment = header.segmentation.segments[index];
+                entropy::SegmentContext {
+                    delta_q: segment.delta_q,
+                    delta_lf: [
+                        segment.delta_lf_y_vertical,
+                        segment.delta_lf_y_horizontal,
+                        segment.delta_lf_u,
+                        segment.delta_lf_v,
+                    ],
+                    reference: segment.reference,
+                    skip: segment.skip,
+                    global_motion: segment.global_motion,
+                    qindex: header.segment_qindex[index],
+                    lossless: header.segment_lossless[index],
+                }
+            }),
+        },
     };
     let mut first_leaf = None;
     let mut complete_color_leaf = None;
     let mut complete_color_tiles = Vec::new();
     let mut complete_monochrome_plane = None;
+    let mut selected_cdfs = None;
+    let mut segment_map = current_segment_map.cloned();
+    let mut decode_complete = true;
     for (range_index, range) in ranges.iter().enumerate() {
         if range.is_empty() {
             return Err(malformed("tile payload is empty"));
         }
-        if header.primary_ref_frame != PRIMARY_REF_NONE {
-            // Inter tiles inherit CDF state from their primary reference.
-            // Their first syntax symbol cannot be checked until that retained
-            // state is implemented; constructing a fresh decoder here would
-            // validate the wrong model.
+        let Some(input_cdfs) = input_cdfs else {
+            // The reference header remains useful for structural validation,
+            // but an incomplete retained entropy bundle cannot be substituted
+            // with defaults without changing the bitstream grammar.
+            decode_complete = false;
             continue;
-        }
+        };
         #[expect(
             clippy::cast_possible_truncation,
             reason = "AV1 limits a frame to at most 512 tiles"
@@ -1086,6 +1324,10 @@ fn validate_tile_entropy_prefixes(
             block_height,
             block_x,
             block_y,
+            tile_origin_b4_x: 0,
+            tile_origin_b4_y: 0,
+            frame_block_width: block_width,
+            frame_block_height: block_height,
             frame_width: header.frame_width,
             frame_height: header.frame_height,
             upscaled_width: header.upscaled_width,
@@ -1105,8 +1347,6 @@ fn validate_tile_entropy_prefixes(
             enable_intra_edge_filter: sequence.enable_intra_edge_filter,
             frame_tools,
         };
-        let reconstructed = entropy::validate_first_partition(data, range.clone(), &context)?;
-        first_leaf = first_leaf.or(reconstructed);
         let next_column = column.saturating_add(1) as usize;
         let next_row = row.saturating_add(1) as usize;
         let tile_block_end_x = tiling
@@ -1144,12 +1384,28 @@ fn validate_tile_entropy_prefixes(
         tile_context.block_height = tile_block_height;
         tile_context.block_x = 0;
         tile_context.block_y = 0;
+        tile_context.tile_origin_b4_x = block_x;
+        tile_context.tile_origin_b4_y = block_y;
         tile_context.frame_width = tile_width;
         tile_context.frame_height = tile_height;
         tile_context.upscaled_width = tile_width;
-        let complete =
-            entropy::validate_complete_lossy_420_partition(data, range.clone(), &tile_context)?;
-        if let Some(reconstruction) = complete {
+        let complete = entropy::validate_complete_lossy_420_partition(
+            data,
+            range.clone(),
+            &tile_context,
+            input_cdfs,
+            segment_map.as_mut(),
+            previous_segment_map,
+        )?;
+        if let Some(mut reconstruction) = complete {
+            first_leaf = first_leaf.or_else(|| Some(reconstruction.leaf.clone()));
+            let tile_cdfs = reconstruction
+                .cdfs
+                .take()
+                .ok_or_else(|| malformed("complete tile omits its entropy snapshot"))?;
+            if header.refresh_frame_context && tile == tiling.context_update_tile {
+                selected_cdfs = Some(entropy::FrameCdfs::publish_intra(input_cdfs, &tile_cdfs));
+            }
             if tiling.tile_count() == 1 && ranges.len() == 1 {
                 complete_color_leaf = Some(reconstruction.into_filtered_leaf()?);
             } else {
@@ -1161,13 +1417,25 @@ fn validate_tile_entropy_prefixes(
                     reconstruction,
                 });
             }
-        }
-        if tiling.tile_count() == 1 && ranges.len() == 1 {
-            complete_monochrome_plane = entropy::validate_complete_monochrome_partition(
-                data,
-                range.clone(),
-                &tile_context,
-            )?;
+        } else {
+            // Unsupported complete classes still retain the earlier bounded
+            // prefix/first-leaf diagnostic. It operates on private state and
+            // must never become the reference CDF publication source.
+            if !header.segmentation.enabled {
+                first_leaf = first_leaf.or(entropy::validate_first_partition(
+                    data,
+                    range.clone(),
+                    &tile_context,
+                )?);
+            }
+            if sequence.monochrome && tiling.tile_count() == 1 && ranges.len() == 1 {
+                complete_monochrome_plane = entropy::validate_complete_monochrome_partition(
+                    data,
+                    range.clone(),
+                    &tile_context,
+                )?;
+            }
+            decode_complete = false;
         }
     }
     Ok(TileValidation {
@@ -1175,6 +1443,9 @@ fn validate_tile_entropy_prefixes(
         complete_color_leaf,
         complete_color_tiles,
         complete_monochrome_plane,
+        selected_cdfs,
+        segment_map,
+        decode_complete,
     })
 }
 
@@ -1924,25 +2195,37 @@ fn read_segmentation(
         let mut segments = [Segment::empty(); 8];
         for segment in &mut segments {
             if bits.bit()? {
+                segment.features |= SEG_ALT_Q;
                 segment.delta_q = bits.signed(9)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_Y_VERTICAL;
                 segment.delta_lf_y_vertical = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_Y_HORIZONTAL;
                 segment.delta_lf_y_horizontal = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_U;
                 segment.delta_lf_u = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_V;
                 segment.delta_lf_v = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_REFERENCE;
                 segment.reference = bits.bits(3)? as i32;
             }
             segment.skip = bits.bit()?;
+            if segment.skip {
+                segment.features |= SEG_SKIP;
+            }
             segment.global_motion = bits.bit()?;
+            if segment.global_motion {
+                segment.features |= SEG_GLOBAL_MOTION;
+            }
         }
         segments
     } else {
@@ -1954,12 +2237,22 @@ fn read_segmentation(
         };
         reference.segmentation.segments
     };
+    let mut preskip = false;
+    let mut last_active_id = 0_i32;
+    for (index, segment) in segments.iter().enumerate() {
+        if segment.features != 0 {
+            last_active_id = i32::try_from(index).unwrap_or(7);
+        }
+        preskip |= segment.features & (SEG_REFERENCE | SEG_SKIP | SEG_GLOBAL_MOTION) != 0;
+    }
     Ok(Segmentation {
         enabled,
         update_map,
         temporal,
         update_data,
         segments,
+        preskip,
+        last_active_id,
     })
 }
 
@@ -2532,6 +2825,9 @@ fn coverage_tile_group(start: u32, end: u32) -> TileGroup {
         complete_color_leaf: None,
         complete_color_tiles: Vec::new(),
         complete_monochrome_plane: None,
+        selected_cdfs: None,
+        segment_map: None,
+        decode_complete: false,
     }
 }
 
@@ -2716,6 +3012,39 @@ fn coverage_references() -> [Option<FrameHeader>; 8] {
 
 #[cfg(coverage)]
 #[coverage(off)]
+fn coverage_reference_states() -> [Option<ReferenceState>; 8] {
+    coverage_references().map(|header| {
+        header.map(|header| ReferenceState {
+            header,
+            decode: None,
+        })
+    })
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_pending(header: FrameHeader) -> PendingFrame {
+    let qindex = header
+        .quantization
+        .as_ref()
+        .map_or(0, |quantization| quantization.base);
+    PendingFrame {
+        header,
+        next_tile: 0,
+        input_cdfs: entropy::FrameCdfs::defaults(qindex).ok(),
+        selected_cdfs: None,
+        previous_segment_map: None,
+        segment_map: None,
+        decode_complete: true,
+        first_leaf: None,
+        complete_color_leaf: None,
+        complete_color_tiles: Vec::new(),
+        complete_monochrome_plane: None,
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
 fn coverage_state_paths() {
     let sequence = coverage_sequence();
     let mut state = FrameState::new();
@@ -2740,6 +3069,7 @@ fn coverage_state_paths() {
     }
     let mut entropy_header = coverage_header();
     entropy_header.primary_ref_frame = PRIMARY_REF_NONE;
+    let entropy_cdfs = entropy::FrameCdfs::defaults(1).unwrap();
     assert!(
         validate_tile_entropy_prefixes(
             &tile_data,
@@ -2748,6 +3078,9 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
+            Some(&entropy_cdfs),
+            None,
+            None,
         )
         .is_err()
     );
@@ -2764,6 +3097,9 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
+            Some(&entropy_cdfs),
+            None,
+            None,
         )
         .is_ok()
     );
@@ -2771,7 +3107,7 @@ fn coverage_state_paths() {
     assert!(coverage_read_tile_group(&no_sequence, &tile_input, tile_input.len() * 8).is_err());
     let mut rejected_entropy = FrameState::new();
     rejected_entropy.sequence = Some(sequence.clone());
-    rejected_entropy.pending = Some(entropy_header);
+    rejected_entropy.pending = Some(coverage_pending(entropy_header));
     assert!(coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8).is_ok());
     let _ = state.begin_frame(&empty_data, 0, 0, 0, 0, false);
     let _ = state.tile_group_obu(&empty_data, 0, 0);
@@ -2807,7 +3143,7 @@ fn coverage_state_paths() {
     inconsistent.max_width += 1;
     assert!(state.accept_sequence(inconsistent).is_err());
 
-    state.pending = Some(coverage_header());
+    state.pending = Some(coverage_pending(coverage_header()));
     assert!(state.temporal_delimiter().is_err());
     assert!(state.finish().is_err());
     assert_eq!(state.complete_show_existing(), Ok(()));
@@ -2817,16 +3153,19 @@ fn coverage_state_paths() {
     let mut shown = coverage_header();
     shown.show_existing_frame = true;
     shown.existing_frame_idx = Some(0);
-    state.pending = Some(shown.clone());
-    state.references[0] = Some(coverage_header());
+    state.pending = Some(coverage_pending(shown.clone()));
+    state.references[0] = Some(ReferenceState {
+        header: coverage_header(),
+        decode: None,
+    });
     assert_eq!(state.complete_show_existing(), Ok(()));
-    state.pending = Some(shown.clone());
-    state.references[0].as_mut().unwrap().showable_frame = false;
+    state.pending = Some(coverage_pending(shown.clone()));
+    state.references[0].as_mut().unwrap().header.showable_frame = false;
     assert!(state.complete_show_existing().is_err());
     state.references[0] = None;
     assert!(state.complete_show_existing().is_err());
     shown.existing_frame_idx = None;
-    state.pending = Some(shown);
+    state.pending = Some(coverage_pending(shown));
     assert!(state.complete_show_existing().is_err());
 
     let mut key = coverage_header();
@@ -2835,23 +3174,26 @@ fn coverage_state_paths() {
     let mut shown_key = key.clone();
     shown_key.show_existing_frame = true;
     shown_key.existing_frame_idx = Some(0);
-    state.references[0] = Some(key);
-    state.pending = Some(shown_key);
+    state.references[0] = Some(ReferenceState {
+        header: key,
+        decode: None,
+    });
+    state.pending = Some(coverage_pending(shown_key));
     assert_eq!(state.complete_show_existing(), Ok(()));
     assert!(state.references.iter().all(|reference| {
         reference
             .as_ref()
-            .is_some_and(|frame| !frame.showable_frame)
+            .is_some_and(|frame| !frame.header.showable_frame)
     }));
 
     state.sequence = Some(sequence.clone());
-    state.references = coverage_references();
+    state.references = coverage_reference_states();
     state.references[0] = None;
     state.invalidate_old_references(10);
-    state.references = coverage_references();
-    state.references[0].as_mut().unwrap().frame_id = 11;
+    state.references = coverage_reference_states();
+    state.references[0].as_mut().unwrap().header.frame_id = 11;
     state.invalidate_old_references(10);
-    state.references = coverage_references();
+    state.references = coverage_reference_states();
     state.invalidate_old_references(1);
     assert_eq!(
         state.accept_parsed_header(true, sequence.frame_id_bits, coverage_header()),
@@ -2881,8 +3223,7 @@ fn coverage_state_paths() {
     let mut tiled = coverage_header();
     tiled.tiling = Some(coverage_tiling(2, 2));
     tiled.refresh_frame_flags = 0b1000_0001;
-    state.pending = Some(tiled);
-    state.next_tile = 0;
+    state.pending = Some(coverage_pending(tiled));
     assert!(state.accept_tile_group(coverage_tile_group(1, 1)).is_err());
     assert_eq!(state.accept_tile_group(coverage_tile_group(0, 1)), Ok(()));
     assert_eq!(state.accept_tile_group(coverage_tile_group(2, 3)), Ok(()));
@@ -2893,13 +3234,13 @@ fn coverage_state_paths() {
 
     let mut missing_tiling = coverage_header();
     missing_tiling.tiling = None;
-    state.pending = Some(missing_tiling);
+    state.pending = Some(coverage_pending(missing_tiling));
     let _ = state.accept_tile_group(coverage_tile_group(0, 0));
     let _ = coverage_read_tile_group(&state, &[], 0);
 
     let mut group_header = coverage_header();
     group_header.tiling = Some(coverage_tiling(2, 2));
-    state.pending = Some(group_header);
+    state.pending = Some(coverage_pending(group_header));
     for payload in [[0b1001_1000_u8], [0b1110_0000], [0], [0x80]] {
         let _ = coverage_read_tile_group(&state, &payload, 8);
     }
@@ -2910,6 +3251,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -2918,6 +3260,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -2926,6 +3269,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -2934,6 +3278,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -3041,11 +3386,12 @@ fn coverage_state_paths() {
     .into_iter()
     .enumerate()
     {
-        coverage_sweep_frame(frame, &animated_sequence, &animated_state.references);
+        let animated_references = animated_state.reference_headers();
+        coverage_sweep_frame(frame, &animated_sequence, &animated_references);
         if frame_index == 1 {
-            coverage_mutation_sweep_frame(frame, &animated_sequence, &animated_state.references);
+            coverage_mutation_sweep_frame(frame, &animated_sequence, &animated_references);
             for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_state.references.clone();
+                let mut missing_reference = animated_references.clone();
                 missing_reference[slot] = None;
                 coverage_sweep_frame(frame, &animated_sequence, &missing_reference);
             }
@@ -3053,9 +3399,9 @@ fn coverage_state_paths() {
         if frame_index == 3 {
             let mut select_mode = frame.to_vec();
             select_mode[107 / 8] ^= 1 << (7 - 107 % 8);
-            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_state.references);
+            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_references);
             for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_state.references.clone();
+                let mut missing_reference = animated_references.clone();
                 missing_reference[slot] = None;
                 coverage_sweep_frame(&select_mode, &animated_sequence, &missing_reference);
             }
@@ -3071,11 +3417,8 @@ fn coverage_state_paths() {
         );
     }
     let show_existing = [0xa8_u8];
-    coverage_sweep_frame(
-        &show_existing,
-        &animated_sequence,
-        &animated_state.references,
-    );
+    let animated_references = animated_state.reference_headers();
+    coverage_sweep_frame(&show_existing, &animated_sequence, &animated_references);
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show_existing, &show_spans).unwrap();
     assert_eq!(
@@ -3083,13 +3426,14 @@ fn coverage_state_paths() {
         Ok(())
     );
     for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
-        coverage_sweep_frame(frame, &animated_sequence, &animated_state.references);
+        let animated_references = animated_state.reference_headers();
+        coverage_sweep_frame(frame, &animated_sequence, &animated_references);
         if frame_index == 0 {
             let mut select_mode = frame.to_vec();
             select_mode[107 / 8] ^= 1 << (7 - 107 % 8);
-            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_state.references);
+            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_references);
             for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_state.references.clone();
+                let mut missing_reference = animated_references.clone();
                 missing_reference[slot] = None;
                 coverage_sweep_frame(&select_mode, &animated_sequence, &missing_reference);
             }
@@ -3149,7 +3493,7 @@ fn coverage_state_paths() {
     frame_id_state.current_frame_id = Some(3);
     let _ = frame_id_state.begin_frame(&frame_id_data, 0, frame_with_id.len(), 0, 0, false);
 
-    let header_bits = direct.pending.as_ref().unwrap().header_bits;
+    let header_bits = direct.pending.as_ref().unwrap().header.header_bits;
     let header_length = header_bits.saturating_add(1).div_ceil(8);
     let mut reduced_header = REDUCED_FRAME[..header_length].to_vec();
     let trailing_byte = header_bits / 8;
@@ -3179,7 +3523,10 @@ fn coverage_state_paths() {
 
     let mut illegal_show = FrameState::new();
     illegal_show.accept_sequence(coverage_sequence()).unwrap();
-    illegal_show.references[0] = Some(coverage_header());
+    illegal_show.references[0] = Some(ReferenceState {
+        header: coverage_header(),
+        decode: None,
+    });
     let show = [0x80];
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show, &show_spans).unwrap();

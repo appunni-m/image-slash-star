@@ -2,8 +2,9 @@
 
 use std::ops::Range;
 
+use crate::codecs::CodecError;
 #[cfg(coverage)]
-use crate::codecs::{CodecError, CodecResult};
+use crate::codecs::CodecResult;
 
 use super::bit_reader::SegmentedData;
 use super::geometry::{BlockSize, IntraEdgeFlags};
@@ -504,6 +505,51 @@ pub(super) struct FrameToolsContext {
     pub(super) transform_mode: u32,
     pub(super) reduced_transform_set: bool,
     pub(super) film_grain_present: bool,
+    pub(super) segmentation: SegmentationContext,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) struct SegmentContext {
+    pub(super) delta_q: i32,
+    pub(super) delta_lf: [i32; 4],
+    pub(super) reference: i32,
+    pub(super) skip: bool,
+    pub(super) global_motion: bool,
+    pub(super) qindex: u32,
+    pub(super) lossless: bool,
+}
+
+impl SegmentContext {
+    pub(super) const EMPTY: Self = Self {
+        delta_q: 0,
+        delta_lf: [0; 4],
+        reference: -1,
+        skip: false,
+        global_motion: false,
+        qindex: 0,
+        lossless: false,
+    };
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) struct SegmentationContext {
+    pub(super) enabled: bool,
+    pub(super) update_map: bool,
+    pub(super) temporal: bool,
+    pub(super) preskip: bool,
+    pub(super) last_active_id: i32,
+    pub(super) segments: [SegmentContext; 8],
+}
+
+impl SegmentationContext {
+    pub(super) const DISABLED: Self = Self {
+        enabled: false,
+        update_map: false,
+        temporal: false,
+        preskip: false,
+        last_active_id: 0,
+        segments: [SegmentContext::EMPTY; 8],
+    };
 }
 
 /// Codec state needed before the first block in one tile.
@@ -521,6 +567,11 @@ pub(super) struct FirstBlockContext {
     pub(super) block_height: u32,
     pub(super) block_x: u32,
     pub(super) block_y: u32,
+    /// Absolute tile origin in the frame's padded four-pixel grid.
+    pub(super) tile_origin_b4_x: u32,
+    pub(super) tile_origin_b4_y: u32,
+    pub(super) frame_block_width: u32,
+    pub(super) frame_block_height: u32,
     pub(super) frame_width: u32,
     pub(super) frame_height: u32,
     pub(super) upscaled_width: u32,
@@ -558,6 +609,7 @@ impl RestorationReference {
     }
 }
 
+#[derive(Clone)]
 struct RestorationCdfs {
     switchable: [u16; 3],
     wiener: [u16; 2],
@@ -578,6 +630,184 @@ impl RestorationCdfs {
             wiener: [21_198, 0],
             sgr_projection: [15_913, 0],
         }
+    }
+}
+
+const DEFAULT_SEGMENT_ID_CDFS: [[u16; 8]; 3] = [
+    [27_146, 24_875, 16_675, 14_535, 4_959, 4_395, 235, 0],
+    [18_494, 14_538, 10_211, 7_833, 2_788, 1_917, 424, 0],
+    [5_241, 4_281, 4_045, 3_878, 371, 121, 89, 0],
+];
+const DEFAULT_SEGMENT_PRED_CDFS: [[u16; 2]; 3] = [[16_384, 0]; 3];
+const DEFAULT_DELTA_LF_CDFS: [[u16; 4]; 5] = [[4_608, 648, 91, 0]; 5];
+
+/// Complete CDF subset currently consumed by the portable intra tile path.
+///
+/// Inter/reference/motion families are deliberately represented as
+/// incomplete until their syntax is implemented. This prevents a retained
+/// intra snapshot from being mistaken for a valid primary-reference input.
+#[derive(Clone)]
+pub(super) struct FrameCdfs {
+    partition: [[[u16; 10]; 4]; 5],
+    restoration: RestorationCdfs,
+    block: super::block::BlockCdfState,
+    segment_id: [[u16; 8]; 3],
+    segment_pred: [[u16; 2]; 3],
+    delta_lf: [[u16; 4]; 5],
+    inter_complete: bool,
+}
+
+impl FrameCdfs {
+    pub(super) fn defaults(qindex: u32) -> Av1Result<Self> {
+        let block = super::block::BlockCdfState::defaults_for_qindex(qindex)
+            .ok_or_else(|| malformed("AV1 qindex has no default CDF state"))?;
+        Ok(Self {
+            partition: PARTITION_CDFS,
+            restoration: RestorationCdfs::defaults(),
+            block,
+            segment_id: DEFAULT_SEGMENT_ID_CDFS,
+            segment_pred: DEFAULT_SEGMENT_PRED_CDFS,
+            delta_lf: DEFAULT_DELTA_LF_CDFS,
+            inter_complete: false,
+        })
+    }
+
+    pub(super) const fn supports_primary_reference(&self) -> bool {
+        self.inter_complete
+    }
+
+    /// Construct the reference snapshot selected by an intra frame's
+    /// context-update tile. Key-intra luma and inter-only state remain the
+    /// frame input, while common/coefficient state is selectively published.
+    pub(super) fn publish_intra(input: &Self, adapted: &Self) -> Self {
+        let mut output = input.clone();
+        output.partition = adapted.partition;
+        output.restoration = adapted.restoration.clone();
+        output.block.publish_intra_from(&adapted.block);
+        output.segment_id = adapted.segment_id;
+        output.delta_lf = adapted.delta_lf;
+        // `segment_pred` belongs to the inter-mode subset and is not copied
+        // for key/intra-only publication.
+        output.reset_common_counts();
+        output
+    }
+
+    fn reset_common_counts(&mut self) {
+        const PARTITION_COUNTS: [usize; 5] = [7, 9, 9, 9, 3];
+        for (level, contexts) in self.partition.iter_mut().enumerate() {
+            for cdf in contexts {
+                cdf[PARTITION_COUNTS[level]] = 0;
+            }
+        }
+        self.restoration.switchable[2] = 0;
+        self.restoration.wiener[1] = 0;
+        self.restoration.sgr_projection[1] = 0;
+        for cdf in &mut self.segment_id {
+            cdf[7] = 0;
+        }
+        for cdf in &mut self.delta_lf {
+            cdf[3] = 0;
+        }
+    }
+}
+
+/// AV1's padded current/previous segmentation map, stored in four-pixel
+/// units. Stride and height retain the codec's 32-cell padding while all
+/// normative reads/writes are clipped to `width`/`height`.
+#[derive(Clone)]
+pub(super) struct SegmentMap {
+    width: u32,
+    height: u32,
+    stride: usize,
+    cells: Vec<u8>,
+}
+
+impl SegmentMap {
+    pub(super) fn new(width: u32, height: u32) -> Av1Result<Self> {
+        let stride_u32 = width
+            .checked_add(31)
+            .ok_or_else(|| malformed("segment-map stride overflows"))?
+            & !31;
+        let padded_height = height
+            .checked_add(31)
+            .ok_or_else(|| malformed("segment-map height overflows"))?
+            & !31;
+        let stride = usize::try_from(stride_u32)
+            .map_err(|_| malformed("segment-map stride exceeds usize"))?;
+        let padded_height = usize::try_from(padded_height)
+            .map_err(|_| malformed("segment-map height exceeds usize"))?;
+        let count = stride
+            .checked_mul(padded_height)
+            .ok_or_else(|| malformed("segment-map allocation overflows"))?;
+        let mut cells = Vec::new();
+        cells
+            .try_reserve_exact(count)
+            .map_err(|_| CodecError::Dimensions("unable to allocate AV1 segment map".to_owned()))?;
+        cells.resize(count, 0);
+        Ok(Self {
+            width,
+            height,
+            stride,
+            cells,
+        })
+    }
+
+    pub(super) fn compatible_with(&self, width: u32, height: u32) -> bool {
+        self.width == width && self.height == height
+    }
+
+    fn get(&self, x: u32, y: u32) -> Option<u8> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let x = usize::try_from(x).ok()?;
+        let y = usize::try_from(y).ok()?;
+        self.cells
+            .get(y.checked_mul(self.stride)?.checked_add(x)?)
+            .copied()
+    }
+
+    fn fill(&mut self, x: u32, y: u32, width: u32, height: u32, id: u8) -> Av1Result<()> {
+        if id > 7 {
+            return Err(malformed("segment id exceeds seven"));
+        }
+        if width == 0 || height == 0 || x >= self.width || y >= self.height {
+            return Err(malformed("segment-map write has invalid geometry"));
+        }
+        let end_x = x.saturating_add(width).min(self.width);
+        let end_y = y.saturating_add(height).min(self.height);
+        for row in y..end_y {
+            let start = usize::try_from(row)
+                .ok()
+                .and_then(|row| row.checked_mul(self.stride))
+                .and_then(|offset| offset.checked_add(usize::try_from(x).ok()?))
+                .ok_or_else(|| malformed("segment-map row offset overflows"))?;
+            let len = usize::try_from(end_x.saturating_sub(x))
+                .map_err(|_| malformed("segment-map span exceeds usize"))?;
+            let end = start
+                .checked_add(len)
+                .ok_or_else(|| malformed("segment-map span overflows"))?;
+            self.cells
+                .get_mut(start..end)
+                .ok_or_else(|| malformed("segment-map span exceeds allocation"))?
+                .fill(id);
+        }
+        Ok(())
+    }
+
+    fn minimum(&self, x: u32, y: u32, width: u32, height: u32) -> u8 {
+        let end_x = x.saturating_add(width).min(self.width);
+        let end_y = y.saturating_add(height).min(self.height);
+        let mut minimum = 7_u8;
+        for row in y..end_y {
+            for column in x..end_x {
+                minimum = minimum.min(self.get(column, row).unwrap_or(0));
+                if minimum == 0 {
+                    return 0;
+                }
+            }
+        }
+        minimum
     }
 }
 
@@ -730,6 +960,14 @@ fn decode_restoration_prefix(
     context: &FirstBlockContext,
 ) -> bool {
     let mut cdfs = RestorationCdfs::defaults();
+    decode_restoration_prefix_with_cdfs(decoder, context, &mut cdfs)
+}
+
+fn decode_restoration_prefix_with_cdfs(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    context: &FirstBlockContext,
+    cdfs: &mut RestorationCdfs,
+) -> bool {
     let mut references = [RestorationReference::defaults(); 3];
     let plane_count = if context.monochrome { 1 } else { 3 };
     for (plane, reference) in references.iter_mut().enumerate().take(plane_count) {
@@ -738,7 +976,7 @@ fn decode_restoration_prefix(
         };
         match restoration_unit_starts_at_first_block(context, plane) {
             Some(true) => {
-                decode_restoration_unit(decoder, &mut cdfs, reference, plane, restoration_type);
+                decode_restoration_unit(decoder, cdfs, reference, plane, restoration_type);
             }
             Some(false) => {}
             None => return false,
@@ -1650,9 +1888,17 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         decoder: &'decoder mut RangeDecoder<'data, 'input, 'spans>,
         context: &FirstBlockContext,
     ) -> Self {
+        Self::with_cdfs(decoder, context, PARTITION_CDFS)
+    }
+
+    fn with_cdfs(
+        decoder: &'decoder mut RangeDecoder<'data, 'input, 'spans>,
+        context: &FirstBlockContext,
+        cdfs: [[[u16; 10]; 4]; 5],
+    ) -> Self {
         Self {
             decoder,
-            cdfs: PARTITION_CDFS,
+            cdfs,
             contexts: PartitionContexts::new(context),
             frame_width: context.block_width,
             frame_height: context.block_height,
@@ -2215,6 +2461,198 @@ pub(super) struct Lossy420Reconstruction {
     pub(super) cdef_active: Vec<bool>,
     pub(super) loop_parameters: Option<super::filter::Parameters>,
     pub(super) cdef_parameters: Option<super::cdef::FrameParameters>,
+    pub(super) cdfs: Option<FrameCdfs>,
+}
+
+#[derive(Clone, Copy)]
+struct SegmentMapUpdate {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    id: u8,
+}
+
+fn negative_deinterleave(diff: u8, predicted: u8, maximum: u8) -> u8 {
+    if predicted == 0 {
+        diff
+    } else if predicted.saturating_add(1) >= maximum {
+        maximum.wrapping_sub(diff.wrapping_add(1))
+    } else if predicted.saturating_mul(2) < maximum {
+        if diff <= predicted.saturating_mul(2) {
+            if diff & 1 != 0 {
+                predicted.saturating_add(diff.wrapping_add(1) >> 1)
+            } else {
+                predicted.saturating_sub(diff >> 1)
+            }
+        } else {
+            diff
+        }
+    } else if diff
+        <= maximum
+            .saturating_sub(predicted)
+            .saturating_sub(1)
+            .saturating_mul(2)
+    {
+        if diff & 1 != 0 {
+            predicted.saturating_add(diff.wrapping_add(1) >> 1)
+        } else {
+            predicted.saturating_sub(diff >> 1)
+        }
+    } else {
+        maximum.wrapping_sub(diff.wrapping_add(1))
+    }
+}
+
+fn spatial_segment_prediction(tile_state: &TileState, node: PartitionNode) -> (u8, usize) {
+    let have_left = node.x != 0;
+    let have_top = node.y != 0;
+    match (have_left, have_top) {
+        (true, true) => {
+            let left = tile_state
+                .segment_at(node.x.saturating_sub(1), node.y)
+                .map_or(0, |(id, _)| id);
+            let above = tile_state
+                .segment_at(node.x, node.y.saturating_sub(1))
+                .map_or(0, |(id, _)| id);
+            let above_left = tile_state
+                .segment_at(node.x.saturating_sub(1), node.y.saturating_sub(1))
+                .map_or(0, |(id, _)| id);
+            let context = if left == above && above_left == left {
+                2
+            } else if left == above || above_left == left || above == above_left {
+                1
+            } else {
+                0
+            };
+            (if above == above_left { above } else { left }, context)
+        }
+        (true, false) => (
+            tile_state
+                .segment_at(node.x.saturating_sub(1), node.y)
+                .map_or(0, |(id, _)| id),
+            0,
+        ),
+        (false, true) => (
+            tile_state
+                .segment_at(node.x, node.y.saturating_sub(1))
+                .map_or(0, |(id, _)| id),
+            0,
+        ),
+        (false, false) => (0, 0),
+    }
+}
+
+fn previous_segment_id(
+    previous: Option<&SegmentMap>,
+    context: &FirstBlockContext,
+    node: PartitionNode,
+) -> u8 {
+    previous.map_or(0, |map| {
+        map.minimum(
+            context.tile_origin_b4_x.saturating_add(node.x),
+            context.tile_origin_b4_y.saturating_add(node.y),
+            node.width,
+            node.height,
+        )
+    })
+}
+
+/// Resolve one segment ID at either the pre-skip (`skip == None`) or
+/// post-skip (`skip == Some`) syntax position.
+fn decode_segment_id(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    context: &FirstBlockContext,
+    node: PartitionNode,
+    tile_state: &TileState,
+    previous: Option<&SegmentMap>,
+    skip: Option<bool>,
+) -> Av1Result<(u8, bool)> {
+    let segmentation = context.frame_tools.segmentation;
+    if !segmentation.enabled {
+        return Ok((0, false));
+    }
+    if !segmentation.update_map {
+        return Ok((previous_segment_id(previous, context, node), false));
+    }
+    let above_pred = node
+        .y
+        .checked_sub(1)
+        .and_then(|y| tile_state.segment_at(node.x, y))
+        .is_some_and(|(_, predicted)| predicted);
+    let left_pred = node
+        .x
+        .checked_sub(1)
+        .and_then(|x| tile_state.segment_at(x, node.y))
+        .is_some_and(|(_, predicted)| predicted);
+    let temporal_allowed = segmentation.temporal && skip != Some(true);
+    let predicted_from_previous = temporal_allowed
+        && decoder.adaptive_bool(
+            &mut cdfs.segment_pred[usize::from(above_pred) + usize::from(left_pred)],
+        );
+    if predicted_from_previous {
+        return Ok((previous_segment_id(previous, context, node), true));
+    }
+    let (predicted, spatial_context) = spatial_segment_prediction(tile_state, node);
+    if skip == Some(true) {
+        return Ok((predicted, false));
+    }
+    let difference = decoder.adaptive_symbol(&mut cdfs.segment_id[spatial_context], 7);
+    let difference =
+        u8::try_from(difference).map_err(|_| malformed("segment-id difference exceeds u8"))?;
+    let active_count = u8::try_from(segmentation.last_active_id.saturating_add(1).clamp(0, 8))
+        .map_err(|_| malformed("active segment count exceeds u8"))?;
+    let decoded = negative_deinterleave(difference, predicted, active_count);
+    if decoded >= active_count {
+        return Err(malformed("decoded segment id exceeds the active range"));
+    }
+    Ok((decoded, false))
+}
+
+fn skip_context_for_node(tile_state: &TileState, node: PartitionNode) -> Av1Result<usize> {
+    let above = match node.y.checked_sub(1) {
+        Some(y) => tile_state.neighbor_at_checked(node.x, y)?,
+        None => None,
+    };
+    let left = match node.x.checked_sub(1) {
+        Some(x) => tile_state.neighbor_at_checked(x, node.y)?,
+        None => None,
+    };
+    Ok(
+        usize::from(above.is_some_and(|neighbor| neighbor.block_skipped))
+            + usize::from(left.is_some_and(|neighbor| neighbor.block_skipped)),
+    )
+}
+
+fn effective_loop_levels(context: &FirstBlockContext, segment: SegmentContext) -> [u8; 4] {
+    let frame = context.frame_tools.loop_filter;
+    let bases = [
+        frame.level_y[0],
+        frame.level_y[1],
+        frame.level_u,
+        frame.level_v,
+    ];
+    let luma_disabled = frame.level_y == [0; 2];
+    let mut levels = [0_u8; 4];
+    for (index, level) in levels.iter_mut().enumerate() {
+        let header_disabled = (index >= 2 && bases[index] == 0) || (index < 2 && luma_disabled);
+        if header_disabled {
+            continue;
+        }
+        let base = i64::from(bases[index])
+            .saturating_add(i64::from(segment.delta_lf[index]))
+            .clamp(0, 63);
+        let reference_scale = if base >= 32 { 2_i64 } else { 1 };
+        let reference_delta = if frame.delta_enabled {
+            i64::from(frame.reference_deltas[0]) * reference_scale
+        } else {
+            0
+        };
+        let adjusted = base.saturating_add(reference_delta).clamp(0, 63);
+        *level = u8::try_from(adjusted).unwrap_or_default();
+    }
+    levels
 }
 
 impl Lossy420Reconstruction {
@@ -2229,6 +2667,7 @@ impl Lossy420Reconstruction {
             cdef_active,
             loop_parameters,
             cdef_parameters,
+            cdfs: _,
         } = self;
         let mut canvas =
             super::raster::FrameCanvas::new(leaf.width, leaf.height, subsampling_x, subsampling_y)?;
@@ -2257,9 +2696,19 @@ pub(super) fn validate_complete_lossy_420_partition(
     data: &SegmentedData<'_, '_>,
     range: Range<usize>,
     context: &FirstBlockContext,
+    input_cdfs: &FrameCdfs,
+    mut current_segment_map: Option<&mut SegmentMap>,
+    previous_segment_map: Option<&SegmentMap>,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
-    if !complete_lossy_420_reconstruction_context(context)
-        && !complete_streamed_lossless_color_context(context)
+    let segmentation = context.frame_tools.segmentation;
+    let intra_segment_features_supported = !segmentation.enabled
+        || segmentation
+            .segments
+            .iter()
+            .all(|segment| segment.reference <= 0 && !segment.global_motion);
+    if (!complete_lossy_420_reconstruction_context(context)
+        && !complete_streamed_lossless_color_context(context))
+        || !intra_segment_features_supported
     {
         return Ok(None);
     }
@@ -2269,9 +2718,18 @@ pub(super) fn validate_complete_lossy_420_partition(
     )
     .ok_or_else(|| malformed("unsupported AV1 chroma subsampling"))?;
     let mut decoder = RangeDecoder::new(data, range.start, range.end, context.disable_cdf_update)?;
+    let mut tile_cdfs = input_cdfs.clone();
+    if context.frame_tools.segmentation.enabled {
+        let current = current_segment_map
+            .as_deref()
+            .ok_or_else(|| malformed("enabled segmentation omits current map"))?;
+        if !current.compatible_with(context.frame_block_width, context.frame_block_height) {
+            return Err(malformed("current segment map has incompatible dimensions"));
+        }
+    }
     #[cfg(coverage)]
     decoder.enable_operation_trace();
-    if !decode_restoration_prefix(&mut decoder, context) {
+    if !decode_restoration_prefix_with_cdfs(&mut decoder, context, &mut tile_cdfs.restoration) {
         return Ok(None);
     }
 
@@ -2295,10 +2753,11 @@ pub(super) fn validate_complete_lossy_420_partition(
         .ok_or_else(|| malformed("superblock root size is invalid"))?;
     let root_step =
         usize::try_from(root_size).map_err(|_| malformed("superblock root size exceeds usize"))?;
-    let mut walker = PartitionWalker::new(&mut decoder, context);
-    let Some(mut block_decoder) = super::block::Lossy420Decoder::with_qindex_and_sampling(
+    let mut walker = PartitionWalker::with_cdfs(&mut decoder, context, tile_cdfs.partition);
+    let Some(mut block_decoder) = super::block::Lossy420Decoder::with_cdf_state(
         quantization.qindex,
         chroma_sampling,
+        &tile_cdfs.block,
     ) else {
         return Ok(None);
     };
@@ -2351,6 +2810,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     } else {
         Vec::new()
     };
+    let mut segment_updates = Vec::<SegmentMapUpdate>::new();
     let mut unsupported = false;
 
     for root_y in (0..context.block_height).step_by(root_step) {
@@ -2436,6 +2896,51 @@ pub(super) fn validate_complete_lossy_420_partition(
                         .saturating_sub(node.y)
                         .saturating_mul(4),
                 );
+                tools.skip_context = skip_context_for_node(&tile_state, node)?;
+                let segmentation = context.frame_tools.segmentation;
+                let (segment_id, segment_pred, selected_segment) = if !segmentation.update_map
+                    || segmentation.preskip
+                {
+                    let (segment_id, segment_pred) = decode_segment_id(
+                        decoder,
+                        &mut tile_cdfs,
+                        context,
+                        node,
+                        &tile_state,
+                        previous_segment_map,
+                        None,
+                    )?;
+                    let segment = segmentation.segments[usize::from(segment_id)];
+                    block_decoder.select_segment(segment.delta_q, segment.qindex, segment.lossless);
+                    if block_decoder
+                        .decode_skip(decoder, tools.skip_context, segment.skip)
+                        .is_err()
+                    {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    }
+                    (segment_id, segment_pred, segment)
+                } else {
+                    let skip = match block_decoder.decode_skip(decoder, tools.skip_context, false) {
+                        Ok(skip) => skip,
+                        Err(_) => {
+                            unsupported = true;
+                            return Ok(PartitionVisitControl::Stop);
+                        }
+                    };
+                    let (segment_id, segment_pred) = decode_segment_id(
+                        decoder,
+                        &mut tile_cdfs,
+                        context,
+                        node,
+                        &tile_state,
+                        previous_segment_map,
+                        Some(skip),
+                    )?;
+                    let segment = segmentation.segments[usize::from(segment_id)];
+                    block_decoder.select_segment(segment.delta_q, segment.qindex, segment.lossless);
+                    (segment_id, segment_pred, segment)
+                };
                 block_decoder.begin_block(
                     syntax_block_size,
                     palette_entropy_width,
@@ -2550,7 +3055,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             &decoded,
                             context.subsampling_x,
                             context.subsampling_y,
-                            quantization.segment_lossless,
+                            selected_segment.lossless,
                         )
                     else {
                         unsupported = true;
@@ -2578,9 +3083,19 @@ pub(super) fn validate_complete_lossy_420_partition(
                         luma_tx_height: luma_tx.1,
                         chroma_tx_width: chroma_tx.0,
                         chroma_tx_height: chroma_tx.1,
+                        levels: effective_loop_levels(context, selected_segment),
                     });
                 }
-                tile_state.commit(node, has_chroma, &decoded)?;
+                if segmentation.update_map {
+                    segment_updates.push(SegmentMapUpdate {
+                        x: context.tile_origin_b4_x.saturating_add(node.x),
+                        y: context.tile_origin_b4_y.saturating_add(node.y),
+                        width: node.width,
+                        height: node.height,
+                        id: segment_id,
+                    });
+                }
+                tile_state.commit(node, has_chroma, &decoded, segment_id, segment_pred)?;
                 Ok(PartitionVisitControl::Continue)
             })?;
             if unsupported || matches!(control, PartitionVisitControl::Stop) {
@@ -2591,12 +3106,23 @@ pub(super) fn validate_complete_lossy_420_partition(
     if tile_state.is_empty() {
         return Ok(None);
     }
+    tile_cdfs.partition = walker.cdfs;
+    drop(walker);
+    tile_cdfs.block = block_decoder.cdf_state();
     if decoder.symbol_coder_overread() {
         return Err(malformed("entropy symbol coder overread the tile padding"));
     }
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
     let planes = canvas.finish()?;
+    if !segment_updates.is_empty() {
+        let map = current_segment_map
+            .as_deref_mut()
+            .ok_or_else(|| malformed("segment updates omit their current map"))?;
+        for update in segment_updates {
+            map.fill(update.x, update.y, update.width, update.height, update.id)?;
+        }
+    }
     let leaf = super::block::FirstLeaf {
         width: context.frame_width,
         height: context.frame_height,
@@ -2627,6 +3153,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         cdef_active,
         loop_parameters,
         cdef_parameters: cdef_frame_parameters,
+        cdfs: Some(tile_cdfs),
     }))
 }
 
@@ -2695,7 +3222,6 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && !context.monochrome
         && layout_supported
         && !context.superres_enabled
-        && !context.segmentation_enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.frame_tools.delta_q_present
@@ -2721,7 +3247,6 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && !context.superres_enabled
-        && !context.segmentation_enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.monochrome
@@ -2827,31 +3352,8 @@ fn cdef_frame_parameters(context: &FirstBlockContext) -> Option<super::cdef::Fra
 
 fn loop_filter_parameters(context: &FirstBlockContext) -> Option<super::filter::Parameters> {
     let loop_filter = context.frame_tools.loop_filter;
-    let intra_level = |level: u32| {
-        if level == 0 {
-            0
-        } else {
-            // Intra blocks use reference slot zero only. AV1 never applies a
-            // mode delta to intra, and reference deltas are doubled for base
-            // levels at least 32.
-            let reference_delta = if loop_filter.delta_enabled {
-                loop_filter.reference_deltas[0].saturating_mul(if level >= 32 { 2 } else { 1 })
-            } else {
-                0
-            };
-            let adjusted = i32::try_from(level)
-                .unwrap_or(i32::MAX)
-                .saturating_add(reference_delta)
-                .clamp(0, 63);
-            u32::try_from(adjusted).unwrap_or_default()
-        }
-    };
     (loop_filter.level_y != [0, 0] || loop_filter.level_u != 0 || loop_filter.level_v != 0)
         .then_some(super::filter::Parameters {
-            luma_vertical: intra_level(loop_filter.level_y[0]),
-            luma_horizontal: intra_level(loop_filter.level_y[1]),
-            chroma_u: intra_level(loop_filter.level_u),
-            chroma_v: intra_level(loop_filter.level_v),
             sharpness: loop_filter.sharpness,
             bit_depth: context.bit_depth,
         })
@@ -3095,7 +3597,7 @@ fn lossy_quantization_for_context(
         .ok_or_else(|| malformed("AV1 lossy sample depth is unsupported"))?;
     Ok(super::block::LossyQuantization {
         sample_depth,
-        qindex: context.frame_tools.segment_qindex,
+        qindex: frame_quantization.base,
         delta_q_present: context.frame_tools.delta_q_present,
         resolution_log2: context.frame_tools.delta_q_resolution_log2,
         y_dc_delta: frame_quantization.y_dc_delta,
@@ -3353,7 +3855,6 @@ fn closed_base_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         & (context.bit_depth == 8)
         & !context.superres_enabled
-        & !context.segmentation_enabled
         & !context.skip_mode_enabled
         & !context.allow_intrabc
         & !context.monochrome
@@ -3435,6 +3936,13 @@ const CLOSED_LOSSY_420_FRAME_TOOLS: FrameToolsContext = FrameToolsContext {
     transform_mode: 1,
     reduced_transform_set: false,
     film_grain_present: false,
+    segmentation: SegmentationContext {
+        segments: [SegmentContext {
+            qindex: 4,
+            ..SegmentContext::EMPTY
+        }; 8],
+        ..SegmentationContext::DISABLED
+    },
 };
 
 fn closed_lossy_420_frame_context(context: &FirstBlockContext) -> bool {
@@ -4693,6 +5201,10 @@ fn coverage_context() -> FirstBlockContext {
         block_height: 16,
         block_x: 0,
         block_y: 0,
+        tile_origin_b4_x: 0,
+        tile_origin_b4_y: 0,
+        frame_block_width: 16,
+        frame_block_height: 16,
         frame_width: 64,
         frame_height: 64,
         upscaled_width: 64,
@@ -4734,6 +5246,7 @@ fn coverage_context() -> FirstBlockContext {
             transform_mode: 0,
             reduced_transform_set: false,
             film_grain_present: false,
+            segmentation: SegmentationContext::DISABLED,
         },
     }
 }

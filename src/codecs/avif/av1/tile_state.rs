@@ -36,6 +36,8 @@ struct TileCell {
     owner: Option<OwnerId>,
     right_context: u8,
     bottom_context: u8,
+    segment_id: u8,
+    segment_pred: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -61,6 +63,8 @@ impl Default for TileCell {
             owner: None,
             right_context: 0x40,
             bottom_context: 0x40,
+            segment_id: 0,
+            segment_pred: false,
         }
     }
 }
@@ -200,6 +204,18 @@ impl TileState {
         }
         let index = y.checked_mul(self.width)?.checked_add(x)?;
         self.cells.get(index)?.owner
+    }
+
+    pub(super) fn segment_at(&self, x: u32, y: u32) -> Option<(u8, bool)> {
+        let x = usize::try_from(x).ok()?;
+        let y = usize::try_from(y).ok()?;
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let index = y.checked_mul(self.width)?.checked_add(x)?;
+        self.cells
+            .get(index)
+            .map(|cell| (cell.segment_id, cell.segment_pred))
     }
 
     pub(super) fn block_at(&self, x: u32, y: u32) -> Option<(OwnerId, &DecodedBlockMeta)> {
@@ -440,6 +456,8 @@ impl TileState {
         node: PartitionNode,
         has_chroma: bool,
         leaf: &FirstLeaf,
+        segment_id: u8,
+        segment_pred: bool,
     ) -> Av1Result<OwnerId> {
         let (coded_width, coded_height) = node.block_size.mi_dimensions();
         if coded_width != node.coded_width
@@ -598,6 +616,8 @@ impl TileState {
                 cell.owner = Some(owner);
                 cell.right_context = row_context(y, luma_right_contexts, node.y);
                 cell.bottom_context = bottom_context;
+                cell.segment_id = segment_id;
+                cell.segment_pred = segment_pred;
             }
         }
         if let Some((chroma_x, chroma_y, chroma_end_x, chroma_end_y)) = chroma_geometry {

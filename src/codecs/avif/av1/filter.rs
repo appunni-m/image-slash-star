@@ -21,14 +21,12 @@ pub(crate) struct Block {
     pub(crate) luma_tx_height: usize,
     pub(crate) chroma_tx_width: usize,
     pub(crate) chroma_tx_height: usize,
+    /// Effective loop-filter levels for Y-vertical, Y-horizontal, U, and V.
+    pub(crate) levels: [u8; 4],
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Parameters {
-    pub(crate) luma_vertical: u32,
-    pub(crate) luma_horizontal: u32,
-    pub(crate) chroma_u: u32,
-    pub(crate) chroma_v: u32,
     pub(crate) sharpness: u32,
     pub(crate) bit_depth: u32,
 }
@@ -62,56 +60,63 @@ pub(crate) fn apply(
 
     let luma_mask = build_masks(dimensions[0], blocks, false, false, false)?;
     let chroma_mask = build_masks(dimensions[1], blocks, true, subsampling_x, subsampling_y)?;
-    let luma_lut = thresholds(parameters.luma_vertical, parameters.sharpness);
-    let luma_horizontal_lut = thresholds(parameters.luma_horizontal, parameters.sharpness);
-    let chroma_u_lut = thresholds(parameters.chroma_u, parameters.sharpness);
-    let chroma_v_lut = thresholds(parameters.chroma_v, parameters.sharpness);
-
+    let threshold_lut: [(i32, i32, i32); 64] = std::array::from_fn(|level| {
+        thresholds(
+            u32::try_from(level).unwrap_or_default(),
+            parameters.sharpness,
+        )
+    });
     apply_vertical(
         &mut planes[0],
         dimensions[0],
-        &luma_mask.vertical,
-        luma_lut,
+        &luma_mask,
+        &threshold_lut,
+        0,
         false,
         parameters.bit_depth,
     )?;
     apply_horizontal(
         &mut planes[0],
         dimensions[0],
-        &luma_mask.horizontal,
-        luma_horizontal_lut,
+        &luma_mask,
+        &threshold_lut,
+        1,
         false,
         parameters.bit_depth,
     )?;
     apply_vertical(
         &mut planes[1],
         dimensions[1],
-        &chroma_mask.vertical,
-        chroma_u_lut,
+        &chroma_mask,
+        &threshold_lut,
+        2,
         true,
         parameters.bit_depth,
     )?;
     apply_horizontal(
         &mut planes[1],
         dimensions[1],
-        &chroma_mask.horizontal,
-        chroma_u_lut,
+        &chroma_mask,
+        &threshold_lut,
+        2,
         true,
         parameters.bit_depth,
     )?;
     apply_vertical(
         &mut planes[2],
         dimensions[1],
-        &chroma_mask.vertical,
-        chroma_v_lut,
+        &chroma_mask,
+        &threshold_lut,
+        3,
         true,
         parameters.bit_depth,
     )?;
     apply_horizontal(
         &mut planes[2],
         dimensions[1],
-        &chroma_mask.horizontal,
-        chroma_v_lut,
+        &chroma_mask,
+        &threshold_lut,
+        3,
         true,
         parameters.bit_depth,
     )?;
@@ -123,6 +128,7 @@ struct Masks {
     horizontal: Vec<u8>,
     width_units: usize,
     height_units: usize,
+    levels: Vec<[u8; 4]>,
 }
 
 fn build_masks(
@@ -142,6 +148,7 @@ fn build_masks(
         horizontal: vec![NO_EDGE; mask_height.checked_mul(width_units)?],
         width_units,
         height_units,
+        levels: vec![[0; 4]; width_units.checked_mul(height_units)?],
     };
 
     for block in blocks {
@@ -194,6 +201,12 @@ fn build_masks(
             .min(masks.height_units);
         let horizontal_tx = transform_units(tx_width);
         let vertical_tx = transform_units(tx_height);
+        for row in y_units..end_y {
+            for column in x_units..end_x {
+                let index = row.checked_mul(masks.width_units)?.checked_add(column)?;
+                *masks.levels.get_mut(index)? = block.levels;
+            }
+        }
         if x_units > 0 {
             for segment in y_units..end_y {
                 set_min(
@@ -295,8 +308,9 @@ fn thresholds(level: u32, sharpness: u32) -> (i32, i32, i32) {
 fn apply_vertical(
     plane: &mut [u16],
     dimensions: (usize, usize),
-    mask: &[u8],
-    thresholds: (i32, i32, i32),
+    masks: &Masks,
+    threshold_lut: &[(i32, i32, i32); 64],
+    level_index: usize,
     chroma: bool,
     bit_depth: u32,
 ) -> Option<()> {
@@ -307,10 +321,20 @@ fn apply_vertical(
     for y_unit in 0..height_units {
         for x_unit in 1..width_units {
             let index = y_unit.checked_mul(mask_width)?.checked_add(x_unit)?;
-            let edge = *mask.get(index)?;
+            let edge = *masks.vertical.get(index)?;
             if edge == NO_EDGE {
                 continue;
             }
+            let level = usize::from(
+                *masks
+                    .levels
+                    .get(y_unit.checked_mul(width_units)?.checked_add(x_unit)?)?
+                    .get(level_index)?,
+            );
+            if level == 0 {
+                continue;
+            }
+            let thresholds = *threshold_lut.get(level)?;
             let x = x_unit.checked_mul(4)?;
             let y = y_unit.checked_mul(4)?;
             let rows = height.saturating_sub(y).min(4);
@@ -335,8 +359,9 @@ fn apply_vertical(
 fn apply_horizontal(
     plane: &mut [u16],
     dimensions: (usize, usize),
-    mask: &[u8],
-    thresholds: (i32, i32, i32),
+    masks: &Masks,
+    threshold_lut: &[(i32, i32, i32); 64],
+    level_index: usize,
     chroma: bool,
     bit_depth: u32,
 ) -> Option<()> {
@@ -346,10 +371,20 @@ fn apply_horizontal(
     for y_unit in 1..height_units {
         for x_unit in 0..width_units {
             let index = y_unit.checked_mul(width_units)?.checked_add(x_unit)?;
-            let edge = *mask.get(index)?;
+            let edge = *masks.horizontal.get(index)?;
             if edge == NO_EDGE {
                 continue;
             }
+            let level = usize::from(
+                *masks
+                    .levels
+                    .get(y_unit.checked_mul(width_units)?.checked_add(x_unit)?)?
+                    .get(level_index)?,
+            );
+            if level == 0 {
+                continue;
+            }
+            let thresholds = *threshold_lut.get(level)?;
             let x = x_unit.checked_mul(4)?;
             let y = y_unit.checked_mul(4)?;
             let columns = width.saturating_sub(x).min(4);
@@ -776,6 +811,7 @@ mod tests {
             luma_tx_height: 8,
             chroma_tx_width: 4,
             chroma_tx_height: 4,
+            levels: [9; 4],
         }];
         assert!(
             apply(
@@ -783,10 +819,6 @@ mod tests {
                 [(8, 8), (4, 4), (4, 4)],
                 &blocks,
                 Parameters {
-                    luma_vertical: 9,
-                    luma_horizontal: 9,
-                    chroma_u: 9,
-                    chroma_v: 9,
                     sharpness: 0,
                     bit_depth: 8,
                 },

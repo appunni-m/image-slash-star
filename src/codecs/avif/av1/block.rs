@@ -2952,6 +2952,190 @@ pub(super) struct RectangularNeighbors<'a> {
     pub(super) left_bottom: Option<&'a FirstLeaf>,
 }
 
+/// Canonical block-level adaptive state retained by an AV1 reference frame.
+///
+/// The working decoder still carries a number of fixture-era duplicate
+/// coefficient tables.  Those tables and the last-residual scratch values are
+/// deliberately absent here: reference CDF publication must retain exactly
+/// one normative coefficient family and no block-local scratch.
+#[derive(Clone)]
+pub(super) struct BlockCdfState {
+    coefficient: super::coefficient_cdfs::CoefficientCdfs,
+    transform_type: super::coefficient_cdfs::TransformTypeCdfs,
+    skip: [[u16; 2]; 3],
+    delta_q: [u16; 4],
+    transform_size: [[[u16; 4]; 3]; 4],
+    /// Key/intra luma-mode (`kfym`) state.  This is consumed by key and
+    /// intra-only tiles but is intentionally not replaced during reference
+    /// CDF publication, matching rav1d's thread-update contract.
+    luma_mode: [[u16; 13]; 25],
+    luma_angle: [[u16; 7]; 8],
+    chroma_mode: [[u16; 13]; 13],
+    subsampled_chroma_mode: [[u16; 14]; 13],
+    cfl_sign: [u16; 8],
+    cfl_alpha: [[u16; 16]; 6],
+    palette_y: [[[u16; 2]; 3]; 7],
+    palette_uv: [[u16; 2]; 2],
+    palette_size: [[[u16; 7]; 7]; 2],
+    color_map: [[[[u16; 8]; 5]; 7]; 2],
+    use_filter_intra: [[u16; 2]; 22],
+    filter_intra: [u16; 5],
+}
+
+impl BlockCdfState {
+    pub(super) fn defaults_for_qindex(qindex: u32) -> Option<Self> {
+        BlockCdfs::defaults_for_qindex([0, 0], qindex).map(|cdfs| cdfs.snapshot())
+    }
+
+    /// Publish the canonical coefficient/common-mode subset adapted by an
+    /// intra tile while preserving the input key-intra luma table.
+    pub(super) fn publish_intra_from(&mut self, adapted: &Self) {
+        let luma_mode = self.luma_mode;
+        *self = adapted.clone();
+        self.reset_counts();
+        // `kfym` is outside rav1d's intra publication/reset subset: retain
+        // both its probabilities and the adaptation counts from the input.
+        self.luma_mode = luma_mode;
+    }
+
+    fn reset_counts(&mut self) {
+        fn reset<const N: usize>(cdf: &mut [u16; N], count_index: usize) {
+            if let Some(count) = cdf.get_mut(count_index) {
+                *count = 0;
+            }
+        }
+
+        let coefficient = &mut self.coefficient;
+        for plane in &mut coefficient.eob_bin_16 {
+            for cdf in plane {
+                reset(cdf, 4);
+            }
+        }
+        for plane in &mut coefficient.eob_bin_32 {
+            for cdf in plane {
+                reset(cdf, 5);
+            }
+        }
+        for plane in &mut coefficient.eob_bin_64 {
+            for cdf in plane {
+                reset(cdf, 6);
+            }
+        }
+        for plane in &mut coefficient.eob_bin_128 {
+            for cdf in plane {
+                reset(cdf, 7);
+            }
+        }
+        for plane in &mut coefficient.eob_bin_256 {
+            for cdf in plane {
+                reset(cdf, 8);
+            }
+        }
+        for cdf in &mut coefficient.eob_bin_512 {
+            reset(cdf, 9);
+        }
+        for cdf in &mut coefficient.eob_bin_1024 {
+            reset(cdf, 10);
+        }
+        for tx in &mut coefficient.eob_base_tok {
+            for plane in tx {
+                for cdf in plane {
+                    reset(cdf, 2);
+                }
+            }
+        }
+        for tx in &mut coefficient.base_tok {
+            for plane in tx {
+                for cdf in plane {
+                    reset(cdf, 3);
+                }
+            }
+        }
+        for tx in &mut coefficient.br_tok {
+            for plane in tx {
+                for cdf in plane {
+                    reset(cdf, 3);
+                }
+            }
+        }
+        for tx in &mut coefficient.eob_hi_bit {
+            for plane in tx {
+                for cdf in plane {
+                    reset(cdf, 1);
+                }
+            }
+        }
+        for tx in &mut coefficient.skip {
+            for cdf in tx {
+                reset(cdf, 1);
+            }
+        }
+        for plane in &mut coefficient.dc_sign {
+            for cdf in plane {
+                reset(cdf, 1);
+            }
+        }
+        for size in &mut self.transform_type.intra1 {
+            for cdf in size {
+                reset(cdf, 6);
+            }
+        }
+        for size in &mut self.transform_type.intra2 {
+            for cdf in size {
+                reset(cdf, 4);
+            }
+        }
+        for cdf in &mut self.skip {
+            reset(cdf, 1);
+        }
+        reset(&mut self.delta_q, 3);
+        for (row, contexts) in self.transform_size.iter_mut().enumerate() {
+            let count_index = row.saturating_add(1).min(2);
+            for cdf in contexts {
+                reset(cdf, count_index);
+            }
+        }
+        for cdf in &mut self.luma_angle {
+            reset(cdf, 6);
+        }
+        for cdf in &mut self.chroma_mode {
+            reset(cdf, 12);
+        }
+        for cdf in &mut self.subsampled_chroma_mode {
+            reset(cdf, 13);
+        }
+        reset(&mut self.cfl_sign, 7);
+        for cdf in &mut self.cfl_alpha {
+            reset(cdf, 15);
+        }
+        for block in &mut self.palette_y {
+            for cdf in block {
+                reset(cdf, 1);
+            }
+        }
+        for cdf in &mut self.palette_uv {
+            reset(cdf, 1);
+        }
+        for plane in &mut self.palette_size {
+            for cdf in plane {
+                reset(cdf, 6);
+            }
+        }
+        for plane in &mut self.color_map {
+            for (size_index, contexts) in plane.iter_mut().enumerate() {
+                for cdf in contexts {
+                    // `size_index` is palette size minus two.
+                    reset(cdf, size_index.saturating_add(1));
+                }
+            }
+        }
+        for cdf in &mut self.use_filter_intra {
+            reset(cdf, 1);
+        }
+        reset(&mut self.filter_intra, 4);
+    }
+}
+
 struct BlockCdfs {
     coefficient: super::coefficient_cdfs::CoefficientCdfs,
     transform_type: super::coefficient_cdfs::TransformTypeCdfs,
@@ -5642,6 +5826,48 @@ const QCAT3_LUMA_8X8_SKIP: [[u16; 2]; 7] = [
     [1_731, 0],
 ];
 impl BlockCdfs {
+    fn snapshot(&self) -> BlockCdfState {
+        BlockCdfState {
+            coefficient: self.coefficient.clone(),
+            transform_type: self.transform_type.clone(),
+            skip: self.skip,
+            delta_q: self.delta_q,
+            transform_size: self.transform_size,
+            luma_mode: self.luma_mode,
+            luma_angle: self.luma_angle,
+            chroma_mode: self.chroma_mode,
+            subsampled_chroma_mode: self.subsampled_chroma_mode,
+            cfl_sign: self.cfl_sign,
+            cfl_alpha: self.cfl_alpha,
+            palette_y: self.palette_y,
+            palette_uv: self.palette_uv,
+            palette_size: self.palette_size,
+            color_map: self.color_map,
+            use_filter_intra: self.use_filter_intra,
+            filter_intra: self.filter_intra,
+        }
+    }
+
+    fn install_snapshot(&mut self, snapshot: &BlockCdfState) {
+        self.coefficient = snapshot.coefficient.clone();
+        self.transform_type = snapshot.transform_type.clone();
+        self.skip = snapshot.skip;
+        self.delta_q = snapshot.delta_q;
+        self.transform_size = snapshot.transform_size;
+        self.luma_mode = snapshot.luma_mode;
+        self.luma_angle = snapshot.luma_angle;
+        self.chroma_mode = snapshot.chroma_mode;
+        self.subsampled_chroma_mode = snapshot.subsampled_chroma_mode;
+        self.cfl_sign = snapshot.cfl_sign;
+        self.cfl_alpha = snapshot.cfl_alpha;
+        self.palette_y = snapshot.palette_y;
+        self.palette_uv = snapshot.palette_uv;
+        self.palette_size = snapshot.palette_size;
+        self.color_map = snapshot.color_map;
+        self.use_filter_intra = snapshot.use_filter_intra;
+        self.filter_intra = snapshot.filter_intra;
+    }
+
     // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:113-138, 169-177, 412-414,
     // 719-905 and 1313-1348 for q-context zero. Filter-intra is
     // indexed by block size at src/cdf.c:88-110.
@@ -18212,8 +18438,11 @@ fn decode_syntax_with_palette_entropy(
         palette_entropy_dimensions,
         0,
         None,
+        None,
+        0,
+        matches!(policy.quantization_syntax, QuantizationSyntax::Lossless),
     )
-    .map(|(syntax, _)| syntax)
+    .map(|(syntax, _, _)| syntax)
 }
 
 #[derive(Clone, Copy)]
@@ -18223,6 +18452,10 @@ struct DecodedIntraHeader {
     skip: bool,
     cdef: CdefMetadata,
     lossless: bool,
+    /// Tile delta-q accumulator before the selected segment's ALT_Q is
+    /// applied. This, rather than the effective dequant qindex, carries to
+    /// the next block.
+    tile_qindex: u32,
     lossy_quantization: LossyQuantization,
     luma_predictor: LumaPredictor,
     luma_angle: Option<i32>,
@@ -18503,8 +18736,13 @@ fn decode_intra_header(
     palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
     cdef_index_bits: u32,
     segment_lossless: bool,
+    predecoded_skip: Option<bool>,
+    segment_delta_q: i32,
 ) -> PortableResult<DecodedIntraHeader> {
-    let skip = decoder.adaptive_bool(cdfs.skip.get_mut(tools.skip_context).portable()?);
+    let skip = match predecoded_skip {
+        Some(skip) => skip,
+        None => decoder.adaptive_bool(cdfs.skip.get_mut(tools.skip_context).portable()?),
+    };
     let cdef_index = if skip {
         0
     } else {
@@ -18525,6 +18763,13 @@ fn decode_intra_header(
         effective_quantization_syntax,
         tools.sample_depth,
     )?;
+    let tile_qindex = lossy_quantization.qindex;
+    lossy_quantization.qindex = u32::try_from(
+        i64::from(tile_qindex)
+            .saturating_add(i64::from(segment_delta_q))
+            .clamp(0, 255),
+    )
+    .map_err(|_| PortableUnavailable)?;
     lossy_quantization.segment_lossless = segment_lossless;
     let (luma_mode, luma_predictor, luma_angle) = decode_luma_intra_header(
         decoder,
@@ -18609,6 +18854,7 @@ fn decode_intra_header(
             index: usize::try_from(cdef_index).unwrap_or_default(),
         },
         lossless: segment_lossless,
+        tile_qindex,
         lossy_quantization,
         luma_predictor,
         luma_angle,
@@ -18636,7 +18882,10 @@ fn decode_syntax_with_cdef(
     palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
     cdef_index_bits: u32,
     large_coeff_arena: Option<&mut LargeCoefficientArena>,
-) -> PortableResult<(BlockSyntax, CdefMetadata)> {
+    predecoded_skip: Option<bool>,
+    segment_delta_q: i32,
+    segment_lossless: bool,
+) -> PortableResult<(BlockSyntax, CdefMetadata, u32)> {
     // The current pure-Rust 4:2:2 path is deliberately limited to the
     // reference-proven Square16 terminal. Reject other geometries before
     // reading even the block skip symbol; their transform/CDF tables are not
@@ -18669,7 +18918,9 @@ fn decode_syntax_with_cdef(
         tools,
         palette_entropy_dimensions,
         cdef_index_bits,
-        matches!(policy.quantization_syntax, QuantizationSyntax::Lossless),
+        segment_lossless,
+        predecoded_skip,
+        segment_delta_q,
     )?;
     let DecodedIntraHeader {
         skip,
@@ -18683,6 +18934,7 @@ fn decode_syntax_with_cdef(
         palette,
         transform_luma_mode,
         transform_depth,
+        tile_qindex,
         ..
     } = header;
 
@@ -20501,6 +20753,7 @@ fn decode_syntax_with_cdef(
             },
         },
         cdef,
+        tile_qindex,
     ))
 }
 
@@ -47714,6 +47967,21 @@ fn generic_plane_geometry(
     Ok((coded_width, coded_height, active_width, active_height))
 }
 
+#[derive(Clone, Copy)]
+struct BlockSegmentState {
+    delta_q: i32,
+    qindex: u32,
+    lossless: bool,
+}
+
+impl BlockSegmentState {
+    const DEFAULT: Self = Self {
+        delta_q: 0,
+        qindex: 0,
+        lossless: true,
+    };
+}
+
 pub(super) struct Lossy420Decoder {
     cdfs: BlockCdfs,
     large_coeff_arena: LargeCoefficientArena,
@@ -47728,6 +47996,8 @@ pub(super) struct Lossy420Decoder {
     cdef_root_size: u32,
     pending_delta_q: bool,
     current_qindex: Option<u32>,
+    segment: BlockSegmentState,
+    pending_skip: Option<bool>,
     last_cdef_active: bool,
     last_cdef_index: usize,
     pending_block_geometry: Option<PendingBlockGeometry>,
@@ -47749,6 +48019,8 @@ impl Lossy420Decoder {
             cdef_root_size: 16,
             pending_delta_q: false,
             current_qindex: None,
+            segment: BlockSegmentState::DEFAULT,
+            pending_skip: None,
             last_cdef_active: false,
             last_cdef_index: 0,
             pending_block_geometry: None,
@@ -47770,6 +48042,12 @@ impl Lossy420Decoder {
             cdef_root_size: 16,
             pending_delta_q: false,
             current_qindex: Some(qindex),
+            segment: BlockSegmentState {
+                qindex,
+                lossless: qindex == 0,
+                ..BlockSegmentState::DEFAULT
+            },
+            pending_skip: None,
             last_cdef_active: false,
             last_cdef_index: 0,
             pending_block_geometry: None,
@@ -47794,10 +48072,58 @@ impl Lossy420Decoder {
             cdef_root_size: 16,
             pending_delta_q: false,
             current_qindex: Some(qindex),
+            segment: BlockSegmentState {
+                qindex,
+                lossless: qindex == 0,
+                ..BlockSegmentState::DEFAULT
+            },
+            pending_skip: None,
             last_cdef_active: false,
             last_cdef_index: 0,
             pending_block_geometry: None,
         })
+    }
+
+    pub(super) fn with_cdf_state(
+        qindex: u32,
+        chroma_sampling: ChromaSampling,
+        state: &BlockCdfState,
+    ) -> Option<Self> {
+        let mut decoder = Self::with_qindex_and_sampling(qindex, chroma_sampling)?;
+        decoder.cdfs.install_snapshot(state);
+        Some(decoder)
+    }
+
+    pub(super) fn cdf_state(&self) -> BlockCdfState {
+        self.cdfs.snapshot()
+    }
+
+    /// Select the segment effects for the next block. Segment selection is
+    /// external because its pre/post-skip ordering also owns the frame-level
+    /// segment map and CDFs.
+    pub(super) fn select_segment(&mut self, delta_q: i32, qindex: u32, lossless: bool) {
+        self.segment = BlockSegmentState {
+            delta_q,
+            qindex,
+            lossless,
+        };
+    }
+
+    /// Decode (or force) the block skip sentence at its normative position.
+    /// The result is consumed exactly once by the following block decode.
+    pub(super) fn decode_skip(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        skip_context: usize,
+        forced: bool,
+    ) -> PortableResult<bool> {
+        let skip = if forced {
+            true
+        } else {
+            decoder.adaptive_bool(self.cdfs.skip.get_mut(skip_context).portable()?)
+        };
+        self.pending_skip = Some(skip);
+        Ok(skip)
     }
 
     /// Preserve nominal coded geometry separately from the palette entropy
@@ -47910,12 +48236,14 @@ impl Lossy420Decoder {
         if let Some(qindex) = self.current_qindex {
             quantization.qindex = qindex;
         }
+        quantization.segment_qindex = self.segment.qindex;
+        quantization.segment_lossless = self.segment.lossless;
         quantization.delta_q_present &= self.take_delta_q();
         quantization
     }
 
-    fn remember_qindex(&mut self, syntax: &BlockSyntax, _decoder: &RangeDecoder<'_, '_, '_>) {
-        self.current_qindex = Some(syntax.lossy_quantization.qindex);
+    fn remember_qindex(&mut self, tile_qindex: u32, _decoder: &RangeDecoder<'_, '_, '_>) {
+        self.current_qindex = Some(tile_qindex);
     }
 
     fn remember_cdef(
@@ -47966,6 +48294,7 @@ impl Lossy420Decoder {
         // before any gate so an early terminal rejection cannot arm the next
         // call with stale block dimensions.
         let pending_block_geometry = self.pending_block_geometry.take();
+        let predecoded_skip = self.pending_skip.take();
         let full_large = matches!(chroma_sampling, ChromaSampling::Full)
             && full_large_chroma_geometry(transform_grid).is_ok();
         if self.qcat_one_square_only
@@ -47986,7 +48315,7 @@ impl Lossy420Decoder {
         self.palette_map_arena.begin_leaf()?;
         let palette_entropy_dimensions =
             pending_block_geometry.map(|geometry| geometry.palette_entropy_dimensions);
-        let (syntax, metadata) = super::block::decode_syntax_with_cdef(
+        let (syntax, metadata, tile_qindex) = super::block::decode_syntax_with_cdef(
             decoder,
             &mut self.cdfs,
             &mut self.palette_map_arena,
@@ -47997,6 +48326,9 @@ impl Lossy420Decoder {
             palette_entropy_dimensions,
             cdef_index_bits,
             Some(&mut self.large_coeff_arena),
+            predecoded_skip,
+            self.segment.delta_q,
+            self.segment.lossless,
         )?;
         if let Some(geometry) = pending_block_geometry {
             self.remember_cdef(metadata, geometry);
@@ -48004,6 +48336,7 @@ impl Lossy420Decoder {
             self.last_cdef_active = metadata.active;
             self.last_cdef_index = metadata.index;
         }
+        self.remember_qindex(tile_qindex, decoder);
         Ok(syntax)
     }
 
@@ -48049,6 +48382,7 @@ impl Lossy420Decoder {
         // rejects the leaf. This mirrors the legacy decoder's failure state
         // and prevents a stale palette rectangle from reaching its sibling.
         let pending = self.pending_block_geometry.take().portable()?;
+        let predecoded_skip = self.pending_skip.take();
         (pending.block_size == block_size)
             .then_some(())
             .portable()?;
@@ -48162,9 +48496,11 @@ impl Lossy420Decoder {
             Some(pending.palette_entropy_dimensions),
             cdef_index_bits,
             quantization.segment_lossless,
+            predecoded_skip,
+            self.segment.delta_q,
         )?;
         header.cdef = self.remember_cdef(header.cdef, pending);
-        self.current_qindex = Some(header.lossy_quantization.qindex);
+        self.current_qindex = Some(header.tile_qindex);
         (header.block_size == block_size && header.chroma_sampling == chroma_sampling)
             .then_some(())
             .portable()?;
@@ -48624,7 +48960,6 @@ impl Lossy420Decoder {
             tools,
             cdef_index_bits,
         )?;
-        self.remember_qindex(&syntax, decoder);
         let tx_context = normalized_luma_transform_context(transform_grid, &syntax)?;
         reconstruct_visible_lossy_normalized_leaf(
             &syntax,
@@ -48805,7 +49140,6 @@ impl Lossy420Decoder {
             cdef_index_bits,
         )?;
         reject_unhandled_lossy_luma_64x64_split(&syntax)?;
-        self.remember_qindex(&syntax, decoder);
         let luma_context = lossy_luma_context(&syntax);
         let tx_context = luma_transform_context_for_syntax(
             transform_grid,
@@ -49012,7 +49346,6 @@ impl Lossy420Decoder {
             }
         };
         reject_unhandled_lossy_luma_64x64_split(&syntax)?;
-        self.remember_qindex(&syntax, decoder);
         let luma_context = lossy_luma_context(&syntax);
         let tx_context = luma_transform_context_for_syntax(
             transform_grid,
@@ -49325,7 +49658,6 @@ impl Lossy420Decoder {
         };
         reject_unhandled_lossy_luma_64x64_split(&syntax)?;
 
-        self.remember_qindex(&syntax, decoder);
         let luma_context = lossy_luma_context(&syntax);
         let chroma_contexts = lossy_chroma_contexts(&syntax);
         let chroma_edge_contexts = chroma_edge_contexts_for_syntax(&syntax);
@@ -49793,7 +50125,6 @@ impl Lossy420Decoder {
             Err(_) => return Err(PortableUnavailable),
         };
         reject_unhandled_lossy_luma_64x64_split(&syntax)?;
-        self.remember_qindex(&syntax, decoder);
 
         let luma_context = lossy_luma_context(&syntax);
         let chroma_contexts = lossy_chroma_contexts(&syntax);
@@ -50931,7 +51262,6 @@ impl Lossy420Decoder {
             cdef_index_bits,
         )?;
         reject_unhandled_lossy_luma_64x64_split(&syntax)?;
-        self.remember_qindex(&syntax, decoder);
         (!syntax.palette.is_present()).then_some(()).portable()?;
         let BlockSyntax {
             block_skipped,
@@ -51095,7 +51425,6 @@ impl Lossy420Decoder {
             Ok(syntax) => syntax,
             Err(_) => return Err(PortableUnavailable),
         };
-        self.remember_qindex(&syntax, decoder);
         let (grid_width, grid_height, _) = transform_grid.properties();
         let edges = FullIntraEdges::origin_for_sampling(
             grid_width,
