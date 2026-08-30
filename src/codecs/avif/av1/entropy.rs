@@ -600,6 +600,9 @@ pub(super) struct InterFrameContext<'a> {
     pub(super) interpolation_filter: u32,
     pub(super) dual_filter: bool,
     pub(super) reference_mode_select: bool,
+    pub(super) motion_mode_switchable: bool,
+    pub(super) allow_warped_motion: bool,
+    pub(super) enable_interintra_compound: bool,
 }
 
 impl<'a> InterFrameContext<'a> {
@@ -2793,6 +2796,159 @@ fn inter_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> u8 {
     compare_reference_counts(forward, backward)
 }
 
+fn interintra_allowed(block_size: BlockSize) -> bool {
+    matches!(
+        block_size,
+        BlockSize::B8x8
+            | BlockSize::B8x16
+            | BlockSize::B16x8
+            | BlockSize::B16x16
+            | BlockSize::B16x32
+            | BlockSize::B32x16
+            | BlockSize::B32x32
+    )
+}
+
+fn interintra_size_group(block_size: BlockSize) -> usize {
+    let (width, height) = block_size.mi_dimensions();
+    usize::try_from(width.ilog2().min(height.ilog2()).min(3)).unwrap_or(3)
+}
+
+/// Consume the inter-intra sentence even though this reconstruction tranche
+/// deliberately rejects the blended predictor. Keeping the exact CDF rows
+/// and wedge context means the private decoder never mistakes an inter-intra
+/// block for a residual-bearing translation block.
+fn decode_interintra_syntax(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    inter_context: &InterFrameContext<'_>,
+    block_size: BlockSize,
+    compound: bool,
+    skip_mode: bool,
+) -> Av1Result<bool> {
+    if !inter_context.enable_interintra_compound
+        || compound
+        || skip_mode
+        || !interintra_allowed(block_size)
+    {
+        return Ok(false);
+    }
+    let size_group = interintra_size_group(block_size);
+    if !decoder.adaptive_bool(&mut cdfs.inter.interintra_for(size_group).0) {
+        return Ok(false);
+    }
+    let mode = decoder.adaptive_symbol(&mut cdfs.inter.interintra_mode_for(size_group).0, 3);
+    if mode > 3 {
+        return Err(malformed("inter-intra mode symbol is invalid"));
+    }
+    let use_wedge = decoder.adaptive_bool(&mut cdfs.inter.interintra_wedge_for(block_size).0);
+    if use_wedge {
+        let wedge = decoder.adaptive_symbol(&mut cdfs.inter.wedge_index_for(block_size).0, 15);
+        if wedge > 15 {
+            return Err(malformed("inter-intra wedge index is invalid"));
+        }
+    }
+    Ok(true)
+}
+
+fn has_overlappable_neighbor(tile_state: &TileState, node: PartitionNode) -> Av1Result<bool> {
+    let (width, height) = node.block_size.mi_dimensions();
+    if width.min(height) < 2 {
+        return Ok(false);
+    }
+    if let Some(y) = node.y.checked_sub(1) {
+        for offset in 0..width {
+            let x = node
+                .x
+                .checked_add(offset)
+                .ok_or_else(|| malformed("overlappable-neighbor x overflows"))?;
+            if tile_state
+                .neighbor_at_checked(x, y)?
+                .is_some_and(|neighbor| neighbor.coding.inter().is_some())
+            {
+                return Ok(true);
+            }
+        }
+    }
+    if let Some(x) = node.x.checked_sub(1) {
+        for offset in 0..height {
+            let y = node
+                .y
+                .checked_add(offset)
+                .ok_or_else(|| malformed("overlappable-neighbor y overflows"))?;
+            if tile_state
+                .neighbor_at_checked(x, y)?
+                .is_some_and(|neighbor| neighbor.coding.inter().is_some())
+            {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
+fn interpolation_filter_symbol(filter: InterpolationFilter) -> usize {
+    match filter {
+        InterpolationFilter::Regular => 0,
+        InterpolationFilter::Smooth => 1,
+        InterpolationFilter::Sharp => 2,
+        // Bilinear is not one of the switchable symbols; treating it as
+        // unknown matches the reference context derivation.
+        InterpolationFilter::Bilinear => 3,
+    }
+}
+
+fn neighbor_interpolation_filter(
+    tile_state: &TileState,
+    x: u32,
+    y: u32,
+    reference: ReferenceFrame,
+    direction: usize,
+) -> Av1Result<usize> {
+    let Some(neighbor) = tile_state.neighbor_at_checked(x, y)? else {
+        return Ok(3);
+    };
+    let Some(inter) = neighbor.coding.inter() else {
+        return Ok(3);
+    };
+    if inter.references.first != reference && inter.references.second != Some(reference) {
+        return Ok(3);
+    }
+    Ok(interpolation_filter_symbol(
+        inter.filters[if direction == 0 { 1 } else { 0 }],
+    ))
+}
+
+fn switchable_interpolation_context(
+    tile_state: &TileState,
+    node: PartitionNode,
+    reference: ReferenceFrame,
+    direction: usize,
+) -> Av1Result<usize> {
+    let left = node
+        .x
+        .checked_sub(1)
+        .map(|x| neighbor_interpolation_filter(tile_state, x, node.y, reference, direction))
+        .transpose()?
+        .unwrap_or(3);
+    let above = node
+        .y
+        .checked_sub(1)
+        .map(|y| neighbor_interpolation_filter(tile_state, node.x, y, reference, direction))
+        .transpose()?
+        .unwrap_or(3);
+    let context = if left == above {
+        left
+    } else if left == 3 {
+        above
+    } else if above == 3 {
+        left
+    } else {
+        3
+    };
+    Ok(context)
+}
+
 fn inter_forward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> (u8, u8, u8) {
     let mut broad = [0_u32; 4];
     let mut first = [0_u32; 2];
@@ -3202,9 +3358,16 @@ fn decode_inter_leaf(
         return Ok(Err(super::block::PortableUnavailable));
     }
     let (block_width_b4, block_height_b4) = node.block_size.mi_dimensions();
+    // Frame-level skip mode is rejected by the current admission gate. Keep
+    // the per-block value explicit so compound/inter-intra syntax cannot be
+    // accidentally tied to residual skipping as that gate widens.
+    let skip_mode = false;
+    let forced_global = selected_segment.global_motion || selected_segment.skip;
+    let forced_reference = selected_segment.reference > 0 || forced_global;
     let compound_allowed = inter_context.reference_mode_select
         && block_width_b4.min(block_height_b4) > 1
-        && !block_skipped;
+        && !skip_mode
+        && !forced_reference;
     if compound_allowed {
         let compound =
             decoder.adaptive_bool(&mut cdfs.inter.compound[inter_compound_context(neighbors)].0);
@@ -3212,7 +3375,6 @@ fn decode_inter_leaf(
             return Ok(Err(super::block::PortableUnavailable));
         }
     }
-    let forced_global = selected_segment.global_motion || selected_segment.skip;
     let reference = if selected_segment.reference > 0 {
         ReferenceFrame::from_segment_feature(selected_segment.reference)
             .ok_or_else(|| malformed("segment reference exceeds seven"))?
@@ -3222,9 +3384,6 @@ fn decode_inter_leaf(
         decode_inter_single_reference(decoder, cdfs, neighbors)?
     };
     let reference_state = inter_context.reference(reference);
-    if reference_state.scale.scaled || !reference_state.global_motion.is_translation() {
-        return Ok(Err(super::block::PortableUnavailable));
-    }
     let request = inter_context.mv_request(
         ReferenceMvTarget::Single(reference),
         node.block_size,
@@ -3335,21 +3494,68 @@ fn decode_inter_leaf(
             inter_context.high_precision_mv,
         )?;
     }
-    let has_subpel_filter =
-        block_width_b4.min(block_height_b4) == 1 || !matches!(mode, InterMode::Global);
-    let filters = if has_subpel_filter && inter_context.interpolation_filter == 4 {
-        let first = decoder.adaptive_symbol(&mut cdfs.inter.interpolation_filter[0][0].0, 2);
-        let first = InterpolationFilter::from_symbol(first)
-            .ok_or_else(|| malformed("interpolation filter symbol is invalid"))?;
-        let second = if inter_context.dual_filter {
-            let symbol = decoder.adaptive_symbol(&mut cdfs.inter.interpolation_filter[1][0].0, 2);
+    if matches!(mode, InterMode::Global) && !reference_state.global_motion.is_translation() {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+    let interintra = decode_interintra_syntax(
+        decoder,
+        cdfs,
+        inter_context,
+        node.block_size,
+        false,
+        skip_mode,
+    )?;
+    if interintra {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+    let motion_mode = if !skip_mode
+        && inter_context.motion_mode_switchable
+        && block_width_b4.min(block_height_b4) >= 2
+        && has_overlappable_neighbor(tile_state, node)?
+    {
+        // Local-warp sample discovery is not part of this private
+        // translation tranche. Refuse the potentially three-symbol sentence
+        // while retaining the frame flag, rather than consuming an OBMC CDF
+        // for a block whose bitstream may select local warp.
+        if inter_context.allow_warped_motion {
+            return Ok(Err(super::block::PortableUnavailable));
+        }
+        let symbol = decoder.adaptive_symbol(&mut cdfs.inter.obmc_for(node.block_size).0, 1);
+        match symbol {
+            0 => MotionMode::Translation,
+            1 => return Ok(Err(super::block::PortableUnavailable)),
+            _ => return Err(malformed("OBMC motion-mode symbol is invalid")),
+        }
+    } else {
+        MotionMode::Translation
+    };
+    let interpolation_needed = !skip_mode
+        && motion_mode == MotionMode::Translation
+        && !(matches!(mode, InterMode::Global) && !reference_state.global_motion.is_translation());
+    let filters = if interpolation_needed && inter_context.interpolation_filter == 4 {
+        // AV1 reads vertical first and horizontal second; the motion kernel
+        // stores horizontal then vertical.
+        let vertical_context = switchable_interpolation_context(tile_state, node, reference, 0)?;
+        let vertical = decoder.adaptive_symbol(
+            &mut cdfs.inter.interpolation_filter[0][vertical_context].0,
+            2,
+        );
+        let vertical = InterpolationFilter::from_symbol(vertical)
+            .ok_or_else(|| malformed("vertical interpolation filter symbol is invalid"))?;
+        let horizontal = if inter_context.dual_filter {
+            let horizontal_context =
+                switchable_interpolation_context(tile_state, node, reference, 1)?;
+            let symbol = decoder.adaptive_symbol(
+                &mut cdfs.inter.interpolation_filter[1][horizontal_context].0,
+                2,
+            );
             InterpolationFilter::from_symbol(symbol)
-                .ok_or_else(|| malformed("interpolation filter symbol is invalid"))?
+                .ok_or_else(|| malformed("horizontal interpolation filter symbol is invalid"))?
         } else {
-            first
+            vertical
         };
-        [first, second]
-    } else if has_subpel_filter {
+        [horizontal, vertical]
+    } else if interpolation_needed {
         let filter = InterpolationFilter::from_symbol(inter_context.interpolation_filter.min(3))
             .ok_or_else(|| malformed("fixed interpolation filter is invalid"))?;
         [filter; 2]
@@ -3379,6 +3585,7 @@ fn decode_inter_leaf(
         quantization,
         tools,
         reference_state.surface,
+        reference_state.scale,
         context.tile_origin_b4_x.saturating_add(node.x),
         context.tile_origin_b4_y.saturating_add(node.y),
         motion,
@@ -3397,7 +3604,7 @@ fn decode_inter_leaf(
             motion_vectors: [motion, MotionVector::ZERO],
             mode,
             compound_type: CompoundType::Average,
-            motion_mode: MotionMode::Translation,
+            motion_mode,
             filters,
             global: [matches!(mode, InterMode::Global), false],
             new_mv: [matches!(mode, InterMode::New), false],
@@ -4049,11 +4256,12 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && matches!(context.level, 0 | 1)
 }
 
-/// First inter reconstruction tranche: unscaled, single-reference, 8-bit
-/// 4:2:0 translation blocks with the optional post-filters disabled.  The
-/// entropy sentence is still decoded in AV1 order; unsupported compound,
-/// warped, scaled, and variable-transform branches are rejected before a
-/// block can publish neighbor metadata.
+/// First inter reconstruction tranche: single-reference, 8-bit 4:2:0
+/// translation blocks with the optional post-filters disabled. Reference
+/// scaling is dispatched through the same checked MC boundary as unity-scale
+/// references. Unsupported compound, inter-intra, warped, and
+/// variable-transform branches are rejected before a block publishes neighbor
+/// metadata.
 fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     !context.intra_frame
         && context.bit_depth == 8
@@ -4068,6 +4276,7 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && !context.allow_screen_content_tools
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
+        && context.frame_tools.transform_mode != 2
         && context.frame_tools.cdef.is_none()
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]

@@ -16,7 +16,7 @@ use super::large_cdfs::{
     LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
 };
 use super::mc::{MotionScratch, PredictionRequest};
-use super::motion::{InterpolationFilter, MotionVector};
+use super::motion::{InterpolationFilter, MotionVector, ScaleFactors};
 use super::quantization;
 use super::sample_depth::SampleDepth;
 use super::surface::FrameSurface;
@@ -48487,6 +48487,7 @@ impl Lossy420Decoder {
         quantization: LossyQuantization,
         tools: BlockTools,
         reference: &FrameSurface,
+        scale: ScaleFactors,
         block_x_b4: u32,
         block_y_b4: u32,
         motion: MotionVector,
@@ -48608,9 +48609,15 @@ impl Lossy420Decoder {
                     .plane(plane)
                     .map_err(|_| PortableUnavailable)?
                     .portable()?;
-                let predicted = scratch
-                    .put_unscaled(reference_plane, request)
-                    .map_err(|_| PortableUnavailable)?;
+                let predicted = if scale.scaled {
+                    scratch
+                        .put_scaled(reference_plane, request, scale)
+                        .map_err(|_| PortableUnavailable)?
+                } else {
+                    scratch
+                        .put_unscaled(reference_plane, request)
+                        .map_err(|_| PortableUnavailable)?
+                };
                 prediction.extend_from_slice(predicted);
             }
             let context_width = tx_width / 4;

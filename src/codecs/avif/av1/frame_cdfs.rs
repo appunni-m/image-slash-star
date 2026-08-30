@@ -387,14 +387,13 @@ impl InterCdfs {
     }
 
     /// Block-size CDFs use this crate's specification-order discriminants,
-    /// not [`BlockSize::cdf_index`], which deliberately models dav1d's
-    /// reverse lookup tables.
+    /// matching the reverse lookup tables used by the inter syntax state.
     #[allow(
         dead_code,
         reason = "consumed by the inter block engine in the following implementation slice"
     )]
     pub(super) fn motion_mode_for(&mut self, block_size: BlockSize) -> &mut Cdf<3> {
-        &mut self.motion_mode[block_size as usize]
+        &mut self.motion_mode[block_size.cdf_index()]
     }
 
     /// Typed OBMC lookup paired with [`Self::motion_mode_for`].
@@ -403,7 +402,29 @@ impl InterCdfs {
         reason = "consumed by the inter block engine in the following implementation slice"
     )]
     pub(super) fn obmc_for(&mut self, block_size: BlockSize) -> &mut Cdf<2> {
-        &mut self.obmc[block_size as usize]
+        &mut self.obmc[block_size.cdf_index()]
+    }
+
+    pub(super) fn interintra_for(&mut self, size_group: usize) -> &mut Cdf<2> {
+        &mut self.interintra[size_group.min(self.interintra.len().saturating_sub(1))]
+    }
+
+    pub(super) fn interintra_mode_for(&mut self, size_group: usize) -> &mut Cdf<4> {
+        &mut self.interintra_mode[size_group.min(self.interintra_mode.len().saturating_sub(1))]
+    }
+
+    pub(super) fn interintra_wedge_for(&mut self, block_size: BlockSize) -> &mut Cdf<2> {
+        let context = block_size
+            .cdf_index()
+            .min(self.interintra_wedge.len().saturating_sub(1));
+        &mut self.interintra_wedge[context]
+    }
+
+    pub(super) fn wedge_index_for(&mut self, block_size: BlockSize) -> &mut Cdf<16> {
+        let context = block_size
+            .cdf_index()
+            .min(self.wedge_index.len().saturating_sub(1));
+        &mut self.wedge_index[context]
     }
 }
 
