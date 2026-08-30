@@ -2244,7 +2244,9 @@ fn inverse_dct_dct_with_ranges<
     coefficients: &[i32],
     width: usize,
     height: usize,
-) -> Option<Vec<i32>> {
+    rows: &mut [i32],
+    output: &mut [i32],
+) -> Option<()> {
     let shift = transform_intermediate_shift(width, height)?;
     let coefficient_width = width.min(32);
     let coefficient_height = height.min(32);
@@ -2253,7 +2255,11 @@ fn inverse_dct_dct_with_ranges<
         return None;
     }
     let sample_count = width.checked_mul(height)?;
-    let mut rows = vec![0_i32; sample_count];
+    if rows.len() != sample_count || output.len() != sample_count {
+        return None;
+    }
+    rows.fill(0);
+    output.fill(0);
     let ratio_two_rectangle =
         width.saturating_mul(2) == height || height.saturating_mul(2) == width;
 
@@ -2299,7 +2305,6 @@ fn inverse_dct_dct_with_ranges<
         );
     }
 
-    let mut output = vec![0_i32; sample_count];
     macro_rules! vertical_pass {
         ($size:literal, $transform:ident) => {{
             for column in 0..width {
@@ -2322,7 +2327,7 @@ fn inverse_dct_dct_with_ranges<
         64 => vertical_pass!(64, inverse_dct64_with),
         _ => return None,
     }
-    Some(output)
+    Some(())
 }
 
 fn inverse_transform_with_ranges<
@@ -2336,7 +2341,12 @@ fn inverse_transform_with_ranges<
     height: usize,
     horizontal: AxisTransform,
     vertical: AxisTransform,
-) -> Option<Vec<i32>> {
+    rows: &mut [i32],
+    output: &mut [i32],
+) -> Option<()> {
+    if width == 0 || height == 0 || width > 64 || height > 64 {
+        return None;
+    }
     if matches!(
         (horizontal, vertical),
         (AxisTransform::Dct, AxisTransform::Dct)
@@ -2346,7 +2356,7 @@ fn inverse_transform_with_ranges<
             ROW_MAXIMUM,
             COLUMN_MINIMUM,
             COLUMN_MAXIMUM,
-        >(coefficients, width, height);
+        >(coefficients, width, height, rows, output);
     }
     let shift = transform_intermediate_shift(width, height)?;
     let coefficient_width = width.min(32);
@@ -2357,7 +2367,11 @@ fn inverse_transform_with_ranges<
     }
 
     let sample_count = width.checked_mul(height)?;
-    let mut rows = vec![0_i32; sample_count];
+    if rows.len() != sample_count || output.len() != sample_count {
+        return None;
+    }
+    rows.fill(0);
+    output.fill(0);
     let mut axis_input = [0_i32; 64];
     let mut axis_output = [0_i32; 64];
     let ratio_two_rectangle =
@@ -2397,7 +2411,6 @@ fn inverse_transform_with_ranges<
         );
     }
 
-    let mut output = vec![0_i32; sample_count];
     for column in 0..width {
         for row in 0..height {
             axis_input[row] = rows[row.saturating_mul(width).saturating_add(column)];
@@ -2413,26 +2426,25 @@ fn inverse_transform_with_ranges<
             output[row.saturating_mul(width).saturating_add(column)] = value.wrapping_add(8) >> 4;
         }
     }
-    Some(output)
+    Some(())
 }
 
 /// Apply any normative AV1 inverse transform using depth-specific ranges.
 ///
-/// Coefficients use AV1's compact column-major window. The result is
-/// row-major residual data. Unsupported size/type combinations return
-/// `None` instead of silently selecting a different transform.
-#[allow(
-    dead_code,
-    reason = "the high-depth gate remains closed until the complete walker consumes this backend"
-)]
-pub(super) fn inverse_transform_with_depth(
+/// Coefficients use AV1's compact column-major window. `rows` is reusable
+/// intermediate storage and `output` receives row-major residual data. Both
+/// slices must have exactly `width * height` entries. Unsupported size/type
+/// combinations return `None` instead of silently selecting another transform.
+pub(super) fn inverse_transform_with_depth_into(
     coefficients: &[i32],
     width: usize,
     height: usize,
     horizontal: AxisTransform,
     vertical: AxisTransform,
     sample_depth: SampleDepth,
-) -> Option<Vec<i32>> {
+    rows: &mut [i32],
+    output: &mut [i32],
+) -> Option<()> {
     let ranges = TransformRange::for_depth(sample_depth);
     match sample_depth.bits() {
         8 => {
@@ -2444,6 +2456,8 @@ pub(super) fn inverse_transform_with_depth(
                 height,
                 horizontal,
                 vertical,
+                rows,
+                output,
             )
         }
         10 => {
@@ -2455,6 +2469,8 @@ pub(super) fn inverse_transform_with_depth(
                 height,
                 horizontal,
                 vertical,
+                rows,
+                output,
             )
         }
         12 => {
@@ -2466,6 +2482,8 @@ pub(super) fn inverse_transform_with_depth(
                 height,
                 horizontal,
                 vertical,
+                rows,
+                output,
             )
         }
         _ => None,

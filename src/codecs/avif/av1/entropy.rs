@@ -510,6 +510,12 @@ pub(super) struct FrameToolsContext {
 #[derive(Clone, Copy)]
 pub(super) struct FirstBlockContext {
     pub(super) disable_cdf_update: bool,
+    /// True only for key and intra-only frames.
+    ///
+    /// Keeping this admission fact beside the tile entropy state prevents an
+    /// error-resilient inter/switch frame with no primary reference from
+    /// entering the intra-only block decoder with freshly initialized CDFs.
+    pub(super) intra_frame: bool,
     pub(super) level: u32,
     pub(super) block_width: u32,
     pub(super) block_height: u32,
@@ -2153,7 +2159,8 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         && context.block_width == context.frame_width / 4
         && context.block_height == context.frame_height / 4
         && context.upscaled_width == context.frame_width;
-    context.bit_depth == 8
+    context.intra_frame
+        && context.bit_depth == 8
         && context.monochrome
         && context.all_lossless
         && !context.superres_enabled
@@ -2609,7 +2616,8 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// tilings stay closed until their high-depth arithmetic/state is connected;
 /// this gate therefore cannot silently route them through eight-bit code.
 fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) -> bool {
-    matches!(context.bit_depth, 10 | 12)
+    context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
         && !context.superres_enabled
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
@@ -2938,7 +2946,8 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
         && context.block_width == context.frame_width / 4
         && context.block_height == context.frame_height / 4
         && context.upscaled_width == context.frame_width;
-    matches!(context.bit_depth, 8 | 10 | 12)
+    context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
@@ -3231,7 +3240,8 @@ fn square_recursive_split_dimensions(context: &FirstBlockContext) -> bool {
 }
 
 fn closed_base_reconstruction_context(context: &FirstBlockContext) -> bool {
-    (context.bit_depth == 8)
+    context.intra_frame
+        & (context.bit_depth == 8)
         & !context.superres_enabled
         & !context.segmentation_enabled
         & !context.skip_mode_enabled
@@ -3251,7 +3261,8 @@ fn closed_444_reconstruction_context(context: &FirstBlockContext) -> bool {
 }
 
 fn closed_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {
-    (context.bit_depth == 8)
+    context.intra_frame
+        & (context.bit_depth == 8)
         & !context.superres_enabled
         & !context.segmentation_enabled
         & !context.skip_mode_enabled
@@ -3732,6 +3743,13 @@ pub(super) fn validate_first_partition(
     range: Range<usize>,
     context: &FirstBlockContext,
 ) -> Av1Result<Option<super::block::FirstLeaf>> {
+    // Inter/switch frames require retained reference surfaces, inherited CDFs,
+    // motion fields, and inter prediction. In particular, primary-ref-none is
+    // legal for error-resilient inter frames, so that header field alone is
+    // not an intra admission test. Reject before consuming tile entropy.
+    if !context.intra_frame {
+        return Ok(None);
+    }
     if complete_lossless_444_reconstruction_context(context) {
         return validate_complete_lossless_444_partition(data, range, context);
     }
@@ -4531,6 +4549,7 @@ pub(super) fn reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>>
 fn coverage_context() -> FirstBlockContext {
     FirstBlockContext {
         disable_cdf_update: false,
+        intra_frame: true,
         level: 1,
         block_width: 16,
         block_height: 16,

@@ -69,7 +69,7 @@ bmp = []
 tiff = []
 webp = []
 ico = ["bmp", "png"]
-avif = []
+avif = ["dep:wide"]
 
 [lints.rust]
 future-incompatible = { level = "deny", priority = -1 }

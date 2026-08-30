@@ -19,6 +19,8 @@ use super::quantization;
 use super::sample_depth::SampleDepth;
 use super::tile_state::NeighborMeta;
 use super::transform;
+use bytemuck::cast;
+use wide::{i16x8, i32x8, u16x8};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct PortableUnavailable;
@@ -282,6 +284,41 @@ struct LargeCoefficientArena {
     generation: u32,
     coefficients: Vec<i32>,
     scratch: LargeCoefficientScratch,
+}
+
+/// Maximum number of output samples produced by one normative AV1 transform.
+/// Coefficients are separately capped to 32x32, but Tx64 output still covers
+/// the complete 64x64 prediction rectangle.
+const MAX_TRANSFORM_SAMPLES: usize = 64 * 64;
+
+/// Allocation-backed work buffers reused across every transform in one tile.
+///
+/// `prediction` is needed only when a transform child must later be copied
+/// into a strided parent raster. `rows` and `residual` are the two exact
+/// inverse-transform passes. Keeping CfL AC separate lets U/V reconstruction
+/// borrow it while the transform buffers continue to mutate.
+struct TransformScratch {
+    prediction: Vec<u16>,
+    rows: Vec<i32>,
+    residual: Vec<i32>,
+}
+
+struct ReconstructionScratch {
+    transform: TransformScratch,
+    cfl_ac: Vec<i32>,
+}
+
+impl ReconstructionScratch {
+    fn new() -> Self {
+        Self {
+            transform: TransformScratch {
+                prediction: Vec::with_capacity(MAX_TRANSFORM_SAMPLES),
+                rows: Vec::with_capacity(MAX_TRANSFORM_SAMPLES),
+                residual: Vec::with_capacity(MAX_TRANSFORM_SAMPLES),
+            },
+            cfl_ac: Vec::with_capacity(MAX_TRANSFORM_SAMPLES),
+        }
+    }
 }
 
 impl LargeCoefficientArena {
@@ -17449,6 +17486,14 @@ fn decode_syntax_with_cdef(
         palette_entropy_dimensions,
         &mut palette,
     )?;
+    // The legacy monochrome reconstruction path does not consume palette
+    // indices. Stop here, before transform/coefficient entropy, instead of
+    // silently rendering a palette-coded alpha/monochrome block as its
+    // ordinary intra predictor. The generic leaf builder will remove this
+    // firewall once it owns palette reconstruction for I400.
+    if matches!(chroma_sampling, ChromaSampling::Monochrome) && palette.y.is_present() {
+        return Err(PortableUnavailable);
+    }
     // AV1 keeps `FILTER_PRED` as the coded luma mode, but transform-type
     // syntax is indexed by the ordinary intra mode represented by the
     // selected filter-intra mode. This is the same `filter_mode_to_y_mode`
@@ -21497,15 +21542,44 @@ fn add_prediction_residual(prediction: &[u16], residual: &[i32], output: &mut [u
 /// Add a contiguous residual directly into an owned prediction buffer.
 /// Keeping one mutable stream removes a full-plane allocation and gives LLVM
 /// a simple non-aliasing zip over the residual input and reconstructed output.
-fn add_prediction_residual_in_place(output: &mut [u16], residual: &[i32], maximum: u16) {
+#[inline(always)]
+fn narrow_av1_samples(values: i32x8, maximum: i32) -> [u16; 8] {
+    let clamped = values.max(i32x8::ZERO).min(i32x8::new([maximum; 8]));
+    // AV1's maximum is 4095, so signed saturation is inert and the bit-cast
+    // back to unsigned lanes is exact.
+    cast::<i16x8, u16x8>(i16x8::from_i32x8_saturate(clamped)).to_array()
+}
+
+fn add_prediction_residual_in_place(
+    output: &mut [u16],
+    residual: &[i32],
+    maximum: u16,
+) -> PortableResult<()> {
+    (output.len() == residual.len()).then_some(()).portable()?;
     let maximum_sample = maximum;
     let maximum = i32::from(maximum);
-    for (destination, value) in output.iter_mut().zip(residual.iter().copied()) {
+    let count = output.len();
+    let vector_count = count / 8 * 8;
+    // AV1 bounds the inverse-transform output to at most 17 signed bits and
+    // the predictor to 12 unsigned bits. Their sum cannot overflow i32, so
+    // `wide`'s lane addition is exactly the scalar saturating addition here.
+    for offset in (0..vector_count).step_by(8) {
+        let predictors = u16x8::new(std::array::from_fn(|lane| output[offset + lane]));
+        let values = i32x8::new(std::array::from_fn(|lane| residual[offset + lane]));
+        let reconstructed = i32x8::from_u16x8(predictors) + values;
+        let samples = narrow_av1_samples(reconstructed, maximum);
+        output[offset..offset + 8].copy_from_slice(&samples);
+    }
+    for (destination, value) in output[vector_count..count]
+        .iter_mut()
+        .zip(residual[vector_count..count].iter().copied())
+    {
         let reconstructed = i32::from(*destination)
             .saturating_add(value)
             .clamp(0, maximum);
         *destination = u16::try_from(reconstructed).unwrap_or(maximum_sample);
     }
+    Ok(())
 }
 
 fn reconstruct_lossy_luma_16x16(
@@ -25474,6 +25548,35 @@ fn reconstruct_filter_intra_prediction_with_max(
     left: &[u16],
     maximum: u16,
 ) -> PortableResult<Vec<u16>> {
+    let sample_count = width.checked_mul(height).portable()?;
+    let mut prediction = vec![0_u16; sample_count];
+    reconstruct_filter_intra_prediction_with_max_into(
+        &mut prediction,
+        mode,
+        width,
+        height,
+        top_left,
+        top,
+        left,
+        maximum,
+    )?;
+    Ok(prediction)
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "filter-intra retains its output, geometry, causal edge state, and sample bound"
+)]
+fn reconstruct_filter_intra_prediction_with_max_into(
+    prediction: &mut [u16],
+    mode: usize,
+    width: usize,
+    height: usize,
+    top_left: u16,
+    top: &[u16],
+    left: &[u16],
+    maximum: u16,
+) -> PortableResult<()> {
     if mode >= FILTER_INTRA_TAPS.len()
         || width == 0
         || height == 0
@@ -25481,11 +25584,17 @@ fn reconstruct_filter_intra_prediction_with_max(
         || !height.is_multiple_of(2)
         || top.len() < width
         || left.len() < height
+        || width.checked_mul(height) != Some(prediction.len())
     {
         return Err(PortableUnavailable);
     }
 
-    let mut prediction = vec![0_u16; width.saturating_mul(height)];
+    let tap_lanes: [i32x8; 7] = std::array::from_fn(|input| {
+        i32x8::new(std::array::from_fn(|lane| {
+            FILTER_INTRA_TAPS[mode][lane][input]
+        }))
+    });
+    prediction.fill(0);
     for y in (0..height).step_by(2) {
         let mut topleft = if y == 0 { top_left } else { left[y - 1] };
         for x in (0..width).step_by(4) {
@@ -25525,27 +25634,32 @@ fn reconstruct_filter_intra_prediction_with_max(
                 },
             ];
             let p = p.map(i32::from);
-            for yy in 0_usize..2 {
-                for xx in 0_usize..4 {
-                    let taps = FILTER_INTRA_TAPS[mode][yy.saturating_mul(4).saturating_add(xx)];
-                    let accumulator =
-                        taps.into_iter().zip(p).fold(0_i32, |sum, (weight, input)| {
-                            sum.saturating_add(weight.saturating_mul(input))
-                        });
-                    let value = (accumulator.saturating_add(8) >> 4).clamp(0, i32::from(maximum));
-                    let value = u16::try_from(value).map_err(|_| PortableUnavailable)?;
-                    let index = y
-                        .saturating_add(yy)
-                        .saturating_mul(width)
-                        .saturating_add(x)
-                        .saturating_add(xx);
-                    *prediction.get_mut(index).ok_or(PortableUnavailable)? = value;
-                }
+            // The eight outputs in one 4x2 group depend only on the seven
+            // already prepared inputs. Groups remain sequential, while the
+            // independent output dot products occupy one portable SIMD lane
+            // each. The maximum absolute tap sum is far inside i32 at 12 bit.
+            let mut accumulator = i32x8::ZERO;
+            for (weights, input) in tap_lanes.iter().copied().zip(p) {
+                accumulator = accumulator + weights * i32x8::new([input; 8]);
             }
+            let values = narrow_av1_samples(
+                (accumulator + i32x8::new([8; 8])).unbounded_shr_scalar(4),
+                i32::from(maximum),
+            );
+            let top_start = y.saturating_mul(width).saturating_add(x);
+            let bottom_start = y.saturating_add(1).saturating_mul(width).saturating_add(x);
+            prediction
+                .get_mut(top_start..top_start.saturating_add(4))
+                .ok_or(PortableUnavailable)?
+                .copy_from_slice(&values[..4]);
+            prediction
+                .get_mut(bottom_start..bottom_start.saturating_add(4))
+                .ok_or(PortableUnavailable)?
+                .copy_from_slice(&values[4..]);
             topleft = u16::try_from(p[4]).map_err(|_| PortableUnavailable)?;
         }
     }
-    Ok(prediction)
+    Ok(())
 }
 
 #[expect(
@@ -29719,15 +29833,19 @@ fn full_directional_derivative(index: i32) -> PortableResult<i32> {
 }
 
 fn full_directional_zone1(
+    prediction: &mut [u16],
     width: usize,
     height: usize,
     angle: i32,
     edges: &FullIntraPlaneEdges,
     enable_intra_edge_filter: bool,
     maximum: u16,
-) -> PortableResult<Vec<u16>> {
+) -> PortableResult<()> {
     (0 < angle && angle < 90).then_some(()).portable()?;
     let edge_length = width.checked_add(height).portable()?;
+    (width.checked_mul(height) == Some(prediction.len()))
+        .then_some(())
+        .portable()?;
     let delta = 90_i32.saturating_sub(angle);
     let mut derivative = full_directional_derivative(angle >> 1)?;
     let upsample =
@@ -29784,7 +29902,7 @@ fn full_directional_zone1(
             )
         }
     };
-    let mut prediction = vec![0_u16; width.checked_mul(height).portable()?];
+    prediction.fill(0);
     for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
         for (x, sample) in row.iter_mut().enumerate() {
             *sample = diagonal_z1_predictor_sample_with_max(
@@ -29798,19 +29916,23 @@ fn full_directional_zone1(
             )?;
         }
     }
-    Ok(prediction)
+    Ok(())
 }
 
 fn full_directional_zone3(
+    prediction: &mut [u16],
     width: usize,
     height: usize,
     angle: i32,
     edges: &FullIntraPlaneEdges,
     enable_intra_edge_filter: bool,
     maximum: u16,
-) -> PortableResult<Vec<u16>> {
+) -> PortableResult<()> {
     (180 < angle && angle < 270).then_some(()).portable()?;
     let edge_length = width.checked_add(height).portable()?;
+    (width.checked_mul(height) == Some(prediction.len()))
+        .then_some(())
+        .portable()?;
     let delta = angle.saturating_sub(180);
     let mut derivative = full_directional_derivative((270_i32.saturating_sub(angle)) >> 1)?;
     let upsample =
@@ -29867,7 +29989,7 @@ fn full_directional_zone3(
             )
         }
     };
-    let mut prediction = vec![0_u16; width.checked_mul(height).portable()?];
+    prediction.fill(0);
     for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
         for (x, sample) in row.iter_mut().enumerate() {
             *sample = diagonal_z3_predictor_sample_with_max(
@@ -29881,19 +30003,23 @@ fn full_directional_zone3(
             )?;
         }
     }
-    Ok(prediction)
+    Ok(())
 }
 
 fn full_directional_zone2(
+    prediction: &mut [u16],
     width: usize,
     height: usize,
     angle: i32,
     edges: &FullIntraPlaneEdges,
     enable_intra_edge_filter: bool,
     maximum: u16,
-) -> PortableResult<Vec<u16>> {
+) -> PortableResult<()> {
     (90 < angle && angle < 180).then_some(()).portable()?;
     let edge_length = width.checked_add(height).portable()?;
+    (width.checked_mul(height) == Some(prediction.len()))
+        .then_some(())
+        .portable()?;
     let mut top_left = edges.top_left;
     if enable_intra_edge_filter && edge_length >= 24 {
         let filtered = i32::from(edges.left[0])
@@ -30013,7 +30139,7 @@ fn full_directional_zone2(
     let mut edge = left;
     edge.extend_from_slice(&top.as_slice()[1..])?;
     let top_increment = 1_i32 + i32::from(upsample_top);
-    let mut prediction = vec![0_u16; width.checked_mul(height).portable()?];
+    prediction.fill(0);
     for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
         let y_i32 = i32::try_from(y).map_err(|_| PortableUnavailable)?;
         let x_position = top_increment
@@ -30059,7 +30185,7 @@ fn full_directional_zone2(
             y_position = y_position.saturating_sub(vertical_derivative);
         }
     }
-    Ok(prediction)
+    Ok(())
 }
 
 fn one_sided_full_dc(edge: &[u16]) -> PortableResult<u16> {
@@ -30122,7 +30248,12 @@ fn rectangular_full_dc(
         .portable()
 }
 
-fn full_intra_prediction(
+#[expect(
+    clippy::too_many_arguments,
+    reason = "normalized intra prediction retains output, mode, geometry, edges, depth, and filter policy"
+)]
+fn full_intra_prediction_into(
+    prediction: &mut [u16],
     predictor: LosslessPredictor,
     angle: Option<i32>,
     filter_intra_mode: Option<usize>,
@@ -30131,14 +30262,20 @@ fn full_intra_prediction(
     edges: &FullIntraPlaneEdges,
     sample_depth: SampleDepth,
     enable_intra_edge_filter: bool,
-) -> PortableResult<Vec<u16>> {
-    if edges.top.len() < width.saturating_add(height)
-        || edges.left.len() < width.saturating_add(height)
+) -> PortableResult<()> {
+    let edge_length = width.checked_add(height).portable()?;
+    let sample_count = width.checked_mul(height).portable()?;
+    if width == 0
+        || height == 0
+        || prediction.len() != sample_count
+        || edges.top.len() < edge_length
+        || edges.left.len() < edge_length
     {
         return Err(PortableUnavailable);
     }
     if let Some(mode) = filter_intra_mode {
-        return reconstruct_filter_intra_prediction_with_max(
+        return reconstruct_filter_intra_prediction_with_max_into(
+            prediction,
             mode,
             width,
             height,
@@ -30149,10 +30286,10 @@ fn full_intra_prediction(
         );
     }
     let predictor = resolve_lossless_predictor(predictor, angle, edges.has_top, edges.has_left);
-    let sample_count = width.checked_mul(height).portable()?;
     let maximum = i32::from(sample_depth.maximum());
     match predictor {
         LosslessPredictor::Diagonal45 | LosslessPredictor::Diagonal67 => full_directional_zone1(
+            prediction,
             width,
             height,
             angle.ok_or(PortableUnavailable)?,
@@ -30163,6 +30300,7 @@ fn full_intra_prediction(
         LosslessPredictor::DiagonalDownRight
         | LosslessPredictor::Diagonal113
         | LosslessPredictor::Diagonal157 => full_directional_zone2(
+            prediction,
             width,
             height,
             angle.ok_or(PortableUnavailable)?,
@@ -30171,6 +30309,7 @@ fn full_intra_prediction(
             sample_depth.maximum(),
         ),
         LosslessPredictor::Diagonal203 => full_directional_zone3(
+            prediction,
             width,
             height,
             angle.ok_or(PortableUnavailable)?,
@@ -30187,35 +30326,57 @@ fn full_intra_prediction(
                 (false, true) => one_sided_full_dc(&edges.left[..height])?,
                 (false, false) => sample_depth.midpoint(),
             };
-            Ok(vec![predictor; sample_count])
+            prediction.fill(predictor);
+            Ok(())
         }
         LosslessPredictor::Vertical => {
-            let mut prediction = vec![0_u16; sample_count];
             for row in prediction.chunks_exact_mut(width) {
                 row.copy_from_slice(&edges.top[..width]);
             }
-            Ok(prediction)
+            Ok(())
         }
         LosslessPredictor::Horizontal => {
-            let mut prediction = vec![0_u16; sample_count];
             for (row, &left) in prediction
                 .chunks_exact_mut(width)
                 .zip(edges.left[..height].iter())
             {
                 row.fill(left);
             }
-            Ok(prediction)
+            Ok(())
         }
         LosslessPredictor::Smooth => {
             let horizontal_weights = smooth_weight_table(width)?;
             let vertical_weights = smooth_weight_table(height)?;
             let right = i32::from(edges.top[width.saturating_sub(1)]);
             let bottom = i32::from(edges.left[height.saturating_sub(1)]);
-            let mut prediction = vec![0_u16; sample_count];
             for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
                 let vertical_weight = i32::from(vertical_weights[y]);
                 let left = i32::from(edges.left[y]);
-                for (x, sample) in row.iter_mut().enumerate() {
+                let mut x = 0_usize;
+                // At 12-bit depth the two-axis weighted sum is at most
+                // 2,096,896, so lane arithmetic is identical to the scalar
+                // saturating operations and can be evaluated eight pixels at
+                // a time without changing a rounding boundary.
+                while x + 8 <= width {
+                    let horizontal_weight = i32x8::new(std::array::from_fn(|lane| {
+                        i32::from(horizontal_weights[x + lane])
+                    }));
+                    let top =
+                        i32x8::new(std::array::from_fn(|lane| i32::from(edges.top[x + lane])));
+                    let value = i32x8::new([vertical_weight; 8]) * top
+                        + i32x8::new([256 - vertical_weight; 8]) * i32x8::new([bottom; 8])
+                        + horizontal_weight * i32x8::new([left; 8])
+                        + (i32x8::new([256; 8]) - horizontal_weight) * i32x8::new([right; 8])
+                        + i32x8::new([256; 8]);
+                    row[x..x + 8].copy_from_slice(&narrow_av1_samples(
+                        value.unbounded_shr_scalar(9),
+                        maximum,
+                    ));
+                    x += 8;
+                }
+                let tail_start = x;
+                for (offset, sample) in row[tail_start..].iter_mut().enumerate() {
+                    let x = tail_start.saturating_add(offset);
                     let horizontal_weight = i32::from(horizontal_weights[x]);
                     let top = i32::from(edges.top[x]);
                     let value = vertical_weight
@@ -30229,16 +30390,28 @@ fn full_intra_prediction(
                         u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?;
                 }
             }
-            Ok(prediction)
+            Ok(())
         }
         LosslessPredictor::SmoothVertical => {
             let vertical_weights = smooth_weight_table(height)?;
             let bottom = i32::from(edges.left[height.saturating_sub(1)]);
-            let mut prediction = vec![0_u16; sample_count];
             for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
                 let vertical_weight = i32::from(vertical_weights[y]);
                 let inverse_weight = 256_i32.saturating_sub(vertical_weight);
-                for (sample, &top) in row.iter_mut().zip(&edges.top[..width]) {
+                let mut x = 0_usize;
+                while x + 8 <= width {
+                    let top =
+                        i32x8::new(std::array::from_fn(|lane| i32::from(edges.top[x + lane])));
+                    let value = i32x8::new([vertical_weight; 8]) * top
+                        + i32x8::new([inverse_weight; 8]) * i32x8::new([bottom; 8])
+                        + i32x8::new([128; 8]);
+                    row[x..x + 8].copy_from_slice(&narrow_av1_samples(
+                        value.unbounded_shr_scalar(8),
+                        maximum,
+                    ));
+                    x += 8;
+                }
+                for (sample, &top) in row[x..].iter_mut().zip(&edges.top[x..width]) {
                     let value = vertical_weight
                         .saturating_mul(i32::from(top))
                         .saturating_add(inverse_weight.saturating_mul(bottom))
@@ -30248,18 +30421,33 @@ fn full_intra_prediction(
                         u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?;
                 }
             }
-            Ok(prediction)
+            Ok(())
         }
         LosslessPredictor::SmoothHorizontal => {
             let horizontal_weights = smooth_weight_table(width)?;
             let right = i32::from(edges.top[width.saturating_sub(1)]);
-            let mut prediction = vec![0_u16; sample_count];
             for (row, &left) in prediction
                 .chunks_exact_mut(width)
                 .zip(&edges.left[..height])
             {
                 let left = i32::from(left);
-                for (sample, &horizontal_weight) in row.iter_mut().zip(horizontal_weights) {
+                let mut x = 0_usize;
+                while x + 8 <= width {
+                    let horizontal_weight = i32x8::new(std::array::from_fn(|lane| {
+                        i32::from(horizontal_weights[x + lane])
+                    }));
+                    let value = horizontal_weight * i32x8::new([left; 8])
+                        + (i32x8::new([256; 8]) - horizontal_weight) * i32x8::new([right; 8])
+                        + i32x8::new([128; 8]);
+                    row[x..x + 8].copy_from_slice(&narrow_av1_samples(
+                        value.unbounded_shr_scalar(8),
+                        maximum,
+                    ));
+                    x += 8;
+                }
+                for (sample, &horizontal_weight) in
+                    row[x..].iter_mut().zip(&horizontal_weights[x..])
+                {
                     let horizontal_weight = i32::from(horizontal_weight);
                     let value = horizontal_weight
                         .saturating_mul(left)
@@ -30272,74 +30460,96 @@ fn full_intra_prediction(
                         u16::try_from(value.clamp(0, maximum)).map_err(|_| PortableUnavailable)?;
                 }
             }
-            Ok(prediction)
+            Ok(())
         }
         LosslessPredictor::Paeth => {
-            let mut prediction = vec![0_u16; sample_count];
             for (y, row) in prediction.chunks_exact_mut(width).enumerate() {
                 for (x, sample) in row.iter_mut().enumerate() {
                     *sample = paeth_predictor(edges.top[x], edges.left[y], edges.top_left);
                 }
             }
-            Ok(prediction)
+            Ok(())
         }
     }
 }
 
-fn full_palette_prediction(
+fn full_palette_prediction_into(
+    prediction: &mut [u16],
     palette: PalettePlane,
     indices: &[u8],
-    sample_count: usize,
-) -> PortableResult<Vec<u16>> {
+) -> PortableResult<()> {
     let size = usize::from(palette.size);
-    ((2..=PALETTE_CAPACITY).contains(&size) && indices.len() >= sample_count)
+    ((2..=PALETTE_CAPACITY).contains(&size) && indices.len() >= prediction.len())
         .then_some(())
         .portable()?;
-    indices[..sample_count]
-        .iter()
-        .map(|&index| {
-            let index = usize::from(index);
-            (index < size).then_some(()).portable()?;
-            palette.colors.get(index).copied().portable()
-        })
-        .collect()
+    for (sample, &index) in prediction.iter_mut().zip(indices) {
+        let index = usize::from(index);
+        (index < size).then_some(()).portable()?;
+        *sample = palette.colors.get(index).copied().portable()?;
+    }
+    Ok(())
 }
 
 fn reconstruct_full_unsplit_prediction(
     mut prediction: Vec<u16>,
     coefficients: CoeffBlockRef<'_>,
     sample_depth: SampleDepth,
+    scratch: &mut TransformScratch,
 ) -> PortableResult<ReconstructedPlane> {
+    let TransformScratch { rows, residual, .. } = scratch;
+    reconstruct_full_unsplit_prediction_in_place(
+        &mut prediction,
+        coefficients,
+        sample_depth,
+        rows,
+        residual,
+    )?;
+    Ok(ReconstructedPlane {
+        samples: prediction,
+    })
+}
+
+fn reconstruct_full_unsplit_prediction_in_place(
+    prediction: &mut [u16],
+    coefficients: CoeffBlockRef<'_>,
+    sample_depth: SampleDepth,
+    rows: &mut Vec<i32>,
+    residual: &mut Vec<i32>,
+) -> PortableResult<()> {
     let sample_count = coefficients
         .width
         .checked_mul(coefficients.height)
         .portable()?;
-    (prediction.len() == sample_count)
+    (prediction.len() == sample_count && sample_count <= MAX_TRANSFORM_SAMPLES)
         .then_some(())
         .portable()?;
     let Some(values) = coefficients.coefficients else {
-        return Ok(ReconstructedPlane {
-            samples: prediction,
-        });
+        return Ok(());
     };
     let (horizontal, vertical) = coefficients.transform.axes();
-    let residual = transform::inverse_transform_with_depth(
+    rows.resize(sample_count, 0);
+    residual.resize(sample_count, 0);
+    transform::inverse_transform_with_depth_into(
         values,
         coefficients.width,
         coefficients.height,
         horizontal,
         vertical,
         sample_depth,
+        rows,
+        residual,
     )
     .portable()?;
-    (residual.len() == sample_count).then_some(()).portable()?;
-    add_prediction_residual_in_place(&mut prediction, &residual, sample_depth.maximum());
-    Ok(ReconstructedPlane {
-        samples: prediction,
-    })
+    add_prediction_residual_in_place(prediction, residual, sample_depth.maximum())?;
+    Ok(())
 }
 
-fn cfl_ac_for_sampling(
+#[expect(
+    clippy::too_many_arguments,
+    reason = "CfL AC generation retains output, luma geometry, visible crop, chroma geometry, layout, and causal strips"
+)]
+fn cfl_ac_for_sampling_into(
+    ac: &mut [i32],
     luma: &ReconstructedPlane,
     luma_width: usize,
     luma_height: usize,
@@ -30349,7 +30559,7 @@ fn cfl_ac_for_sampling(
     chroma_height: usize,
     chroma_sampling: ChromaSampling,
     context: &CflLumaContext,
-) -> PortableResult<Vec<i32>> {
+) -> PortableResult<()> {
     let luma_count = luma_width.checked_mul(luma_height).portable()?;
     let chroma_count = chroma_width.checked_mul(chroma_height).portable()?;
     let (subsampling_x, subsampling_y) = match chroma_sampling {
@@ -30376,11 +30586,13 @@ fn cfl_ac_for_sampling(
         && missing_y <= MAX_CFL_BORDER
         && context.missing_x == missing_x
         && context.missing_y == missing_y
-        && chroma_count.is_power_of_two())
-    .then_some(())
-    .portable()?;
-    let mut ac = Vec::with_capacity(chroma_count);
+        && chroma_count.is_power_of_two()
+        && ac.len() == chroma_count)
+        .then_some(())
+        .portable()?;
+    ac.fill(0);
     let mut sum = 0_i64;
+    let mut destination = 0_usize;
     for chroma_y in 0..chroma_height {
         for chroma_x in 0..chroma_width {
             let mut luma_sum = 0_i32;
@@ -30407,28 +30619,51 @@ fn cfl_ac_for_sampling(
                 }
             }
             let value = luma_sum.saturating_mul(i32::try_from(scale).unwrap_or(i32::MAX));
-            ac.push(value);
+            *ac.get_mut(destination).portable()? = value;
+            destination = destination.checked_add(1).portable()?;
             sum = sum.saturating_add(i64::from(value));
         }
     }
+    (destination == chroma_count).then_some(()).portable()?;
     let rounded = sum.saturating_add(i64::try_from(chroma_count / 2).unwrap_or(i64::MAX));
     let mean = i32::try_from(rounded >> chroma_count.ilog2()).map_err(|_| PortableUnavailable)?;
-    for value in &mut ac {
+    for value in ac.iter_mut() {
         *value = value.saturating_sub(mean);
     }
-    Ok(ac)
+    Ok(())
 }
 
-fn full_cfl_prediction(
+fn full_cfl_prediction_into(
+    prediction: &mut [u16],
     ac: &[i32],
     predictor: u16,
     alpha: i32,
     sample_depth: SampleDepth,
-) -> PortableResult<Vec<u16>> {
-    ac.iter()
-        .copied()
-        .map(|value| reconstruct_lossless_cfl_sample(predictor, alpha, value, 0, sample_depth))
-        .collect()
+) -> PortableResult<()> {
+    (prediction.len() == ac.len()).then_some(()).portable()?;
+    let maximum = i32::from(sample_depth.maximum());
+    let vector_count = prediction.len() / 8 * 8;
+    let alpha_lanes = i32x8::new([alpha; 8]);
+    let predictor_lanes = i32x8::new([i32::from(predictor); 8]);
+    // |alpha| <= 16 and 12-bit CfL AC is bounded below 32,768, so the
+    // product, magnitude bias, and predictor adjustment are exact in i32.
+    for offset in (0..vector_count).step_by(8) {
+        let values = i32x8::new(std::array::from_fn(|lane| ac[offset + lane]));
+        let scaled = alpha_lanes * values;
+        let magnitude = (scaled.abs() + i32x8::new([32; 8])).unbounded_shr_scalar(6);
+        let signed = scaled
+            .is_negative()
+            .select(i32x8::ZERO - magnitude, magnitude);
+        prediction[offset..offset + 8]
+            .copy_from_slice(&narrow_av1_samples(predictor_lanes + signed, maximum));
+    }
+    for (sample, value) in prediction[vector_count..]
+        .iter_mut()
+        .zip(ac[vector_count..].iter().copied())
+    {
+        *sample = reconstruct_lossless_cfl_sample(predictor, alpha, value, 0, sample_depth)?;
+    }
+    Ok(())
 }
 
 fn full_large_chroma_child_coefficients<'a>(
@@ -30592,7 +30827,8 @@ fn intra_child_edges(
     )
 }
 
-fn full_palette_child_prediction(
+fn full_palette_child_prediction_into(
+    prediction: &mut [u16],
     palette: PalettePlane,
     indices: &[u8],
     plane_width: usize,
@@ -30600,16 +30836,17 @@ fn full_palette_child_prediction(
     y: usize,
     width: usize,
     height: usize,
-) -> PortableResult<Vec<u16>> {
+) -> PortableResult<()> {
     let size = usize::from(palette.size);
     let plane_height = indices.len().checked_div(plane_width).portable()?;
     ((2..=PALETTE_CAPACITY).contains(&size)
         && plane_width != 0
         && x.checked_add(width).is_some_and(|end| end <= plane_width)
-        && y.checked_add(height).is_some_and(|end| end <= plane_height))
+        && y.checked_add(height).is_some_and(|end| end <= plane_height)
+        && width.checked_mul(height) == Some(prediction.len()))
     .then_some(())
     .portable()?;
-    let mut prediction = Vec::with_capacity(width.checked_mul(height).portable()?);
+    let mut destination = 0_usize;
     for row in y..y.checked_add(height).portable()? {
         let start = row
             .checked_mul(plane_width)
@@ -30619,10 +30856,11 @@ fn full_palette_child_prediction(
         for &index in indices.get(start..end).portable()? {
             let index = usize::from(index);
             (index < size).then_some(()).portable()?;
-            prediction.push(*palette.colors.get(index).portable()?);
+            *prediction.get_mut(destination).portable()? = *palette.colors.get(index).portable()?;
+            destination = destination.checked_add(1).portable()?;
         }
     }
-    Ok(prediction)
+    (destination == prediction.len()).then_some(()).portable()
 }
 
 #[expect(
@@ -30643,6 +30881,7 @@ fn reconstruct_transform_grid_from_edges<'a, F>(
     external: &FullIntraPlaneEdges,
     sample_depth: SampleDepth,
     enable_intra_edge_filter: bool,
+    scratch: &mut TransformScratch,
     mut coefficients_at: F,
 ) -> PortableResult<ReconstructedPlane>
 where
@@ -30658,6 +30897,11 @@ where
     .portable()?;
     let sample_count = plane_width.checked_mul(plane_height).portable()?;
     let mut samples = vec![sample_depth.midpoint(); sample_count];
+    let TransformScratch {
+        prediction,
+        rows: transform_rows,
+        residual,
+    } = scratch;
     for row in 0..rows {
         let y = row.checked_mul(child_height).portable()?;
         for column in 0..columns {
@@ -30677,9 +30921,15 @@ where
                 child_height,
                 sample_depth,
             )?;
-            let prediction = if let Some((palette, indices)) = palette {
+            let child_sample_count = child_width.checked_mul(child_height).portable()?;
+            (child_sample_count <= MAX_TRANSFORM_SAMPLES)
+                .then_some(())
+                .portable()?;
+            prediction.resize(child_sample_count, 0);
+            if let Some((palette, indices)) = palette {
                 filter_intra_mode.is_none().then_some(()).portable()?;
-                full_palette_child_prediction(
+                full_palette_child_prediction_into(
+                    prediction,
                     palette,
                     indices,
                     plane_width,
@@ -30687,9 +30937,10 @@ where
                     y,
                     child_width,
                     child_height,
-                )?
+                )?;
             } else {
-                full_intra_prediction(
+                full_intra_prediction_into(
+                    prediction,
                     predictor,
                     angle,
                     filter_intra_mode,
@@ -30698,16 +30949,20 @@ where
                     &edges,
                     sample_depth,
                     enable_intra_edge_filter,
-                )?
-            };
+                )?;
+            }
             let coefficients = coefficients_at(child_index)?;
             (coefficients.width == child_width && coefficients.height == child_height)
                 .then_some(())
                 .portable()?;
-            let reconstructed =
-                reconstruct_full_unsplit_prediction(prediction, coefficients, sample_depth)?;
-            for (local_y, source_row) in reconstructed.samples.chunks_exact(child_width).enumerate()
-            {
+            reconstruct_full_unsplit_prediction_in_place(
+                prediction,
+                coefficients,
+                sample_depth,
+                transform_rows,
+                residual,
+            )?;
+            for (local_y, source_row) in prediction.chunks_exact(child_width).enumerate() {
                 let destination_start = y
                     .checked_add(local_y)
                     .and_then(|row| row.checked_mul(plane_width))
@@ -30728,6 +30983,7 @@ fn reconstruct_luma_from_normalized_edges(
     syntax: &BlockSyntax,
     edges: &FullIntraPlaneEdges,
     enable_intra_edge_filter: bool,
+    scratch: &mut TransformScratch,
 ) -> PortableResult<ReconstructedPlane> {
     let (grid_width, grid_height, _) = syntax.transform_grid.properties();
     let plane_width = grid_width.checked_mul(4).portable()?;
@@ -30759,14 +31015,13 @@ fn reconstruct_luma_from_normalized_edges(
 
     if split_count == 0 {
         let coefficients = syntax.unsplit_coefficients(0)?;
-        let prediction = if let Some((palette, indices)) = palette {
-            full_palette_prediction(
-                palette,
-                indices,
-                plane_width.checked_mul(plane_height).portable()?,
-            )?
+        let sample_count = plane_width.checked_mul(plane_height).portable()?;
+        let mut prediction = vec![0_u16; sample_count];
+        if let Some((palette, indices)) = palette {
+            full_palette_prediction_into(&mut prediction, palette, indices)?;
         } else {
-            full_intra_prediction(
+            full_intra_prediction_into(
+                &mut prediction,
                 predictor,
                 syntax.luma_angle,
                 syntax.filter_intra_mode,
@@ -30775,9 +31030,14 @@ fn reconstruct_luma_from_normalized_edges(
                 edges,
                 sample_depth,
                 enable_intra_edge_filter,
-            )?
-        };
-        return reconstruct_full_unsplit_prediction(prediction, coefficients, sample_depth);
+            )?;
+        }
+        return reconstruct_full_unsplit_prediction(
+            prediction,
+            coefficients,
+            sample_depth,
+            scratch,
+        );
     }
 
     macro_rules! rebuild {
@@ -30796,6 +31056,7 @@ fn reconstruct_luma_from_normalized_edges(
                 edges,
                 sample_depth,
                 enable_intra_edge_filter,
+                scratch,
                 $coefficients_at,
             )
         };
@@ -30968,6 +31229,7 @@ fn reconstruct_full_large_chroma_plane(
     grid: &FullLargeChromaGrid,
     cfl_ac: Option<&[i32]>,
     enable_intra_edge_filter: bool,
+    scratch: &mut TransformScratch,
 ) -> PortableResult<ReconstructedPlane> {
     let plane_index = plane.checked_sub(1).filter(|&index| index < 2).portable()?;
     let child_width_units = usize::from(grid.child_width);
@@ -30999,6 +31261,11 @@ fn reconstruct_full_large_chroma_plane(
     let sample_count = plane_width.checked_mul(plane_height).portable()?;
     let sample_depth = syntax.lossy_quantization.sample_depth;
     let mut samples = vec![sample_depth.midpoint(); sample_count];
+    let TransformScratch {
+        prediction,
+        rows: transform_rows,
+        residual,
+    } = scratch;
     for row in 0..rows {
         let y = row.checked_mul(child_height).portable()?;
         for column in 0..columns {
@@ -31019,9 +31286,12 @@ fn reconstruct_full_large_chroma_plane(
                 child_height,
                 sample_depth,
             )?;
-            let prediction = if let ChromaPredictor::Cfl { alpha_u, alpha_v } =
-                syntax.chroma_predictor
-            {
+            let child_sample_count = child_width.checked_mul(child_height).portable()?;
+            (child_sample_count <= MAX_TRANSFORM_SAMPLES)
+                .then_some(())
+                .portable()?;
+            prediction.resize(child_sample_count, 0);
+            if let ChromaPredictor::Cfl { alpha_u, alpha_v } = syntax.chroma_predictor {
                 let alpha = if plane_index == 0 { alpha_u } else { alpha_v };
                 let dc = match (edges.has_top, edges.has_left) {
                     (true, true) => rectangular_full_dc(
@@ -31033,9 +31303,16 @@ fn reconstruct_full_large_chroma_plane(
                     (false, true) => one_sided_full_dc(&edges.left[..child_height])?,
                     (false, false) => sample_depth.midpoint(),
                 };
-                full_cfl_prediction(cfl_ac.ok_or(PortableUnavailable)?, dc, alpha, sample_depth)?
+                full_cfl_prediction_into(
+                    prediction,
+                    cfl_ac.ok_or(PortableUnavailable)?,
+                    dc,
+                    alpha,
+                    sample_depth,
+                )?;
             } else {
-                full_intra_prediction(
+                full_intra_prediction_into(
+                    prediction,
                     lossless_chroma_predictor(syntax.chroma_predictor),
                     syntax.chroma_angle,
                     None,
@@ -31044,14 +31321,18 @@ fn reconstruct_full_large_chroma_plane(
                     &edges,
                     sample_depth,
                     enable_intra_edge_filter,
-                )?
-            };
+                )?;
+            }
             let coefficients =
                 full_large_chroma_child_coefficients(child, arena, child_width, child_height)?;
-            let reconstructed =
-                reconstruct_full_unsplit_prediction(prediction, coefficients, sample_depth)?;
-            for (local_y, source_row) in reconstructed.samples.chunks_exact(child_width).enumerate()
-            {
+            reconstruct_full_unsplit_prediction_in_place(
+                prediction,
+                coefficients,
+                sample_depth,
+                transform_rows,
+                residual,
+            )?;
+            for (local_y, source_row) in prediction.chunks_exact(child_width).enumerate() {
                 let destination_start = y
                     .checked_add(local_y)
                     .and_then(|row| row.checked_mul(plane_width))
@@ -31081,6 +31362,7 @@ fn reconstruct_lossy_normalized_leaf(
     visible_width: usize,
     visible_height: usize,
     enable_intra_edge_filter: bool,
+    scratch: &mut ReconstructionScratch,
 ) -> PortableResult<ClosedLeaf> {
     (!syntax.has_chroma_transform_split())
         .then_some(())
@@ -31089,15 +31371,19 @@ fn reconstruct_lossy_normalized_leaf(
     let (luma_grid_width, luma_grid_height, _) = syntax.transform_grid.properties();
     let luma_width = luma_grid_width.checked_mul(4).portable()?;
     let luma_height = luma_grid_height.checked_mul(4).portable()?;
-    let sample_count = luma_width.checked_mul(luma_height).portable()?;
     (visible_width != 0
         && visible_width <= luma_width
         && visible_height != 0
         && visible_height <= luma_height)
         .then_some(())
         .portable()?;
-    let luma =
-        reconstruct_luma_from_normalized_edges(syntax, &edges.planes[0], enable_intra_edge_filter)?;
+    let ReconstructionScratch { transform, cfl_ac } = scratch;
+    let luma = reconstruct_luma_from_normalized_edges(
+        syntax,
+        &edges.planes[0],
+        enable_intra_edge_filter,
+        transform,
+    )?;
     let cfl_ac = if !matches!(syntax.chroma_sampling, ChromaSampling::Monochrome)
         && matches!(syntax.chroma_predictor, ChromaPredictor::Cfl { .. })
     {
@@ -31105,25 +31391,35 @@ fn reconstruct_lossy_normalized_leaf(
             syntax
                 .chroma_sampling
                 .transform_grid(luma_width / 4, luma_height / 4, 1);
-        Some(cfl_ac_for_sampling(
+        let chroma_width = chroma_grid_width.checked_mul(4).portable()?;
+        let chroma_height = chroma_grid_height.checked_mul(4).portable()?;
+        let chroma_count = chroma_width.checked_mul(chroma_height).portable()?;
+        (chroma_count <= MAX_TRANSFORM_SAMPLES)
+            .then_some(())
+            .portable()?;
+        cfl_ac.resize(chroma_count, 0);
+        cfl_ac_for_sampling_into(
+            cfl_ac,
             &luma,
             luma_width,
             luma_height,
             visible_width,
             visible_height,
-            chroma_grid_width.checked_mul(4).portable()?,
-            chroma_grid_height.checked_mul(4).portable()?,
+            chroma_width,
+            chroma_height,
             syntax.chroma_sampling,
             &edges.cfl_luma,
-        )?)
+        )?;
+        Some(&cfl_ac[..])
     } else {
+        cfl_ac.clear();
         None
     };
 
-    let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
+    let mut chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
         if matches!(syntax.chroma_sampling, ChromaSampling::Monochrome) {
             return Ok(ReconstructedPlane {
-                samples: vec![sample_depth.midpoint(); sample_count],
+                samples: Vec::new(),
             });
         }
         let plane_index = plane.checked_sub(1).filter(|&index| index < 2).portable()?;
@@ -31139,8 +31435,9 @@ fn reconstruct_lossy_normalized_leaf(
                 arena,
                 &edges.planes[plane],
                 grid,
-                cfl_ac.as_deref(),
+                cfl_ac,
                 enable_intra_edge_filter,
+                transform,
             );
         }
         let coefficients = syntax.unsplit_coefficients(plane)?;
@@ -31153,11 +31450,12 @@ fn reconstruct_lossy_normalized_leaf(
         } else {
             syntax.palette.v
         };
-        let prediction = if palette.is_present() {
+        let mut prediction = vec![0_u16; chroma_sample_count];
+        if palette.is_present() {
             (!matches!(syntax.chroma_predictor, ChromaPredictor::Cfl { .. }))
                 .then_some(())
                 .portable()?;
-            full_palette_prediction(palette, &syntax.palette.uv_indices, chroma_sample_count)?
+            full_palette_prediction_into(&mut prediction, palette, &syntax.palette.uv_indices)?;
         } else if let ChromaPredictor::Cfl { alpha_u, alpha_v } = syntax.chroma_predictor {
             let alpha = if plane == 1 { alpha_u } else { alpha_v };
             let dc = match (edges.planes[plane].has_top, edges.planes[plane].has_left) {
@@ -31172,14 +31470,16 @@ fn reconstruct_lossy_normalized_leaf(
                 }
                 (false, false) => sample_depth.midpoint(),
             };
-            full_cfl_prediction(
-                cfl_ac.as_deref().ok_or(PortableUnavailable)?,
+            full_cfl_prediction_into(
+                &mut prediction,
+                cfl_ac.ok_or(PortableUnavailable)?,
                 dc,
                 alpha,
                 sample_depth,
-            )?
+            )?;
         } else {
-            full_intra_prediction(
+            full_intra_prediction_into(
+                &mut prediction,
                 lossless_chroma_predictor(syntax.chroma_predictor),
                 syntax.chroma_angle,
                 None,
@@ -31188,9 +31488,9 @@ fn reconstruct_lossy_normalized_leaf(
                 &edges.planes[plane],
                 sample_depth,
                 enable_intra_edge_filter,
-            )?
-        };
-        reconstruct_full_unsplit_prediction(prediction, coefficients, sample_depth)
+            )?;
+        }
+        reconstruct_full_unsplit_prediction(prediction, coefficients, sample_depth, transform)
     };
     let chroma_u = chroma(1)?;
     let chroma_v = chroma(2)?;
@@ -31213,6 +31513,7 @@ fn reconstruct_visible_lossy_normalized_leaf(
     visible_height: u32,
     enable_intra_edge_filter: bool,
     tx_context: (u8, u8),
+    scratch: &mut ReconstructionScratch,
 ) -> PortableResult<FirstLeaf> {
     let (grid_width, grid_height, _) = transform_grid.properties();
     let coded_width = grid_width.checked_mul(4).portable()?;
@@ -31230,6 +31531,7 @@ fn reconstruct_visible_lossy_normalized_leaf(
         visible_width_usize,
         visible_height_usize,
         enable_intra_edge_filter,
+        scratch,
     )?;
     let luma_context = lossy_luma_context(syntax);
     let chroma_contexts = lossy_chroma_contexts(syntax);
@@ -45578,6 +45880,7 @@ struct PendingBlockGeometry {
 pub(super) struct Lossy420Decoder {
     cdfs: BlockCdfs,
     large_coeff_arena: LargeCoefficientArena,
+    reconstruction_scratch: ReconstructionScratch,
     chroma_sampling: ChromaSampling,
     qcat_one_square_only: bool,
     pending_cdef_index_bits: u32,
@@ -45593,6 +45896,7 @@ impl Lossy420Decoder {
         Self {
             cdfs: BlockCdfs::defaults([0, 0]),
             large_coeff_arena: LargeCoefficientArena::new(),
+            reconstruction_scratch: ReconstructionScratch::new(),
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: false,
             pending_cdef_index_bits: 0,
@@ -45608,6 +45912,7 @@ impl Lossy420Decoder {
         Some(Self {
             cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
             large_coeff_arena: LargeCoefficientArena::new(),
+            reconstruction_scratch: ReconstructionScratch::new(),
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             pending_cdef_index_bits: 0,
@@ -45626,6 +45931,7 @@ impl Lossy420Decoder {
         Some(Self {
             cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
             large_coeff_arena: LargeCoefficientArena::new(),
+            reconstruction_scratch: ReconstructionScratch::new(),
             chroma_sampling,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             pending_cdef_index_bits: 0,
@@ -45867,6 +46173,7 @@ impl Lossy420Decoder {
             height,
             tools.enable_intra_edge_filter,
             tx_context,
+            &mut self.reconstruction_scratch,
         )
     }
 
@@ -46057,6 +46364,7 @@ impl Lossy420Decoder {
                 height,
                 tools.enable_intra_edge_filter,
                 tx_context,
+                &mut self.reconstruction_scratch,
             );
         }
 
@@ -46246,6 +46554,7 @@ impl Lossy420Decoder {
                 height,
                 tools.enable_intra_edge_filter,
                 tx_context,
+                &mut self.reconstruction_scratch,
             );
         }
         let above_left = ClosedLeaf {
@@ -46551,6 +46860,7 @@ impl Lossy420Decoder {
                 height,
                 tools.enable_intra_edge_filter,
                 tx_context,
+                &mut self.reconstruction_scratch,
             );
         }
         let luma_top_neighbor_is_distinct =
@@ -47044,6 +47354,7 @@ impl Lossy420Decoder {
                 height,
                 tools.enable_intra_edge_filter,
                 tx_context,
+                &mut self.reconstruction_scratch,
             );
         }
         if syntax.palette.is_present() && matches!(transform_grid, TransformGrid::Square8) {
@@ -48273,6 +48584,7 @@ impl Lossy420Decoder {
                 height,
                 tools.enable_intra_edge_filter,
                 normalized_luma_transform_context(transform_grid, &syntax)?,
+                &mut self.reconstruction_scratch,
             );
         }
         if full_resolution && !legacy_origin_full_predictors_allowed(transform_grid, &syntax) {

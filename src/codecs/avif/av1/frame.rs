@@ -1078,6 +1078,7 @@ fn validate_tile_entropy_prefixes(
         let block_y = tiling.row_starts[row as usize].wrapping_shl(block_shift);
         let context = entropy::FirstBlockContext {
             disable_cdf_update: header.disable_cdf_update,
+            intra_frame: header.frame_type.is_intra(),
             level: root_level,
             block_width,
             block_height,
