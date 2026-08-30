@@ -690,6 +690,8 @@ fn inter_frame_context<'a>(
         motion_mode_switchable: header.motion_mode_switchable,
         allow_warped_motion: header.allow_warped_motion,
         enable_interintra_compound: sequence.enable_interintra_compound,
+        enable_masked_compound: sequence.enable_masked_compound,
+        enable_jnt_comp: sequence.enable_jnt_comp,
     })
 }
 

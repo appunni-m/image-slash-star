@@ -48173,6 +48173,16 @@ struct BlockSegmentState {
     lossless: bool,
 }
 
+#[derive(Clone, Copy)]
+struct InterPrediction<'a> {
+    references: [&'a FrameSurface; 2],
+    scales: [ScaleFactors; 2],
+    motions: [MotionVector; 2],
+    block_x_b4: u32,
+    block_y_b4: u32,
+    compound_average: bool,
+}
+
 impl BlockSegmentState {
     const DEFAULT: Self = Self {
         delta_q: 0,
@@ -48566,11 +48576,99 @@ impl Lossy420Decoder {
         luma_tx_size: TxSize,
         luma_transform: Av1TransformType,
     ) -> PortableResult<FirstLeaf> {
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references: [reference, reference],
+                scales: [scale, scale],
+                motions: [motion, MotionVector::ZERO],
+                block_x_b4,
+                block_y_b4,
+                compound_average: false,
+            },
+            block_skipped,
+            luma_tx_size,
+            luma_transform,
+            filters,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "compound reconstruction carries block, frame, transform, and prediction state together"
+    )]
+    pub(super) fn decode_inter_compound_translation(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        _has_chroma: bool,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        references: [&FrameSurface; 2],
+        scales: [ScaleFactors; 2],
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motions: [MotionVector; 2],
+        filters: [InterpolationFilter; 2],
+        block_skipped: bool,
+        luma_tx_size: TxSize,
+        luma_transform: Av1TransformType,
+    ) -> PortableResult<FirstLeaf> {
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references,
+                scales,
+                motions,
+                block_x_b4,
+                block_y_b4,
+                compound_average: true,
+            },
+            block_skipped,
+            luma_tx_size,
+            luma_transform,
+            filters,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "shared inter reconstruction carries block, frame, transform, and prediction state together"
+    )]
+    fn decode_inter_translation_impl(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        prediction_state: InterPrediction<'_>,
+        block_skipped: bool,
+        luma_tx_size: TxSize,
+        luma_transform: Av1TransformType,
+        filters: [InterpolationFilter; 2],
+    ) -> PortableResult<FirstLeaf> {
         let chroma_sampling = self.chroma_sampling;
         let quantization = prepared_quantization.quantization;
+        let references = prediction_state.references;
         (chroma_sampling == ChromaSampling::Subsampled420
             && tools.sample_depth == quantization.sample_depth
-            && tools.sample_depth == reference.depth
+            && references
+                .iter()
+                .all(|reference| tools.sample_depth == reference.depth)
             && visible_width != 0
             && visible_height != 0
             && block_size.valid_for_layout(PixelLayout::I420)
@@ -48659,13 +48757,13 @@ impl Lossy420Decoder {
             let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
             let plane_subsampling = chroma_sampling.plane_subsampling(plane);
             let request = PredictionRequest {
-                block_x_b4,
-                block_y_b4,
+                block_x_b4: prediction_state.block_x_b4,
+                block_y_b4: prediction_state.block_y_b4,
                 width: u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
                 height: u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
                 subsampling_x: plane_subsampling.0 == 2,
                 subsampling_y: plane_subsampling.1 == 2,
-                motion,
+                motion: prediction_state.motions[0],
                 filters,
             };
             let prediction_len = tx_width.checked_mul(tx_height).portable()?;
@@ -48673,15 +48771,63 @@ impl Lossy420Decoder {
             prediction
                 .try_reserve_exact(prediction_len)
                 .map_err(|_| PortableUnavailable)?;
-            {
-                let scratch = self.ensure_motion_scratch()?;
-                let reference_plane = reference
+            if prediction_state.compound_average {
+                let first_plane = prediction_state.references[0]
                     .plane(plane)
                     .map_err(|_| PortableUnavailable)?
                     .portable()?;
-                let predicted = if scale.scaled {
+                {
+                    let scratch = self.ensure_motion_scratch()?;
+                    let first_request = request;
+                    if prediction_state.scales[0].scaled {
+                        scratch
+                            .prep_scaled(0, first_plane, first_request, prediction_state.scales[0])
+                            .map_err(|_| PortableUnavailable)?;
+                    } else {
+                        scratch
+                            .prep_unscaled(0, first_plane, first_request)
+                            .map_err(|_| PortableUnavailable)?;
+                    }
+                }
+                let second_plane = prediction_state.references[1]
+                    .plane(plane)
+                    .map_err(|_| PortableUnavailable)?
+                    .portable()?;
+                {
+                    let scratch = self.ensure_motion_scratch()?;
+                    let second_request = PredictionRequest {
+                        motion: prediction_state.motions[1],
+                        ..request
+                    };
+                    if prediction_state.scales[1].scaled {
+                        scratch
+                            .prep_scaled(
+                                1,
+                                second_plane,
+                                second_request,
+                                prediction_state.scales[1],
+                            )
+                            .map_err(|_| PortableUnavailable)?;
+                    } else {
+                        scratch
+                            .prep_unscaled(1, second_plane, second_request)
+                            .map_err(|_| PortableUnavailable)?;
+                    }
+                }
+                let scratch = self.ensure_motion_scratch()?;
+                let predicted = scratch
+                    .blend_average(tx_width, tx_height, tools.sample_depth)
+                    .map_err(|_| PortableUnavailable)?;
+                prediction.extend_from_slice(predicted);
+            } else {
+                let reference_plane = prediction_state.references[0]
+                    .plane(plane)
+                    .map_err(|_| PortableUnavailable)?
+                    .portable()?;
+                let scratch = self.ensure_motion_scratch()?;
+                let predicted = if prediction_state.scales[0].scaled {
                     scratch
-                        .put_scaled(reference_plane, request, scale)
+                        .put_scaled(reference_plane, request, prediction_state.scales[0])
                         .map_err(|_| PortableUnavailable)?
                 } else {
                     scratch

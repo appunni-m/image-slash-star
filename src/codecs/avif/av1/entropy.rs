@@ -9,10 +9,10 @@ use crate::codecs::CodecResult;
 use super::bit_reader::SegmentedData;
 use super::geometry::{BlockSize, IntraEdgeFlags, TxSize};
 use super::motion::{
-    CompoundType, GlobalMotion, InterMode, InterpolationFilter, MotionMode, MotionVector,
-    ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget, ReferencePair,
-    ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField, find_reference_mvs,
-    global_motion_vector,
+    CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter, MotionMode,
+    MotionVector, ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget,
+    ReferencePair, ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField,
+    find_reference_mvs, global_motion_vector,
 };
 use super::surface::FrameSurface;
 use super::tile_state::{BlockCoding, BlockCommitMetadata, TileState};
@@ -603,6 +603,8 @@ pub(super) struct InterFrameContext<'a> {
     pub(super) motion_mode_switchable: bool,
     pub(super) allow_warped_motion: bool,
     pub(super) enable_interintra_compound: bool,
+    pub(super) enable_masked_compound: bool,
+    pub(super) enable_jnt_comp: bool,
 }
 
 impl<'a> InterFrameContext<'a> {
@@ -2923,6 +2925,7 @@ fn switchable_interpolation_context(
     tile_state: &TileState,
     node: PartitionNode,
     reference: ReferenceFrame,
+    compound: bool,
     direction: usize,
 ) -> Av1Result<usize> {
     let left = node
@@ -2946,7 +2949,7 @@ fn switchable_interpolation_context(
     } else {
         3
     };
-    Ok(context)
+    Ok(context.saturating_add(usize::from(compound) * 4))
 }
 
 fn inter_forward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> (u8, u8, u8) {
@@ -3001,31 +3004,246 @@ fn inter_backward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> 
     }
     (
         compare_reference_counts(counts[0].saturating_add(counts[1]), counts[2]),
-        compare_reference_counts(counts[0], counts[1].saturating_add(counts[2])),
+        compare_reference_counts(counts[0], counts[1]),
     )
 }
 
+fn reference_type_from_sentinel(value: i8) -> Option<ReferenceFrame> {
+    (value > 0)
+        .then(|| ReferenceFrame::from_index(usize::try_from(value - 1).ok()?))
+        .flatten()
+}
+
+fn neighbor_reference_types(
+    block: SpatialRefBlock,
+) -> (Option<ReferenceFrame>, Option<ReferenceFrame>) {
+    if block.is_intra() {
+        return (None, None);
+    }
+    (
+        reference_type_from_sentinel(block.references[0]),
+        reference_type_from_sentinel(block.references[1]),
+    )
+}
+
+fn is_backward_reference(reference: Option<ReferenceFrame>) -> bool {
+    reference.is_some_and(|reference| !reference.is_forward())
+}
+
+fn is_unidirectional_compound(
+    references: (Option<ReferenceFrame>, Option<ReferenceFrame>),
+) -> bool {
+    references
+        .0
+        .zip(references.1)
+        .is_some_and(|(first, second)| first.is_forward() == second.is_forward())
+}
+
+/// Context for the reference-mode (single versus compound) symbol.  AV1
+/// treats intra neighbours as an absent reference rather than as a synthetic
+/// forward slot; keeping that distinction is required for the 2/3/4 rows.
 fn inter_compound_context(neighbors: [Option<SpatialRefBlock>; 2]) -> usize {
-    let mut compound = 0_u32;
-    let mut backward = 0_u32;
+    let above = neighbors[0].map(neighbor_reference_types);
+    let left = neighbors[1].map(neighbor_reference_types);
+    match (above, left) {
+        (Some(above), Some(left)) => match (above.1.is_some(), left.1.is_some()) {
+            (false, false) => {
+                usize::from(is_backward_reference(above.0))
+                    ^ usize::from(is_backward_reference(left.0))
+            }
+            (false, true) => 2 + usize::from(above.0.is_none() || is_backward_reference(above.0)),
+            (true, false) => 2 + usize::from(left.0.is_none() || is_backward_reference(left.0)),
+            (true, true) => 4,
+        },
+        (Some(reference), None) | (None, Some(reference)) => {
+            if reference.1.is_some() {
+                3
+            } else {
+                usize::from(is_backward_reference(reference.0))
+            }
+        }
+        (None, None) => 1,
+    }
+}
+
+/// Context for the bidirectional/unidirectional compound reference tree.
+fn inter_compound_reference_type_context(neighbors: [Option<SpatialRefBlock>; 2]) -> usize {
+    let above = neighbors[0].map(neighbor_reference_types);
+    let left = neighbors[1].map(neighbor_reference_types);
+    match (above, left) {
+        (Some(above), Some(left)) => {
+            let above_intra = above.0.is_none();
+            let left_intra = left.0.is_none();
+            if above_intra && left_intra {
+                2
+            } else if above_intra || left_intra {
+                let inter = if above_intra { left } else { above };
+                if inter.1.is_none() {
+                    2
+                } else {
+                    1 + 2 * usize::from(is_unidirectional_compound(inter))
+                }
+            } else {
+                let above_single = above.1.is_none();
+                let left_single = left.1.is_none();
+                if above_single && left_single {
+                    1 + 2 * usize::from(
+                        is_backward_reference(above.0) == is_backward_reference(left.0),
+                    )
+                } else if above_single || left_single {
+                    let compound = if above_single { left } else { above };
+                    if !is_unidirectional_compound(compound) {
+                        1
+                    } else {
+                        3 + usize::from(
+                            is_backward_reference(above.0) == is_backward_reference(left.0),
+                        )
+                    }
+                } else {
+                    let above_uni = is_unidirectional_compound(above);
+                    let left_uni = is_unidirectional_compound(left);
+                    if !above_uni && !left_uni {
+                        0
+                    } else if above_uni != left_uni {
+                        2
+                    } else {
+                        3 + usize::from(
+                            is_backward_reference(above.0) == is_backward_reference(left.0),
+                        )
+                    }
+                }
+            }
+        }
+        (Some(reference), None) | (None, Some(reference)) => {
+            if reference.0.is_none() || reference.1.is_none() {
+                2
+            } else {
+                4 * usize::from(is_unidirectional_compound(reference))
+            }
+        }
+        (None, None) => 2,
+    }
+}
+
+fn inter_compound_reference_contexts(neighbors: [Option<SpatialRefBlock>; 2]) -> [usize; 8] {
+    let mut counts = [0_u32; 7];
     for block in neighbors
         .into_iter()
         .flatten()
         .filter(|block| !block.is_intra())
     {
-        if block.is_compound() {
-            compound = compound.saturating_add(1);
-        }
-        if block.references[0] >= 5 {
-            backward = backward.saturating_add(1);
+        for reference in block.references {
+            let Some(reference) = reference_type_from_sentinel(reference) else {
+                continue;
+            };
+            if let Some(count) = counts.get_mut(reference.index()) {
+                *count = count.saturating_add(1);
+            }
         }
     }
-    if compound == 2 {
-        4
-    } else if compound == 1 {
-        2 + usize::from(backward != 0)
+    [
+        usize::from(compare_reference_counts(
+            counts[0].saturating_add(counts[1]),
+            counts[2].saturating_add(counts[3]),
+        )),
+        usize::from(compare_reference_counts(counts[0], counts[1])),
+        usize::from(compare_reference_counts(counts[2], counts[3])),
+        usize::from(compare_reference_counts(
+            counts[4].saturating_add(counts[5]),
+            counts[6],
+        )),
+        usize::from(compare_reference_counts(counts[4], counts[5])),
+        usize::from(compare_reference_counts(
+            counts[0]
+                .saturating_add(counts[1])
+                .saturating_add(counts[2])
+                .saturating_add(counts[3]),
+            counts[4]
+                .saturating_add(counts[5])
+                .saturating_add(counts[6]),
+        )),
+        usize::from(compare_reference_counts(
+            counts[1],
+            counts[2].saturating_add(counts[3]),
+        )),
+        usize::from(compare_reference_counts(counts[2], counts[3])),
+    ]
+}
+
+fn compound_mode_context(mode_context: u8) -> usize {
+    const COMPOUND_MODE_CONTEXT_MAP: [[usize; 5]; 3] =
+        [[0, 1, 1, 1, 1], [1, 2, 3, 4, 4], [4, 4, 5, 6, 7]];
+    let new_mv_context = usize::from(mode_context & 7).min(4);
+    let ref_mv_context = usize::from((mode_context >> 4) & 7).min(5);
+    COMPOUND_MODE_CONTEXT_MAP[ref_mv_context >> 1][new_mv_context]
+}
+
+fn decode_inter_compound_references(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    neighbors: [Option<SpatialRefBlock>; 2],
+) -> Av1Result<ReferencePair> {
+    let type_context = inter_compound_reference_type_context(neighbors).min(4);
+    let contexts = inter_compound_reference_contexts(neighbors);
+    let bidirectional = decoder.adaptive_bool(&mut cdfs.inter.compound_direction[type_context].0);
+    if bidirectional {
+        let first_group =
+            decoder.adaptive_bool(&mut cdfs.inter.compound_forward_reference[contexts[0]][0].0);
+        let first = if first_group {
+            if decoder.adaptive_bool(&mut cdfs.inter.compound_forward_reference[contexts[2]][2].0) {
+                ReferenceFrame::Golden
+            } else {
+                ReferenceFrame::Last3
+            }
+        } else if decoder
+            .adaptive_bool(&mut cdfs.inter.compound_forward_reference[contexts[1]][1].0)
+        {
+            ReferenceFrame::Last2
+        } else {
+            ReferenceFrame::Last
+        };
+        let second_group =
+            decoder.adaptive_bool(&mut cdfs.inter.compound_backward_reference[contexts[3]][0].0);
+        let second = if second_group {
+            ReferenceFrame::Alt
+        } else if decoder
+            .adaptive_bool(&mut cdfs.inter.compound_backward_reference[contexts[4]][1].0)
+        {
+            ReferenceFrame::Alt2
+        } else {
+            ReferenceFrame::Backward
+        };
+        Ok(ReferencePair::compound(first, second))
     } else {
-        usize::from(backward != 0)
+        let backward = decoder
+            .adaptive_bool(&mut cdfs.inter.compound_unidirectional_reference[contexts[5]][0].0);
+        if backward {
+            return Ok(ReferencePair::compound(
+                ReferenceFrame::Backward,
+                ReferenceFrame::Alt,
+            ));
+        }
+        let late_forward = decoder
+            .adaptive_bool(&mut cdfs.inter.compound_unidirectional_reference[contexts[6]][1].0);
+        if late_forward {
+            return if decoder
+                .adaptive_bool(&mut cdfs.inter.compound_unidirectional_reference[contexts[7]][2].0)
+            {
+                Ok(ReferencePair::compound(
+                    ReferenceFrame::Last,
+                    ReferenceFrame::Golden,
+                ))
+            } else {
+                Ok(ReferencePair::compound(
+                    ReferenceFrame::Last,
+                    ReferenceFrame::Last3,
+                ))
+            };
+        }
+        Ok(ReferencePair::compound(
+            ReferenceFrame::Last,
+            ReferenceFrame::Last2,
+        ))
     }
 }
 
@@ -3368,147 +3586,341 @@ fn decode_inter_leaf(
         && block_width_b4.min(block_height_b4) > 1
         && !skip_mode
         && !forced_reference;
-    if compound_allowed {
-        let compound =
-            decoder.adaptive_bool(&mut cdfs.inter.compound[inter_compound_context(neighbors)].0);
-        if compound {
+    let compound = if compound_allowed {
+        decoder.adaptive_bool(&mut cdfs.inter.compound[inter_compound_context(neighbors)].0)
+    } else {
+        false
+    };
+    let (references, motions, mode, global, new_mv) = if compound {
+        // The average-only tranche deliberately closes the joint/masked
+        // compound tools at the block boundary. Frames may still contain
+        // supported single-reference blocks when those sequence flags are on.
+        if inter_context.enable_masked_compound || inter_context.enable_jnt_comp {
             return Ok(Err(super::block::PortableUnavailable));
         }
-    }
-    let reference = if selected_segment.reference > 0 {
-        ReferenceFrame::from_segment_feature(selected_segment.reference)
-            .ok_or_else(|| malformed("segment reference exceeds seven"))?
-    } else if forced_global {
-        ReferenceFrame::Last
-    } else {
-        decode_inter_single_reference(decoder, cdfs, neighbors)?
-    };
-    let reference_state = inter_context.reference(reference);
-    let request = inter_context.mv_request(
-        ReferenceMvTarget::Single(reference),
-        node.block_size,
-        node.x,
-        node.y,
-        context.tile_origin_b4_x.saturating_add(node.x),
-        context.tile_origin_b4_y.saturating_add(node.y),
-        0,
-        0,
-        context.block_width,
-        context.block_height,
-        context.frame_block_width,
-        context.frame_block_height,
-        node.x.saturating_add(block_width_b4) < context.block_width,
-        None,
-    );
-    let stack = find_reference_mvs(tile_state, request)?;
-    let stack_context = stack.context;
-    let (mode, drl_index) = if forced_global {
-        (InterMode::Global, 0_usize)
-    } else if decoder.adaptive_bool(&mut cdfs.inter.new_mv[usize::from(stack_context & 7)].0) {
-        if !decoder
-            .adaptive_bool(&mut cdfs.inter.global_mv[usize::from((stack_context >> 3) & 1)].0)
-        {
-            (InterMode::Global, 0)
-        } else if decoder
-            .adaptive_bool(&mut cdfs.inter.reference_mv[usize::from((stack_context >> 4) & 15)].0)
-        {
-            let mut index = 1;
-            if stack.len() > 2 {
-                let first_context = stack
-                    .drl_context(1)
-                    .ok_or_else(|| malformed("near MV context is unavailable"))?;
-                if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(first_context)].0) {
-                    index = 2;
-                    if stack.len() > 3 {
-                        let second_context = stack
-                            .drl_context(2)
-                            .ok_or_else(|| malformed("near MV context is unavailable"))?;
-                        if decoder
-                            .adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(second_context)].0)
-                        {
-                            index = 3;
+        let references = decode_inter_compound_references(decoder, cdfs, neighbors)?;
+        let second = references
+            .second
+            .ok_or_else(|| malformed("compound reference pair omits its second reference"))?;
+        let request = inter_context.mv_request(
+            ReferenceMvTarget::Compound(references),
+            node.block_size,
+            node.x,
+            node.y,
+            context
+                .tile_origin_b4_x
+                .checked_add(node.x)
+                .ok_or_else(|| malformed("compound MV x coordinate overflows"))?,
+            context
+                .tile_origin_b4_y
+                .checked_add(node.y)
+                .ok_or_else(|| malformed("compound MV y coordinate overflows"))?,
+            0,
+            0,
+            context.block_width,
+            context.block_height,
+            context.frame_block_width,
+            context.frame_block_height,
+            node.x.saturating_add(block_width_b4) < context.block_width,
+            None,
+        );
+        let stack = find_reference_mvs(tile_state, request)?;
+        let mode_symbol = decoder.adaptive_symbol(
+            &mut cdfs.inter.compound_mode[compound_mode_context(stack.context)].0,
+            7,
+        );
+        let mode = match mode_symbol {
+            0 => InterMode::NearestNearest,
+            1 => InterMode::NearNear,
+            2 => InterMode::NearestNew,
+            3 => InterMode::NewNearest,
+            4 => InterMode::NearNew,
+            5 => InterMode::NewNear,
+            6 => InterMode::GlobalGlobal,
+            7 => InterMode::NewNew,
+            _ => return Err(malformed("compound inter mode symbol is invalid")),
+        };
+        let drl_start = match mode {
+            InterMode::NearNear | InterMode::NearNew | InterMode::NewNear => Some(1_usize),
+            InterMode::NewNew => Some(0_usize),
+            _ => None,
+        };
+        let mut drl_index = 0_usize;
+        if let Some(drl_start) = drl_start {
+            drl_index = drl_start;
+            if stack.len() > drl_start.saturating_add(1) {
+                let context = stack
+                    .drl_context(drl_start)
+                    .ok_or_else(|| malformed("compound DRL context is unavailable"))?;
+                if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(context)].0) {
+                    drl_index = drl_start.saturating_add(1);
+                    if stack.len() > drl_index.saturating_add(1) {
+                        let context = stack
+                            .drl_context(drl_index)
+                            .ok_or_else(|| malformed("compound DRL context is unavailable"))?;
+                        if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(context)].0) {
+                            drl_index = drl_index.saturating_add(1);
                         }
                     }
                 }
             }
-            (InterMode::Near, index)
-        } else {
-            (InterMode::Nearest, 0)
         }
-    } else {
-        let mut index = 0;
-        if stack.len() > 1 {
-            let first_context = stack
-                .drl_context(0)
-                .ok_or_else(|| malformed("new MV context is unavailable"))?;
-            if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(first_context)].0) {
-                index = 1;
-                if stack.len() > 2 {
-                    let second_context = stack
-                        .drl_context(1)
-                        .ok_or_else(|| malformed("new MV context is unavailable"))?;
-                    if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(second_context)].0)
-                    {
-                        index = 2;
-                    }
+        let nearest = stack
+            .slot(0)
+            .ok_or_else(|| malformed("compound MV stack has no nearest slot"))?;
+        let selected = stack
+            .slot(drl_index)
+            .ok_or_else(|| malformed("compound MV stack has no selected slot"))?;
+        let mut motions = [MotionVector::ZERO; 2];
+        if mode == InterMode::GlobalGlobal {
+            let first_state = inter_context.reference(references.first);
+            let second_state = inter_context.reference(second);
+            motions[0] = global_motion_vector(
+                first_state.global_motion,
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                block_width_b4,
+                block_height_b4,
+                inter_context.force_integer_mv,
+                inter_context.high_precision_mv,
+            )?;
+            motions[1] = global_motion_vector(
+                second_state.global_motion,
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                block_width_b4,
+                block_height_b4,
+                inter_context.force_integer_mv,
+                inter_context.high_precision_mv,
+            )?;
+            if !matches!(
+                first_state.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            ) || !matches!(
+                second_state.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            ) {
+                return Ok(Err(super::block::PortableUnavailable));
+            }
+        } else {
+            motions[0] = if mode.uses_new_mv(0) {
+                let predictor = if matches!(mode, InterMode::NewNearest) {
+                    nearest.vectors[0]
+                } else {
+                    selected.vectors[0]
+                };
+                let mut value = predictor;
+                decode_mv_residual(
+                    decoder,
+                    &mut cdfs.motion_vectors,
+                    &mut value,
+                    inter_context.force_integer_mv,
+                    inter_context.high_precision_mv,
+                )?;
+                value
+            } else {
+                selected.vectors[0]
+            };
+            motions[1] = if mode.uses_new_mv(1) {
+                let predictor = if matches!(mode, InterMode::NearestNew) {
+                    nearest.vectors[1]
+                } else {
+                    selected.vectors[1]
+                };
+                let mut value = predictor;
+                decode_mv_residual(
+                    decoder,
+                    &mut cdfs.motion_vectors,
+                    &mut value,
+                    inter_context.force_integer_mv,
+                    inter_context.high_precision_mv,
+                )?;
+                value
+            } else {
+                selected.vectors[1]
+            };
+            for (index, motion) in motions.iter_mut().enumerate() {
+                if !mode.uses_new_mv(index) {
+                    *motion = motion.reduce_precision(
+                        inter_context.force_integer_mv,
+                        inter_context.high_precision_mv,
+                    );
                 }
             }
         }
-        (InterMode::New, index)
-    };
-    let mut motion = match mode {
-        InterMode::Global => global_motion_vector(
-            reference_state.global_motion,
-            context.tile_origin_b4_x.saturating_add(node.x),
-            context.tile_origin_b4_y.saturating_add(node.y),
-            block_width_b4,
-            block_height_b4,
-            inter_context.force_integer_mv,
-            inter_context.high_precision_mv,
-        )?,
-        _ => {
-            stack
-                .slot(drl_index)
-                .ok_or_else(|| malformed("MV candidate stack has no selected slot"))?
-                .vectors[0]
-        }
-    };
-    if matches!(mode, InterMode::Nearest | InterMode::Near) && drl_index < 2 {
-        motion = motion.reduce_precision(
-            inter_context.force_integer_mv,
-            inter_context.high_precision_mv,
+        (
+            references,
+            motions,
+            mode,
+            [mode == InterMode::GlobalGlobal; 2],
+            [mode.uses_new_mv(0), mode.uses_new_mv(1)],
+        )
+    } else {
+        let reference = if selected_segment.reference > 0 {
+            ReferenceFrame::from_segment_feature(selected_segment.reference)
+                .ok_or_else(|| malformed("segment reference exceeds seven"))?
+        } else if forced_global {
+            ReferenceFrame::Last
+        } else {
+            decode_inter_single_reference(decoder, cdfs, neighbors)?
+        };
+        let reference_state = inter_context.reference(reference);
+        let request = inter_context.mv_request(
+            ReferenceMvTarget::Single(reference),
+            node.block_size,
+            node.x,
+            node.y,
+            context
+                .tile_origin_b4_x
+                .checked_add(node.x)
+                .ok_or_else(|| malformed("single-reference MV x coordinate overflows"))?,
+            context
+                .tile_origin_b4_y
+                .checked_add(node.y)
+                .ok_or_else(|| malformed("single-reference MV y coordinate overflows"))?,
+            0,
+            0,
+            context.block_width,
+            context.block_height,
+            context.frame_block_width,
+            context.frame_block_height,
+            node.x.saturating_add(block_width_b4) < context.block_width,
+            None,
         );
-    }
-    if matches!(mode, InterMode::New) {
-        if stack.len() <= 1 {
+        let stack = find_reference_mvs(tile_state, request)?;
+        let stack_context = stack.context;
+        let (mode, drl_index) = if forced_global {
+            (InterMode::Global, 0_usize)
+        } else if decoder.adaptive_bool(&mut cdfs.inter.new_mv[usize::from(stack_context & 7)].0) {
+            if !decoder
+                .adaptive_bool(&mut cdfs.inter.global_mv[usize::from((stack_context >> 3) & 1)].0)
+            {
+                (InterMode::Global, 0)
+            } else if decoder.adaptive_bool(
+                &mut cdfs.inter.reference_mv[usize::from((stack_context >> 4) & 15)].0,
+            ) {
+                let mut index = 1;
+                if stack.len() > 2 {
+                    let first_context = stack
+                        .drl_context(1)
+                        .ok_or_else(|| malformed("near MV context is unavailable"))?;
+                    if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(first_context)].0)
+                    {
+                        index = 2;
+                        if stack.len() > 3 {
+                            let second_context = stack
+                                .drl_context(2)
+                                .ok_or_else(|| malformed("near MV context is unavailable"))?;
+                            if decoder.adaptive_bool(
+                                &mut cdfs.inter.drl_bit[usize::from(second_context)].0,
+                            ) {
+                                index = 3;
+                            }
+                        }
+                    }
+                }
+                (InterMode::Near, index)
+            } else {
+                (InterMode::Nearest, 0)
+            }
+        } else {
+            let mut index = 0;
+            if stack.len() > 1 {
+                let first_context = stack
+                    .drl_context(0)
+                    .ok_or_else(|| malformed("new MV context is unavailable"))?;
+                if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(first_context)].0) {
+                    index = 1;
+                    if stack.len() > 2 {
+                        let second_context = stack
+                            .drl_context(1)
+                            .ok_or_else(|| malformed("new MV context is unavailable"))?;
+                        if decoder
+                            .adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(second_context)].0)
+                        {
+                            index = 2;
+                        }
+                    }
+                }
+            }
+            (InterMode::New, index)
+        };
+        let mut motion = match mode {
+            InterMode::Global => global_motion_vector(
+                reference_state.global_motion,
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                block_width_b4,
+                block_height_b4,
+                inter_context.force_integer_mv,
+                inter_context.high_precision_mv,
+            )?,
+            _ => {
+                stack
+                    .slot(drl_index)
+                    .ok_or_else(|| malformed("MV candidate stack has no selected slot"))?
+                    .vectors[0]
+            }
+        };
+        if matches!(mode, InterMode::Nearest | InterMode::Near) && drl_index < 2 {
             motion = motion.reduce_precision(
                 inter_context.force_integer_mv,
                 inter_context.high_precision_mv,
             );
         }
-        decode_mv_residual(
+        if matches!(mode, InterMode::New) {
+            if stack.len() <= 1 {
+                motion = motion.reduce_precision(
+                    inter_context.force_integer_mv,
+                    inter_context.high_precision_mv,
+                );
+            }
+            decode_mv_residual(
+                decoder,
+                &mut cdfs.motion_vectors,
+                &mut motion,
+                inter_context.force_integer_mv,
+                inter_context.high_precision_mv,
+            )?;
+        }
+        if matches!(mode, InterMode::Global)
+            && !matches!(
+                reference_state.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+        {
+            return Ok(Err(super::block::PortableUnavailable));
+        }
+        (
+            ReferencePair::single(reference),
+            [motion, MotionVector::ZERO],
+            mode,
+            [mode == InterMode::Global, false],
+            [mode == InterMode::New, false],
+        )
+    };
+    let first_state = inter_context.reference(references.first);
+    let second_state = references
+        .second
+        .map(|reference| inter_context.reference(reference));
+    let interintra = if compound {
+        false
+    } else {
+        decode_interintra_syntax(
             decoder,
-            &mut cdfs.motion_vectors,
-            &mut motion,
-            inter_context.force_integer_mv,
-            inter_context.high_precision_mv,
-        )?;
-    }
-    if matches!(mode, InterMode::Global) && !reference_state.global_motion.is_translation() {
-        return Ok(Err(super::block::PortableUnavailable));
-    }
-    let interintra = decode_interintra_syntax(
-        decoder,
-        cdfs,
-        inter_context,
-        node.block_size,
-        false,
-        skip_mode,
-    )?;
+            cdfs,
+            inter_context,
+            node.block_size,
+            false,
+            skip_mode,
+        )?
+    };
     if interintra {
         return Ok(Err(super::block::PortableUnavailable));
     }
-    let motion_mode = if !skip_mode
+    let motion_mode = if compound {
+        MotionMode::Translation
+    } else if !skip_mode
         && inter_context.motion_mode_switchable
         && block_width_b4.min(block_height_b4) >= 2
         && has_overlappable_neighbor(tile_state, node)?
@@ -3529,13 +3941,24 @@ fn decode_inter_leaf(
     } else {
         MotionMode::Translation
     };
-    let interpolation_needed = !skip_mode
-        && motion_mode == MotionMode::Translation
-        && !(matches!(mode, InterMode::Global) && !reference_state.global_motion.is_translation());
+    let interpolation_needed = match mode {
+        InterMode::Global => matches!(
+            first_state.global_motion.kind,
+            GlobalMotionType::Translation
+        ),
+        InterMode::GlobalGlobal => second_state.is_some_and(|second| {
+            matches!(
+                first_state.global_motion.kind,
+                GlobalMotionType::Translation
+            ) || matches!(second.global_motion.kind, GlobalMotionType::Translation)
+        }),
+        _ => !skip_mode && motion_mode == MotionMode::Translation,
+    };
     let filters = if interpolation_needed && inter_context.interpolation_filter == 4 {
         // AV1 reads vertical first and horizontal second; the motion kernel
         // stores horizontal then vertical.
-        let vertical_context = switchable_interpolation_context(tile_state, node, reference, 0)?;
+        let vertical_context =
+            switchable_interpolation_context(tile_state, node, references.first, compound, 0)?;
         let vertical = decoder.adaptive_symbol(
             &mut cdfs.inter.interpolation_filter[0][vertical_context].0,
             2,
@@ -3544,7 +3967,7 @@ fn decode_inter_leaf(
             .ok_or_else(|| malformed("vertical interpolation filter symbol is invalid"))?;
         let horizontal = if inter_context.dual_filter {
             let horizontal_context =
-                switchable_interpolation_context(tile_state, node, reference, 1)?;
+                switchable_interpolation_context(tile_state, node, references.first, compound, 1)?;
             let symbol = decoder.adaptive_symbol(
                 &mut cdfs.inter.interpolation_filter[1][horizontal_context].0,
                 2,
@@ -3577,38 +4000,61 @@ fn decode_inter_leaf(
         context.frame_tools.reduced_transform_set,
         quantization.segment_lossless,
     )?;
-    let leaf = match block_decoder.decode_inter_translation(
-        decoder,
-        node.block_size,
-        visible_width,
-        visible_height,
-        true,
-        prepared_quantization,
-        tools,
-        reference_state.surface,
-        reference_state.scale,
-        context.tile_origin_b4_x.saturating_add(node.x),
-        context.tile_origin_b4_y.saturating_add(node.y),
-        motion,
-        filters,
-        block_skipped,
-        tx_size,
-        transform,
-    ) {
+    let leaf = match if compound {
+        let second = second_state
+            .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
+        block_decoder.decode_inter_compound_translation(
+            decoder,
+            node.block_size,
+            visible_width,
+            visible_height,
+            true,
+            prepared_quantization,
+            tools,
+            [first_state.surface, second.surface],
+            [first_state.scale, second.scale],
+            context.tile_origin_b4_x.saturating_add(node.x),
+            context.tile_origin_b4_y.saturating_add(node.y),
+            motions,
+            filters,
+            block_skipped,
+            tx_size,
+            transform,
+        )
+    } else {
+        block_decoder.decode_inter_translation(
+            decoder,
+            node.block_size,
+            visible_width,
+            visible_height,
+            true,
+            prepared_quantization,
+            tools,
+            first_state.surface,
+            first_state.scale,
+            context.tile_origin_b4_x.saturating_add(node.x),
+            context.tile_origin_b4_y.saturating_add(node.y),
+            motions[0],
+            filters,
+            block_skipped,
+            tx_size,
+            transform,
+        )
+    } {
         Ok(leaf) => leaf,
         Err(_) => return Ok(Err(super::block::PortableUnavailable)),
     };
     Ok(Ok(DecodedInterLeaf {
         leaf,
         metadata: super::tile_state::InterBlockMeta {
-            references: ReferencePair::single(reference),
-            motion_vectors: [motion, MotionVector::ZERO],
+            references,
+            motion_vectors: motions,
             mode,
             compound_type: CompoundType::Average,
             motion_mode,
             filters,
-            global: [matches!(mode, InterMode::Global), false],
-            new_mv: [matches!(mode, InterMode::New), false],
+            global,
+            new_mv,
         },
     }))
 }
@@ -3658,7 +4104,8 @@ fn effective_loop_levels(
                         .get(reference.index().saturating_add(1))
                         .copied()
                         .unwrap_or_default();
-                    let mode_index = usize::from(!matches!(mode, InterMode::Global));
+                    let mode_index =
+                        usize::from(!matches!(mode, InterMode::Global | InterMode::GlobalGlobal));
                     let mode_delta = frame
                         .mode_deltas
                         .get(mode_index)
@@ -4313,12 +4760,11 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && matches!(context.level, 0 | 1)
 }
 
-/// First inter reconstruction tranche: single-reference, 8-bit 4:2:0
-/// translation blocks with loop filtering and the bounded CDEF profile
-/// enabled. Reference scaling is dispatched through the same checked MC
-/// boundary as unity-scale references. Unsupported compound, inter-intra,
-/// warped, and variable-transform branches are rejected before a block
-/// publishes neighbor metadata.
+/// First inter reconstruction tranche: 8-bit 4:2:0 translation blocks with
+/// loop filtering and the bounded CDEF profile enabled. Single-reference and
+/// average compound prediction share the checked MC boundary; joint/masked
+/// compound, inter-intra, warped, and variable-transform branches are still
+/// rejected before a block publishes neighbor metadata.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
     let Some(cdef) = context.frame_tools.cdef else {
         return true;
