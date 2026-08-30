@@ -2251,6 +2251,15 @@ pub(super) struct LossyQuantization {
     pub(super) segment_lossless: bool,
 }
 
+/// Quantization state whose one-shot tile delta sentences have already been
+/// consumed for an inter block. Keeping this distinct from the frame-static
+/// input prevents the terminal from preparing the same block twice and
+/// silently discarding segment ALT_Q.
+#[derive(Clone, Copy)]
+pub(super) struct PreparedInterQuantization {
+    pub(super) quantization: LossyQuantization,
+}
+
 #[derive(Clone, Copy)]
 struct SyntaxPolicy {
     spatial_luma_context: SpatialLumaContext,
@@ -48466,6 +48475,67 @@ impl Lossy420Decoder {
         quantization
     }
 
+    /// Decode the inter block's one-shot delta-q/delta-LF opportunity.
+    ///
+    /// The returned wrapper is intentionally consumed by
+    /// `decode_inter_translation`; a second call to `prepare_quantization`
+    /// would replace the segment-adjusted qindex with the tile accumulator.
+    pub(super) fn decode_inter_quantization(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        quantization: LossyQuantization,
+        skipped: bool,
+    ) -> PortableResult<PreparedInterQuantization> {
+        let geometry = self.pending_block_geometry.ok_or(PortableUnavailable)?;
+        let pending_skip = self.pending_skip.ok_or(PortableUnavailable)?;
+        (pending_skip == skipped).then_some(()).portable()?;
+
+        let (root_width, root_height) = geometry.block_size.mi_dimensions();
+        let full_root = root_width == self.cdef_root_size && root_height == self.cdef_root_size;
+        let delta_q_present =
+            quantization.delta_q_present && self.take_delta_q() && !(skipped && full_root);
+        let initial_qindex = self.current_qindex.unwrap_or(quantization.qindex);
+        let decoded = decode_block_quantization(
+            decoder,
+            &mut self.cdfs,
+            QuantizationSyntax::Lossy {
+                initial_qindex,
+                delta_q_present,
+                resolution_log2: quantization.resolution_log2,
+                y_dc_delta: quantization.y_dc_delta,
+                y_ac_delta: quantization.y_ac_delta,
+                u_dc_delta: quantization.u_dc_delta,
+                u_ac_delta: quantization.u_ac_delta,
+                v_dc_delta: quantization.v_dc_delta,
+                v_ac_delta: quantization.v_ac_delta,
+                using_matrix: quantization.using_matrix,
+                matrix_y: quantization.matrix_y,
+                matrix_u: quantization.matrix_u,
+                matrix_v: quantization.matrix_v,
+                reduced_transform_set: quantization.reduced_transform_set,
+                segment_qindex: self.segment.qindex,
+            },
+            quantization.sample_depth,
+        )?;
+        let tile_qindex = decoded.qindex;
+        self.remember_qindex(tile_qindex, decoder);
+        let qindex = u32::try_from(
+            i64::from(tile_qindex)
+                .saturating_add(i64::from(self.segment.delta_q))
+                .clamp(0, 255),
+        )
+        .map_err(|_| PortableUnavailable)?;
+        Ok(PreparedInterQuantization {
+            quantization: LossyQuantization {
+                qindex,
+                delta_q_present,
+                segment_qindex: self.segment.qindex,
+                segment_lossless: self.segment.lossless,
+                ..decoded
+            },
+        })
+    }
+
     fn ensure_motion_scratch(&mut self) -> PortableResult<&mut MotionScratch> {
         if self.motion_scratch.is_none() {
             self.motion_scratch = Some(MotionScratch::new().map_err(|_| PortableUnavailable)?);
@@ -48484,7 +48554,7 @@ impl Lossy420Decoder {
         visible_width: u32,
         visible_height: u32,
         _has_chroma: bool,
-        quantization: LossyQuantization,
+        prepared_quantization: PreparedInterQuantization,
         tools: BlockTools,
         reference: &FrameSurface,
         scale: ScaleFactors,
@@ -48497,6 +48567,7 @@ impl Lossy420Decoder {
         luma_transform: Av1TransformType,
     ) -> PortableResult<FirstLeaf> {
         let chroma_sampling = self.chroma_sampling;
+        let quantization = prepared_quantization.quantization;
         (chroma_sampling == ChromaSampling::Subsampled420
             && tools.sample_depth == quantization.sample_depth
             && tools.sample_depth == reference.depth
@@ -48514,7 +48585,6 @@ impl Lossy420Decoder {
         (predecoded_skip == block_skipped)
             .then_some(())
             .portable()?;
-        let quantization = self.prepare_quantization(quantization);
         let (luma_width, luma_height) = block_size.pixel_dimensions();
         let y_geometry = generic_plane_geometry(
             block_size,

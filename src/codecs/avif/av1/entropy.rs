@@ -3240,9 +3240,9 @@ fn decode_inter_transform_type(
     cdfs: &mut FrameCdfs,
     tx_size: TxSize,
     reduced_transform_set: bool,
-    qindex: u32,
+    segment_lossless: bool,
 ) -> Av1Result<super::block::Av1TransformType> {
-    if qindex == 0
+    if segment_lossless
         || tx_size
             .pixel_dimensions()
             .0
@@ -3341,7 +3341,7 @@ fn decode_inter_leaf(
     visible_height: u32,
     selected_segment: SegmentContext,
     block_skipped: bool,
-    quantization: super::block::LossyQuantization,
+    prepared_quantization: super::block::PreparedInterQuantization,
     tools: super::block::BlockTools,
 ) -> Av1Result<super::block::PortableResult<DecodedInterLeaf>> {
     if selected_segment.reference == 0 {
@@ -3569,12 +3569,13 @@ fn decode_inter_leaf(
         context.frame_tools.transform_mode,
     )
     .map_err(|_| malformed("variable inter transform is unavailable"))?;
+    let quantization = prepared_quantization.quantization;
     let transform = decode_inter_transform_type(
         decoder,
         cdfs,
         tx_size,
         context.frame_tools.reduced_transform_set,
-        quantization.segment_qindex,
+        quantization.segment_lossless,
     )?;
     let leaf = match block_decoder.decode_inter_translation(
         decoder,
@@ -3582,7 +3583,7 @@ fn decode_inter_leaf(
         visible_width,
         visible_height,
         true,
-        quantization,
+        prepared_quantization,
         tools,
         reference_state.surface,
         reference_state.scale,
@@ -3846,9 +3847,7 @@ pub(super) fn validate_complete_lossy_420_partition(
 
     for root_y in (0..context.block_height).step_by(root_step) {
         for root_x in (0..context.block_width).step_by(root_step) {
-            let delta_q_mask = if context.level == 0 { 31 } else { 15 };
-            let delta_q_at_root =
-                context.frame_tools.delta_q_present && ((root_x | root_y) & delta_q_mask) == 0;
+            let delta_q_at_root = context.frame_tools.delta_q_present;
             block_decoder.begin_superblock(
                 context.frame_tools.cdef.map_or(0, |cdef| cdef.bits),
                 delta_q_at_root,
@@ -4003,6 +4002,17 @@ pub(super) fn validate_complete_lossy_420_partition(
                         unsupported = true;
                         return Ok(PartitionVisitControl::Stop);
                     }
+                    let prepared_quantization = match block_decoder.decode_inter_quantization(
+                        decoder,
+                        quantization,
+                        block_skipped,
+                    ) {
+                        Ok(prepared) => prepared,
+                        Err(_) => {
+                            unsupported = true;
+                            return Ok(PartitionVisitControl::Stop);
+                        }
+                    };
                     match decode_inter_leaf(
                         decoder,
                         &mut tile_cdfs,
@@ -4015,7 +4025,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         height,
                         selected_segment,
                         block_skipped,
-                        quantization,
+                        prepared_quantization,
                         tools,
                     )? {
                         Ok(inter) => {
@@ -4336,8 +4346,6 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && !context.frame_tools.delta_q_present
-        && !context.frame_tools.delta_lf_present
         && context.frame_tools.transform_mode != 2
         && inter_cdef_supported(context)
         && !context.frame_tools.restoration_present
