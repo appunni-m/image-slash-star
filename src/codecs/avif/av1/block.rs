@@ -48527,6 +48527,9 @@ impl Lossy420Decoder {
             },
             quantization.sample_depth,
         )?;
+        if decoded.delta_q_present {
+            decode_delta_lf(decoder, &mut self.cdfs)?;
+        }
         let tile_qindex = decoded.qindex;
         self.remember_qindex(tile_qindex, decoder);
         let qindex = u32::try_from(
