@@ -267,9 +267,29 @@ impl BlockSize {
     ///
     /// The predicate is intentionally independent of the visible crop: a
     /// standalone 4x4 image is coded as B8x8 and therefore remains eligible.
+    /// AV1's lower bound uses the numeric block-size ordering, not an
+    /// independent eight-pixel minimum on both axes. Consequently the later
+    /// B4x16 and B16x4 enum values are palette-eligible too.
     pub(super) const fn palette_allowed(self) -> bool {
-        let (width, height) = self.pixel_dimensions();
-        width >= 8 && width <= 64 && height >= 8 && height <= 64
+        matches!(
+            self,
+            Self::B8x8
+                | Self::B8x16
+                | Self::B16x8
+                | Self::B16x16
+                | Self::B16x32
+                | Self::B32x16
+                | Self::B32x32
+                | Self::B32x64
+                | Self::B64x32
+                | Self::B64x64
+                | Self::B4x16
+                | Self::B16x4
+                | Self::B8x32
+                | Self::B32x8
+                | Self::B16x64
+                | Self::B64x16
+        )
     }
 
     /// Palette-size CDF row for one palette-eligible coded block.
