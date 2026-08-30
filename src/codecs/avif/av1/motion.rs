@@ -61,7 +61,7 @@ impl MotionVector {
         })
     }
 
-    pub(super) const fn manhattan_distance(self, other: Self) -> u32 {
+    pub(super) fn manhattan_distance(self, other: Self) -> u32 {
         u32::from(self.y.abs_diff(other.y)).saturating_add(u32::from(self.x.abs_diff(other.x)))
     }
 
@@ -585,10 +585,11 @@ impl MotionCandidateStack {
     }
 
     pub(super) fn add_or_weight(&mut self, vectors: [MotionVector; 2], weight: i32) {
+        let count = self.len();
         if let Some(candidate) = self
             .candidates
             .iter_mut()
-            .take(self.len())
+            .take(count)
             .find(|candidate| candidate.vectors == vectors)
         {
             candidate.weight = candidate.weight.saturating_add(weight);
@@ -634,7 +635,8 @@ impl MotionCandidateStack {
     }
 
     fn add_weight_to_range(&mut self, end: usize, weight: i32) {
-        for candidate in self.candidates.iter_mut().take(end.min(self.len())) {
+        let count = self.len();
+        for candidate in self.candidates.iter_mut().take(end.min(count)) {
             candidate.weight = candidate.weight.saturating_add(weight);
         }
     }
@@ -1178,7 +1180,7 @@ fn add_compound_extended_candidate(
 fn add_single_extended_candidate(
     stack: &mut MotionCandidateStack,
     block: SpatialRefBlock,
-    target: ReferenceFrame,
+    _target: ReferenceFrame,
     target_sign: bool,
     sign_bias: [bool; 7],
 ) {
@@ -1750,6 +1752,7 @@ pub(super) struct IntrabcLegalityInput {
     pub(super) tile_left_b4: u32,
     pub(super) tile_top_b4: u32,
     pub(super) tile_right_b4: u32,
+    pub(super) tile_bottom_b4: u32,
     pub(super) has_chroma: bool,
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
@@ -2068,7 +2071,7 @@ impl TemporalMotionField {
         if coded_width == 0 || frame_height == 0 || order_hint_bits > 8 {
             return Err(malformed("temporal motion field has invalid geometry"));
         }
-        let width = coded_width.div_ceil(8);
+        let _width = coded_width.div_ceil(8);
         let height = frame_height.div_ceil(8);
         let padded_width = coded_width
             .checked_add(127)
@@ -2195,19 +2198,24 @@ pub(super) fn load_projected_temporal_field(
     let mut selected = [0_usize; 3];
     let mut selected_count = 0_usize;
     let mut total = 2_usize;
-    let mut select = |index: usize, total_limit: &mut usize| {
-        if selected_count < selected.len() {
-            selected[selected_count] = index;
-            selected_count += 1;
-            *total_limit = (*total_limit).max(selected_count);
+    fn select_source(
+        selected: &mut [usize; 3],
+        selected_count: &mut usize,
+        index: usize,
+        total_limit: &mut usize,
+    ) {
+        if *selected_count < selected.len() {
+            selected[*selected_count] = index;
+            *selected_count += 1;
+            *total_limit = (*total_limit).max(*selected_count);
         }
-    };
+    }
     if retained[0].is_some()
         && retained[0]
             .is_some_and(|field| field.reference_order_hints()[6] != reference_order_hints[3])
     {
         total = 3;
-        select(0, &mut total);
+        select_source(&mut selected, &mut selected_count, 0, &mut total);
     }
     for index in [4_usize, 5, 6] {
         if selected_count >= total {
@@ -2220,11 +2228,11 @@ pub(super) fn load_projected_temporal_field(
                 current_order_hint,
             ) > 0
         {
-            select(index, &mut total);
+            select_source(&mut selected, &mut selected_count, index, &mut total);
         }
     }
     if selected_count < total && retained[1].is_some() {
-        select(1, &mut total);
+        select_source(&mut selected, &mut selected_count, 1, &mut total);
     }
 
     let logical_width8 = current_width.div_ceil(8);

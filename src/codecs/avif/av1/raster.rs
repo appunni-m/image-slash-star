@@ -599,6 +599,7 @@ impl FrameCanvas {
 
     /// Copy a contiguous reconstructed column immediately left of `x` into
     /// fixed stack storage. Coordinates are plane pixels, not luma units.
+    #[allow(dead_code, reason = "retained for strict following-block edge access")]
     pub(super) fn written_column_before<const COUNT: usize>(
         &self,
         plane: usize,
@@ -647,6 +648,7 @@ impl FrameCanvas {
     /// the neutral 8-bit midpoint. Keep that policy explicit at those call
     /// sites while strict edge readers continue to use
     /// [`Self::written_column_before`].
+    #[allow(dead_code, reason = "retained for compatibility edge access")]
     pub(super) fn column_before_or_default<const COUNT: usize>(
         &self,
         plane: usize,

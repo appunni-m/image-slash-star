@@ -28,12 +28,14 @@ impl SampleDepth {
     };
 
     /// Validated ten-bit AV1 sample domain.
+    #[allow(dead_code, reason = "reserved for high-bit-depth AVIF reconstruction")]
     pub(crate) const TEN: Self = Self {
         bits: 10,
         maximum: 1_023,
     };
 
     /// Validated twelve-bit AV1 sample domain.
+    #[allow(dead_code, reason = "reserved for high-bit-depth AVIF reconstruction")]
     pub(crate) const TWELVE: Self = Self {
         bits: 12,
         maximum: 4_095,
@@ -95,6 +97,7 @@ impl SampleDepth {
     }
 
     /// Clip one signed reconstruction result to this nominal sample domain.
+    #[allow(dead_code, reason = "reserved for high-bit-depth AVIF reconstruction")]
     pub(crate) fn clip_i32(self, value: i32) -> u16 {
         let clipped = value.clamp(0, i32::from(self.maximum()));
         u16::try_from(clipped).unwrap_or(self.maximum())

@@ -7,8 +7,15 @@ use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
 
 use super::bit_reader::SegmentedData;
-use super::geometry::{BlockSize, IntraEdgeFlags};
-use super::tile_state::TileState;
+use super::geometry::{BlockSize, IntraEdgeFlags, TxSize};
+use super::motion::{
+    CompoundType, GlobalMotion, InterMode, InterpolationFilter, MotionMode, MotionVector,
+    ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget, ReferencePair,
+    ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField, find_reference_mvs,
+    global_motion_vector,
+};
+use super::surface::FrameSurface;
+use super::tile_state::{BlockCoding, BlockCommitMetadata, TileState};
 use super::{Av1Result, malformed};
 
 const WINDOW_BITS: i32 = 64;
@@ -550,6 +557,98 @@ impl SegmentationContext {
         last_active_id: 0,
         segments: [SegmentContext::EMPTY; 8],
     };
+}
+
+/// Immutable reference state used by one inter-frame tile decode.  The
+/// decoder keeps the owning `Arc<FrameSurface>` in frame state and borrows it
+/// only for the duration of entropy/prediction.  This prevents a plane view
+/// from outliving the retained slot while still making the hot prediction
+/// path allocation-free.
+#[derive(Clone, Copy)]
+pub(super) struct InterReference<'a> {
+    #[allow(
+        dead_code,
+        reason = "retained for reference-order and temporal dispatch"
+    )]
+    pub(super) logical: ReferenceFrame,
+    pub(super) surface: &'a FrameSurface,
+    pub(super) scale: ScaleFactors,
+    #[allow(dead_code, reason = "retained for temporal projection dispatch")]
+    pub(super) order_hint: u32,
+    pub(super) global_motion: GlobalMotion,
+    #[allow(dead_code, reason = "retained for sign-biased reference-MV dispatch")]
+    pub(super) sign_bias: bool,
+    #[allow(dead_code, reason = "retained for temporal reference-MV dispatch")]
+    pub(super) temporal: Option<&'a TemporalMotionField>,
+}
+
+/// Seven logical references and the frame-level controls shared by every
+/// inter block in a tile.  The constructor validates the full mapping before
+/// any inter entropy is consumed; an individual block therefore cannot turn
+/// a missing slot into a default/DC predictor.
+#[derive(Clone, Copy)]
+pub(super) struct InterFrameContext<'a> {
+    pub(super) references: [InterReference<'a>; 7],
+    pub(super) current_order_hint: u32,
+    pub(super) order_hint_bits: u32,
+    pub(super) reference_order_hints: [u32; 7],
+    pub(super) global_motion: [GlobalMotion; 7],
+    pub(super) sign_bias: [bool; 7],
+    pub(super) force_integer_mv: bool,
+    pub(super) high_precision_mv: bool,
+    pub(super) use_ref_frame_mvs: bool,
+    pub(super) interpolation_filter: u32,
+    pub(super) dual_filter: bool,
+    pub(super) reference_mode_select: bool,
+}
+
+impl<'a> InterFrameContext<'a> {
+    pub(super) fn reference(self, reference: ReferenceFrame) -> InterReference<'a> {
+        self.references[reference.index()]
+    }
+
+    pub(super) fn mv_request(
+        self,
+        target: ReferenceMvTarget,
+        block_size: BlockSize,
+        local_x_b4: u32,
+        local_y_b4: u32,
+        absolute_x_b4: u32,
+        absolute_y_b4: u32,
+        tile_left_b4: u32,
+        tile_top_b4: u32,
+        tile_right_b4: u32,
+        tile_bottom_b4: u32,
+        frame_width_b4: u32,
+        frame_height_b4: u32,
+        top_has_right: bool,
+        temporal: Option<&ProjectedTemporalField>,
+    ) -> ReferenceMvRequest<'_> {
+        ReferenceMvRequest {
+            target,
+            block_size,
+            local_x_b4,
+            local_y_b4,
+            absolute_x_b4,
+            absolute_y_b4,
+            tile_left_b4,
+            tile_top_b4,
+            tile_right_b4,
+            tile_bottom_b4,
+            frame_width_b4,
+            frame_height_b4,
+            top_has_right,
+            global_motion: self.global_motion,
+            force_integer_mv: self.force_integer_mv,
+            high_precision_mv: self.high_precision_mv,
+            sign_bias: self.sign_bias,
+            current_order_hint: self.current_order_hint,
+            order_hint_bits: self.order_hint_bits,
+            reference_order_hints: self.reference_order_hints,
+            use_ref_frame_mvs: self.use_ref_frame_mvs,
+            temporal,
+        }
+    }
 }
 
 /// Codec state needed before the first block in one tile.
@@ -2632,6 +2731,680 @@ fn skip_context_for_node(tile_state: &TileState, node: PartitionNode) -> Av1Resu
     )
 }
 
+fn inter_neighbors(
+    tile_state: &TileState,
+    node: PartitionNode,
+) -> Av1Result<[Option<SpatialRefBlock>; 2]> {
+    let above = node
+        .y
+        .checked_sub(1)
+        .map(|y| tile_state.spatial_block(node.x, y))
+        .transpose()?
+        .flatten();
+    let left = node
+        .x
+        .checked_sub(1)
+        .map(|x| tile_state.spatial_block(x, node.y))
+        .transpose()?
+        .flatten();
+    Ok([above, left])
+}
+
+fn inter_intra_context(neighbors: [Option<SpatialRefBlock>; 2]) -> usize {
+    let count = neighbors
+        .into_iter()
+        .flatten()
+        .filter(|block| block.is_intra())
+        .count();
+    match count {
+        2 => 3,
+        1 => 2,
+        _ => 0,
+    }
+}
+
+fn compare_reference_counts(left: u32, right: u32) -> u8 {
+    match left.cmp(&right) {
+        std::cmp::Ordering::Less => 0,
+        std::cmp::Ordering::Equal => 1,
+        std::cmp::Ordering::Greater => 2,
+    }
+}
+
+fn inter_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> u8 {
+    let mut forward = 0_u32;
+    let mut backward = 0_u32;
+    for block in neighbors
+        .into_iter()
+        .flatten()
+        .filter(|block| !block.is_intra())
+    {
+        for reference in block.references {
+            if reference < 0 {
+                continue;
+            }
+            if reference >= 5 {
+                backward = backward.saturating_add(1);
+            } else if reference > 0 {
+                forward = forward.saturating_add(1);
+            }
+        }
+    }
+    compare_reference_counts(forward, backward)
+}
+
+fn inter_forward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> (u8, u8, u8) {
+    let mut broad = [0_u32; 4];
+    let mut first = [0_u32; 2];
+    let mut second = [0_u32; 2];
+    for block in neighbors
+        .into_iter()
+        .flatten()
+        .filter(|block| !block.is_intra())
+    {
+        for reference in block.references {
+            if reference <= 0 || reference >= 5 {
+                continue;
+            }
+            let reference = usize::try_from(reference - 1).unwrap_or(usize::MAX);
+            if let Some(count) = broad.get_mut(reference) {
+                *count = count.saturating_add(1);
+            }
+            if reference < 2 {
+                first[reference] = first[reference].saturating_add(1);
+            } else if let Some(count) = second.get_mut(reference - 2) {
+                *count = count.saturating_add(1);
+            }
+        }
+    }
+    (
+        compare_reference_counts(
+            broad[0].saturating_add(broad[1]),
+            broad[2].saturating_add(broad[3]),
+        ),
+        compare_reference_counts(first[0], first[1]),
+        compare_reference_counts(second[0], second[1]),
+    )
+}
+
+fn inter_backward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> (u8, u8) {
+    let mut counts = [0_u32; 3];
+    for block in neighbors
+        .into_iter()
+        .flatten()
+        .filter(|block| !block.is_intra())
+    {
+        for reference in block.references {
+            if reference >= 5 {
+                let index = usize::try_from(reference - 5).unwrap_or(usize::MAX);
+                if let Some(count) = counts.get_mut(index) {
+                    *count = count.saturating_add(1);
+                }
+            }
+        }
+    }
+    (
+        compare_reference_counts(counts[0].saturating_add(counts[1]), counts[2]),
+        compare_reference_counts(counts[0], counts[1].saturating_add(counts[2])),
+    )
+}
+
+fn inter_compound_context(neighbors: [Option<SpatialRefBlock>; 2]) -> usize {
+    let mut compound = 0_u32;
+    let mut backward = 0_u32;
+    for block in neighbors
+        .into_iter()
+        .flatten()
+        .filter(|block| !block.is_intra())
+    {
+        if block.is_compound() {
+            compound = compound.saturating_add(1);
+        }
+        if block.references[0] >= 5 {
+            backward = backward.saturating_add(1);
+        }
+    }
+    if compound == 2 {
+        4
+    } else if compound == 1 {
+        2 + usize::from(backward != 0)
+    } else {
+        usize::from(backward != 0)
+    }
+}
+
+fn decode_inter_single_reference(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    neighbors: [Option<SpatialRefBlock>; 2],
+) -> Av1Result<ReferenceFrame> {
+    let ctx = usize::from(inter_reference_context(neighbors));
+    let first = decoder.adaptive_bool(
+        &mut cdfs
+            .inter
+            .reference
+            .get_mut(0)
+            .and_then(|row| row.get_mut(ctx))
+            .ok_or_else(|| malformed("single-reference CDF context exceeds three"))?
+            .0,
+    );
+    if first {
+        let (backward_ctx, backward_one_ctx) = inter_backward_reference_context(neighbors);
+        if decoder.adaptive_bool(
+            &mut cdfs
+                .inter
+                .reference
+                .get_mut(1)
+                .and_then(|row| row.get_mut(usize::from(backward_ctx)))
+                .ok_or_else(|| malformed("backward-reference CDF context exceeds three"))?
+                .0,
+        ) {
+            return Ok(ReferenceFrame::Alt);
+        }
+        return ReferenceFrame::from_index(
+            4 + usize::from(
+                decoder.adaptive_bool(
+                    &mut cdfs
+                        .inter
+                        .reference
+                        .get_mut(3)
+                        .and_then(|row| row.get_mut(usize::from(backward_one_ctx)))
+                        .ok_or_else(|| malformed("backward-reference leaf CDF is unavailable"))?
+                        .0,
+                ),
+            ),
+        )
+        .ok_or_else(|| malformed("decoded backward reference exceeds seven"));
+    }
+    let (forward_ctx, forward_one_ctx, forward_two_ctx) =
+        inter_forward_reference_context(neighbors);
+    if decoder.adaptive_bool(
+        &mut cdfs
+            .inter
+            .reference
+            .get_mut(2)
+            .and_then(|row| row.get_mut(usize::from(forward_ctx)))
+            .ok_or_else(|| malformed("forward-reference CDF context exceeds three"))?
+            .0,
+    ) {
+        return ReferenceFrame::from_index(
+            2 + usize::from(
+                decoder.adaptive_bool(
+                    &mut cdfs
+                        .inter
+                        .reference
+                        .get_mut(4)
+                        .and_then(|row| row.get_mut(usize::from(forward_two_ctx)))
+                        .ok_or_else(|| malformed("forward-reference leaf CDF is unavailable"))?
+                        .0,
+                ),
+            ),
+        )
+        .ok_or_else(|| malformed("decoded forward reference exceeds seven"));
+    }
+    ReferenceFrame::from_index(usize::from(
+        decoder.adaptive_bool(
+            &mut cdfs
+                .inter
+                .reference
+                .get_mut(3)
+                .and_then(|row| row.get_mut(usize::from(forward_one_ctx)))
+                .ok_or_else(|| malformed("forward-reference leaf CDF is unavailable"))?
+                .0,
+        ),
+    ))
+    .ok_or_else(|| malformed("decoded forward reference exceeds seven"))
+}
+
+fn decode_mv_component(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdf: &mut super::frame_cdfs::MvComponentCdfs,
+    mv_precision: i32,
+) -> Av1Result<i16> {
+    let negative = decoder.adaptive_bool(&mut cdf.sign.0);
+    let class = decoder.adaptive_symbol(&mut cdf.classes.0, 10);
+    let (up, fractional, high_precision) = if class == 0 {
+        let up = u16::from(decoder.adaptive_bool(&mut cdf.class_zero.0));
+        let fractional = if mv_precision >= 0 {
+            decoder.adaptive_symbol(&mut cdf.class_zero_fractional[usize::from(up)].0, 3)
+        } else {
+            3
+        };
+        let high_precision = if mv_precision > 0 {
+            u16::from(decoder.adaptive_bool(&mut cdf.class_zero_high_precision.0))
+        } else {
+            1
+        };
+        (up, fractional, high_precision)
+    } else {
+        let mut up = 1_u16
+            .checked_shl(class)
+            .ok_or_else(|| malformed("motion-vector class shift overflows"))?;
+        for bit in 0..class {
+            let value = u16::from(
+                decoder.adaptive_bool(
+                    &mut cdf
+                        .class_n_bits
+                        .get_mut(
+                            usize::try_from(bit)
+                                .map_err(|_| malformed("motion-vector class index exceeds ten"))?,
+                        )
+                        .ok_or_else(|| malformed("motion-vector class index exceeds ten"))?
+                        .0,
+                ),
+            );
+            up |= value
+                .checked_shl(bit)
+                .ok_or_else(|| malformed("motion-vector class bit shift overflows"))?;
+        }
+        let fractional = if mv_precision >= 0 {
+            decoder.adaptive_symbol(&mut cdf.class_n_fractional.0, 3)
+        } else {
+            3
+        };
+        let high_precision = if mv_precision > 0 {
+            u16::from(decoder.adaptive_bool(&mut cdf.class_n_high_precision.0))
+        } else {
+            1
+        };
+        (up, fractional, high_precision)
+    };
+    let magnitude = u32::from(up)
+        .checked_shl(3)
+        .and_then(|value| value.checked_add(fractional << 1))
+        .and_then(|value| value.checked_add(u32::from(high_precision)))
+        .and_then(|value| value.checked_add(1))
+        .ok_or_else(|| malformed("motion-vector magnitude overflows"))?;
+    let magnitude =
+        i32::try_from(magnitude).map_err(|_| malformed("motion-vector magnitude exceeds i32"))?;
+    let value = if negative { -magnitude } else { magnitude };
+    i16::try_from(value).map_err(|_| malformed("motion-vector residual exceeds i16"))
+}
+
+fn decode_mv_residual(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut super::frame_cdfs::MvCdfs,
+    vector: &mut MotionVector,
+    force_integer_mv: bool,
+    high_precision_mv: bool,
+) -> Av1Result<()> {
+    let joint = decoder.adaptive_symbol(&mut cdfs.joint.0, 3);
+    let precision = i32::from(high_precision_mv) - i32::from(force_integer_mv);
+    if joint == 2 || joint == 3 {
+        let residual = decode_mv_component(decoder, &mut cdfs.component[0], precision)?;
+        *vector = vector.checked_add(MotionVector { y: residual, x: 0 })?;
+    }
+    if joint == 1 || joint == 3 {
+        let residual = decode_mv_component(decoder, &mut cdfs.component[1], precision)?;
+        *vector = vector.checked_add(MotionVector { y: 0, x: residual })?;
+    }
+    Ok(())
+}
+
+fn inter_transform_from_symbol(
+    offset: usize,
+    symbol: u32,
+) -> Option<super::block::Av1TransformType> {
+    let index = offset.checked_add(usize::try_from(symbol).ok()?)?;
+    Some(match index {
+        12 => super::block::Av1TransformType::IdentityIdentity,
+        13 => super::block::Av1TransformType::VerticalDct,
+        14 => super::block::Av1TransformType::HorizontalDct,
+        15 => super::block::Av1TransformType::VerticalAdst,
+        16 => super::block::Av1TransformType::HorizontalAdst,
+        17 => super::block::Av1TransformType::VerticalFlipAdst,
+        18 => super::block::Av1TransformType::HorizontalFlipAdst,
+        19 => super::block::Av1TransformType::DctDct,
+        20 => super::block::Av1TransformType::AdstDct,
+        21 => super::block::Av1TransformType::DctAdst,
+        22 => super::block::Av1TransformType::FlipAdstDct,
+        23 => super::block::Av1TransformType::DctFlipAdst,
+        24 => super::block::Av1TransformType::IdentityIdentity,
+        25 => super::block::Av1TransformType::VerticalDct,
+        26 => super::block::Av1TransformType::HorizontalDct,
+        27 => super::block::Av1TransformType::VerticalAdst,
+        28 => super::block::Av1TransformType::HorizontalAdst,
+        29 => super::block::Av1TransformType::VerticalFlipAdst,
+        30 => super::block::Av1TransformType::HorizontalFlipAdst,
+        31 => super::block::Av1TransformType::DctDct,
+        32 => super::block::Av1TransformType::AdstDct,
+        33 => super::block::Av1TransformType::DctAdst,
+        34 => super::block::Av1TransformType::FlipAdstDct,
+        35 => super::block::Av1TransformType::DctFlipAdst,
+        36 => super::block::Av1TransformType::AdstAdst,
+        37 => super::block::Av1TransformType::FlipAdstFlipAdst,
+        38 => super::block::Av1TransformType::AdstFlipAdst,
+        39 => super::block::Av1TransformType::FlipAdstAdst,
+        _ => return None,
+    })
+}
+
+fn decode_inter_transform_type(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    tx_size: TxSize,
+    reduced_transform_set: bool,
+    qindex: u32,
+) -> Av1Result<super::block::Av1TransformType> {
+    if qindex == 0
+        || tx_size
+            .pixel_dimensions()
+            .0
+            .max(tx_size.pixel_dimensions().1)
+            >= 64
+    {
+        return Ok(super::block::Av1TransformType::DctDct);
+    }
+    if reduced_transform_set
+        || tx_size
+            .pixel_dimensions()
+            .0
+            .max(tx_size.pixel_dimensions().1)
+            == 32
+    {
+        return Ok(
+            if decoder
+                .adaptive_bool(&mut cdfs.common.inter_transform_3[tx_size.minimum_context()].0)
+            {
+                super::block::Av1TransformType::DctDct
+            } else {
+                super::block::Av1TransformType::IdentityIdentity
+            },
+        );
+    }
+    if tx_size.minimum_context() == 2 {
+        let symbol = decoder.adaptive_symbol(&mut cdfs.common.inter_transform_2.0, 11);
+        return inter_transform_from_symbol(12, symbol)
+            .ok_or_else(|| malformed("inter transform symbol is invalid"));
+    }
+    let context = tx_size.minimum_context().min(1);
+    let symbol = decoder.adaptive_symbol(&mut cdfs.common.inter_transform_1[context].0, 15);
+    inter_transform_from_symbol(24, symbol)
+        .ok_or_else(|| malformed("inter transform symbol is invalid"))
+}
+
+fn decode_inter_transform_size(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    block_size: BlockSize,
+    transform_mode: u32,
+) -> super::block::PortableResult<TxSize> {
+    let mut tx_size = if transform_mode == 0 {
+        TxSize::Tx4x4
+    } else {
+        block_size.maximum_luma_tx()
+    };
+    if transform_mode != 2 {
+        return Ok(tx_size);
+    }
+    let max_depth = block_size.transform_size_max().min(2);
+    for depth in 0..max_depth {
+        if tx_size == TxSize::Tx4x4 {
+            break;
+        }
+        let max_axis = tx_size
+            .pixel_dimensions()
+            .0
+            .max(tx_size.pixel_dimensions().1);
+        let max_index = max_axis.ilog2().saturating_sub(2);
+        let category = 2_u32
+            .saturating_mul(4_u32.saturating_sub(max_index))
+            .saturating_sub(u32::try_from(depth).unwrap_or(2));
+        let category =
+            usize::try_from(category.min(6)).map_err(|_| super::block::PortableUnavailable)?;
+        let context = 0_usize;
+        let split =
+            decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
+        if !split {
+            return Ok(tx_size);
+        }
+        tx_size = tx_size.sub_size();
+    }
+    Err(super::block::PortableUnavailable)
+}
+
+#[derive(Clone)]
+struct DecodedInterLeaf {
+    leaf: super::block::FirstLeaf,
+    metadata: super::tile_state::InterBlockMeta,
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the inter leaf boundary carries syntax, tile state, frame references, geometry, and block tools explicitly"
+)]
+fn decode_inter_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    block_decoder: &mut super::block::Lossy420Decoder,
+    tile_state: &TileState,
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    node: PartitionNode,
+    visible_width: u32,
+    visible_height: u32,
+    selected_segment: SegmentContext,
+    block_skipped: bool,
+    quantization: super::block::LossyQuantization,
+    tools: super::block::BlockTools,
+) -> Av1Result<super::block::PortableResult<DecodedInterLeaf>> {
+    if selected_segment.reference == 0 {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+    let neighbors = inter_neighbors(tile_state, node)?;
+    let intra_context = inter_intra_context(neighbors);
+    let inter_flag = if selected_segment.reference > 0 || selected_segment.global_motion {
+        true
+    } else {
+        decoder.adaptive_bool(&mut cdfs.inter.intra[intra_context].0)
+    };
+    if !inter_flag {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+    let (block_width_b4, block_height_b4) = node.block_size.mi_dimensions();
+    let compound_allowed = inter_context.reference_mode_select
+        && block_width_b4.min(block_height_b4) > 1
+        && !block_skipped;
+    if compound_allowed {
+        let compound =
+            decoder.adaptive_bool(&mut cdfs.inter.compound[inter_compound_context(neighbors)].0);
+        if compound {
+            return Ok(Err(super::block::PortableUnavailable));
+        }
+    }
+    let forced_global = selected_segment.global_motion || selected_segment.skip;
+    let reference = if selected_segment.reference > 0 {
+        ReferenceFrame::from_segment_feature(selected_segment.reference)
+            .ok_or_else(|| malformed("segment reference exceeds seven"))?
+    } else if forced_global {
+        ReferenceFrame::Last
+    } else {
+        decode_inter_single_reference(decoder, cdfs, neighbors)?
+    };
+    let reference_state = inter_context.reference(reference);
+    if reference_state.scale.scaled || !reference_state.global_motion.is_translation() {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+    let request = inter_context.mv_request(
+        ReferenceMvTarget::Single(reference),
+        node.block_size,
+        node.x,
+        node.y,
+        context.tile_origin_b4_x.saturating_add(node.x),
+        context.tile_origin_b4_y.saturating_add(node.y),
+        0,
+        0,
+        context.block_width,
+        context.block_height,
+        context.frame_block_width,
+        context.frame_block_height,
+        node.x.saturating_add(block_width_b4) < context.block_width,
+        None,
+    );
+    let stack = find_reference_mvs(tile_state, request)?;
+    let stack_context = stack.context;
+    let (mode, drl_index) = if forced_global {
+        (InterMode::Global, 0_usize)
+    } else if decoder.adaptive_bool(&mut cdfs.inter.new_mv[usize::from(stack_context & 7)].0) {
+        if !decoder
+            .adaptive_bool(&mut cdfs.inter.global_mv[usize::from((stack_context >> 3) & 1)].0)
+        {
+            (InterMode::Global, 0)
+        } else if decoder
+            .adaptive_bool(&mut cdfs.inter.reference_mv[usize::from((stack_context >> 4) & 15)].0)
+        {
+            let mut index = 1;
+            if stack.len() > 2 {
+                let first_context = stack
+                    .drl_context(1)
+                    .ok_or_else(|| malformed("near MV context is unavailable"))?;
+                if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(first_context)].0) {
+                    index = 2;
+                    if stack.len() > 3 {
+                        let second_context = stack
+                            .drl_context(2)
+                            .ok_or_else(|| malformed("near MV context is unavailable"))?;
+                        if decoder
+                            .adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(second_context)].0)
+                        {
+                            index = 3;
+                        }
+                    }
+                }
+            }
+            (InterMode::Near, index)
+        } else {
+            (InterMode::Nearest, 0)
+        }
+    } else {
+        let mut index = 0;
+        if stack.len() > 1 {
+            let first_context = stack
+                .drl_context(0)
+                .ok_or_else(|| malformed("new MV context is unavailable"))?;
+            if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(first_context)].0) {
+                index = 1;
+                if stack.len() > 2 {
+                    let second_context = stack
+                        .drl_context(1)
+                        .ok_or_else(|| malformed("new MV context is unavailable"))?;
+                    if decoder.adaptive_bool(&mut cdfs.inter.drl_bit[usize::from(second_context)].0)
+                    {
+                        index = 2;
+                    }
+                }
+            }
+        }
+        (InterMode::New, index)
+    };
+    let mut motion = match mode {
+        InterMode::Global => global_motion_vector(
+            reference_state.global_motion,
+            context.tile_origin_b4_x.saturating_add(node.x),
+            context.tile_origin_b4_y.saturating_add(node.y),
+            block_width_b4,
+            block_height_b4,
+            inter_context.force_integer_mv,
+            inter_context.high_precision_mv,
+        )?,
+        _ => {
+            stack
+                .slot(drl_index)
+                .ok_or_else(|| malformed("MV candidate stack has no selected slot"))?
+                .vectors[0]
+        }
+    };
+    if matches!(mode, InterMode::Nearest | InterMode::Near) && drl_index < 2 {
+        motion = motion.reduce_precision(
+            inter_context.force_integer_mv,
+            inter_context.high_precision_mv,
+        );
+    }
+    if matches!(mode, InterMode::New) {
+        if stack.len() <= 1 {
+            motion = motion.reduce_precision(
+                inter_context.force_integer_mv,
+                inter_context.high_precision_mv,
+            );
+        }
+        decode_mv_residual(
+            decoder,
+            &mut cdfs.motion_vectors,
+            &mut motion,
+            inter_context.force_integer_mv,
+            inter_context.high_precision_mv,
+        )?;
+    }
+    let has_subpel_filter =
+        block_width_b4.min(block_height_b4) == 1 || !matches!(mode, InterMode::Global);
+    let filters = if has_subpel_filter && inter_context.interpolation_filter == 4 {
+        let first = decoder.adaptive_symbol(&mut cdfs.inter.interpolation_filter[0][0].0, 2);
+        let first = InterpolationFilter::from_symbol(first)
+            .ok_or_else(|| malformed("interpolation filter symbol is invalid"))?;
+        let second = if inter_context.dual_filter {
+            let symbol = decoder.adaptive_symbol(&mut cdfs.inter.interpolation_filter[1][0].0, 2);
+            InterpolationFilter::from_symbol(symbol)
+                .ok_or_else(|| malformed("interpolation filter symbol is invalid"))?
+        } else {
+            first
+        };
+        [first, second]
+    } else if has_subpel_filter {
+        let filter = InterpolationFilter::from_symbol(inter_context.interpolation_filter.min(3))
+            .ok_or_else(|| malformed("fixed interpolation filter is invalid"))?;
+        [filter; 2]
+    } else {
+        [InterpolationFilter::Regular; 2]
+    };
+    let tx_size = decode_inter_transform_size(
+        decoder,
+        cdfs,
+        node.block_size,
+        context.frame_tools.transform_mode,
+    )
+    .map_err(|_| malformed("variable inter transform is unavailable"))?;
+    let transform = decode_inter_transform_type(
+        decoder,
+        cdfs,
+        tx_size,
+        context.frame_tools.reduced_transform_set,
+        quantization.segment_qindex,
+    )?;
+    let leaf = match block_decoder.decode_inter_translation(
+        decoder,
+        node.block_size,
+        visible_width,
+        visible_height,
+        true,
+        quantization,
+        tools,
+        reference_state.surface,
+        context.tile_origin_b4_x.saturating_add(node.x),
+        context.tile_origin_b4_y.saturating_add(node.y),
+        motion,
+        filters,
+        block_skipped,
+        tx_size,
+        transform,
+    ) {
+        Ok(leaf) => leaf,
+        Err(_) => return Ok(Err(super::block::PortableUnavailable)),
+    };
+    Ok(Ok(DecodedInterLeaf {
+        leaf,
+        metadata: super::tile_state::InterBlockMeta {
+            references: ReferencePair::single(reference),
+            motion_vectors: [motion, MotionVector::ZERO],
+            mode,
+            compound_type: CompoundType::Average,
+            motion_mode: MotionMode::Translation,
+            filters,
+            global: [matches!(mode, InterMode::Global), false],
+            new_mv: [matches!(mode, InterMode::New), false],
+        },
+    }))
+}
+
 fn effective_loop_levels(
     context: &FirstBlockContext,
     segment: SegmentContext,
@@ -2713,7 +3486,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     input_cdfs: &FrameCdfs,
     mut current_segment_map: Option<&mut SegmentMap>,
     previous_segment_map: Option<&SegmentMap>,
+    inter_context: Option<&InterFrameContext<'_>>,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
+    let inter_reconstruction =
+        complete_inter_420_reconstruction_context(context) && inter_context.is_some();
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
         || segmentation
@@ -2721,8 +3497,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             .iter()
             .all(|segment| segment.reference <= 0 && !segment.global_motion);
     if (!complete_lossy_420_reconstruction_context(context)
-        && !complete_streamed_lossless_color_context(context))
-        || !intra_segment_features_supported
+        && !complete_streamed_lossless_color_context(context)
+        && !inter_reconstruction)
+        || (context.intra_frame && !intra_segment_features_supported)
     {
         return Ok(None);
     }
@@ -2918,7 +3695,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                 );
                 tools.skip_context = skip_context_for_node(&tile_state, node)?;
                 let segmentation = context.frame_tools.segmentation;
-                let (segment_id, segment_pred, selected_segment) = if !segmentation.update_map
+                let (segment_id, segment_pred, selected_segment, block_skipped) = if !segmentation
+                    .update_map
                     || segmentation.preskip
                 {
                     let (segment_id, segment_pred) = decode_segment_id(
@@ -2932,14 +3710,18 @@ pub(super) fn validate_complete_lossy_420_partition(
                     )?;
                     let segment = segmentation.segments[usize::from(segment_id)];
                     block_decoder.select_segment(segment.delta_q, segment.qindex, segment.lossless);
-                    if block_decoder
-                        .decode_skip(decoder, tools.skip_context, segment.skip)
-                        .is_err()
-                    {
-                        unsupported = true;
-                        return Ok(PartitionVisitControl::Stop);
-                    }
-                    (segment_id, segment_pred, segment)
+                    let block_skipped = match block_decoder.decode_skip(
+                        decoder,
+                        tools.skip_context,
+                        segment.skip,
+                    ) {
+                        Ok(skip) => skip,
+                        Err(_) => {
+                            unsupported = true;
+                            return Ok(PartitionVisitControl::Stop);
+                        }
+                    };
+                    (segment_id, segment_pred, segment, block_skipped)
                 } else {
                     let skip = match block_decoder.decode_skip(decoder, tools.skip_context, false) {
                         Ok(skip) => skip,
@@ -2959,7 +3741,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                     )?;
                     let segment = segmentation.segments[usize::from(segment_id)];
                     block_decoder.select_segment(segment.delta_q, segment.qindex, segment.lossless);
-                    (segment_id, segment_pred, segment)
+                    (segment_id, segment_pred, segment, skip)
                 };
                 block_decoder.begin_block(
                     syntax_block_size,
@@ -2973,7 +3755,34 @@ pub(super) fn validate_complete_lossy_420_partition(
                 // concrete copy avoids a panic-only unwrap in codec code.
                 let legacy_transform_grid =
                     transform_grid.unwrap_or(super::block::TransformGrid::Square4);
-                let decoded = if tile_state.is_empty() {
+                let mut inter_metadata = None;
+                let decoded = if !context.intra_frame {
+                    let Some(inter_context) = inter_context else {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    };
+                    match decode_inter_leaf(
+                        decoder,
+                        &mut tile_cdfs,
+                        &mut block_decoder,
+                        &tile_state,
+                        context,
+                        inter_context,
+                        node,
+                        width,
+                        height,
+                        selected_segment,
+                        block_skipped,
+                        quantization,
+                        tools,
+                    )? {
+                        Ok(inter) => {
+                            inter_metadata = Some(inter.metadata);
+                            Ok(inter.leaf)
+                        }
+                        Err(error) => Err(error),
+                    }
+                } else if tile_state.is_empty() {
                     let standalone_tiny_frame =
                         context.frame_width == 4 && context.frame_height == 4;
                     let has_chroma =
@@ -3119,7 +3928,22 @@ pub(super) fn validate_complete_lossy_420_partition(
                         id: segment_id,
                     });
                 }
-                tile_state.commit(node, has_chroma, &decoded, segment_id, segment_pred)?;
+                let commit_metadata =
+                    inter_metadata.map_or_else(BlockCommitMetadata::intra, |metadata| {
+                        BlockCommitMetadata {
+                            coding: BlockCoding::Inter(metadata),
+                            skip_mode: false,
+                            tx_cells: None,
+                        }
+                    });
+                tile_state.commit_with_metadata(
+                    node,
+                    has_chroma,
+                    &decoded,
+                    segment_id,
+                    segment_pred,
+                    commit_metadata,
+                )?;
                 Ok(PartitionVisitControl::Continue)
             })?;
             if unsupported || matches!(control, PartitionVisitControl::Stop) {
@@ -3220,6 +4044,38 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
                 ..
             })
         )
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+}
+
+/// First inter reconstruction tranche: unscaled, single-reference, 8-bit
+/// 4:2:0 translation blocks with the optional post-filters disabled.  The
+/// entropy sentence is still decoded in AV1 order; unsupported compound,
+/// warped, scaled, and variable-transform branches are rejected before a
+/// block can publish neighbor metadata.
+fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    !context.intra_frame
+        && context.bit_depth == 8
+        && context.subsampling_x
+        && context.subsampling_y
+        && !context.superres_enabled
+        && context.upscaled_width == context.frame_width
+        && !context.monochrome
+        && !context.all_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && !context.segmentation_enabled
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)

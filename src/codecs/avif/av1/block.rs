@@ -15,8 +15,11 @@ use super::geometry::{BlockSize, IntraTxPlan, PixelLayout, TxSize};
 use super::large_cdfs::{
     LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
 };
+use super::mc::{MotionScratch, PredictionRequest};
+use super::motion::{InterpolationFilter, MotionVector};
 use super::quantization;
 use super::sample_depth::SampleDepth;
+use super::surface::FrameSurface;
 use super::tile_state::NeighborMeta;
 use super::transform;
 use bytemuck::cast;
@@ -247,6 +250,7 @@ impl PaletteSyntax {
                 .colors
                 .get(..size)
                 .filter(|colors| colors.iter().all(|&color| color <= maximum))
+                .is_some()
                 .then_some(())
                 .portable()?;
             let map = map.ok_or(PortableUnavailable)?;
@@ -288,6 +292,7 @@ impl PaletteSyntax {
                             && size <= PALETTE_CAPACITY
                             && colors.iter().all(|&color| color <= sample_depth.maximum())
                     })
+                    .is_some()
                     .then_some(())
                     .portable()?;
             }
@@ -1465,7 +1470,7 @@ enum LossyTransformKind {
     reason = "the complete transform set is consumed as the high-depth and inter gates are integrated"
 )]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Av1TransformType {
+pub(super) enum Av1TransformType {
     DctDct,
     AdstDct,
     DctAdst,
@@ -2001,6 +2006,7 @@ impl TransformGrid {
     /// in dav1d. It is deliberately kept separate from the transform-grid
     /// dimensions: rectangular blocks use the AV1 rectangular transform
     /// families, whose maximum level is not always the smaller grid axis.
+    #[allow(dead_code, reason = "retained for complete transform-grid dispatch")]
     const fn transform_size_max(self) -> usize {
         self.block_size().transform_size_max()
     }
@@ -2010,6 +2016,7 @@ impl TransformGrid {
     /// The bitstream syntax starts the angle-delta symbol at `BLOCK_8X8`.
     /// The two smaller grids below therefore leave the symbol in the range
     /// decoder for the following syntax element.
+    #[allow(dead_code, reason = "retained for complete transform-grid dispatch")]
     const fn has_angle_delta(self) -> bool {
         self.block_size().has_angle_delta()
     }
@@ -2020,6 +2027,7 @@ impl TransformGrid {
     /// transform grid. The closed decoder only admits the grids below, but
     /// retaining the bitstream's block-size index keeps CDF history correct
     /// when a partition mixes 16×16 and 8×8 leaves.
+    #[allow(dead_code, reason = "retained for complete transform-grid dispatch")]
     const fn filter_intra_cdf_index(self) -> usize {
         self.block_size().cdf_index()
     }
@@ -2255,6 +2263,10 @@ struct SyntaxPolicy {
     allow_smooth_luma: bool,
 }
 
+#[allow(
+    dead_code,
+    reason = "the complete coefficient-skip CDF family is retained for rectangular inter terminals"
+)]
 #[derive(Clone, Copy)]
 enum CoefficientSkipCdf {
     LumaContext(usize),
@@ -9150,7 +9162,7 @@ fn decode_delta_lf(
     } else {
         1
     };
-    for component in 0..component_count {
+    for component in 0_usize..component_count {
         let row = component.saturating_add(usize::from(syntax.multi));
         let symbol = decoder.adaptive_symbol(cdfs.delta_lf.get_mut(row).portable()?, 3);
         let magnitude = if symbol == 3 {
@@ -13947,6 +13959,10 @@ fn decode_lossy_chroma_4x4_coefficients(
     Ok(coefficients)
 }
 
+#[allow(
+    dead_code,
+    reason = "the complete large-transform CDF family is retained for later inter and high-depth terminals"
+)]
 #[derive(Clone, Copy, Debug)]
 enum LossyLargeCdfSet {
     Luma4x16,
@@ -14821,7 +14837,7 @@ fn generic_high_coefficient_context(
         GenericCoefficientClass::TwoDimensional => (x | y) > 1,
         GenericCoefficientClass::Horizontal | GenericCoefficientClass::Vertical => y != 0,
     };
-    (if distant { 14 } else { 7 }).saturating_add(coefficient_high_context(magnitude))
+    (if distant { 14_usize } else { 7_usize }).saturating_add(coefficient_high_context(magnitude))
 }
 
 fn generic_matrix_values(
@@ -15284,6 +15300,79 @@ fn decode_generic_lossy_terminal(
     let transform = GenericTerminalTransform::Lossy(transform);
     arena.coefficients.clear();
     if skipped {
+        return Ok(DecodedGenericTerminal {
+            skipped: true,
+            coefficient_count,
+            residual_context: 0x40,
+            transform,
+        });
+    }
+    arena
+        .coefficients
+        .try_reserve(coefficient_count)
+        .map_err(|_| PortableUnavailable)?;
+    arena.coefficients.resize(coefficient_count, 0);
+    let dc_sign_context =
+        coefficient_dc_sign_context_for_dimensions(context_width, context_height, above, left);
+    let residual_context = decode_generic_lossy_coefficients_into(
+        decoder,
+        plane,
+        cdfs,
+        &mut arena.scratch,
+        quantization,
+        tx_size,
+        transform,
+        dc_sign_context,
+        &mut arena.coefficients,
+    )?;
+    Ok(DecodedGenericTerminal {
+        skipped: false,
+        coefficient_count,
+        residual_context,
+        transform,
+    })
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "inter terminal decoding keeps the selected transform and prediction geometry explicit"
+)]
+fn decode_inter_lossy_terminal(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+    arena: &mut LargeCoefficientArena,
+    quantization: LossyQuantization,
+    tx_size: TxSize,
+    _block_plane_width: usize,
+    _block_plane_height: usize,
+    above: &[u8],
+    left: &[u8],
+    block_skipped: bool,
+    transform: Av1TransformType,
+) -> PortableResult<DecodedGenericTerminal> {
+    let (tx_width, tx_height) = tx_size.pixel_dimensions();
+    let tx_width = usize::try_from(tx_width).map_err(|_| PortableUnavailable)?;
+    let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
+    let (coefficient_width, coefficient_height) = tx_size.coefficient_dimensions();
+    let coefficient_count = usize::try_from(
+        coefficient_width
+            .checked_mul(coefficient_height)
+            .portable()?,
+    )
+    .map_err(|_| PortableUnavailable)?;
+    let context_width = tx_width / 4;
+    let context_height = tx_height / 4;
+    (above.len() == context_width
+        && left.len() == context_height
+        && matches!(plane, 0..=2)
+        && tx_width <= 32
+        && tx_height <= 32)
+        .then_some(())
+        .portable()?;
+    let transform = GenericTerminalTransform::Lossy(transform);
+    arena.coefficients.clear();
+    if block_skipped {
         return Ok(DecodedGenericTerminal {
             skipped: true,
             coefficient_count,
@@ -21802,6 +21891,10 @@ fn reconstruct_lossy_luma_16x4_smooth(
     reconstruct_lossy_luma_16x4_from_prediction(prediction, coefficients, transform_kind)
 }
 
+#[allow(
+    dead_code,
+    reason = "retained smooth-vertical rectangular predictor for complete edge dispatch"
+)]
 fn reconstruct_lossy_luma_16x4_smooth_vertical(
     top: [u16; 16],
     bottom: u16,
@@ -28477,6 +28570,10 @@ fn reconstruct_following_lossy_monochrome_square4_leaf(
     Ok(leaf)
 }
 
+#[allow(
+    dead_code,
+    reason = "retained monochrome horizontal terminal for complete tile geometry"
+)]
 fn reconstruct_following_lossy_monochrome_square4_horizontal_leaf(
     syntax: BlockSyntax,
     palette_map_arena: &PaletteMapArena,
@@ -28514,6 +28611,10 @@ fn reconstruct_following_lossy_monochrome_square4_horizontal_leaf(
 #[expect(
     clippy::too_many_arguments,
     reason = "R16x4 prediction keeps the complete edge state and rectangular transform syntax explicit"
+)]
+#[allow(
+    dead_code,
+    reason = "retained rectangular edge dispatcher for complete intra geometry"
 )]
 fn reconstruct_lossy_luma_16x4_from_edges(
     luma_predictor: LumaPredictor,
@@ -28649,6 +28750,10 @@ fn reconstruct_lossy_luma_16x4_from_edges(
     Ok(luma)
 }
 
+#[allow(
+    dead_code,
+    reason = "retained monochrome rectangular terminal for complete tile geometry"
+)]
 fn reconstruct_following_lossy_monochrome_horizontal_16x4_leaf(
     syntax: BlockSyntax,
     neighbor: &ClosedLeaf,
@@ -29784,6 +29889,7 @@ fn reconstruct_leaf_with_luma_override(
         chroma_sampling,
         palette: _,
         reconstruction,
+        block_skipped: _,
     } = syntax;
     let planes = match reconstruction {
         ReconstructionPolicy::LosslessWht4x4 => [
@@ -29988,10 +30094,10 @@ fn reconstruct_leaf_with_luma_override(
                         chroma_transform_kind(chroma_predictor),
                     ),
                 };
-                return ClosedLeaf {
+                return Ok(ClosedLeaf {
                     luma_predictor,
                     planes: [luma, chroma(1), chroma(2)],
-                };
+                });
             }
             let chroma_u = match chroma_predictor {
                 ChromaPredictor::Cfl { alpha_u, .. } => reconstruct_lossy_chroma_4x4_cfl(
@@ -30083,10 +30189,10 @@ fn reconstruct_leaf_with_luma_override(
                         lossy_chroma_16x16_coefficients[plane - 1],
                     ),
                 };
-                return ClosedLeaf {
+                return Ok(ClosedLeaf {
                     luma_predictor,
                     planes: [luma, chroma(1), chroma(2)],
-                };
+                });
             }
             if matches!(chroma_sampling, ChromaSampling::Subsampled422) {
                 let chroma = |plane: usize| {
@@ -30096,10 +30202,10 @@ fn reconstruct_leaf_with_luma_override(
                         chroma_transform_kind(chroma_predictor),
                     )
                 };
-                return ClosedLeaf {
+                return Ok(ClosedLeaf {
                     luma_predictor,
                     planes: [luma, chroma(1), chroma(2)],
-                };
+                });
             }
             let chroma_u = match chroma_predictor {
                 ChromaPredictor::Cfl { alpha_u, .. } => reconstruct_lossy_chroma_8x8_cfl(
@@ -34815,6 +34921,7 @@ fn reconstruct_following_square_leaf(
         chroma_sampling: _,
         palette: _,
         reconstruction: _,
+        block_skipped: _,
     } = syntax;
     let edges = neighbor
         .planes
@@ -43322,7 +43429,7 @@ fn reconstruct_following_lossy_420_vertical_16x16_leaf(
         luma_angle,
         filter_intra_mode,
         chroma_predictor,
-        chroma_angle,
+        chroma_angle: _,
         lossy_luma_16x16_coefficients,
         lossy_luma_16x16_transform,
         lossy_luma_8x8_split,
@@ -48070,6 +48177,7 @@ pub(super) struct Lossy420Decoder {
     large_coeff_arena: LargeCoefficientArena,
     palette_map_arena: PaletteMapArena,
     reconstruction_scratch: ReconstructionScratch,
+    motion_scratch: Option<MotionScratch>,
     chroma_sampling: ChromaSampling,
     qcat_one_square_only: bool,
     cdef_index_bits: u32,
@@ -48093,6 +48201,7 @@ impl Lossy420Decoder {
             large_coeff_arena: LargeCoefficientArena::new(),
             palette_map_arena: PaletteMapArena::new(),
             reconstruction_scratch: ReconstructionScratch::new(),
+            motion_scratch: None,
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: false,
             cdef_index_bits: 0,
@@ -48116,6 +48225,7 @@ impl Lossy420Decoder {
             large_coeff_arena: LargeCoefficientArena::new(),
             palette_map_arena: PaletteMapArena::new(),
             reconstruction_scratch: ReconstructionScratch::new(),
+            motion_scratch: None,
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -48146,6 +48256,7 @@ impl Lossy420Decoder {
             large_coeff_arena: LargeCoefficientArena::new(),
             palette_map_arena: PaletteMapArena::new(),
             reconstruction_scratch: ReconstructionScratch::new(),
+            motion_scratch: None,
             chroma_sampling,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -48353,6 +48464,244 @@ impl Lossy420Decoder {
         quantization.segment_lossless = self.segment.lossless;
         quantization.delta_q_present &= self.take_delta_q();
         quantization
+    }
+
+    fn ensure_motion_scratch(&mut self) -> PortableResult<&mut MotionScratch> {
+        if self.motion_scratch.is_none() {
+            self.motion_scratch = Some(MotionScratch::new().map_err(|_| PortableUnavailable)?);
+        }
+        self.motion_scratch.as_mut().portable()
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "single-reference reconstruction carries block, frame, transform, and prediction state together"
+    )]
+    pub(super) fn decode_inter_translation(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        _has_chroma: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        reference: &FrameSurface,
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motion: MotionVector,
+        filters: [InterpolationFilter; 2],
+        block_skipped: bool,
+        luma_tx_size: TxSize,
+        luma_transform: Av1TransformType,
+    ) -> PortableResult<FirstLeaf> {
+        let chroma_sampling = self.chroma_sampling;
+        (chroma_sampling == ChromaSampling::Subsampled420
+            && tools.sample_depth == quantization.sample_depth
+            && tools.sample_depth == reference.depth
+            && visible_width != 0
+            && visible_height != 0
+            && block_size.valid_for_layout(PixelLayout::I420)
+            && !quantization.segment_lossless)
+            .then_some(())
+            .portable()?;
+        let pending = self.pending_block_geometry.take().portable()?;
+        (pending.block_size == block_size)
+            .then_some(())
+            .portable()?;
+        let predecoded_skip = self.pending_skip.take().unwrap_or(block_skipped);
+        (predecoded_skip == block_skipped)
+            .then_some(())
+            .portable()?;
+        let quantization = self.prepare_quantization(quantization);
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        let y_geometry = generic_plane_geometry(
+            block_size,
+            chroma_sampling,
+            0,
+            visible_width,
+            visible_height,
+        )?;
+        let u_geometry = generic_plane_geometry(
+            block_size,
+            chroma_sampling,
+            1,
+            visible_width,
+            visible_height,
+        )?;
+        let v_geometry = generic_plane_geometry(
+            block_size,
+            chroma_sampling,
+            2,
+            visible_width,
+            visible_height,
+        )?;
+        let expected_luma = luma_tx_size;
+        let (tx_luma_width, tx_luma_height) = expected_luma.pixel_dimensions();
+        (u32::try_from(y_geometry.0).map_err(|_| PortableUnavailable)? == tx_luma_width
+            && u32::try_from(y_geometry.1).map_err(|_| PortableUnavailable)? == tx_luma_height
+            && tx_luma_width == luma_width
+            && tx_luma_height == luma_height)
+            .then_some(())
+            .portable()?;
+        let layout = PixelLayout::I420;
+        let chroma_tx = block_size.maximum_chroma_tx(layout).portable()?;
+        let (tx_chroma_width, tx_chroma_height) = chroma_tx.pixel_dimensions();
+        (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
+            && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)? == tx_chroma_height
+            && u_geometry.0 == v_geometry.0
+            && u_geometry.1 == v_geometry.1)
+            .then_some(())
+            .portable()?;
+
+        let mut rasters = [
+            PrivatePlaneRaster::new(
+                y_geometry.0,
+                y_geometry.1,
+                y_geometry.2,
+                y_geometry.3,
+                tools.sample_depth,
+            )?,
+            PrivatePlaneRaster::new(
+                u_geometry.0,
+                u_geometry.1,
+                u_geometry.2,
+                u_geometry.3,
+                tools.sample_depth,
+            )?,
+            PrivatePlaneRaster::new(
+                v_geometry.0,
+                v_geometry.1,
+                v_geometry.2,
+                v_geometry.3,
+                tools.sample_depth,
+            )?,
+        ];
+        let mut contexts = [0x40_u8; 3];
+        let tx_sizes = [luma_tx_size, chroma_tx, chroma_tx];
+        let geometries = [y_geometry, u_geometry, v_geometry];
+        for plane in 0..3 {
+            let geometry = geometries[plane];
+            let tx_size = tx_sizes[plane];
+            let (tx_width, tx_height) = tx_size.pixel_dimensions();
+            let tx_width = usize::try_from(tx_width).map_err(|_| PortableUnavailable)?;
+            let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
+            let plane_subsampling = chroma_sampling.plane_subsampling(plane);
+            let request = PredictionRequest {
+                block_x_b4,
+                block_y_b4,
+                width: u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
+                height: u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
+                subsampling_x: plane_subsampling.0 == 2,
+                subsampling_y: plane_subsampling.1 == 2,
+                motion,
+                filters,
+            };
+            let prediction_len = tx_width.checked_mul(tx_height).portable()?;
+            let mut prediction = Vec::new();
+            prediction
+                .try_reserve_exact(prediction_len)
+                .map_err(|_| PortableUnavailable)?;
+            {
+                let scratch = self.ensure_motion_scratch()?;
+                let reference_plane = reference
+                    .plane(plane)
+                    .map_err(|_| PortableUnavailable)?
+                    .portable()?;
+                let predicted = scratch
+                    .put_unscaled(reference_plane, request)
+                    .map_err(|_| PortableUnavailable)?;
+                prediction.extend_from_slice(predicted);
+            }
+            let context_width = tx_width / 4;
+            let context_height = tx_height / 4;
+            let above = vec![0x40_u8; context_width];
+            let left = vec![0x40_u8; context_height];
+            let transform = if plane == 0 {
+                luma_transform
+            } else {
+                Av1TransformType::DctDct
+            };
+            let terminal = decode_inter_lossy_terminal(
+                decoder,
+                plane,
+                &mut self.cdfs,
+                &mut self.large_coeff_arena,
+                quantization,
+                tx_size,
+                geometry.0,
+                geometry.1,
+                &above,
+                &left,
+                predecoded_skip,
+                transform,
+            )?;
+            let coefficients = if terminal.skipped {
+                None
+            } else {
+                Some(
+                    self.large_coeff_arena
+                        .coefficients
+                        .get(..terminal.coefficient_count)
+                        .portable()?,
+                )
+            };
+            let ReconstructionScratch { transform, .. } = &mut self.reconstruction_scratch;
+            let TransformScratch { rows, residual, .. } = transform;
+            reconstruct_full_unsplit_prediction_in_place(
+                &mut prediction,
+                CoeffBlockRef {
+                    width: tx_width,
+                    height: tx_height,
+                    coefficients,
+                    transform: match terminal.transform {
+                        GenericTerminalTransform::Lossy(value) => value,
+                        GenericTerminalTransform::LosslessWht4x4 => {
+                            return Err(PortableUnavailable);
+                        }
+                    },
+                },
+                tools.sample_depth,
+                rows,
+                residual,
+            )?;
+            rasters[plane].commit_transform(
+                0,
+                0,
+                tx_width,
+                tx_height,
+                &prediction,
+                tools.sample_depth,
+            )?;
+            contexts[plane] = terminal.residual_context;
+        }
+        let [y, u, v] = rasters;
+        let (tx_context_width, tx_context_height) = luma_tx_size.context_dimensions();
+        Ok(FirstLeaf {
+            width: visible_width,
+            height: visible_height,
+            block_skipped: predecoded_skip,
+            planes: [
+                y.into_visible_plane()?,
+                u.into_visible_plane()?,
+                v.into_visible_plane()?,
+            ],
+            luma_predictor: LumaPredictor::Dc,
+            chroma_predictor: Some(ChromaPredictor::Dc),
+            luma_context: contexts[0],
+            chroma_contexts: [contexts[1], contexts[2]],
+            chroma_right_contexts: [[contexts[1]; 16], [contexts[2]; 16]],
+            chroma_bottom_contexts: [[contexts[1]; 16], [contexts[2]; 16]],
+            tx_context_width,
+            tx_context_height,
+            luma_transform_split: false,
+            luma_right_contexts: [contexts[0]; 16],
+            luma_bottom_contexts: [contexts[0]; 16],
+            wide_coefficient_contexts: None,
+            palette_cache: PaletteCacheState::default(),
+            #[cfg(coverage)]
+            entropy_operations: Vec::new(),
+        })
     }
 
     fn remember_qindex(&mut self, tile_qindex: u32, _decoder: &RangeDecoder<'_, '_, '_>) {
@@ -49177,6 +49526,10 @@ impl Lossy420Decoder {
         )
     }
 
+    #[allow(
+        dead_code,
+        reason = "retained monochrome horizontal entrypoint for complete tile geometry"
+    )]
     pub(super) fn decode_following_horizontal_without_chroma(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,

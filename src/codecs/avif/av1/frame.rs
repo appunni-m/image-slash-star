@@ -5,7 +5,9 @@ use std::{ops::Range, sync::Arc};
 use super::bit_reader::{BitReader, SegmentedData};
 use super::entropy;
 use super::geometry::PixelLayout;
-use super::motion::{GlobalMotion, GlobalMotionType, TemporalMotionField, relative_distance};
+use super::motion::{
+    GlobalMotion, GlobalMotionType, ScaleFactors, TemporalMotionField, relative_distance,
+};
 use super::sample_depth::SampleDepth;
 use super::sequence::SequenceHeader;
 #[cfg(coverage)]
@@ -615,6 +617,79 @@ fn new_temporal_motion_field(
     )
 }
 
+fn inter_frame_context<'a>(
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    references: &'a [Option<ReferenceState>; REFERENCE_SLOTS],
+) -> Av1Result<entropy::InterFrameContext<'a>> {
+    if !header.frame_type.is_inter() {
+        return Err(malformed("intra frame requested inter reference context"));
+    }
+    let mut reference_order_hints = [0_u32; 7];
+    let mut sign_bias = [false; 7];
+    let mut inter_references = [None; 7];
+    for logical in super::motion::ReferenceFrame::ALL {
+        let index = logical.index();
+        let slot = header
+            .reference_indices
+            .get(index)
+            .copied()
+            .ok_or_else(|| malformed("inter reference index exceeds seven"))?;
+        let reference = references
+            .get(slot)
+            .and_then(Option::as_ref)
+            .ok_or_else(|| malformed("decoded inter frame references an empty slot"))?;
+        let surface = reference
+            .surface
+            .as_deref()
+            .ok_or_else(|| malformed("decoded inter frame reference has no surface"))?;
+        surface.validate()?;
+        let order_hint = reference.header.order_hint;
+        reference_order_hints[index] = order_hint;
+        sign_bias[index] =
+            relative_distance(sequence.order_hint_bits, order_hint, header.order_hint) > 0;
+        let scale = ScaleFactors::new(
+            header.frame_width,
+            header.frame_height,
+            surface.upscaled_width,
+            surface.frame_height,
+        )?;
+        inter_references[index] = Some(entropy::InterReference {
+            logical,
+            surface,
+            scale,
+            order_hint,
+            global_motion: header.global_motion[index],
+            sign_bias: sign_bias[index],
+            temporal: Some(&surface.motion),
+        });
+    }
+    let references: [Av1Result<entropy::InterReference<'a>>; 7] = std::array::from_fn(|index| {
+        // Every entry is populated by the checked loop above.  The explicit
+        // match keeps this conversion non-panicking if the logical reference
+        // table is ever expanded independently of `ReferenceFrame::ALL`.
+        inter_references[index].ok_or_else(|| malformed("inter reference table is incomplete"))
+    });
+    let references = references.into_iter().collect::<Av1Result<Vec<_>>>()?;
+    let references: [entropy::InterReference<'a>; 7] = references
+        .try_into()
+        .map_err(|_| malformed("inter reference table has invalid length"))?;
+    Ok(entropy::InterFrameContext {
+        references,
+        current_order_hint: header.order_hint,
+        order_hint_bits: sequence.order_hint_bits,
+        reference_order_hints,
+        global_motion: header.global_motion,
+        sign_bias,
+        force_integer_mv: header.force_integer_mv,
+        high_precision_mv: header.allow_high_precision_mv,
+        use_ref_frame_mvs: header.use_ref_frame_mvs,
+        interpolation_filter: header.interpolation_filter,
+        dual_filter: sequence.enable_dual_filter,
+        reference_mode_select: header.reference_mode_select,
+    })
+}
+
 fn invalidate_reference_slots(
     references: &mut [Option<ReferenceState>; REFERENCE_SLOTS],
     frame_id: u32,
@@ -1158,6 +1233,15 @@ impl FrameState {
             return Err(malformed("frame syntax validation failed"));
         }
         bits.byte_align()?;
+        let inter_context = if header.frame_type.is_inter() {
+            Some(inter_frame_context(
+                header,
+                sequence,
+                &pending.staged_references,
+            )?)
+        } else {
+            None
+        };
         let tile_ranges = split_tile_payloads(
             data,
             bits.position() / 8,
@@ -1176,6 +1260,7 @@ impl FrameState {
             pending.input_cdfs.as_ref(),
             pending.segment_map.as_ref(),
             pending.previous_segment_map.as_ref(),
+            inter_context.as_ref(),
         )?;
         Ok(TileGroup {
             start,
@@ -1689,6 +1774,7 @@ fn validate_tile_entropy_prefixes(
     input_cdfs: Option<&entropy::FrameCdfs>,
     current_segment_map: Option<&entropy::SegmentMap>,
     previous_segment_map: Option<&entropy::SegmentMap>,
+    inter_context: Option<&entropy::InterFrameContext<'_>>,
 ) -> Av1Result<TileValidation> {
     let root_level = u32::from(!sequence.use_128x128_superblock);
     // Frame dimensions and superblock mode were validated while parsing the
@@ -1899,6 +1985,7 @@ fn validate_tile_entropy_prefixes(
             input_cdfs,
             segment_map.as_mut(),
             previous_segment_map,
+            inter_context,
         )?;
         if let Some(mut reconstruction) = complete {
             let tile_cdfs = reconstruction
@@ -1906,7 +1993,11 @@ fn validate_tile_entropy_prefixes(
                 .take()
                 .ok_or_else(|| malformed("complete tile omits its entropy snapshot"))?;
             if header.refresh_frame_context && tile == tiling.context_update_tile {
-                selected_cdfs = Some(entropy::FrameCdfs::publish_intra(input_cdfs, &tile_cdfs));
+                selected_cdfs = Some(if header.frame_type.is_inter() {
+                    entropy::FrameCdfs::publish_inter(input_cdfs, &tile_cdfs)
+                } else {
+                    entropy::FrameCdfs::publish_intra(input_cdfs, &tile_cdfs)
+                });
             }
             if tiling.tile_count() == 1 && ranges.len() == 1 {
                 complete_color_leaf = Some(reconstruction.into_filtered_leaf()?);
@@ -3571,6 +3662,7 @@ fn coverage_state_paths() {
             Some(&entropy_cdfs),
             None,
             None,
+            None,
         )
         .is_err()
     );
@@ -3588,6 +3680,7 @@ fn coverage_state_paths() {
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
             Some(&entropy_cdfs),
+            None,
             None,
             None,
         )

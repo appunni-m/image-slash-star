@@ -7,7 +7,7 @@
 // This is data from the normative reference implementation. Keeping
 // its exact packing makes transform-size selection allocation-free.
 #[rustfmt::skip]
-pub(super) static AV1_INVERSE_QUANT_MATRICES: [[[u8; 3344]; 2]; 15] = [
+pub(super) static AV1_INVERSE_QUANT_MATRICES: [[[u8; 3360]; 2]; 15] = [
     [ // level 0
         [ // luma
             32, 43, 73, 97, 43, 67, 94, 110, 73, 94, 137, 150, 97, 110, 150, 200, 32, 32, 38, 51, 68, 84, 95, 109, 32, 35, 40, 49, 63, 76, 89, 102,
@@ -3246,6 +3246,10 @@ pub(super) static AV1_INVERSE_QUANT_MATRICES: [[[u8; 3344]; 2]; 15] = [
             31, 31, 31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 32, 32, 32, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31,
             31, 31, 31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 32, 32, 32, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31,
             31, 31, 31, 31, 31, 31, 31, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+            // The final chroma row in the pinned source is 16 values short
+            // of the uniform allocation stride; the trailing padding is
+            // never selected by a transform offset.
+            32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
         ],
     ],
 ];

@@ -16,7 +16,11 @@ from pathlib import Path
 
 LEVELS = 15
 PLANES = 2
-MATRIX_VALUES = 3344
+MATRIX_VALUES = 3360
+# The pinned libaom initializer omits the final 16-value chroma padding
+# row.  The decoder never indexes that padding, but the Rust carrier keeps a
+# uniform stride so all level/plane entries remain allocation-free.
+SOURCE_VALUES = (LEVELS * PLANES - 1) * MATRIX_VALUES + (MATRIX_VALUES - 16)
 TOTAL_VALUES = LEVELS * PLANES * MATRIX_VALUES
 DECLARATION = (
     "static const qm_val_t iwt_matrix_ref"
@@ -46,8 +50,10 @@ def values(source: str) -> list[int]:
     body = re.sub(r"/\*.*?\*/", "", body, flags=re.DOTALL)
     body = re.sub(r"//.*", "", body)
     parsed = [int(value) for value in re.findall(r"\b\d+\b", body)]
+    if len(parsed) == SOURCE_VALUES:
+        parsed.extend([32] * (TOTAL_VALUES - SOURCE_VALUES))
     if len(parsed) != TOTAL_VALUES:
-        raise ValueError(f"expected {TOTAL_VALUES} values, found {len(parsed)}")
+        raise ValueError(f"expected {SOURCE_VALUES} or {TOTAL_VALUES} values, found {len(parsed)}")
     if any(value > 255 for value in parsed):
         raise ValueError("inverse quantization matrix value exceeds u8")
     return parsed
