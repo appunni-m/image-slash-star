@@ -7,7 +7,7 @@ use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
 
 use super::bit_reader::SegmentedData;
-use super::geometry::{BlockSize, IntraEdgeFlags, TxSize};
+use super::geometry::{BlockSize, IntraEdgeFlags, PixelLayout, TxSize};
 use super::motion::{
     CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter, MotionMode,
     MotionVector, ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget,
@@ -3562,6 +3562,12 @@ fn decode_inter_leaf(
     prepared_quantization: super::block::PreparedInterQuantization,
     tools: super::block::BlockTools,
 ) -> Av1Result<super::block::PortableResult<DecodedInterLeaf>> {
+    if matches!(context.bit_depth, 10 | 12) {
+        let (block_width, block_height) = node.block_size.pixel_dimensions();
+        if !(8..=32).contains(&block_width) || !(8..=32).contains(&block_height) {
+            return Ok(Err(super::block::PortableUnavailable));
+        }
+    }
     if selected_segment.reference == 0 {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -4170,8 +4176,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     previous_segment_map: Option<&SegmentMap>,
     inter_context: Option<&InterFrameContext<'_>>,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
-    let inter_reconstruction =
-        complete_inter_420_reconstruction_context(context) && inter_context.is_some();
+    let inter_reconstruction = inter_context.is_some_and(|inter_context| {
+        complete_inter_420_reconstruction_context(context)
+            || complete_high_depth_inter_420_reconstruction_context(context, inter_context)
+    });
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
         || segmentation
@@ -4804,6 +4812,58 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+}
+
+/// Exact high-depth 4:2:0 inter tranche admitted by the depth-parametric
+/// motion-compensation core. The block engine retains samples in `u16`, but
+/// its inter path is intentionally limited to whole 8..=32-pixel transforms
+/// and a closed tool profile until the remaining AV1 syntax families publish
+/// their high-depth state. Every retained reference is checked up front so a
+/// later reference choice cannot narrow the path back to eight-bit geometry.
+fn complete_high_depth_inter_420_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I420
+    });
+    !context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && context.subsampling_y
+        && !context.superres_enabled
+        && context.upscaled_width == context.frame_width
+        && !context.monochrome
+        && !context.all_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.segmentation_enabled
+        && context.frame_tools.transform_mode == 1
+        && !context.frame_tools.reduced_transform_set
+        && context
+            .frame_tools
+            .quantization
+            .is_some_and(|quantization| !quantization.using_matrix)
+        && !context.frame_tools.delta_lf_present
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && references_match
 }
 
 /// Color all-lossless frames share the canonical streamed coefficient state
