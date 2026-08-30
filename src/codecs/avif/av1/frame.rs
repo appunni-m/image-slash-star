@@ -897,6 +897,7 @@ fn assemble_color_tiles(
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),

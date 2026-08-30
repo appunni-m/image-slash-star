@@ -1178,9 +1178,9 @@ fn decode_complete_following_leaf(
     );
 
     let above_luma_contexts =
-        tile_state.luma_contexts_above::<16>(node.x, node.y, node.width.min(16))?;
+        tile_state.luma_contexts_above::<32>(node.x, node.y, node.width.min(32))?;
     let left_luma_contexts =
-        tile_state.luma_contexts_left::<16>(node.x, node.y, node.height.min(16))?;
+        tile_state.luma_contexts_left::<32>(node.x, node.y, node.height.min(32))?;
 
     let chroma_above_y = if context.subsampling_y {
         node.y.saturating_sub(node.y % 2)
@@ -1203,17 +1203,17 @@ fn decode_complete_following_leaf(
         node.width
     };
     let above_chroma_contexts = [
-        tile_state.chroma_contexts_above::<16>(
+        tile_state.chroma_contexts_above::<32>(
             0,
             chroma_context_x,
             chroma_context_y,
-            chroma_context_width.min(16),
+            chroma_context_width.min(32),
         )?,
-        tile_state.chroma_contexts_above::<16>(
+        tile_state.chroma_contexts_above::<32>(
             1,
             chroma_context_x,
             chroma_context_y,
-            chroma_context_width.min(16),
+            chroma_context_width.min(32),
         )?,
     ];
 
@@ -1243,17 +1243,17 @@ fn decode_complete_following_leaf(
         node.height
     };
     let left_chroma_contexts = [
-        tile_state.chroma_contexts_left::<16>(
+        tile_state.chroma_contexts_left::<32>(
             0,
             chroma_context_left_x,
             chroma_context_left_y,
-            chroma_context_height.min(16),
+            chroma_context_height.min(32),
         )?,
-        tile_state.chroma_contexts_left::<16>(
+        tile_state.chroma_contexts_left::<32>(
             1,
             chroma_context_left_x,
             chroma_context_left_y,
-            chroma_context_height.min(16),
+            chroma_context_height.min(32),
         )?,
     ];
 
@@ -1300,24 +1300,41 @@ fn decode_complete_following_leaf(
         Err(_) => return Ok(Err(super::block::PortableUnavailable)),
     };
 
-    Ok(block_decoder.decode_following_from_edges(
-        decoder,
-        width,
-        height,
-        has_chroma,
-        quantization,
-        tools,
-        super::block::SpatialNeighbors {
-            above,
-            left,
-            tx_left,
-            above_luma_contexts,
-            left_luma_contexts,
-            above_chroma_contexts,
-            left_chroma_contexts,
-        },
-        &edges,
-    ))
+    let neighbors = super::block::SpatialNeighbors {
+        above,
+        left,
+        tx_left,
+        above_luma_contexts,
+        left_luma_contexts,
+        above_chroma_contexts,
+        left_chroma_contexts,
+    };
+    if super::block::uses_streamed_large_intra(node.block_size) {
+        Ok(block_decoder.decode_large_intra(
+            decoder,
+            node.block_size,
+            width,
+            height,
+            has_chroma,
+            quantization,
+            tools,
+            super::block::LargeIntraSpatial::Following {
+                neighbors,
+                edges: &edges,
+            },
+        ))
+    } else {
+        Ok(block_decoder.decode_following_from_edges(
+            decoder,
+            width,
+            height,
+            has_chroma,
+            quantization,
+            tools,
+            neighbors,
+            &edges,
+        ))
+    }
 }
 
 const MAX_PARTITION_NODES: usize = 1_048_576;
@@ -2351,11 +2368,17 @@ pub(super) fn validate_complete_lossy_420_partition(
                 } else {
                     node.block_size
                 };
-                let Ok(transform_grid) =
-                    super::block::TransformGrid::from_block_size(syntax_block_size)
-                else {
-                    unsupported = true;
-                    return Ok(PartitionVisitControl::Stop);
+                let streamed_large = super::block::uses_streamed_large_intra(syntax_block_size);
+                let transform_grid = if streamed_large {
+                    None
+                } else {
+                    let Ok(transform_grid) =
+                        super::block::TransformGrid::from_block_size(syntax_block_size)
+                    else {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    };
+                    Some(transform_grid)
                 };
                 let mut tools = tools;
                 tools.palette_context =
@@ -2398,18 +2421,34 @@ pub(super) fn validate_complete_lossy_420_partition(
                     palette_entropy_width,
                     palette_entropy_height,
                 );
+                // The value is consulted only in the `!streamed_large`
+                // branch, where construction above proved `Some`. Keeping a
+                // concrete copy avoids a panic-only unwrap in codec code.
+                let legacy_transform_grid =
+                    transform_grid.unwrap_or(super::block::TransformGrid::Square4);
                 let decoded = if tile_state.is_empty() {
                     let standalone_tiny_frame =
                         context.frame_width == 4 && context.frame_height == 4;
                     let has_chroma =
                         partition_node_has_chroma(context, node, standalone_tiny_frame);
-                    if has_chroma {
+                    if streamed_large {
+                        block_decoder.decode_large_intra(
+                            decoder,
+                            syntax_block_size,
+                            width,
+                            height,
+                            has_chroma,
+                            quantization,
+                            tools,
+                            super::block::LargeIntraSpatial::Origin,
+                        )
+                    } else if has_chroma {
                         if !context.subsampling_x && !context.subsampling_y {
                             block_decoder.decode_origin_full(
                                 decoder,
                                 width,
                                 height,
-                                transform_grid,
+                                legacy_transform_grid,
                                 quantization,
                                 tools,
                             )
@@ -2418,7 +2457,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                 decoder,
                                 width,
                                 height,
-                                transform_grid,
+                                legacy_transform_grid,
                                 quantization,
                                 tools,
                             )
@@ -2428,7 +2467,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             decoder,
                             width,
                             height,
-                            transform_grid,
+                            legacy_transform_grid,
                             quantization,
                             tools,
                         )
@@ -2482,12 +2521,15 @@ pub(super) fn validate_complete_lossy_420_partition(
                     &decoded.planes,
                 )?;
                 if collect_loop_filter {
-                    let Some((luma_tx, chroma_tx)) = super::block::filter_transform_dimensions(
-                        transform_grid,
-                        &decoded,
-                        context.subsampling_x,
-                        context.subsampling_y,
-                    ) else {
+                    let Some((luma_tx, chroma_tx)) =
+                        super::block::filter_transform_dimensions_for_block(
+                            syntax_block_size,
+                            transform_grid,
+                            &decoded,
+                            context.subsampling_x,
+                            context.subsampling_y,
+                        )
+                    else {
                         unsupported = true;
                         return Ok(PartitionVisitControl::Stop);
                     };
@@ -2546,6 +2588,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: decoder.operation_trace(),
@@ -2926,6 +2969,7 @@ pub(super) fn validate_complete_lossless_444_partition(
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: decoder.operation_trace(),

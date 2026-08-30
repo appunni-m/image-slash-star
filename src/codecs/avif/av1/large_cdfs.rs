@@ -6,8 +6,9 @@
 
 #[derive(Clone, Copy)]
 pub(super) struct LargeCoefficientCdfDefaults {
-    pub(super) luma_skip_contexts: [[u16; 2]; 7],
-    pub(super) luma_64x64_skip: [u16; 2],
+    pub(super) luma_context_two_skip: [[u16; 2]; 7],
+    pub(super) luma_context_three_skip: [[u16; 2]; 7],
+    pub(super) luma_context_four_skip: [[u16; 2]; 7],
     pub(super) eob_256: [[u16; 9]; 2],
     pub(super) chroma_context_two_eob_high: [[u16; 2]; 9],
     pub(super) chroma_context_two_eob_base: [[u16; 3]; 4],
@@ -26,7 +27,18 @@ pub(super) struct LargeCoefficientCdfDefaults {
 
 pub(super) const QCAT1_LARGE_COEFFICIENT_CDFS: LargeCoefficientCdfDefaults =
     LargeCoefficientCdfDefaults {
-        luma_skip_contexts: [
+        // dav1d 1.5.3 `default_coef_cdf[1].skip[2][0..=6]`, complemented
+        // for the portable inverse-CDF range decoder.
+        luma_context_two_skip: [
+            [867, 0],
+            [22457, 0],
+            [14721, 0],
+            [7962, 0],
+            [9480, 0],
+            [4854, 0],
+            [472, 0],
+        ],
+        luma_context_three_skip: [
             [6042, 0],
             [31723, 0],
             [21065, 0],
@@ -35,7 +47,17 @@ pub(super) const QCAT1_LARGE_COEFFICIENT_CDFS: LargeCoefficientCdfDefaults =
             [6798, 0],
             [830, 0],
         ],
-        luma_64x64_skip: [6184, 0],
+        // libaom 3.13.1 `av1_default_txb_skip_cdfs[1][TX_64X64]`,
+        // complemented for this range decoder.
+        luma_context_four_skip: [
+            [6_184, 0],
+            [32_580, 0],
+            [23_921, 0],
+            [8_249, 0],
+            [9_830, 0],
+            [2_185, 0],
+            [160, 0],
+        ],
         eob_256: [
             [31320, 30659, 28617, 26505, 23439, 19508, 14824, 9468, 0],
             [26366, 24620, 20145, 17696, 14040, 9921, 6321, 3391, 0],
@@ -381,7 +403,18 @@ pub(super) const QCAT1_LARGE_COEFFICIENT_CDFS: LargeCoefficientCdfDefaults =
 
 pub(super) const QCAT3_LARGE_COEFFICIENT_CDFS: LargeCoefficientCdfDefaults =
     LargeCoefficientCdfDefaults {
-        luma_skip_contexts: [
+        // dav1d 1.5.3 `default_coef_cdf[3].skip[2][0..=6]`, complemented
+        // for the portable inverse-CDF range decoder.
+        luma_context_two_skip: [
+            [258, 0],
+            [24338, 0],
+            [15450, 0],
+            [8614, 0],
+            [9094, 0],
+            [3979, 0],
+            [629, 0],
+        ],
+        luma_context_three_skip: [
             [1097, 0],
             [30712, 0],
             [21022, 0],
@@ -390,7 +423,17 @@ pub(super) const QCAT3_LARGE_COEFFICIENT_CDFS: LargeCoefficientCdfDefaults =
             [8053, 0],
             [1284, 0],
         ],
-        luma_64x64_skip: [1229, 0],
+        // libaom 3.13.1 `av1_default_txb_skip_cdfs[3][TX_64X64]`,
+        // complemented for this range decoder.
+        luma_context_four_skip: [
+            [1_229, 0],
+            [24_335, 0],
+            [12_192, 0],
+            [4_864, 0],
+            [4_916, 0],
+            [2_742, 0],
+            [327, 0],
+        ],
         eob_256: [
             [27420, 25655, 20948, 16844, 10662, 5991, 2434, 1011, 0],
             [9658, 8171, 5628, 3874, 2601, 1841, 1376, 674, 0],

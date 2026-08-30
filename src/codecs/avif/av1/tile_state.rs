@@ -552,9 +552,21 @@ impl TileState {
             tx_context_height: leaf.tx_context_height,
         });
 
-        let split = leaf.luma_transform_split;
-        let row_context = |y: u32, contexts: &[u8; 16], origin: u32| {
-            if !split {
+        let edge_contextual = leaf.luma_transform_split || leaf.wide_coefficient_contexts.is_some();
+        let luma_right_contexts = leaf
+            .wide_coefficient_contexts
+            .as_ref()
+            .map_or(leaf.luma_right_contexts.as_slice(), |contexts| {
+                contexts.luma_right.as_slice()
+            });
+        let luma_bottom_contexts = leaf
+            .wide_coefficient_contexts
+            .as_ref()
+            .map_or(leaf.luma_bottom_contexts.as_slice(), |contexts| {
+                contexts.luma_bottom.as_slice()
+            });
+        let row_context = |y: u32, contexts: &[u8], origin: u32| {
+            if !edge_contextual {
                 return leaf.luma_context;
             }
             usize::try_from(y.saturating_sub(origin))
@@ -567,9 +579,9 @@ impl TileState {
             for x in node.x..end_x {
                 let index = self.cell_index(x, y)?;
                 let column = usize::try_from(x.saturating_sub(node.x)).unwrap_or(usize::MAX);
-                let bottom_context = if split {
-                    leaf.luma_bottom_contexts
-                        .get(column.min(leaf.luma_bottom_contexts.len().saturating_sub(1)))
+                let bottom_context = if edge_contextual {
+                    luma_bottom_contexts
+                        .get(column.min(luma_bottom_contexts.len().saturating_sub(1)))
                         .copied()
                         .unwrap_or(0x40)
                 } else {
@@ -580,7 +592,7 @@ impl TileState {
                     .get_mut(index)
                     .ok_or_else(|| malformed("tile cell disappeared during block state commit"))?;
                 cell.owner = Some(owner);
-                cell.right_context = row_context(y, &leaf.luma_right_contexts, node.y);
+                cell.right_context = row_context(y, luma_right_contexts, node.y);
                 cell.bottom_context = bottom_context;
             }
         }
@@ -595,17 +607,25 @@ impl TileState {
                     })?;
                     cell.owner = Some(owner);
                     for plane in 0..2 {
-                        cell.right_contexts[plane] = leaf.chroma_right_contexts[plane]
-                            .get(row.min(leaf.chroma_right_contexts[plane].len().saturating_sub(1)))
+                        let chroma_right_contexts = leaf
+                            .wide_coefficient_contexts
+                            .as_ref()
+                            .map_or(leaf.chroma_right_contexts[plane].as_slice(), |contexts| {
+                                contexts.chroma_right[plane].as_slice()
+                            });
+                        let chroma_bottom_contexts =
+                            leaf.wide_coefficient_contexts.as_ref().map_or(
+                                leaf.chroma_bottom_contexts[plane].as_slice(),
+                                |contexts| contexts.chroma_bottom[plane].as_slice(),
+                            );
+                        cell.right_contexts[plane] = chroma_right_contexts
+                            .get(row.min(chroma_right_contexts.len().saturating_sub(1)))
                             .copied()
                             .unwrap_or(leaf.chroma_contexts[plane]);
-                        cell.bottom_contexts[plane] =
-                            leaf.chroma_bottom_contexts[plane]
-                                .get(column.min(
-                                    leaf.chroma_bottom_contexts[plane].len().saturating_sub(1),
-                                ))
-                                .copied()
-                                .unwrap_or(leaf.chroma_contexts[plane]);
+                        cell.bottom_contexts[plane] = chroma_bottom_contexts
+                            .get(column.min(chroma_bottom_contexts.len().saturating_sub(1)))
+                            .copied()
+                            .unwrap_or(leaf.chroma_contexts[plane]);
                     }
                 }
             }

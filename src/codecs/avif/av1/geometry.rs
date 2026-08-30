@@ -320,6 +320,53 @@ impl BlockSize {
             }
         }
     }
+
+    /// AV1's maximum signalled transform-size level for this coded block.
+    ///
+    /// The value selects the transform-size CDF row.  The entropy symbol is
+    /// still capped to two subdivision steps by the intra syntax.
+    pub(super) const fn transform_size_max(self) -> usize {
+        match self {
+            Self::B4x4 => 0,
+            Self::B4x8 | Self::B8x4 | Self::B8x8 => 1,
+            Self::B4x16 | Self::B16x4 | Self::B8x16 | Self::B16x8 | Self::B16x16 => 2,
+            Self::B8x32 | Self::B32x8 | Self::B16x32 | Self::B32x16 | Self::B32x32 => 3,
+            Self::B16x64
+            | Self::B64x16
+            | Self::B32x64
+            | Self::B64x32
+            | Self::B64x64
+            | Self::B64x128
+            | Self::B128x64
+            | Self::B128x128 => 4,
+        }
+    }
+
+    /// Whether this block carries an intra directional angle delta.
+    pub(super) const fn has_angle_delta(self) -> bool {
+        let (width, height) = self.mi_dimensions();
+        width >= 4 || height >= 4 || (width >= 2 && height >= 2)
+    }
+
+    /// Whether this block can carry filter-intra syntax.
+    pub(super) const fn filter_intra_allowed(self) -> bool {
+        let (width, height) = self.pixel_dimensions();
+        width <= 32 && height <= 32
+    }
+
+    /// Whether lossy chroma-from-luma syntax is size-eligible.
+    pub(super) const fn lossy_cfl_allowed(self) -> bool {
+        let (width, height) = self.pixel_dimensions();
+        width <= 32 && height <= 32
+    }
+
+    /// Defensive layout gate for the AV1 1:4 block restrictions.
+    pub(super) const fn valid_for_layout(self, layout: PixelLayout) -> bool {
+        !matches!(
+            (self, layout),
+            (Self::B32x64 | Self::B64x128, PixelLayout::I422)
+        )
+    }
 }
 
 /// All 19 normative AV1 transform sizes.
@@ -462,6 +509,199 @@ impl TxSize {
     pub(super) const fn context_dimensions(self) -> (u8, u8) {
         let (width, height) = self.mi_dimensions();
         (context_dimension(width), context_dimension(height))
+    }
+}
+
+/// One terminal intra transform in normative coded traversal order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct IntraTxVisit {
+    pub(super) plane: u8,
+    pub(super) tx_size: TxSize,
+    pub(super) x: u32,
+    pub(super) y: u32,
+}
+
+/// Allocation-free transform plan for one intra leaf.
+///
+/// AV1 visits 64-pixel luma chunks in raster order, visits Y/U/V within each
+/// chunk, then visits that plane's terminal transforms in raster order.  The
+/// plan retains coded geometry only; callers separately omit transforms whose
+/// origins lie outside the visible frame rectangle.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct IntraTxPlan {
+    block_size: BlockSize,
+    layout: PixelLayout,
+    luma_tx: TxSize,
+    chroma_tx: Option<TxSize>,
+}
+
+impl IntraTxPlan {
+    pub(super) const fn new(
+        block_size: BlockSize,
+        layout: PixelLayout,
+        lossless: bool,
+        tx_depth: usize,
+    ) -> Option<Self> {
+        if !block_size.valid_for_layout(layout) {
+            return None;
+        }
+        let luma_tx = if lossless {
+            if tx_depth != 0 {
+                return None;
+            }
+            TxSize::Tx4x4
+        } else {
+            if tx_depth > block_size.transform_size_max() || tx_depth > 2 {
+                return None;
+            }
+            let mut tx = block_size.maximum_luma_tx();
+            let mut depth = 0;
+            while depth < tx_depth {
+                tx = tx.sub_size();
+                depth += 1;
+            }
+            tx
+        };
+        let chroma_tx = match layout {
+            PixelLayout::Monochrome => None,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444 => {
+                if lossless {
+                    Some(TxSize::Tx4x4)
+                } else {
+                    block_size.maximum_chroma_tx(layout)
+                }
+            }
+        };
+        Some(Self {
+            block_size,
+            layout,
+            luma_tx,
+            chroma_tx,
+        })
+    }
+
+    pub(super) const fn luma_tx(self) -> TxSize {
+        self.luma_tx
+    }
+
+    pub(super) const fn iter(self) -> IntraTxIter {
+        IntraTxIter {
+            plan: self,
+            chunk_x: 0,
+            chunk_y: 0,
+            plane: 0,
+            tx_x: 0,
+            tx_y: 0,
+            plane_started: false,
+            finished: false,
+        }
+    }
+}
+
+pub(super) struct IntraTxIter {
+    plan: IntraTxPlan,
+    chunk_x: u32,
+    chunk_y: u32,
+    plane: u8,
+    tx_x: u32,
+    tx_y: u32,
+    plane_started: bool,
+    finished: bool,
+}
+
+impl IntraTxIter {
+    const fn plane_scale(&self, plane: u8) -> (u32, u32) {
+        if plane == 0 {
+            return (1, 1);
+        }
+        match self.plan.layout {
+            PixelLayout::Monochrome | PixelLayout::I444 => (1, 1),
+            PixelLayout::I422 => (2, 1),
+            PixelLayout::I420 => (2, 2),
+        }
+    }
+
+    const fn plane_tx(&self, plane: u8) -> Option<TxSize> {
+        if plane == 0 {
+            Some(self.plan.luma_tx)
+        } else {
+            self.plan.chroma_tx
+        }
+    }
+
+    fn advance_chunk(&mut self, block_width: u32, block_height: u32) {
+        self.chunk_x = self.chunk_x.saturating_add(64);
+        if self.chunk_x >= block_width {
+            self.chunk_x = 0;
+            self.chunk_y = self.chunk_y.saturating_add(64);
+        }
+        if self.chunk_y >= block_height {
+            self.finished = true;
+        }
+        self.plane = 0;
+        self.plane_started = false;
+    }
+}
+
+impl Iterator for IntraTxIter {
+    type Item = IntraTxVisit;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (block_width, block_height) = self.plan.block_size.pixel_dimensions();
+        while !self.finished {
+            let plane = self.plane;
+            let Some(tx_size) = self.plane_tx(plane) else {
+                self.advance_chunk(block_width, block_height);
+                continue;
+            };
+            let (scale_x, scale_y) = self.plane_scale(plane);
+            let chunk_width = block_width.saturating_sub(self.chunk_x).min(64);
+            let chunk_height = block_height.saturating_sub(self.chunk_y).min(64);
+            let plane_chunk_x = self.chunk_x / scale_x;
+            let plane_chunk_y = self.chunk_y / scale_y;
+            // AV1 promotes a subsampled coded axis smaller than four pixels
+            // to one complete 4-pixel chroma transform footprint.
+            let plane_chunk_width = if plane == 0 {
+                chunk_width
+            } else {
+                chunk_width.div_ceil(scale_x).max(4)
+            };
+            let plane_chunk_height = if plane == 0 {
+                chunk_height
+            } else {
+                chunk_height.div_ceil(scale_y).max(4)
+            };
+            let plane_end_x = plane_chunk_x.saturating_add(plane_chunk_width);
+            let plane_end_y = plane_chunk_y.saturating_add(plane_chunk_height);
+            let (tx_width, tx_height) = tx_size.pixel_dimensions();
+
+            if !self.plane_started {
+                self.tx_x = plane_chunk_x;
+                self.tx_y = plane_chunk_y;
+                self.plane_started = true;
+            }
+            if self.tx_y < plane_end_y {
+                let visit = IntraTxVisit {
+                    plane,
+                    tx_size,
+                    x: self.tx_x,
+                    y: self.tx_y,
+                };
+                self.tx_x = self.tx_x.saturating_add(tx_width);
+                if self.tx_x >= plane_end_x {
+                    self.tx_x = plane_chunk_x;
+                    self.tx_y = self.tx_y.saturating_add(tx_height);
+                }
+                return Some(visit);
+            }
+
+            self.plane = self.plane.saturating_add(1);
+            self.plane_started = false;
+            if self.plane > 2 {
+                self.advance_chunk(block_width, block_height);
+            }
+        }
+        None
     }
 }
 

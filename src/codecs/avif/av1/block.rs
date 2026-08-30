@@ -11,7 +11,7 @@
 #![allow(clippy::arithmetic_side_effects)]
 
 use super::entropy::RangeDecoder;
-use super::geometry::BlockSize;
+use super::geometry::{BlockSize, IntraTxPlan, PixelLayout, TxSize};
 use super::large_cdfs::{
     LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
 };
@@ -764,7 +764,10 @@ struct CoeffBlockRef<'a> {
     transform: Av1TransformType,
 }
 
-pub(super) const MAX_INTRA_EDGE_SAMPLES: usize = 128;
+/// Maximum complete coded intra edge. A 128x128 block needs 128 top plus 128
+/// left samples; terminal-transform prediction still consumes only the exact
+/// checked prefix for that transform.
+pub(super) const MAX_INTRA_EDGE_SAMPLES: usize = 256;
 const MAX_CFL_BORDER: usize = 4;
 const MAX_CFL_STRIP_SAMPLES: usize = MAX_INTRA_EDGE_SAMPLES * 2;
 
@@ -893,8 +896,8 @@ impl CflLumaContext {
 /// `logical_len` is the prepared slice exposed to predictors. `valid_len`
 /// counts only samples that were both authorized and reconstructed before
 /// edge repetition/defaulting; neutral compatibility fill never increases
-/// it. The fixed 128-sample capacity covers one maximum 64x64 transform plus
-/// its directional extension without hot-path allocation.
+/// it. The fixed 256-sample capacity covers one maximum 128x128 coded block
+/// while terminal-transform predictors borrow only their checked prefix.
 #[derive(Clone, Debug)]
 struct EdgeLine {
     samples: [u16; MAX_INTRA_EDGE_SAMPLES],
@@ -1414,7 +1417,7 @@ struct CdefMetadata {
     index: usize,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ChromaSampling {
     Full,
     Subsampled420,
@@ -1738,6 +1741,26 @@ impl ChromaSampling {
         }
     }
 
+    const fn pixel_layout(self) -> PixelLayout {
+        match self {
+            Self::Full => PixelLayout::I444,
+            Self::Subsampled420 => PixelLayout::I420,
+            Self::Subsampled422 => PixelLayout::I422,
+            Self::Monochrome => PixelLayout::Monochrome,
+        }
+    }
+
+    const fn plane_subsampling(self, plane: usize) -> (usize, usize) {
+        if plane == 0 {
+            return (1, 1);
+        }
+        match self {
+            Self::Subsampled420 => (2, 2),
+            Self::Subsampled422 => (2, 1),
+            Self::Full | Self::Monochrome => (1, 1),
+        }
+    }
+
     const fn transform_grid(
         self,
         luma_grid_width: usize,
@@ -1959,21 +1982,7 @@ impl TransformGrid {
     /// dimensions: rectangular blocks use the AV1 rectangular transform
     /// families, whose maximum level is not always the smaller grid axis.
     const fn transform_size_max(self) -> usize {
-        match self {
-            Self::Square4 => 0,
-            Self::Vertical4x8 | Self::Horizontal8x4 | Self::Square8 => 1,
-            Self::Vertical4x16
-            | Self::Horizontal16x4
-            | Self::Horizontal16x8
-            | Self::Vertical8x16
-            | Self::Square16 => 2,
-            Self::Vertical16x32
-            | Self::Horizontal32x16
-            | Self::Horizontal32x8
-            | Self::Vertical8x32
-            | Self::Square32 => 3,
-            Self::Vertical16x64 | Self::Horizontal64x16 | Self::Square64 => 4,
-        }
+        self.block_size().transform_size_max()
     }
 
     /// Whether this block's AV1 mode syntax carries `angle_delta_y`.
@@ -1982,11 +1991,7 @@ impl TransformGrid {
     /// The two smaller grids below therefore leave the symbol in the range
     /// decoder for the following syntax element.
     const fn has_angle_delta(self) -> bool {
-        let (width, height, _) = self.properties();
-        // `b_dim[2] + b_dim[3] >= 2` in AV1 is the log2 transform-grid
-        // condition. Rectangles such as 16×4 and 4×16 therefore carry the
-        // symbol too, while 8×4 and 4×8 do not.
-        width >= 4 || height >= 4 || (width >= 2 && height >= 2)
+        self.block_size().has_angle_delta()
     }
 
     /// Index of the AV1 `use_filter_intra` CDF for this coded block size.
@@ -2226,6 +2231,7 @@ enum CoefficientSkipCdf {
     LossyLuma16x16Context(usize),
     LossyLuma32x16Context(usize),
     LossyLuma32x32Context(usize),
+    LossyLumaContextFour(usize),
     Base,
     OneNonzeroNeighbor,
     TwoNonzeroNeighbors,
@@ -2233,16 +2239,6 @@ enum CoefficientSkipCdf {
         transform_context: usize,
         skip_context: usize,
     },
-}
-
-/// Selects the qcat-specific skip sentence for a direct lossy luma
-/// transform-context-two terminal, including TX_16X16 and TX_8X16. The scalar
-/// and contextual CDFs are distinct AV1 syntax paths; selecting one by
-/// inspecting a mutable CDF value would be incorrect after adaptive updates.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum LossyLuma16x16SkipMode {
-    Contextual,
-    Scalar,
 }
 
 /// Frame-level coding tools that change one intra leaf's entropy syntax.
@@ -2312,6 +2308,30 @@ pub(in crate::codecs::avif) struct ReconstructedPlane {
     pub(in crate::codecs::avif) samples: Vec<u16>,
 }
 
+/// Coefficient contexts for the complete 128-pixel AV1 block edge.
+///
+/// Legacy carriers retain their compact 16-entry arrays. Generic 128-pixel
+/// leaves attach this checked 32-MI view so tile publication never repeats or
+/// truncates the sixteenth context cell.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in crate::codecs::avif) struct CoefficientEdgeContexts32 {
+    pub(in crate::codecs::avif) luma_right: [u8; 32],
+    pub(in crate::codecs::avif) luma_bottom: [u8; 32],
+    pub(in crate::codecs::avif) chroma_right: [[u8; 32]; 2],
+    pub(in crate::codecs::avif) chroma_bottom: [[u8; 32]; 2],
+}
+
+impl Default for CoefficientEdgeContexts32 {
+    fn default() -> Self {
+        Self {
+            luma_right: [0x40; 32],
+            luma_bottom: [0x40; 32],
+            chroma_right: [[0x40; 32]; 2],
+            chroma_bottom: [[0x40; 32]; 2],
+        }
+    }
+}
+
 /// The three planes reconstructed by the first supported AV1 leaf.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::codecs::avif) struct FirstLeaf {
@@ -2353,6 +2373,9 @@ pub(in crate::codecs::avif) struct FirstLeaf {
     /// coefficient-skip sentence.
     pub(in crate::codecs::avif) luma_right_contexts: [u8; 16],
     pub(in crate::codecs::avif) luma_bottom_contexts: [u8; 16],
+    /// Full-width coefficient contexts for generic blocks whose coded edge
+    /// exceeds the legacy 64-pixel carrier.
+    pub(in crate::codecs::avif) wide_coefficient_contexts: Option<CoefficientEdgeContexts32>,
     /// Tile-local palette metadata retained for the next spatial leaves.
     pub(super) palette_cache: PaletteCacheState,
     #[cfg(coverage)]
@@ -2470,6 +2493,42 @@ pub(super) fn filter_transform_dimensions(
         }
         .saturating_mul(4),
     );
+    Some((luma, chroma))
+}
+
+/// Block-size keyed loop-filter geometry for the streamed large-intra path.
+/// Legacy blocks retain their syntax-specific adapter above; generic blocks
+/// publish the exact terminal luma context and have one normative maximum
+/// chroma transform per 64-pixel chunk.
+pub(super) fn filter_transform_dimensions_for_block(
+    block_size: BlockSize,
+    transform_grid: Option<TransformGrid>,
+    leaf: &FirstLeaf,
+    subsampling_x: bool,
+    subsampling_y: bool,
+) -> Option<((usize, usize), (usize, usize))> {
+    if let Some(transform_grid) = transform_grid {
+        return filter_transform_dimensions(transform_grid, leaf, subsampling_x, subsampling_y);
+    }
+    uses_streamed_large_intra(block_size).then_some(())?;
+    let luma = (
+        4_usize.checked_shl(u32::from(leaf.tx_context_width))?,
+        4_usize.checked_shl(u32::from(leaf.tx_context_height))?,
+    );
+    let layout = if leaf.chroma_predictor.is_none() {
+        PixelLayout::Monochrome
+    } else {
+        PixelLayout::from_sequence(false, subsampling_x, subsampling_y)?
+    };
+    let chroma = block_size
+        .maximum_chroma_tx(layout)
+        .map_or((4, 4), |tx_size| {
+            let (width, height) = tx_size.pixel_dimensions();
+            (
+                usize::try_from(width).unwrap_or(4),
+                usize::try_from(height).unwrap_or(4),
+            )
+        });
     Some((luma, chroma))
 }
 
@@ -2624,6 +2683,7 @@ impl MonochromeLeaf {
             luma_transform_split: false,
             luma_right_contexts: std::array::from_fn(|index| self.right_contexts[index]),
             luma_bottom_contexts: std::array::from_fn(|index| self.bottom_contexts[index]),
+            wide_coefficient_contexts: None,
             palette_cache: self.palette_cache,
             #[cfg(coverage)]
             entropy_operations: Vec::new(),
@@ -2754,10 +2814,36 @@ pub(super) struct SpatialNeighbors {
     /// context: top-left when an above neighbor exists, otherwise the
     /// terminal/bottom-left owner used by a top-row horizontal dispatch.
     pub(super) tx_left: Option<NeighborMeta>,
-    pub(super) above_luma_contexts: [u8; 16],
-    pub(super) left_luma_contexts: [u8; 16],
-    pub(super) above_chroma_contexts: [[u8; 16]; 2],
-    pub(super) left_chroma_contexts: [[u8; 16]; 2],
+    pub(super) above_luma_contexts: [u8; 32],
+    pub(super) left_luma_contexts: [u8; 32],
+    pub(super) above_chroma_contexts: [[u8; 32]; 2],
+    pub(super) left_chroma_contexts: [[u8; 32]; 2],
+}
+
+/// Spatial state for the streamed all-block intra engine. Prediction edges
+/// remain borrowed from the frame canvas while compact owner/context metadata
+/// is copied, so no reconstructed neighbor plane is cloned at dispatch.
+pub(super) enum LargeIntraSpatial<'a> {
+    Origin,
+    Following {
+        neighbors: SpatialNeighbors,
+        edges: &'a FullIntraEdges,
+    },
+}
+
+pub(super) const fn uses_streamed_large_intra(block_size: BlockSize) -> bool {
+    matches!(
+        block_size,
+        BlockSize::B32x64
+            | BlockSize::B64x32
+            | BlockSize::B64x128
+            | BlockSize::B128x64
+            | BlockSize::B128x128
+    )
+}
+
+fn legacy_coefficient_contexts(contexts: &[u8; 32]) -> [u8; 16] {
+    std::array::from_fn(|index| contexts[index])
 }
 
 fn full_resolution_chroma_top_left(neighbors: &VerticalNeighbors<'_>, plane: usize) -> Option<u16> {
@@ -2846,16 +2932,9 @@ struct BlockCdfs {
     coefficient_skip: [[u16; 2]; 2],
     luma_coefficient_skip: [[u16; 2]; 7],
     lossy_luma_8x8_coefficient_skip: [[u16; 2]; 7],
-    lossy_luma_16x16_coefficient_skip: [u16; 2],
     lossy_luma_16x16_coefficient_skip_contexts: [[u16; 2]; 7],
-    /// qcat-specific syntax selector for direct transform-context-two luma
-    /// terminals, including TX_16X16 and TX_8X16.
-    lossy_luma_16x16_skip_mode: LossyLuma16x16SkipMode,
-    /// qcat-two's contextual row zero shares the adaptive state used by the
-    /// transform-context-two scalar terminals.
-    lossy_luma_16x16_context_zero_uses_scalar_state: bool,
     lossy_luma_context_three_coefficient_skip: [[u16; 2]; 7],
-    lossy_luma_64x64_coefficient_skip: [u16; 2],
+    lossy_luma_context_four_coefficient_skip: [[u16; 2]; 7],
     lossy_luma_32x32_eob_bin: [u16; 11],
     lossy_luma_16x64_eob_bin: [u16; 10],
     lossy_luma_8x8_transform_type: [[u16; 7]; 13],
@@ -2885,9 +2964,6 @@ struct BlockCdfs {
     last_lossy_luma_residual_context: Option<u8>,
     lossy_luma_8x16_eob_bin: [u16; 8],
     lossy_luma_8x16_eob_bin_1d: [u16; 8],
-    lossy_luma_8x16_eob_high: [[u16; 2]; 9],
-    lossy_luma_8x16_base_1d: [[u16; 4]; 41],
-    lossy_luma_8x16_high_tokens: [[u16; 4]; 21],
     lossy_chroma_8x4_eob_bin: [u16; 6],
     lossy_chroma_8x4_eob_high: [[u16; 2]; 6],
     lossy_chroma_8x4_eob_base: [[u16; 3]; 4],
@@ -3748,7 +3824,29 @@ const QCAT0_SUBSAMPLED_CHROMA_SKIP: [[[u16; 2]; 6]; 5] = [
     ],
 ];
 
-const QCAT2_LUMA_64X64_SKIP: [u16; 2] = [4_195, 0];
+// libaom 3.13.1 `av1_default_txb_skip_cdfs[2][TX_64X64]`,
+// complemented for this range decoder.
+const QCAT2_LUMA_CONTEXT_FOUR_SKIP: [[u16; 2]; 7] = [
+    [4_195, 0],
+    [29_585, 0],
+    [14_966, 0],
+    [6_791, 0],
+    [6_091, 0],
+    [4_936, 0],
+    [381, 0],
+];
+
+// libaom 3.13.1 `av1_default_txb_skip_cdfs[0][TX_64X64]`,
+// complemented for this range decoder.
+const QCAT0_LUMA_CONTEXT_FOUR_SKIP: [[u16; 2]; 7] = [
+    [26_460, 0],
+    [32_651, 0],
+    [31_130, 0],
+    [30_607, 0],
+    [16_384, 0],
+    [21_845, 0],
+    [2_521, 0],
+];
 const QCAT2_LUMA_16X16_EOB_BIN: [u16; 9] = [
     29_679, 28_848, 26_730, 23_308, 18_502, 12_887, 7_002, 3_592, 0,
 ];
@@ -3757,14 +3855,23 @@ const QCAT2_LUMA_16X16_EOB_BIN: [u16; 9] = [
 // TX8x16 and TX16x8 luma transforms share this qcat-zero sentence.
 const QCAT0_LUMA_8X16_EOB_BIN: [u16; 8] =
     [32_549, 32_286, 31_628, 30_677, 29_088, 26_740, 20_182, 0];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].eob_bin_128[0][1]`,
+// complemented for the portable range decoder. Horizontal and vertical
+// transform classes use this one-dimensional row.
+const QCAT0_LUMA_8X16_EOB_BIN_1D: [u16; 8] =
+    [32_397, 32_069, 31_514, 27_938, 23_289, 20_206, 15_271, 0];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[1].eob_bin_128[0][0]`,
+// complemented for the portable range decoder.
+const QCAT1_LUMA_8X16_EOB_BIN: [u16; 8] =
+    [32_083, 31_835, 31_280, 30_054, 28_002, 24_206, 13_514, 0];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[1].eob_bin_128[0][1]`,
+// complemented for the portable range decoder.
+const QCAT1_LUMA_8X16_EOB_BIN_1D: [u16; 8] =
+    [32_551, 32_416, 32_150, 30_465, 27_507, 22_799, 15_296, 0];
 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].eob_bin_128[0][0]`,
 // complemented for the portable range decoder.
 const QCAT2_LUMA_8X16_EOB_BIN: [u16; 8] =
     [31_402, 31_030, 30_241, 27_752, 23_413, 16_971, 8_125, 0];
-// Direct rectangular qcat-one remains outside the admitted portable subset.
-// Preserve its historical state until an independent qcat-one witness proves
-// the authoritative row instead of silently changing behavior with qcat zero.
-const PRESERVED_QCAT1_LUMA_8X16_EOB_BIN: [u16; 8] = QCAT2_LUMA_8X16_EOB_BIN;
 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].eob_bin_512[0]`,
 // complemented for the portable range decoder. R32x16 and R16x64 share
 // this 512-coefficient EOB sentence.
@@ -3776,6 +3883,29 @@ const QCAT2_LUMA_16X64_EOB_BIN: [u16; 10] = [
 // dimensional row when its selected transform is in the H/V class.
 const QCAT2_LUMA_8X16_EOB_BIN_1D: [u16; 8] =
     [32_414, 32_210, 31_824, 30_008, 25_481, 18_731, 10_989, 0];
+const QCAT2_LUMA_16X16_HIGH: [[u16; 4]; 21] = [
+    [18_330, 11_970, 8_679, 0],
+    [20_147, 13_565, 9_671, 0],
+    [24_591, 18_643, 14_366, 0],
+    [27_094, 22_267, 18_312, 0],
+    [28_532, 24_529, 21_035, 0],
+    [29_321, 26_018, 22_962, 0],
+    [30_782, 28_818, 26_904, 0],
+    [16_560, 10_669, 7_838, 0],
+    [16_231, 8_743, 5_183, 0],
+    [19_988, 12_387, 7_901, 0],
+    [23_001, 16_156, 11_352, 0],
+    [25_082, 19_030, 14_370, 0],
+    [26_435, 21_154, 16_804, 0],
+    [28_827, 25_197, 21_932, 0],
+    [9_949, 5_346, 3_566, 0],
+    [10_544, 4_254, 2_047, 0],
+    [15_108, 7_335, 3_855, 0],
+    [19_194, 11_286, 6_766, 0],
+    [22_139, 14_791, 9_830, 0],
+    [24_156, 17_470, 12_503, 0],
+    [27_161, 22_277, 18_172, 0],
+];
 const QCAT2_LUMA_16X16_EOB_HIGH: [[u16; 2]; 9] = [
     [12_935, 0],
     [11_266, 0],
@@ -5039,12 +5169,6 @@ const QCAT2_LUMA_16X16_SKIP_CONTEXTS: [[u16; 2]; 7] = [
     [599, 0],
 ];
 
-// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].skip[2][0]` is
-// `CDF1(32510)`; the range decoder stores its complement. This scalar is
-// used by the transform-context-two luma sentence when its residual-neighbor
-// context is zero.
-const QCAT3_LUMA_16X16_SKIP: [u16; 2] = [258, 0];
-
 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[*].skip[3][0..=6]`, complemented
 // for the portable range decoder. R32x16 children of an R64x16 transform use
 // transform-context three and retain all seven luma neighbor contexts.
@@ -5114,6 +5238,10 @@ const LOSSY_LUMA_TXP_INTRA1_S8: [[u16; 7]; 13] = [
 // the rectangular luma and subsampled-chroma terminals admitted below.
 // `eob_bin_128[0][0]` is the two-dimensional EOB sentence for R16x8.
 const QCAT3_LUMA_8X16_EOB_BIN: [u16; 8] = [29_296, 27_883, 25_279, 20_287, 14_251, 8_232, 3_133, 0];
+// ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].eob_bin_128[0][1]`,
+// complemented for the portable range decoder.
+const QCAT3_LUMA_8X16_EOB_BIN_1D: [u16; 8] =
+    [31_882, 31_037, 29_497, 24_299, 17_199, 10_642, 4_385, 0];
 
 // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[3].eob_hi_bit[2][0]`,
 // complemented for the portable range decoder. R16x8 uses the transform-
@@ -5900,19 +6028,14 @@ impl BlockCdfs {
                 [281, 0],
             ],
             lossy_luma_8x8_coefficient_skip: QCAT0_LUMA_8X8_SKIP,
-            // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[2].skip[2][0]`
-            // is `CDF1(32363)`; the range decoder stores its complement.
-            lossy_luma_16x16_coefficient_skip: [405, 0],
             lossy_luma_16x16_coefficient_skip_contexts: QCAT0_LUMA_16X16_SKIP_CONTEXTS,
-            lossy_luma_16x16_skip_mode: LossyLuma16x16SkipMode::Contextual,
-            lossy_luma_16x16_context_zero_uses_scalar_state: false,
             // ✅ VERIFIED: dav1d 1.5.3 `default_coef_cdf[0].skip[3]`.
             // Every transform-context-three luma geometry mutates this one
             // normative adaptive state.
             lossy_luma_context_three_coefficient_skip: QCAT0_LUMA_32X16_SKIP_CONTEXTS,
             // ✅ VERIFIED: rav1d 1.1.0 `src/cdf.rs` `skip[4][0]` for
             // S64x64. The range decoder stores the complemented CDF.
-            lossy_luma_64x64_coefficient_skip: [26_460, 0],
+            lossy_luma_context_four_coefficient_skip: QCAT0_LUMA_CONTEXT_FOUR_SKIP,
             // ✅ VERIFIED: rav1d 1.1.0 qcat-zero
             // `eob_bin_1024[luma][two-dimensional]`.
             lossy_luma_32x32_eob_bin: [
@@ -6060,32 +6183,7 @@ impl BlockCdfs {
             // the luma R8x16 transform used by the next baseline terminal.
             // The final zero in each row is the AV1 CDF sentinel.
             lossy_luma_8x16_eob_bin: QCAT0_LUMA_8X16_EOB_BIN,
-            lossy_luma_8x16_eob_bin_1d: QCAT2_LUMA_8X16_EOB_BIN_1D,
-            lossy_luma_8x16_eob_high: LOSSY_LUMA_16X16_EOB_HIGH,
-            lossy_luma_8x16_base_1d: QCAT2_LUMA_16X16_BASE,
-            lossy_luma_8x16_high_tokens: [
-                [18_330, 11_970, 8_679, 0],
-                [20_147, 13_565, 9_671, 0],
-                [24_591, 18_643, 14_366, 0],
-                [27_094, 22_267, 18_312, 0],
-                [28_532, 24_529, 21_035, 0],
-                [29_321, 26_018, 22_962, 0],
-                [30_782, 28_818, 26_904, 0],
-                [16_560, 10_669, 7_838, 0],
-                [16_231, 8_743, 5_183, 0],
-                [19_988, 12_387, 7_901, 0],
-                [23_001, 16_156, 11_352, 0],
-                [25_082, 19_030, 14_370, 0],
-                [26_435, 21_154, 16_804, 0],
-                [28_827, 25_197, 21_932, 0],
-                [9_949, 5_346, 3_566, 0],
-                [10_544, 4_254, 2_047, 0],
-                [15_108, 7_335, 3_855, 0],
-                [19_194, 11_286, 6_766, 0],
-                [22_139, 14_791, 9_830, 0],
-                [24_156, 17_470, 12_503, 0],
-                [27_161, 22_277, 18_172, 0],
-            ],
+            lossy_luma_8x16_eob_bin_1d: QCAT0_LUMA_8X16_EOB_BIN_1D,
             lossy_chroma_8x4_eob_bin: LOSSY_CHROMA_8X4_EOB_BIN,
             lossy_chroma_8x4_eob_high: LOSSY_CHROMA_8X4_EOB_HIGH,
             lossy_chroma_8x4_eob_base: LOSSY_CHROMA_8X4_EOB_BASE,
@@ -6280,8 +6378,9 @@ impl BlockCdfs {
     }
 
     fn install_large_coefficient_defaults(&mut self, defaults: LargeCoefficientCdfDefaults) {
-        self.lossy_luma_context_three_coefficient_skip = defaults.luma_skip_contexts;
-        self.lossy_luma_64x64_coefficient_skip = defaults.luma_64x64_skip;
+        self.lossy_luma_16x16_coefficient_skip_contexts = defaults.luma_context_two_skip;
+        self.lossy_luma_context_three_coefficient_skip = defaults.luma_context_three_skip;
+        self.lossy_luma_context_four_coefficient_skip = defaults.luma_context_four_skip;
         self.lossy_luma_16x16_eob_bin = defaults.eob_256[0];
         self.lossy_chroma_16x16_eob_bin = defaults.eob_256[1];
         self.lossy_chroma_16x16_eob_high = defaults.chroma_context_two_eob_high;
@@ -6308,12 +6407,9 @@ impl BlockCdfs {
     /// Build the coefficient CDF state for a frame qindex.
     ///
     /// AV1's mode CDFs are shared across quantizer categories, while its
-    /// coefficient CDFs select one of four qcat tables. Qcat one has
-    /// evidence-backed square 8x8 and direct 16x16 lossy 4:2:0 paths; the
-    /// direct 16x16 skip sentence is scalar for qcat one and three, while
-    /// qcat zero and two use their contextual transform-context-two rows.
-    /// Qcat two and the proven qcat-three terminals retain their existing
-    /// geometry-specific tables.
+    /// coefficient CDFs select one of four qcat tables. Every transform
+    /// context owns one adaptive skip table; direct terminals use row zero
+    /// of the same seven-row state used by split children.
     fn defaults_for_qindex(use_filter_intra: [u16; 2], qindex: u32) -> Option<Self> {
         let qcat = usize::from(qindex > 20)
             .saturating_add(usize::from(qindex > 60))
@@ -6345,9 +6441,8 @@ impl BlockCdfs {
                 cdfs.lossy_luma_8x8_base = QCAT1_LUMA_8X8_BASE;
                 cdfs.lossy_luma_8x8_base_1d = QCAT1_LUMA_8X8_BASE_1D;
                 cdfs.lossy_luma_8x8_high_tokens = QCAT1_LUMA_8X8_HIGH;
-                cdfs.lossy_luma_16x16_coefficient_skip = [867, 0];
-                cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Scalar;
-                cdfs.lossy_luma_8x16_eob_bin = PRESERVED_QCAT1_LUMA_8X16_EOB_BIN;
+                cdfs.lossy_luma_8x16_eob_bin = QCAT1_LUMA_8X16_EOB_BIN;
+                cdfs.lossy_luma_8x16_eob_bin_1d = QCAT1_LUMA_8X16_EOB_BIN_1D;
                 cdfs.lossy_luma_16x16_eob_bin = QCAT1_LUMA_16X16_EOB_BIN;
                 cdfs.lossy_luma_16x16_eob_high = QCAT1_LUMA_16X16_EOB_HIGH;
                 cdfs.lossy_luma_16x16_eob_base = QCAT1_LUMA_16X16_EOB_BASE;
@@ -6389,8 +6484,6 @@ impl BlockCdfs {
                 cdfs.high_chroma = QCAT2_GENERIC_HIGH_CHROMA;
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT2_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_16x16_coefficient_skip_contexts = QCAT2_LUMA_16X16_SKIP_CONTEXTS;
-                cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Contextual;
-                cdfs.lossy_luma_16x16_context_zero_uses_scalar_state = true;
                 cdfs.lossy_luma_context_three_coefficient_skip = QCAT2_LUMA_32X16_SKIP_CONTEXTS;
                 cdfs.lossy_luma_8x8_eob_bin = QCAT2_LUMA_8X8_EOB_BIN;
                 cdfs.lossy_luma_8x8_eob_bin_1d = QCAT2_LUMA_8X8_EOB_BIN_1D;
@@ -6408,12 +6501,10 @@ impl BlockCdfs {
                 cdfs.lossy_luma_16x64_eob_bin = QCAT2_LUMA_16X64_EOB_BIN;
                 cdfs.lossy_luma_8x16_eob_bin = QCAT2_LUMA_8X16_EOB_BIN;
                 cdfs.lossy_luma_8x16_eob_bin_1d = QCAT2_LUMA_8X16_EOB_BIN_1D;
-                cdfs.lossy_luma_8x16_eob_high = QCAT2_LUMA_16X16_EOB_HIGH;
                 cdfs.lossy_luma_16x16_eob_high = QCAT2_LUMA_16X16_EOB_HIGH;
                 cdfs.lossy_luma_16x16_eob_base = QCAT2_LUMA_16X16_EOB_BASE;
                 cdfs.lossy_luma_16x16_base = QCAT2_LUMA_16X16_BASE;
-                cdfs.lossy_luma_8x16_base_1d = QCAT2_LUMA_16X16_BASE;
-                cdfs.lossy_luma_16x16_high_tokens = cdfs.lossy_luma_8x16_high_tokens;
+                cdfs.lossy_luma_16x16_high_tokens = QCAT2_LUMA_16X16_HIGH;
                 cdfs.lossy_luma_32x32_eob_high = QCAT2_LUMA_32X32_EOB_HIGH;
                 cdfs.lossy_luma_32x32_eob_base = QCAT2_LUMA_32X32_EOB_BASE;
                 cdfs.lossy_luma_32x32_base = QCAT2_LUMA_32X32_BASE;
@@ -6441,7 +6532,7 @@ impl BlockCdfs {
                 cdfs.lossy_chroma_16x16_eob_base = QCAT2_CHROMA_16X16_EOB_BASE;
                 cdfs.lossy_chroma_16x16_base = QCAT2_CHROMA_16X16_BASE;
                 cdfs.lossy_chroma_16x16_high_tokens = QCAT2_CHROMA_16X16_HIGH;
-                cdfs.lossy_luma_64x64_coefficient_skip = QCAT2_LUMA_64X64_SKIP;
+                cdfs.lossy_luma_context_four_coefficient_skip = QCAT2_LUMA_CONTEXT_FOUR_SKIP;
                 cdfs.lossy_luma_64x64_eob_high = QCAT2_LUMA_64X64_EOB_HIGH;
                 cdfs.lossy_luma_64x64_eob_base = QCAT2_LUMA_64X64_EOB_BASE;
                 cdfs.lossy_luma_64x64_base = QCAT2_LUMA_64X64_BASE;
@@ -6455,10 +6546,9 @@ impl BlockCdfs {
                 Some(cdfs)
             }
             3 => {
-                cdfs.lossy_luma_16x16_coefficient_skip = QCAT3_LUMA_16X16_SKIP;
-                cdfs.lossy_luma_16x16_skip_mode = LossyLuma16x16SkipMode::Scalar;
                 cdfs.lossy_luma_8x8_coefficient_skip = QCAT3_LUMA_8X8_SKIP;
                 cdfs.lossy_luma_8x16_eob_bin = QCAT3_LUMA_8X16_EOB_BIN;
+                cdfs.lossy_luma_8x16_eob_bin_1d = QCAT3_LUMA_8X16_EOB_BIN_1D;
                 cdfs.lossy_luma_16x16_eob_high = QCAT3_LUMA_16X16_EOB_HIGH;
                 cdfs.lossy_luma_16x16_eob_base = QCAT3_LUMA_16X16_EOB_BASE;
                 cdfs.lossy_luma_16x16_base = QCAT3_LUMA_16X16_BASE;
@@ -8083,22 +8173,16 @@ fn decode_contextual_skip(
             decoder.adaptive_bool(&mut cdfs.lossy_luma_8x8_coefficient_skip[context])
         }
         CoefficientSkipCdf::LossyLuma16x16Context(context) => {
-            // qcat two exposes the same AV1 skip[2][0] sentence through both
-            // the contextual and scalar Rust paths. Keep one adaptive state
-            // for that qcat so a preceding TX32X8/TX16X8 leaf cannot leave a
-            // later direct TX16X16 leaf reading a stale duplicate. Qcat zero
-            // retains its independently evidenced contextual row zero.
-            if context == 0 && cdfs.lossy_luma_16x16_context_zero_uses_scalar_state {
-                decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip)
-            } else {
-                decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip_contexts[context])
-            }
+            decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip_contexts[context])
         }
         CoefficientSkipCdf::LossyLuma32x16Context(context) => {
             decoder.adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[context])
         }
         CoefficientSkipCdf::LossyLuma32x32Context(context) => {
             decoder.adaptive_bool(&mut cdfs.lossy_luma_context_three_coefficient_skip[context])
+        }
+        CoefficientSkipCdf::LossyLumaContextFour(context) => {
+            decoder.adaptive_bool(&mut cdfs.lossy_luma_context_four_coefficient_skip[context])
         }
         CoefficientSkipCdf::Base => {
             decoder.adaptive_bool(&mut cdfs.coefficient_skip[coefficient_context])
@@ -8124,22 +8208,14 @@ fn decode_lossy_luma_tx_context_two_skip(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
 ) -> bool {
-    match cdfs.lossy_luma_16x16_skip_mode {
-        LossyLuma16x16SkipMode::Contextual => {
-            // A direct transform-context-two terminal uses row zero. Going
-            // through the shared decoder also preserves qcat-two's required
-            // contextual/scalar adaptive-state alias.
-            decode_contextual_skip(
-                decoder,
-                0,
-                CoefficientSkipCdf::LossyLuma16x16Context(0),
-                cdfs,
-            )
-        }
-        LossyLuma16x16SkipMode::Scalar => {
-            decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip)
-        }
-    }
+    // A direct transform-context-two terminal uses row zero of the same
+    // normative adaptive state consumed by contextual split children.
+    decode_contextual_skip(
+        decoder,
+        0,
+        CoefficientSkipCdf::LossyLuma16x16Context(0),
+        cdfs,
+    )
 }
 
 fn decode_contextual_top_left_coefficients(
@@ -13532,6 +13608,7 @@ enum LossyLargeCdfSet {
     Luma32x32,
     Luma64x64,
     Luma8x16,
+    Luma16x8,
     Chroma16x16,
     Chroma32x32,
     Chroma16x32,
@@ -13646,8 +13723,11 @@ fn decode_lossy_large_two_d_coefficients_into(
     (coefficients.len() == coefficient_count)
         .then_some(())
         .portable()?;
-    // Both entry points create this destination with zero-initialized
-    // storage. Avoid clearing it a second time on the coefficient hot path.
+    // The generic transform walker deliberately reuses one coefficient
+    // allocation for every terminal. Sparse payloads touch only coded
+    // positions, so stale values from the preceding transform must be
+    // cleared before the first entropy symbol is consumed.
+    coefficients.fill(0);
     let chroma = matches!(
         cdf_set,
         LossyLargeCdfSet::Chroma16x16
@@ -13687,7 +13767,7 @@ fn decode_lossy_large_two_d_coefficients_into(
                 41,
             )
         }
-        LossyLargeCdfSet::Luma8x16 => (
+        LossyLargeCdfSet::Luma8x16 | LossyLargeCdfSet::Luma16x8 => (
             &[
                 [0, 16, 6, 6, 21],
                 [16, 16, 6, 21, 21],
@@ -13851,7 +13931,7 @@ fn decode_lossy_large_two_d_coefficients_into(
             &mut cdfs.lossy_luma_32x32_base[..],
             &mut cdfs.lossy_luma_32x32_high_tokens[..],
         ),
-        LossyLargeCdfSet::Luma8x16 => (
+        LossyLargeCdfSet::Luma8x16 | LossyLargeCdfSet::Luma16x8 => (
             &mut cdfs.lossy_luma_16x16_eob_high[..],
             &mut cdfs.lossy_luma_16x16_eob_base[..],
             &mut cdfs.lossy_luma_16x16_base[..],
@@ -13919,20 +13999,22 @@ fn decode_lossy_large_two_d_coefficients_into(
         // This CDF family is named after its shared entropy context, but its
         // sole geometry owner is the transposed Full R4×16 chroma carrier.
         LossyLargeCdfSet::Chroma8x4 => chroma_4x16_matrix(quantization, plane)?,
-        LossyLargeCdfSet::Chroma8x32 | LossyLargeCdfSet::Chroma32x8 => {
-            unavailable_256_rect_matrix(quantization)?
-        }
+        LossyLargeCdfSet::Chroma8x32 => complete_chroma_matrix(quantization, plane, 8, 32)?,
+        LossyLargeCdfSet::Chroma32x8 => complete_chroma_matrix(quantization, plane, 32, 8)?,
         _ => None,
     };
     let luma_matrix_values = match cdf_set {
         LossyLargeCdfSet::Luma4x16 => luma_4x16_matrix(quantization)?,
-        LossyLargeCdfSet::Luma8x16 => luma_16x8_matrix(quantization)?,
-        LossyLargeCdfSet::Luma8x32 => unavailable_256_rect_matrix(quantization)?,
+        LossyLargeCdfSet::Luma8x16 => luma_8x16_matrix(quantization)?,
+        LossyLargeCdfSet::Luma16x8 => luma_16x8_matrix(quantization)?,
+        LossyLargeCdfSet::Luma16x16 => luma_16x16_matrix(quantization)?,
+        LossyLargeCdfSet::Luma8x32 => complete_luma_matrix(quantization, 8, 32)?,
         LossyLargeCdfSet::Luma32x8 => luma_32x8_matrix(quantization)?,
-        LossyLargeCdfSet::Luma16x32 => luma_32x16_matrix(quantization)?,
+        LossyLargeCdfSet::Luma16x32 => luma_16x32_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma64x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x32 => luma_32x32_matrix(quantization)?,
+        LossyLargeCdfSet::Luma64x64 => luma_32x32_matrix(quantization)?,
         _ => None,
     };
     let dequant_shift = match cdf_set {
@@ -14162,6 +14244,349 @@ fn decode_lossy_large_two_d_coefficients_into(
         cdfs.last_lossy_luma_residual_context = Some(residual_context);
     }
     Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct DecodedGenericTerminal {
+    skipped: bool,
+    coefficient_count: usize,
+    residual_context: u8,
+    transform: Av1TransformType,
+}
+
+fn tx_entropy_context(tx_size: TxSize) -> PortableResult<usize> {
+    let (width, height) = tx_size.pixel_dimensions();
+    let maximum = width.max(height);
+    (maximum.is_power_of_two() && (4..=64).contains(&maximum))
+        .then_some(usize::try_from(maximum.ilog2().saturating_sub(2)).unwrap_or(0))
+        .portable()
+}
+
+fn merged_coefficient_context(contexts: &[u8]) -> u8 {
+    contexts
+        .iter()
+        .copied()
+        .fold(0_u8, |merged, context| merged | context)
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one streamed terminal owns geometry, entropy context edges, transform selection, quantization, and reusable storage"
+)]
+fn decode_generic_lossy_terminal(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+    arena: &mut LargeCoefficientArena,
+    quantization: LossyQuantization,
+    tx_size: TxSize,
+    block_plane_width: usize,
+    block_plane_height: usize,
+    above: &[u8],
+    left: &[u8],
+    block_skipped: bool,
+    transform_luma_mode: usize,
+    chroma_predictor: ChromaPredictor,
+) -> PortableResult<DecodedGenericTerminal> {
+    let (tx_width, tx_height) = tx_size.pixel_dimensions();
+    let tx_width = usize::try_from(tx_width).map_err(|_| PortableUnavailable)?;
+    let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
+    let (coefficient_width, coefficient_height) = tx_size.coefficient_dimensions();
+    let coefficient_count = usize::try_from(
+        coefficient_width
+            .checked_mul(coefficient_height)
+            .portable()?,
+    )
+    .map_err(|_| PortableUnavailable)?;
+    let context_width = tx_width / 4;
+    let context_height = tx_height / 4;
+    (above.len() == context_width
+        && left.len() == context_height
+        && matches!(plane, 0..=2)
+        && matches!(
+            tx_size,
+            TxSize::Tx8x16
+                | TxSize::Tx16x8
+                | TxSize::Tx16x16
+                | TxSize::Tx16x32
+                | TxSize::Tx32x16
+                | TxSize::Tx32x32
+                | TxSize::Tx32x64
+                | TxSize::Tx64x32
+                | TxSize::Tx64x64
+        ))
+    .then_some(())
+    .portable()?;
+
+    let entropy_context = tx_entropy_context(tx_size)?;
+    let one_transform = block_plane_width <= tx_width && block_plane_height <= tx_height;
+    let above_merged = merged_coefficient_context(above);
+    let left_merged = merged_coefficient_context(left);
+    let skipped = if block_skipped {
+        true
+    } else if plane == 0 {
+        let skip_context = if one_transform {
+            0
+        } else {
+            luma_skip_context(above_merged, left_merged)
+        };
+        let skip_cdf = match entropy_context {
+            2 => CoefficientSkipCdf::LossyLuma16x16Context(skip_context),
+            3 => CoefficientSkipCdf::LossyLuma32x16Context(skip_context),
+            4 => CoefficientSkipCdf::LossyLumaContextFour(skip_context),
+            _ => return Err(PortableUnavailable),
+        };
+        decode_contextual_skip(decoder, 0, skip_cdf, cdfs)
+    } else {
+        let skip_context = if one_transform { 7 } else { 10 }
+            + usize::from(above.iter().any(|&context| context != 0x40))
+            + usize::from(left.iter().any(|&context| context != 0x40));
+        decode_contextual_skip(
+            decoder,
+            1,
+            CoefficientSkipCdf::Subsampled {
+                transform_context: entropy_context,
+                skip_context,
+            },
+            cdfs,
+        )
+    };
+
+    let (transform, transform_symbol) =
+        if plane == 0 && matches!(tx_size, TxSize::Tx8x16 | TxSize::Tx16x8) && !skipped {
+            let symbol = decoder.adaptive_symbol(
+                cdfs.lossy_luma_8x8_transform_type
+                    .get_mut(transform_luma_mode)
+                    .portable()?,
+                6,
+            );
+            let transform = match symbol {
+                0 => Av1TransformType::IdentityIdentity,
+                1 => Av1TransformType::DctDct,
+                2 => Av1TransformType::VerticalDct,
+                3 => Av1TransformType::HorizontalDct,
+                4 => Av1TransformType::AdstAdst,
+                5 => Av1TransformType::AdstDct,
+                6 => Av1TransformType::DctAdst,
+                _ => return Err(PortableUnavailable),
+            };
+            (transform, Some(symbol))
+        } else if plane == 0 && matches!(tx_size, TxSize::Tx16x16) && !skipped {
+            let symbol = decoder.adaptive_symbol(
+                cdfs.lossy_luma_16x16_transform_type
+                    .get_mut(transform_luma_mode)
+                    .portable()?,
+                4,
+            );
+            let transform = match symbol {
+                0 => Av1TransformType::IdentityIdentity,
+                1 => Av1TransformType::DctDct,
+                2 => Av1TransformType::AdstAdst,
+                3 => Av1TransformType::AdstDct,
+                4 => Av1TransformType::DctAdst,
+                _ => return Err(PortableUnavailable),
+            };
+            (transform, Some(symbol))
+        } else if plane == 0 || tx_width.max(tx_height) >= 32 {
+            (Av1TransformType::DctDct, None)
+        } else {
+            (
+                Av1TransformType::from(chroma_transform_kind(chroma_predictor)),
+                None,
+            )
+        };
+
+    arena.coefficients.clear();
+    if skipped {
+        return Ok(DecodedGenericTerminal {
+            skipped: true,
+            coefficient_count,
+            residual_context: 0x40,
+            transform,
+        });
+    }
+    arena
+        .coefficients
+        .try_reserve(coefficient_count)
+        .map_err(|_| PortableUnavailable)?;
+    arena.coefficients.resize(coefficient_count, 0);
+
+    let dc_sign_context =
+        coefficient_dc_sign_context_for_dimensions(context_width, context_height, above, left);
+    if plane == 0
+        && matches!(tx_size, TxSize::Tx8x16 | TxSize::Tx16x8)
+        && matches!(transform_symbol, Some(2 | 3))
+    {
+        let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x16_eob_bin_1d, 7);
+        let geometry = if matches!(tx_size, TxSize::Tx8x16) {
+            LossyOneDimensionalGeometry::R8x16
+        } else {
+            LossyOneDimensionalGeometry::R16x8
+        };
+        let (coefficients, residual_context) = decode_lossy_luma_8x16_1d_coefficients(
+            decoder,
+            cdfs,
+            quantization,
+            eob_bin,
+            matches!(transform_symbol, Some(2)),
+            dc_sign_context,
+            geometry,
+        )?;
+        arena.coefficients.copy_from_slice(&coefficients);
+        return Ok(DecodedGenericTerminal {
+            skipped: false,
+            coefficient_count,
+            residual_context,
+            transform,
+        });
+    }
+
+    let layout = match (plane == 0, tx_size) {
+        (true, TxSize::Tx8x16) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x16_eob_bin, 7),
+            scan: &LOSSY_LUMA_8X16_SCAN,
+            coefficient_count,
+            shift: 4,
+            mask: 15,
+            levels_stride: LOSSY_LUMA_8X16_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_8X16_LEVELS,
+            eob_thresholds: (16, 32),
+            cdf_set: LossyLargeCdfSet::Luma8x16,
+        },
+        (true, TxSize::Tx16x8) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x16_eob_bin, 7),
+            scan: &LOSSY_LUMA_16X8_SCAN,
+            coefficient_count,
+            shift: 3,
+            mask: 7,
+            levels_stride: LOSSY_LUMA_16X8_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_16X8_LEVELS,
+            eob_thresholds: (16, 32),
+            cdf_set: LossyLargeCdfSet::Luma16x8,
+        },
+        (true, TxSize::Tx16x16) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x16_eob_bin, 8),
+            scan: &LOSSY_LUMA_16X16_SCAN,
+            coefficient_count,
+            shift: 4,
+            mask: 15,
+            levels_stride: LOSSY_LUMA_16X16_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_16X16_LEVELS,
+            eob_thresholds: (32, 64),
+            cdf_set: LossyLargeCdfSet::Luma16x16,
+        },
+        (true, TxSize::Tx16x32) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x64_eob_bin, 9),
+            scan: &LOSSY_LUMA_16X32_SCAN,
+            coefficient_count,
+            shift: 5,
+            mask: 31,
+            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_32X32_LEVELS,
+            eob_thresholds: (64, 128),
+            cdf_set: LossyLargeCdfSet::Luma16x32,
+        },
+        (true, TxSize::Tx32x16) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x64_eob_bin, 9),
+            scan: &LOSSY_LUMA_32X16_SCAN,
+            coefficient_count,
+            shift: 4,
+            mask: 15,
+            levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_32X16_LEVELS,
+            eob_thresholds: (64, 128),
+            cdf_set: LossyLargeCdfSet::Luma32x16,
+        },
+        (true, TxSize::Tx32x32) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10),
+            scan: &LOSSY_LUMA_32X32_SCAN,
+            coefficient_count,
+            shift: 5,
+            mask: 31,
+            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_32X32_LEVELS,
+            eob_thresholds: (128, 256),
+            cdf_set: LossyLargeCdfSet::Luma32x32,
+        },
+        (true, TxSize::Tx32x64 | TxSize::Tx64x32 | TxSize::Tx64x64) => {
+            LossyLargeCoefficientLayout {
+                eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10),
+                scan: &LOSSY_LUMA_32X32_SCAN,
+                coefficient_count,
+                shift: 5,
+                mask: 31,
+                levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
+                levels_len: LOSSY_LUMA_32X32_LEVELS,
+                eob_thresholds: (128, 256),
+                cdf_set: LossyLargeCdfSet::Luma64x64,
+            }
+        }
+        (false, TxSize::Tx16x32) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x32_eob_bin, 9),
+            scan: &LOSSY_LUMA_16X32_SCAN,
+            coefficient_count,
+            shift: 5,
+            mask: 31,
+            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_32X32_LEVELS,
+            eob_thresholds: (64, 128),
+            cdf_set: LossyLargeCdfSet::Chroma16x32,
+        },
+        (false, TxSize::Tx32x16) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x32_eob_bin, 9),
+            scan: &LOSSY_LUMA_32X16_SCAN,
+            coefficient_count,
+            shift: 4,
+            mask: 15,
+            levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_32X16_LEVELS,
+            eob_thresholds: (64, 128),
+            cdf_set: LossyLargeCdfSet::Chroma32x16,
+        },
+        (false, TxSize::Tx32x32) => LossyLargeCoefficientLayout {
+            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_chroma_32x32_eob_bin, 10),
+            scan: &LOSSY_LUMA_32X32_SCAN,
+            coefficient_count,
+            shift: 5,
+            mask: 31,
+            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
+            levels_len: LOSSY_LUMA_32X32_LEVELS,
+            eob_thresholds: (128, 256),
+            cdf_set: LossyLargeCdfSet::Chroma32x32,
+        },
+        _ => return Err(PortableUnavailable),
+    };
+    let mut terminal_quantization = quantization;
+    if matches!(transform, Av1TransformType::IdentityIdentity) {
+        terminal_quantization.using_matrix = false;
+    }
+    if plane == 0 {
+        cdfs.last_lossy_luma_residual_context = None;
+    } else {
+        cdfs.last_lossy_chroma_residual_context = None;
+    }
+    decode_lossy_large_two_d_coefficients_into(
+        decoder,
+        plane,
+        cdfs,
+        terminal_quantization,
+        Some(dc_sign_context),
+        layout,
+        &mut arena.coefficients,
+        &mut arena.scratch,
+    )?;
+    let residual_context = if plane == 0 {
+        cdfs.last_lossy_luma_residual_context.take()
+    } else {
+        cdfs.last_lossy_chroma_residual_context.take()
+    }
+    .portable()?;
+    Ok(DecodedGenericTerminal {
+        skipped: false,
+        coefficient_count,
+        residual_context,
+        transform,
+    })
 }
 
 fn decode_lossy_large_two_d_coefficients(
@@ -14460,7 +14885,7 @@ fn decode_lossy_luma_16x8_coefficients(
     quantization: LossyQuantization,
     dc_sign_context: usize,
 ) -> PortableResult<(Lossy16x8TransformCoefficients, Lossy4x8TransformKind)> {
-    let skipped = decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip);
+    let skipped = decode_lossy_luma_tx_context_two_skip(decoder, cdfs);
     if skipped {
         return Ok(([0_i32; 128], Lossy4x8TransformKind::DctDct));
     }
@@ -14518,7 +14943,7 @@ fn decode_lossy_luma_16x8_coefficients(
             levels_stride: LOSSY_LUMA_16X8_LEVEL_STRIDE,
             levels_len: LOSSY_LUMA_16X8_LEVELS,
             eob_thresholds: (16, 32),
-            cdf_set: LossyLargeCdfSet::Luma8x16,
+            cdf_set: LossyLargeCdfSet::Luma16x8,
         },
     )?;
     Ok((
@@ -14946,9 +15371,9 @@ fn lossy_420_chroma_skip_cdf(
         TransformGrid::Vertical16x32 | TransformGrid::Horizontal32x16 | TransformGrid::Square32 => {
             2
         }
-        // R16x64 maps to one 8x32 chroma transform. dav1d's `t_dim.ctx`
-        // selects the fourth subsampled coefficient-skip row for that shape.
-        TransformGrid::Vertical16x64 => 3,
+        // R16x64 maps to one RTX8x32 chroma transform. Its maximum axis is
+        // 32 pixels, so dav1d's `t_dim.ctx` selects row two.
+        TransformGrid::Vertical16x64 => 2,
         // BLOCK_64X16 maps to R32x8 in 4:2:0, whose t_dim.ctx is two.
         TransformGrid::Horizontal64x16 => 2,
         TransformGrid::Square64 => 3,
@@ -15045,7 +15470,7 @@ fn lossy_full_chroma_skip_cdf(
         | TransformGrid::Vertical16x64
         | TransformGrid::Horizontal64x16
         | TransformGrid::Square32 => 3,
-        TransformGrid::Square64 => 4,
+        TransformGrid::Square64 => 3,
     };
     let (width, height, _) = transform_grid.properties();
     let above_non_neutral = above_contexts[..width.min(16)]
@@ -16197,22 +16622,18 @@ fn dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
     let qindex = coefficient_qindex(quantization, 0, index);
     let dequant_table = quantization::table(quantization.sample_depth);
     let mut quantizer = u32::from(dequant_table[qindex][usize::from(index != 0)]);
-    // The admitted lossy leaf is the closed 4:2:0 frame class, whose frame
-    // header selects luma matrix 10. AV1 scales the DC/AC dequantizer before
-    // multiplying by the coefficient token; applying the matrix afterwards
-    // would change both direct and Golomb-extended coefficient values.
+    // AV1 scales the DC/AC dequantizer before multiplying by the coefficient
+    // token; applying the matrix afterwards would change both direct and
+    // Golomb-extended coefficient values. A missing explicit matrix means the
+    // legacy 8x8 carrier; level 15 is the normative uniform matrix.
     if quantization.using_matrix {
-        let matrix_values = if let Some(matrix_values) = matrix_values {
-            matrix_values
-        } else {
-            match quantization.matrix_y {
-                9 => &quantization::Y_8X8_MATRIX_9,
-                10 => &quantization::Y_8X8_MATRIX_10,
-                _ => return Err(PortableUnavailable),
-            }
-        };
-        let matrix = u32::from(matrix_values.get(index).copied().unwrap_or(32));
-        quantizer = quantizer.saturating_mul(matrix).saturating_add(16) >> 5;
+        (quantization.matrix_y <= 15).then_some(()).portable()?;
+        let matrix_values = matrix_values
+            .or_else(|| quantization::inverse_matrix(quantization.matrix_y, false, 8, 8));
+        if let Some(matrix_values) = matrix_values {
+            let matrix = u32::from(*matrix_values.get(index).portable()?);
+            quantizer = quantizer.saturating_mul(matrix).saturating_add(16) >> 5;
+        }
     }
     // AV1 applies the coefficient product mask before its sign-dependent
     // clamp. The order matters for the pinned Golomb and twenty-bit token
@@ -16248,20 +16669,48 @@ fn luma_4x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'s
         8 => Ok(Some(&quantization::Y_4X4_MATRIX_8)),
         9 => Ok(Some(&quantization::Y_4X4_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_4X4_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 4, 4),
     }
 }
 
-fn unavailable_256_rect_matrix(
+fn complete_luma_matrix(
     quantization: LossyQuantization,
+    coefficient_width: usize,
+    coefficient_height: usize,
 ) -> PortableResult<Option<&'static [u8]>> {
-    // TX_8X32 and TX_32X8 have distinct pre-transposed AV1 matrix tables;
-    // their shared coefficient-CDF context does not make a 16x16 matrix a
-    // valid substitute. Keep these geometries explicit and fail closed until
-    // their complete matrix-index tables are installed.
-    (!quantization.using_matrix)
-        .then_some(None::<&'static [u8]>)
-        .portable()
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    (quantization.matrix_y <= 15).then_some(()).portable()?;
+    Ok(quantization::inverse_matrix(
+        quantization.matrix_y,
+        false,
+        coefficient_width,
+        coefficient_height,
+    ))
+}
+
+fn complete_chroma_matrix(
+    quantization: LossyQuantization,
+    plane: usize,
+    coefficient_width: usize,
+    coefficient_height: usize,
+) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    let level = match plane {
+        1 => quantization.matrix_u,
+        2 => quantization.matrix_v,
+        _ => return Err(PortableUnavailable),
+    };
+    (level <= 15).then_some(()).portable()?;
+    Ok(quantization::inverse_matrix(
+        level,
+        true,
+        coefficient_width,
+        coefficient_height,
+    ))
 }
 
 fn luma_4x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
@@ -16271,7 +16720,7 @@ fn luma_4x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'s
     match quantization.matrix_y {
         9 => Ok(Some(&quantization::Y_4X8_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_4X8_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 4, 8),
     }
 }
 
@@ -16282,7 +16731,7 @@ fn luma_8x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'s
     match quantization.matrix_y {
         6 => Ok(Some(&quantization::Y_8X4_MATRIX_6)),
         7 => Ok(Some(&quantization::Y_8X4_MATRIX_7)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 8, 4),
     }
 }
 
@@ -16294,7 +16743,7 @@ fn luma_4x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         5 => Ok(Some(&quantization::Y_4X16_MATRIX_5)),
         9 => Ok(Some(&quantization::Y_4X16_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_4X16_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 4, 16),
     }
 }
 
@@ -16305,7 +16754,7 @@ fn luma_8x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
     match quantization.matrix_y {
         9 => Ok(Some(&quantization::Y_8X16_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_8X16_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 8, 16),
     }
 }
 
@@ -16318,7 +16767,7 @@ fn luma_16x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         7 => Ok(Some(&quantization::Y_16X8_MATRIX_7)),
         9 => Ok(Some(&quantization::Y_16X8_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_16X8_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 16, 8),
     }
 }
 
@@ -16333,7 +16782,7 @@ fn luma_16x4_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
         8 => Ok(Some(&quantization::Y_16X4_MATRIX_8)),
         9 => Ok(Some(&quantization::Y_16X4_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_16X4_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 16, 4),
     }
 }
 
@@ -16344,7 +16793,19 @@ fn luma_16x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&
     match quantization.matrix_y {
         9 => Ok(Some(&quantization::Y_16X16_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_16X16_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 16, 16),
+    }
+}
+
+fn luma_16x32_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match quantization.matrix_y {
+        // This legacy constant is the reference `qm_tbl_32x16` table, which
+        // is the transposed coefficient table used by logical TX16x32.
+        2 => Ok(Some(&quantization::Y_32X16_MATRIX_2)),
+        _ => complete_luma_matrix(quantization, 16, 32),
     }
 }
 
@@ -16353,10 +16814,9 @@ fn luma_32x16_matrix(quantization: LossyQuantization) -> PortableResult<Option<&
         return Ok(None);
     }
     match quantization.matrix_y {
-        2 => Ok(Some(&quantization::Y_32X16_MATRIX_2)),
         9 => Ok(Some(&quantization::Y_32X16_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_32X16_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 32, 16),
     }
 }
 
@@ -16366,7 +16826,7 @@ fn luma_32x8_matrix(quantization: LossyQuantization) -> PortableResult<Option<&'
     }
     match quantization.matrix_y {
         9 => Ok(Some(&quantization::Y_32X8_MATRIX_9)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 32, 8),
     }
 }
 
@@ -16377,7 +16837,7 @@ fn luma_32x32_matrix(quantization: LossyQuantization) -> PortableResult<Option<&
     match quantization.matrix_y {
         9 => Ok(Some(&quantization::Y_32X32_MATRIX_9)),
         10 => Ok(Some(&quantization::Y_32X32_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_luma_matrix(quantization, 32, 32),
     }
 }
 
@@ -16391,7 +16851,7 @@ fn chroma_8x16_matrix(
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_8X16_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_8X16_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 8, 16),
     }
 }
 
@@ -16406,7 +16866,7 @@ fn chroma_16x16_matrix(
         (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_16X16_MATRIX_2)),
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X16_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X16_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 16, 16),
     }
 }
 
@@ -16419,7 +16879,7 @@ fn chroma_16x4_matrix(
     }
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X4_MATRIX_9)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 16, 4),
     }
 }
 
@@ -16434,7 +16894,7 @@ fn chroma_4x16_matrix(
         (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_4X16_MATRIX_2)),
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_4X16_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_4X16_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 4, 16),
     }
 }
 
@@ -16449,7 +16909,7 @@ fn chroma_16x8_matrix(
         (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_16X8_MATRIX_2)),
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_16X8_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X8_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 16, 8),
     }
 }
 
@@ -16463,22 +16923,15 @@ fn chroma_16x32_matrix(
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_16X32_MATRIX_2)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_16X32_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 16, 32),
     }
 }
 
 fn chroma_32x16_matrix(
     quantization: LossyQuantization,
-    _plane: usize,
+    plane: usize,
 ) -> PortableResult<Option<&'static [u8]>> {
-    // The horizontal table is a distinct transposed AV1 matrix. Keep this
-    // carrier fail-closed until every admitted UV matrix index has an exact
-    // table instead of silently borrowing the vertical or luma weights.
-    if quantization.using_matrix {
-        Err(PortableUnavailable)
-    } else {
-        Ok(None)
-    }
+    complete_chroma_matrix(quantization, plane, 32, 16)
 }
 
 fn chroma_32x32_matrix(
@@ -16490,7 +16943,7 @@ fn chroma_32x32_matrix(
     }
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_32X32_MATRIX_9)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 32, 32),
     }
 }
 
@@ -16589,23 +17042,13 @@ fn dequantize_lossy_chroma_coefficient_with_token_using_matrix_and_shift(
             2 => quantization.matrix_v,
             _ => return Err(PortableUnavailable),
         };
-        let matrix_values = if let Some(matrix_values) = matrix_values {
-            matrix_values
-        } else {
-            match matrix_index {
-                2 => &quantization::UV_8X8_MATRIX_2,
-                9 => &quantization::UV_8X8_MATRIX_9,
-                10 => &quantization::UV_8X8_MATRIX_10,
-                _ => return Err(PortableUnavailable),
-            }
-        };
-        let matrix = u32::from(
-            matrix_values
-                .get(index)
-                .copied()
-                .ok_or(PortableUnavailable)?,
-        );
-        quantizer = quantizer.saturating_mul(matrix).saturating_add(16) >> 5;
+        (matrix_index <= 15).then_some(()).portable()?;
+        let matrix_values =
+            matrix_values.or_else(|| quantization::inverse_matrix(matrix_index, true, 8, 8));
+        if let Some(matrix_values) = matrix_values {
+            let matrix = u32::from(*matrix_values.get(index).portable()?);
+            quantizer = quantizer.saturating_mul(matrix).saturating_add(16) >> 5;
+        }
     }
     let product = quantizer.wrapping_mul(token);
     let dequantized = (if golomb_extended {
@@ -16639,7 +17082,7 @@ fn chroma_4x4_matrix(
     match (plane, quantization.matrix_u, quantization.matrix_v) {
         (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_4X4_MATRIX_9)),
         (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_4X4_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        _ => complete_chroma_matrix(quantization, plane, 4, 4),
     }
 }
 
@@ -16665,7 +17108,8 @@ fn chroma_rect32_matrix(
         (9, true) => Ok(Some(&quantization::UV_4X8_MATRIX_9)),
         (10, false) => Ok(Some(&quantization::UV_8X4_MATRIX_10)),
         (10, true) => Ok(Some(&quantization::UV_4X8_MATRIX_10)),
-        _ => Err(PortableUnavailable),
+        (_, true) => complete_chroma_matrix(quantization, plane, 4, 8),
+        (_, false) => complete_chroma_matrix(quantization, plane, 8, 4),
     }
 }
 
@@ -16692,7 +17136,7 @@ fn dequantize_lossy_chroma_4x4_coefficient_with_token(
 fn decode_subsampled_chroma_angle(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
-    transform_grid: TransformGrid,
+    block_size: BlockSize,
     chroma_mode: u32,
     base_angle: i32,
 ) -> PortableResult<i32> {
@@ -16701,7 +17145,7 @@ fn decode_subsampled_chroma_angle(
     // coded block reaches BLOCK_8X8. The mode-specific acceptance interval
     // is part of the bitstream contract, so reject an impossible delta
     // instead of consuming later syntax with a mismatched state.
-    let angle_delta = if transform_grid.has_angle_delta() {
+    let angle_delta = if block_size.has_angle_delta() {
         let angle_index =
             usize::try_from(chroma_mode.saturating_sub(1)).map_err(|_| PortableUnavailable)?;
         #[expect(
@@ -17279,6 +17723,400 @@ fn decode_syntax_with_palette_entropy(
     .map(|(syntax, _)| syntax)
 }
 
+#[derive(Clone, Copy)]
+struct DecodedIntraHeader {
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    skip: bool,
+    cdef: CdefMetadata,
+    lossless: bool,
+    lossy_quantization: LossyQuantization,
+    luma_predictor: LumaPredictor,
+    luma_angle: Option<i32>,
+    filter_intra_mode: Option<usize>,
+    chroma_predictor: ChromaPredictor,
+    chroma_angle: Option<i32>,
+    palette: PaletteSyntax,
+    transform_luma_mode: usize,
+    transform_depth: usize,
+}
+
+fn decode_block_quantization(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    quantization_syntax: QuantizationSyntax,
+    sample_depth: SampleDepth,
+) -> PortableResult<LossyQuantization> {
+    let mut quantization = LossyQuantization {
+        sample_depth,
+        qindex: 0,
+        delta_q_present: false,
+        resolution_log2: 0,
+        y_dc_delta: 0,
+        y_ac_delta: 0,
+        u_dc_delta: 0,
+        u_ac_delta: 0,
+        v_dc_delta: 0,
+        v_ac_delta: 0,
+        using_matrix: false,
+        matrix_y: 0,
+        matrix_u: 0,
+        matrix_v: 0,
+    };
+    if let QuantizationSyntax::Lossy {
+        initial_qindex,
+        delta_q_present,
+        resolution_log2,
+        y_dc_delta,
+        y_ac_delta,
+        u_dc_delta,
+        u_ac_delta,
+        v_dc_delta,
+        v_ac_delta,
+        using_matrix,
+        matrix_y,
+        matrix_u,
+        matrix_v,
+    } = quantization_syntax
+    {
+        let qindex = if delta_q_present {
+            decode_delta_q(decoder, cdfs, initial_qindex, resolution_log2)?
+        } else {
+            initial_qindex
+        };
+        quantization = LossyQuantization {
+            sample_depth,
+            qindex,
+            delta_q_present,
+            resolution_log2,
+            y_dc_delta,
+            y_ac_delta,
+            u_dc_delta,
+            u_ac_delta,
+            v_dc_delta,
+            v_ac_delta,
+            using_matrix,
+            matrix_y,
+            matrix_u,
+            matrix_v,
+        };
+    }
+    Ok(quantization)
+}
+
+fn decode_luma_intra_header(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    quantization_syntax: QuantizationSyntax,
+    policy: SyntaxPolicy,
+) -> PortableResult<(u32, LumaPredictor, Option<i32>)> {
+    let luma_mode =
+        decoder.adaptive_symbol(&mut cdfs.luma_mode[policy.spatial_luma_context.index()], 12);
+    let luma_predictor = match luma_mode {
+        0 if matches!(quantization_syntax, QuantizationSyntax::Lossless)
+            || matches!(
+                policy.coefficient_policy,
+                CoefficientPolicy::Lossy420DcOrSkipped { .. }
+            ) =>
+        {
+            LumaPredictor::Dc
+        }
+        1 if !matches!(
+            policy.coefficient_policy,
+            CoefficientPolicy::SubsampledBoundaryContextual { .. }
+                | CoefficientPolicy::SubsampledSkippedContextual { .. }
+        ) =>
+        {
+            LumaPredictor::Vertical
+        }
+        2 if !matches!(
+            policy.coefficient_policy,
+            CoefficientPolicy::SubsampledBoundaryContextual { .. }
+                | CoefficientPolicy::SubsampledSkippedContextual { .. }
+        ) =>
+        {
+            LumaPredictor::Horizontal
+        }
+        3 if policy.allow_diagonal_luma => LumaPredictor::Diagonal45,
+        4 if policy.allow_diagonal_luma => LumaPredictor::DiagonalDownRight,
+        5 if policy.allow_diagonal_luma => LumaPredictor::Diagonal113,
+        6 if policy.allow_diagonal_luma => LumaPredictor::Diagonal157,
+        7 if policy.allow_diagonal_luma => LumaPredictor::Diagonal203,
+        8 if policy.allow_diagonal_luma => LumaPredictor::Diagonal67,
+        9 if policy.allow_smooth_luma => LumaPredictor::Smooth,
+        10 if policy.allow_smooth_luma => LumaPredictor::SmoothVertical,
+        11 if policy.allow_smooth_luma => LumaPredictor::SmoothHorizontal,
+        12 if matches!(
+            chroma_sampling,
+            ChromaSampling::Monochrome
+                | ChromaSampling::Full
+                | ChromaSampling::Subsampled420
+                | ChromaSampling::Subsampled422
+        ) =>
+        {
+            LumaPredictor::Paeth
+        }
+        _ => return Err(PortableUnavailable),
+    };
+
+    let color_frame_context = matches!(
+        policy.coefficient_policy,
+        CoefficientPolicy::ColorFrameTopLeft
+            | CoefficientPolicy::ColorFrameSquareContextual { .. }
+            | CoefficientPolicy::ColorFrameBoundaryContextual { .. }
+    );
+    if !policy.spatial_luma_context.accepts(luma_predictor) && !color_frame_context {
+        return Err(PortableUnavailable);
+    }
+
+    let directional = matches!(
+        luma_predictor,
+        LumaPredictor::Vertical
+            | LumaPredictor::Horizontal
+            | LumaPredictor::Diagonal45
+            | LumaPredictor::DiagonalDownRight
+            | LumaPredictor::Diagonal113
+            | LumaPredictor::Diagonal157
+            | LumaPredictor::Diagonal203
+            | LumaPredictor::Diagonal67
+    );
+    if !directional {
+        return Ok((luma_mode, luma_predictor, None));
+    }
+    let angle_index = match luma_predictor {
+        LumaPredictor::Vertical => 0,
+        LumaPredictor::Horizontal => 1,
+        LumaPredictor::Diagonal45 => 2,
+        LumaPredictor::DiagonalDownRight => 3,
+        LumaPredictor::Diagonal113 => 4,
+        LumaPredictor::Diagonal157 => 5,
+        LumaPredictor::Diagonal203 => 6,
+        LumaPredictor::Diagonal67 => 7,
+        _ => return Err(PortableUnavailable),
+    };
+    let angle_delta = if block_size.has_angle_delta() {
+        #[expect(
+            clippy::cast_possible_wrap,
+            reason = "the decoded symbol is bounded to 0..=6"
+        )]
+        {
+            (decoder.adaptive_symbol(&mut cdfs.luma_angle[angle_index], 6) as i32).wrapping_sub(3)
+        }
+    } else {
+        0
+    };
+    let base_angle = match luma_predictor {
+        LumaPredictor::Vertical => 90_i32,
+        LumaPredictor::Horizontal => 180,
+        LumaPredictor::Diagonal45 => 45,
+        LumaPredictor::DiagonalDownRight => 135,
+        LumaPredictor::Diagonal113 => 113,
+        LumaPredictor::Diagonal157 => 157,
+        LumaPredictor::Diagonal203 => 203,
+        LumaPredictor::Diagonal67 => 67,
+        _ => return Err(PortableUnavailable),
+    };
+    let angle = base_angle.saturating_add(3_i32.saturating_mul(angle_delta));
+    let accepted = match luma_predictor {
+        LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => 0 < angle && angle < 90,
+        LumaPredictor::DiagonalDownRight
+        | LumaPredictor::Diagonal113
+        | LumaPredictor::Diagonal157 => 90 < angle && angle < 180,
+        LumaPredictor::Diagonal203 => 180 < angle && angle < 270,
+        LumaPredictor::Vertical | LumaPredictor::Horizontal => 0 < angle && angle < 270,
+        _ => false,
+    };
+    accepted.then_some(()).portable()?;
+    Ok((luma_mode, luma_predictor, Some(angle)))
+}
+
+fn decode_chroma_intra_header(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    luma_predictor: LumaPredictor,
+    quantization_syntax: QuantizationSyntax,
+    policy: SyntaxPolicy,
+) -> PortableResult<(ChromaPredictor, Option<i32>)> {
+    if matches!(chroma_sampling, ChromaSampling::Monochrome) {
+        return Ok((ChromaPredictor::Dc, None));
+    }
+    let (grid_width, grid_height) = block_size.mi_dimensions();
+    let grid_width = usize::try_from(grid_width).map_err(|_| PortableUnavailable)?;
+    let grid_height = usize::try_from(grid_height).map_err(|_| PortableUnavailable)?;
+    let lossless = matches!(quantization_syntax, QuantizationSyntax::Lossless);
+    let cfl_allowed = match chroma_sampling {
+        ChromaSampling::Full => ChromaSampling::full_cfl_allowed(grid_width, grid_height, lossless),
+        ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 => {
+            ChromaSampling::subsampled_cfl_allowed(grid_width, grid_height, lossless)
+        }
+        ChromaSampling::Monochrome => false,
+    };
+    let predictor_index = luma_predictor.cdf_index();
+    let chroma_mode = if cfl_allowed {
+        decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode[predictor_index], 13)
+    } else {
+        decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12)
+    };
+    if chroma_mode == 13 && cfl_allowed {
+        return Ok((decode_cfl_chroma_predictor(decoder, cdfs)?, None));
+    }
+    let (predictor, base_angle) = match chroma_mode {
+        0 => (ChromaPredictor::Dc, None),
+        1 => (ChromaPredictor::Vertical, Some(90_i32)),
+        2 if policy.allow_horizontal_chroma => (ChromaPredictor::Horizontal, Some(180_i32)),
+        3 if policy.allow_diagonal_chroma => (ChromaPredictor::Diagonal45, Some(45_i32)),
+        4 if policy.allow_diagonal_chroma => (ChromaPredictor::DiagonalDownRight, Some(135_i32)),
+        5 if policy.allow_diagonal_chroma => (ChromaPredictor::Diagonal113, Some(113_i32)),
+        6 if policy.allow_diagonal_chroma => (ChromaPredictor::Diagonal157, Some(157_i32)),
+        7 if policy.allow_diagonal_chroma => (ChromaPredictor::Diagonal203, Some(203_i32)),
+        8 if policy.allow_diagonal_chroma => (ChromaPredictor::Diagonal67, Some(67_i32)),
+        9 if policy.allow_smooth_chroma => (ChromaPredictor::Smooth, None),
+        10 if policy.allow_smooth_chroma => (ChromaPredictor::SmoothVertical, None),
+        11 if policy.allow_smooth_chroma => (ChromaPredictor::SmoothHorizontal, None),
+        12 => (ChromaPredictor::Paeth, None),
+        _ => return Err(PortableUnavailable),
+    };
+    let angle = if let Some(base_angle) = base_angle {
+        Some(decode_subsampled_chroma_angle(
+            decoder,
+            cdfs,
+            block_size,
+            chroma_mode,
+            base_angle,
+        )?)
+    } else {
+        None
+    };
+    Ok((predictor, angle))
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the shared AV1 header keeps geometry, policy, clipped palette extent, and CDEF ownership explicit"
+)]
+fn decode_intra_header(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    palette_map_arena: &mut PaletteMapArena,
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    policy: SyntaxPolicy,
+    tools: BlockTools,
+    palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
+    cdef_index_bits: u32,
+) -> PortableResult<DecodedIntraHeader> {
+    let skip = decoder.adaptive_bool(&mut cdfs.skip);
+    let cdef_index = if skip {
+        0
+    } else {
+        decoder.bits(cdef_index_bits)
+    };
+    let lossless = matches!(policy.quantization_syntax, QuantizationSyntax::Lossless);
+    let lossy_quantization = decode_block_quantization(
+        decoder,
+        cdfs,
+        policy.quantization_syntax,
+        tools.sample_depth,
+    )?;
+    let (luma_mode, luma_predictor, luma_angle) = decode_luma_intra_header(
+        decoder,
+        cdfs,
+        block_size,
+        chroma_sampling,
+        policy.quantization_syntax,
+        policy,
+    )?;
+    let (chroma_predictor, chroma_angle) = decode_chroma_intra_header(
+        decoder,
+        cdfs,
+        block_size,
+        chroma_sampling,
+        luma_predictor,
+        policy.quantization_syntax,
+        policy,
+    )?;
+    let palette_geometry =
+        PaletteGeometry::new(block_size, chroma_sampling, palette_entropy_dimensions)?;
+    let mut palette = decode_palette_syntax(
+        decoder,
+        cdfs,
+        block_size,
+        chroma_sampling,
+        luma_predictor,
+        chroma_predictor,
+        tools,
+    )?;
+    let mut filter_intra_mode = None;
+    if matches!(luma_predictor, LumaPredictor::Dc)
+        && tools.enable_filter_intra
+        && !palette.y.is_present()
+        && block_size.filter_intra_allowed()
+    {
+        let use_filter_intra =
+            decoder.adaptive_bool(&mut cdfs.use_filter_intra[block_size.cdf_index()]);
+        if use_filter_intra {
+            let mode = decoder.adaptive_symbol(&mut cdfs.filter_intra, 4);
+            filter_intra_mode = Some(usize::try_from(mode).map_err(|_| PortableUnavailable)?);
+        }
+    }
+    decode_palette_index_maps(
+        decoder,
+        cdfs,
+        palette_map_arena,
+        palette_geometry,
+        &mut palette,
+    )?;
+    palette.validate_for_geometry(
+        palette_map_arena,
+        palette_geometry,
+        chroma_sampling,
+        tools.sample_depth,
+    )?;
+    let transform_luma_mode = match filter_intra_mode {
+        None => usize::try_from(luma_mode).map_err(|_| PortableUnavailable)?,
+        Some(0 | 4) => 0,
+        Some(1) => 1,
+        Some(2) => 2,
+        Some(3) => 6,
+        Some(_) => return Err(PortableUnavailable),
+    };
+    let mut transform_depth = 0;
+    if !lossless && tools.transform_mode == 2 {
+        let transform_size_max = block_size.transform_size_max();
+        if transform_size_max != 0 {
+            let depth = decoder.adaptive_symbol(
+                &mut cdfs.transform_size[transform_size_max.saturating_sub(1)]
+                    [tools.transform_context.min(2)],
+                transform_size_max.min(2),
+            );
+            transform_depth = usize::try_from(depth).map_err(|_| PortableUnavailable)?;
+        }
+    }
+    Ok(DecodedIntraHeader {
+        block_size,
+        chroma_sampling,
+        skip,
+        cdef: CdefMetadata {
+            active: !skip,
+            index: usize::try_from(cdef_index).unwrap_or_default(),
+        },
+        lossless,
+        lossy_quantization,
+        luma_predictor,
+        luma_angle,
+        filter_intra_mode,
+        chroma_predictor,
+        chroma_angle,
+        palette,
+        transform_luma_mode,
+        transform_depth,
+    })
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "block syntax keeps codec policy, palette geometry, CDEF state, and coefficient storage explicit"
@@ -17314,504 +18152,35 @@ fn decode_syntax_with_cdef(
         spatial_luma_context,
         coefficient_policy,
         quantization_syntax,
-        allow_horizontal_chroma,
-        allow_diagonal_chroma,
-        allow_diagonal_luma,
-        allow_smooth_chroma,
-        allow_smooth_luma,
+        ..
     } = policy;
     let (transform_grid_width, transform_grid_height, _) = transform_grid.properties();
-    let skip = decoder.adaptive_bool(&mut cdfs.skip);
-    // CDEF index syntax is fixed-width and follows `skip` for the first
-    // coded block of each superblock. The frame walker supplies zero for
-    // later blocks and for codec classes whose frame header disables CDEF.
-    let cdef_index = if !skip {
-        decoder.bits(cdef_index_bits)
-    } else {
-        0
-    };
-
-    let mut lossy_quantization = LossyQuantization {
-        sample_depth: tools.sample_depth,
-        qindex: 0,
-        delta_q_present: false,
-        resolution_log2: 0,
-        y_dc_delta: 0,
-        y_ac_delta: 0,
-        u_dc_delta: 0,
-        u_ac_delta: 0,
-        v_dc_delta: 0,
-        v_ac_delta: 0,
-        using_matrix: false,
-        matrix_y: 0,
-        matrix_u: 0,
-        matrix_v: 0,
-    };
-    match quantization_syntax {
-        QuantizationSyntax::Lossless => {}
-        QuantizationSyntax::Lossy {
-            initial_qindex,
-            delta_q_present,
-            resolution_log2,
-            y_dc_delta,
-            y_ac_delta,
-            u_dc_delta,
-            u_ac_delta,
-            v_dc_delta,
-            v_ac_delta,
-            using_matrix,
-            matrix_y,
-            matrix_u,
-            matrix_v,
-        } => {
-            let qindex = if delta_q_present {
-                decode_delta_q(decoder, cdfs, initial_qindex, resolution_log2)?
-            } else {
-                initial_qindex
-            };
-            lossy_quantization = LossyQuantization {
-                sample_depth: tools.sample_depth,
-                qindex,
-                delta_q_present,
-                resolution_log2,
-                y_dc_delta,
-                y_ac_delta,
-                u_dc_delta,
-                u_ac_delta,
-                v_dc_delta,
-                v_ac_delta,
-                using_matrix,
-                matrix_y,
-                matrix_u,
-                matrix_v,
-            };
-        }
-    }
-
-    let luma_mode = decoder.adaptive_symbol(&mut cdfs.luma_mode[spatial_luma_context.index()], 12);
-    let luma_predictor = match luma_mode {
-        0 if matches!(quantization_syntax, QuantizationSyntax::Lossless)
-            || matches!(
-                coefficient_policy,
-                CoefficientPolicy::Lossy420DcOrSkipped { .. }
-            ) =>
-        {
-            LumaPredictor::Dc
-        }
-        1 if !matches!(
-            coefficient_policy,
-            CoefficientPolicy::SubsampledBoundaryContextual { .. }
-                | CoefficientPolicy::SubsampledSkippedContextual { .. }
-        ) =>
-        {
-            LumaPredictor::Vertical
-        }
-        2 if !matches!(
-            coefficient_policy,
-            CoefficientPolicy::SubsampledBoundaryContextual { .. }
-                | CoefficientPolicy::SubsampledSkippedContextual { .. }
-        ) =>
-        {
-            LumaPredictor::Horizontal
-        }
-        3 if allow_diagonal_luma => LumaPredictor::Diagonal45,
-        4 if allow_diagonal_luma => LumaPredictor::DiagonalDownRight,
-        5 if allow_diagonal_luma => LumaPredictor::Diagonal113,
-        6 if allow_diagonal_luma => LumaPredictor::Diagonal157,
-        7 if allow_diagonal_luma => LumaPredictor::Diagonal203,
-        8 if allow_diagonal_luma => LumaPredictor::Diagonal67,
-        9 if allow_smooth_luma => LumaPredictor::Smooth,
-        10 if allow_smooth_luma => LumaPredictor::SmoothVertical,
-        11 if allow_smooth_luma => LumaPredictor::SmoothHorizontal,
-        12 if matches!(
-            chroma_sampling,
-            ChromaSampling::Monochrome
-                | ChromaSampling::Full
-                | ChromaSampling::Subsampled420
-                | ChromaSampling::Subsampled422
-        ) =>
-        {
-            LumaPredictor::Paeth
-        }
-        _ => {
-            return Err(PortableUnavailable);
-        }
-    };
-
-    let color_frame_context = matches!(
-        coefficient_policy,
-        CoefficientPolicy::ColorFrameTopLeft
-            | CoefficientPolicy::ColorFrameSquareContextual { .. }
-            | CoefficientPolicy::ColorFrameBoundaryContextual { .. }
-    );
-    if !spatial_luma_context.accepts(luma_predictor) && !color_frame_context {
-        return Err(PortableUnavailable);
-    }
-
-    let mut luma_angle = None;
-    let mut filter_intra_mode = None;
-    if matches!(
-        luma_predictor,
-        LumaPredictor::Vertical
-            | LumaPredictor::Horizontal
-            | LumaPredictor::Diagonal45
-            | LumaPredictor::DiagonalDownRight
-            | LumaPredictor::Diagonal113
-            | LumaPredictor::Diagonal157
-            | LumaPredictor::Diagonal203
-            | LumaPredictor::Diagonal67
-    ) {
-        let angle_index = match luma_predictor {
-            LumaPredictor::Vertical => 0,
-            LumaPredictor::Horizontal => 1,
-            LumaPredictor::Diagonal45 => 2,
-            LumaPredictor::DiagonalDownRight => 3,
-            LumaPredictor::Diagonal113 => 4,
-            LumaPredictor::Diagonal157 => 5,
-            LumaPredictor::Diagonal203 => 6,
-            LumaPredictor::Diagonal67 => 7,
-            LumaPredictor::Smooth => 0,
-            LumaPredictor::SmoothVertical => 0,
-            LumaPredictor::SmoothHorizontal => 0,
-            LumaPredictor::Dc => 0,
-            LumaPredictor::Paeth => 0,
-        };
-        let luma_angle_delta = if transform_grid.has_angle_delta() {
-            #[expect(
-                clippy::cast_possible_wrap,
-                reason = "the decoded symbol is bounded to 0..=6"
-            )]
-            {
-                let symbol = decoder.adaptive_symbol(&mut cdfs.luma_angle[angle_index], 6);
-                (symbol as i32).wrapping_sub(3)
-            }
-        } else {
-            0
-        };
-        let base_angle: i32 = match luma_predictor {
-            LumaPredictor::Vertical => 90,
-            LumaPredictor::Horizontal => 180,
-            LumaPredictor::Diagonal45 => 45,
-            LumaPredictor::DiagonalDownRight => 135,
-            LumaPredictor::Diagonal113 => 113,
-            LumaPredictor::Diagonal157 => 157,
-            LumaPredictor::Diagonal203 => 203,
-            LumaPredictor::Diagonal67 => 67,
-            LumaPredictor::Smooth => 0,
-            LumaPredictor::SmoothVertical => 0,
-            LumaPredictor::SmoothHorizontal => 0,
-            LumaPredictor::Dc => 0,
-            LumaPredictor::Paeth => 0,
-        };
-        let accepted = match luma_predictor {
-            LumaPredictor::Diagonal45 => {
-                let angle = base_angle.saturating_add(3_i32.saturating_mul(luma_angle_delta));
-                0 < angle && angle < 90
-            }
-            LumaPredictor::DiagonalDownRight
-            | LumaPredictor::Diagonal113
-            | LumaPredictor::Diagonal157 => {
-                let angle = base_angle.saturating_add(3_i32.saturating_mul(luma_angle_delta));
-                90 < angle && angle < 180
-            }
-            LumaPredictor::Diagonal203 => {
-                let angle = base_angle.saturating_add(3_i32.saturating_mul(luma_angle_delta));
-                180 < angle && angle < 270
-            }
-            LumaPredictor::Diagonal67 => {
-                let angle = base_angle.saturating_add(3_i32.saturating_mul(luma_angle_delta));
-                0 < angle && angle < 90
-            }
-            LumaPredictor::Vertical | LumaPredictor::Horizontal => {
-                let angle = base_angle.saturating_add(3_i32.saturating_mul(luma_angle_delta));
-                0 < angle && angle < 270
-            }
-            _ => luma_angle_delta == 0,
-        };
-        if !accepted {
-            return Err(PortableUnavailable);
-        }
-        luma_angle = Some(base_angle.saturating_add(3_i32.saturating_mul(luma_angle_delta)));
-    }
-
-    let mut chroma_angle = None;
-    let chroma_predictor = match chroma_sampling {
-        ChromaSampling::Monochrome => ChromaPredictor::Dc,
-        ChromaSampling::Full => {
-            let predictor_index = luma_predictor.cdf_index();
-            let cfl_allowed = ChromaSampling::full_cfl_allowed(
-                transform_grid_width,
-                transform_grid_height,
-                matches!(quantization_syntax, QuantizationSyntax::Lossless),
-            );
-            let chroma_mode = if cfl_allowed {
-                decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode[predictor_index], 13)
-            } else {
-                decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12)
-            };
-            let (chroma_predictor, base_angle) = match chroma_mode {
-                0 => (ChromaPredictor::Dc, None),
-                13 if cfl_allowed => (decode_cfl_chroma_predictor(decoder, cdfs)?, None),
-                1 => (ChromaPredictor::Vertical, Some(90_i32)),
-                2 if allow_horizontal_chroma => (ChromaPredictor::Horizontal, Some(180_i32)),
-                3 if allow_diagonal_chroma => (ChromaPredictor::Diagonal45, Some(45_i32)),
-                4 if allow_diagonal_chroma => (ChromaPredictor::DiagonalDownRight, Some(135_i32)),
-                5 if allow_diagonal_chroma => (ChromaPredictor::Diagonal113, Some(113_i32)),
-                6 if allow_diagonal_chroma => (ChromaPredictor::Diagonal157, Some(157_i32)),
-                7 if allow_diagonal_chroma => (ChromaPredictor::Diagonal203, Some(203_i32)),
-                8 if allow_diagonal_chroma => (ChromaPredictor::Diagonal67, Some(67_i32)),
-                9 if allow_smooth_chroma => (ChromaPredictor::Smooth, None),
-                10 if allow_smooth_chroma => (ChromaPredictor::SmoothVertical, None),
-                11 if allow_smooth_chroma => (ChromaPredictor::SmoothHorizontal, None),
-                12 => (ChromaPredictor::Paeth, None),
-                _ => return Err(PortableUnavailable),
-            };
-            if let Some(base_angle) = base_angle {
-                let angle_delta = if transform_grid.has_angle_delta() {
-                    let angle_index = usize::try_from(chroma_mode.saturating_sub(1))
-                        .map_err(|_| PortableUnavailable)?;
-                    #[expect(
-                        clippy::cast_possible_wrap,
-                        reason = "the decoded symbol is bounded to 0..=6"
-                    )]
-                    {
-                        (decoder
-                            .adaptive_symbol(cdfs.luma_angle.get_mut(angle_index).portable()?, 6)
-                            as i32)
-                            .wrapping_sub(3)
-                    }
-                } else {
-                    0
-                };
-                let angle = base_angle.saturating_add(3_i32.saturating_mul(angle_delta));
-                let accepted = match chroma_mode {
-                    1 | 2 => 0 < angle && angle < 270,
-                    3 | 8 => 0 < angle && angle < 90,
-                    4..=6 => 90 < angle && angle < 180,
-                    7 => 180 < angle && angle < 270,
-                    _ => false,
-                };
-                accepted.then_some(()).portable()?;
-                chroma_angle = Some(angle);
-            }
-            chroma_predictor
-        }
-        ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 => {
-            // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:1072-1078,
-            // src/cdf.c:113-177, and the pinned Slice 32/33 scalar traces.
-            // CFL follows dav1d's luma-block mask: luma blocks through 32×32
-            // use the fourteen-symbol row, while larger luma blocks use the
-            // ordinary twelve-symbol row.
-            let predictor_index = luma_predictor.cdf_index();
-            let chroma_mode = if ChromaSampling::subsampled_cfl_allowed(
-                transform_grid_width,
-                transform_grid_height,
-                matches!(quantization_syntax, QuantizationSyntax::Lossless),
-            ) {
-                decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode[predictor_index], 13)
-            } else {
-                decoder.adaptive_symbol(&mut cdfs.chroma_mode[predictor_index], 12)
-            };
-
-            match chroma_mode {
-                0 => ChromaPredictor::Dc,
-                13 if ChromaSampling::subsampled_cfl_allowed(
-                    transform_grid_width,
-                    transform_grid_height,
-                    matches!(quantization_syntax, QuantizationSyntax::Lossless),
-                ) =>
-                {
-                    decode_cfl_chroma_predictor(decoder, cdfs)?
-                }
-                1 => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        90,
-                    )?);
-                    ChromaPredictor::Vertical
-                }
-                2 if allow_horizontal_chroma => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        180,
-                    )?);
-                    ChromaPredictor::Horizontal
-                }
-                3 if allow_diagonal_chroma => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        45,
-                    )?);
-                    ChromaPredictor::Diagonal45
-                }
-                4 if allow_diagonal_chroma => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        135,
-                    )?);
-                    ChromaPredictor::DiagonalDownRight
-                }
-                5 if allow_diagonal_chroma => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        113,
-                    )?);
-                    ChromaPredictor::Diagonal113
-                }
-                6 if allow_diagonal_chroma => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        157,
-                    )?);
-                    ChromaPredictor::Diagonal157
-                }
-                7 if allow_diagonal_chroma => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        203,
-                    )?);
-                    ChromaPredictor::Diagonal203
-                }
-                8 if allow_diagonal_chroma => {
-                    chroma_angle = Some(decode_subsampled_chroma_angle(
-                        decoder,
-                        cdfs,
-                        transform_grid,
-                        chroma_mode,
-                        67,
-                    )?);
-                    ChromaPredictor::Diagonal67
-                }
-                9 if allow_smooth_chroma => ChromaPredictor::Smooth,
-                10 if allow_smooth_chroma => ChromaPredictor::SmoothVertical,
-                11 if allow_smooth_chroma => ChromaPredictor::SmoothHorizontal,
-                12 => ChromaPredictor::Paeth,
-                _ => return Err(PortableUnavailable),
-            }
-        }
-    };
-    let palette_geometry = PaletteGeometry::new(
-        transform_grid.block_size(),
-        chroma_sampling,
-        palette_entropy_dimensions,
-    )?;
-    let mut palette = decode_palette_syntax(
+    let header = decode_intra_header(
         decoder,
         cdfs,
+        palette_map_arena,
         transform_grid.block_size(),
         chroma_sampling,
-        luma_predictor,
-        chroma_predictor,
+        policy,
         tools,
+        palette_entropy_dimensions,
+        cdef_index_bits,
     )?;
-    let filter_intra_size_allowed = transform_grid_width
-        .saturating_mul(4)
-        .max(transform_grid_height.saturating_mul(4))
-        <= 32;
-    if matches!(luma_predictor, LumaPredictor::Dc)
-        && tools.enable_filter_intra
-        && !palette.y.is_present()
-        && filter_intra_size_allowed
-    {
-        let filter_intra_cdf_index = transform_grid.filter_intra_cdf_index();
-        let use_filter_intra =
-            decoder.adaptive_bool(&mut cdfs.use_filter_intra[filter_intra_cdf_index]);
-        if use_filter_intra {
-            let mode = decoder.adaptive_symbol(&mut cdfs.filter_intra, 4);
-            filter_intra_mode = Some(usize::try_from(mode).map_err(|_| PortableUnavailable)?);
-        }
-    }
+    let DecodedIntraHeader {
+        skip,
+        cdef,
+        lossy_quantization,
+        luma_predictor,
+        luma_angle,
+        filter_intra_mode,
+        chroma_predictor,
+        chroma_angle,
+        palette,
+        transform_luma_mode,
+        transform_depth,
+        ..
+    } = header;
 
-    // AV1 places palette index maps after the optional filter-intra sentence
-    // and before transform-size syntax. Palette metadata and colors are read
-    // above so the luma palette still gates filter-intra exactly as specified.
-    decode_palette_index_maps(
-        decoder,
-        cdfs,
-        palette_map_arena,
-        palette_geometry,
-        &mut palette,
-    )?;
-    palette.validate_for_geometry(
-        palette_map_arena,
-        palette_geometry,
-        chroma_sampling,
-        tools.sample_depth,
-    )?;
-    // AV1 keeps `FILTER_PRED` as the coded luma mode, but transform-type
-    // syntax is indexed by the ordinary intra mode represented by the
-    // selected filter-intra mode. This is the same `filter_mode_to_y_mode`
-    // mapping used by the reference decoder.
-    let transform_luma_mode = match filter_intra_mode {
-        None => usize::try_from(luma_mode).map_err(|_| PortableUnavailable)?,
-        Some(0 | 4) => 0,
-        Some(1) => 1,
-        Some(2) => 2,
-        Some(3) => 6,
-        Some(_) => return Err(PortableUnavailable),
-    };
-    let mut transform_depth = 0_usize;
-    if matches!(quantization_syntax, QuantizationSyntax::Lossy { .. }) && tools.transform_mode == 2
-    {
-        let transform_size_max = transform_grid.transform_size_max();
-        if transform_size_max != 0 {
-            // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:1193-1202 and
-            // src/env.h:75-81. The frame walker supplies the bounded
-            // above/left context. The first safe split class is an 8x8
-            // luma transform split into four 4x4 transforms.
-            let depth = decoder.adaptive_symbol(
-                &mut cdfs.transform_size[transform_size_max.saturating_sub(1)]
-                    [tools.transform_context.min(2)],
-                transform_size_max.min(2),
-            );
-
-            transform_depth = usize::try_from(depth).map_err(|_| PortableUnavailable)?;
-            if transform_depth != 0
-                && !matches!(
-                    transform_grid,
-                    TransformGrid::Vertical4x8
-                        | TransformGrid::Vertical4x16
-                        | TransformGrid::Horizontal8x4
-                        | TransformGrid::Horizontal16x4
-                        | TransformGrid::Square8
-                        | TransformGrid::Square16
-                        | TransformGrid::Square32
-                        | TransformGrid::Square64
-                        | TransformGrid::Vertical8x16
-                        | TransformGrid::Vertical16x32
-                        | TransformGrid::Vertical16x64
-                        | TransformGrid::Horizontal64x16
-                        | TransformGrid::Horizontal32x16
-                        | TransformGrid::Horizontal32x8
-                        | TransformGrid::Vertical8x32
-                        | TransformGrid::Horizontal16x8
-                )
-            {
-                return Err(PortableUnavailable);
-            }
-        }
-    }
     if matches!(chroma_sampling, ChromaSampling::Full)
         && let Ok((_, _, columns, rows)) = full_large_chroma_geometry(transform_grid)
     {
@@ -18464,8 +18833,8 @@ fn decode_syntax_with_cdef(
                         if transform_depth != 0 {
                             return Err(PortableUnavailable);
                         }
-                        let skipped =
-                            decoder.adaptive_bool(&mut cdfs.lossy_luma_64x64_coefficient_skip);
+                        let skipped = decoder
+                            .adaptive_bool(&mut cdfs.lossy_luma_context_four_coefficient_skip[0]);
                         if !skipped {
                             lossy_luma_64x64_coefficients =
                                 Some(decode_lossy_luma_64x64_coefficients(
@@ -18683,8 +19052,7 @@ fn decode_syntax_with_cdef(
                 }
                 if matches!(transform_grid, TransformGrid::Horizontal32x8) {
                     if plane == 0 {
-                        let skipped =
-                            decoder.adaptive_bool(&mut cdfs.lossy_luma_16x16_coefficient_skip);
+                        let skipped = decode_lossy_luma_tx_context_two_skip(decoder, cdfs);
                         if !skipped {
                             let result = decode_lossy_luma_32x8_coefficients(
                                 decoder,
@@ -19626,10 +19994,7 @@ fn decode_syntax_with_cdef(
                 }
             },
         },
-        CdefMetadata {
-            active: !skip,
-            index: usize::try_from(cdef_index).unwrap_or_default(),
-        },
+        cdef,
     ))
 }
 
@@ -31152,6 +31517,291 @@ fn full_large_chroma_child_coefficients<'a>(
         coefficients,
         transform: Av1TransformType::DctDct,
     })
+}
+
+/// Private coded-size reconstruction surface for one plane of a streamed
+/// intra leaf. `written` is separate from sample value because the depth
+/// midpoint is both a valid reconstructed pixel and the initialization value.
+struct PrivatePlaneRaster {
+    coded_width: usize,
+    coded_height: usize,
+    active_width: usize,
+    active_height: usize,
+    samples: Vec<u16>,
+    written: Vec<u8>,
+}
+
+impl PrivatePlaneRaster {
+    fn new(
+        coded_width: usize,
+        coded_height: usize,
+        active_width: usize,
+        active_height: usize,
+        sample_depth: SampleDepth,
+    ) -> PortableResult<Self> {
+        let sample_count = coded_width.checked_mul(coded_height).portable()?;
+        (coded_width != 0
+            && coded_height != 0
+            && active_width != 0
+            && active_height != 0
+            && active_width <= coded_width
+            && active_height <= coded_height)
+            .then_some(())
+            .portable()?;
+        Ok(Self {
+            coded_width,
+            coded_height,
+            active_width,
+            active_height,
+            samples: vec![sample_depth.midpoint(); sample_count],
+            written: vec![0; sample_count],
+        })
+    }
+
+    fn written_sample(&self, x: usize, y: usize) -> PortableResult<u16> {
+        let index = y
+            .checked_mul(self.coded_width)
+            .and_then(|offset| offset.checked_add(x))
+            .portable()?;
+        (*self.written.get(index).portable()? != 0)
+            .then_some(*self.samples.get(index).portable()?)
+            .portable()
+    }
+
+    fn commit_transform(
+        &mut self,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+        prediction: &[u16],
+        sample_depth: SampleDepth,
+    ) -> PortableResult<()> {
+        (prediction.len() == width.checked_mul(height).portable()?
+            && x < self.active_width
+            && y < self.active_height)
+            .then_some(())
+            .portable()?;
+        let copy_width = width.min(self.active_width.saturating_sub(x));
+        let copy_height = height.min(self.active_height.saturating_sub(y));
+        for (row, source) in prediction.chunks_exact(width).take(copy_height).enumerate() {
+            let start = y
+                .checked_add(row)
+                .and_then(|row| row.checked_mul(self.coded_width))
+                .and_then(|offset| offset.checked_add(x))
+                .portable()?;
+            let end = start.checked_add(copy_width).portable()?;
+            let source = source.get(..copy_width).portable()?;
+            source
+                .iter()
+                .copied()
+                .all(|sample| sample_depth.validate(sample).is_some())
+                .then_some(())
+                .portable()?;
+            self.samples
+                .get_mut(start..end)
+                .portable()?
+                .copy_from_slice(source);
+            self.written.get_mut(start..end).portable()?.fill(1);
+        }
+        Ok(())
+    }
+
+    fn into_visible_plane(self) -> PortableResult<ReconstructedPlane> {
+        if self.active_width == self.coded_width && self.active_height == self.coded_height {
+            return Ok(ReconstructedPlane {
+                samples: self.samples,
+            });
+        }
+        let sample_count = self
+            .active_width
+            .checked_mul(self.active_height)
+            .portable()?;
+        let mut samples = Vec::with_capacity(sample_count);
+        for row in 0..self.active_height {
+            let start = row.checked_mul(self.coded_width).portable()?;
+            let end = start.checked_add(self.active_width).portable()?;
+            samples.extend_from_slice(self.samples.get(start..end).portable()?);
+        }
+        Ok(ReconstructedPlane { samples })
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "transform-local edges retain coded geometry, sampling, location, and the external authorization"
+    )]
+    fn transform_edges(
+        &self,
+        external: &FullIntraPlaneEdges,
+        block_size: BlockSize,
+        chroma_sampling: ChromaSampling,
+        plane: usize,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+        sample_depth: SampleDepth,
+    ) -> PortableResult<FullIntraPlaneEdges> {
+        (x < self.active_width
+            && y < self.active_height
+            && x.checked_add(width)
+                .is_some_and(|end| end <= self.coded_width)
+            && y.checked_add(height)
+                .is_some_and(|end| end <= self.coded_height))
+        .then_some(())
+        .portable()?;
+        let extension = width.min(height);
+        let top_limit = width.checked_add(extension).portable()?;
+        let left_limit = height.checked_add(extension).portable()?;
+        (top_limit <= MAX_INTRA_EDGE_SAMPLES && left_limit <= MAX_INTRA_EDGE_SAMPLES)
+            .then_some(())
+            .portable()?;
+
+        let (scale_x, scale_y) = chroma_sampling.plane_subsampling(plane);
+        let boundary_x_mi = 16_usize.checked_div(scale_x).portable()?;
+        let boundary_y_mi = 16_usize.checked_div(scale_y).portable()?;
+        let row_off_mi = y / 4;
+        let column_off_mi = x / 4;
+        let tx_width_mi = width / 4;
+        let tx_height_mi = height / 4;
+        let (block_width, block_height) = block_size.pixel_dimensions();
+        let block_width = usize::try_from(block_width).map_err(|_| PortableUnavailable)?;
+        let block_height = usize::try_from(block_height).map_err(|_| PortableUnavailable)?;
+        (block_width.div_ceil(scale_x) == self.coded_width
+            && block_height.div_ceil(scale_y) == self.coded_height)
+            .then_some(())
+            .portable()?;
+        let active_width_mi = self.active_width.div_ceil(4);
+        let active_height_mi = self.active_height.div_ceil(4);
+        let chunk_x_mi = column_off_mi / boundary_x_mi * boundary_x_mi;
+        let chunk_y_mi = row_off_mi / boundary_y_mi * boundary_y_mi;
+        let chunk_right_mi = active_width_mi.min(chunk_x_mi.saturating_add(boundary_x_mi));
+        let chunk_bottom_mi = active_height_mi.min(chunk_y_mi.saturating_add(boundary_y_mi));
+        let chunk_has_top_right = if chunk_x_mi.saturating_add(boundary_x_mi) < active_width_mi {
+            true
+        } else if chunk_y_mi != 0 {
+            false
+        } else {
+            external.have_above_right
+        };
+        let chunk_has_bottom_left = if chunk_x_mi != 0 {
+            false
+        } else if chunk_y_mi.saturating_add(boundary_y_mi) < active_height_mi {
+            true
+        } else {
+            external.have_below_left
+        };
+        let have_above_right = !((row_off_mi > chunk_y_mi || !chunk_has_top_right)
+            && column_off_mi.saturating_add(tx_width_mi) >= chunk_right_mi);
+        let have_below_left = !(column_off_mi > chunk_x_mi
+            || (!chunk_has_bottom_left
+                && row_off_mi.saturating_add(tx_height_mi) >= chunk_bottom_mi));
+
+        let mut top = [0_u16; MAX_INTRA_EDGE_SAMPLES];
+        let mut top_len = 0_usize;
+        let mut top_valid_len = 0_usize;
+        if y != 0 {
+            let base_len = width.min(self.active_width.saturating_sub(x));
+            let wanted = if have_above_right {
+                top_limit
+            } else {
+                base_len
+            };
+            for offset in 0..wanted {
+                let sample_x = x.checked_add(offset).portable()?;
+                if sample_x >= self.active_width {
+                    break;
+                }
+                let Ok(sample) = self.written_sample(sample_x, y.saturating_sub(1)) else {
+                    break;
+                };
+                top[top_len] = sample;
+                top_len = top_len.checked_add(1).portable()?;
+            }
+            (top_len >= base_len).then_some(()).portable()?;
+            top_valid_len = top_len;
+        } else if external.has_top {
+            top_len = if have_above_right {
+                top_limit
+            } else {
+                width.min(self.active_width.saturating_sub(x))
+            };
+            top_valid_len = external.top.valid_len().saturating_sub(x).min(top_len);
+            for offset in 0..top_len {
+                top[offset] = *external
+                    .top
+                    .get(x.checked_add(offset).portable()?)
+                    .portable()?;
+            }
+        }
+
+        let mut left = [0_u16; MAX_INTRA_EDGE_SAMPLES];
+        let mut left_len = 0_usize;
+        let mut left_valid_len = 0_usize;
+        if x != 0 {
+            let base_len = height.min(self.active_height.saturating_sub(y));
+            let wanted = if have_below_left {
+                left_limit
+            } else {
+                base_len
+            };
+            for offset in 0..wanted {
+                let sample_y = y.checked_add(offset).portable()?;
+                if sample_y >= self.active_height {
+                    break;
+                }
+                let Ok(sample) = self.written_sample(x.saturating_sub(1), sample_y) else {
+                    break;
+                };
+                left[left_len] = sample;
+                left_len = left_len.checked_add(1).portable()?;
+            }
+            (left_len >= base_len).then_some(()).portable()?;
+            left_valid_len = left_len;
+        } else if external.has_left {
+            left_len = if have_below_left {
+                left_limit
+            } else {
+                height.min(self.active_height.saturating_sub(y))
+            };
+            left_valid_len = external.left.valid_len().saturating_sub(y).min(left_len);
+            for offset in 0..left_len {
+                left[offset] = *external
+                    .left
+                    .get(y.checked_add(offset).portable()?)
+                    .portable()?;
+            }
+        }
+
+        let has_top = y != 0 || external.has_top;
+        let has_left = x != 0 || external.has_left;
+        let top_left = match (x, y) {
+            (0, 0) => Some(external.top_left),
+            (_, 0) if external.has_top => Some(*external.top.get(x.saturating_sub(1)).portable()?),
+            (0, _) if external.has_left => {
+                Some(*external.left.get(y.saturating_sub(1)).portable()?)
+            }
+            (_, _) if x != 0 && y != 0 => {
+                Some(self.written_sample(x.saturating_sub(1), y.saturating_sub(1))?)
+            }
+            _ => None,
+        };
+        FullIntraPlaneEdges::prepare_with_valid_lengths(
+            width,
+            height,
+            sample_depth,
+            &top[..top_len],
+            &left[..left_len],
+            top_valid_len,
+            left_valid_len,
+            top_left,
+            has_top,
+            has_left,
+            has_top && have_above_right,
+            has_left && have_below_left,
+            external.smooth,
+        )
+    }
 }
 
 #[expect(
@@ -43481,6 +44131,7 @@ fn visible_leaf(
         luma_transform_split,
         luma_right_contexts: luma_edge_contexts.0,
         luma_bottom_contexts: luma_edge_contexts.1,
+        wide_coefficient_contexts: None,
         palette_cache: PaletteCacheState::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -46359,6 +47010,68 @@ struct PendingBlockGeometry {
     palette_entropy_dimensions: PaletteEntropyDimensions,
 }
 
+struct GenericCoefficientState {
+    above: [[u8; 32]; 3],
+    left: [[u8; 32]; 3],
+}
+
+impl GenericCoefficientState {
+    const fn origin() -> Self {
+        Self {
+            above: [[0x40; 32]; 3],
+            left: [[0x40; 32]; 3],
+        }
+    }
+
+    fn following(neighbors: SpatialNeighbors) -> Self {
+        Self {
+            above: [
+                neighbors.above_luma_contexts,
+                neighbors.above_chroma_contexts[0],
+                neighbors.above_chroma_contexts[1],
+            ],
+            left: [
+                neighbors.left_luma_contexts,
+                neighbors.left_chroma_contexts[0],
+                neighbors.left_chroma_contexts[1],
+            ],
+        }
+    }
+}
+
+fn generic_plane_geometry(
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    plane: usize,
+    visible_width: u32,
+    visible_height: u32,
+) -> PortableResult<(usize, usize, usize, usize)> {
+    if plane != 0 && matches!(chroma_sampling, ChromaSampling::Monochrome) {
+        // `FirstLeaf` intentionally retains a three-plane carrier, but a
+        // monochrome leaf never visits or publishes U/V. Keep only the
+        // canonical dummy transform footprint instead of allocating two
+        // block-sized midpoint rasters for 128-pixel leaves.
+        return Ok((4, 4, 4, 4));
+    }
+    let (coded_width, coded_height) = block_size.pixel_dimensions();
+    let (scale_x, scale_y) = chroma_sampling.plane_subsampling(plane);
+    let scale_x = u32::try_from(scale_x).map_err(|_| PortableUnavailable)?;
+    let scale_y = u32::try_from(scale_y).map_err(|_| PortableUnavailable)?;
+    let coded_width =
+        usize::try_from(coded_width.div_ceil(scale_x)).map_err(|_| PortableUnavailable)?;
+    let coded_height =
+        usize::try_from(coded_height.div_ceil(scale_y)).map_err(|_| PortableUnavailable)?;
+    let active_width = usize::try_from(visible_width.div_ceil(scale_x))
+        .map_err(|_| PortableUnavailable)?
+        .max(usize::from(plane != 0) * 4)
+        .min(coded_width);
+    let active_height = usize::try_from(visible_height.div_ceil(scale_y))
+        .map_err(|_| PortableUnavailable)?
+        .max(usize::from(plane != 0) * 4)
+        .min(coded_height);
+    Ok((coded_width, coded_height, active_width, active_height))
+}
+
 pub(super) struct Lossy420Decoder {
     cdfs: BlockCdfs,
     large_coeff_arena: LargeCoefficientArena,
@@ -46581,6 +47294,396 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
+        reason = "the streamed block boundary retains entropy, coded and visible geometry, chroma ownership, quantization, tools, and spatial state"
+    )]
+    pub(super) fn decode_large_intra(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        has_chroma: bool,
+        quantization: LossyQuantization,
+        mut tools: BlockTools,
+        spatial: LargeIntraSpatial<'_>,
+    ) -> PortableResult<FirstLeaf> {
+        (uses_streamed_large_intra(block_size)
+            && tools.sample_depth == quantization.sample_depth
+            && visible_width != 0
+            && visible_height != 0)
+            .then_some(())
+            .portable()?;
+        let chroma_sampling = if has_chroma {
+            self.chroma_sampling
+        } else {
+            ChromaSampling::Monochrome
+        };
+        let layout = chroma_sampling.pixel_layout();
+        block_size
+            .valid_for_layout(layout)
+            .then_some(())
+            .portable()?;
+
+        // Pending geometry is single-use even when a later semantic gate
+        // rejects the leaf. This mirrors the legacy decoder's failure state
+        // and prevents a stale palette rectangle from reaching its sibling.
+        let pending = self.pending_block_geometry.take().portable()?;
+        (pending.block_size == block_size)
+            .then_some(())
+            .portable()?;
+        self.large_coeff_arena.begin_leaf();
+        self.palette_map_arena.begin_leaf()?;
+        let quantization = self.prepare_quantization(quantization);
+
+        let (block_grid_width, block_grid_height) = block_size.mi_dimensions();
+        let origin_edges = if matches!(&spatial, LargeIntraSpatial::Origin) {
+            Some(FullIntraEdges::origin_for_sampling(
+                usize::try_from(block_grid_width).map_err(|_| PortableUnavailable)?,
+                usize::try_from(block_grid_height).map_err(|_| PortableUnavailable)?,
+                chroma_sampling,
+                tools.sample_depth,
+            )?)
+        } else {
+            None
+        };
+        let (neighbors, edges) = match spatial {
+            LargeIntraSpatial::Origin => (None, origin_edges.as_ref().portable()?),
+            LargeIntraSpatial::Following { neighbors, edges } => (Some(neighbors), edges),
+        };
+        let (max_tx_width, max_tx_height) = block_size.maximum_luma_tx().context_dimensions();
+        tools.transform_context = neighbors.map_or(0, |neighbors| {
+            usize::from(
+                neighbors
+                    .tx_left
+                    .is_some_and(|neighbor| neighbor.tx_context_height >= max_tx_height),
+            )
+            .saturating_add(usize::from(
+                neighbors
+                    .above
+                    .is_some_and(|neighbor| neighbor.tx_context_width >= max_tx_width),
+            ))
+        });
+        let spatial_luma_context =
+            neighbors.map_or(Ok(SpatialLumaContext::Origin), |neighbors| {
+                SpatialLumaContext::from_two_neighbors(
+                    neighbors
+                        .above
+                        .map_or(LumaPredictor::Dc, |neighbor| neighbor.luma_predictor),
+                    neighbors
+                        .left
+                        .map_or(LumaPredictor::Dc, |neighbor| neighbor.luma_predictor),
+                )
+            })?;
+        let neutral = [0x40; 32];
+        let above_luma = neighbors.map_or(neutral, |neighbors| neighbors.above_luma_contexts);
+        let left_luma = neighbors.map_or(neutral, |neighbors| neighbors.left_luma_contexts);
+        let above_chroma =
+            neighbors.map_or([neutral; 2], |neighbors| neighbors.above_chroma_contexts);
+        let left_chroma =
+            neighbors.map_or([neutral; 2], |neighbors| neighbors.left_chroma_contexts);
+        let cdef_index_bits = self.take_cdef_index_bits();
+        let header = decode_intra_header(
+            decoder,
+            &mut self.cdfs,
+            &mut self.palette_map_arena,
+            block_size,
+            chroma_sampling,
+            SyntaxPolicy {
+                spatial_luma_context,
+                coefficient_policy: CoefficientPolicy::Lossy420DcOrSkipped {
+                    above_luma_contexts: legacy_coefficient_contexts(&above_luma),
+                    left_luma_contexts: legacy_coefficient_contexts(&left_luma),
+                    above_chroma_contexts: above_chroma
+                        .map(|contexts| legacy_coefficient_contexts(&contexts)),
+                    left_chroma_contexts: left_chroma
+                        .map(|contexts| legacy_coefficient_contexts(&contexts)),
+                },
+                quantization_syntax: QuantizationSyntax::Lossy {
+                    initial_qindex: quantization.qindex,
+                    delta_q_present: quantization.delta_q_present,
+                    resolution_log2: quantization.resolution_log2,
+                    y_dc_delta: quantization.y_dc_delta,
+                    y_ac_delta: quantization.y_ac_delta,
+                    u_dc_delta: quantization.u_dc_delta,
+                    u_ac_delta: quantization.u_ac_delta,
+                    v_dc_delta: quantization.v_dc_delta,
+                    v_ac_delta: quantization.v_ac_delta,
+                    using_matrix: quantization.using_matrix,
+                    matrix_y: quantization.matrix_y,
+                    matrix_u: quantization.matrix_u,
+                    matrix_v: quantization.matrix_v,
+                },
+                allow_horizontal_chroma: has_chroma,
+                allow_diagonal_chroma: has_chroma,
+                allow_diagonal_luma: true,
+                allow_smooth_chroma: has_chroma,
+                allow_smooth_luma: true,
+            },
+            tools,
+            Some(pending.palette_entropy_dimensions),
+            cdef_index_bits,
+        )?;
+        self.remember_cdef(header.cdef);
+        self.current_qindex = Some(header.lossy_quantization.qindex);
+        (!header.lossless
+            && header.block_size == block_size
+            && header.chroma_sampling == chroma_sampling
+            && !matches!(header.chroma_predictor, ChromaPredictor::Cfl { .. })
+            && header.filter_intra_mode.is_none())
+        .then_some(())
+        .portable()?;
+        let plan =
+            IntraTxPlan::new(block_size, layout, false, header.transform_depth).portable()?;
+
+        let y_geometry = generic_plane_geometry(
+            block_size,
+            chroma_sampling,
+            0,
+            visible_width,
+            visible_height,
+        )?;
+        let u_geometry = generic_plane_geometry(
+            block_size,
+            chroma_sampling,
+            1,
+            visible_width,
+            visible_height,
+        )?;
+        let v_geometry = generic_plane_geometry(
+            block_size,
+            chroma_sampling,
+            2,
+            visible_width,
+            visible_height,
+        )?;
+        let mut rasters = [
+            PrivatePlaneRaster::new(
+                y_geometry.0,
+                y_geometry.1,
+                y_geometry.2,
+                y_geometry.3,
+                tools.sample_depth,
+            )?,
+            PrivatePlaneRaster::new(
+                u_geometry.0,
+                u_geometry.1,
+                u_geometry.2,
+                u_geometry.3,
+                tools.sample_depth,
+            )?,
+            PrivatePlaneRaster::new(
+                v_geometry.0,
+                v_geometry.1,
+                v_geometry.2,
+                v_geometry.3,
+                tools.sample_depth,
+            )?,
+        ];
+        let mut coefficient_state = neighbors.map_or_else(
+            GenericCoefficientState::origin,
+            GenericCoefficientState::following,
+        );
+
+        for visit in plan.iter() {
+            let plane = usize::from(visit.plane);
+            let x = usize::try_from(visit.x).map_err(|_| PortableUnavailable)?;
+            let y = usize::try_from(visit.y).map_err(|_| PortableUnavailable)?;
+            if x >= rasters[plane].active_width || y >= rasters[plane].active_height {
+                continue;
+            }
+            let (tx_width, tx_height) = visit.tx_size.pixel_dimensions();
+            let tx_width = usize::try_from(tx_width).map_err(|_| PortableUnavailable)?;
+            let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
+            let context_x = x / 4;
+            let context_y = y / 4;
+            let context_width = tx_width / 4;
+            let context_height = tx_height / 4;
+            let above_end = context_x.checked_add(context_width).portable()?;
+            let left_end = context_y.checked_add(context_height).portable()?;
+            let mut above = [0x40_u8; 16];
+            let mut left = [0x40_u8; 16];
+            above[..context_width].copy_from_slice(
+                coefficient_state.above[plane]
+                    .get(context_x..above_end)
+                    .portable()?,
+            );
+            left[..context_height].copy_from_slice(
+                coefficient_state.left[plane]
+                    .get(context_y..left_end)
+                    .portable()?,
+            );
+            let terminal = decode_generic_lossy_terminal(
+                decoder,
+                plane,
+                &mut self.cdfs,
+                &mut self.large_coeff_arena,
+                header.lossy_quantization,
+                visit.tx_size,
+                rasters[plane].coded_width,
+                rasters[plane].coded_height,
+                &above[..context_width],
+                &left[..context_height],
+                header.skip,
+                header.transform_luma_mode,
+                header.chroma_predictor,
+            )?;
+            let transform_edges = rasters[plane].transform_edges(
+                &edges.planes[plane],
+                block_size,
+                chroma_sampling,
+                plane,
+                x,
+                y,
+                tx_width,
+                tx_height,
+                tools.sample_depth,
+            )?;
+            let sample_count = tx_width.checked_mul(tx_height).portable()?;
+            let TransformScratch {
+                prediction,
+                rows,
+                residual,
+            } = &mut self.reconstruction_scratch.transform;
+            prediction.resize(sample_count, 0);
+            let palette = match plane {
+                0 if header.palette.y.is_present() => Some((
+                    header.palette.y,
+                    header.palette.y_view(&self.palette_map_arena)?,
+                )),
+                1 if header.palette.u.is_present() => Some((
+                    header.palette.u,
+                    header.palette.uv_view(&self.palette_map_arena)?,
+                )),
+                2 if header.palette.v.is_present() => Some((
+                    header.palette.v,
+                    header.palette.uv_view(&self.palette_map_arena)?,
+                )),
+                _ => None,
+            };
+            if let Some((palette, map)) = palette {
+                full_palette_child_prediction_into(
+                    prediction, palette, map, x, y, tx_width, tx_height,
+                )?;
+            } else {
+                let predictor = if plane == 0 {
+                    lossless_luma_predictor(header.luma_predictor)
+                } else {
+                    lossless_chroma_predictor(header.chroma_predictor)
+                };
+                full_intra_prediction_into(
+                    prediction,
+                    predictor,
+                    if plane == 0 {
+                        header.luma_angle
+                    } else {
+                        header.chroma_angle
+                    },
+                    (plane == 0).then_some(header.filter_intra_mode).flatten(),
+                    tx_width,
+                    tx_height,
+                    &transform_edges,
+                    tools.sample_depth,
+                    tools.enable_intra_edge_filter,
+                )?;
+            }
+            let coefficients = if terminal.skipped {
+                None
+            } else {
+                Some(
+                    self.large_coeff_arena
+                        .coefficients
+                        .get(..terminal.coefficient_count)
+                        .portable()?,
+                )
+            };
+            reconstruct_full_unsplit_prediction_in_place(
+                prediction,
+                CoeffBlockRef {
+                    width: tx_width,
+                    height: tx_height,
+                    coefficients,
+                    transform: terminal.transform,
+                },
+                tools.sample_depth,
+                rows,
+                residual,
+            )?;
+            rasters[plane].commit_transform(
+                x,
+                y,
+                tx_width,
+                tx_height,
+                prediction,
+                tools.sample_depth,
+            )?;
+            coefficient_state.above[plane]
+                .get_mut(context_x..above_end)
+                .portable()?
+                .fill(terminal.residual_context);
+            coefficient_state.left[plane]
+                .get_mut(context_y..left_end)
+                .portable()?
+                .fill(terminal.residual_context);
+        }
+
+        let wide = CoefficientEdgeContexts32 {
+            luma_right: coefficient_state.left[0],
+            luma_bottom: coefficient_state.above[0],
+            chroma_right: [coefficient_state.left[1], coefficient_state.left[2]],
+            chroma_bottom: [coefficient_state.above[1], coefficient_state.above[2]],
+        };
+        let luma_context_slots = y_geometry.2.div_ceil(4).min(32);
+        let chroma_context_slots = u_geometry.2.div_ceil(4).min(32);
+        let luma_context = *wide
+            .luma_bottom
+            .get(luma_context_slots.saturating_sub(1))
+            .portable()?;
+        let chroma_contexts = if has_chroma {
+            [
+                *wide.chroma_bottom[0]
+                    .get(chroma_context_slots.saturating_sub(1))
+                    .portable()?,
+                *wide.chroma_bottom[1]
+                    .get(chroma_context_slots.saturating_sub(1))
+                    .portable()?,
+            ]
+        } else {
+            [0x40; 2]
+        };
+        let [y, u, v] = rasters;
+        let (tx_context_width, tx_context_height) = plan.luma_tx().context_dimensions();
+        Ok(FirstLeaf {
+            width: visible_width,
+            height: visible_height,
+            planes: [
+                y.into_visible_plane()?,
+                u.into_visible_plane()?,
+                v.into_visible_plane()?,
+            ],
+            luma_predictor: header.luma_predictor,
+            chroma_predictor: has_chroma.then_some(header.chroma_predictor),
+            luma_context,
+            chroma_contexts,
+            chroma_right_contexts: std::array::from_fn(|plane| {
+                std::array::from_fn(|index| wide.chroma_right[plane][index])
+            }),
+            chroma_bottom_contexts: std::array::from_fn(|plane| {
+                std::array::from_fn(|index| wide.chroma_bottom[plane][index])
+            }),
+            tx_context_width,
+            tx_context_height,
+            luma_transform_split: header.transform_depth != 0,
+            luma_right_contexts: std::array::from_fn(|index| wide.luma_right[index]),
+            luma_bottom_contexts: std::array::from_fn(|index| wide.luma_bottom[index]),
+            wide_coefficient_contexts: Some(wide),
+            palette_cache: header.palette.cache_state(),
+            #[cfg(coverage)]
+            entropy_operations: Vec::new(),
+        })
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
         reason = "following-block decoding keeps entropy, geometry, quantization, owner metadata, and normalized edges explicit"
     )]
     pub(super) fn decode_following_from_edges(
@@ -46659,10 +47762,16 @@ impl Lossy420Decoder {
             SyntaxPolicy {
                 spatial_luma_context,
                 coefficient_policy: CoefficientPolicy::Lossy420DcOrSkipped {
-                    above_luma_contexts: neighbors.above_luma_contexts,
-                    left_luma_contexts: neighbors.left_luma_contexts,
-                    above_chroma_contexts: neighbors.above_chroma_contexts,
-                    left_chroma_contexts: neighbors.left_chroma_contexts,
+                    above_luma_contexts: legacy_coefficient_contexts(
+                        &neighbors.above_luma_contexts,
+                    ),
+                    left_luma_contexts: legacy_coefficient_contexts(&neighbors.left_luma_contexts),
+                    above_chroma_contexts: std::array::from_fn(|plane| {
+                        legacy_coefficient_contexts(&neighbors.above_chroma_contexts[plane])
+                    }),
+                    left_chroma_contexts: std::array::from_fn(|plane| {
+                        legacy_coefficient_contexts(&neighbors.left_chroma_contexts[plane])
+                    }),
                 },
                 quantization_syntax: QuantizationSyntax::Lossy {
                     initial_qindex: quantization.qindex,
@@ -49238,6 +50347,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: second.palette_cache,
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -49399,6 +50509,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: fourth.palette_cache,
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -49561,6 +50672,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: fourth.palette_cache,
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -49762,6 +50874,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: second_palette_cache,
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -49911,6 +51024,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: second_palette_cache,
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -50126,6 +51240,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: bottom_right_palette_cache,
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -50347,6 +51462,7 @@ where
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: bottom_right_palette_cache,
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -50398,16 +51514,14 @@ mod tests {
         let Some(qcat_three) = BlockCdfs::defaults_for_qindex([0, 0], 121) else {
             panic!("qcat three");
         };
-        assert_eq!(qcat_zero.lossy_luma_16x16_coefficient_skip, [405, 0]);
+        assert_eq!(
+            qcat_zero.lossy_luma_16x16_coefficient_skip_contexts[0],
+            [2_811, 0]
+        );
         assert_eq!(
             qcat_zero.lossy_luma_context_three_coefficient_skip[0],
             [14_848, 0]
         );
-        assert_eq!(
-            qcat_zero.lossy_luma_16x16_skip_mode,
-            LossyLuma16x16SkipMode::Contextual
-        );
-        assert!(!qcat_zero.lossy_luma_16x16_context_zero_uses_scalar_state);
         assert_eq!(
             qcat_zero.lossy_luma_8x16_eob_bin,
             [32_549, 32_286, 31_628, 30_677, 29_088, 26_740, 20_182, 0]
@@ -50427,39 +51541,51 @@ mod tests {
             ]
         );
         assert_eq!(qcat_one.lossy_luma_8x8_coefficient_skip[0], [986, 0]);
-        assert_eq!(qcat_one.lossy_luma_16x16_coefficient_skip, [867, 0]);
+        assert_eq!(
+            qcat_one.lossy_luma_16x16_coefficient_skip_contexts,
+            [
+                [867, 0],
+                [22_457, 0],
+                [14_721, 0],
+                [7_962, 0],
+                [9_480, 0],
+                [4_854, 0],
+                [472, 0],
+            ]
+        );
         assert_eq!(
             qcat_one.lossy_luma_8x16_eob_bin,
             [31_402, 31_030, 30_241, 27_752, 23_413, 16_971, 8_125, 0]
         );
-        assert_eq!(
-            qcat_one.lossy_luma_16x16_skip_mode,
-            LossyLuma16x16SkipMode::Scalar
-        );
         assert_eq!(qcat_one.eob_bin_luma, [30_643, 30_217, 27_603, 23_822, 0]);
         assert_eq!(qcat_one.dc_sign[1][2], [15_488, 0]);
-        assert_eq!(qcat_two.lossy_luma_16x16_coefficient_skip, [405, 0]);
+        assert_eq!(
+            qcat_two.lossy_luma_16x16_coefficient_skip_contexts[0],
+            [405, 0]
+        );
         assert_eq!(
             qcat_two.lossy_luma_context_three_coefficient_skip[0],
             [2_099, 0]
         );
         assert_eq!(
-            qcat_two.lossy_luma_16x16_skip_mode,
-            LossyLuma16x16SkipMode::Contextual
-        );
-        assert!(qcat_two.lossy_luma_16x16_context_zero_uses_scalar_state);
-        assert_eq!(
             qcat_two.lossy_luma_8x16_eob_bin,
             [31_402, 31_030, 30_241, 27_752, 23_413, 16_971, 8_125, 0]
         );
-        assert_eq!(qcat_three.lossy_luma_16x16_coefficient_skip, [258, 0]);
+        assert_eq!(
+            qcat_three.lossy_luma_16x16_coefficient_skip_contexts,
+            [
+                [258, 0],
+                [24_338, 0],
+                [15_450, 0],
+                [8_614, 0],
+                [9_094, 0],
+                [3_979, 0],
+                [629, 0],
+            ]
+        );
         assert_eq!(
             qcat_three.lossy_luma_8x16_eob_bin,
             [29_296, 27_883, 25_279, 20_287, 14_251, 8_232, 3_133, 0]
-        );
-        assert_eq!(
-            qcat_three.lossy_luma_16x16_skip_mode,
-            LossyLuma16x16SkipMode::Scalar
         );
     }
 

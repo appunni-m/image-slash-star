@@ -431,6 +431,51 @@ pub(super) const fn table(
     }
 }
 
+/// Select one AV1 inverse-quantization matrix in the coefficient order used
+/// by the portable decoder.
+///
+/// Rectangular transforms are intentionally mapped to the reference table
+/// with transposed dimensions. dav1d applies the same mapping because AV1
+/// rectangular coefficients are stored transposed. Transform dimensions
+/// above 32 have already been adjusted to their coded coefficient window by
+/// the caller (`min(width, 32) × min(height, 32)`). Matrix level 15 is the
+/// normative uniform/no-matrix level and therefore returns `None`.
+pub(super) fn inverse_matrix(
+    level: u32,
+    chroma: bool,
+    coefficient_width: usize,
+    coefficient_height: usize,
+) -> Option<&'static [u8]> {
+    let level = usize::try_from(level).ok()?;
+    if level == 15 {
+        return None;
+    }
+    let (offset, len) = match (coefficient_width, coefficient_height) {
+        (4, 4) => (0, 16),
+        (8, 8) => (16, 64),
+        (16, 16) => (80, 256),
+        (32, 32) => (336, 1024),
+        // The packed source uses logical transform dimensions. The portable
+        // coefficient arrays use dav1d's transposed rectangular order.
+        (4, 8) => (1392, 32),
+        (8, 4) => (1360, 32),
+        (8, 16) => (1552, 128),
+        (16, 8) => (1424, 128),
+        (16, 32) => (2192, 512),
+        (32, 16) => (1680, 512),
+        (4, 16) => (2768, 64),
+        (16, 4) => (2704, 64),
+        (8, 32) => (3088, 256),
+        (32, 8) => (2832, 256),
+        _ => return None,
+    };
+    let plane = usize::from(chroma);
+    super::quantization_matrices::AV1_INVERSE_QUANT_MATRICES
+        .get(level)?
+        .get(plane)?
+        .get(offset..offset.checked_add(len)?)
+}
+
 /// AV1 quantization matrix 10 for a subsampled 4×4 U/V transform.
 // ✅ VERIFIED: rav1d 1.1.0 `src/qm.rs`, `qm_tbl_4x4[10][1]`.
 pub(super) const UV_4X4_MATRIX_10: [u8; 16] = [
