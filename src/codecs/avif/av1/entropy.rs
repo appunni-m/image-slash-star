@@ -7,7 +7,7 @@ use crate::codecs::{CodecError, CodecResult};
 
 use super::bit_reader::SegmentedData;
 use super::geometry::{BlockSize, IntraEdgeFlags};
-use super::tile_state::{OwnerId, TileState};
+use super::tile_state::TileState;
 use super::{Av1Result, malformed};
 
 const WINDOW_BITS: i32 = 64;
@@ -1101,140 +1101,6 @@ pub(super) struct PartitionNode {
     pub(super) intra_edges: IntraEdgeFlags,
 }
 
-/// Admit the following Vertical8x16 filter-intra leaves for which the
-/// portable reconstruction has an end-to-end oracle trace.
-///
-/// The complete walker exposes terminal leaves in coded order. For a 16×32
-/// 4:2:0 frame, exactly two preceding 8×16 leaves at `(0, 0)` and `(2, 0)`
-/// prove the upper row of a split 16×16 pair. The next `(0, 4)` leaf is then
-/// the lower-left child reached through the vertical-neighbor caller, followed
-/// by the lower-right child at `(2, 4)`. Keeping the admission here, before
-/// block syntax is decoded, prevents the generic Vertical8x16 path from
-/// claiming unsupported filter-intra modes or geometries that have not been
-/// validated against the reference decoder.
-fn following_v8x16_filter_intra_mode(
-    context: &FirstBlockContext,
-    node: PartitionNode,
-    tile_state: &TileState,
-) -> Option<usize> {
-    if !following_v8x16_frame_context(context)
-        || node.level != 4
-        || node.y != 4
-        || node.width != 2
-        || node.height != 4
-        || node.kind != PartitionKind::None
-    {
-        return None;
-    }
-
-    let upper_pair = |tile_state: &TileState| {
-        if tile_state.decoded_block_count() < 2 {
-            return false;
-        }
-        let Some(upper_left) = tile_state.block_by_index(0) else {
-            return false;
-        };
-        let Some(upper_right) = tile_state.block_by_index(1) else {
-            return false;
-        };
-        upper_left.partition_level == 4
-            && upper_left.partition_kind == PartitionKind::None
-            && upper_left.origin_x == 0
-            && upper_left.origin_y == 0
-            && upper_left.entropy_width == 2
-            && upper_left.entropy_height == 4
-            && upper_right.partition_level == 4
-            && upper_right.partition_kind == PartitionKind::None
-            && upper_right.origin_x == 2
-            && upper_right.origin_y == 0
-            && upper_right.entropy_width == 2
-            && upper_right.entropy_height == 4
-    };
-
-    if !upper_pair(tile_state) {
-        return None;
-    }
-
-    match (node.x, tile_state.decoded_block_count()) {
-        (0, 2) => Some(2),
-        (2, 3) => {
-            let lower_left = tile_state.block_by_index(2)?;
-            (lower_left.partition_level == 4
-                && lower_left.partition_kind == PartitionKind::None
-                && lower_left.origin_x == 0
-                && lower_left.origin_y == 4
-                && lower_left.entropy_width == 2
-                && lower_left.entropy_height == 4)
-                .then_some(0)
-        }
-        _ => None,
-    }
-}
-
-fn following_v8x16_frame_context(context: &FirstBlockContext) -> bool {
-    context.frame_width == 16
-        && context.frame_height == 32
-        && context.upscaled_width == 16
-        && context.level == 0
-        && context.block_width == 4
-        && context.block_height == 8
-        && context.block_x == 0
-        && context.block_y == 0
-        && !context.monochrome
-        && context.subsampling_x
-        && context.subsampling_y
-        && context.bit_depth == 8
-        && !context.superres_enabled
-        && !context.segmentation_enabled
-        && !context.skip_mode_enabled
-        && !context.allow_intrabc
-        && !context.allow_screen_content_tools
-        && !context.frame_tools.film_grain_present
-        && !context.all_lossless
-}
-
-fn retained_leaf(
-    leaves: &[(PartitionNode, super::block::FirstLeaf)],
-    owner: OwnerId,
-) -> Av1Result<&(PartitionNode, super::block::FirstLeaf)> {
-    let index = owner
-        .index()
-        .ok_or_else(|| malformed("tile owner index exceeds usize"))?;
-    leaves
-        .get(index)
-        .ok_or_else(|| malformed("tile owner has no retained compatibility leaf"))
-}
-
-fn retained_leaf_at<'a>(
-    tile_state: &TileState,
-    leaves: &'a [(PartitionNode, super::block::FirstLeaf)],
-    x: u32,
-    y: u32,
-) -> Av1Result<Option<&'a (PartitionNode, super::block::FirstLeaf)>> {
-    let Some(owner) = tile_state.owner_at(x, y) else {
-        return Ok(None);
-    };
-    retained_leaf(leaves, owner).map(Some)
-}
-
-fn retained_chroma_leaf_at<'a>(
-    tile_state: &TileState,
-    leaves: &'a [(PartitionNode, super::block::FirstLeaf)],
-    x: u32,
-    y: u32,
-) -> Av1Result<Option<&'a (PartitionNode, super::block::FirstLeaf)>> {
-    let Some(owner) = tile_state.chroma_owner_at_luma(x, y) else {
-        return Ok(None);
-    };
-    let block = tile_state
-        .block(owner)
-        .ok_or_else(|| malformed("chroma owner has no block metadata"))?;
-    if !block.has_chroma {
-        return Err(malformed("chroma owner does not publish chroma state"));
-    }
-    retained_leaf(leaves, owner).map(Some)
-}
-
 fn partition_node_has_chroma(
     context: &FirstBlockContext,
     node: PartitionNode,
@@ -1249,6 +1115,203 @@ fn partition_node_has_chroma(
     let owns_horizontal = !context.subsampling_x || node.coded_width > 1 || node.x % 2 != 0;
     let owns_vertical = !context.subsampling_y || node.coded_height > 1 || node.y % 2 != 0;
     owns_horizontal && owns_vertical
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the following-leaf boundary keeps entropy, tile state, raster, frame geometry, and block tools explicit"
+)]
+fn decode_complete_following_leaf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    block_decoder: &mut super::block::Lossy420Decoder,
+    tile_state: &TileState,
+    canvas: &super::raster::FrameCanvas,
+    context: &FirstBlockContext,
+    node: PartitionNode,
+    width: u32,
+    height: u32,
+    palette_coded_width: u32,
+    palette_coded_height: u32,
+    quantization: super::block::LossyQuantization,
+    mut tools: super::block::BlockTools,
+) -> Av1Result<super::block::PortableResult<super::block::FirstLeaf>> {
+    let has_chroma = partition_node_has_chroma(context, node, false);
+    let above = match node.y.checked_sub(1) {
+        Some(y) => tile_state.neighbor_at_checked(node.x, y)?,
+        None => None,
+    };
+    let left_x = node.x.checked_sub(1);
+    let left = match left_x {
+        Some(x) => tile_state.neighbor_at_checked(x, node.y)?,
+        None => None,
+    };
+    if above.is_none() && left.is_none() {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+
+    let bottom_unit = node.y.saturating_add(node.height.saturating_sub(1));
+    let bottom_left = match left_x {
+        Some(x) => tile_state.neighbor_at_checked(x, bottom_unit)?,
+        None => None,
+    };
+    let tx_left = if above.is_some() {
+        left.or(bottom_left)
+    } else {
+        bottom_left
+    };
+    let above_palette = above
+        .and_then(|neighbor| tile_state.block(neighbor.owner))
+        .map(|block| block.palette_cache);
+    let left_palette = bottom_left
+        .and_then(|neighbor| tile_state.block(neighbor.owner))
+        .map(|block| block.palette_cache);
+    tools.palette_context = super::block::PaletteNeighborContext::from_cache_states(
+        node.y,
+        above_palette,
+        left_palette,
+    );
+
+    let above_luma_contexts =
+        tile_state.luma_contexts_above::<16>(node.x, node.y, node.width.min(16))?;
+    let left_luma_contexts =
+        tile_state.luma_contexts_left::<16>(node.x, node.y, node.height.min(16))?;
+
+    let chroma_above_y = if context.subsampling_y {
+        node.y.saturating_sub(node.y % 2)
+    } else {
+        node.y
+    };
+    let chroma_context_x = if context.subsampling_x {
+        node.x / 2
+    } else {
+        node.x
+    };
+    let chroma_context_y = if context.subsampling_y {
+        chroma_above_y / 2
+    } else {
+        chroma_above_y
+    };
+    let chroma_context_width = if context.subsampling_x {
+        node.width.div_ceil(2)
+    } else {
+        node.width
+    };
+    let above_chroma_contexts = [
+        tile_state.chroma_contexts_above::<16>(
+            0,
+            chroma_context_x,
+            chroma_context_y,
+            chroma_context_width.min(16),
+        )?,
+        tile_state.chroma_contexts_above::<16>(
+            1,
+            chroma_context_x,
+            chroma_context_y,
+            chroma_context_width.min(16),
+        )?,
+    ];
+
+    let chroma_left_x = if context.subsampling_x {
+        node.x.saturating_sub(node.x % 2)
+    } else {
+        node.x
+    };
+    let chroma_left_y = if context.subsampling_y {
+        node.y.saturating_sub(node.y % 2).saturating_add(1)
+    } else {
+        node.y
+    };
+    let chroma_context_left_x = if context.subsampling_x {
+        chroma_left_x / 2
+    } else {
+        chroma_left_x
+    };
+    let chroma_context_left_y = if context.subsampling_y {
+        chroma_left_y / 2
+    } else {
+        chroma_left_y
+    };
+    let chroma_context_height = if context.subsampling_y {
+        node.height.div_ceil(2)
+    } else {
+        node.height
+    };
+    let left_chroma_contexts = [
+        tile_state.chroma_contexts_left::<16>(
+            0,
+            chroma_context_left_x,
+            chroma_context_left_y,
+            chroma_context_height.min(16),
+        )?,
+        tile_state.chroma_contexts_left::<16>(
+            1,
+            chroma_context_left_x,
+            chroma_context_left_y,
+            chroma_context_height.min(16),
+        )?,
+    ];
+
+    let smooth_luma = above
+        .is_some_and(|neighbor| super::block::is_smooth_luma_predictor(neighbor.luma_predictor))
+        || left.is_some_and(|neighbor| {
+            super::block::is_smooth_luma_predictor(neighbor.luma_predictor)
+        });
+    // Match AV1's chroma-base adjustment: the above mode owner is selected
+    // from the sampling-aligned base plus one luma unit on a subsampled axis,
+    // independent of the current block width.
+    let above_chroma_x = if context.subsampling_x {
+        chroma_left_x.saturating_add(1)
+    } else {
+        node.x
+    };
+    let above_chroma = match chroma_above_y.checked_sub(1) {
+        Some(y) => tile_state.chroma_neighbor_at_luma_checked(above_chroma_x, y)?,
+        None => None,
+    };
+    let left_chroma = match chroma_left_x.checked_sub(1) {
+        Some(x) => tile_state.chroma_neighbor_at_luma_checked(x, chroma_left_y)?,
+        None => None,
+    };
+    let smooth_chroma = has_chroma
+        && (above_chroma.is_some_and(|neighbor| {
+            neighbor.has_chroma
+                && super::block::is_smooth_chroma_predictor(neighbor.chroma_predictor)
+        }) || left_chroma.is_some_and(|neighbor| {
+            neighbor.has_chroma
+                && super::block::is_smooth_chroma_predictor(neighbor.chroma_predictor)
+        }));
+    let edges = match canvas.intra_edges(
+        node.x,
+        node.y,
+        palette_coded_width,
+        palette_coded_height,
+        has_chroma,
+        tools.sample_depth,
+        node.intra_edges,
+        [smooth_luma, smooth_chroma, smooth_chroma],
+    ) {
+        Ok(edges) => edges,
+        Err(_) => return Ok(Err(super::block::PortableUnavailable)),
+    };
+
+    Ok(block_decoder.decode_following_from_edges(
+        decoder,
+        width,
+        height,
+        has_chroma,
+        quantization,
+        tools,
+        super::block::SpatialNeighbors {
+            above,
+            left,
+            tx_left,
+            above_luma_contexts,
+            left_luma_contexts,
+            above_chroma_contexts,
+            left_chroma_contexts,
+        },
+        &edges,
+    ))
 }
 
 const MAX_PARTITION_NODES: usize = 1_048_576;
@@ -2226,7 +2289,6 @@ pub(super) fn validate_complete_lossy_420_partition(
         context.subsampling_x,
         context.subsampling_y,
     )?;
-    let mut leaves = Vec::<(PartitionNode, super::block::FirstLeaf)>::new();
     let collect_loop_filter = context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0;
@@ -2369,543 +2431,20 @@ pub(super) fn validate_complete_lossy_420_partition(
                         )
                     }
                 } else {
-                    let has_chroma = partition_node_has_chroma(context, node, false);
-                    let above_y = node.y.checked_sub(1);
-                    let above_left = above_y
-                        .map(|y| retained_leaf_at(&tile_state, &leaves, node.x, y))
-                        .transpose()?
-                        .flatten();
-                    // The angular predictor's top window extends past the
-                    // current block, so this is the leaf immediately to the
-                    // right of the current covered interval. The
-                    // coefficient-context helpers consume only as many units
-                    // as the current transform needs and therefore still use
-                    // the above-left leaf first.
-                    let above_right_x = if node.width == 1 {
-                        node.x.saturating_add(1)
-                    } else if node.width == 4 {
-                        // A 16x16 leaf is reconstructed as two adjacent 8x16
-                        // contexts. The second top edge starts two syntax
-                        // units into the current interval; using the full
-                        // interval width skips that adjacent 8x8 leaf when the
-                        // partition is split there.
-                        node.x.saturating_add(2)
-                    } else {
-                        node.x.saturating_add(node.width.saturating_sub(1))
-                    };
-                    let above_right = above_y
-                        .map(|y| retained_leaf_at(&tile_state, &leaves, above_right_x, y))
-                        .transpose()?
-                        .flatten();
-                    let above_luma_extension = if node.width == 2 {
-                        let extension_x = node.x.saturating_add(node.width);
-                        above_y
-                            .map(|y| retained_leaf_at(&tile_state, &leaves, extension_x, y))
-                            .transpose()?
-                            .flatten()
-                    } else {
-                        None
-                    };
-                    let chroma_above_y = if context.subsampling_y {
-                        node.y.saturating_sub(node.y % 2)
-                    } else {
-                        node.y
-                    };
-                    let above_chroma_extension = if node.width == 2 {
-                        let extension_x = node.x.saturating_add(node.width);
-                        chroma_above_y
-                            .checked_sub(1)
-                            .map(|y| retained_chroma_leaf_at(&tile_state, &leaves, extension_x, y))
-                            .transpose()?
-                            .flatten()
-                    } else {
-                        None
-                    };
-                    let above_chroma_x = node.x.saturating_add(node.width.saturating_sub(1));
-                    let above_chroma = chroma_above_y
-                        .checked_sub(1)
-                        .map(|y| retained_chroma_leaf_at(&tile_state, &leaves, above_chroma_x, y))
-                        .transpose()?
-                        .flatten();
-                    let above_luma_contexts =
-                        tile_state.luma_contexts_above::<16>(node.x, node.y, node.width.min(16))?;
-                    let chroma_context_x = if context.subsampling_x {
-                        node.x / 2
-                    } else {
-                        node.x
-                    };
-                    let chroma_context_y = if context.subsampling_y {
-                        chroma_above_y / 2
-                    } else {
-                        chroma_above_y
-                    };
-                    let chroma_context_width = if context.subsampling_x {
-                        node.width.div_ceil(2)
-                    } else {
-                        node.width
-                    };
-                    let above_chroma_contexts = [
-                        tile_state.chroma_contexts_above::<16>(
-                            0,
-                            chroma_context_x,
-                            chroma_context_y,
-                            chroma_context_width.min(16),
-                        )?,
-                        tile_state.chroma_contexts_above::<16>(
-                            1,
-                            chroma_context_x,
-                            chroma_context_y,
-                            chroma_context_width.min(16),
-                        )?,
-                    ];
-                    let left_x = node.x.checked_sub(1);
-                    let left_top = left_x
-                        .zip(node.y.checked_sub(1))
-                        .map(|(x, y)| retained_leaf_at(&tile_state, &leaves, x, y))
-                        .transpose()?
-                        .flatten();
-                    let bottom_unit = node.y.saturating_add(node.height.saturating_sub(1));
-                    let left = left_x
-                        .map(|x| retained_leaf_at(&tile_state, &leaves, x, bottom_unit))
-                        .transpose()?
-                        .flatten();
-                    let above_palette = match above_y {
-                        Some(y) => tile_state
-                            .block_at_checked(node.x, y)?
-                            .map(|(_, block)| block.palette_cache),
-                        None => None,
-                    };
-                    let left_palette = match left_x {
-                        Some(x) => tile_state
-                            .block_at_checked(x, bottom_unit)?
-                            .map(|(_, block)| block.palette_cache),
-                        None => None,
-                    };
-                    tools.palette_context = super::block::PaletteNeighborContext::from_cache_states(
-                        node.y,
-                        above_palette,
-                        left_palette,
-                    );
-                    let left_luma_top = left_x
-                        .map(|x| retained_leaf_at(&tile_state, &leaves, x, node.y))
-                        .transpose()?
-                        .flatten();
-                    let below_unit = node.y.saturating_add(node.height);
-                    let left_below = left_x
-                        .map(|x| retained_leaf_at(&tile_state, &leaves, x, below_unit))
-                        .transpose()?
-                        .flatten();
-                    let chroma_left_x = if context.subsampling_x {
-                        node.x.saturating_sub(node.x % 2)
-                    } else {
-                        node.x
-                    };
-                    let chroma_left_y = if context.subsampling_y {
-                        node.y.saturating_sub(node.y % 2).saturating_add(1)
-                    } else {
-                        node.y
-                    };
-                    let left_chroma = chroma_left_x
-                        .checked_sub(1)
-                        .map(|x| retained_chroma_leaf_at(&tile_state, &leaves, x, chroma_left_y))
-                        .transpose()?
-                        .flatten();
-
-                    let (
-                        left_luma_contexts,
-                        luma_top_neighbor,
-                        luma_left_edge_8,
-                        luma_left_edge_16,
-                        luma_left_edge_32,
-                        chroma_left_edges_16,
-                        chroma_left_edges_8,
-                    ) = {
-                        let top = left_luma_top.map(|(_, leaf)| leaf);
-                        let contexts = tile_state.luma_contexts_left::<16>(
-                            node.x,
-                            node.y,
-                            node.height.min(16),
-                        )?;
-                        let luma_x = node
-                            .x
-                            .checked_mul(4)
-                            .ok_or_else(|| malformed("luma edge x coordinate overflows"))?;
-                        let luma_y = node
-                            .y
-                            .checked_mul(4)
-                            .ok_or_else(|| malformed("luma edge y coordinate overflows"))?;
-                        let luma_edge_8 = if height == 8 && left_luma_top.is_some() {
-                            canvas.written_column_before::<8>(0, luma_x, luma_y).ok()
-                        } else {
-                            None
-                        };
-                        let luma_edge_16 =
-                            if (width == 4 || width == 8 || width == 16) && height == 16 {
-                                canvas.written_column_before::<16>(0, luma_x, luma_y).ok()
-                            } else {
-                                None
-                            };
-                        let chroma_x = if context.subsampling_x {
-                            node.x.checked_div(2).and_then(|value| value.checked_mul(4))
-                        } else {
-                            Some(luma_x)
-                        }
-                        .ok_or_else(|| malformed("chroma edge x coordinate overflows"))?;
-                        let chroma_y = if context.subsampling_y {
-                            node.y.checked_div(2).and_then(|value| value.checked_mul(4))
-                        } else {
-                            Some(luma_y)
-                        }
-                        .ok_or_else(|| malformed("chroma edge y coordinate overflows"))?;
-                        let chroma_edges_16 =
-                            if full_resolution && matches!(width, 8 | 16) && height == 16 {
-                                std::array::from_fn(|plane| {
-                                    canvas
-                                        .written_column_before::<16>(
-                                            plane.saturating_add(1),
-                                            chroma_x,
-                                            chroma_y,
-                                        )
-                                        .ok()
-                                })
-                            } else if (width == 4 || (!full_resolution && width == 16))
-                                && height == 16
-                            {
-                                std::array::from_fn(|plane| {
-                                    Some(canvas.column_before_or_default::<16>(
-                                        plane.saturating_add(1),
-                                        chroma_x,
-                                        chroma_y,
-                                        128,
-                                    ))
-                                })
-                            } else {
-                                [None; 2]
-                            };
-                        let luma_edge_32 = if width == 32 && height == 32 {
-                            Some(canvas.column_before_or_default::<32>(0, luma_x, luma_y, 128))
-                        } else {
-                            None
-                        };
-                        let chroma_edges = if full_resolution && height == 8 {
-                            std::array::from_fn(|plane| {
-                                canvas
-                                    .written_column_before::<8>(
-                                        plane.saturating_add(1),
-                                        chroma_x,
-                                        chroma_y,
-                                    )
-                                    .ok()
-                            })
-                        } else if matches!(width, 4 | 16) && height == 16 {
-                            std::array::from_fn(|plane| {
-                                Some(canvas.column_before_or_default::<8>(
-                                    plane.saturating_add(1),
-                                    chroma_x,
-                                    chroma_y,
-                                    128,
-                                ))
-                            })
-                        } else {
-                            [None; 2]
-                        };
-                        (
-                            contexts,
-                            top,
-                            luma_edge_8,
-                            luma_edge_16,
-                            luma_edge_32,
-                            chroma_edges_16,
-                            chroma_edges,
-                        )
-                    };
-
-                    let chroma_context_left_x = if context.subsampling_x {
-                        chroma_left_x / 2
-                    } else {
-                        chroma_left_x
-                    };
-                    let chroma_context_left_y = if context.subsampling_y {
-                        chroma_left_y / 2
-                    } else {
-                        chroma_left_y
-                    };
-                    let chroma_context_height = if context.subsampling_y {
-                        node.height.div_ceil(2)
-                    } else {
-                        node.height
-                    };
-                    let left_chroma_contexts = [
-                        tile_state.chroma_contexts_left::<16>(
-                            0,
-                            chroma_context_left_x,
-                            chroma_context_left_y,
-                            chroma_context_height.min(16),
-                        )?,
-                        tile_state.chroma_contexts_left::<16>(
-                            1,
-                            chroma_context_left_x,
-                            chroma_context_left_y,
-                            chroma_context_height.min(16),
-                        )?,
-                    ];
-
-                    let left_y_offset = left.map_or(0, |(prior, _)| {
-                        node.y.saturating_sub(prior.y).saturating_mul(4)
-                    });
-                    let left_chroma_y_offset = left_chroma.map_or(0, |(prior, _)| {
-                        let row_delta = if context.subsampling_y {
-                            node.y
-                                .saturating_div(2)
-                                .saturating_sub(prior.y.saturating_div(2))
-                        } else {
-                            node.y.saturating_sub(prior.y)
-                        };
-                        row_delta.saturating_mul(4)
-                    });
-                    let above_chroma_x_offset = above_chroma.map_or(0, |(prior, _)| {
-                        let column_delta = if context.subsampling_x {
-                            node.x
-                                .saturating_div(2)
-                                .saturating_sub(prior.x.saturating_div(2))
-                        } else {
-                            node.x.saturating_sub(prior.x)
-                        };
-                        column_delta.saturating_mul(4)
-                    });
-
-                    let bottom_luma_x = node
-                        .x
-                        .checked_mul(4)
-                        .ok_or_else(|| malformed("bottom luma edge x overflows"))?;
-                    let bottom_luma_y = node
-                        .y
-                        .checked_add(node.height)
-                        .and_then(|value| value.checked_mul(4))
-                        .ok_or_else(|| malformed("bottom luma edge y overflows"))?;
-                    let left_luma_bottom = left_below.and_then(|_| {
-                        canvas
-                            .written_column_before::<8>(0, bottom_luma_x, bottom_luma_y)
-                            .ok()
-                    });
-                    let left_chroma_below = chroma_left_x
-                        .checked_sub(1)
-                        .map(|x| retained_chroma_leaf_at(&tile_state, &leaves, x, below_unit))
-                        .transpose()?
-                        .flatten();
-                    let bottom_chroma_x = if context.subsampling_x {
-                        node.x.checked_div(2).and_then(|value| value.checked_mul(4))
-                    } else {
-                        Some(bottom_luma_x)
-                    }
-                    .ok_or_else(|| malformed("bottom chroma edge x overflows"))?;
-                    let bottom_chroma_y = if context.subsampling_y {
-                        node.y
-                            .checked_add(node.height)
-                            .and_then(|value| value.checked_div(2))
-                            .and_then(|value| value.checked_mul(4))
-                    } else {
-                        Some(bottom_luma_y)
-                    }
-                    .ok_or_else(|| malformed("bottom chroma edge y overflows"))?;
-                    let left_chroma_bottom = std::array::from_fn(|plane| {
-                        left_chroma_below.and_then(|_| {
-                            canvas
-                                .written_column_before::<4>(
-                                    plane.saturating_add(1),
-                                    bottom_chroma_x,
-                                    bottom_chroma_y,
-                                )
-                                .ok()
-                        })
-                    });
-                    let left_full_chroma_bottom_8 =
-                        if full_resolution && width == 8 && (height == 8 || height == 16) {
-                            std::array::from_fn(|plane| {
-                                left_chroma_below.and_then(|_| {
-                                    canvas
-                                        .written_column_before::<8>(
-                                            plane.saturating_add(1),
-                                            bottom_chroma_x,
-                                            bottom_chroma_y,
-                                        )
-                                        .ok()
-                                })
-                            })
-                        } else {
-                            [None; 2]
-                        };
-                    let following_v8x16_filter_intra_mode =
-                        following_v8x16_filter_intra_mode(context, node, &tile_state);
-                    let full_edges = if full_resolution && has_chroma {
-                        let above = match above_y {
-                            Some(y) => tile_state
-                                .block_at_checked(node.x, y)?
-                                .map(|(_, block)| block),
-                            None => None,
-                        };
-                        let left = match left_x {
-                            Some(x) => tile_state
-                                .block_at_checked(x, node.y)?
-                                .map(|(_, block)| block),
-                            None => None,
-                        };
-                        let smooth_luma = above.is_some_and(|block| {
-                            super::block::is_smooth_luma_predictor(block.luma_predictor)
-                        }) || left.is_some_and(|block| {
-                            super::block::is_smooth_luma_predictor(block.luma_predictor)
-                        });
-                        let smooth_chroma = above.is_some_and(|block| {
-                            super::block::is_smooth_chroma_predictor(block.chroma_predictor)
-                        }) || left.is_some_and(|block| {
-                            super::block::is_smooth_chroma_predictor(block.chroma_predictor)
-                        });
-                        match canvas.full_intra_edges(
-                            node.x,
-                            node.y,
-                            palette_coded_width,
-                            palette_coded_height,
-                            tools.sample_depth,
-                            node.intra_edges,
-                            [smooth_luma, smooth_chroma, smooth_chroma],
-                        ) {
-                            Ok(edges) => Some(edges),
-                            Err(_)
-                                if tools.sample_depth
-                                    == super::sample_depth::SampleDepth::EIGHT
-                                    && !full_large =>
-                            {
-                                None
-                            }
-                            Err(_) => {
-                                unsupported = true;
-                                return Ok(PartitionVisitControl::Stop);
-                            }
-                        }
-                    } else {
-                        None
-                    };
-
-                    if let Some((above_prior, above)) = above_left {
-                        let above_left_width = above.width;
-                        let above_right_width =
-                            above_right.map_or(above.width, |(_, leaf)| leaf.width);
-                        let above_left_x_offset =
-                            node.x.saturating_sub(above_prior.x).saturating_mul(4);
-                        let above_right_x_offset = above_right.map_or_else(
-                            || node.x.saturating_sub(above_prior.x).saturating_mul(4),
-                            |(prior, _)| node.x.saturating_sub(prior.x).saturating_mul(4),
-                        );
-                        let above_right = above_right.map_or(above, |(_, leaf)| leaf);
-                        let neighbors = super::block::VerticalNeighbors {
-                            above_left: above,
-                            above_right,
-                            above_left_width,
-                            above_right_width,
-                            above_left_x_offset,
-                            above_right_x_offset,
-                            following_v8x16_filter_intra_mode,
-                            above_luma_extension: above_luma_extension.map(|(_, leaf)| leaf),
-                            above_luma_extension_x_offset: above_luma_extension.map_or(
-                                0,
-                                |(prior, _)| {
-                                    node.x
-                                        .saturating_add(node.width)
-                                        .saturating_sub(prior.x)
-                                        .saturating_mul(4)
-                                },
-                            ),
-                            above_chroma_extension: above_chroma_extension.map(|(_, leaf)| leaf),
-                            above_chroma_extension_x_offset: above_chroma_extension.map_or(
-                                0,
-                                |(prior, _)| {
-                                    if context.subsampling_x {
-                                        node.x
-                                            .saturating_add(node.width)
-                                            .saturating_div(2)
-                                            .saturating_sub(prior.x.saturating_div(2))
-                                            .saturating_mul(4)
-                                    } else {
-                                        node.x
-                                            .saturating_add(node.width)
-                                            .saturating_sub(prior.x)
-                                            .saturating_mul(4)
-                                    }
-                                },
-                            ),
-                            above_luma_contexts,
-                            above_chroma_contexts,
-                            above_chroma: above_chroma.map(|(_, leaf)| leaf),
-                            above_chroma_x_offset,
-                            left_top: left_top.map(|(_, leaf)| leaf),
-                            left_luma_top: left_luma_top.map(|(_, leaf)| leaf),
-                            left: left.map(|(_, leaf)| leaf),
-                            left_luma_contexts,
-                            left_luma_edge_8: luma_left_edge_8,
-                            left_luma_edge_16: luma_left_edge_16,
-                            left_luma_edge_32: luma_left_edge_32,
-                            left_chroma_contexts,
-                            left_chroma: left_chroma.map(|(_, leaf)| leaf),
-                            left_chroma_edges_16: chroma_left_edges_16,
-                            left_y_offset,
-                            left_chroma_y_offset,
-                            left_luma_bottom,
-                            left_chroma_bottom,
-                            left_full_chroma_bottom_8,
-                        };
-                        if has_chroma {
-                            block_decoder.decode_following_vertical(
-                                decoder,
-                                width,
-                                height,
-                                quantization,
-                                tools,
-                                neighbors,
-                                full_edges.as_ref(),
-                            )
-                        } else {
-                            block_decoder.decode_following_vertical_without_chroma(
-                                decoder,
-                                width,
-                                height,
-                                quantization,
-                                tools,
-                                neighbors,
-                            )
-                        }
-                    } else if let Some((_, left)) = left {
-                        if has_chroma {
-                            block_decoder.decode_following_horizontal_with_chroma(
-                                decoder,
-                                width,
-                                height,
-                                quantization,
-                                tools,
-                                left,
-                                luma_top_neighbor,
-                                luma_left_edge_8,
-                                left_luma_bottom,
-                                luma_left_edge_16,
-                                chroma_left_edges_16,
-                                chroma_left_edges_8,
-                                left_full_chroma_bottom_8,
-                                left_luma_contexts,
-                                left_chroma_contexts,
-                                full_edges.as_ref(),
-                            )
-                        } else {
-                            block_decoder.decode_following_horizontal_without_chroma(
-                                decoder,
-                                width,
-                                height,
-                                quantization,
-                                tools,
-                                left,
-                            )
-                        }
-                    } else {
-                        Err(super::block::PortableUnavailable)
-                    }
+                    decode_complete_following_leaf(
+                        decoder,
+                        &mut block_decoder,
+                        &tile_state,
+                        &canvas,
+                        context,
+                        node,
+                        width,
+                        height,
+                        palette_coded_width,
+                        palette_coded_height,
+                        quantization,
+                        tools,
+                    )?
                 };
                 let decoded = match decoded {
                     Ok(decoded) => decoded,
@@ -2973,7 +2512,6 @@ pub(super) fn validate_complete_lossy_420_partition(
                     });
                 }
                 tile_state.commit(node, has_chroma, &decoded)?;
-                leaves.push((node, decoded));
                 Ok(PartitionVisitControl::Continue)
             })?;
             if unsupported || matches!(control, PartitionVisitControl::Stop) {

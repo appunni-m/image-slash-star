@@ -6,7 +6,8 @@
 //! unchecked slice construction.
 
 use super::block::{
-    FullIntraEdges, FullIntraPlaneEdges, PortableResult, PortableUnavailable, ReconstructedPlane,
+    CflLumaContext, FullIntraEdges, FullIntraPlaneEdges, MAX_INTRA_EDGE_SAMPLES, PortableResult,
+    PortableUnavailable, ReconstructedPlane,
 };
 use super::cdef::{self, Block as CdefBlock, Parameters as CdefParameters};
 use super::filter;
@@ -321,24 +322,26 @@ impl FrameCanvas {
         })
     }
 
-    /// Prepare the exact tile-local prefilter edges for one full-resolution
-    /// intra block. The caller invokes this before placing the current leaf,
-    /// so coverage proves that an authorized edge sample was decoded first;
-    /// the partition flags independently prove whether that extension is
-    /// legal for the current block and pixel layout.
-    pub(super) fn full_intra_edges(
+    /// Prepare the exact tile-local prefilter edges for one intra block.
+    ///
+    /// The caller invokes this before placing the current leaf, so coverage
+    /// proves that an authorized edge sample was decoded first. Partition
+    /// flags independently prove whether each extension is legal for the
+    /// current block and pixel layout. Chroma coordinates use the same
+    /// per-axis ceil-and-align geometry as [`Self::place_av1_partition_leaf`];
+    /// a luma-only leaf receives inert chroma edges instead of consulting
+    /// unowned chroma cells.
+    pub(super) fn intra_edges(
         &self,
         x_units: u32,
         y_units: u32,
         width_units: u32,
         height_units: u32,
+        has_chroma: bool,
         sample_depth: SampleDepth,
         intra_edges: IntraEdgeFlags,
         smooth: [bool; 3],
     ) -> PortableResult<FullIntraEdges> {
-        if self.subsampling_x || self.subsampling_y {
-            return Err(PortableUnavailable);
-        }
         let pixels = |units: u32| {
             usize::try_from(units)
                 .ok()
@@ -354,41 +357,157 @@ impl FrameCanvas {
         }
         let layout = PixelLayout::from_sequence(false, self.subsampling_x, self.subsampling_y)
             .ok_or(PortableUnavailable)?;
-        Ok(FullIntraEdges::from_planes([
-            self.full_intra_plane_edges(
-                0,
-                x,
-                y,
-                width,
-                height,
-                sample_depth,
-                intra_edges.top_has_right(PixelLayout::I444),
-                intra_edges.left_has_bottom(PixelLayout::I444),
-                smooth[0],
-            )?,
-            self.full_intra_plane_edges(
-                1,
-                x,
-                y,
-                width,
-                height,
-                sample_depth,
-                intra_edges.top_has_right(layout),
-                intra_edges.left_has_bottom(layout),
-                smooth[1],
-            )?,
-            self.full_intra_plane_edges(
-                2,
-                x,
-                y,
-                width,
-                height,
-                sample_depth,
-                intra_edges.top_has_right(layout),
-                intra_edges.left_has_bottom(layout),
-                smooth[2],
-            )?,
-        ]))
+        let luma = self.full_intra_plane_edges(
+            0,
+            x,
+            y,
+            width,
+            height,
+            sample_depth,
+            intra_edges.top_has_right(PixelLayout::I444),
+            intra_edges.left_has_bottom(PixelLayout::I444),
+            smooth[0],
+        )?;
+
+        let chroma_units = |units: u32, subsampled: bool| {
+            let units = if subsampled {
+                units.checked_add(1)?.checked_div(2)?
+            } else {
+                units
+            };
+            usize::try_from(units).ok()?.checked_mul(4)
+        };
+        let chroma_x_units = if self.subsampling_x {
+            x_units / 2
+        } else {
+            x_units
+        };
+        let chroma_y_units = if self.subsampling_y {
+            y_units / 2
+        } else {
+            y_units
+        };
+        let chroma_x = pixels(chroma_x_units)?;
+        let chroma_y = pixels(chroma_y_units)?;
+        let chroma_width = chroma_units(width_units, self.subsampling_x)
+            .filter(|&extent| extent != 0)
+            .ok_or(PortableUnavailable)?;
+        let chroma_height = chroma_units(height_units, self.subsampling_y)
+            .filter(|&extent| extent != 0)
+            .ok_or(PortableUnavailable)?;
+        let chroma = |plane: usize| {
+            if has_chroma {
+                self.full_intra_plane_edges(
+                    plane,
+                    chroma_x,
+                    chroma_y,
+                    chroma_width,
+                    chroma_height,
+                    sample_depth,
+                    intra_edges.top_has_right(layout),
+                    intra_edges.left_has_bottom(layout),
+                    smooth[plane],
+                )
+            } else {
+                FullIntraPlaneEdges::origin(chroma_width, chroma_height, sample_depth)
+            }
+        };
+        let edges = FullIntraEdges::from_planes([luma, chroma(1)?, chroma(2)?]);
+        if !has_chroma {
+            return Ok(edges);
+        }
+
+        let subsampling_width = if self.subsampling_x { 2 } else { 1 };
+        let subsampling_height = if self.subsampling_y { 2 } else { 1 };
+        let required_luma_width = chroma_width
+            .checked_mul(subsampling_width)
+            .ok_or(PortableUnavailable)?;
+        let required_luma_height = chroma_height
+            .checked_mul(subsampling_height)
+            .ok_or(PortableUnavailable)?;
+        let missing_x = required_luma_width
+            .checked_sub(width)
+            .ok_or(PortableUnavailable)?;
+        let missing_y = required_luma_height
+            .checked_sub(height)
+            .ok_or(PortableUnavailable)?;
+        let source_x = x.checked_sub(missing_x).ok_or(PortableUnavailable)?;
+        let source_y = y.checked_sub(missing_y).ok_or(PortableUnavailable)?;
+        let sample_before = |sample_x: usize, sample_y: usize| -> PortableResult<u16> {
+            let sample_x = sample_x.min(self.width.saturating_sub(1));
+            let sample_y = sample_y.min(self.height.saturating_sub(1));
+            let index = sample_y
+                .checked_mul(self.width)
+                .and_then(|offset| offset.checked_add(sample_x))
+                .ok_or(PortableUnavailable)?;
+            self.written[0]
+                .get(index)
+                .copied()
+                .filter(|written| *written)
+                .ok_or(PortableUnavailable)?;
+            let sample = self.planes[0]
+                .get(index)
+                .copied()
+                .ok_or(PortableUnavailable)?;
+            sample_depth.validate(sample).ok_or(PortableUnavailable)
+        };
+        let above_len = width.checked_mul(missing_y).ok_or(PortableUnavailable)?;
+        let left_len = height.checked_mul(missing_x).ok_or(PortableUnavailable)?;
+        let corner_len = missing_x
+            .checked_mul(missing_y)
+            .ok_or(PortableUnavailable)?;
+        let mut above = [0_u16; MAX_INTRA_EDGE_SAMPLES * 2];
+        let mut left = [0_u16; MAX_INTRA_EDGE_SAMPLES * 2];
+        let mut corner = [0_u16; 16];
+        if above_len > above.len() || left_len > left.len() || corner_len > corner.len() {
+            return Err(PortableUnavailable);
+        }
+        for row in 0..missing_y {
+            for column in 0..width {
+                let index = row
+                    .checked_mul(width)
+                    .and_then(|offset| offset.checked_add(column))
+                    .ok_or(PortableUnavailable)?;
+                above[index] = sample_before(
+                    x.checked_add(column).ok_or(PortableUnavailable)?,
+                    source_y.checked_add(row).ok_or(PortableUnavailable)?,
+                )?;
+            }
+        }
+        for row in 0..height {
+            for column in 0..missing_x {
+                let index = row
+                    .checked_mul(missing_x)
+                    .and_then(|offset| offset.checked_add(column))
+                    .ok_or(PortableUnavailable)?;
+                left[index] = sample_before(
+                    source_x.checked_add(column).ok_or(PortableUnavailable)?,
+                    y.checked_add(row).ok_or(PortableUnavailable)?,
+                )?;
+            }
+        }
+        for row in 0..missing_y {
+            for column in 0..missing_x {
+                let index = row
+                    .checked_mul(missing_x)
+                    .and_then(|offset| offset.checked_add(column))
+                    .ok_or(PortableUnavailable)?;
+                corner[index] = sample_before(
+                    source_x.checked_add(column).ok_or(PortableUnavailable)?,
+                    source_y.checked_add(row).ok_or(PortableUnavailable)?,
+                )?;
+            }
+        }
+        let cfl_luma = CflLumaContext::prepare(
+            width,
+            height,
+            missing_x,
+            missing_y,
+            &above[..above_len],
+            &left[..left_len],
+            &corner[..corner_len],
+        )?;
+        Ok(edges.with_cfl_luma(cfl_luma))
     }
 
     /// Copy a contiguous reconstructed column immediately left of `x` into
@@ -643,36 +762,31 @@ impl FrameCanvas {
             height
         };
         let edge_capacity = width.checked_add(height).ok_or(PortableUnavailable)?;
-        let mut top = if has_top {
-            Vec::with_capacity(edge_capacity)
+        if edge_capacity > MAX_INTRA_EDGE_SAMPLES {
+            return Err(PortableUnavailable);
+        }
+        let mut top = [0_u16; MAX_INTRA_EDGE_SAMPLES];
+        let top_len = if has_top {
+            plane_width.saturating_sub(x).min(top_length)
         } else {
-            Vec::new()
+            0
         };
         if has_top {
-            for offset in 0..top_length {
+            for offset in 0..top_len {
                 let sample_x = x.checked_add(offset).ok_or(PortableUnavailable)?;
-                let sample = if sample_x < plane_width {
-                    sample_at(sample_x, y - 1)?
-                } else {
-                    top.last().copied().ok_or(PortableUnavailable)?
-                };
-                top.push(sample);
+                *top.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(sample_x, y - 1)?;
             }
         }
-        let mut left = if has_left {
-            Vec::with_capacity(edge_capacity)
+        let mut left = [0_u16; MAX_INTRA_EDGE_SAMPLES];
+        let left_len = if has_left {
+            plane_height.saturating_sub(y).min(left_length)
         } else {
-            Vec::new()
+            0
         };
         if has_left {
-            for offset in 0..left_length {
+            for offset in 0..left_len {
                 let sample_y = y.checked_add(offset).ok_or(PortableUnavailable)?;
-                let sample = if sample_y < plane_height {
-                    sample_at(x - 1, sample_y)?
-                } else {
-                    left.last().copied().ok_or(PortableUnavailable)?
-                };
-                left.push(sample);
+                *left.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(x - 1, sample_y)?;
             }
         }
         let top_left = if has_top && has_left {
@@ -681,12 +795,12 @@ impl FrameCanvas {
             None
         };
 
-        FullIntraPlaneEdges::prepare_owned(
+        FullIntraPlaneEdges::prepare(
             width,
             height,
             sample_depth,
-            top,
-            left,
+            &top[..top_len],
+            &left[..left_len],
             top_left,
             has_top,
             has_left,

@@ -8,8 +8,8 @@
 use std::num::NonZeroU32;
 
 use super::block::{ChromaPredictor, FirstLeaf, LumaPredictor, PaletteCacheState};
-use super::entropy::{PartitionKind, PartitionNode};
-use super::geometry::{BlockSize, TxSize};
+use super::entropy::PartitionNode;
+use super::geometry::TxSize;
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 
@@ -31,63 +31,9 @@ impl OwnerId {
     }
 }
 
-const MAX_EDGE_CELLS: usize = 32;
-
-#[allow(
-    dead_code,
-    reason = "bounded owner spans are the next compatibility-reader migration boundary"
-)]
-#[derive(Clone, Copy)]
-pub(super) struct OwnerSpan {
-    owners: [Option<OwnerId>; MAX_EDGE_CELLS],
-    len: usize,
-}
-
-#[allow(
-    dead_code,
-    reason = "bounded owner spans are the next compatibility-reader migration boundary"
-)]
-impl OwnerSpan {
-    pub(super) fn empty() -> Self {
-        Self {
-            owners: [None; MAX_EDGE_CELLS],
-            len: 0,
-        }
-    }
-
-    pub(super) fn is_empty(self) -> bool {
-        self.len == 0
-    }
-
-    fn push_unique(&mut self, owner: OwnerId) -> Av1Result<()> {
-        if self.len != 0 && self.owners.get(self.len - 1).copied().flatten() == Some(owner) {
-            return Ok(());
-        }
-        let slot = self
-            .owners
-            .get_mut(self.len)
-            .ok_or_else(|| malformed("tile edge crosses too many block owners"))?;
-        *slot = Some(owner);
-        self.len = self
-            .len
-            .checked_add(1)
-            .ok_or_else(|| malformed("tile edge owner count overflows"))?;
-        Ok(())
-    }
-
-    pub(super) fn iter(self) -> impl Iterator<Item = OwnerId> {
-        self.owners.into_iter().take(self.len).flatten()
-    }
-}
-
-#[allow(
-    dead_code,
-    reason = "transform-state readers migrate after owner and coefficient-context readers"
-)]
 #[derive(Clone, Copy)]
 struct TileCell {
     owner: Option<OwnerId>,
-    tx_size: Option<TxSize>,
     right_context: u8,
     bottom_context: u8,
 }
@@ -113,7 +59,6 @@ impl Default for TileCell {
     fn default() -> Self {
         Self {
             owner: None,
-            tx_size: None,
             right_context: 0x40,
             bottom_context: 0x40,
         }
@@ -121,17 +66,8 @@ impl Default for TileCell {
 }
 
 /// Stable scalar metadata for one successfully reconstructed block.
-#[allow(
-    dead_code,
-    reason = "metadata consumers migrate incrementally from retained reconstructed leaves"
-)]
 #[derive(Clone, Copy)]
 pub(super) struct DecodedBlockMeta {
-    pub(super) partition_level: u32,
-    pub(super) partition_kind: PartitionKind,
-    pub(super) origin_x: u32,
-    pub(super) origin_y: u32,
-    pub(super) block_size: BlockSize,
     pub(super) entropy_width: u32,
     pub(super) entropy_height: u32,
     pub(super) luma_predictor: LumaPredictor,
@@ -140,13 +76,44 @@ pub(super) struct DecodedBlockMeta {
     pub(super) has_chroma: bool,
     pub(super) tx_context_width: u8,
     pub(super) tx_context_height: u8,
-    pub(super) luma_transform_split: bool,
-    pub(super) luma_context: u8,
-    pub(super) chroma_contexts: [u8; 2],
-    pub(super) luma_right_contexts: [u8; 16],
-    pub(super) luma_bottom_contexts: [u8; 16],
-    pub(super) chroma_right_contexts: [[u8; 16]; 2],
-    pub(super) chroma_bottom_contexts: [[u8; 16]; 2],
+}
+
+/// Copy-only neighbor facts consumed while decoding a following block.
+///
+/// Pixel samples remain exclusively in `FrameCanvas`; the owner identity is
+/// retained so equality is structural and never depends on allocation or
+/// pointer reuse.
+#[derive(Clone, Copy)]
+pub(super) struct NeighborMeta {
+    pub(super) owner: OwnerId,
+    pub(super) pixel_width: u32,
+    pub(super) pixel_height: u32,
+    pub(super) luma_predictor: LumaPredictor,
+    pub(super) chroma_predictor: Option<ChromaPredictor>,
+    pub(super) has_chroma: bool,
+    pub(super) tx_context_width: u8,
+    pub(super) tx_context_height: u8,
+}
+
+impl NeighborMeta {
+    fn from_block(owner: OwnerId, block: &DecodedBlockMeta) -> Av1Result<Self> {
+        Ok(Self {
+            owner,
+            pixel_width: block
+                .entropy_width
+                .checked_mul(4)
+                .ok_or_else(|| malformed("neighbor pixel width overflows"))?,
+            pixel_height: block
+                .entropy_height
+                .checked_mul(4)
+                .ok_or_else(|| malformed("neighbor pixel height overflows"))?,
+            luma_predictor: block.luma_predictor,
+            chroma_predictor: block.chroma_predictor,
+            has_chroma: block.has_chroma,
+            tx_context_width: block.tx_context_width,
+            tx_context_height: block.tx_context_height,
+        })
+    }
 }
 
 /// Bounded O(1)-indexed state for one tile's padded four-pixel grid.
@@ -162,10 +129,6 @@ pub(super) struct TileState {
     blocks: Vec<DecodedBlockMeta>,
 }
 
-#[allow(
-    dead_code,
-    reason = "queries migrate incrementally while the state is shadow-written beside the legacy leaf walker"
-)]
 impl TileState {
     pub(super) fn new(
         width: u32,
@@ -205,10 +168,6 @@ impl TileState {
                 CodecError::Dimensions("unable to allocate AV1 chroma tile cells".to_owned())
             })?;
         chroma_cells.resize(chroma_cell_count, ChromaCell::default());
-        let mut blocks = Vec::new();
-        blocks.try_reserve_exact(cell_count).map_err(|_| {
-            CodecError::Dimensions("unable to allocate AV1 tile block metadata".to_owned())
-        })?;
         Ok(Self {
             width,
             height,
@@ -218,7 +177,7 @@ impl TileState {
             chroma_width,
             chroma_height,
             chroma_cells,
-            blocks,
+            blocks: Vec::new(),
         })
     }
 
@@ -226,16 +185,8 @@ impl TileState {
         self.blocks.is_empty()
     }
 
-    pub(super) fn decoded_block_count(&self) -> usize {
-        self.blocks.len()
-    }
-
     pub(super) fn block(&self, owner: OwnerId) -> Option<&DecodedBlockMeta> {
         self.blocks.get(owner.index()?)
-    }
-
-    pub(super) fn block_by_index(&self, index: usize) -> Option<&DecodedBlockMeta> {
-        self.blocks.get(index)
     }
 
     pub(super) fn owner_at(&self, x: u32, y: u32) -> Option<OwnerId> {
@@ -267,6 +218,12 @@ impl TileState {
         Ok(Some((owner, block)))
     }
 
+    pub(super) fn neighbor_at_checked(&self, x: u32, y: u32) -> Av1Result<Option<NeighborMeta>> {
+        self.block_at_checked(x, y)?
+            .map(|(owner, block)| NeighborMeta::from_block(owner, block))
+            .transpose()
+    }
+
     pub(super) fn chroma_owner_at_luma(&self, x: u32, y: u32) -> Option<OwnerId> {
         let x = usize::try_from(x).ok()?;
         let y = usize::try_from(y).ok()?;
@@ -279,6 +236,33 @@ impl TileState {
             .checked_mul(self.chroma_width)?
             .checked_add(chroma_x)?;
         self.chroma_cells.get(index)?.owner
+    }
+
+    pub(super) fn chroma_block_at_luma_checked(
+        &self,
+        x: u32,
+        y: u32,
+    ) -> Av1Result<Option<(OwnerId, &DecodedBlockMeta)>> {
+        let Some(owner) = self.chroma_owner_at_luma(x, y) else {
+            return Ok(None);
+        };
+        let block = self
+            .block(owner)
+            .ok_or_else(|| malformed("tile chroma owner has no block metadata"))?;
+        if !block.has_chroma {
+            return Err(malformed("tile chroma owner does not publish chroma state"));
+        }
+        Ok(Some((owner, block)))
+    }
+
+    pub(super) fn chroma_neighbor_at_luma_checked(
+        &self,
+        x: u32,
+        y: u32,
+    ) -> Av1Result<Option<NeighborMeta>> {
+        self.chroma_block_at_luma_checked(x, y)?
+            .map(|(owner, block)| NeighborMeta::from_block(owner, block))
+            .transpose()
     }
 
     pub(super) fn chroma_contexts_above<const COUNT: usize>(
@@ -446,60 +430,6 @@ impl TileState {
         Ok(contexts)
     }
 
-    pub(super) fn owners_in_row(&self, y: u32, start_x: u32, end_x: u32) -> Av1Result<OwnerSpan> {
-        if start_x >= end_x {
-            return Err(malformed("tile row query has an empty extent"));
-        }
-        let y = usize::try_from(y).map_err(|_| malformed("tile row exceeds usize"))?;
-        let start_x =
-            usize::try_from(start_x).map_err(|_| malformed("tile row start exceeds usize"))?;
-        let end_x = usize::try_from(end_x).map_err(|_| malformed("tile row end exceeds usize"))?;
-        if y >= self.height || end_x > self.width {
-            return Err(malformed("tile row query exceeds state grid"));
-        }
-        let mut owners = OwnerSpan::empty();
-        for x in start_x..end_x {
-            let index = y
-                .checked_mul(self.width)
-                .and_then(|row| row.checked_add(x))
-                .ok_or_else(|| malformed("tile row query index overflows"))?;
-            if let Some(owner) = self.cells.get(index).and_then(|cell| cell.owner) {
-                owners.push_unique(owner)?;
-            }
-        }
-        Ok(owners)
-    }
-
-    pub(super) fn owners_in_column(
-        &self,
-        x: u32,
-        start_y: u32,
-        end_y: u32,
-    ) -> Av1Result<OwnerSpan> {
-        if start_y >= end_y {
-            return Err(malformed("tile column query has an empty extent"));
-        }
-        let x = usize::try_from(x).map_err(|_| malformed("tile column exceeds usize"))?;
-        let start_y =
-            usize::try_from(start_y).map_err(|_| malformed("tile column start exceeds usize"))?;
-        let end_y =
-            usize::try_from(end_y).map_err(|_| malformed("tile column end exceeds usize"))?;
-        if x >= self.width || end_y > self.height {
-            return Err(malformed("tile column query exceeds state grid"));
-        }
-        let mut owners = OwnerSpan::empty();
-        for y in start_y..end_y {
-            let index = y
-                .checked_mul(self.width)
-                .and_then(|row| row.checked_add(x))
-                .ok_or_else(|| malformed("tile column query index overflows"))?;
-            if let Some(owner) = self.cells.get(index).and_then(|cell| cell.owner) {
-                owners.push_unique(owner)?;
-            }
-        }
-        Ok(owners)
-    }
-
     /// Publish one block only after entropy, reconstruction, validation, and
     /// padded-canvas placement have all succeeded.
     pub(super) fn commit(
@@ -605,15 +535,13 @@ impl TileState {
         let tx_height = 1_u32
             .checked_shl(u32::from(leaf.tx_context_height))
             .ok_or_else(|| malformed("luma transform height context overflows"))?;
-        let tx_size = TxSize::from_mi_dimensions(tx_width, tx_height)
+        TxSize::from_mi_dimensions(tx_width, tx_height)
             .ok_or_else(|| malformed("leaf publishes a non-normative transform size"))?;
 
+        self.blocks.try_reserve(1).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 tile block metadata".to_owned())
+        })?;
         self.blocks.push(DecodedBlockMeta {
-            partition_level: node.level,
-            partition_kind: node.kind,
-            origin_x: node.x,
-            origin_y: node.y,
-            block_size: node.block_size,
             entropy_width: node.width,
             entropy_height: node.height,
             luma_predictor: leaf.luma_predictor,
@@ -622,13 +550,6 @@ impl TileState {
             has_chroma,
             tx_context_width: leaf.tx_context_width,
             tx_context_height: leaf.tx_context_height,
-            luma_transform_split: leaf.luma_transform_split,
-            luma_context: leaf.luma_context,
-            chroma_contexts: leaf.chroma_contexts,
-            luma_right_contexts: leaf.luma_right_contexts,
-            luma_bottom_contexts: leaf.luma_bottom_contexts,
-            chroma_right_contexts: leaf.chroma_right_contexts,
-            chroma_bottom_contexts: leaf.chroma_bottom_contexts,
         });
 
         let split = leaf.luma_transform_split;
@@ -659,7 +580,6 @@ impl TileState {
                     .get_mut(index)
                     .ok_or_else(|| malformed("tile cell disappeared during block state commit"))?;
                 cell.owner = Some(owner);
-                cell.tx_size = Some(tx_size);
                 cell.right_context = row_context(y, &leaf.luma_right_contexts, node.y);
                 cell.bottom_context = bottom_context;
             }
