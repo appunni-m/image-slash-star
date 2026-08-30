@@ -263,6 +263,29 @@ impl BlockSize {
         }
     }
 
+    /// Whether this nominal coded block carries AV1 palette syntax.
+    ///
+    /// The predicate is intentionally independent of the visible crop: a
+    /// standalone 4x4 image is coded as B8x8 and therefore remains eligible.
+    pub(super) const fn palette_allowed(self) -> bool {
+        let (width, height) = self.pixel_dimensions();
+        width >= 8 && width <= 64 && height >= 8 && height <= 64
+    }
+
+    /// Palette-size CDF row for one palette-eligible coded block.
+    pub(super) const fn palette_size_context(self) -> Option<usize> {
+        if !self.palette_allowed() {
+            return None;
+        }
+        let (width, height) = self.mi_dimensions();
+        Some(
+            width
+                .ilog2()
+                .saturating_add(height.ilog2())
+                .saturating_sub(2) as usize,
+        )
+    }
+
     /// Normative maximum luma transform.
     pub(super) const fn maximum_luma_tx(self) -> TxSize {
         MAX_TX_FOR_BLOCK[self as usize][PixelLayout::Monochrome as usize]

@@ -2342,20 +2342,20 @@ pub(super) fn validate_complete_lossy_420_partition(
                 // A standalone 4x4 image is cropped from one coded 8x8
                 // block. All other leaves retain their nominal pre-clipping
                 // partition dimensions for block and transform syntax.
-                let transform_grid = if context.frame_width == 4
+                let syntax_block_size = if context.frame_width == 4
                     && context.frame_height == 4
                     && width == 4
                     && height == 4
                 {
-                    super::block::TransformGrid::Square8
+                    BlockSize::B8x8
                 } else {
-                    let Ok(transform_grid) =
-                        super::block::TransformGrid::from_block_size(node.block_size)
-                    else {
-                        unsupported = true;
-                        return Ok(PartitionVisitControl::Stop);
-                    };
-                    transform_grid
+                    node.block_size
+                };
+                let Ok(transform_grid) =
+                    super::block::TransformGrid::from_block_size(syntax_block_size)
+                else {
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
                 };
                 let mut tools = tools;
                 tools.palette_context =
@@ -2382,23 +2382,19 @@ pub(super) fn validate_complete_lossy_420_partition(
                         return Ok(PartitionVisitControl::Stop);
                     }
                 }
-                let (palette_coded_width, palette_coded_height, _) = transform_grid.properties();
-                let Ok(palette_coded_width) = u32::try_from(palette_coded_width) else {
-                    unsupported = true;
-                    return Ok(PartitionVisitControl::Stop);
-                };
-                let Ok(palette_coded_height) = u32::try_from(palette_coded_height) else {
-                    unsupported = true;
-                    return Ok(PartitionVisitControl::Stop);
-                };
+                let (coded_mi_width, coded_mi_height) = syntax_block_size.mi_dimensions();
+                let (palette_coded_width, palette_coded_height) =
+                    syntax_block_size.pixel_dimensions();
                 let palette_entropy_width = palette_coded_width
-                    .min(context.block_width.saturating_sub(node.x))
-                    .saturating_mul(4);
-                let palette_entropy_height = palette_coded_height
-                    .min(context.block_height.saturating_sub(node.y))
-                    .saturating_mul(4);
+                    .min(context.block_width.saturating_sub(node.x).saturating_mul(4));
+                let palette_entropy_height = palette_coded_height.min(
+                    context
+                        .block_height
+                        .saturating_sub(node.y)
+                        .saturating_mul(4),
+                );
                 block_decoder.begin_block(
-                    transform_grid,
+                    syntax_block_size,
                     palette_entropy_width,
                     palette_entropy_height,
                 );
@@ -2447,8 +2443,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                         node,
                         width,
                         height,
-                        palette_coded_width,
-                        palette_coded_height,
+                        coded_mi_width,
+                        coded_mi_height,
                         quantization,
                         tools,
                     )?
