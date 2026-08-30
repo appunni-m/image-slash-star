@@ -4180,13 +4180,15 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_420_reconstruction_context(context, inter_context)
     });
+    let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
+        || complete_superres_lossy_420_reconstruction_context(context);
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
         || segmentation
             .segments
             .iter()
             .all(|segment| segment.reference <= 0 && !segment.global_motion);
-    if (!complete_lossy_420_reconstruction_context(context)
+    if (!intra_reconstruction
         && !complete_streamed_lossless_color_context(context)
         && !inter_reconstruction)
         || (context.intra_frame && !intra_segment_features_supported)
@@ -4796,8 +4798,7 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.bit_depth == 8
         && context.subsampling_x
         && context.subsampling_y
-        && !context.superres_enabled
-        && context.upscaled_width == context.frame_width
+        && (context.superres_enabled || context.upscaled_width == context.frame_width)
         && !context.monochrome
         && !context.all_lossless
         && !context.skip_mode_enabled
@@ -4809,6 +4810,42 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
         && !context.segmentation_enabled
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+}
+
+/// The same bounded intra profile as the general lossy 4:2:0 decoder, with
+/// AV1's horizontal super-resolution flag admitted. Reconstruction remains in
+/// coded coordinates; the completed leaf is resized only after deblock/CDEF.
+/// High-depth, lossless, restoration, and film-grain classes stay explicitly
+/// outside this first super-resolution tranche.
+fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    context.intra_frame
+        && context.bit_depth == 8
+        && context.superres_enabled
+        && context.subsampling_x
+        && context.subsampling_y
+        && !context.monochrome
+        && !context.all_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && context.frame_tools.quantization.is_some()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && matches!(
+            context.frame_tools.cdef,
+            None | Some(CdefContext {
+                bits: 0..=2,
+                y_strength_count: 1..=4,
+                uv_strength_count: 1..=4,
+                first_y_strength: Some(_),
+                first_uv_strength: Some(_),
+                ..
+            })
+        )
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)

@@ -8,6 +8,7 @@ use super::geometry::PixelLayout;
 use super::motion::{
     GlobalMotion, GlobalMotionType, ScaleFactors, TemporalMotionField, relative_distance,
 };
+use super::resize;
 use super::sample_depth::SampleDepth;
 use super::sequence::SequenceHeader;
 #[cfg(coverage)]
@@ -1346,6 +1347,22 @@ impl FrameState {
                 &pending.header,
                 sequence,
             )?;
+            if pending.header.superres_enabled {
+                let depth = SampleDepth::new(sequence.bit_depth)
+                    .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
+                assembled_color_leaf = assembled_color_leaf
+                    .map(|leaf| {
+                        resize::upscale_i420_leaf(
+                            leaf,
+                            pending.header.frame_width,
+                            pending.header.upscaled_width,
+                            pending.header.frame_height,
+                            pending.header.superres_denominator,
+                            depth,
+                        )
+                    })
+                    .transpose()?;
+            }
         }
         enum SurfacePlan {
             Color {
@@ -1992,7 +2009,15 @@ fn validate_tile_entropy_prefixes(
         tile_context.tile_origin_b4_y = block_y;
         tile_context.frame_width = tile_width;
         tile_context.frame_height = tile_height;
-        tile_context.upscaled_width = tile_width;
+        // Super-resolution is a frame-wide post-filter. Keep the target
+        // display width in the entropy context so its admission gate can
+        // distinguish coded and upscaled coordinates; non-superres tiles
+        // retain the historical tile-local width used by the block walker.
+        tile_context.upscaled_width = if header.superres_enabled {
+            header.upscaled_width
+        } else {
+            tile_width
+        };
         let complete = entropy::validate_complete_lossy_420_partition(
             data,
             range.clone(),
@@ -2015,7 +2040,21 @@ fn validate_tile_entropy_prefixes(
                 });
             }
             if tiling.tile_count() == 1 && ranges.len() == 1 {
-                complete_color_leaf = Some(reconstruction.into_filtered_leaf()?);
+                let leaf = reconstruction.into_filtered_leaf()?;
+                complete_color_leaf = Some(if header.superres_enabled {
+                    let depth = SampleDepth::new(sequence.bit_depth)
+                        .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
+                    resize::upscale_i420_leaf(
+                        leaf,
+                        header.frame_width,
+                        header.upscaled_width,
+                        header.frame_height,
+                        header.superres_denominator,
+                        depth,
+                    )?
+                } else {
+                    leaf
+                });
             } else {
                 complete_color_tiles.push(ReconstructedColorTile {
                     x: tile_origin_x,
