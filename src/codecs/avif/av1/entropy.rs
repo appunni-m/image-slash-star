@@ -638,23 +638,24 @@ const DEFAULT_SEGMENT_ID_CDFS: [[u16; 8]; 3] = [
     [18_494, 14_538, 10_211, 7_833, 2_788, 1_917, 424, 0],
     [5_241, 4_281, 4_045, 3_878, 371, 121, 89, 0],
 ];
-const DEFAULT_SEGMENT_PRED_CDFS: [[u16; 2]; 3] = [[16_384, 0]; 3];
-const DEFAULT_DELTA_LF_CDFS: [[u16; 4]; 5] = [[4_608, 648, 91, 0]; 5];
 
-/// Complete CDF subset currently consumed by the portable intra tile path.
-///
-/// Inter/reference/motion families are deliberately represented as
-/// incomplete until their syntax is implemented. This prevents a retained
-/// intra snapshot from being mistaken for a valid primary-reference input.
+/// Complete canonical frame CDF state. The portable block engine consumes the
+/// intra/common subset today; retaining exact inter and motion families makes
+/// primary-reference publication complete before inter reconstruction lands.
 #[derive(Clone)]
 pub(super) struct FrameCdfs {
     partition: [[[u16; 10]; 4]; 5],
     restoration: RestorationCdfs,
     block: super::block::BlockCdfState,
+    common: super::frame_cdfs::CommonCdfs,
     segment_id: [[u16; 8]; 3],
-    segment_pred: [[u16; 2]; 3],
-    delta_lf: [[u16; 4]; 5],
-    inter_complete: bool,
+    #[allow(
+        dead_code,
+        reason = "intraBC syntax consumes this retained input family in the next block-engine slice"
+    )]
+    intrabc: super::frame_cdfs::Cdf<2>,
+    inter: super::frame_cdfs::InterCdfs,
+    motion_vectors: super::frame_cdfs::MvCdfs,
 }
 
 impl FrameCdfs {
@@ -665,15 +666,12 @@ impl FrameCdfs {
             partition: PARTITION_CDFS,
             restoration: RestorationCdfs::defaults(),
             block,
+            common: super::frame_cdfs::CommonCdfs::defaults(),
             segment_id: DEFAULT_SEGMENT_ID_CDFS,
-            segment_pred: DEFAULT_SEGMENT_PRED_CDFS,
-            delta_lf: DEFAULT_DELTA_LF_CDFS,
-            inter_complete: false,
+            intrabc: super::frame_cdfs::DEFAULT_INTRABC,
+            inter: super::frame_cdfs::InterCdfs::defaults(),
+            motion_vectors: super::frame_cdfs::MvCdfs::defaults(),
         })
-    }
-
-    pub(super) const fn supports_primary_reference(&self) -> bool {
-        self.inter_complete
     }
 
     /// Construct the reference snapshot selected by an intra frame's
@@ -684,11 +682,23 @@ impl FrameCdfs {
         output.partition = adapted.partition;
         output.restoration = adapted.restoration.clone();
         output.block.publish_intra_from(&adapted.block);
+        output.common.publish_from(&adapted.common);
         output.segment_id = adapted.segment_id;
-        output.delta_lf = adapted.delta_lf;
-        // `segment_pred` belongs to the inter-mode subset and is not copied
-        // for key/intra-only publication.
         output.reset_common_counts();
+        output
+    }
+
+    /// Publish a context-update tile for an inter/switch frame. `intrabc` and
+    /// key-frame luma-mode state remain from the frame input exactly as in
+    /// scalar dav1d 1.5.3.
+    #[allow(
+        dead_code,
+        reason = "called once the inter block engine can produce an adapted tile snapshot"
+    )]
+    pub(super) fn publish_inter(input: &Self, adapted: &Self) -> Self {
+        let mut output = Self::publish_intra(input, adapted);
+        output.inter.publish_from(&adapted.inter);
+        output.motion_vectors.publish_from(&adapted.motion_vectors);
         output
     }
 
@@ -704,9 +714,6 @@ impl FrameCdfs {
         self.restoration.sgr_projection[1] = 0;
         for cdf in &mut self.segment_id {
             cdf[7] = 0;
-        }
-        for cdf in &mut self.delta_lf {
-            cdf[3] = 0;
         }
     }
 }
@@ -2589,7 +2596,7 @@ fn decode_segment_id(
     let temporal_allowed = segmentation.temporal && skip != Some(true);
     let predicted_from_previous = temporal_allowed
         && decoder.adaptive_bool(
-            &mut cdfs.segment_pred[usize::from(above_pred) + usize::from(left_pred)],
+            &mut cdfs.inter.segment_prediction[usize::from(above_pred) + usize::from(left_pred)].0,
         );
     if predicted_from_previous {
         return Ok((previous_segment_id(previous, context, node), true));
@@ -2625,7 +2632,11 @@ fn skip_context_for_node(tile_state: &TileState, node: PartitionNode) -> Av1Resu
     )
 }
 
-fn effective_loop_levels(context: &FirstBlockContext, segment: SegmentContext) -> [u8; 4] {
+fn effective_loop_levels(
+    context: &FirstBlockContext,
+    segment: SegmentContext,
+    dynamic_delta_lf: [i32; 4],
+) -> [u8; 4] {
     let frame = context.frame_tools.loop_filter;
     let bases = [
         frame.level_y[0],
@@ -2640,7 +2651,10 @@ fn effective_loop_levels(context: &FirstBlockContext, segment: SegmentContext) -
         if header_disabled {
             continue;
         }
-        let base = i64::from(bases[index])
+        let dynamic_base = i64::from(bases[index])
+            .saturating_add(i64::from(dynamic_delta_lf[index]))
+            .clamp(0, 63);
+        let base = dynamic_base
             .saturating_add(i64::from(segment.delta_lf[index]))
             .clamp(0, 63);
         let reference_scale = if base >= 32 { 2_i64 } else { 1 };
@@ -2761,6 +2775,12 @@ pub(super) fn validate_complete_lossy_420_partition(
     ) else {
         return Ok(None);
     };
+    block_decoder.configure_delta_lf(
+        context.frame_tools.delta_lf_present,
+        context.frame_tools.delta_lf_resolution_log2,
+        context.frame_tools.delta_lf_multi,
+        context.monochrome,
+    );
     let padded_width = context
         .block_width
         .checked_mul(4)
@@ -3083,7 +3103,11 @@ pub(super) fn validate_complete_lossy_420_partition(
                         luma_tx_height: luma_tx.1,
                         chroma_tx_width: chroma_tx.0,
                         chroma_tx_height: chroma_tx.1,
-                        levels: effective_loop_levels(context, selected_segment),
+                        levels: effective_loop_levels(
+                            context,
+                            selected_segment,
+                            block_decoder.loop_delta_lf(),
+                        ),
                     });
                 }
                 if segmentation.update_map {
@@ -3183,7 +3207,6 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
                 || simple_422
         }
         && context.frame_tools.quantization.is_some()
-        && !context.frame_tools.delta_lf_present
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && matches!(

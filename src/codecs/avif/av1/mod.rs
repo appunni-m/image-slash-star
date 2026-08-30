@@ -7,6 +7,7 @@ mod coefficient_cdfs;
 mod entropy;
 mod filter;
 mod frame;
+mod frame_cdfs;
 mod geometry;
 mod large_cdfs;
 mod quantization;
@@ -135,6 +136,19 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
             return Err(malformed("OBU payload exceeds its sample"));
         }
         let payload_end = payload_start.saturating_add(payload_size);
+        if matches!(obu_type, 1 | 2 | 8) && has_extension {
+            return Err(malformed("non-layer-specific OBU has an extension header"));
+        }
+        if matches!(obu_type, 3 | 4 | 6 | 7) {
+            frame_bearing = true;
+            if !state.admits_layer_specific_obu(has_extension, temporal_id, spatial_id)? {
+                // Membership is decided only after validating the complete
+                // OBU envelope. An ignored layer must leave decoder state
+                // exactly untouched.
+                offset = payload_end;
+                continue;
+            }
+        }
         match obu_type {
             1 => {
                 let sequence = sequence::parse(&data, payload_start, payload_end)?;
@@ -151,30 +165,42 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
                     &data,
                     payload_start,
                     payload_end,
+                    has_extension,
                     temporal_id,
                     spatial_id,
                     false,
                 )?;
-                frame_bearing = true;
             }
             4 => {
-                state.tile_group_obu(&data, payload_start, payload_end)?;
-                frame_bearing = true;
+                state.tile_group_obu(
+                    &data,
+                    payload_start,
+                    payload_end,
+                    has_extension,
+                    temporal_id,
+                    spatial_id,
+                )?;
             }
             6 => {
-                state.frame_obu(&data, payload_start, payload_end, temporal_id, spatial_id)?;
-                frame_bearing = true;
+                state.frame_obu(
+                    &data,
+                    payload_start,
+                    payload_end,
+                    has_extension,
+                    temporal_id,
+                    spatial_id,
+                )?;
             }
             7 => {
                 state.frame_header_obu(
                     &data,
                     payload_start,
                     payload_end,
+                    has_extension,
                     temporal_id,
                     spatial_id,
                     true,
                 )?;
-                frame_bearing = true;
             }
             _ => {}
         }
@@ -183,27 +209,27 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
     if !frame_bearing {
         return Err(malformed("sample contains no frame-bearing OBU"));
     }
-    Ok(())
+    state.sample_flush()
 }
 
-fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Av1Result<ValidatedPlane> {
+fn validate_plane_state(input: &[u8], plane: &EncodedPlane) -> Av1Result<FrameState> {
     let mut state = FrameState::new();
     for sample in &plane.samples {
         validate_sample(input, sample, &mut state)?;
     }
+    state.finish()?;
+    Ok(state)
+}
+
+fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Av1Result<ValidatedPlane> {
+    let state = validate_plane_state(input, plane)?;
     let sequence = state.finish()?.clone();
+    let selected = state.selected_display()?;
     Ok(ValidatedPlane {
-        first_leaf: if state.has_multiple_tiles() {
-            state.complete_color_leaf().cloned()
-        } else {
-            state
-                .complete_color_leaf()
-                .cloned()
-                .or_else(|| state.first_leaf().cloned())
-        },
-        complete_monochrome_plane: state.complete_monochrome_plane().cloned(),
+        first_leaf: selected.color_leaf,
+        complete_monochrome_plane: selected.monochrome_plane,
         sequence,
-        frame_dimensions: state.frame_dimensions(),
+        frame_dimensions: selected.dimensions,
     })
 }
 
@@ -591,10 +617,14 @@ fn validate_first_sequence_sample(
             samples: vec![color_sample.clone()],
         },
     )?;
-    let Some(color_leaf) = color.first_leaf.as_ref() else {
+    let Some((color_width, color_height)) = color
+        .first_leaf
+        .as_ref()
+        .map(|leaf| (leaf.width, leaf.height))
+    else {
         return Ok(None);
     };
-    if color.frame_dimensions != Some((color_leaf.width, color_leaf.height)) {
+    if color.frame_dimensions != Some((color_width, color_height)) {
         return Ok(None);
     }
     let alpha_plane = if let Some(alpha) = &sequence.alpha {
@@ -613,9 +643,9 @@ fn validate_first_sequence_sample(
         };
         if !(alpha.sequence.monochrome
             && alpha.sequence.bit_depth == color.sequence.bit_depth
-            && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
-            && usize::try_from(color_leaf.width).ok().and_then(|width| {
-                usize::try_from(color_leaf.height)
+            && alpha.frame_dimensions == Some((color_width, color_height))
+            && usize::try_from(color_width).ok().and_then(|width| {
+                usize::try_from(color_height)
                     .ok()
                     .and_then(|height| width.checked_mul(height))
             }) == Some(alpha_plane.samples.len()))
@@ -626,8 +656,11 @@ fn validate_first_sequence_sample(
     } else {
         None
     };
+    let color_leaf = color
+        .first_leaf
+        .ok_or_else(|| malformed("validated first sequence sample lost its color surface"))?;
     Ok(Some(portable_still(
-        color_leaf.clone(),
+        color_leaf,
         color.sequence,
         alpha_plane,
     )))
@@ -657,9 +690,9 @@ pub(super) fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> 
     let Some(sequence) = &extracted.sequence else {
         return Ok(());
     };
-    validate_plane(extracted.input, &sequence.color)?;
+    validate_plane_state(extracted.input, &sequence.color)?;
     if let Some(alpha) = &sequence.alpha {
-        validate_plane(extracted.input, alpha)?;
+        validate_plane_state(extracted.input, alpha)?;
     }
     Ok(())
 }
@@ -668,9 +701,9 @@ pub(super) fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> 
 pub(super) fn validate(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
     let portable_still = validate_still(extracted)?;
     if let Some(sequence) = &extracted.sequence {
-        validate_plane(extracted.input, &sequence.color)?;
+        validate_plane_state(extracted.input, &sequence.color)?;
         if let Some(alpha) = &sequence.alpha {
-            validate_plane(extracted.input, alpha)?;
+            validate_plane_state(extracted.input, alpha)?;
         }
     }
     Ok(ValidatedAv1 { portable_still })

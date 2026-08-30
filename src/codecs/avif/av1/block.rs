@@ -2952,6 +2952,25 @@ pub(super) struct RectangularNeighbors<'a> {
     pub(super) left_bottom: Option<&'a FirstLeaf>,
 }
 
+/// Frame-level delta-loop-filter syntax with tile-local accumulator state
+/// intentionally kept outside retained CDF snapshots.
+#[derive(Clone, Copy)]
+struct DeltaLfSyntax {
+    present: bool,
+    resolution_log2: u32,
+    multi: bool,
+    monochrome: bool,
+}
+
+impl DeltaLfSyntax {
+    const DISABLED: Self = Self {
+        present: false,
+        resolution_log2: 0,
+        multi: false,
+        monochrome: false,
+    };
+}
+
 /// Canonical block-level adaptive state retained by an AV1 reference frame.
 ///
 /// The working decoder still carries a number of fixture-era duplicate
@@ -2964,10 +2983,11 @@ pub(super) struct BlockCdfState {
     transform_type: super::coefficient_cdfs::TransformTypeCdfs,
     skip: [[u16; 2]; 3],
     delta_q: [u16; 4],
+    delta_lf: [[u16; 4]; 5],
     transform_size: [[[u16; 4]; 3]; 4],
     /// Key/intra luma-mode (`kfym`) state.  This is consumed by key and
     /// intra-only tiles but is intentionally not replaced during reference
-    /// CDF publication, matching rav1d's thread-update contract.
+    /// CDF publication, matching scalar dav1d's context-update boundary.
     luma_mode: [[u16; 13]; 25],
     luma_angle: [[u16; 7]; 8],
     chroma_mode: [[u16; 13]; 13],
@@ -2993,7 +3013,7 @@ impl BlockCdfState {
         let luma_mode = self.luma_mode;
         *self = adapted.clone();
         self.reset_counts();
-        // `kfym` is outside rav1d's intra publication/reset subset: retain
+        // `kfym` is outside scalar dav1d's publication/reset subset: retain
         // both its probabilities and the adaptation counts from the input.
         self.luma_mode = luma_mode;
     }
@@ -3089,6 +3109,9 @@ impl BlockCdfState {
             reset(cdf, 1);
         }
         reset(&mut self.delta_q, 3);
+        for cdf in &mut self.delta_lf {
+            reset(cdf, 3);
+        }
         for (row, contexts) in self.transform_size.iter_mut().enumerate() {
             let count_index = row.saturating_add(1).min(2);
             for cdf in contexts {
@@ -3141,6 +3164,9 @@ struct BlockCdfs {
     transform_type: super::coefficient_cdfs::TransformTypeCdfs,
     skip: [[u16; 2]; 3],
     delta_q: [u16; 4],
+    delta_lf: [[u16; 4]; 5],
+    delta_lf_syntax: DeltaLfSyntax,
+    last_delta_lf: [i32; 4],
     /// `txsz[max_tx.max - 1][tx_context]` from AV1's frame CDF.
     transform_size: [[[u16; 4]; 3]; 4],
     luma_mode: [[u16; 13]; 25],
@@ -5832,6 +5858,7 @@ impl BlockCdfs {
             transform_type: self.transform_type.clone(),
             skip: self.skip,
             delta_q: self.delta_q,
+            delta_lf: self.delta_lf,
             transform_size: self.transform_size,
             luma_mode: self.luma_mode,
             luma_angle: self.luma_angle,
@@ -5853,6 +5880,7 @@ impl BlockCdfs {
         self.transform_type = snapshot.transform_type.clone();
         self.skip = snapshot.skip;
         self.delta_q = snapshot.delta_q;
+        self.delta_lf = snapshot.delta_lf;
         self.transform_size = snapshot.transform_size;
         self.luma_mode = snapshot.luma_mode;
         self.luma_angle = snapshot.luma_angle;
@@ -5877,6 +5905,9 @@ impl BlockCdfs {
             transform_type: super::coefficient_cdfs::DEFAULT_TRANSFORM_TYPE_CDFS.clone(),
             skip: [[1_097, 0], [16_253, 0], [28_192, 0]],
             delta_q: [4_608, 648, 91, 0],
+            delta_lf: [[4_608, 648, 91, 0]; 5],
+            delta_lf_syntax: DeltaLfSyntax::DISABLED,
+            last_delta_lf: [0; 4],
             transform_size: TRANSFORM_SIZE_CDF,
             luma_mode: [
                 // `dav1d_intra_mode_context` maps the above and left modes to
@@ -9100,6 +9131,55 @@ fn decode_delta_q(
     } else {
         Ok(initial_qindex.saturating_add(delta).clamp(1, 255))
     }
+}
+
+// ✅ VERIFIED: AV1 specification `read_delta_lf`; rav1d-safe 0.5.7
+// `decode.rs:1574-1610`. The accumulator is initialized once per tile and
+// carries across superblocks; only the delta-q-owned read opportunity is
+// consumed per superblock.
+fn decode_delta_lf(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+) -> PortableResult<()> {
+    let syntax = cdfs.delta_lf_syntax;
+    if !syntax.present {
+        return Ok(());
+    }
+    let component_count = if syntax.multi {
+        if syntax.monochrome { 2 } else { 4 }
+    } else {
+        1
+    };
+    for component in 0..component_count {
+        let row = component.saturating_add(usize::from(syntax.multi));
+        let symbol = decoder.adaptive_symbol(cdfs.delta_lf.get_mut(row).portable()?, 3);
+        let magnitude = if symbol == 3 {
+            let bit_count = decoder.bits(3).saturating_add(1);
+            decoder
+                .bits(bit_count)
+                .checked_add(1)
+                .and_then(|value| value.checked_add(1_u32.checked_shl(bit_count)?))
+                .portable()?
+        } else {
+            symbol
+        };
+        if magnitude == 0 {
+            continue;
+        }
+        let magnitude = i64::from(magnitude.checked_shl(syntax.resolution_log2).portable()?);
+        let delta = if decoder.equal() {
+            magnitude.saturating_neg()
+        } else {
+            magnitude
+        };
+        cdfs.last_delta_lf[component] = i32::try_from(
+            i64::from(cdfs.last_delta_lf[component])
+                .saturating_add(delta)
+                .clamp(-63, 63),
+        )
+        .map_err(|_| PortableUnavailable)?;
+    }
+    Ok(())
 }
 
 const LOSSY_LUMA_8X8_SCAN: [u16; 64] = [
@@ -18763,6 +18843,9 @@ fn decode_intra_header(
         effective_quantization_syntax,
         tools.sample_depth,
     )?;
+    if lossy_quantization.delta_q_present {
+        decode_delta_lf(decoder, cdfs)?;
+    }
     let tile_qindex = lossy_quantization.qindex;
     lossy_quantization.qindex = u32::try_from(
         i64::from(tile_qindex)
@@ -48096,6 +48179,36 @@ impl Lossy420Decoder {
 
     pub(super) fn cdf_state(&self) -> BlockCdfState {
         self.cdfs.snapshot()
+    }
+
+    /// Configure the frame syntax and initialize the tile-local delta-LF
+    /// accumulator. This is called exactly once for each independently
+    /// initialized tile entropy decoder.
+    pub(super) fn configure_delta_lf(
+        &mut self,
+        present: bool,
+        resolution_log2: u32,
+        multi: bool,
+        monochrome: bool,
+    ) {
+        self.cdfs.delta_lf_syntax = DeltaLfSyntax {
+            present,
+            resolution_log2,
+            multi,
+            monochrome,
+        };
+        self.cdfs.last_delta_lf = [0; 4];
+    }
+
+    /// Return the four effective dynamic components used by loop filtering.
+    /// A single-component stream applies accumulator zero to every plane and
+    /// direction without duplicating adaptive state.
+    pub(super) fn loop_delta_lf(&self) -> [i32; 4] {
+        if self.cdfs.delta_lf_syntax.multi {
+            self.cdfs.last_delta_lf
+        } else {
+            [self.cdfs.last_delta_lf[0]; 4]
+        }
     }
 
     /// Select the segment effects for the next block. Segment selection is

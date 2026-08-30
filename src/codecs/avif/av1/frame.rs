@@ -4,10 +4,13 @@ use std::{ops::Range, sync::Arc};
 
 use super::bit_reader::{BitReader, SegmentedData};
 use super::entropy;
+use super::geometry::PixelLayout;
+use super::sample_depth::SampleDepth;
 use super::sequence::SequenceHeader;
 #[cfg(coverage)]
 use super::sequence::{DecoderParameters, OperatingPoint, Timing};
 use super::{Av1Result, malformed};
+use crate::codecs::CodecError;
 #[cfg(coverage)]
 use crate::codecs::avif::samples::ByteSpan;
 
@@ -366,21 +369,384 @@ impl FrameHeader {
     }
 }
 
+/// One checked owned plane of an AV1 decoded frame.
+#[derive(Clone)]
+struct FramePlane {
+    width: u32,
+    height: u32,
+    stride: usize,
+    samples: Vec<u16>,
+}
+
+impl FramePlane {
+    fn validate_reconstructed(
+        source: &super::block::ReconstructedPlane,
+        width: u32,
+        height: u32,
+        depth: SampleDepth,
+    ) -> Av1Result<usize> {
+        let stride =
+            usize::try_from(width).map_err(|_| malformed("reference plane width exceeds usize"))?;
+        let height_usize = usize::try_from(height)
+            .map_err(|_| malformed("reference plane height exceeds usize"))?;
+        let length = stride
+            .checked_mul(height_usize)
+            .ok_or_else(|| malformed("reference plane size overflows usize"))?;
+        if width == 0
+            || height == 0
+            || source.samples.len() != length
+            || source
+                .samples
+                .iter()
+                .any(|&sample| depth.validate(sample).is_none())
+        {
+            return Err(malformed("reference plane has invalid samples or extent"));
+        }
+        Ok(stride)
+    }
+
+    fn from_validated(
+        source: super::block::ReconstructedPlane,
+        width: u32,
+        height: u32,
+        stride: usize,
+    ) -> Self {
+        Self {
+            width,
+            height,
+            stride,
+            samples: source.samples,
+        }
+    }
+
+    fn reconstructed_copy(&self) -> Av1Result<super::block::ReconstructedPlane> {
+        let width = usize::try_from(self.width)
+            .map_err(|_| malformed("display plane width exceeds usize"))?;
+        let height = usize::try_from(self.height)
+            .map_err(|_| malformed("display plane height exceeds usize"))?;
+        let length = self
+            .stride
+            .checked_mul(height)
+            .ok_or_else(|| malformed("display plane size overflows usize"))?;
+        if self.stride < width || self.samples.len() != length {
+            return Err(malformed("display plane has invalid retained geometry"));
+        }
+        let mut samples = Vec::new();
+        samples.try_reserve_exact(length).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 display plane".to_owned())
+        })?;
+        samples.extend_from_slice(&self.samples);
+        Ok(super::block::ReconstructedPlane { samples })
+    }
+}
+
+/// Restored, upscaled, ungrained AV1 picture retained by reference slots.
+/// Render dimensions are presentation metadata and never redefine storage.
+struct FrameSurface {
+    depth: SampleDepth,
+    layout: PixelLayout,
+    coded_width: u32,
+    upscaled_width: u32,
+    frame_height: u32,
+    render_width: u32,
+    render_height: u32,
+    planes: [Option<FramePlane>; 3],
+    #[cfg(coverage)]
+    entropy_operations: Vec<crate::Av1EntropyOperationState>,
+}
+
+impl FrameSurface {
+    fn plane_dimensions(
+        layout: PixelLayout,
+        width: u32,
+        height: u32,
+        plane: usize,
+    ) -> Option<(u32, u32)> {
+        if plane == 0 {
+            return Some((width, height));
+        }
+        match layout {
+            PixelLayout::Monochrome => None,
+            PixelLayout::I420 => Some((width.div_ceil(2), height.div_ceil(2))),
+            PixelLayout::I422 => Some((width.div_ceil(2), height)),
+            PixelLayout::I444 => Some((width, height)),
+        }
+    }
+
+    fn validate_color_leaf(
+        leaf: &super::block::FirstLeaf,
+        header: &FrameHeader,
+        sequence: &SequenceHeader,
+    ) -> Av1Result<(SampleDepth, PixelLayout, [usize; 3])> {
+        let depth = SampleDepth::new(sequence.bit_depth)
+            .ok_or_else(|| malformed("reference surface sample depth is unsupported"))?;
+        let layout = PixelLayout::from_sequence(
+            sequence.monochrome,
+            sequence.subsampling_x,
+            sequence.subsampling_y,
+        )
+        .ok_or_else(|| malformed("reference surface layout is unsupported"))?;
+        if matches!(layout, PixelLayout::Monochrome)
+            || leaf.width != header.upscaled_width
+            || leaf.height != header.frame_height
+            || header.render_width == 0
+            || header.render_height == 0
+        {
+            return Err(malformed(
+                "decoded color surface disagrees with its frame header",
+            ));
+        }
+        let mut strides = [0_usize; 3];
+        for (plane, source) in leaf.planes.iter().enumerate() {
+            let (width, height) =
+                Self::plane_dimensions(layout, header.upscaled_width, header.frame_height, plane)
+                    .ok_or_else(|| malformed("color surface unexpectedly omits chroma"))?;
+            strides[plane] = FramePlane::validate_reconstructed(source, width, height, depth)?;
+        }
+        Ok((depth, layout, strides))
+    }
+
+    fn from_validated_color_leaf(
+        leaf: super::block::FirstLeaf,
+        header: &FrameHeader,
+        depth: SampleDepth,
+        layout: PixelLayout,
+        strides: [usize; 3],
+    ) -> Self {
+        let chroma_width = if matches!(layout, PixelLayout::I420 | PixelLayout::I422) {
+            header.upscaled_width.div_ceil(2)
+        } else {
+            header.upscaled_width
+        };
+        let chroma_height = if matches!(layout, PixelLayout::I420) {
+            header.frame_height.div_ceil(2)
+        } else {
+            header.frame_height
+        };
+        #[cfg(coverage)]
+        let entropy_operations = leaf.entropy_operations;
+        let [y, u, v] = leaf.planes;
+        let [y_stride, u_stride, v_stride] = strides;
+        let planes = [
+            Some(FramePlane::from_validated(
+                y,
+                header.upscaled_width,
+                header.frame_height,
+                y_stride,
+            )),
+            Some(FramePlane::from_validated(
+                u,
+                chroma_width,
+                chroma_height,
+                u_stride,
+            )),
+            Some(FramePlane::from_validated(
+                v,
+                chroma_width,
+                chroma_height,
+                v_stride,
+            )),
+        ];
+        Self {
+            depth,
+            layout,
+            coded_width: header.frame_width,
+            upscaled_width: header.upscaled_width,
+            frame_height: header.frame_height,
+            render_width: header.render_width,
+            render_height: header.render_height,
+            planes,
+            #[cfg(coverage)]
+            entropy_operations,
+        }
+    }
+
+    fn validate_monochrome_plane(
+        plane: &super::block::ReconstructedPlane,
+        header: &FrameHeader,
+        sequence: &SequenceHeader,
+    ) -> Av1Result<(SampleDepth, usize)> {
+        let depth = SampleDepth::new(sequence.bit_depth)
+            .ok_or_else(|| malformed("monochrome reference depth is unsupported"))?;
+        if !sequence.monochrome
+            || header.frame_width != header.upscaled_width
+            || header.render_width == 0
+            || header.render_height == 0
+        {
+            return Err(malformed(
+                "decoded monochrome surface disagrees with its frame header",
+            ));
+        }
+        let stride = FramePlane::validate_reconstructed(
+            plane,
+            header.upscaled_width,
+            header.frame_height,
+            depth,
+        )?;
+        Ok((depth, stride))
+    }
+
+    fn from_validated_monochrome_plane(
+        plane: super::block::ReconstructedPlane,
+        header: &FrameHeader,
+        depth: SampleDepth,
+        stride: usize,
+    ) -> Self {
+        Self {
+            depth,
+            layout: PixelLayout::Monochrome,
+            coded_width: header.frame_width,
+            upscaled_width: header.upscaled_width,
+            frame_height: header.frame_height,
+            render_width: header.render_width,
+            render_height: header.render_height,
+            planes: [
+                Some(FramePlane::from_validated(
+                    plane,
+                    header.upscaled_width,
+                    header.frame_height,
+                    stride,
+                )),
+                None,
+                None,
+            ],
+            #[cfg(coverage)]
+            entropy_operations: Vec::new(),
+        }
+    }
+
+    fn validate(&self) -> Av1Result<()> {
+        if !matches!(self.depth.bits(), 8 | 10 | 12)
+            || self.coded_width == 0
+            || self.coded_width > self.upscaled_width
+            || self.upscaled_width == 0
+            || self.frame_height == 0
+            || self.render_width == 0
+            || self.render_height == 0
+        {
+            return Err(malformed("retained frame surface has invalid metadata"));
+        }
+        for (plane, retained) in self.planes.iter().enumerate() {
+            let expected =
+                Self::plane_dimensions(self.layout, self.upscaled_width, self.frame_height, plane);
+            match (expected, retained) {
+                (None, None) => {}
+                (Some((width, height)), Some(retained)) => {
+                    let width_usize = usize::try_from(width)
+                        .map_err(|_| malformed("retained plane width exceeds usize"))?;
+                    let height_usize = usize::try_from(height)
+                        .map_err(|_| malformed("retained plane height exceeds usize"))?;
+                    let length = retained
+                        .stride
+                        .checked_mul(height_usize)
+                        .ok_or_else(|| malformed("retained plane size overflows usize"))?;
+                    if retained.width != width
+                        || retained.height != height
+                        || retained.stride < width_usize
+                        || retained.samples.len() != length
+                    {
+                        return Err(malformed("retained frame plane has invalid geometry"));
+                    }
+                }
+                _ => return Err(malformed("retained frame surface has invalid plane layout")),
+            }
+        }
+        Ok(())
+    }
+
+    fn materialize(&self) -> Av1Result<SelectedDisplay> {
+        self.validate()?;
+        if matches!(self.layout, PixelLayout::Monochrome) {
+            return Ok(SelectedDisplay {
+                color_leaf: None,
+                monochrome_plane: self.planes[0]
+                    .as_ref()
+                    .map(FramePlane::reconstructed_copy)
+                    .transpose()?,
+                dimensions: Some((self.upscaled_width, self.frame_height)),
+            });
+        }
+        let planes = [
+            self.planes[0]
+                .as_ref()
+                .ok_or_else(|| malformed("display surface omits luma"))?
+                .reconstructed_copy()?,
+            self.planes[1]
+                .as_ref()
+                .ok_or_else(|| malformed("display surface omits first chroma"))?
+                .reconstructed_copy()?,
+            self.planes[2]
+                .as_ref()
+                .ok_or_else(|| malformed("display surface omits second chroma"))?
+                .reconstructed_copy()?,
+        ];
+        Ok(SelectedDisplay {
+            color_leaf: Some(super::block::FirstLeaf {
+                width: self.upscaled_width,
+                height: self.frame_height,
+                block_skipped: false,
+                planes,
+                luma_predictor: super::block::LumaPredictor::Dc,
+                chroma_predictor: None,
+                luma_context: 0x40,
+                chroma_contexts: [0x40; 2],
+                chroma_right_contexts: [[0x40; 16]; 2],
+                chroma_bottom_contexts: [[0x40; 16]; 2],
+                tx_context_width: 0,
+                tx_context_height: 0,
+                luma_transform_split: false,
+                luma_right_contexts: [0x40; 16],
+                luma_bottom_contexts: [0x40; 16],
+                wide_coefficient_contexts: None,
+                palette_cache: Default::default(),
+                #[cfg(coverage)]
+                entropy_operations: self.entropy_operations.clone(),
+            }),
+            monochrome_plane: None,
+            dimensions: Some((self.upscaled_width, self.frame_height)),
+        })
+    }
+}
+
+pub(super) struct SelectedDisplay {
+    pub(super) color_leaf: Option<super::block::FirstLeaf>,
+    pub(super) monochrome_plane: Option<super::block::ReconstructedPlane>,
+    pub(super) dimensions: Option<(u32, u32)>,
+}
+
+impl SelectedDisplay {
+    const fn unavailable() -> Self {
+        Self {
+            color_leaf: None,
+            monochrome_plane: None,
+            dimensions: None,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct FrameCompletion {
+    surface: Option<Arc<FrameSurface>>,
+    temporal_unit: u64,
+    temporal_id: u32,
+    spatial_id: u32,
+    film_grain: Option<FilmGrain>,
+    show_existing: bool,
+    diagnostic_leaf: Option<super::block::FirstLeaf>,
+    diagnostic_frame_dimensions: Option<(u32, u32)>,
+}
+
 #[derive(Clone)]
 struct ReferenceDecodeState {
     cdfs: entropy::FrameCdfs,
     segmentation_map: Option<entropy::SegmentMap>,
-    #[expect(
-        dead_code,
-        reason = "retained reference pixels are consumed by the following inter-prediction slice"
-    )]
-    surface: Option<super::block::FirstLeaf>,
 }
 
 #[derive(Clone)]
 struct ReferenceState {
     header: FrameHeader,
     decode: Option<Arc<ReferenceDecodeState>>,
+    surface: Option<Arc<FrameSurface>>,
 }
 
 fn invalidate_reference_slots(
@@ -413,6 +779,9 @@ fn invalidate_reference_slots(
 
 struct PendingFrame {
     header: FrameHeader,
+    obu_extension: bool,
+    staged_references: [Option<ReferenceState>; REFERENCE_SLOTS],
+    staged_current_frame_id: Option<u32>,
     next_tile: u32,
     input_cdfs: Option<entropy::FrameCdfs>,
     selected_cdfs: Option<entropy::FrameCdfs>,
@@ -427,28 +796,26 @@ struct PendingFrame {
 
 pub(super) struct FrameState {
     sequence: Option<SequenceHeader>,
+    operating_point_idc: u32,
+    has_nonzero_operating_point_idc: bool,
     references: [Option<ReferenceState>; REFERENCE_SLOTS],
     pending: Option<PendingFrame>,
     current_frame_id: Option<u32>,
-    frame_dimensions: Option<(u32, u32)>,
-    multi_tile: bool,
-    first_leaf: Option<super::block::FirstLeaf>,
-    complete_color_leaf: Option<super::block::FirstLeaf>,
-    complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+    temporal_unit: u64,
+    completions: Vec<FrameCompletion>,
 }
 
 impl FrameState {
     pub(super) fn new() -> Self {
         Self {
             sequence: None,
+            operating_point_idc: 0,
+            has_nonzero_operating_point_idc: false,
             references: std::array::from_fn(|_| None),
             pending: None,
             current_frame_id: None,
-            frame_dimensions: None,
-            multi_tile: false,
-            first_leaf: None,
-            complete_color_leaf: None,
-            complete_monochrome_plane: None,
+            temporal_unit: 0,
+            completions: Vec::new(),
         }
     }
 
@@ -460,7 +827,59 @@ impl FrameState {
         {
             return Err(malformed("frame syntax validation failed"));
         }
+        self.operating_point_idc = sequence
+            .operating_points
+            .first()
+            .map_or(0, |operating_point| operating_point.idc);
+        self.has_nonzero_operating_point_idc = sequence
+            .operating_points
+            .iter()
+            .any(|operating_point| operating_point.idc != 0);
         self.sequence = Some(sequence);
+        Ok(())
+    }
+
+    /// Apply the selected operating point to one layer-specific OBU after its
+    /// header and payload bounds have already been validated.
+    pub(super) fn admits_layer_specific_obu(
+        &self,
+        has_extension: bool,
+        temporal_id: u32,
+        spatial_id: u32,
+    ) -> Av1Result<bool> {
+        if self.sequence.is_none() {
+            return Err(malformed(
+                "layer-specific OBU appears before a sequence header",
+            ));
+        }
+        if self.has_nonzero_operating_point_idc != has_extension {
+            return Err(malformed(
+                "layer OBU extension disagrees with sequence operating points",
+            ));
+        }
+        if self.operating_point_idc == 0 {
+            return Ok(true);
+        }
+        let temporal_member = self
+            .operating_point_idc
+            .checked_shr(temporal_id)
+            .is_some_and(|mask| mask & 1 != 0);
+        let spatial_bit = spatial_id.saturating_add(8);
+        let spatial_member = self
+            .operating_point_idc
+            .checked_shr(spatial_bit)
+            .is_some_and(|mask| mask & 1 != 0);
+        Ok(temporal_member && spatial_member)
+    }
+
+    fn advance_temporal_unit(&mut self, stage: &'static str) -> Av1Result<()> {
+        if self.pending.is_some() {
+            return Err(malformed(stage));
+        }
+        self.temporal_unit = self
+            .temporal_unit
+            .checked_add(1)
+            .ok_or_else(|| malformed("temporal-unit counter overflows"))?;
         Ok(())
     }
 
@@ -469,6 +888,21 @@ impl FrameState {
             return Err(malformed(
                 "temporal delimiter appears during a pending frame",
             ));
+        }
+        Ok(())
+    }
+
+    /// Finish the one temporal unit carried by an AVIF sample. A temporal
+    /// delimiter inside that sample validates placement but does not create a
+    /// second boundary.
+    pub(super) fn sample_flush(&mut self) -> Av1Result<()> {
+        self.advance_temporal_unit("AVIF sample ends during a pending frame")?;
+        if self.completions.len() > 1
+            && let Some(selected_index) = self.selected_completion_index()
+        {
+            let selected = self.completions.swap_remove(selected_index);
+            self.completions.clear();
+            self.completions.push(selected);
         }
         Ok(())
     }
@@ -483,24 +917,47 @@ impl FrameState {
         Ok(sequence)
     }
 
-    pub(super) fn first_leaf(&self) -> Option<&super::block::FirstLeaf> {
-        self.first_leaf.as_ref()
+    fn selected_completion_index(&self) -> Option<usize> {
+        self.completions
+            .iter()
+            .enumerate()
+            .max_by_key(|(index, completion)| {
+                (
+                    completion.temporal_unit,
+                    completion.spatial_id,
+                    completion.temporal_id,
+                    *index,
+                )
+            })
+            .map(|(index, _)| index)
     }
 
-    pub(super) fn complete_color_leaf(&self) -> Option<&super::block::FirstLeaf> {
-        self.complete_color_leaf.as_ref()
+    fn selected_completion(&self) -> Option<&FrameCompletion> {
+        self.selected_completion_index()
+            .and_then(|index| self.completions.get(index))
     }
 
-    pub(super) const fn frame_dimensions(&self) -> Option<(u32, u32)> {
-        self.frame_dimensions
-    }
-
-    pub(super) const fn has_multiple_tiles(&self) -> bool {
-        self.multi_tile
-    }
-
-    pub(super) fn complete_monochrome_plane(&self) -> Option<&super::block::ReconstructedPlane> {
-        self.complete_monochrome_plane.as_ref()
+    pub(super) fn selected_display(&self) -> Av1Result<SelectedDisplay> {
+        let Some(completion) = self.selected_completion() else {
+            return Ok(SelectedDisplay::unavailable());
+        };
+        if completion.show_existing && completion.diagnostic_leaf.is_some() {
+            return Err(malformed(
+                "show-existing completion contains diagnostic reconstruction",
+            ));
+        }
+        if completion.film_grain.is_some() {
+            return Ok(SelectedDisplay::unavailable());
+        }
+        if let Some(surface) = completion.surface.as_deref() {
+            surface.materialize()
+        } else {
+            Ok(SelectedDisplay {
+                color_leaf: completion.diagnostic_leaf.clone(),
+                monochrome_plane: None,
+                dimensions: completion.diagnostic_frame_dimensions,
+            })
+        }
     }
 
     pub(super) fn frame_obu(
@@ -508,10 +965,19 @@ impl FrameState {
         data: &SegmentedData<'_, '_>,
         start: usize,
         end: usize,
+        has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
     ) -> Av1Result<()> {
-        let mut reader = self.begin_frame(data, start, end, temporal_id, spatial_id, false)?;
+        let mut reader = self.begin_frame(
+            data,
+            start,
+            end,
+            has_extension,
+            temporal_id,
+            spatial_id,
+            false,
+        )?;
         if self
             .pending
             .as_ref()
@@ -529,11 +995,20 @@ impl FrameState {
         data: &SegmentedData<'_, '_>,
         start: usize,
         end: usize,
+        has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
         redundant: bool,
     ) -> Av1Result<()> {
-        let mut reader = self.begin_frame(data, start, end, temporal_id, spatial_id, redundant)?;
+        let mut reader = self.begin_frame(
+            data,
+            start,
+            end,
+            has_extension,
+            temporal_id,
+            spatial_id,
+            redundant,
+        )?;
         reader.trailing_bits()?;
         self.complete_show_existing()
     }
@@ -543,7 +1018,11 @@ impl FrameState {
         data: &SegmentedData<'_, '_>,
         start: usize,
         end: usize,
+        has_extension: bool,
+        temporal_id: u32,
+        spatial_id: u32,
     ) -> Av1Result<()> {
+        self.validate_pending_layer(has_extension, temporal_id, spatial_id)?;
         let mut reader = BitReader::new(data, start, end)?;
         let group = self.read_tile_group(data, &mut reader, end)?;
         self.accept_tile_group(group)
@@ -554,6 +1033,7 @@ impl FrameState {
         data: &'data SegmentedData<'input, 'spans>,
         start: usize,
         end: usize,
+        has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
         redundant: bool,
@@ -565,7 +1045,12 @@ impl FrameState {
             let Some(pending) = self.pending.as_ref() else {
                 return Err(malformed("redundant frame header has no pending frame"));
             };
-            let references = self.reference_headers();
+            self.validate_pending_layer(has_extension, temporal_id, spatial_id)?;
+            let references = std::array::from_fn(|index| {
+                pending.staged_references[index]
+                    .as_ref()
+                    .map(|reference| reference.header.clone())
+            });
             let (header, reader) = parse(
                 data,
                 start,
@@ -596,6 +1081,7 @@ impl FrameState {
         self.accept_parsed_header(
             sequence.frame_id_numbers_present,
             sequence.frame_id_bits,
+            has_extension,
             header,
         )?;
         Ok(reader)
@@ -605,6 +1091,7 @@ impl FrameState {
         &mut self,
         frame_id_numbers_present: bool,
         frame_id_bits: u32,
+        obu_extension: bool,
         header: FrameHeader,
     ) -> Av1Result<()> {
         let mut references = self.references.clone();
@@ -657,15 +1144,13 @@ impl FrameState {
                 .map_or(0, |quantization| quantization.base);
             Some(entropy::FrameCdfs::defaults(qindex)?)
         } else {
-            primary_decode
-                .filter(|decode| decode.cdfs.supports_primary_reference())
-                .map(|decode| decode.cdfs.clone())
+            primary_decode.map(|decode| decode.cdfs.clone())
         };
-        self.references = references;
-        self.current_frame_id = current_frame_id;
-        self.frame_dimensions = Some((header.frame_width, header.frame_height));
         self.pending = Some(PendingFrame {
             header,
+            obu_extension,
+            staged_references: references,
+            staged_current_frame_id: current_frame_id,
             next_tile: 0,
             input_cdfs,
             selected_cdfs: None,
@@ -677,9 +1162,27 @@ impl FrameState {
             complete_color_tiles: Vec::new(),
             complete_monochrome_plane: None,
         });
-        self.first_leaf = None;
-        self.complete_color_leaf = None;
-        self.complete_monochrome_plane = None;
+        Ok(())
+    }
+
+    fn validate_pending_layer(
+        &self,
+        has_extension: bool,
+        temporal_id: u32,
+        spatial_id: u32,
+    ) -> Av1Result<()> {
+        let pending = self
+            .pending
+            .as_ref()
+            .ok_or(malformed("layer OBU has no pending frame"))?;
+        if pending.obu_extension != has_extension
+            || pending.header.temporal_id != temporal_id
+            || pending.header.spatial_id != spatial_id
+        {
+            return Err(malformed(
+                "frame header and tile group layer identities disagree",
+            ));
+        }
         Ok(())
     }
 
@@ -703,22 +1206,43 @@ impl FrameState {
             return Err(malformed("show-existing frame omits its reference slot"));
         };
         // `slot` is read from a three-bit AV1 syntax element.
-        let Some(reference) = self.references[slot].as_ref() else {
+        let Some(reference) = pending.staged_references[slot].as_ref() else {
             return Err(malformed("show-existing frame references an empty slot"));
         };
         let reference = reference.clone();
         if !reference.header.showable_frame {
             return Err(malformed("frame syntax validation failed"));
         }
+        self.completions.try_reserve(1).map_err(|_| {
+            CodecError::Dimensions("unable to reserve AV1 frame completion".to_owned())
+        })?;
+        let completion = FrameCompletion {
+            surface: reference.surface.clone(),
+            temporal_unit: self.temporal_unit,
+            temporal_id: header.temporal_id,
+            spatial_id: header.spatial_id,
+            film_grain: reference.header.film_grain.clone(),
+            show_existing: true,
+            diagnostic_leaf: None,
+            diagnostic_frame_dimensions: None,
+        };
+        let pending = self
+            .pending
+            .take()
+            .ok_or(malformed("show-existing completion disappeared"))?;
+        let mut references = pending.staged_references;
         if reference.header.frame_type == FrameType::Key {
             let mut hidden = reference;
             hidden.header.showable_frame = false;
-            self.references = std::array::from_fn(|_| Some(hidden.clone()));
+            references = std::array::from_fn(|_| Some(hidden.clone()));
         }
-        self.pending = None;
+        self.references = references;
+        self.current_frame_id = pending.staged_current_frame_id;
+        self.completions.push(completion);
         Ok(())
     }
 
+    #[cfg(coverage)]
     fn invalidate_old_references(&mut self, frame_id: u32) {
         // This method is called only after `begin_frame` has obtained the
         // active sequence header.
@@ -762,6 +1286,9 @@ impl FrameState {
             return Err(malformed("frame syntax validation failed"));
         }
         if end >= tile_count {
+            return Err(malformed("frame syntax validation failed"));
+        }
+        if start != pending.next_tile {
             return Err(malformed("frame syntax validation failed"));
         }
         bits.byte_align()?;
@@ -817,6 +1344,14 @@ impl FrameState {
                 .pending
                 .as_mut()
                 .ok_or(malformed("accepted tile group disappeared"))?;
+            pending
+                .complete_color_tiles
+                .try_reserve(group.complete_color_tiles.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to reserve reconstructed AV1 tile state".to_owned(),
+                    )
+                })?;
             pending.next_tile = next_tile;
             pending.first_leaf = pending.first_leaf.take().or(group.first_leaf);
             pending.complete_color_leaf = pending
@@ -834,7 +1369,6 @@ impl FrameState {
             let previous_segment_map = pending.segment_map.take();
             pending.segment_map = group.segment_map.or(previous_segment_map);
             pending.decode_complete &= group.decode_complete;
-            self.multi_tile |= tile_count > 1;
             return Ok(());
         }
 
@@ -857,8 +1391,65 @@ impl FrameState {
                 sequence,
             )?;
         }
-        // All fallible assembly is complete, so ownership can now move out of
-        // the pending frame without compromising tile-group rollback.
+        enum SurfacePlan {
+            Color {
+                depth: SampleDepth,
+                layout: PixelLayout,
+                strides: [usize; 3],
+            },
+            Monochrome {
+                depth: SampleDepth,
+                stride: usize,
+            },
+            None,
+        }
+        let sequence = self
+            .sequence
+            .as_ref()
+            .ok_or(malformed("completed frame has no sequence"))?;
+        let color_leaf = assembled_color_leaf
+            .as_ref()
+            .or(pending.complete_color_leaf.as_ref())
+            .or(group.complete_color_leaf.as_ref());
+        let monochrome_plane = pending
+            .complete_monochrome_plane
+            .as_ref()
+            .or(group.complete_monochrome_plane.as_ref());
+        let surface_plan = if let Some(leaf) = color_leaf {
+            let (depth, layout, strides) =
+                FrameSurface::validate_color_leaf(leaf, &pending.header, sequence)?;
+            SurfacePlan::Color {
+                depth,
+                layout,
+                strides,
+            }
+        } else if let Some(plane) = monochrome_plane {
+            let (depth, stride) =
+                FrameSurface::validate_monochrome_plane(plane, &pending.header, sequence)?;
+            SurfacePlan::Monochrome { depth, stride }
+        } else {
+            SurfacePlan::None
+        };
+        let has_first_leaf = pending.first_leaf.is_some() || group.first_leaf.is_some();
+        let diagnostic_fallback = matches!(surface_plan, SurfacePlan::None)
+            && has_first_leaf
+            && tile_count == 1
+            && pending.header.loop_filter.level_y == [0; 2]
+            && pending.header.loop_filter.level_u == 0
+            && pending.header.loop_filter.level_v == 0
+            && pending.header.cdef.is_none()
+            && !pending.header.superres_enabled
+            && pending.header.restoration.is_none()
+            && pending.header.film_grain.is_none();
+        if pending.header.show_frame {
+            self.completions.try_reserve(1).map_err(|_| {
+                CodecError::Dimensions("unable to reserve AV1 frame completion".to_owned())
+            })?;
+        }
+
+        // Assembly, surface validation, and completion reservation are all
+        // fallible. Ownership moves only after they succeed, making the state
+        // mutation below a single non-fallible commit.
         let pending = self
             .pending
             .take()
@@ -874,6 +1465,24 @@ impl FrameState {
         let segment_map = group.segment_map.or(pending.segment_map);
         let decode_complete = pending.decode_complete && group.decode_complete;
         let completed = pending.header;
+        let surface = match surface_plan {
+            SurfacePlan::Color {
+                depth,
+                layout,
+                strides,
+            } => complete_color_leaf.map(|leaf| {
+                Arc::new(FrameSurface::from_validated_color_leaf(
+                    leaf, &completed, depth, layout, strides,
+                ))
+            }),
+            SurfacePlan::Monochrome { depth, stride } => complete_monochrome_plane.map(|plane| {
+                Arc::new(FrameSurface::from_validated_monochrome_plane(
+                    plane, &completed, depth, stride,
+                ))
+            }),
+            SurfacePlan::None => None,
+        };
+        let mut references = pending.staged_references;
         if completed.refresh_frame_flags != 0 {
             let retained_cdfs = if completed.refresh_frame_context {
                 selected_cdfs
@@ -885,7 +1494,6 @@ impl FrameState {
                     Arc::new(ReferenceDecodeState {
                         cdfs,
                         segmentation_map: segment_map,
-                        surface: complete_color_leaf.clone(),
                     })
                 })
             } else {
@@ -894,18 +1502,31 @@ impl FrameState {
             let reference = ReferenceState {
                 header: completed.clone(),
                 decode,
+                surface: surface.clone(),
             };
-            for (slot, retained) in self.references.iter_mut().enumerate() {
+            for (slot, retained) in references.iter_mut().enumerate() {
                 let mask = 1_u8 << slot;
                 if completed.refresh_frame_flags & mask != 0 {
                     *retained = Some(reference.clone());
                 }
             }
         }
-        self.first_leaf = first_leaf;
-        self.complete_color_leaf = complete_color_leaf;
-        self.complete_monochrome_plane = complete_monochrome_plane;
-        self.multi_tile |= tile_count > 1;
+        if completed.show_frame {
+            let diagnostic_leaf = diagnostic_fallback.then_some(first_leaf).flatten();
+            self.completions.push(FrameCompletion {
+                surface,
+                temporal_unit: self.temporal_unit,
+                temporal_id: completed.temporal_id,
+                spatial_id: completed.spatial_id,
+                film_grain: completed.film_grain.clone(),
+                show_existing: false,
+                diagnostic_leaf,
+                diagnostic_frame_dimensions: diagnostic_fallback
+                    .then_some((completed.upscaled_width, completed.frame_height)),
+            });
+        }
+        self.references = references;
+        self.current_frame_id = pending.staged_current_frame_id;
         Ok(())
     }
 }
@@ -1398,7 +2019,6 @@ fn validate_tile_entropy_prefixes(
             previous_segment_map,
         )?;
         if let Some(mut reconstruction) = complete {
-            first_leaf = first_leaf.or_else(|| Some(reconstruction.leaf.clone()));
             let tile_cdfs = reconstruction
                 .cdfs
                 .take()
@@ -3017,6 +3637,7 @@ fn coverage_reference_states() -> [Option<ReferenceState>; 8] {
         header.map(|header| ReferenceState {
             header,
             decode: None,
+            surface: None,
         })
     })
 }
@@ -3030,6 +3651,9 @@ fn coverage_pending(header: FrameHeader) -> PendingFrame {
         .map_or(0, |quantization| quantization.base);
     PendingFrame {
         header,
+        obu_extension: false,
+        staged_references: std::array::from_fn(|_| None),
+        staged_current_frame_id: None,
         next_tile: 0,
         input_cdfs: entropy::FrameCdfs::defaults(qindex).ok(),
         selected_cdfs: None,
@@ -3109,9 +3733,9 @@ fn coverage_state_paths() {
     rejected_entropy.sequence = Some(sequence.clone());
     rejected_entropy.pending = Some(coverage_pending(entropy_header));
     assert!(coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8).is_ok());
-    let _ = state.begin_frame(&empty_data, 0, 0, 0, 0, false);
-    let _ = state.tile_group_obu(&empty_data, 0, 0);
-    let _ = state.tile_group_obu(&empty_data, 1, 0);
+    let _ = state.begin_frame(&empty_data, 0, 0, false, 0, 0, false);
+    let _ = state.tile_group_obu(&empty_data, 0, 0, false, 0, 0);
+    let _ = state.tile_group_obu(&empty_data, 1, 0, false, 0, 0);
     let _ = parse(
         &empty_data,
         1,
@@ -3132,7 +3756,12 @@ fn coverage_state_paths() {
     );
     let mut missing_sequence = FrameState::new();
     assert_eq!(
-        missing_sequence.accept_parsed_header(true, sequence.frame_id_bits, coverage_header()),
+        missing_sequence.accept_parsed_header(
+            true,
+            sequence.frame_id_bits,
+            false,
+            coverage_header(),
+        ),
         Ok(())
     );
     assert_eq!(state.temporal_delimiter(), Ok(()));
@@ -3153,16 +3782,22 @@ fn coverage_state_paths() {
     let mut shown = coverage_header();
     shown.show_existing_frame = true;
     shown.existing_frame_idx = Some(0);
-    state.pending = Some(coverage_pending(shown.clone()));
     state.references[0] = Some(ReferenceState {
         header: coverage_header(),
         decode: None,
+        surface: None,
     });
+    let mut shown_pending = coverage_pending(shown.clone());
+    shown_pending.staged_references = state.references.clone();
+    state.pending = Some(shown_pending);
     assert_eq!(state.complete_show_existing(), Ok(()));
-    state.pending = Some(coverage_pending(shown.clone()));
     state.references[0].as_mut().unwrap().header.showable_frame = false;
+    let mut unshowable_pending = coverage_pending(shown.clone());
+    unshowable_pending.staged_references = state.references.clone();
+    state.pending = Some(unshowable_pending);
     assert!(state.complete_show_existing().is_err());
     state.references[0] = None;
+    state.pending.as_mut().unwrap().staged_references = state.references.clone();
     assert!(state.complete_show_existing().is_err());
     shown.existing_frame_idx = None;
     state.pending = Some(coverage_pending(shown));
@@ -3177,8 +3812,11 @@ fn coverage_state_paths() {
     state.references[0] = Some(ReferenceState {
         header: key,
         decode: None,
+        surface: None,
     });
-    state.pending = Some(coverage_pending(shown_key));
+    let mut shown_key_pending = coverage_pending(shown_key);
+    shown_key_pending.staged_references = state.references.clone();
+    state.pending = Some(shown_key_pending);
     assert_eq!(state.complete_show_existing(), Ok(()));
     assert!(state.references.iter().all(|reference| {
         reference
@@ -3196,14 +3834,14 @@ fn coverage_state_paths() {
     state.references = coverage_reference_states();
     state.invalidate_old_references(1);
     assert_eq!(
-        state.accept_parsed_header(true, sequence.frame_id_bits, coverage_header()),
+        state.accept_parsed_header(true, sequence.frame_id_bits, false, coverage_header()),
         Ok(())
     );
     state.pending = None;
     let mut accepted_existing = coverage_header();
     accepted_existing.show_existing_frame = true;
     assert_eq!(
-        state.accept_parsed_header(true, sequence.frame_id_bits, accepted_existing),
+        state.accept_parsed_header(true, sequence.frame_id_bits, false, accepted_existing),
         Ok(())
     );
     state.pending = None;
@@ -3216,7 +3854,7 @@ fn coverage_state_paths() {
     repeated_id.frame_id = 3;
     assert!(
         invalid_id_state
-            .accept_parsed_header(true, sequence.frame_id_bits, repeated_id)
+            .accept_parsed_header(true, sequence.frame_id_bits, false, repeated_id)
             .is_err()
     );
 
@@ -3412,7 +4050,7 @@ fn coverage_state_paths() {
         }];
         let data = SegmentedData::new(frame, &spans).unwrap();
         assert_eq!(
-            animated_state.frame_obu(&data, 0, frame.len(), 0, 0),
+            animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
             Ok(())
         );
     }
@@ -3422,7 +4060,7 @@ fn coverage_state_paths() {
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show_existing, &show_spans).unwrap();
     assert_eq!(
-        animated_state.frame_header_obu(&show_data, 0, 1, 0, 0, false),
+        animated_state.frame_header_obu(&show_data, 0, 1, false, 0, 0, false),
         Ok(())
     );
     for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
@@ -3444,7 +4082,7 @@ fn coverage_state_paths() {
         }];
         let data = SegmentedData::new(frame, &spans).unwrap();
         assert_eq!(
-            animated_state.frame_obu(&data, 0, frame.len(), 0, 0),
+            animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
             Ok(())
         );
     }
@@ -3454,27 +4092,27 @@ fn coverage_state_paths() {
     direct.accept_sequence(parsed_sequence.clone()).unwrap();
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 0, 0, false)
+            .begin_frame(&data, frame_start, frame_end, false, 0, 0, false)
             .is_ok()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 0, 0, false)
+            .begin_frame(&data, frame_start, frame_end, false, 0, 0, false)
             .is_err()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 0, 0, true)
+            .begin_frame(&data, frame_start, frame_end, false, 0, 0, true)
             .is_ok()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 1, 0, true)
+            .begin_frame(&data, frame_start, frame_end, true, 1, 0, true)
             .is_err()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_start, 0, 0, true)
+            .begin_frame(&data, frame_start, frame_start, false, 0, 0, true)
             .is_err()
     );
 
@@ -3491,7 +4129,7 @@ fn coverage_state_paths() {
     let mut frame_id_state = FrameState::new();
     frame_id_state.accept_sequence(frame_id_sequence).unwrap();
     frame_id_state.current_frame_id = Some(3);
-    let _ = frame_id_state.begin_frame(&frame_id_data, 0, frame_with_id.len(), 0, 0, false);
+    let _ = frame_id_state.begin_frame(&frame_id_data, 0, frame_with_id.len(), false, 0, 0, false);
 
     let header_bits = direct.pending.as_ref().unwrap().header.header_bits;
     let header_length = header_bits.saturating_add(1).div_ceil(8);
@@ -3508,15 +4146,15 @@ fn coverage_state_paths() {
     let mut split = FrameState::new();
     split.accept_sequence(parsed_sequence.clone()).unwrap();
     assert_eq!(
-        split.frame_header_obu(&header_data, 0, reduced_header.len(), 0, 0, false),
+        split.frame_header_obu(&header_data, 0, reduced_header.len(), false, 0, 0, false,),
         Ok(())
     );
     assert_eq!(
-        split.frame_header_obu(&header_data, 0, reduced_header.len(), 0, 0, true),
+        split.frame_header_obu(&header_data, 0, reduced_header.len(), false, 0, 0, true,),
         Ok(())
     );
     assert!(matches!(
-        split.tile_group_obu(&header_data, 0, 0),
+        split.tile_group_obu(&header_data, 0, 0, false, 0, 0),
         Err(crate::codecs::CodecError::Malformed(message))
             if message.contains("tile payload is empty")
     ));
@@ -3526,11 +4164,16 @@ fn coverage_state_paths() {
     illegal_show.references[0] = Some(ReferenceState {
         header: coverage_header(),
         decode: None,
+        surface: None,
     });
     let show = [0x80];
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show, &show_spans).unwrap();
-    assert!(illegal_show.frame_obu(&show_data, 0, 1, 0, 0).is_err());
+    assert!(
+        illegal_show
+            .frame_obu(&show_data, 0, 1, false, 0, 0)
+            .is_err()
+    );
 
     let references = coverage_references();
     let mut show_existing = CoverageBitWriter::new();
