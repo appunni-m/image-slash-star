@@ -1154,21 +1154,16 @@ fn decode_complete_following_leaf(
     if above.is_none() && left.is_none() {
         return Ok(Err(super::block::PortableUnavailable));
     }
+    tools.skip_context = usize::from(above.is_some_and(|neighbor| neighbor.block_skipped))
+        .saturating_add(usize::from(
+            left.is_some_and(|neighbor| neighbor.block_skipped),
+        ));
 
-    let bottom_unit = node.y.saturating_add(node.height.saturating_sub(1));
-    let bottom_left = match left_x {
-        Some(x) => tile_state.neighbor_at_checked(x, bottom_unit)?,
-        None => None,
-    };
-    let tx_left = if above.is_some() {
-        left.or(bottom_left)
-    } else {
-        bottom_left
-    };
+    let tx_left = left;
     let above_palette = above
         .and_then(|neighbor| tile_state.block(neighbor.owner))
         .map(|block| block.palette_cache);
-    let left_palette = bottom_left
+    let left_palette = left
         .and_then(|neighbor| tile_state.block(neighbor.owner))
         .map(|block| block.palette_cache);
     tools.palette_context = super::block::PaletteNeighborContext::from_cache_states(
@@ -1309,7 +1304,7 @@ fn decode_complete_following_leaf(
         above_chroma_contexts,
         left_chroma_contexts,
     };
-    if super::block::uses_streamed_large_intra(node.block_size) {
+    if super::block::uses_streamed_intra(node.block_size) {
         Ok(block_decoder.decode_large_intra(
             decoder,
             node.block_size,
@@ -1483,17 +1478,27 @@ impl PartitionContexts {
         if above_value == 0xff || left_value == 0xff {
             return Err(malformed("partition context has no AV1 value"));
         }
-        let start_x = self.cell(x, y)?.0;
-        let end_x = self
-            .cell(x.saturating_add(width.saturating_sub(1)), y)?
-            .0
-            .saturating_add(1)
+        (width != 0 && height != 0)
+            .then_some(())
+            .ok_or_else(|| malformed("partition context footprint is empty"))?;
+        let (start_x, start_y) = self.cell(x, y)?;
+        // Terminal partition syntax retains its nominal coded footprint at a
+        // frame edge. Convert the exclusive endpoint without asking `cell`
+        // to validate an out-of-frame coordinate, then clip to the context
+        // surfaces: those unavailable cells can never be consumed later.
+        let end_x = x
+            .checked_add(width)
+            .and_then(|end| end.checked_sub(self.origin_x))
+            .map(|relative| relative.div_ceil(2))
+            .and_then(|end| usize::try_from(end).ok())
+            .ok_or_else(|| malformed("partition context x endpoint overflows"))?
             .min(self.above.len());
-        let start_y = self.cell(x, y)?.1;
-        let end_y = self
-            .cell(x, y.saturating_add(height.saturating_sub(1)))?
-            .1
-            .saturating_add(1)
+        let end_y = y
+            .checked_add(height)
+            .and_then(|end| end.checked_sub(self.origin_y))
+            .map(|relative| relative.div_ceil(2))
+            .and_then(|end| usize::try_from(end).ok())
+            .ok_or_else(|| malformed("partition context y endpoint overflows"))?
             .min(self.left.len());
         self.above[start_x..end_x].fill(above_value);
         self.left[start_y..end_y].fill(left_value);
@@ -2133,6 +2138,8 @@ pub(super) fn validate_complete_monochrome_partition(
                     enable_intra_edge_filter: context.enable_intra_edge_filter,
                     transform_mode: context.frame_tools.transform_mode,
                     transform_context: 0,
+                    skip_context: 0,
+                    suppress_delta_q_when_skipped: false,
                     palette_context: Default::default(),
                 };
                 let decoded = if leaves.is_empty() {
@@ -2251,7 +2258,9 @@ pub(super) fn validate_complete_lossy_420_partition(
     range: Range<usize>,
     context: &FirstBlockContext,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
-    if !complete_lossy_420_reconstruction_context(context) {
+    if !complete_lossy_420_reconstruction_context(context)
+        && !complete_streamed_lossless_color_context(context)
+    {
         return Ok(None);
     }
     let chroma_sampling = super::block::ChromaSampling::from_subsampling(
@@ -2275,6 +2284,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         enable_intra_edge_filter: context.enable_intra_edge_filter,
         transform_mode: context.frame_tools.transform_mode,
         transform_context: 0,
+        skip_context: 0,
+        suppress_delta_q_when_skipped: false,
         palette_context: Default::default(),
     };
     let root_level = context.level;
@@ -2350,6 +2361,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             block_decoder.begin_superblock(
                 context.frame_tools.cdef.map_or(0, |cdef| cdef.bits),
                 delta_q_at_root,
+                root_x,
+                root_y,
+                root_size,
             );
             walker.reset_root();
             walker.set_root_bounds(root_x, root_y, root_size)?;
@@ -2368,7 +2382,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 } else {
                     node.block_size
                 };
-                let streamed_large = super::block::uses_streamed_large_intra(syntax_block_size);
+                let streamed_large = super::block::uses_streamed_intra(syntax_block_size);
                 let transform_grid = if streamed_large {
                     None
                 } else {
@@ -2381,15 +2395,21 @@ pub(super) fn validate_complete_lossy_420_partition(
                     Some(transform_grid)
                 };
                 let mut tools = tools;
+                tools.suppress_delta_q_when_skipped = delta_q_at_root
+                    && node.x == root_x
+                    && node.y == root_y
+                    && node.coded_width == root_size
+                    && node.coded_height == root_size;
                 tools.palette_context =
                     super::block::PaletteNeighborContext::from_neighbors(node.y, None, None);
-                let full_resolution = !context.subsampling_x && !context.subsampling_y;
-                let full_large = full_resolution
+                let legacy_full_large = !streamed_large
+                    && !context.subsampling_x
+                    && !context.subsampling_y
                     && matches!(
                         (node.coded_width, node.coded_height),
                         (4, 16) | (8, 4) | (16, 4) | (16, 16)
                     );
-                if full_large {
+                if legacy_full_large {
                     let fully_visible = node
                         .x
                         .checked_add(node.coded_width)
@@ -2420,6 +2440,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     syntax_block_size,
                     palette_entropy_width,
                     palette_entropy_height,
+                    node.x,
+                    node.y,
                 );
                 // The value is consulted only in the `!streamed_large`
                 // branch, where construction above proved `Some`. Keeping a
@@ -2528,6 +2550,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             &decoded,
                             context.subsampling_x,
                             context.subsampling_y,
+                            quantization.segment_lossless,
                         )
                     else {
                         unsupported = true;
@@ -2550,6 +2573,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         y,
                         width,
                         height,
+                        has_chroma,
                         luma_tx_width: luma_tx.0,
                         luma_tx_height: luma_tx.1,
                         chroma_tx_width: chroma_tx.0,
@@ -2576,6 +2600,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let leaf = super::block::FirstLeaf {
         width: context.frame_width,
         height: context.frame_height,
+        block_skipped: false,
         planes,
         luma_predictor: super::block::LumaPredictor::Dc,
         chroma_predictor: None,
@@ -2650,6 +2675,44 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && matches!(context.level, 0 | 1)
 }
 
+/// Color all-lossless frames share the canonical streamed coefficient state
+/// with lossy intra. Keeping this gate beside the lossy admission makes the
+/// tile walker, context publication, and private reconstruction raster common
+/// across all 22 block sizes without mixing the legacy lossless CDF copies.
+fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool {
+    let layout_supported = context.subsampling_x || !context.subsampling_y;
+    let padded_block_width = (context.frame_width.saturating_add(7) >> 3).wrapping_shl(1);
+    let padded_block_height = (context.frame_height.saturating_add(7) >> 3).wrapping_shl(1);
+    let dimensions_are_supported = context.frame_width != 0
+        && context.frame_height != 0
+        && context.block_width == padded_block_width
+        && context.block_height == padded_block_height
+        && context.upscaled_width == context.frame_width;
+    context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && context.all_lossless
+        && context.frame_tools.segment_lossless
+        && !context.monochrome
+        && layout_supported
+        && !context.superres_enabled
+        && !context.segmentation_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.restoration_present
+        && !context.frame_tools.film_grain_present
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && context.restoration_types == [None; 3]
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && dimensions_are_supported
+}
+
 /// Exact high-depth Full-resolution tranche admitted by the generic unsplit
 /// reconstruction core. Optional post-filters and large implicit transform
 /// tilings stay closed until their high-depth arithmetic/state is connected;
@@ -2718,12 +2781,11 @@ fn record_cdef_metadata(
     let active_width = frame_width.div_ceil(8);
     let region_width = frame_width.div_ceil(64);
     if active {
-        for block_y in (y..end_y).step_by(8) {
-            for block_x in (x..end_x).step_by(8) {
+        for block_y in y / 8..end_y.div_ceil(8) {
+            for block_x in x / 8..end_x.div_ceil(8) {
                 let index = block_y
-                    .checked_div(8)
-                    .and_then(|row| row.checked_mul(active_width))
-                    .and_then(|row| row.checked_add(block_x.checked_div(8)?))
+                    .checked_mul(active_width)
+                    .and_then(|row| row.checked_add(block_x))
                     .ok_or_else(|| malformed("CDEF active-map index overflows"))?;
                 let Some(slot) = cdef_active.get_mut(index) else {
                     return Err(malformed("CDEF active-map index exceeds its frame"));
@@ -2732,12 +2794,11 @@ fn record_cdef_metadata(
             }
         }
 
-        for region_y in (y..end_y).step_by(64) {
-            for region_x in (x..end_x).step_by(64) {
+        for region_y in y / 64..end_y.div_ceil(64) {
+            for region_x in x / 64..end_x.div_ceil(64) {
                 let index = region_y
-                    .checked_div(64)
-                    .and_then(|row| row.checked_mul(region_width))
-                    .and_then(|row| row.checked_add(region_x.checked_div(64)?))
+                    .checked_mul(region_width)
+                    .and_then(|row| row.checked_add(region_x))
                     .ok_or_else(|| malformed("CDEF index-map index overflows"))?;
                 let Some(slot) = cdef_indices.get_mut(index) else {
                     return Err(malformed("CDEF index-map index exceeds its frame"));
@@ -2766,18 +2827,21 @@ fn cdef_frame_parameters(context: &FirstBlockContext) -> Option<super::cdef::Fra
 
 fn loop_filter_parameters(context: &FirstBlockContext) -> Option<super::filter::Parameters> {
     let loop_filter = context.frame_tools.loop_filter;
-    let intra_delta = if loop_filter.delta_enabled {
-        loop_filter.reference_deltas[0].saturating_add(loop_filter.mode_deltas[0])
-    } else {
-        0
-    };
     let intra_level = |level: u32| {
         if level == 0 {
             0
         } else {
+            // Intra blocks use reference slot zero only. AV1 never applies a
+            // mode delta to intra, and reference deltas are doubled for base
+            // levels at least 32.
+            let reference_delta = if loop_filter.delta_enabled {
+                loop_filter.reference_deltas[0].saturating_mul(if level >= 32 { 2 } else { 1 })
+            } else {
+                0
+            };
             let adjusted = i32::try_from(level)
                 .unwrap_or(i32::MAX)
-                .saturating_add(intra_delta)
+                .saturating_add(reference_delta)
                 .clamp(0, 63);
             u32::try_from(adjusted).unwrap_or_default()
         }
@@ -2870,6 +2934,8 @@ pub(super) fn validate_complete_lossless_444_partition(
                 enable_intra_edge_filter: context.enable_intra_edge_filter,
                 transform_mode: context.frame_tools.transform_mode,
                 transform_context: 0,
+                skip_context: 0,
+                suppress_delta_q_when_skipped: false,
                 palette_context: Default::default(),
             };
             let above = std::array::from_fn(|segment| {
@@ -2957,6 +3023,7 @@ pub(super) fn validate_complete_lossless_444_partition(
     Ok(Some(super::block::FirstLeaf {
         width: context.frame_width,
         height: context.frame_height,
+        block_skipped: false,
         planes,
         luma_predictor: super::block::LumaPredictor::Dc,
         chroma_predictor: None,
@@ -3041,6 +3108,9 @@ fn lossy_quantization_for_context(
         matrix_y: frame_quantization.matrix_y,
         matrix_u: frame_quantization.matrix_u,
         matrix_v: frame_quantization.matrix_v,
+        reduced_transform_set: context.frame_tools.reduced_transform_set,
+        segment_qindex: context.frame_tools.segment_qindex,
+        segment_lossless: context.frame_tools.segment_lossless,
     })
 }
 
@@ -3678,6 +3748,8 @@ fn decode_closed_leaf(
             enable_intra_edge_filter: context.enable_intra_edge_filter,
             transform_mode: context.frame_tools.transform_mode,
             transform_context: 0,
+            skip_context: 0,
+            suppress_delta_q_when_skipped: false,
             palette_context: Default::default(),
         },
     );
@@ -3702,6 +3774,8 @@ fn decode_closed_420_leaf(
             enable_intra_edge_filter: context.enable_intra_edge_filter,
             transform_mode: context.frame_tools.transform_mode,
             transform_context: 0,
+            skip_context: 0,
+            suppress_delta_q_when_skipped: false,
             palette_context: Default::default(),
         },
     );
@@ -3726,6 +3800,8 @@ fn decode_closed_lossy_420_leaf(
             enable_intra_edge_filter: context.enable_intra_edge_filter,
             transform_mode: context.frame_tools.transform_mode,
             transform_context: 0,
+            skip_context: 0,
+            suppress_delta_q_when_skipped: false,
             palette_context: Default::default(),
         },
     );
@@ -3748,6 +3824,8 @@ fn decode_closed_lossy_444_16x16_leaf(
             enable_intra_edge_filter: context.enable_intra_edge_filter,
             transform_mode: context.frame_tools.transform_mode,
             transform_context: 0,
+            skip_context: 0,
+            suppress_delta_q_when_skipped: false,
             palette_context: Default::default(),
         },
     );
@@ -3820,6 +3898,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                     );
@@ -3864,6 +3944,8 @@ pub(super) fn validate_first_partition(
                 enable_intra_edge_filter: context.enable_intra_edge_filter,
                 transform_mode: context.frame_tools.transform_mode,
                 transform_context: 0,
+                skip_context: 0,
+                suppress_delta_q_when_skipped: false,
                 palette_context: Default::default(),
             };
             let origin_x = node
@@ -4062,6 +4144,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         |decoder| {
@@ -4103,6 +4187,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         |decoder| {
@@ -4142,6 +4228,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         |decoder| {
@@ -4175,6 +4263,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         super::block::SplitOrientation::Horizontal,
@@ -4206,6 +4296,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         |_| Ok(()),
@@ -4294,6 +4386,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         |decoder| {
@@ -4334,6 +4428,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         |decoder| {
@@ -4370,6 +4466,8 @@ pub(super) fn validate_first_partition(
                             enable_intra_edge_filter: context.enable_intra_edge_filter,
                             transform_mode: context.frame_tools.transform_mode,
                             transform_context: 0,
+                            skip_context: 0,
+                            suppress_delta_q_when_skipped: false,
                             palette_context: Default::default(),
                         },
                         super::block::SplitOrientation::Horizontal,
@@ -5069,6 +5167,8 @@ mod tests {
                 enable_intra_edge_filter: true,
                 transform_mode: 0,
                 transform_context: 0,
+                skip_context: 0,
+                suppress_delta_q_when_skipped: false,
                 palette_context: Default::default(),
             };
             let decoded = if leaves.is_empty() {
@@ -5143,6 +5243,9 @@ mod tests {
                     matrix_y: 0,
                     matrix_u: 0,
                     matrix_v: 0,
+                    reduced_transform_set: false,
+                    segment_qindex: 120,
+                    segment_lossless: false,
                 },
                 crate::codecs::avif::av1::block::BlockTools {
                     sample_depth: crate::codecs::avif::av1::sample_depth::SampleDepth::new(8)
@@ -5154,6 +5257,8 @@ mod tests {
                     enable_intra_edge_filter: true,
                     transform_mode: 1,
                     transform_context: 0,
+                    skip_context: 0,
+                    suppress_delta_q_when_skipped: false,
                     palette_context: Default::default(),
                 },
             );

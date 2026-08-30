@@ -76,6 +76,7 @@ pub(super) struct DecodedBlockMeta {
     pub(super) has_chroma: bool,
     pub(super) tx_context_width: u8,
     pub(super) tx_context_height: u8,
+    pub(super) block_skipped: bool,
 }
 
 /// Copy-only neighbor facts consumed while decoding a following block.
@@ -93,6 +94,7 @@ pub(super) struct NeighborMeta {
     pub(super) has_chroma: bool,
     pub(super) tx_context_width: u8,
     pub(super) tx_context_height: u8,
+    pub(super) block_skipped: bool,
 }
 
 impl NeighborMeta {
@@ -112,6 +114,7 @@ impl NeighborMeta {
             has_chroma: block.has_chroma,
             tx_context_width: block.tx_context_width,
             tx_context_height: block.tx_context_height,
+            block_skipped: block.block_skipped,
         })
     }
 }
@@ -550,6 +553,7 @@ impl TileState {
             has_chroma,
             tx_context_width: leaf.tx_context_width,
             tx_context_height: leaf.tx_context_height,
+            block_skipped: leaf.block_skipped,
         });
 
         let edge_contextual = leaf.luma_transform_split || leaf.wide_coefficient_contexts.is_some();

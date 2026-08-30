@@ -360,12 +360,12 @@ impl BlockSize {
         width <= 32 && height <= 32
     }
 
-    /// Defensive layout gate for the AV1 1:4 block restrictions.
-    pub(super) const fn valid_for_layout(self, layout: PixelLayout) -> bool {
-        !matches!(
-            (self, layout),
-            (Self::B32x64 | Self::B64x128, PixelLayout::I422)
-        )
+    /// All normative coded block sizes are legal in every AV1 pixel layout.
+    /// Layout-specific transform limits are represented by
+    /// `MAX_TX_FOR_BLOCK`; the I422 1:4 rows intentionally select TX4X4
+    /// rather than making the containing block illegal.
+    pub(super) const fn valid_for_layout(self, _layout: PixelLayout) -> bool {
+        true
     }
 }
 
@@ -509,6 +509,39 @@ impl TxSize {
     pub(super) const fn context_dimensions(self) -> (u8, u8) {
         let (width, height) = self.mi_dimensions();
         (context_dimension(width), context_dimension(height))
+    }
+
+    /// AV1 coefficient-CDF transform context (`TxfmInfo::ctx`).
+    ///
+    /// This is deliberately not the maximum axis log2. The 1:4 transform
+    /// families use the context of the smaller square family selected by the
+    /// specification.
+    pub(super) const fn coefficient_context(self) -> usize {
+        match self {
+            Self::Tx4x4 => 0,
+            Self::Tx8x8 | Self::Tx4x8 | Self::Tx8x4 | Self::Tx4x16 | Self::Tx16x4 => 1,
+            Self::Tx16x16 | Self::Tx8x16 | Self::Tx16x8 | Self::Tx8x32 | Self::Tx32x8 => 2,
+            Self::Tx32x32 | Self::Tx16x32 | Self::Tx32x16 | Self::Tx16x64 | Self::Tx64x16 => 3,
+            Self::Tx64x64 | Self::Tx32x64 | Self::Tx64x32 => 4,
+        }
+    }
+
+    /// AV1 transform-size context used to choose an EOB-bin family.
+    pub(super) const fn two_d_size_context(self) -> usize {
+        let (width, height) = self.context_dimensions();
+        let width = if width < 3 { width } else { 3 };
+        let height = if height < 3 { height } else { 3 };
+        (width as usize).saturating_add(height as usize)
+    }
+
+    /// Minimum transform-axis context used by the intra transform-type CDF.
+    pub(super) const fn minimum_context(self) -> usize {
+        let (width, height) = self.context_dimensions();
+        if width < height {
+            width as usize
+        } else {
+            height as usize
+        }
     }
 }
 

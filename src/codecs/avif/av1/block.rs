@@ -364,18 +364,15 @@ impl PaletteGeometry {
             if !subsampled {
                 return Ok((coded, entropy));
             }
-            (coded % 2 == 0 && entropy % 2 == 0)
+            (coded.is_multiple_of(4) && entropy.is_multiple_of(4))
                 .then_some(())
                 .portable()?;
-            let mut coded = coded / 2;
-            let mut entropy = entropy / 2;
-            // AV1's small-chroma-block rule expands a two-sample coded axis
-            // to four. The entropy rectangle receives the same two-sample
-            // offset; this is distinct from transform-grid ceil rounding.
-            if coded < 4 {
-                coded = coded.checked_add(2).portable()?;
-                entropy = entropy.checked_add(2).portable()?;
-            }
+            // Chroma palette dimensions are expressed in complete 4x4
+            // chroma units. Convert each eight-luma-pixel span independently
+            // and round a partial final span up; this also promotes a 4px
+            // sub-8 luma axis to one complete 4px chroma unit.
+            let coded = coded.div_ceil(8).checked_mul(4).portable()?;
+            let entropy = entropy.div_ceil(8).checked_mul(4).portable()?;
             Ok((coded, entropy))
         }
 
@@ -692,6 +689,7 @@ type DecodedLossy420Coefficients = (
 /// Exact syntax consumed for one supported leaf block.
 #[derive(Clone, Copy)]
 struct BlockSyntax {
+    block_skipped: bool,
     luma_predictor: LumaPredictor,
     luma_angle: Option<i32>,
     filter_intra_mode: Option<usize>,
@@ -836,11 +834,11 @@ impl CflLumaContext {
     )]
     fn sample(
         &self,
-        luma: &ReconstructedPlane,
+        luma: &[u16],
         luma_width: usize,
         luma_height: usize,
-        visible_width: usize,
-        visible_height: usize,
+        reconstructed_width: usize,
+        reconstructed_height: usize,
         source_x: usize,
         source_y: usize,
     ) -> PortableResult<u16> {
@@ -848,10 +846,10 @@ impl CflLumaContext {
         let required_height = self.missing_y.checked_add(luma_height).portable()?;
         (source_x < required_width
             && source_y < required_height
-            && visible_width != 0
-            && visible_width <= luma_width
-            && visible_height != 0
-            && visible_height <= luma_height)
+            && reconstructed_width != 0
+            && reconstructed_width <= luma_width
+            && reconstructed_height != 0
+            && reconstructed_height <= luma_height)
             .then_some(())
             .portable()?;
         if source_y < self.missing_y {
@@ -879,15 +877,15 @@ impl CflLumaContext {
         }
         let x = source_x
             .saturating_sub(self.missing_x)
-            .min(visible_width.saturating_sub(1));
+            .min(reconstructed_width.saturating_sub(1));
         let y = source_y
             .saturating_sub(self.missing_y)
-            .min(visible_height.saturating_sub(1));
+            .min(reconstructed_height.saturating_sub(1));
         let index = y
             .checked_mul(luma_width)
             .and_then(|offset| offset.checked_add(x))
             .portable()?;
-        luma.samples.get(index).copied().portable()
+        luma.get(index).copied().portable()
     }
 }
 
@@ -1512,6 +1510,33 @@ impl Av1TransformType {
             Self::HorizontalFlipAdst => (FlipAdst, Identity),
         }
     }
+
+    const fn coefficient_class(self) -> GenericCoefficientClass {
+        match self {
+            Self::VerticalDct | Self::VerticalAdst | Self::VerticalFlipAdst => {
+                GenericCoefficientClass::Vertical
+            }
+            Self::HorizontalDct | Self::HorizontalAdst | Self::HorizontalFlipAdst => {
+                GenericCoefficientClass::Horizontal
+            }
+            _ => GenericCoefficientClass::TwoDimensional,
+        }
+    }
+
+    const fn uses_quantization_matrix(self) -> bool {
+        matches!(
+            self,
+            Self::DctDct
+                | Self::AdstDct
+                | Self::DctAdst
+                | Self::AdstAdst
+                | Self::FlipAdstDct
+                | Self::DctFlipAdst
+                | Self::FlipAdstFlipAdst
+                | Self::AdstFlipAdst
+                | Self::FlipAdstAdst
+        )
+    }
 }
 
 impl From<LossyTransformKind> for Av1TransformType {
@@ -1777,7 +1802,8 @@ impl ChromaSampling {
         }
     }
 
-    const fn subsampled_cfl_allowed(
+    const fn cfl_allowed(
+        self,
         luma_grid_width: usize,
         luma_grid_height: usize,
         all_lossless: bool,
@@ -1789,10 +1815,16 @@ impl ChromaSampling {
         let width = luma_grid_width.saturating_mul(4);
         let height = luma_grid_height.saturating_mul(4);
         if all_lossless {
-            // In 4:2:0 the lossless rule is expressed in coded chroma
-            // units: the chroma block must be one 4×4 transform, so a
-            // luma 4×4, 4×8, 8×4, or 8×8 block is eligible.
-            return luma_grid_width <= 2 && luma_grid_height <= 2;
+            // The lossless rule is expressed in coded chroma units: CfL is
+            // present only when the owned chroma block is exactly one 4x4
+            // transform. Horizontal and vertical subsampling therefore have
+            // independent eligibility bounds.
+            return match self {
+                Self::Subsampled420 => luma_grid_width <= 2 && luma_grid_height <= 2,
+                Self::Subsampled422 => luma_grid_width <= 2 && luma_grid_height == 1,
+                Self::Full => luma_grid_width == 1 && luma_grid_height == 1,
+                Self::Monochrome => false,
+            };
         }
         matches!(
             (width, height),
@@ -1811,18 +1843,6 @@ impl ChromaSampling {
                 | (32, 16)
                 | (32, 32)
         )
-    }
-
-    const fn full_cfl_allowed(
-        luma_grid_width: usize,
-        luma_grid_height: usize,
-        all_lossless: bool,
-    ) -> bool {
-        if all_lossless {
-            luma_grid_width == 1 && luma_grid_height == 1
-        } else {
-            Self::subsampled_cfl_allowed(luma_grid_width, luma_grid_height, false)
-        }
     }
 }
 
@@ -2191,6 +2211,8 @@ enum QuantizationSyntax {
         matrix_y: u32,
         matrix_u: u32,
         matrix_v: u32,
+        reduced_transform_set: bool,
+        segment_qindex: u32,
     },
 }
 
@@ -2210,6 +2232,15 @@ pub(super) struct LossyQuantization {
     pub(super) matrix_y: u32,
     pub(super) matrix_u: u32,
     pub(super) matrix_v: u32,
+    /// Frame-level reduced transform-type set selection.
+    pub(super) reduced_transform_set: bool,
+    /// Static segment qindex before tile delta-q adjustment.
+    pub(super) segment_qindex: u32,
+    /// Normative static segment-lossless state. This is intentionally kept
+    /// separate from both `segment_qindex` and the tile's mutable delta-q
+    /// state: transform selection uses the former while dequantization uses
+    /// the latter.
+    pub(super) segment_lossless: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -2252,6 +2283,10 @@ pub(super) struct BlockTools {
     pub(super) transform_mode: u32,
     /// `get_tx_ctx` result from already decoded above/left transform state.
     pub(super) transform_context: usize,
+    /// Normative block-skip context: skipped above plus skipped left owner.
+    pub(super) skip_context: usize,
+    /// Suppress delta-q bits when this skipped leaf owns the whole superblock.
+    pub(super) suppress_delta_q_when_skipped: bool,
     /// Tile-local palette metadata from the immediate above and left leaves.
     pub(super) palette_context: PaletteNeighborContext,
 }
@@ -2260,16 +2295,20 @@ pub(super) struct BlockTools {
 pub(super) struct PaletteNeighborContext {
     above: PaletteCacheState,
     left: PaletteCacheState,
+    /// Immediate above availability for the palette-presence CDF.
     above_available: bool,
+    /// Above colors may cross a 64px superblock row only through the palette
+    /// presence context, never through the color-cache sentence.
+    above_cache_available: bool,
     left_available: bool,
 }
 
 #[derive(Clone, Copy)]
 struct PalettePlaneContext {
     above: PalettePlane,
-    above_available: bool,
+    above_cache_available: bool,
     left: PalettePlane,
-    left_available: bool,
+    left_cache_available: bool,
 }
 
 /// Orientation of the smallest admitted two-child recursive split.
@@ -2337,6 +2376,8 @@ impl Default for CoefficientEdgeContexts32 {
 pub(in crate::codecs::avif) struct FirstLeaf {
     pub(in crate::codecs::avif) width: u32,
     pub(in crate::codecs::avif) height: u32,
+    /// Whether this block's mode-level skip bit was set.
+    pub(in crate::codecs::avif) block_skipped: bool,
     pub(in crate::codecs::avif) planes: [ReconstructedPlane; 3],
     /// Luma intra predictor retained for the next block's mode context.
     pub(in crate::codecs::avif) luma_predictor: LumaPredictor,
@@ -2388,11 +2429,12 @@ impl PaletteNeighborContext {
         above: Option<PaletteCacheState>,
         left: Option<PaletteCacheState>,
     ) -> Self {
-        let above_available = above.is_some() && by4 & 15 != 0;
+        let above_available = above.is_some();
         Self {
-            above: above.filter(|_| above_available).unwrap_or_default(),
+            above: above.unwrap_or_default(),
             left: left.unwrap_or_default(),
             above_available,
+            above_cache_available: above_available && by4 & 15 != 0,
             left_available: left.is_some(),
         }
     }
@@ -2506,11 +2548,15 @@ pub(super) fn filter_transform_dimensions_for_block(
     leaf: &FirstLeaf,
     subsampling_x: bool,
     subsampling_y: bool,
+    segment_lossless: bool,
 ) -> Option<((usize, usize), (usize, usize))> {
+    if segment_lossless {
+        return Some(((4, 4), (4, 4)));
+    }
     if let Some(transform_grid) = transform_grid {
         return filter_transform_dimensions(transform_grid, leaf, subsampling_x, subsampling_y);
     }
-    uses_streamed_large_intra(block_size).then_some(())?;
+    uses_streamed_intra(block_size).then_some(())?;
     let luma = (
         4_usize.checked_shl(u32::from(leaf.tx_context_width))?,
         4_usize.checked_shl(u32::from(leaf.tx_context_height))?,
@@ -2671,6 +2717,7 @@ impl MonochromeLeaf {
         FirstLeaf {
             width: self.width,
             height: self.height,
+            block_skipped: false,
             planes: [plane.clone(), plane.clone(), plane],
             luma_predictor: self.predictor,
             chroma_predictor: None,
@@ -2831,15 +2878,8 @@ pub(super) enum LargeIntraSpatial<'a> {
     },
 }
 
-pub(super) const fn uses_streamed_large_intra(block_size: BlockSize) -> bool {
-    matches!(
-        block_size,
-        BlockSize::B32x64
-            | BlockSize::B64x32
-            | BlockSize::B64x128
-            | BlockSize::B128x64
-            | BlockSize::B128x128
-    )
+pub(super) const fn uses_streamed_intra(_block_size: BlockSize) -> bool {
+    true
 }
 
 fn legacy_coefficient_contexts(contexts: &[u8; 32]) -> [u8; 16] {
@@ -2913,7 +2953,9 @@ pub(super) struct RectangularNeighbors<'a> {
 }
 
 struct BlockCdfs {
-    skip: [u16; 2],
+    coefficient: super::coefficient_cdfs::CoefficientCdfs,
+    transform_type: super::coefficient_cdfs::TransformTypeCdfs,
+    skip: [[u16; 2]; 3],
     delta_q: [u16; 4],
     /// `txsz[max_tx.max - 1][tx_context]` from AV1's frame CDF.
     transform_size: [[[u16; 4]; 3]; 4],
@@ -5603,9 +5645,11 @@ impl BlockCdfs {
     // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:113-138, 169-177, 412-414,
     // 719-905 and 1313-1348 for q-context zero. Filter-intra is
     // indexed by block size at src/cdf.c:88-110.
-    const fn defaults(_use_filter_intra: [u16; 2]) -> Self {
+    fn defaults(_use_filter_intra: [u16; 2]) -> Self {
         Self {
-            skip: [1_097, 0],
+            coefficient: super::coefficient_cdfs::DEFAULT_COEFFICIENT_CDFS[0].clone(),
+            transform_type: super::coefficient_cdfs::DEFAULT_TRANSFORM_TYPE_CDFS.clone(),
+            skip: [[1_097, 0], [16_253, 0], [28_192, 0]],
             delta_q: [4_608, 648, 91, 0],
             transform_size: TRANSFORM_SIZE_CDF,
             luma_mode: [
@@ -6415,6 +6459,7 @@ impl BlockCdfs {
             .saturating_add(usize::from(qindex > 60))
             .saturating_add(usize::from(qindex > 120));
         let mut cdfs = Self::defaults(use_filter_intra);
+        cdfs.coefficient = super::coefficient_cdfs::DEFAULT_COEFFICIENT_CDFS[qcat].clone();
         match qcat {
             0 => Some(cdfs),
             1 => {
@@ -6582,7 +6627,7 @@ impl BlockCdfs {
 // ✅ VERIFIED: dav1d 1.5.3 src/recon_tmpl.c:49-57.
 fn read_golomb(decoder: &mut RangeDecoder<'_, '_, '_>) -> u32 {
     let mut length = 0_u32;
-    while !decoder.equal() && length < 32 {
+    while !decoder.equal() && length < 31 {
         length = length.wrapping_add(1);
     }
     let mut value = 1_u32;
@@ -14251,15 +14296,40 @@ struct DecodedGenericTerminal {
     skipped: bool,
     coefficient_count: usize,
     residual_context: u8,
-    transform: Av1TransformType,
+    transform: GenericTerminalTransform,
 }
 
-fn tx_entropy_context(tx_size: TxSize) -> PortableResult<usize> {
-    let (width, height) = tx_size.pixel_dimensions();
-    let maximum = width.max(height);
-    (maximum.is_power_of_two() && (4..=64).contains(&maximum))
-        .then_some(usize::try_from(maximum.ilog2().saturating_sub(2)).unwrap_or(0))
-        .portable()
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GenericCoefficientClass {
+    TwoDimensional,
+    Horizontal,
+    Vertical,
+}
+
+/// Reconstruction transform selected for one canonical streamed terminal.
+/// Lossless WHT is kept distinct from the 16 lossy transform types so no
+/// coefficient or inverse-transform code can accidentally treat it as DCT or
+/// IDTX merely because all three share the same 4x4 coefficient grammar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum GenericTerminalTransform {
+    Lossy(Av1TransformType),
+    LosslessWht4x4,
+}
+
+impl GenericTerminalTransform {
+    const fn coefficient_class(self) -> GenericCoefficientClass {
+        match self {
+            Self::Lossy(transform) => transform.coefficient_class(),
+            Self::LosslessWht4x4 => GenericCoefficientClass::TwoDimensional,
+        }
+    }
+
+    const fn uses_quantization_matrix(self) -> bool {
+        match self {
+            Self::Lossy(transform) => transform.uses_quantization_matrix(),
+            Self::LosslessWht4x4 => false,
+        }
+    }
 }
 
 fn merged_coefficient_context(contexts: &[u8]) -> u8 {
@@ -14267,6 +14337,581 @@ fn merged_coefficient_context(contexts: &[u8]) -> u8 {
         .iter()
         .copied()
         .fold(0_u8, |merged, context| merged | context)
+}
+
+fn generic_two_dimensional_scan(tx_size: TxSize) -> &'static [u16] {
+    match tx_size {
+        TxSize::Tx4x4 => &LOSSY_CHROMA_4X4_SCAN,
+        TxSize::Tx8x8 => &LOSSY_LUMA_8X8_SCAN,
+        TxSize::Tx16x16 => &LOSSY_LUMA_16X16_SCAN,
+        TxSize::Tx32x32 | TxSize::Tx64x64 | TxSize::Tx32x64 | TxSize::Tx64x32 => {
+            &LOSSY_LUMA_32X32_SCAN
+        }
+        TxSize::Tx4x8 => &LOSSY_LUMA_4X8_SCAN,
+        TxSize::Tx8x4 => &LOSSY_LUMA_8X4_SCAN,
+        TxSize::Tx8x16 => &LOSSY_LUMA_8X16_SCAN,
+        TxSize::Tx16x8 => &LOSSY_LUMA_16X8_SCAN,
+        TxSize::Tx16x32 | TxSize::Tx16x64 => &LOSSY_LUMA_16X32_SCAN,
+        TxSize::Tx32x16 | TxSize::Tx64x16 => &LOSSY_LUMA_32X16_SCAN,
+        TxSize::Tx4x16 => &LOSSY_CHROMA_4X16_SCAN,
+        TxSize::Tx16x4 => &LOSSY_LUMA_16X4_SCAN,
+        TxSize::Tx8x32 => &LOSSY_LUMA_8X32_SCAN,
+        TxSize::Tx32x8 => &LOSSY_LUMA_32X8_SCAN,
+    }
+}
+
+fn decode_generic_eob_bin(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    tx_size: TxSize,
+    chroma: usize,
+    one_dimensional: usize,
+) -> u32 {
+    match tx_size.two_d_size_context() {
+        0 => decoder.adaptive_symbol(&mut cdfs.coefficient.eob_bin_16[chroma][one_dimensional], 4),
+        1 => decoder.adaptive_symbol(&mut cdfs.coefficient.eob_bin_32[chroma][one_dimensional], 5),
+        2 => decoder.adaptive_symbol(&mut cdfs.coefficient.eob_bin_64[chroma][one_dimensional], 6),
+        3 => decoder.adaptive_symbol(
+            &mut cdfs.coefficient.eob_bin_128[chroma][one_dimensional],
+            7,
+        ),
+        4 => decoder.adaptive_symbol(
+            &mut cdfs.coefficient.eob_bin_256[chroma][one_dimensional],
+            8,
+        ),
+        5 => decoder.adaptive_symbol(&mut cdfs.coefficient.eob_bin_512[chroma], 9),
+        6 => decoder.adaptive_symbol(&mut cdfs.coefficient.eob_bin_1024[chroma], 10),
+        _ => unreachable!("TxSize::two_d_size_context is bounded to zero through six"),
+    }
+}
+
+fn generic_coefficient_position(
+    class: GenericCoefficientClass,
+    scan: &[u16],
+    scan_index: usize,
+    coefficient_width: usize,
+    coefficient_height: usize,
+) -> PortableResult<(usize, usize, usize)> {
+    let height_shift = coefficient_height.ilog2();
+    let width_shift = coefficient_width.ilog2();
+    match class {
+        GenericCoefficientClass::TwoDimensional => {
+            let rc = usize::from(*scan.get(scan_index).portable()?);
+            Ok((
+                rc,
+                rc.checked_shr(height_shift).portable()?,
+                rc & coefficient_height.saturating_sub(1),
+            ))
+        }
+        GenericCoefficientClass::Horizontal => Ok((
+            scan_index,
+            scan_index & coefficient_height.saturating_sub(1),
+            scan_index.checked_shr(height_shift).portable()?,
+        )),
+        GenericCoefficientClass::Vertical => {
+            let x = scan_index & coefficient_width.saturating_sub(1);
+            let y = scan_index.checked_shr(width_shift).portable()?;
+            let rc = x
+                .checked_shl(height_shift)
+                .and_then(|value| value.checked_add(y))
+                .portable()?;
+            Ok((rc, x, y))
+        }
+    }
+}
+
+const GENERIC_SQUARE_LOW_CONTEXT_OFFSETS: [[u8; 5]; 5] = [
+    [0, 1, 6, 6, 21],
+    [1, 6, 6, 21, 21],
+    [6, 6, 21, 21, 21],
+    [6, 21, 21, 21, 21],
+    [21, 21, 21, 21, 21],
+];
+
+const GENERIC_WIDE_LOW_CONTEXT_OFFSETS: [[u8; 5]; 5] = [
+    [0, 16, 6, 6, 21],
+    [16, 16, 6, 21, 21],
+    [16, 16, 21, 21, 21],
+    [16, 16, 21, 21, 21],
+    [16, 16, 21, 21, 21],
+];
+
+const GENERIC_TALL_LOW_CONTEXT_OFFSETS: [[u8; 5]; 5] = [
+    [0, 11, 11, 11, 11],
+    [11, 11, 11, 11, 11],
+    [6, 6, 21, 21, 21],
+    [6, 21, 21, 21, 21],
+    [21, 21, 21, 21, 21],
+];
+
+fn generic_low_coefficient_context(
+    levels: &[u8],
+    class: GenericCoefficientClass,
+    coefficient_width: usize,
+    coefficient_height: usize,
+    x: usize,
+    y: usize,
+    stride: usize,
+) -> PortableResult<(usize, u32)> {
+    let origin = x
+        .checked_mul(stride)
+        .and_then(|value| value.checked_add(y))
+        .portable()?;
+    let level_at = |row: usize, column: usize| {
+        origin
+            .checked_add(row.checked_mul(stride).portable()?)
+            .and_then(|value| value.checked_add(column))
+            .and_then(|index| levels.get(index).copied())
+            .map(u32::from)
+            .portable()
+    };
+    let (high_magnitude, magnitude, offset) = match class {
+        GenericCoefficientClass::TwoDimensional => {
+            let high_magnitude = level_at(0, 1)?
+                .saturating_add(level_at(1, 0)?)
+                .saturating_add(level_at(1, 1)?);
+            let magnitude = high_magnitude
+                .saturating_add(level_at(0, 2)?)
+                .saturating_add(level_at(2, 0)?);
+            let offsets = if coefficient_width == coefficient_height {
+                &GENERIC_SQUARE_LOW_CONTEXT_OFFSETS
+            } else if coefficient_width > coefficient_height {
+                &GENERIC_WIDE_LOW_CONTEXT_OFFSETS
+            } else {
+                &GENERIC_TALL_LOW_CONTEXT_OFFSETS
+            };
+            (
+                high_magnitude,
+                magnitude,
+                usize::from(offsets[y.min(4)][x.min(4)]),
+            )
+        }
+        GenericCoefficientClass::Horizontal | GenericCoefficientClass::Vertical => {
+            let high_magnitude = level_at(0, 1)?
+                .saturating_add(level_at(1, 0)?)
+                .saturating_add(level_at(0, 2)?);
+            let magnitude = high_magnitude
+                .saturating_add(level_at(0, 3)?)
+                .saturating_add(level_at(0, 4)?);
+            let offset = 26_usize.saturating_add(if y > 1 { 10 } else { y * 5 });
+            (high_magnitude, magnitude, offset)
+        }
+    };
+    let magnitude_class = if magnitude > 512 {
+        4
+    } else {
+        usize::try_from(magnitude.saturating_add(64) >> 7).unwrap_or(4)
+    };
+    Ok((offset.saturating_add(magnitude_class), high_magnitude))
+}
+
+fn generic_high_coefficient_context(
+    class: GenericCoefficientClass,
+    x: usize,
+    y: usize,
+    magnitude: u32,
+) -> usize {
+    let distant = match class {
+        GenericCoefficientClass::TwoDimensional => (x | y) > 1,
+        GenericCoefficientClass::Horizontal | GenericCoefficientClass::Vertical => y != 0,
+    };
+    (if distant { 14 } else { 7 }).saturating_add(coefficient_high_context(magnitude))
+}
+
+fn generic_matrix_values(
+    quantization: LossyQuantization,
+    plane: usize,
+    tx_size: TxSize,
+    transform: GenericTerminalTransform,
+) -> PortableResult<(LossyQuantization, Option<&'static [u8]>)> {
+    let mut quantization = quantization;
+    quantization.using_matrix &= transform.uses_quantization_matrix();
+    if !quantization.using_matrix {
+        return Ok((quantization, None));
+    }
+    let matrix_level = match plane {
+        0 => quantization.matrix_y,
+        1 => quantization.matrix_u,
+        2 => quantization.matrix_v,
+        _ => return Err(PortableUnavailable),
+    };
+    (matrix_level <= 15).then_some(()).portable()?;
+    let (width, height) = tx_size.coefficient_dimensions();
+    let matrix = quantization::inverse_matrix(
+        matrix_level,
+        plane != 0,
+        usize::try_from(width).map_err(|_| PortableUnavailable)?,
+        usize::try_from(height).map_err(|_| PortableUnavailable)?,
+    );
+    (matrix_level == 15 || matrix.is_some())
+        .then_some(())
+        .portable()?;
+    Ok((quantization, matrix))
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the canonical coefficient sentence keeps entropy, geometry, transform, sign context, and reusable storage explicit"
+)]
+fn decode_generic_lossy_coefficients_into(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+    scratch: &mut LargeCoefficientScratch,
+    quantization: LossyQuantization,
+    tx_size: TxSize,
+    transform: GenericTerminalTransform,
+    dc_sign_context: usize,
+    coefficients: &mut [i32],
+) -> PortableResult<u8> {
+    let chroma = usize::from(plane != 0);
+    let tx_context = tx_size.coefficient_context();
+    let class = transform.coefficient_class();
+    let one_dimensional = usize::from(class != GenericCoefficientClass::TwoDimensional);
+    let (coefficient_width, coefficient_height) = tx_size.coefficient_dimensions();
+    let coefficient_width = usize::try_from(coefficient_width).map_err(|_| PortableUnavailable)?;
+    let coefficient_height =
+        usize::try_from(coefficient_height).map_err(|_| PortableUnavailable)?;
+    let coefficient_count = coefficient_width
+        .checked_mul(coefficient_height)
+        .portable()?;
+    (coefficients.len() == coefficient_count && coefficient_count.is_power_of_two())
+        .then_some(())
+        .portable()?;
+    coefficients.fill(0);
+
+    let eob_bin = decode_generic_eob_bin(decoder, cdfs, tx_size, chroma, one_dimensional);
+    let eob = if eob_bin > 1 {
+        let high = u32::from(decoder.adaptive_bool(
+            &mut cdfs.coefficient.eob_hi_bit[tx_context][chroma]
+                [usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?],
+        ));
+        (high | 2)
+            .checked_shl(eob_bin.saturating_sub(2))
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_bin.saturating_sub(2))
+    } else {
+        eob_bin
+    };
+    let eob = usize::try_from(eob)
+        .ok()
+        .filter(|&value| value < coefficient_count)
+        .portable()?;
+    let scan = generic_two_dimensional_scan(tx_size);
+    let (quantization, matrix_values) =
+        generic_matrix_values(quantization, plane, tx_size, transform)?;
+    let dequant_shift = u32::try_from(tx_context.saturating_sub(2)).unwrap_or(0);
+    let dequantize = |decoder: &mut RangeDecoder<'_, '_, '_>,
+                      token: u32,
+                      negative: bool,
+                      index: usize|
+     -> PortableResult<(i32, u32)> {
+        if plane == 0 {
+            dequantize_lossy_coefficient_with_token_using_matrix_and_shift(
+                decoder,
+                token,
+                negative,
+                index,
+                quantization,
+                matrix_values,
+                dequant_shift,
+            )
+        } else {
+            dequantize_lossy_chroma_coefficient_with_token_using_matrix_and_shift(
+                decoder,
+                token,
+                negative,
+                index,
+                plane,
+                quantization,
+                matrix_values,
+                dequant_shift,
+            )
+        }
+    };
+
+    if eob == 0 {
+        let base =
+            decoder.adaptive_symbol(&mut cdfs.coefficient.eob_base_tok[tx_context][chroma][0], 2);
+        let token = if base == 2 {
+            decode_high_token(
+                decoder,
+                &mut cdfs.coefficient.br_tok[tx_context.min(3)][chroma][0],
+            )
+        } else {
+            base.saturating_add(1)
+        };
+        let negative =
+            decoder.adaptive_bool(&mut cdfs.coefficient.dc_sign[chroma][dc_sign_context.min(2)]);
+        let (coefficient, token) = dequantize(decoder, token, negative, 0)?;
+        coefficients[0] = coefficient;
+        return Ok(lossy_coefficient_residual_context(token, token, negative));
+    }
+
+    let two_d_size_context = tx_size.two_d_size_context();
+    let eob_context = 1_usize
+        .saturating_add(usize::from(eob > (2_usize << two_d_size_context)))
+        .saturating_add(usize::from(eob > (4_usize << two_d_size_context)));
+    let eob_base = decoder.adaptive_symbol(
+        &mut cdfs.coefficient.eob_base_tok[tx_context][chroma][eob_context],
+        2,
+    );
+    let (eob_rc, eob_x, eob_y) =
+        generic_coefficient_position(class, scan, eob, coefficient_width, coefficient_height)?;
+    let eob_token = if eob_base == 2 {
+        let context = if match class {
+            GenericCoefficientClass::TwoDimensional => (eob_x | eob_y) > 1,
+            GenericCoefficientClass::Horizontal | GenericCoefficientClass::Vertical => eob_y != 0,
+        } {
+            14
+        } else {
+            7
+        };
+        decode_high_token(
+            decoder,
+            &mut cdfs.coefficient.br_tok[tx_context.min(3)][chroma][context],
+        )
+    } else {
+        eob_base.saturating_add(1)
+    };
+
+    let (stride, levels_len) = match class {
+        GenericCoefficientClass::TwoDimensional => (
+            coefficient_height,
+            coefficient_height
+                .checked_mul(coefficient_width.saturating_add(2))
+                .portable()?,
+        ),
+        GenericCoefficientClass::Horizontal => (
+            16,
+            16_usize
+                .checked_mul(coefficient_height.saturating_add(2))
+                .portable()?,
+        ),
+        GenericCoefficientClass::Vertical => (
+            16,
+            16_usize
+                .checked_mul(coefficient_width.saturating_add(2))
+                .portable()?,
+        ),
+    };
+    scratch.tokens.clear();
+    scratch.tokens.resize(coefficient_count, 0);
+    scratch.levels.clear();
+    scratch.levels.resize(levels_len, 0);
+    scratch.nonzero_positions.clear();
+    scratch.tokens[eob_rc] = eob_token;
+    let eob_level = if eob_base == 2 {
+        eob_token.saturating_add(192)
+    } else {
+        u32::from(lossy_luma_level_token(eob_token)?)
+    };
+    let eob_level_index = eob_x
+        .checked_mul(stride)
+        .and_then(|value| value.checked_add(eob_y))
+        .portable()?;
+    *scratch.levels.get_mut(eob_level_index).portable()? =
+        u8::try_from(eob_level).map_err(|_| PortableUnavailable)?;
+    scratch.nonzero_positions.push(eob_rc);
+
+    for scan_index in (1..eob).rev() {
+        let (rc, x, y) = generic_coefficient_position(
+            class,
+            scan,
+            scan_index,
+            coefficient_width,
+            coefficient_height,
+        )?;
+        let (low_context, high_magnitude) = generic_low_coefficient_context(
+            &scratch.levels,
+            class,
+            coefficient_width,
+            coefficient_height,
+            x,
+            y,
+            stride,
+        )?;
+        let base = decoder.adaptive_symbol(
+            &mut cdfs.coefficient.base_tok[tx_context][chroma][low_context],
+            3,
+        );
+        let token = if base == 3 {
+            let context = generic_high_coefficient_context(class, x, y, high_magnitude);
+            decode_high_token(
+                decoder,
+                &mut cdfs.coefficient.br_tok[tx_context.min(3)][chroma][context],
+            )
+        } else {
+            base
+        };
+        scratch.tokens[rc] = token;
+        let level = if base == 3 {
+            token.saturating_add(192)
+        } else {
+            u32::from(lossy_luma_level_token(token)?)
+        };
+        let level_index = x
+            .checked_mul(stride)
+            .and_then(|value| value.checked_add(y))
+            .portable()?;
+        *scratch.levels.get_mut(level_index).portable()? =
+            u8::try_from(level).map_err(|_| PortableUnavailable)?;
+        if token != 0 {
+            scratch.nonzero_positions.push(rc);
+        }
+    }
+
+    let (dc_context, dc_magnitude) = match class {
+        GenericCoefficientClass::TwoDimensional => {
+            let magnitude = u32::from(*scratch.levels.get(1).portable()?)
+                .saturating_add(u32::from(*scratch.levels.get(stride).portable()?))
+                .saturating_add(u32::from(
+                    *scratch.levels.get(stride.saturating_add(1)).portable()?,
+                ));
+            (0, magnitude)
+        }
+        GenericCoefficientClass::Horizontal | GenericCoefficientClass::Vertical => {
+            generic_low_coefficient_context(
+                &scratch.levels,
+                class,
+                coefficient_width,
+                coefficient_height,
+                0,
+                0,
+                stride,
+            )?
+        }
+    };
+    let dc_base = decoder.adaptive_symbol(
+        &mut cdfs.coefficient.base_tok[tx_context][chroma][dc_context],
+        3,
+    );
+    let dc_token = if dc_base == 3 {
+        decode_high_token(
+            decoder,
+            &mut cdfs.coefficient.br_tok[tx_context.min(3)][chroma]
+                [coefficient_high_context(dc_magnitude)],
+        )
+    } else {
+        dc_base
+    };
+    let mut magnitude = 0_u32;
+    let mut dc_negative = false;
+    if dc_token != 0 {
+        dc_negative =
+            decoder.adaptive_bool(&mut cdfs.coefficient.dc_sign[chroma][dc_sign_context.min(2)]);
+        let (coefficient, token) = dequantize(decoder, dc_token, dc_negative, 0)?;
+        coefficients[0] = coefficient;
+        magnitude = magnitude.saturating_add(token);
+    }
+    for &position in scratch.nonzero_positions.iter().rev() {
+        let negative = decoder.equal();
+        let (coefficient, token) =
+            dequantize(decoder, scratch.tokens[position], negative, position)?;
+        coefficients[position] = coefficient;
+        magnitude = magnitude.saturating_add(token);
+    }
+    Ok(lossy_coefficient_residual_context(
+        magnitude,
+        dc_token,
+        dc_negative,
+    ))
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "transform selection depends independently on plane, size, skip, frame policy, segment qindex, and prediction mode"
+)]
+fn select_generic_intra_transform(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+    tx_size: TxSize,
+    skipped: bool,
+    reduced_transform_set: bool,
+    segment_qindex: u32,
+    transform_luma_mode: usize,
+    chroma_predictor: ChromaPredictor,
+) -> PortableResult<Av1TransformType> {
+    if skipped
+        || tx_size
+            .pixel_dimensions()
+            .0
+            .max(tx_size.pixel_dimensions().1)
+            >= 32
+    {
+        return Ok(Av1TransformType::DctDct);
+    }
+    if plane != 0 {
+        return Ok(Av1TransformType::from(chroma_transform_kind(
+            chroma_predictor,
+        )));
+    }
+    if segment_qindex == 0 {
+        return Ok(Av1TransformType::DctDct);
+    }
+    let minimum_context = tx_size.minimum_context();
+    if reduced_transform_set || minimum_context == 2 {
+        let symbol = decoder.adaptive_symbol(
+            cdfs.transform_type.intra2[minimum_context]
+                .get_mut(transform_luma_mode)
+                .portable()?,
+            4,
+        );
+        match symbol {
+            0 => Ok(Av1TransformType::IdentityIdentity),
+            1 => Ok(Av1TransformType::DctDct),
+            2 => Ok(Av1TransformType::AdstAdst),
+            3 => Ok(Av1TransformType::AdstDct),
+            4 => Ok(Av1TransformType::DctAdst),
+            _ => Err(PortableUnavailable),
+        }
+    } else {
+        let symbol = decoder.adaptive_symbol(
+            cdfs.transform_type.intra1[minimum_context]
+                .get_mut(transform_luma_mode)
+                .portable()?,
+            6,
+        );
+        match symbol {
+            0 => Ok(Av1TransformType::IdentityIdentity),
+            1 => Ok(Av1TransformType::DctDct),
+            2 => Ok(Av1TransformType::VerticalDct),
+            3 => Ok(Av1TransformType::HorizontalDct),
+            4 => Ok(Av1TransformType::AdstAdst),
+            5 => Ok(Av1TransformType::AdstDct),
+            6 => Ok(Av1TransformType::DctAdst),
+            _ => Err(PortableUnavailable),
+        }
+    }
+}
+
+fn generic_coefficient_skip_context(
+    plane: usize,
+    tx_size: TxSize,
+    block_plane_width: usize,
+    block_plane_height: usize,
+    above: &[u8],
+    left: &[u8],
+) -> PortableResult<usize> {
+    let (tx_width, tx_height) = tx_size.pixel_dimensions();
+    let tx_width = usize::try_from(tx_width).map_err(|_| PortableUnavailable)?;
+    let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
+    let one_transform = block_plane_width == tx_width && block_plane_height == tx_height;
+    if plane == 0 {
+        return Ok(if one_transform {
+            0
+        } else {
+            luma_skip_context(
+                merged_coefficient_context(above),
+                merged_coefficient_context(left),
+            )
+        });
+    }
+    Ok(7_usize
+        .saturating_add(3_usize.saturating_mul(usize::from(!one_transform)))
+        .saturating_add(usize::from(above.iter().any(|&context| context != 0x40)))
+        .saturating_add(usize::from(left.iter().any(|&context| context != 0x40))))
 }
 
 #[expect(
@@ -14300,102 +14945,37 @@ fn decode_generic_lossy_terminal(
     .map_err(|_| PortableUnavailable)?;
     let context_width = tx_width / 4;
     let context_height = tx_height / 4;
-    (above.len() == context_width
-        && left.len() == context_height
-        && matches!(plane, 0..=2)
-        && matches!(
-            tx_size,
-            TxSize::Tx8x16
-                | TxSize::Tx16x8
-                | TxSize::Tx16x16
-                | TxSize::Tx16x32
-                | TxSize::Tx32x16
-                | TxSize::Tx32x32
-                | TxSize::Tx32x64
-                | TxSize::Tx64x32
-                | TxSize::Tx64x64
-        ))
-    .then_some(())
-    .portable()?;
+    (above.len() == context_width && left.len() == context_height && matches!(plane, 0..=2))
+        .then_some(())
+        .portable()?;
 
-    let entropy_context = tx_entropy_context(tx_size)?;
-    let one_transform = block_plane_width <= tx_width && block_plane_height <= tx_height;
-    let above_merged = merged_coefficient_context(above);
-    let left_merged = merged_coefficient_context(left);
-    let skipped = if block_skipped {
-        true
-    } else if plane == 0 {
-        let skip_context = if one_transform {
-            0
-        } else {
-            luma_skip_context(above_merged, left_merged)
-        };
-        let skip_cdf = match entropy_context {
-            2 => CoefficientSkipCdf::LossyLuma16x16Context(skip_context),
-            3 => CoefficientSkipCdf::LossyLuma32x16Context(skip_context),
-            4 => CoefficientSkipCdf::LossyLumaContextFour(skip_context),
-            _ => return Err(PortableUnavailable),
-        };
-        decode_contextual_skip(decoder, 0, skip_cdf, cdfs)
-    } else {
-        let skip_context = if one_transform { 7 } else { 10 }
-            + usize::from(above.iter().any(|&context| context != 0x40))
-            + usize::from(left.iter().any(|&context| context != 0x40));
-        decode_contextual_skip(
-            decoder,
-            1,
-            CoefficientSkipCdf::Subsampled {
-                transform_context: entropy_context,
-                skip_context,
-            },
-            cdfs,
-        )
-    };
-
-    let (transform, transform_symbol) =
-        if plane == 0 && matches!(tx_size, TxSize::Tx8x16 | TxSize::Tx16x8) && !skipped {
-            let symbol = decoder.adaptive_symbol(
-                cdfs.lossy_luma_8x8_transform_type
-                    .get_mut(transform_luma_mode)
-                    .portable()?,
-                6,
-            );
-            let transform = match symbol {
-                0 => Av1TransformType::IdentityIdentity,
-                1 => Av1TransformType::DctDct,
-                2 => Av1TransformType::VerticalDct,
-                3 => Av1TransformType::HorizontalDct,
-                4 => Av1TransformType::AdstAdst,
-                5 => Av1TransformType::AdstDct,
-                6 => Av1TransformType::DctAdst,
-                _ => return Err(PortableUnavailable),
-            };
-            (transform, Some(symbol))
-        } else if plane == 0 && matches!(tx_size, TxSize::Tx16x16) && !skipped {
-            let symbol = decoder.adaptive_symbol(
-                cdfs.lossy_luma_16x16_transform_type
-                    .get_mut(transform_luma_mode)
-                    .portable()?,
-                4,
-            );
-            let transform = match symbol {
-                0 => Av1TransformType::IdentityIdentity,
-                1 => Av1TransformType::DctDct,
-                2 => Av1TransformType::AdstAdst,
-                3 => Av1TransformType::AdstDct,
-                4 => Av1TransformType::DctAdst,
-                _ => return Err(PortableUnavailable),
-            };
-            (transform, Some(symbol))
-        } else if plane == 0 || tx_width.max(tx_height) >= 32 {
-            (Av1TransformType::DctDct, None)
-        } else {
-            (
-                Av1TransformType::from(chroma_transform_kind(chroma_predictor)),
-                None,
-            )
-        };
-
+    let tx_context = tx_size.coefficient_context();
+    let skip_context = generic_coefficient_skip_context(
+        plane,
+        tx_size,
+        block_plane_width,
+        block_plane_height,
+        above,
+        left,
+    )?;
+    let skipped = block_skipped
+        || decoder.adaptive_bool(
+            cdfs.coefficient.skip[tx_context]
+                .get_mut(skip_context)
+                .portable()?,
+        );
+    let transform = select_generic_intra_transform(
+        decoder,
+        plane,
+        cdfs,
+        tx_size,
+        skipped,
+        quantization.reduced_transform_set,
+        quantization.segment_qindex,
+        transform_luma_mode,
+        chroma_predictor,
+    )?;
+    let transform = GenericTerminalTransform::Lossy(transform);
     arena.coefficients.clear();
     if skipped {
         return Ok(DecodedGenericTerminal {
@@ -14410,180 +14990,93 @@ fn decode_generic_lossy_terminal(
         .try_reserve(coefficient_count)
         .map_err(|_| PortableUnavailable)?;
     arena.coefficients.resize(coefficient_count, 0);
-
     let dc_sign_context =
         coefficient_dc_sign_context_for_dimensions(context_width, context_height, above, left);
-    if plane == 0
-        && matches!(tx_size, TxSize::Tx8x16 | TxSize::Tx16x8)
-        && matches!(transform_symbol, Some(2 | 3))
-    {
-        let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x16_eob_bin_1d, 7);
-        let geometry = if matches!(tx_size, TxSize::Tx8x16) {
-            LossyOneDimensionalGeometry::R8x16
-        } else {
-            LossyOneDimensionalGeometry::R16x8
-        };
-        let (coefficients, residual_context) = decode_lossy_luma_8x16_1d_coefficients(
-            decoder,
-            cdfs,
-            quantization,
-            eob_bin,
-            matches!(transform_symbol, Some(2)),
-            dc_sign_context,
-            geometry,
-        )?;
-        arena.coefficients.copy_from_slice(&coefficients);
-        return Ok(DecodedGenericTerminal {
-            skipped: false,
-            coefficient_count,
-            residual_context,
-            transform,
-        });
-    }
-
-    let layout = match (plane == 0, tx_size) {
-        (true, TxSize::Tx8x16) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x16_eob_bin, 7),
-            scan: &LOSSY_LUMA_8X16_SCAN,
-            coefficient_count,
-            shift: 4,
-            mask: 15,
-            levels_stride: LOSSY_LUMA_8X16_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_8X16_LEVELS,
-            eob_thresholds: (16, 32),
-            cdf_set: LossyLargeCdfSet::Luma8x16,
-        },
-        (true, TxSize::Tx16x8) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x16_eob_bin, 7),
-            scan: &LOSSY_LUMA_16X8_SCAN,
-            coefficient_count,
-            shift: 3,
-            mask: 7,
-            levels_stride: LOSSY_LUMA_16X8_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_16X8_LEVELS,
-            eob_thresholds: (16, 32),
-            cdf_set: LossyLargeCdfSet::Luma16x8,
-        },
-        (true, TxSize::Tx16x16) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x16_eob_bin, 8),
-            scan: &LOSSY_LUMA_16X16_SCAN,
-            coefficient_count,
-            shift: 4,
-            mask: 15,
-            levels_stride: LOSSY_LUMA_16X16_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_16X16_LEVELS,
-            eob_thresholds: (32, 64),
-            cdf_set: LossyLargeCdfSet::Luma16x16,
-        },
-        (true, TxSize::Tx16x32) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x64_eob_bin, 9),
-            scan: &LOSSY_LUMA_16X32_SCAN,
-            coefficient_count,
-            shift: 5,
-            mask: 31,
-            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_32X32_LEVELS,
-            eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Luma16x32,
-        },
-        (true, TxSize::Tx32x16) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_16x64_eob_bin, 9),
-            scan: &LOSSY_LUMA_32X16_SCAN,
-            coefficient_count,
-            shift: 4,
-            mask: 15,
-            levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_32X16_LEVELS,
-            eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Luma32x16,
-        },
-        (true, TxSize::Tx32x32) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10),
-            scan: &LOSSY_LUMA_32X32_SCAN,
-            coefficient_count,
-            shift: 5,
-            mask: 31,
-            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_32X32_LEVELS,
-            eob_thresholds: (128, 256),
-            cdf_set: LossyLargeCdfSet::Luma32x32,
-        },
-        (true, TxSize::Tx32x64 | TxSize::Tx64x32 | TxSize::Tx64x64) => {
-            LossyLargeCoefficientLayout {
-                eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_luma_32x32_eob_bin, 10),
-                scan: &LOSSY_LUMA_32X32_SCAN,
-                coefficient_count,
-                shift: 5,
-                mask: 31,
-                levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
-                levels_len: LOSSY_LUMA_32X32_LEVELS,
-                eob_thresholds: (128, 256),
-                cdf_set: LossyLargeCdfSet::Luma64x64,
-            }
-        }
-        (false, TxSize::Tx16x32) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x32_eob_bin, 9),
-            scan: &LOSSY_LUMA_16X32_SCAN,
-            coefficient_count,
-            shift: 5,
-            mask: 31,
-            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_32X32_LEVELS,
-            eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Chroma16x32,
-        },
-        (false, TxSize::Tx32x16) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_chroma_16x32_eob_bin, 9),
-            scan: &LOSSY_LUMA_32X16_SCAN,
-            coefficient_count,
-            shift: 4,
-            mask: 15,
-            levels_stride: LOSSY_LUMA_32X16_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_32X16_LEVELS,
-            eob_thresholds: (64, 128),
-            cdf_set: LossyLargeCdfSet::Chroma32x16,
-        },
-        (false, TxSize::Tx32x32) => LossyLargeCoefficientLayout {
-            eob_bin: decoder.adaptive_symbol(&mut cdfs.lossy_chroma_32x32_eob_bin, 10),
-            scan: &LOSSY_LUMA_32X32_SCAN,
-            coefficient_count,
-            shift: 5,
-            mask: 31,
-            levels_stride: LOSSY_LUMA_32X32_LEVEL_STRIDE,
-            levels_len: LOSSY_LUMA_32X32_LEVELS,
-            eob_thresholds: (128, 256),
-            cdf_set: LossyLargeCdfSet::Chroma32x32,
-        },
-        _ => return Err(PortableUnavailable),
-    };
-    let mut terminal_quantization = quantization;
-    if matches!(transform, Av1TransformType::IdentityIdentity) {
-        terminal_quantization.using_matrix = false;
-    }
-    if plane == 0 {
-        cdfs.last_lossy_luma_residual_context = None;
-    } else {
-        cdfs.last_lossy_chroma_residual_context = None;
-    }
-    decode_lossy_large_two_d_coefficients_into(
+    let residual_context = decode_generic_lossy_coefficients_into(
         decoder,
         plane,
         cdfs,
-        terminal_quantization,
-        Some(dc_sign_context),
-        layout,
-        &mut arena.coefficients,
         &mut arena.scratch,
+        quantization,
+        tx_size,
+        transform,
+        dc_sign_context,
+        &mut arena.coefficients,
     )?;
-    let residual_context = if plane == 0 {
-        cdfs.last_lossy_luma_residual_context.take()
-    } else {
-        cdfs.last_lossy_chroma_residual_context.take()
-    }
-    .portable()?;
     Ok(DecodedGenericTerminal {
         skipped: false,
         coefficient_count,
+        residual_context,
+        transform,
+    })
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the lossless terminal keeps entropy geometry, neighbor contexts, quantization, and reusable storage explicit"
+)]
+fn decode_generic_lossless_terminal(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    plane: usize,
+    cdfs: &mut BlockCdfs,
+    arena: &mut LargeCoefficientArena,
+    mut quantization: LossyQuantization,
+    tx_size: TxSize,
+    block_plane_width: usize,
+    block_plane_height: usize,
+    above: &[u8],
+    left: &[u8],
+    block_skipped: bool,
+) -> PortableResult<DecodedGenericTerminal> {
+    (tx_size == TxSize::Tx4x4 && matches!(plane, 0..=2))
+        .then_some(())
+        .portable()?;
+    let context_width = 1;
+    let context_height = 1;
+    (above.len() == context_width && left.len() == context_height)
+        .then_some(())
+        .portable()?;
+    let skip_context = generic_coefficient_skip_context(
+        plane,
+        tx_size,
+        block_plane_width,
+        block_plane_height,
+        above,
+        left,
+    )?;
+    let skipped = block_skipped
+        || decoder.adaptive_bool(cdfs.coefficient.skip[0].get_mut(skip_context).portable()?);
+    let transform = GenericTerminalTransform::LosslessWht4x4;
+    arena.coefficients.clear();
+    if skipped {
+        return Ok(DecodedGenericTerminal {
+            skipped: true,
+            coefficient_count: 16,
+            residual_context: 0x40,
+            transform,
+        });
+    }
+    arena
+        .coefficients
+        .try_reserve(16)
+        .map_err(|_| PortableUnavailable)?;
+    arena.coefficients.resize(16, 0);
+    quantization.using_matrix = false;
+    let dc_sign_context = coefficient_dc_sign_context_for_dimensions(1, 1, above, left);
+    let residual_context = decode_generic_lossy_coefficients_into(
+        decoder,
+        plane,
+        cdfs,
+        &mut arena.scratch,
+        quantization,
+        tx_size,
+        transform,
+        dc_sign_context,
+        &mut arena.coefficients,
+    )?;
+    Ok(DecodedGenericTerminal {
+        skipped: false,
+        coefficient_count: 16,
         residual_context,
         transform,
     })
@@ -17259,9 +17752,9 @@ fn decode_palette_plane(
 
     let (cache, cache_count) = palette_cache_entries(
         neighbors.above,
-        neighbors.above_available,
+        neighbors.above_cache_available,
         neighbors.left,
-        neighbors.left_available,
+        neighbors.left_cache_available,
     );
     let mut used_cache = [0_u16; PALETTE_CAPACITY];
     let mut used_count = 0_usize;
@@ -17607,9 +18100,9 @@ fn decode_palette_syntax(
             size_context,
             PalettePlaneContext {
                 above: palette_context.above.y,
-                above_available: palette_context.above_available,
+                above_cache_available: palette_context.above_cache_available,
                 left: palette_context.left.y,
-                left_available: palette_context.left_available,
+                left_cache_available: palette_context.left_available,
             },
         )?
     } else {
@@ -17634,9 +18127,9 @@ fn decode_palette_syntax(
             size_context,
             PalettePlaneContext {
                 above: palette_context.above.u,
-                above_available: palette_context.above_available,
+                above_cache_available: palette_context.above_cache_available,
                 left: palette_context.left.u,
-                left_available: palette_context.left_available,
+                left_cache_available: palette_context.left_available,
             },
         )?;
         let v = decode_palette_v_plane(decoder, tools.sample_depth, u.size)?;
@@ -17762,6 +18255,9 @@ fn decode_block_quantization(
         matrix_y: 0,
         matrix_u: 0,
         matrix_v: 0,
+        reduced_transform_set: false,
+        segment_qindex: 0,
+        segment_lossless: false,
     };
     if let QuantizationSyntax::Lossy {
         initial_qindex,
@@ -17777,6 +18273,8 @@ fn decode_block_quantization(
         matrix_y,
         matrix_u,
         matrix_v,
+        reduced_transform_set,
+        segment_qindex,
     } = quantization_syntax
     {
         let qindex = if delta_q_present {
@@ -17799,6 +18297,9 @@ fn decode_block_quantization(
             matrix_y,
             matrix_u,
             matrix_v,
+            reduced_transform_set,
+            segment_qindex,
+            segment_lossless: false,
         };
     }
     Ok(quantization)
@@ -17809,13 +18310,13 @@ fn decode_luma_intra_header(
     cdfs: &mut BlockCdfs,
     block_size: BlockSize,
     chroma_sampling: ChromaSampling,
-    quantization_syntax: QuantizationSyntax,
+    segment_lossless: bool,
     policy: SyntaxPolicy,
 ) -> PortableResult<(u32, LumaPredictor, Option<i32>)> {
     let luma_mode =
         decoder.adaptive_symbol(&mut cdfs.luma_mode[policy.spatial_luma_context.index()], 12);
     let luma_predictor = match luma_mode {
-        0 if matches!(quantization_syntax, QuantizationSyntax::Lossless)
+        0 if segment_lossless
             || matches!(
                 policy.coefficient_policy,
                 CoefficientPolicy::Lossy420DcOrSkipped { .. }
@@ -17938,7 +18439,7 @@ fn decode_chroma_intra_header(
     block_size: BlockSize,
     chroma_sampling: ChromaSampling,
     luma_predictor: LumaPredictor,
-    quantization_syntax: QuantizationSyntax,
+    segment_lossless: bool,
     policy: SyntaxPolicy,
 ) -> PortableResult<(ChromaPredictor, Option<i32>)> {
     if matches!(chroma_sampling, ChromaSampling::Monochrome) {
@@ -17947,14 +18448,7 @@ fn decode_chroma_intra_header(
     let (grid_width, grid_height) = block_size.mi_dimensions();
     let grid_width = usize::try_from(grid_width).map_err(|_| PortableUnavailable)?;
     let grid_height = usize::try_from(grid_height).map_err(|_| PortableUnavailable)?;
-    let lossless = matches!(quantization_syntax, QuantizationSyntax::Lossless);
-    let cfl_allowed = match chroma_sampling {
-        ChromaSampling::Full => ChromaSampling::full_cfl_allowed(grid_width, grid_height, lossless),
-        ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 => {
-            ChromaSampling::subsampled_cfl_allowed(grid_width, grid_height, lossless)
-        }
-        ChromaSampling::Monochrome => false,
-    };
+    let cfl_allowed = chroma_sampling.cfl_allowed(grid_width, grid_height, segment_lossless);
     let predictor_index = luma_predictor.cdf_index();
     let chroma_mode = if cfl_allowed {
         decoder.adaptive_symbol(&mut cdfs.subsampled_chroma_mode[predictor_index], 13)
@@ -18008,26 +18502,36 @@ fn decode_intra_header(
     tools: BlockTools,
     palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
     cdef_index_bits: u32,
+    segment_lossless: bool,
 ) -> PortableResult<DecodedIntraHeader> {
-    let skip = decoder.adaptive_bool(&mut cdfs.skip);
+    let skip = decoder.adaptive_bool(cdfs.skip.get_mut(tools.skip_context).portable()?);
     let cdef_index = if skip {
         0
     } else {
         decoder.bits(cdef_index_bits)
     };
-    let lossless = matches!(policy.quantization_syntax, QuantizationSyntax::Lossless);
-    let lossy_quantization = decode_block_quantization(
+    let mut effective_quantization_syntax = policy.quantization_syntax;
+    if skip
+        && tools.suppress_delta_q_when_skipped
+        && let QuantizationSyntax::Lossy {
+            delta_q_present, ..
+        } = &mut effective_quantization_syntax
+    {
+        *delta_q_present = false;
+    }
+    let mut lossy_quantization = decode_block_quantization(
         decoder,
         cdfs,
-        policy.quantization_syntax,
+        effective_quantization_syntax,
         tools.sample_depth,
     )?;
+    lossy_quantization.segment_lossless = segment_lossless;
     let (luma_mode, luma_predictor, luma_angle) = decode_luma_intra_header(
         decoder,
         cdfs,
         block_size,
         chroma_sampling,
-        policy.quantization_syntax,
+        segment_lossless,
         policy,
     )?;
     let (chroma_predictor, chroma_angle) = decode_chroma_intra_header(
@@ -18036,7 +18540,7 @@ fn decode_intra_header(
         block_size,
         chroma_sampling,
         luma_predictor,
-        policy.quantization_syntax,
+        segment_lossless,
         policy,
     )?;
     let palette_geometry =
@@ -18085,7 +18589,7 @@ fn decode_intra_header(
         Some(_) => return Err(PortableUnavailable),
     };
     let mut transform_depth = 0;
-    if !lossless && tools.transform_mode == 2 {
+    if !segment_lossless && tools.transform_mode == 2 {
         let transform_size_max = block_size.transform_size_max();
         if transform_size_max != 0 {
             let depth = decoder.adaptive_symbol(
@@ -18104,7 +18608,7 @@ fn decode_intra_header(
             active: !skip,
             index: usize::try_from(cdef_index).unwrap_or_default(),
         },
-        lossless,
+        lossless: segment_lossless,
         lossy_quantization,
         luma_predictor,
         luma_angle,
@@ -18165,6 +18669,7 @@ fn decode_syntax_with_cdef(
         tools,
         palette_entropy_dimensions,
         cdef_index_bits,
+        matches!(policy.quantization_syntax, QuantizationSyntax::Lossless),
     )?;
     let DecodedIntraHeader {
         skip,
@@ -19897,6 +20402,7 @@ fn decode_syntax_with_cdef(
     let lossy_luma_residual_context = cdfs.last_lossy_luma_residual_context.take();
     Ok((
         BlockSyntax {
+            block_skipped: skip,
             luma_predictor,
             luma_angle,
             filter_intra_mode,
@@ -20044,6 +20550,17 @@ fn inverse_wht_4x4(coefficients: TransformCoefficients) -> [i32; 16] {
         }
     }
     values
+}
+
+fn reconstruct_lossless_wht_prediction_in_place(
+    prediction: &mut [u16],
+    coefficients: &[i32],
+    sample_depth: SampleDepth,
+) -> PortableResult<()> {
+    let coefficients: &TransformCoefficients =
+        coefficients.try_into().map_err(|_| PortableUnavailable)?;
+    let residual = inverse_wht_4x4(*coefficients);
+    add_prediction_residual_in_place(prediction, &residual, sample_depth.maximum())
 }
 
 fn reconstruct_transform(predictor: u16, coefficients: TransformCoefficients) -> [u16; 16] {
@@ -28762,7 +29279,9 @@ fn reconstruct_lossless_palette_leaf(
     if let ChromaPredictor::Cfl { alpha_u, alpha_v } = syntax.chroma_predictor {
         (!uv_palette).then_some(()).portable()?;
         let (luma_grid_width, luma_grid_height, _) = syntax.transform_grid.properties();
-        ChromaSampling::subsampled_cfl_allowed(luma_grid_width, luma_grid_height, true)
+        syntax
+            .chroma_sampling
+            .cfl_allowed(luma_grid_width, luma_grid_height, true)
             .then_some(())
             .portable()?;
         let (chroma_grid_width, chroma_grid_height) =
@@ -28777,7 +29296,7 @@ fn reconstruct_lossless_palette_leaf(
         let mut ac = vec![0_i32; chroma_count];
         cfl_ac_for_sampling_into(
             &mut ac,
-            &luma,
+            &luma.samples,
             luma_width,
             luma_height,
             luma_width,
@@ -31376,11 +31895,11 @@ fn reconstruct_full_unsplit_prediction_in_place(
 )]
 fn cfl_ac_for_sampling_into(
     ac: &mut [i32],
-    luma: &ReconstructedPlane,
+    luma: &[u16],
     luma_width: usize,
     luma_height: usize,
-    visible_width: usize,
-    visible_height: usize,
+    reconstructed_width: usize,
+    reconstructed_height: usize,
     chroma_width: usize,
     chroma_height: usize,
     chroma_sampling: ChromaSampling,
@@ -31403,11 +31922,11 @@ fn cfl_ac_for_sampling_into(
     let required_height = chroma_height.checked_mul(subsampling_y).portable()?;
     let missing_x = required_width.checked_sub(luma_width).portable()?;
     let missing_y = required_height.checked_sub(luma_height).portable()?;
-    (luma.samples.len() == luma_count
-        && visible_width != 0
-        && visible_width <= luma_width
-        && visible_height != 0
-        && visible_height <= luma_height
+    (luma.len() == luma_count
+        && reconstructed_width != 0
+        && reconstructed_width <= luma_width
+        && reconstructed_height != 0
+        && reconstructed_height <= luma_height
         && missing_x <= MAX_CFL_BORDER
         && missing_y <= MAX_CFL_BORDER
         && context.missing_x == missing_x
@@ -31436,8 +31955,8 @@ fn cfl_ac_for_sampling_into(
                         luma,
                         luma_width,
                         luma_height,
-                        visible_width,
-                        visible_height,
+                        reconstructed_width,
+                        reconstructed_height,
                         source_x,
                         source_y,
                     )?;
@@ -31488,6 +32007,49 @@ fn full_cfl_prediction_into(
         .zip(ac[vector_count..].iter().copied())
     {
         *sample = reconstruct_lossless_cfl_sample(predictor, alpha, value, 0, sample_depth)?;
+    }
+    Ok(())
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "a streamed CfL child borrows one rectangle from the block-wide AC surface"
+)]
+fn full_cfl_child_prediction_into(
+    prediction: &mut [u16],
+    ac: &[i32],
+    ac_stride: usize,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+    predictor: u16,
+    alpha: i32,
+    sample_depth: SampleDepth,
+) -> PortableResult<()> {
+    (prediction.len() == width.checked_mul(height).portable()?
+        && ac_stride != 0
+        && x.checked_add(width).is_some_and(|end| end <= ac_stride))
+    .then_some(())
+    .portable()?;
+    for row in 0..height {
+        let source_start = y
+            .checked_add(row)
+            .and_then(|source_y| source_y.checked_mul(ac_stride))
+            .and_then(|offset| offset.checked_add(x))
+            .portable()?;
+        let source_end = source_start.checked_add(width).portable()?;
+        let destination_start = row.checked_mul(width).portable()?;
+        let destination_end = destination_start.checked_add(width).portable()?;
+        full_cfl_prediction_into(
+            prediction
+                .get_mut(destination_start..destination_end)
+                .portable()?,
+            ac.get(source_start..source_end).portable()?,
+            predictor,
+            alpha,
+            sample_depth,
+        )?;
     }
     Ok(())
 }
@@ -31568,6 +32130,55 @@ impl PrivatePlaneRaster {
             .portable()
     }
 
+    fn active_is_complete(&self) -> bool {
+        self.rectangle_is_complete(self.active_width, self.active_height)
+    }
+
+    fn rectangle_is_complete(&self, width: usize, height: usize) -> bool {
+        width != 0
+            && height != 0
+            && width <= self.coded_width
+            && height <= self.coded_height
+            && (0..height).all(|row| {
+                let start = row.saturating_mul(self.coded_width);
+                let end = start.saturating_add(width);
+                self.written
+                    .get(start..end)
+                    .is_some_and(|written| written.iter().all(|&value| value != 0))
+            })
+    }
+
+    /// Return the complete luma rectangle retained for a clipped block.
+    ///
+    /// AV1 reconstructs the complete terminal transform that crosses the
+    /// frame edge. CfL consumes that tail and repeats only after the aligned
+    /// transform boundary, while final frame publication still crops to the
+    /// active dimensions.
+    fn complete_transform_extent(
+        &self,
+        transform_width: usize,
+        transform_height: usize,
+    ) -> PortableResult<(usize, usize)> {
+        (transform_width != 0 && transform_height != 0)
+            .then_some(())
+            .portable()?;
+        let width = self
+            .active_width
+            .div_ceil(transform_width)
+            .checked_mul(transform_width)
+            .portable()?
+            .min(self.coded_width);
+        let height = self
+            .active_height
+            .div_ceil(transform_height)
+            .checked_mul(transform_height)
+            .portable()?
+            .min(self.coded_height);
+        self.rectangle_is_complete(width, height)
+            .then_some((width, height))
+            .portable()
+    }
+
     fn commit_transform(
         &mut self,
         x: usize,
@@ -31579,19 +32190,20 @@ impl PrivatePlaneRaster {
     ) -> PortableResult<()> {
         (prediction.len() == width.checked_mul(height).portable()?
             && x < self.active_width
-            && y < self.active_height)
-            .then_some(())
-            .portable()?;
-        let copy_width = width.min(self.active_width.saturating_sub(x));
-        let copy_height = height.min(self.active_height.saturating_sub(y));
-        for (row, source) in prediction.chunks_exact(width).take(copy_height).enumerate() {
+            && y < self.active_height
+            && x.checked_add(width)
+                .is_some_and(|end| end <= self.coded_width)
+            && y.checked_add(height)
+                .is_some_and(|end| end <= self.coded_height))
+        .then_some(())
+        .portable()?;
+        for (row, source) in prediction.chunks_exact(width).enumerate() {
             let start = y
                 .checked_add(row)
                 .and_then(|row| row.checked_mul(self.coded_width))
                 .and_then(|offset| offset.checked_add(x))
                 .portable()?;
-            let end = start.checked_add(copy_width).portable()?;
-            let source = source.get(..copy_width).portable()?;
+            let end = start.checked_add(width).portable()?;
             source
                 .iter()
                 .copied()
@@ -31667,8 +32279,13 @@ impl PrivatePlaneRaster {
         let (block_width, block_height) = block_size.pixel_dimensions();
         let block_width = usize::try_from(block_width).map_err(|_| PortableUnavailable)?;
         let block_height = usize::try_from(block_height).map_err(|_| PortableUnavailable)?;
-        (block_width.div_ceil(scale_x) == self.coded_width
-            && block_height.div_ceil(scale_y) == self.coded_height)
+        let expected_width = block_width
+            .div_ceil(scale_x)
+            .max(usize::from(plane != 0) * 4);
+        let expected_height = block_height
+            .div_ceil(scale_y)
+            .max(usize::from(plane != 0) * 4);
+        (expected_width == self.coded_width && expected_height == self.coded_height)
             .then_some(())
             .portable()?;
         let active_width_mi = self.active_width.div_ceil(4);
@@ -31701,7 +32318,10 @@ impl PrivatePlaneRaster {
         let mut top_len = 0_usize;
         let mut top_valid_len = 0_usize;
         if y != 0 {
-            let base_len = width.min(self.active_width.saturating_sub(x));
+            // A visited transform reconstructs its complete coded tail even
+            // when that tail lies beyond the visible frame. Later transform
+            // rows consume that retained tail as their normative top edge.
+            let base_len = width;
             let wanted = if have_above_right {
                 top_limit
             } else {
@@ -31709,7 +32329,7 @@ impl PrivatePlaneRaster {
             };
             for offset in 0..wanted {
                 let sample_x = x.checked_add(offset).portable()?;
-                if sample_x >= self.active_width {
+                if sample_x >= self.coded_width {
                     break;
                 }
                 let Ok(sample) = self.written_sample(sample_x, y.saturating_sub(1)) else {
@@ -31739,7 +32359,9 @@ impl PrivatePlaneRaster {
         let mut left_len = 0_usize;
         let mut left_valid_len = 0_usize;
         if x != 0 {
-            let base_len = height.min(self.active_height.saturating_sub(y));
+            // The analogous bottom tail is retained for a later transform
+            // column's left edge.
+            let base_len = height;
             let wanted = if have_below_left {
                 left_limit
             } else {
@@ -31747,7 +32369,7 @@ impl PrivatePlaneRaster {
             };
             for offset in 0..wanted {
                 let sample_y = y.checked_add(offset).portable()?;
-                if sample_y >= self.active_height {
+                if sample_y >= self.coded_height {
                     break;
                 }
                 let Ok(sample) = self.written_sample(x.saturating_sub(1), sample_y) else {
@@ -32532,7 +33154,7 @@ fn reconstruct_lossy_normalized_leaf(
         cfl_ac.resize(chroma_count, 0);
         cfl_ac_for_sampling_into(
             cfl_ac,
-            &luma,
+            &luma.samples,
             luma_width,
             luma_height,
             visible_width,
@@ -32678,6 +33300,7 @@ fn reconstruct_visible_lossy_normalized_leaf(
     let (chroma_right, chroma_bottom) = chroma_edge_contexts_for_syntax(syntax);
     let leaf = visible_leaf(
         closed,
+        syntax.block_skipped,
         (!matches!(syntax.chroma_sampling, ChromaSampling::Monochrome))
             .then_some(syntax.chroma_predictor),
         transform_grid,
@@ -44077,6 +44700,7 @@ where
 )]
 fn visible_leaf(
     leaf: ClosedLeaf,
+    block_skipped: bool,
     chroma_predictor: Option<ChromaPredictor>,
     transform_grid: TransformGrid,
     width: u32,
@@ -44119,6 +44743,7 @@ fn visible_leaf(
     FirstLeaf {
         width,
         height,
+        block_skipped,
         planes,
         luma_predictor: leaf.luma_predictor,
         chroma_predictor,
@@ -44581,6 +45206,7 @@ pub(super) fn decode_first_lossless_444_leaf(
     Ok(with_palette_cache(
         visible_leaf(
             leaf,
+            syntax.block_skipped,
             Some(syntax.chroma_predictor),
             transform_grid,
             width,
@@ -46915,6 +47541,7 @@ pub(super) fn decode_first_lossless_420_leaf(
     Ok(crop_lossless_420_leaf(with_palette_cache(
         visible_leaf(
             leaf,
+            syntax.block_skipped,
             Some(syntax.chroma_predictor),
             transform_grid,
             width,
@@ -47008,6 +47635,8 @@ fn reject_unhandled_lossy_luma_64x64_split(syntax: &BlockSyntax) -> PortableResu
 struct PendingBlockGeometry {
     block_size: BlockSize,
     palette_entropy_dimensions: PaletteEntropyDimensions,
+    cdef_slot: usize,
+    cdef_coverage: u8,
 }
 
 struct GenericCoefficientState {
@@ -47046,6 +47675,23 @@ fn generic_plane_geometry(
     visible_width: u32,
     visible_height: u32,
 ) -> PortableResult<(usize, usize, usize, usize)> {
+    fn sampled_axis(pixels: u32, scale: u32) -> PortableResult<usize> {
+        (pixels != 0 && scale != 0).then_some(()).portable()?;
+        let samples = if scale == 1 {
+            pixels
+        } else {
+            // Subsampling operates on complete 4x4 luma units, not on the
+            // raw pixel count. An odd final luma MI therefore owns one full
+            // 4px chroma unit instead of a two-pixel partial unit.
+            pixels
+                .div_ceil(4)
+                .div_ceil(scale)
+                .checked_mul(4)
+                .portable()?
+        };
+        usize::try_from(samples).map_err(|_| PortableUnavailable)
+    }
+
     if plane != 0 && matches!(chroma_sampling, ChromaSampling::Monochrome) {
         // `FirstLeaf` intentionally retains a three-plane carrier, but a
         // monochrome leaf never visits or publishes U/V. Keep only the
@@ -47057,16 +47703,12 @@ fn generic_plane_geometry(
     let (scale_x, scale_y) = chroma_sampling.plane_subsampling(plane);
     let scale_x = u32::try_from(scale_x).map_err(|_| PortableUnavailable)?;
     let scale_y = u32::try_from(scale_y).map_err(|_| PortableUnavailable)?;
-    let coded_width =
-        usize::try_from(coded_width.div_ceil(scale_x)).map_err(|_| PortableUnavailable)?;
-    let coded_height =
-        usize::try_from(coded_height.div_ceil(scale_y)).map_err(|_| PortableUnavailable)?;
-    let active_width = usize::try_from(visible_width.div_ceil(scale_x))
-        .map_err(|_| PortableUnavailable)?
+    let coded_width = sampled_axis(coded_width, scale_x)?.max(usize::from(plane != 0) * 4);
+    let coded_height = sampled_axis(coded_height, scale_y)?.max(usize::from(plane != 0) * 4);
+    let active_width = sampled_axis(visible_width, scale_x)?
         .max(usize::from(plane != 0) * 4)
         .min(coded_width);
-    let active_height = usize::try_from(visible_height.div_ceil(scale_y))
-        .map_err(|_| PortableUnavailable)?
+    let active_height = sampled_axis(visible_height, scale_y)?
         .max(usize::from(plane != 0) * 4)
         .min(coded_height);
     Ok((coded_width, coded_height, active_width, active_height))
@@ -47079,7 +47721,11 @@ pub(super) struct Lossy420Decoder {
     reconstruction_scratch: ReconstructionScratch,
     chroma_sampling: ChromaSampling,
     qcat_one_square_only: bool,
-    pending_cdef_index_bits: u32,
+    cdef_index_bits: u32,
+    cdef_indices: [Option<usize>; 4],
+    cdef_root_x: u32,
+    cdef_root_y: u32,
+    cdef_root_size: u32,
     pending_delta_q: bool,
     current_qindex: Option<u32>,
     last_cdef_active: bool,
@@ -47096,7 +47742,11 @@ impl Lossy420Decoder {
             reconstruction_scratch: ReconstructionScratch::new(),
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: false,
-            pending_cdef_index_bits: 0,
+            cdef_index_bits: 0,
+            cdef_indices: [None; 4],
+            cdef_root_x: 0,
+            cdef_root_y: 0,
+            cdef_root_size: 16,
             pending_delta_q: false,
             current_qindex: None,
             last_cdef_active: false,
@@ -47113,7 +47763,11 @@ impl Lossy420Decoder {
             reconstruction_scratch: ReconstructionScratch::new(),
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
-            pending_cdef_index_bits: 0,
+            cdef_index_bits: 0,
+            cdef_indices: [None; 4],
+            cdef_root_x: 0,
+            cdef_root_y: 0,
+            cdef_root_size: 16,
             pending_delta_q: false,
             current_qindex: Some(qindex),
             last_cdef_active: false,
@@ -47133,7 +47787,11 @@ impl Lossy420Decoder {
             reconstruction_scratch: ReconstructionScratch::new(),
             chroma_sampling,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
-            pending_cdef_index_bits: 0,
+            cdef_index_bits: 0,
+            cdef_indices: [None; 4],
+            cdef_root_x: 0,
+            cdef_root_y: 0,
+            cdef_root_size: 16,
             pending_delta_q: false,
             current_qindex: Some(qindex),
             last_cdef_active: false,
@@ -47149,13 +47807,36 @@ impl Lossy420Decoder {
         block_size: BlockSize,
         palette_entropy_width: u32,
         palette_entropy_height: u32,
+        block_x: u32,
+        block_y: u32,
     ) {
+        let local_x = block_x.saturating_sub(self.cdef_root_x);
+        let local_y = block_y.saturating_sub(self.cdef_root_y);
+        let split = usize::from(self.cdef_root_size > 16);
+        let slot_x = usize::from(local_x >= 16).min(split);
+        let slot_y = usize::from(local_y >= 16).min(split);
+        let cdef_slot = slot_y.saturating_mul(2).saturating_add(slot_x);
+        let (block_width, block_height) = block_size.mi_dimensions();
+        let spans_right = split != 0 && slot_x == 0 && block_width > 16;
+        let spans_bottom = split != 0 && slot_y == 0 && block_height > 16;
+        let mut cdef_coverage = 1_u8 << cdef_slot;
+        if spans_right {
+            cdef_coverage |= 1_u8 << cdef_slot.saturating_add(1);
+        }
+        if spans_bottom {
+            cdef_coverage |= 1_u8 << cdef_slot.saturating_add(2);
+        }
+        if spans_right && spans_bottom {
+            cdef_coverage |= 1_u8 << cdef_slot.saturating_add(3);
+        }
         self.pending_block_geometry = Some(PendingBlockGeometry {
             block_size,
             palette_entropy_dimensions: PaletteEntropyDimensions {
                 width: palette_entropy_width,
                 height: palette_entropy_height,
             },
+            cdef_slot,
+            cdef_coverage,
         });
     }
 
@@ -47191,14 +47872,33 @@ impl Lossy420Decoder {
             .checked_mul(4)
             .portable()?
             .min(coded_height);
-        self.begin_block(transform_grid.block_size(), entropy_width, entropy_height);
+        self.begin_block(
+            transform_grid.block_size(),
+            entropy_width,
+            entropy_height,
+            self.cdef_root_x,
+            self.cdef_root_y,
+        );
         Ok(())
     }
 
-    /// Arm the fixed-width CDEF-index sentence for the first block in one
-    /// superblock. The following blocks consume no additional index bits.
-    pub(super) fn begin_superblock(&mut self, cdef_index_bits: u32, delta_q: bool) {
-        self.pending_cdef_index_bits = cdef_index_bits;
+    /// Arm the fixed-width CDEF-index sentences for one superblock. A 128px
+    /// superblock owns four independently initialized 64px CDEF regions;
+    /// blocks spanning a region boundary publish their decoded index to every
+    /// covered slot.
+    pub(super) fn begin_superblock(
+        &mut self,
+        cdef_index_bits: u32,
+        delta_q: bool,
+        root_x: u32,
+        root_y: u32,
+        root_size: u32,
+    ) {
+        self.cdef_index_bits = cdef_index_bits;
+        self.cdef_indices = [None; 4];
+        self.cdef_root_x = root_x;
+        self.cdef_root_y = root_y;
+        self.cdef_root_size = root_size;
         self.pending_delta_q = delta_q;
         // AV1 initializes `last_qidx` once when a tile starts and carries it
         // across all superblocks in that tile. Do not restore the frame base
@@ -47218,23 +47918,39 @@ impl Lossy420Decoder {
         self.current_qindex = Some(syntax.lossy_quantization.qindex);
     }
 
-    fn remember_cdef(&mut self, metadata: CdefMetadata) {
+    fn remember_cdef(
+        &mut self,
+        mut metadata: CdefMetadata,
+        geometry: PendingBlockGeometry,
+    ) -> CdefMetadata {
+        if metadata.active {
+            if let Some(index) = self.cdef_indices[geometry.cdef_slot] {
+                metadata.index = index;
+            }
+            for slot in 0..self.cdef_indices.len() {
+                if geometry.cdef_coverage & (1_u8 << slot) != 0 {
+                    self.cdef_indices[slot] = Some(metadata.index);
+                }
+            }
+        }
         self.last_cdef_active = metadata.active;
         self.last_cdef_index = metadata.index;
-        // The fixed-width index is coded on the first non-skipped block of a
-        // superblock. A skipped block does not consume it, so leave the
-        // sentence armed until the first active block arrives.
-        if metadata.active {
-            self.pending_cdef_index_bits = 0;
-        }
+        metadata
     }
 
     pub(super) fn cdef_metadata(&self) -> (bool, usize) {
         (self.last_cdef_active, self.last_cdef_index)
     }
 
-    fn take_cdef_index_bits(&mut self) -> u32 {
-        self.pending_cdef_index_bits
+    fn take_cdef_index_bits(&self) -> u32 {
+        let slot = self
+            .pending_block_geometry
+            .map_or(0, |geometry| geometry.cdef_slot);
+        if self.cdef_indices.get(slot).copied().flatten().is_some() {
+            0
+        } else {
+            self.cdef_index_bits
+        }
     }
 
     fn decode_syntax_with_cdef(
@@ -47282,7 +47998,12 @@ impl Lossy420Decoder {
             cdef_index_bits,
             Some(&mut self.large_coeff_arena),
         )?;
-        self.remember_cdef(metadata);
+        if let Some(geometry) = pending_block_geometry {
+            self.remember_cdef(metadata, geometry);
+        } else {
+            self.last_cdef_active = metadata.active;
+            self.last_cdef_index = metadata.index;
+        }
         Ok(syntax)
     }
 
@@ -47307,7 +48028,7 @@ impl Lossy420Decoder {
         mut tools: BlockTools,
         spatial: LargeIntraSpatial<'_>,
     ) -> PortableResult<FirstLeaf> {
-        (uses_streamed_large_intra(block_size)
+        (uses_streamed_intra(block_size)
             && tools.sample_depth == quantization.sample_depth
             && visible_width != 0
             && visible_height != 0)
@@ -47363,7 +48084,22 @@ impl Lossy420Decoder {
                     .is_some_and(|neighbor| neighbor.tx_context_width >= max_tx_width),
             ))
         });
-        let spatial_luma_context =
+        let following_vertical_zone1_context = matches!(
+            (chroma_sampling, block_size),
+            (ChromaSampling::Subsampled420, BlockSize::B8x16)
+        ) && neighbors.is_some_and(|neighbors| {
+            neighbors
+                .above
+                .is_some_and(|neighbor| neighbor.pixel_width == 8 && neighbor.pixel_height == 16)
+                && neighbors.left.is_none()
+                && edges.planes[0].has_top
+                && !edges.planes[0].has_left
+                && edges.planes[0].top.valid_len() == 8
+                && !tools.enable_intra_edge_filter
+        });
+        let spatial_luma_context = if following_vertical_zone1_context {
+            SpatialLumaContext::FollowingVerticalZone1
+        } else {
             neighbors.map_or(Ok(SpatialLumaContext::Origin), |neighbors| {
                 SpatialLumaContext::from_two_neighbors(
                     neighbors
@@ -47373,7 +48109,8 @@ impl Lossy420Decoder {
                         .left
                         .map_or(LumaPredictor::Dc, |neighbor| neighbor.luma_predictor),
                 )
-            })?;
+            })?
+        };
         let neutral = [0x40; 32];
         let above_luma = neighbors.map_or(neutral, |neighbors| neighbors.above_luma_contexts);
         let left_luma = neighbors.map_or(neutral, |neighbors| neighbors.left_luma_contexts);
@@ -47382,7 +48119,7 @@ impl Lossy420Decoder {
         let left_chroma =
             neighbors.map_or([neutral; 2], |neighbors| neighbors.left_chroma_contexts);
         let cdef_index_bits = self.take_cdef_index_bits();
-        let header = decode_intra_header(
+        let mut header = decode_intra_header(
             decoder,
             &mut self.cdfs,
             &mut self.palette_map_arena,
@@ -47412,6 +48149,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: has_chroma,
                 allow_diagonal_chroma: has_chroma,
@@ -47422,18 +48161,15 @@ impl Lossy420Decoder {
             tools,
             Some(pending.palette_entropy_dimensions),
             cdef_index_bits,
+            quantization.segment_lossless,
         )?;
-        self.remember_cdef(header.cdef);
+        header.cdef = self.remember_cdef(header.cdef, pending);
         self.current_qindex = Some(header.lossy_quantization.qindex);
-        (!header.lossless
-            && header.block_size == block_size
-            && header.chroma_sampling == chroma_sampling
-            && !matches!(header.chroma_predictor, ChromaPredictor::Cfl { .. })
-            && header.filter_intra_mode.is_none())
-        .then_some(())
-        .portable()?;
-        let plan =
-            IntraTxPlan::new(block_size, layout, false, header.transform_depth).portable()?;
+        (header.block_size == block_size && header.chroma_sampling == chroma_sampling)
+            .then_some(())
+            .portable()?;
+        let plan = IntraTxPlan::new(block_size, layout, header.lossless, header.transform_depth)
+            .portable()?;
 
         let y_geometry = generic_plane_geometry(
             block_size,
@@ -47483,6 +48219,7 @@ impl Lossy420Decoder {
             GenericCoefficientState::origin,
             GenericCoefficientState::following,
         );
+        self.reconstruction_scratch.cfl_ac.clear();
 
         for visit in plan.iter() {
             let plane = usize::from(visit.plane);
@@ -47512,21 +48249,63 @@ impl Lossy420Decoder {
                     .get(context_y..left_end)
                     .portable()?,
             );
-            let terminal = decode_generic_lossy_terminal(
-                decoder,
-                plane,
-                &mut self.cdfs,
-                &mut self.large_coeff_arena,
-                header.lossy_quantization,
-                visit.tx_size,
-                rasters[plane].coded_width,
-                rasters[plane].coded_height,
-                &above[..context_width],
-                &left[..context_height],
-                header.skip,
-                header.transform_luma_mode,
-                header.chroma_predictor,
-            )?;
+            let terminal = if header.lossless {
+                decode_generic_lossless_terminal(
+                    decoder,
+                    plane,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    header.lossy_quantization,
+                    visit.tx_size,
+                    rasters[plane].coded_width,
+                    rasters[plane].coded_height,
+                    &above[..context_width],
+                    &left[..context_height],
+                    header.skip,
+                )?
+            } else {
+                decode_generic_lossy_terminal(
+                    decoder,
+                    plane,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    header.lossy_quantization,
+                    visit.tx_size,
+                    rasters[plane].coded_width,
+                    rasters[plane].coded_height,
+                    &above[..context_width],
+                    &left[..context_height],
+                    header.skip,
+                    header.transform_luma_mode,
+                    header.chroma_predictor,
+                )?
+            };
+            if plane == 1 && matches!(header.chroma_predictor, ChromaPredictor::Cfl { .. }) {
+                rasters[0].active_is_complete().then_some(()).portable()?;
+                let (luma_tx_width, luma_tx_height) = plan.luma_tx().pixel_dimensions();
+                let (cfl_luma_width, cfl_luma_height) = rasters[0].complete_transform_extent(
+                    usize::try_from(luma_tx_width).map_err(|_| PortableUnavailable)?,
+                    usize::try_from(luma_tx_height).map_err(|_| PortableUnavailable)?,
+                )?;
+                let chroma_count = rasters[1]
+                    .coded_width
+                    .checked_mul(rasters[1].coded_height)
+                    .portable()?;
+                let cfl_ac = &mut self.reconstruction_scratch.cfl_ac;
+                cfl_ac.resize(chroma_count, 0);
+                cfl_ac_for_sampling_into(
+                    cfl_ac,
+                    &rasters[0].samples,
+                    rasters[0].coded_width,
+                    rasters[0].coded_height,
+                    cfl_luma_width,
+                    cfl_luma_height,
+                    rasters[1].coded_width,
+                    rasters[1].coded_height,
+                    chroma_sampling,
+                    &edges.cfl_luma,
+                )?;
+            }
             let transform_edges = rasters[plane].transform_edges(
                 &edges.planes[plane],
                 block_size,
@@ -47539,11 +48318,12 @@ impl Lossy420Decoder {
                 tools.sample_depth,
             )?;
             let sample_count = tx_width.checked_mul(tx_height).portable()?;
+            let ReconstructionScratch { transform, cfl_ac } = &mut self.reconstruction_scratch;
             let TransformScratch {
                 prediction,
                 rows,
                 residual,
-            } = &mut self.reconstruction_scratch.transform;
+            } = transform;
             prediction.resize(sample_count, 0);
             let palette = match plane {
                 0 if header.palette.y.is_present() => Some((
@@ -47561,8 +48341,36 @@ impl Lossy420Decoder {
                 _ => None,
             };
             if let Some((palette, map)) = palette {
+                (!matches!(header.chroma_predictor, ChromaPredictor::Cfl { .. }) || plane == 0)
+                    .then_some(())
+                    .portable()?;
                 full_palette_child_prediction_into(
                     prediction, palette, map, x, y, tx_width, tx_height,
+                )?;
+            } else if plane != 0
+                && let ChromaPredictor::Cfl { alpha_u, alpha_v } = header.chroma_predictor
+            {
+                let predictor = match (transform_edges.has_top, transform_edges.has_left) {
+                    (true, true) => rectangular_full_dc(
+                        &transform_edges.top[..tx_width],
+                        &transform_edges.left[..tx_height],
+                        tools.sample_depth,
+                    )?,
+                    (true, false) => one_sided_full_dc(&transform_edges.top[..tx_width])?,
+                    (false, true) => one_sided_full_dc(&transform_edges.left[..tx_height])?,
+                    (false, false) => tools.sample_depth.midpoint(),
+                };
+                full_cfl_child_prediction_into(
+                    prediction,
+                    cfl_ac,
+                    rasters[plane].coded_width,
+                    x,
+                    y,
+                    tx_width,
+                    tx_height,
+                    predictor,
+                    if plane == 1 { alpha_u } else { alpha_v },
+                    tools.sample_depth,
                 )?;
             } else {
                 let predictor = if plane == 0 {
@@ -47596,18 +48404,32 @@ impl Lossy420Decoder {
                         .portable()?,
                 )
             };
-            reconstruct_full_unsplit_prediction_in_place(
-                prediction,
-                CoeffBlockRef {
-                    width: tx_width,
-                    height: tx_height,
-                    coefficients,
-                    transform: terminal.transform,
-                },
-                tools.sample_depth,
-                rows,
-                residual,
-            )?;
+            match terminal.transform {
+                GenericTerminalTransform::Lossy(transform) => {
+                    reconstruct_full_unsplit_prediction_in_place(
+                        prediction,
+                        CoeffBlockRef {
+                            width: tx_width,
+                            height: tx_height,
+                            coefficients,
+                            transform,
+                        },
+                        tools.sample_depth,
+                        rows,
+                        residual,
+                    )?;
+                }
+                GenericTerminalTransform::LosslessWht4x4 => {
+                    (tx_width == 4 && tx_height == 4).then_some(()).portable()?;
+                    if let Some(coefficients) = coefficients {
+                        reconstruct_lossless_wht_prediction_in_place(
+                            prediction,
+                            coefficients,
+                            tools.sample_depth,
+                        )?;
+                    }
+                }
+            }
             rasters[plane].commit_transform(
                 x,
                 y,
@@ -47616,12 +48438,14 @@ impl Lossy420Decoder {
                 prediction,
                 tools.sample_depth,
             )?;
+            let published_above_end = above_end.min(rasters[plane].active_width.div_ceil(4));
+            let published_left_end = left_end.min(rasters[plane].active_height.div_ceil(4));
             coefficient_state.above[plane]
-                .get_mut(context_x..above_end)
+                .get_mut(context_x..published_above_end)
                 .portable()?
                 .fill(terminal.residual_context);
             coefficient_state.left[plane]
-                .get_mut(context_y..left_end)
+                .get_mut(context_y..published_left_end)
                 .portable()?
                 .fill(terminal.residual_context);
         }
@@ -47655,6 +48479,7 @@ impl Lossy420Decoder {
         Ok(FirstLeaf {
             width: visible_width,
             height: visible_height,
+            block_skipped: header.skip,
             planes: [
                 y.into_visible_plane()?,
                 u.into_visible_plane()?,
@@ -47787,6 +48612,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: has_chroma,
                 allow_diagonal_chroma: has_chroma,
@@ -47965,6 +48792,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: false,
                 allow_diagonal_chroma: false,
@@ -48073,6 +48902,7 @@ impl Lossy420Decoder {
                 with_palette_cache(
                     visible_leaf(
                         leaf,
+                        syntax.block_skipped,
                         None,
                         transform_grid,
                         width,
@@ -48163,6 +48993,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: false,
                 allow_diagonal_chroma: false,
@@ -48338,6 +49170,7 @@ impl Lossy420Decoder {
                 with_palette_cache(
                     visible_leaf(
                         leaf,
+                        syntax.block_skipped,
                         None,
                         transform_grid,
                         width,
@@ -48474,6 +49307,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: true,
                 allow_diagonal_chroma: true,
@@ -48795,6 +49630,7 @@ impl Lossy420Decoder {
                 with_palette_cache(
                     visible_leaf(
                         leaf,
+                        syntax.block_skipped,
                         Some(syntax.chroma_predictor),
                         transform_grid,
                         width,
@@ -48940,6 +49776,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: true,
                 allow_diagonal_chroma: true,
@@ -48985,6 +49823,7 @@ impl Lossy420Decoder {
                     with_palette_cache(
                         visible_leaf(
                             leaf,
+                            syntax.block_skipped,
                             Some(syntax.chroma_predictor),
                             transform_grid,
                             width,
@@ -50079,6 +50918,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: true,
                 allow_diagonal_chroma: true,
@@ -50093,6 +50934,7 @@ impl Lossy420Decoder {
         self.remember_qindex(&syntax, decoder);
         (!syntax.palette.is_present()).then_some(()).portable()?;
         let BlockSyntax {
+            block_skipped,
             luma_predictor,
             luma_angle,
             chroma_predictor,
@@ -50164,6 +51006,7 @@ impl Lossy420Decoder {
                 luma_predictor,
                 planes: [luma, chroma_u, chroma_v],
             },
+            block_skipped,
             Some(chroma_predictor),
             TransformGrid::Vertical8x16,
             width,
@@ -50231,6 +51074,8 @@ impl Lossy420Decoder {
                     matrix_y: quantization.matrix_y,
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
+                    reduced_transform_set: quantization.reduced_transform_set,
+                    segment_qindex: quantization.segment_qindex,
                 },
                 allow_horizontal_chroma: full_resolution,
                 allow_diagonal_chroma: full_resolution
@@ -50335,6 +51180,7 @@ where
     Ok(FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: first.luma_predictor,
         chroma_predictor: None,
@@ -50497,6 +51343,7 @@ where
     Ok(FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: first.luma_predictor,
         chroma_predictor: None,
@@ -50660,6 +51507,7 @@ where
     Ok(FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: first.luma_predictor,
         chroma_predictor: None,
@@ -50862,6 +51710,7 @@ where
     Ok(FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: first.luma_predictor,
         chroma_predictor: None,
@@ -51012,6 +51861,7 @@ where
     Ok(FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: first.luma_predictor,
         chroma_predictor: None,
@@ -51228,6 +52078,7 @@ where
     Ok(FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: top_left.luma_predictor,
         chroma_predictor: None,
@@ -51450,6 +52301,7 @@ where
     Ok(FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: top_left.luma_predictor,
         chroma_predictor: None,

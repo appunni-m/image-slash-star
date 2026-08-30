@@ -16,6 +16,7 @@ pub(crate) struct Block {
     pub(crate) y: usize,
     pub(crate) width: usize,
     pub(crate) height: usize,
+    pub(crate) has_chroma: bool,
     pub(crate) luma_tx_width: usize,
     pub(crate) luma_tx_height: usize,
     pub(crate) chroma_tx_width: usize,
@@ -144,6 +145,9 @@ fn build_masks(
     };
 
     for block in blocks {
+        if chroma && !block.has_chroma {
+            continue;
+        }
         let (x, y, block_width, block_height, tx_width, tx_height) = if chroma {
             (
                 if subsampling_x { block.x / 2 } else { block.x },
@@ -767,6 +771,7 @@ mod tests {
             y: 0,
             width: 8,
             height: 8,
+            has_chroma: true,
             luma_tx_width: 8,
             luma_tx_height: 8,
             chroma_tx_width: 4,

@@ -3,6 +3,7 @@
 mod bit_reader;
 mod block;
 mod cdef;
+mod coefficient_cdfs;
 mod entropy;
 mod filter;
 mod frame;
@@ -237,6 +238,7 @@ fn assembled_leaf(
     block::FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: block::LumaPredictor::Dc,
         chroma_predictor: None,

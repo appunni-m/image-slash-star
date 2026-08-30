@@ -885,6 +885,7 @@ fn assemble_color_tiles(
     Ok(Some(super::block::FirstLeaf {
         width: header.frame_width,
         height: header.frame_height,
+        block_skipped: false,
         planes,
         luma_predictor: super::block::LumaPredictor::Dc,
         chroma_predictor: None,
