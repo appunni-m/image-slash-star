@@ -112,6 +112,18 @@ impl PaletteSyntax {
     }
 }
 
+/// Padded-frame palette extent in luma pixels for the current coded block.
+///
+/// This differs from the nominal block size only at the right or bottom
+/// coded-frame boundary. AV1 still stores the resulting map with the nominal
+/// coded stride and repeats the final decoded column/row into the clipped
+/// region.
+#[derive(Clone, Copy)]
+struct PaletteEntropyDimensions {
+    width: u32,
+    height: u32,
+}
+
 #[derive(Clone, Copy)]
 struct LossyLuma4x4Split {
     coefficients: LossyLuma4x4SplitCoefficients,
@@ -658,8 +670,19 @@ impl BlockSyntax {
     }
 
     fn luma_unsplit_carrier_count(&self) -> usize {
+        // Two legacy skip branches use the generic 8×8-sized zero carrier as
+        // a sentinel even though the coded transform is rectangular or
+        // 16×16. It represents no residual and must not compete with the
+        // normalized geometry-specific carrier selected below.
+        let legacy_zero_skip_alias = matches!(
+            self.transform_grid,
+            TransformGrid::Horizontal8x4 | TransformGrid::Square16
+        ) && self
+            .lossy_luma_coefficients
+            .as_ref()
+            .is_some_and(|values| values.iter().all(|&value| value == 0));
         [
-            self.lossy_luma_coefficients.is_some(),
+            self.lossy_luma_coefficients.is_some() && !legacy_zero_skip_alias,
             self.lossy_luma_4x8_coefficients.is_some(),
             self.lossy_luma_16x16_coefficients.is_some(),
             self.lossy_luma_32x32_coefficients.is_some(),
@@ -1207,6 +1230,22 @@ pub(super) const fn is_smooth_luma_predictor(predictor: LumaPredictor) -> bool {
     )
 }
 
+fn legacy_origin_full_predictors_allowed(
+    transform_grid: TransformGrid,
+    syntax: &BlockSyntax,
+) -> bool {
+    let luma_allowed = !is_smooth_luma_predictor(syntax.luma_predictor)
+        || matches!(transform_grid, TransformGrid::Horizontal16x4);
+    let chroma_allowed = matches!(
+        syntax.chroma_predictor,
+        ChromaPredictor::Dc
+            | ChromaPredictor::Cfl { .. }
+            | ChromaPredictor::Vertical
+            | ChromaPredictor::Paeth
+    );
+    luma_allowed && chroma_allowed
+}
+
 const fn chroma_rect_transform_kind(predictor: ChromaPredictor) -> Lossy4x8TransformKind {
     match predictor {
         ChromaPredictor::Dc | ChromaPredictor::Cfl { .. } | ChromaPredictor::Diagonal45 => {
@@ -1373,7 +1412,7 @@ impl TransformGrid {
         }
     }
 
-    const fn properties(self) -> (usize, usize, [u16; 2]) {
+    pub(super) const fn properties(self) -> (usize, usize, [u16; 2]) {
         match self {
             // ✅ VERIFIED: AOM/libdav1d default CDF for BLOCK_4X4 is
             // AOM_CDF2(4621); this decoder stores the complemented value.
@@ -1870,13 +1909,11 @@ impl PaletteNeighborContext {
 /// sizes in the closed decoder and can therefore be reconstructed without
 /// retaining raw syntax or pointers.
 pub(super) fn filter_transform_dimensions(
-    width: u32,
-    height: u32,
+    transform_grid: TransformGrid,
     leaf: &FirstLeaf,
     subsampling_x: bool,
     subsampling_y: bool,
 ) -> Option<((usize, usize), (usize, usize))> {
-    let transform_grid = TransformGrid::from_luma_dimensions(width, height).ok()?;
     let (grid_width, grid_height, _) = transform_grid.properties();
     let split = leaf.luma_transform_split && (grid_width > 1 || grid_height > 1);
     let luma = if split {
@@ -13371,6 +13408,9 @@ fn decode_lossy_large_two_d_coefficients_into(
         LossyLargeCdfSet::Chroma32x16 => chroma_32x16_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma16x8 => chroma_16x8_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma8x16 => chroma_8x16_matrix(quantization, plane)?,
+        // This CDF family is named after its shared entropy context, but its
+        // sole geometry owner is the transposed Full R4×16 chroma carrier.
+        LossyLargeCdfSet::Chroma8x4 => chroma_4x16_matrix(quantization, plane)?,
         LossyLargeCdfSet::Chroma8x32 | LossyLargeCdfSet::Chroma32x8 => {
             unavailable_256_rect_matrix(quantization)?
         }
@@ -13381,7 +13421,7 @@ fn decode_lossy_large_two_d_coefficients_into(
         LossyLargeCdfSet::Luma8x16 => luma_16x8_matrix(quantization)?,
         LossyLargeCdfSet::Luma8x32 => unavailable_256_rect_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x8 => luma_32x8_matrix(quantization)?,
-        LossyLargeCdfSet::Luma16x32 => luma_32x32_matrix(quantization)?,
+        LossyLargeCdfSet::Luma16x32 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma64x16 => luma_32x16_matrix(quantization)?,
         LossyLargeCdfSet::Luma32x32 => luma_32x32_matrix(quantization)?,
@@ -15875,6 +15915,21 @@ fn chroma_16x4_matrix(
     }
 }
 
+fn chroma_4x16_matrix(
+    quantization: LossyQuantization,
+    plane: usize,
+) -> PortableResult<Option<&'static [u8]>> {
+    if !quantization.using_matrix {
+        return Ok(None);
+    }
+    match (plane, quantization.matrix_u, quantization.matrix_v) {
+        (1, 2, _) | (2, _, 2) => Ok(Some(&quantization::UV_4X16_MATRIX_2)),
+        (1, 9, _) | (2, _, 9) => Ok(Some(&quantization::UV_4X16_MATRIX_9)),
+        (1, 10, _) | (2, _, 10) => Ok(Some(&quantization::UV_4X16_MATRIX_10)),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 fn chroma_16x8_matrix(
     quantization: LossyQuantization,
     plane: usize,
@@ -16432,18 +16487,34 @@ fn palette_index_order(
     (context, order)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "palette decoding keeps coded stride and clipped entropy extents explicit"
+)]
 fn decode_palette_indices(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     plane: usize,
     palette_size: u8,
-    width: u32,
-    height: u32,
+    coded_width: u32,
+    coded_height: u32,
+    entropy_width: u32,
+    entropy_height: u32,
 ) -> PortableResult<[u8; PALETTE_MAP_SAMPLES]> {
-    let width = usize::try_from(width).map_err(|_| PortableUnavailable)?;
-    let height = usize::try_from(height).map_err(|_| PortableUnavailable)?;
-    let sample_count = width.checked_mul(height).ok_or(PortableUnavailable)?;
+    let coded_width = usize::try_from(coded_width).map_err(|_| PortableUnavailable)?;
+    let coded_height = usize::try_from(coded_height).map_err(|_| PortableUnavailable)?;
+    let entropy_width = usize::try_from(entropy_width).map_err(|_| PortableUnavailable)?;
+    let entropy_height = usize::try_from(entropy_height).map_err(|_| PortableUnavailable)?;
+    let sample_count = coded_width
+        .checked_mul(coded_height)
+        .ok_or(PortableUnavailable)?;
     (sample_count > 0 && sample_count <= PALETTE_MAP_SAMPLES)
+        .then_some(())
+        .portable()?;
+    (entropy_width > 0
+        && entropy_height > 0
+        && entropy_width <= coded_width
+        && entropy_height <= coded_height)
         .then_some(())
         .portable()?;
     let palette_size = usize::from(palette_size);
@@ -16454,12 +16525,16 @@ fn decode_palette_indices(
     let mut indices = [0_u8; PALETTE_MAP_SAMPLES];
     indices[0] = u8::try_from(decoder.uniform(u32::try_from(palette_size).unwrap_or(0)))
         .map_err(|_| PortableUnavailable)?;
-    for diagonal in 1..width.saturating_add(height).saturating_sub(1) {
-        let first_column = diagonal.min(width.saturating_sub(1));
-        let last_column = diagonal.saturating_sub(height.saturating_sub(1));
+    for diagonal in 1..entropy_width
+        .saturating_add(entropy_height)
+        .saturating_sub(1)
+    {
+        let first_column = diagonal.min(entropy_width.saturating_sub(1));
+        let last_column = diagonal.saturating_sub(entropy_height.saturating_sub(1));
         for column in (last_column..=first_column).rev() {
             let row = diagonal.saturating_sub(column);
-            let (context, order) = palette_index_order(&indices, row, column, width, palette_size);
+            let (context, order) =
+                palette_index_order(&indices, row, column, coded_width, palette_size);
             let symbol = decoder.adaptive_symbol(
                 cdfs.color_map
                     .get_mut(plane)
@@ -16472,8 +16547,48 @@ fn decode_palette_indices(
             );
             let symbol = usize::try_from(symbol).map_err(|_| PortableUnavailable)?;
             let value = *order.get(symbol).ok_or(PortableUnavailable)?;
-            let index = row.saturating_mul(width).saturating_add(column);
+            let index = row.saturating_mul(coded_width).saturating_add(column);
             *indices.get_mut(index).ok_or(PortableUnavailable)? = value;
+        }
+    }
+    if entropy_width < coded_width {
+        for row in 0..entropy_height {
+            let row_start = row.checked_mul(coded_width).ok_or(PortableUnavailable)?;
+            let filler = *indices
+                .get(
+                    row_start
+                        .checked_add(entropy_width.saturating_sub(1))
+                        .ok_or(PortableUnavailable)?,
+                )
+                .ok_or(PortableUnavailable)?;
+            let fill_start = row_start
+                .checked_add(entropy_width)
+                .ok_or(PortableUnavailable)?;
+            let fill_end = row_start
+                .checked_add(coded_width)
+                .ok_or(PortableUnavailable)?;
+            indices
+                .get_mut(fill_start..fill_end)
+                .ok_or(PortableUnavailable)?
+                .fill(filler);
+        }
+    }
+    if entropy_height < coded_height {
+        let source_start = entropy_height
+            .saturating_sub(1)
+            .checked_mul(coded_width)
+            .ok_or(PortableUnavailable)?;
+        let source_end = source_start
+            .checked_add(coded_width)
+            .filter(|&end| end <= sample_count)
+            .ok_or(PortableUnavailable)?;
+        for row in entropy_height..coded_height {
+            let destination_start = row.checked_mul(coded_width).ok_or(PortableUnavailable)?;
+            destination_start
+                .checked_add(coded_width)
+                .filter(|&end| end <= sample_count)
+                .ok_or(PortableUnavailable)?;
+            indices.copy_within(source_start..source_end, destination_start);
         }
     }
     Ok(indices)
@@ -16568,6 +16683,7 @@ fn decode_palette_index_maps(
     cdfs: &mut BlockCdfs,
     transform_grid: TransformGrid,
     chroma_sampling: ChromaSampling,
+    entropy_dimensions: Option<PaletteEntropyDimensions>,
     palette: &mut PaletteSyntax,
 ) -> PortableResult<()> {
     let (luma_grid_width, luma_grid_height, _) = transform_grid.properties();
@@ -16577,14 +16693,42 @@ fn decode_palette_index_maps(
         u32::try_from(luma_grid_width.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
     let luma_height =
         u32::try_from(luma_grid_height.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
+    let entropy_dimensions = entropy_dimensions.unwrap_or(PaletteEntropyDimensions {
+        width: luma_width,
+        height: luma_height,
+    });
+    let entropy_luma_grid_width =
+        usize::try_from(entropy_dimensions.width / 4).map_err(|_| PortableUnavailable)?;
+    let entropy_luma_grid_height =
+        usize::try_from(entropy_dimensions.height / 4).map_err(|_| PortableUnavailable)?;
+    (entropy_dimensions.width % 4 == 0
+        && entropy_dimensions.height % 4 == 0
+        && entropy_luma_grid_width <= luma_grid_width
+        && entropy_luma_grid_height <= luma_grid_height)
+        .then_some(())
+        .portable()?;
+    let (entropy_chroma_grid_width, entropy_chroma_grid_height) =
+        chroma_sampling.transform_grid(entropy_luma_grid_width, entropy_luma_grid_height, 1);
     let chroma_width =
         u32::try_from(chroma_grid_width.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
     let chroma_height =
         u32::try_from(chroma_grid_height.saturating_mul(4)).map_err(|_| PortableUnavailable)?;
+    let entropy_chroma_width = u32::try_from(entropy_chroma_grid_width.saturating_mul(4))
+        .map_err(|_| PortableUnavailable)?;
+    let entropy_chroma_height = u32::try_from(entropy_chroma_grid_height.saturating_mul(4))
+        .map_err(|_| PortableUnavailable)?;
 
     if palette.y.is_present() {
-        palette.y_indices =
-            decode_palette_indices(decoder, cdfs, 0, palette.y.size, luma_width, luma_height)?;
+        palette.y_indices = decode_palette_indices(
+            decoder,
+            cdfs,
+            0,
+            palette.y.size,
+            luma_width,
+            luma_height,
+            entropy_dimensions.width,
+            entropy_dimensions.height,
+        )?;
     }
     if palette.u.is_present() || palette.v.is_present() {
         (palette.u.is_present() && palette.v.is_present() && palette.u.size == palette.v.size)
@@ -16597,6 +16741,8 @@ fn decode_palette_index_maps(
             palette.u.size,
             chroma_width,
             chroma_height,
+            entropy_chroma_width,
+            entropy_chroma_height,
         )?;
     }
     Ok(())
@@ -16617,12 +16763,17 @@ fn decode_syntax(
         chroma_sampling,
         policy,
         tools,
+        None,
         0,
         None,
     )
     .map(|(syntax, _)| syntax)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "block syntax keeps codec policy, palette geometry, CDEF state, and coefficient storage explicit"
+)]
 fn decode_syntax_with_cdef(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
@@ -16630,6 +16781,7 @@ fn decode_syntax_with_cdef(
     chroma_sampling: ChromaSampling,
     policy: SyntaxPolicy,
     tools: BlockTools,
+    palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
     cdef_index_bits: u32,
     large_coeff_arena: Option<&mut LargeCoefficientArena>,
 ) -> PortableResult<(BlockSyntax, CdefMetadata)> {
@@ -17079,7 +17231,14 @@ fn decode_syntax_with_cdef(
     // AV1 places palette index maps after the optional filter-intra sentence
     // and before transform-size syntax. Palette metadata and colors are read
     // above so the luma palette still gates filter-intra exactly as specified.
-    decode_palette_index_maps(decoder, cdfs, transform_grid, chroma_sampling, &mut palette)?;
+    decode_palette_index_maps(
+        decoder,
+        cdfs,
+        transform_grid,
+        chroma_sampling,
+        palette_entropy_dimensions,
+        &mut palette,
+    )?;
     // AV1 keeps `FILTER_PRED` as the coded luma mode, but transform-type
     // syntax is indexed by the ordinary intra mode represented by the
     // selected filter-intra mode. This is the same `filter_mode_to_y_mode`
@@ -44716,6 +44875,12 @@ fn reject_unhandled_lossy_luma_64x64_split(syntax: &BlockSyntax) -> PortableResu
 /// cannot create a fresh `BlockCdfs` for each terminal block without changing
 /// the meaning of all later range-coded bits. This state is private decoder
 /// machinery; it is not exposed as a public codec API.
+#[derive(Clone, Copy)]
+struct PendingBlockGeometry {
+    transform_grid: TransformGrid,
+    palette_entropy_dimensions: PaletteEntropyDimensions,
+}
+
 pub(super) struct Lossy420Decoder {
     cdfs: BlockCdfs,
     large_coeff_arena: LargeCoefficientArena,
@@ -44726,6 +44891,7 @@ pub(super) struct Lossy420Decoder {
     current_qindex: Option<u32>,
     last_cdef_active: bool,
     last_cdef_index: usize,
+    pending_block_geometry: Option<PendingBlockGeometry>,
 }
 
 impl Lossy420Decoder {
@@ -44740,6 +44906,7 @@ impl Lossy420Decoder {
             current_qindex: None,
             last_cdef_active: false,
             last_cdef_index: 0,
+            pending_block_geometry: None,
         }
     }
 
@@ -44754,6 +44921,7 @@ impl Lossy420Decoder {
             current_qindex: Some(qindex),
             last_cdef_active: false,
             last_cdef_index: 0,
+            pending_block_geometry: None,
         })
     }
 
@@ -44771,7 +44939,32 @@ impl Lossy420Decoder {
             current_qindex: Some(qindex),
             last_cdef_active: false,
             last_cdef_index: 0,
+            pending_block_geometry: None,
         })
+    }
+
+    /// Preserve nominal coded geometry separately from the palette entropy
+    /// rectangle clipped to AV1's padded frame boundary.
+    pub(super) fn begin_block(
+        &mut self,
+        transform_grid: TransformGrid,
+        palette_entropy_width: u32,
+        palette_entropy_height: u32,
+    ) {
+        self.pending_block_geometry = Some(PendingBlockGeometry {
+            transform_grid,
+            palette_entropy_dimensions: PaletteEntropyDimensions {
+                width: palette_entropy_width,
+                height: palette_entropy_height,
+            },
+        });
+    }
+
+    fn following_transform_grid(&self, width: u32, height: u32) -> PortableResult<TransformGrid> {
+        self.pending_block_geometry.map_or_else(
+            || TransformGrid::from_luma_dimensions(width, height),
+            |geometry| Ok(geometry.transform_grid),
+        )
     }
 
     /// Arm the fixed-width CDEF-index sentence for the first block in one
@@ -44837,6 +45030,10 @@ impl Lossy420Decoder {
             return Err(PortableUnavailable);
         }
         self.large_coeff_arena.begin_leaf();
+        let palette_entropy_dimensions = self
+            .pending_block_geometry
+            .take()
+            .map(|geometry| geometry.palette_entropy_dimensions);
         let (syntax, metadata) = super::block::decode_syntax_with_cdef(
             decoder,
             &mut self.cdfs,
@@ -44844,6 +45041,7 @@ impl Lossy420Decoder {
             chroma_sampling,
             policy,
             tools,
+            palette_entropy_dimensions,
             cdef_index_bits,
             Some(&mut self.large_coeff_arena),
         )?;
@@ -44958,7 +45156,7 @@ impl Lossy420Decoder {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
-        let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
+        let transform_grid = self.following_transform_grid(width, height)?;
 
         let quantization = self.prepare_quantization(quantization);
         matches!(
@@ -45119,7 +45317,7 @@ impl Lossy420Decoder {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
-        let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
+        let transform_grid = self.following_transform_grid(width, height)?;
 
         let quantization = self.prepare_quantization(quantization);
         let mut tools = tools;
@@ -45412,7 +45610,7 @@ impl Lossy420Decoder {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
-        let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
+        let transform_grid = self.following_transform_grid(width, height)?;
         let full_large = matches!(self.chroma_sampling, ChromaSampling::Full)
             && full_large_chroma_geometry(transform_grid).is_ok();
         let full_strict = matches!(self.chroma_sampling, ChromaSampling::Full)
@@ -45500,7 +45698,9 @@ impl Lossy420Decoder {
             syntax.lossy_luma_8x4_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
-        if full_strict {
+        let full_unsplit = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && syntax.reject_split_transform_syntax().is_ok();
+        if full_strict || full_unsplit {
             return reconstruct_visible_lossy444_unsplit_leaf(
                 &syntax,
                 &self.large_coeff_arena,
@@ -45816,7 +46016,7 @@ impl Lossy420Decoder {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
-        let transform_grid = TransformGrid::from_luma_dimensions(width, height)?;
+        let transform_grid = self.following_transform_grid(width, height)?;
 
         let full_large = matches!(self.chroma_sampling, ChromaSampling::Full)
             && full_large_chroma_geometry(transform_grid).is_ok();
@@ -45990,7 +46190,9 @@ impl Lossy420Decoder {
                 luma_context,
             )
         };
-        if full_strict {
+        let full_unsplit = matches!(self.chroma_sampling, ChromaSampling::Full)
+            && syntax.reject_split_transform_syntax().is_ok();
+        if full_strict || full_unsplit {
             return reconstruct_visible_lossy444_unsplit_leaf(
                 &syntax,
                 &self.large_coeff_arena,
@@ -47148,20 +47350,19 @@ impl Lossy420Decoder {
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
-        let full_large = matches!(syntax_chroma_sampling, ChromaSampling::Full)
-            && full_large_chroma_geometry(transform_grid).is_ok();
-        let full_strict = matches!(syntax_chroma_sampling, ChromaSampling::Full)
-            && (quantization.sample_depth != SampleDepth::EIGHT || full_large);
+        let full_resolution = matches!(syntax_chroma_sampling, ChromaSampling::Full);
+        let full_large = full_resolution && full_large_chroma_geometry(transform_grid).is_ok();
+        let full_strict =
+            full_resolution && (quantization.sample_depth != SampleDepth::EIGHT || full_large);
         if full_strict {
             validate_full_large_entry(transform_grid, width, height, quantization.using_matrix)?;
         }
         let quantization = self.prepare_quantization(quantization);
         let cdef_index_bits = self.take_cdef_index_bits();
-        // The established eight-bit paths retain their deliberately narrow
-        // fixture-backed policy. Full-resolution high-depth syntax uses the
-        // complete legal intra-mode alphabet; reconstruction remains behind
-        // the public high-depth admission gate until its spatial walker is
-        // connected.
+        // Full-resolution syntax uses the complete legal intra-mode alphabet.
+        // Transform depth is decoded later, so a split eight-bit leaf is
+        // checked against the former narrow origin policy before it can enter
+        // the unchanged legacy reconstruction path below.
         let syntax = self.decode_syntax_with_cdef(
             decoder,
             transform_grid,
@@ -47189,15 +47390,15 @@ impl Lossy420Decoder {
                     matrix_u: quantization.matrix_u,
                     matrix_v: quantization.matrix_v,
                 },
-                allow_horizontal_chroma: full_strict,
-                allow_diagonal_chroma: full_strict
+                allow_horizontal_chroma: full_resolution,
+                allow_diagonal_chroma: full_resolution
                     || matches!(
                         (syntax_chroma_sampling, transform_grid),
                         (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
                     ),
                 allow_diagonal_luma: true,
-                allow_smooth_chroma: full_strict,
-                allow_smooth_luma: full_strict
+                allow_smooth_chroma: full_resolution,
+                allow_smooth_luma: full_resolution
                     || matches!(transform_grid, TransformGrid::Horizontal16x4),
             },
             tools,
@@ -47208,7 +47409,8 @@ impl Lossy420Decoder {
             Err(_) => return Err(PortableUnavailable),
         };
         self.remember_qindex(&syntax, decoder);
-        if full_strict {
+        let full_unsplit = full_resolution && syntax.reject_split_transform_syntax().is_ok();
+        if full_strict || full_unsplit {
             let (grid_width, grid_height, _) = transform_grid.properties();
             let coded_width = grid_width.checked_mul(4).portable()?;
             let coded_height = grid_height.checked_mul(4).portable()?;
@@ -47227,6 +47429,9 @@ impl Lossy420Decoder {
                 tools.enable_intra_edge_filter,
                 luma_transform_context(transform_grid, false),
             );
+        }
+        if full_resolution && !legacy_origin_full_predictors_allowed(transform_grid, &syntax) {
+            return Err(PortableUnavailable);
         }
         let predictors = origin_predictors_with_depth(
             syntax.luma_predictor,

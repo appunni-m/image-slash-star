@@ -902,6 +902,40 @@ pub(super) const UV_16X16_MATRIX_9: [u8; 256] = [
     50, 48, 47, 46, 46, 46, 46, 47, 50, 53, 54, 56, 58, 60, 61, 61,
 ];
 
+/// AV1 quantization matrix 2 for a coded 4×16 U/V transform.
+// ✅ VERIFIED: rav1d-safe 0.5.7 `src/qm.rs`,
+// `dav1d_qm_tbl[2][1][RTX_4X16]`. The reference stores this rectangle in
+// `qm_tbl_16x4` order, matching the coefficient index consumed by the decoder.
+#[rustfmt::skip]
+pub(super) const UV_4X16_MATRIX_2: [u8; 64] = [
+    31, 32, 36, 40, 44, 46, 45, 47, 49, 52, 54, 58, 60, 62, 64, 65,
+    48, 46, 46, 46, 51, 54, 56, 57, 58, 60, 62, 64, 66, 64, 66, 68,
+    57, 53, 51, 50, 54, 60, 64, 68, 73, 76, 79, 82, 84, 84, 81, 83,
+    68, 63, 60, 58, 61, 64, 67, 71, 77, 82, 87, 91, 95, 97, 99, 100,
+];
+
+/// AV1 quantization matrix 9 for a coded 4×16 U/V transform.
+// ✅ VERIFIED: rav1d-safe 0.5.7 `src/qm.rs`,
+// `dav1d_qm_tbl[9][1][RTX_4X16]`.
+#[rustfmt::skip]
+pub(super) const UV_4X16_MATRIX_9: [u8; 64] = [
+    31, 31, 31, 31, 34, 35, 39, 40, 42, 46, 47, 47, 47, 46, 48, 48,
+    37, 38, 39, 40, 42, 43, 47, 47, 47, 48, 48, 47, 46, 46, 46, 46,
+    48, 47, 46, 46, 47, 47, 47, 48, 50, 52, 53, 53, 53, 53, 54, 54,
+    49, 47, 46, 45, 45, 46, 45, 47, 49, 53, 53, 56, 57, 58, 59, 59,
+];
+
+/// AV1 quantization matrix 10 for a coded 4×16 U/V transform.
+// ✅ VERIFIED: rav1d-safe 0.5.7 `src/qm.rs`,
+// `dav1d_qm_tbl[10][1][RTX_4X16]`.
+#[rustfmt::skip]
+pub(super) const UV_4X16_MATRIX_10: [u8; 64] = [
+    31, 31, 31, 31, 31, 34, 34, 38, 38, 42, 42, 48, 48, 47, 47, 47,
+    33, 34, 34, 35, 35, 39, 39, 43, 43, 45, 45, 47, 47, 46, 46, 45,
+    42, 42, 42, 42, 42, 45, 45, 47, 47, 48, 48, 50, 50, 50, 50, 49,
+    48, 47, 47, 45, 45, 46, 46, 46, 46, 50, 50, 53, 53, 54, 54, 56,
+];
+
 /// AV1 quantization matrix 9 for a coded 16×4 subsampled U/V transform.
 // ✅ VERIFIED: dav1d 1.5.3 `src/qm.c`, `dav1d_qm_tbl[9][1][RTX_16X4]`.
 // Rectangular coefficients are stored in the transposed order consumed by

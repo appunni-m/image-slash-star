@@ -1082,7 +1082,13 @@ pub(super) struct PartitionNode {
     pub(super) level: u32,
     pub(super) x: u32,
     pub(super) y: u32,
+    /// Nominal AV1 block width before clipping to the padded frame boundary.
+    pub(super) coded_width: u32,
+    /// Nominal AV1 block height before clipping to the padded frame boundary.
+    pub(super) coded_height: u32,
+    /// Entropy-visible width clipped to the padded frame boundary.
     pub(super) width: u32,
+    /// Entropy-visible height clipped to the padded frame boundary.
     pub(super) height: u32,
     pub(super) context: u8,
     pub(super) kind: PartitionKind,
@@ -1486,9 +1492,9 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         let (children, count) = partition_child_geometries(kind, x, y, half_size)?;
         let child_level = level.saturating_add(1);
         let context_level = child_level.min(4);
-        for geometry in children.into_iter().take(count) {
+        for coded_geometry in children.into_iter().take(count) {
             let Some(geometry) =
-                clip_partition_geometry(geometry, self.root_end_x, self.root_end_y)?
+                clip_partition_geometry(coded_geometry, self.root_end_x, self.root_end_y)?
             else {
                 continue;
             };
@@ -1499,6 +1505,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
                 level: child_level,
                 x: geometry.x,
                 y: geometry.y,
+                coded_width: coded_geometry.width,
+                coded_height: coded_geometry.height,
                 width: geometry.width,
                 height: geometry.height,
                 context,
@@ -1558,6 +1566,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
                 level,
                 x,
                 y,
+                coded_width: half_size,
+                coded_height: half_size,
                 width,
                 height,
                 context,
@@ -1576,6 +1586,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
             level,
             x,
             y,
+            coded_width: full_width,
+            coded_height: full_height,
             width: full_width,
             height: full_height,
             context,
@@ -1987,24 +1999,47 @@ pub(super) fn validate_complete_lossy_420_partition(
             let control = walker.walk(root_level, root_x, root_y, &mut |decoder, node| {
                 let width = node.width.saturating_mul(4);
                 let height = node.height.saturating_mul(4);
+                let coded_width = node.coded_width.saturating_mul(4);
+                let coded_height = node.coded_height.saturating_mul(4);
+                // A standalone 4x4 image is cropped from one coded 8x8
+                // block. All other leaves retain their nominal pre-clipping
+                // partition dimensions for block and transform syntax.
+                let transform_grid = if context.frame_width == 4
+                    && context.frame_height == 4
+                    && width == 4
+                    && height == 4
+                {
+                    super::block::TransformGrid::Square8
+                } else {
+                    let Ok(transform_grid) =
+                        super::block::TransformGrid::from_luma_dimensions(
+                            coded_width,
+                            coded_height,
+                        )
+                    else {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    };
+                    transform_grid
+                };
                 let mut tools = tools;
                 tools.palette_context =
                     super::block::PaletteNeighborContext::from_neighbors(node.y, None, None);
                 let full_resolution = !context.subsampling_x && !context.subsampling_y;
                 let full_large = full_resolution
                     && matches!(
-                        (node.width, node.height),
+                        (node.coded_width, node.coded_height),
                         (4, 16) | (8, 4) | (16, 4) | (16, 16)
                     );
                 if full_large {
                     let fully_visible = node
                         .x
-                        .checked_add(node.width)
+                        .checked_add(node.coded_width)
                         .and_then(|right| right.checked_mul(4))
                         .is_some_and(|right| right <= context.frame_width)
                         && node
                             .y
-                            .checked_add(node.height)
+                            .checked_add(node.coded_height)
                             .and_then(|bottom| bottom.checked_mul(4))
                             .is_some_and(|bottom| bottom <= context.frame_height);
                     if !fully_visible {
@@ -2012,34 +2047,35 @@ pub(super) fn validate_complete_lossy_420_partition(
                         return Ok(PartitionVisitControl::Stop);
                     }
                 }
+                let (palette_coded_width, palette_coded_height, _) = transform_grid.properties();
+                let Ok(palette_coded_width) = u32::try_from(palette_coded_width) else {
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
+                };
+                let Ok(palette_coded_height) = u32::try_from(palette_coded_height) else {
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
+                };
+                let palette_entropy_width = palette_coded_width
+                    .min(context.block_width.saturating_sub(node.x))
+                    .saturating_mul(4);
+                let palette_entropy_height = palette_coded_height
+                    .min(context.block_height.saturating_sub(node.y))
+                    .saturating_mul(4);
+                block_decoder.begin_block(
+                    transform_grid,
+                    palette_entropy_width,
+                    palette_entropy_height,
+                );
                 let decoded = if leaves.is_empty() {
-                    // A standalone 4x4 image is the one cropped-frame case in
-                    // which AV1 codes an 8x8 origin block for a 4x4 visible
-                    // result. A 4x4 leaf inside a larger tile is a genuine
-                    // 4x4 block and must use the 4x4 syntax sentence.
-                    let transform_grid = if context.frame_width == 4
-                        && context.frame_height == 4
-                        && width == 4
-                        && height == 4
-                    {
-                        super::block::TransformGrid::Square8
-                    } else {
-                        let Ok(transform_grid) =
-                            super::block::TransformGrid::from_luma_dimensions(width, height)
-                        else {
-                            unsupported = true;
-                            return Ok(PartitionVisitControl::Stop);
-                        };
-                        transform_grid
-                    };
                     let standalone_tiny_frame =
                         context.frame_width == 4 && context.frame_height == 4;
                     let has_chroma = if !context.subsampling_x && !context.subsampling_y {
                         !context.monochrome
                     } else {
                         standalone_tiny_frame
-                            || (node.width > 1 || node.x % 2 != 0)
-                                && (node.height > 1 || node.y % 2 != 0)
+                            || (node.coded_width > 1 || node.x % 2 != 0)
+                                && (node.coded_height > 1 || node.y % 2 != 0)
                     };
                     if has_chroma {
                         if !context.subsampling_x && !context.subsampling_y {
@@ -2075,7 +2111,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     let has_chroma = if !context.subsampling_x && !context.subsampling_y {
                         !context.monochrome
                     } else {
-                        (node.width > 1 || node.x % 2 != 0) && (node.height > 1 || node.y % 2 != 0)
+                        (node.coded_width > 1 || node.x % 2 != 0)
+                            && (node.coded_height > 1 || node.y % 2 != 0)
                     };
                     let above_left = leaves.iter().rev().find(|(prior, _)| {
                         prior.x.saturating_add(prior.width) > node.x
@@ -2124,8 +2161,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                         let extension_x = node.x.saturating_add(node.width);
                         leaves.iter().rev().find(|(prior, _)| {
                             let has_chroma = full_resolution
-                                || ((prior.width > 1 || prior.x % 2 != 0)
-                                    && (prior.height > 1 || prior.y % 2 != 0));
+                                || ((prior.coded_width > 1 || prior.x % 2 != 0)
+                                    && (prior.coded_height > 1 || prior.y % 2 != 0));
                             has_chroma
                                 && prior.x <= extension_x
                                 && extension_x < prior.x.saturating_add(prior.width)
@@ -2136,8 +2173,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     };
                     let above_chroma = leaves.iter().rev().find(|(prior, _)| {
                         let has_chroma = full_resolution
-                            || ((prior.width > 1 || prior.x % 2 != 0)
-                                && (prior.height > 1 || prior.y % 2 != 0));
+                            || ((prior.coded_width > 1 || prior.x % 2 != 0)
+                                && (prior.coded_height > 1 || prior.y % 2 != 0));
                         has_chroma
                             && prior.x <= node.x.saturating_add(node.width.saturating_sub(1))
                             && node.x.saturating_add(node.width.saturating_sub(1))
@@ -2445,8 +2482,9 @@ pub(super) fn validate_complete_lossy_420_partition(
                             let mut chroma_candidates: Vec<_> = leaves
                                 .iter()
                                 .filter(|(prior, _)| {
-                                    let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
-                                        && (prior.height > 1 || prior.y % 2 != 0);
+                                    let has_chroma =
+                                        (prior.coded_width > 1 || prior.x % 2 != 0)
+                                            && (prior.coded_height > 1 || prior.y % 2 != 0);
                                     has_chroma
                                         && prior.x.saturating_add(prior.width) == chroma_left_x
                                         && prior.y < node.y.saturating_add(node.height)
@@ -2577,8 +2615,9 @@ pub(super) fn validate_complete_lossy_420_partition(
                             let mut chroma_candidates: Vec<_> = leaves
                                 .iter()
                                 .filter(|(prior, _)| {
-                                    let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
-                                        && (prior.height > 1 || prior.y % 2 != 0);
+                                    let has_chroma =
+                                        (prior.coded_width > 1 || prior.x % 2 != 0)
+                                            && (prior.coded_height > 1 || prior.y % 2 != 0);
                                     has_chroma
                                         && prior.x.saturating_add(prior.width) == chroma_left_x
                                         && prior.y < node.y.saturating_add(node.height)
@@ -2732,8 +2771,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     });
                     let left_chroma_bottom = std::array::from_fn(|plane| {
                         left_below.and_then(|(prior, leaf)| {
-                            let has_chroma = (prior.width > 1 || prior.x % 2 != 0)
-                                && (prior.height > 1 || prior.y % 2 != 0);
+                            let has_chroma = (prior.coded_width > 1 || prior.x % 2 != 0)
+                                && (prior.coded_height > 1 || prior.y % 2 != 0);
                             if !has_chroma {
                                 return None;
                             }
@@ -2802,10 +2841,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                     };
                     let following_v8x16_filter_intra_mode =
                         following_v8x16_filter_intra_mode(context, node, &leaves);
-                    let full_edges = if full_resolution
-                        && (tools.sample_depth != super::sample_depth::SampleDepth::EIGHT
-                            || full_large)
-                    {
+                    let full_edges = if full_resolution && has_chroma {
                         let above = above_left.map(|(_, leaf)| leaf);
                         let left = left_luma_top.map(|(_, leaf)| leaf);
                         let smooth_luma = above.is_some_and(|leaf| {
@@ -2821,12 +2857,19 @@ pub(super) fn validate_complete_lossy_420_partition(
                         match canvas.full_intra_edges(
                             node.x,
                             node.y,
-                            node.width,
-                            node.height,
+                            palette_coded_width,
+                            palette_coded_height,
                             tools.sample_depth,
                             [smooth_luma, smooth_chroma, smooth_chroma],
                         ) {
                             Ok(edges) => Some(edges),
+                            Err(_)
+                                if tools.sample_depth
+                                    == super::sample_depth::SampleDepth::EIGHT
+                                    && !full_large =>
+                            {
+                                None
+                            }
                             Err(_) => {
                                 unsupported = true;
                                 return Ok(PartitionVisitControl::Stop);
@@ -2980,8 +3023,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     !context.monochrome
                 } else {
                     (context.frame_width == 4 && context.frame_height == 4)
-                        || (node.width > 1 || node.x % 2 != 0)
-                            && (node.height > 1 || node.y % 2 != 0)
+                        || (node.coded_width > 1 || node.x % 2 != 0)
+                            && (node.coded_height > 1 || node.y % 2 != 0)
                 };
                 canvas.place_av1_partition_leaf(
                     node.x,
@@ -2994,8 +3037,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 if collect_loop_filter {
                     let Some((luma_tx, chroma_tx)) =
                         super::block::filter_transform_dimensions(
-                            width,
-                            height,
+                            transform_grid,
                             &decoded,
                             context.subsampling_x,
                             context.subsampling_y,
