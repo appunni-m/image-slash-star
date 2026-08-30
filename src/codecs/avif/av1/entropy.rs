@@ -4268,6 +4268,7 @@ pub(super) fn validate_complete_lossy_420_partition(
 
 fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     let high_depth_full = complete_high_depth_full_reconstruction_context(context);
+    let high_depth_420 = complete_high_depth_420_reconstruction_context(context);
     let simple_422 = context.subsampling_x
         && !context.subsampling_y
         && context.frame_width == 16
@@ -4282,10 +4283,12 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0;
-    (closed_base_reconstruction_context(context) || high_depth_full)
+    (closed_base_reconstruction_context(context) || high_depth_full || high_depth_420)
         && !context.all_lossless
         && if high_depth_full {
             !context.subsampling_x && !context.subsampling_y
+        } else if high_depth_420 {
+            context.subsampling_x && context.subsampling_y
         } else {
             (context.subsampling_x && context.subsampling_y)
                 || (!context.subsampling_x && !context.subsampling_y)
@@ -4407,6 +4410,38 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
         && !context.monochrome
         && !context.subsampling_x
         && !context.subsampling_y
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.reduced_transform_set
+        && !context
+            .frame_tools
+            .quantization
+            .is_some_and(|quantization| quantization.using_matrix)
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && context.block_x == 0
+        && context.block_y == 0
+}
+
+/// Exact high-depth 4:2:0 tranche admitted by the normalized reconstruction
+/// core. The older geometry-specific 4:2:0 reconstructors narrow samples to
+/// eight-bit arithmetic, so high-depth I420 must remain on the generic
+/// edge-aware path until those carriers are depth-parametric. Keep the same
+/// conservative tool profile as the high-depth 4:4:4 tranche, while rejecting
+/// quantization matrices here because the 4:2:0 coefficient path does not yet
+/// carry their plane-specific high-depth proof.
+fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && !context.superres_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.monochrome
+        && context.subsampling_x
+        && context.subsampling_y
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.reduced_transform_set
         && !context
