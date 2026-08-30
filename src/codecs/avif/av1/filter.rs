@@ -21,6 +21,9 @@ pub(crate) struct Block {
     pub(crate) luma_tx_height: usize,
     pub(crate) chroma_tx_width: usize,
     pub(crate) chroma_tx_height: usize,
+    /// Skipped inter prediction units have no internal transform edges.
+    /// Their outer prediction-unit boundaries remain filterable.
+    pub(crate) skip_internal_edges: bool,
     /// Effective loop-filter levels for Y-vertical, Y-horizontal, U, and V.
     pub(crate) levels: [u8; 4],
 }
@@ -246,27 +249,29 @@ fn build_masks(
             }
         }
 
-        let mut edge = x_units.saturating_add(horizontal_tx);
-        while edge < end_x {
-            for segment in y_units..end_y {
-                set_min(
-                    &mut masks.vertical,
-                    segment.checked_mul(mask_width)?.checked_add(edge)?,
-                    edge_index(horizontal_tx),
-                );
+        if !block.skip_internal_edges {
+            let mut edge = x_units.saturating_add(horizontal_tx);
+            while edge < end_x {
+                for segment in y_units..end_y {
+                    set_min(
+                        &mut masks.vertical,
+                        segment.checked_mul(mask_width)?.checked_add(edge)?,
+                        edge_index(horizontal_tx),
+                    );
+                }
+                edge = edge.saturating_add(horizontal_tx);
             }
-            edge = edge.saturating_add(horizontal_tx);
-        }
-        let mut edge = y_units.saturating_add(vertical_tx);
-        while edge < end_y {
-            for segment in x_units..end_x {
-                set_min(
-                    &mut masks.horizontal,
-                    edge.checked_mul(masks.width_units)?.checked_add(segment)?,
-                    edge_index(vertical_tx),
-                );
+            let mut edge = y_units.saturating_add(vertical_tx);
+            while edge < end_y {
+                for segment in x_units..end_x {
+                    set_min(
+                        &mut masks.horizontal,
+                        edge.checked_mul(masks.width_units)?.checked_add(segment)?,
+                        edge_index(vertical_tx),
+                    );
+                }
+                edge = edge.saturating_add(vertical_tx);
             }
-            edge = edge.saturating_add(vertical_tx);
         }
     }
     Some(masks)
@@ -325,12 +330,7 @@ fn apply_vertical(
             if edge == NO_EDGE {
                 continue;
             }
-            let level = usize::from(
-                *masks
-                    .levels
-                    .get(y_unit.checked_mul(width_units)?.checked_add(x_unit)?)?
-                    .get(level_index)?,
-            );
+            let level = edge_level(masks, y_unit, x_unit, level_index, true)?;
             if level == 0 {
                 continue;
             }
@@ -375,12 +375,7 @@ fn apply_horizontal(
             if edge == NO_EDGE {
                 continue;
             }
-            let level = usize::from(
-                *masks
-                    .levels
-                    .get(y_unit.checked_mul(width_units)?.checked_add(x_unit)?)?
-                    .get(level_index)?,
-            );
+            let level = edge_level(masks, y_unit, x_unit, level_index, false)?;
             if level == 0 {
                 continue;
             }
@@ -404,6 +399,42 @@ fn apply_horizontal(
         }
     }
     Some(())
+}
+
+/// Resolve the level on a prediction-unit edge. AV1 carries the current
+/// non-zero level to the edge; when that side is disabled, the level from the
+/// previous cell still enables filtering across the boundary.
+fn edge_level(
+    masks: &Masks,
+    y_unit: usize,
+    x_unit: usize,
+    level_index: usize,
+    vertical: bool,
+) -> Option<usize> {
+    let current_index = y_unit
+        .checked_mul(masks.width_units)?
+        .checked_add(x_unit.min(masks.width_units.saturating_sub(1)))?;
+    let current = usize::from(*masks.levels.get(current_index)?.get(level_index)?);
+    if current != 0 {
+        return Some(current);
+    }
+    let previous_index = if vertical {
+        x_unit.checked_sub(1)?
+    } else {
+        y_unit.checked_sub(1)?
+    };
+    let previous_index = if vertical {
+        y_unit
+            .checked_mul(masks.width_units)?
+            .checked_add(previous_index)?
+    } else {
+        previous_index
+            .checked_mul(masks.width_units)?
+            .checked_add(x_unit)?
+    };
+    Some(usize::from(
+        *masks.levels.get(previous_index)?.get(level_index)?,
+    ))
 }
 
 #[expect(
@@ -811,6 +842,7 @@ mod tests {
             luma_tx_height: 8,
             chroma_tx_width: 4,
             chroma_tx_height: 4,
+            skip_internal_edges: false,
             levels: [9; 4],
         }];
         assert!(

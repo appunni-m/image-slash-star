@@ -1559,6 +1559,7 @@ fn assemble_color_tiles(
     let mut cdef_active = vec![false; active_width.saturating_mul(active_height)];
     let mut loop_parameters: Option<super::filter::Parameters> = None;
     let mut cdef_parameters: Option<super::cdef::FrameParameters> = None;
+    let mut filter_parameters_initialized = false;
     for tile in tiles.iter().chain(trailing_tiles) {
         let tile_x = usize::try_from(tile.x)
             .map_err(|_| malformed("assembled tile x origin exceeds usize"))?;
@@ -1568,11 +1569,20 @@ fn assemble_color_tiles(
             .map_err(|_| malformed("assembled tile width exceeds usize"))?;
         let tile_height = usize::try_from(tile.height)
             .map_err(|_| malformed("assembled tile height exceeds usize"))?;
-        if loop_parameters.is_none() {
-            loop_parameters = tile.reconstruction.loop_parameters;
+        let tile_loop_parameters = tile.reconstruction.loop_parameters;
+        let tile_cdef_parameters = tile.reconstruction.cdef_parameters;
+        if !filter_parameters_initialized {
+            loop_parameters = tile_loop_parameters;
+            cdef_parameters = tile_cdef_parameters;
+            filter_parameters_initialized = true;
+        } else if tile_loop_parameters != loop_parameters || tile_cdef_parameters != cdef_parameters
+        {
+            return Err(malformed("assembled tiles disagree on filter parameters"));
         }
-        if cdef_parameters.is_none() {
-            cdef_parameters = tile.reconstruction.cdef_parameters;
+        if tile_cdef_parameters.is_some()
+            && (!tile_x.is_multiple_of(64) || !tile_y.is_multiple_of(64))
+        {
+            return Err(malformed("CDEF tile origin is not 64-pixel aligned"));
         }
         canvas.place_planes(
             tile.width,

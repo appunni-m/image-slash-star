@@ -41,7 +41,7 @@ pub(crate) struct Parameters {
     pub(crate) bit_depth: u32,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct FrameParameters {
     pub(crate) damping: u32,
     pub(crate) bit_depth: u32,

@@ -48739,6 +48739,37 @@ impl Lossy420Decoder {
         (self.last_cdef_active, self.last_cdef_index)
     }
 
+    /// Decode the raw CDEF-index sentence belonging to an inter block.
+    ///
+    /// Intra syntax reaches the same state through `decode_syntax_with_cdef`,
+    /// but inter prediction owns its mode and motion grammar in the entropy
+    /// walker. Keep the pending geometry and skip sentence live for
+    /// `decode_inter_translation`; only the per-superblock CDEF ownership is
+    /// updated here.
+    pub(super) fn decode_inter_cdef(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        skipped: bool,
+    ) -> PortableResult<()> {
+        let geometry = self.pending_block_geometry.ok_or(PortableUnavailable)?;
+        let pending_skip = self.pending_skip.ok_or(PortableUnavailable)?;
+        (pending_skip == skipped).then_some(()).portable()?;
+        let index = if skipped {
+            0
+        } else {
+            usize::try_from(decoder.bits(self.take_cdef_index_bits()))
+                .map_err(|_| PortableUnavailable)?
+        };
+        self.remember_cdef(
+            CdefMetadata {
+                active: !skipped,
+                index,
+            },
+            geometry,
+        );
+        Ok(())
+    }
+
     fn take_cdef_index_bits(&self) -> u32 {
         let slot = self
             .pending_block_geometry

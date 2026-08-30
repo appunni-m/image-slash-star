@@ -3612,10 +3612,20 @@ fn decode_inter_leaf(
     }))
 }
 
+#[derive(Clone, Copy)]
+enum LoopFilterClass {
+    Intra,
+    Inter {
+        reference: ReferenceFrame,
+        mode: InterMode,
+    },
+}
+
 fn effective_loop_levels(
     context: &FirstBlockContext,
     segment: SegmentContext,
     dynamic_delta_lf: [i32; 4],
+    class: LoopFilterClass,
 ) -> [u8; 4] {
     let frame = context.frame_tools.loop_filter;
     let bases = [
@@ -3637,13 +3647,30 @@ fn effective_loop_levels(
         let base = dynamic_base
             .saturating_add(i64::from(segment.delta_lf[index]))
             .clamp(0, 63);
-        let reference_scale = if base >= 32 { 2_i64 } else { 1 };
-        let reference_delta = if frame.delta_enabled {
-            i64::from(frame.reference_deltas[0]) * reference_scale
+        let adjusted = if frame.delta_enabled {
+            let scale = if base >= 32 { 2_i64 } else { 1 };
+            let delta = match class {
+                LoopFilterClass::Intra => i64::from(frame.reference_deltas[0]),
+                LoopFilterClass::Inter { reference, mode } => {
+                    let reference_delta = frame
+                        .reference_deltas
+                        .get(reference.index().saturating_add(1))
+                        .copied()
+                        .unwrap_or_default();
+                    let mode_index = usize::from(!matches!(mode, InterMode::Global));
+                    let mode_delta = frame
+                        .mode_deltas
+                        .get(mode_index)
+                        .copied()
+                        .unwrap_or_default();
+                    i64::from(reference_delta).saturating_add(i64::from(mode_delta))
+                }
+            };
+            base.saturating_add(delta.saturating_mul(scale))
+                .clamp(0, 63)
         } else {
-            0
+            base
         };
-        let adjusted = base.saturating_add(reference_delta).clamp(0, 63);
         *level = u8::try_from(adjusted).unwrap_or_default();
     }
     levels
@@ -3968,6 +3995,14 @@ pub(super) fn validate_complete_lossy_420_partition(
                         unsupported = true;
                         return Ok(PartitionVisitControl::Stop);
                     };
+                    if context.frame_tools.cdef.is_some()
+                        && block_decoder
+                            .decode_inter_cdef(decoder, block_skipped)
+                            .is_err()
+                    {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    }
                     match decode_inter_leaf(
                         decoder,
                         &mut tile_cdfs,
@@ -4119,10 +4154,19 @@ pub(super) fn validate_complete_lossy_420_partition(
                         luma_tx_height: luma_tx.1,
                         chroma_tx_width: chroma_tx.0,
                         chroma_tx_height: chroma_tx.1,
+                        skip_internal_edges: block_skipped && inter_metadata.is_some(),
                         levels: effective_loop_levels(
                             context,
                             selected_segment,
                             block_decoder.loop_delta_lf(),
+                            inter_metadata
+                                .as_ref()
+                                .map_or(LoopFilterClass::Intra, |metadata| {
+                                    LoopFilterClass::Inter {
+                                        reference: metadata.references.first,
+                                        mode: metadata.mode,
+                                    }
+                                }),
                         ),
                     });
                 }
@@ -4257,11 +4301,29 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
 }
 
 /// First inter reconstruction tranche: single-reference, 8-bit 4:2:0
-/// translation blocks with the optional post-filters disabled. Reference
-/// scaling is dispatched through the same checked MC boundary as unity-scale
-/// references. Unsupported compound, inter-intra, warped, and
-/// variable-transform branches are rejected before a block publishes neighbor
-/// metadata.
+/// translation blocks with loop filtering and the bounded CDEF profile
+/// enabled. Reference scaling is dispatched through the same checked MC
+/// boundary as unity-scale references. Unsupported compound, inter-intra,
+/// warped, and variable-transform branches are rejected before a block
+/// publishes neighbor metadata.
+fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
+    let Some(cdef) = context.frame_tools.cdef else {
+        return true;
+    };
+    let count = match cdef.bits {
+        0 => 1,
+        1 => 2,
+        2 => 4,
+        _ => return false,
+    };
+    context.frame_width.is_multiple_of(8)
+        && context.frame_height.is_multiple_of(8)
+        && cdef.y_strength_count == count
+        && cdef.uv_strength_count == count
+        && cdef.first_y_strength.is_some()
+        && cdef.first_uv_strength.is_some()
+}
+
 fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     !context.intra_frame
         && context.bit_depth == 8
@@ -4277,13 +4339,10 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.transform_mode != 2
-        && context.frame_tools.cdef.is_none()
+        && inter_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
         && !context.segmentation_enabled
         && context.block_x == 0
         && context.block_y == 0
