@@ -14,6 +14,7 @@ use super::motion::{
     ReferencePair, ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField,
     find_reference_mvs, global_motion_vector,
 };
+use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
 use super::tile_state::{BlockCoding, BlockCommitMetadata, TileState};
 use super::{Av1Result, malformed};
@@ -674,6 +675,9 @@ pub(super) struct FirstBlockContext {
     /// Absolute tile origin in the frame's padded four-pixel grid.
     pub(super) tile_origin_b4_x: u32,
     pub(super) tile_origin_b4_y: u32,
+    /// True only when the frame walker proved that this is the sole tile.
+    /// Tile-local `(0, 0)` coordinates alone do not establish that fact.
+    pub(super) single_tile: bool,
     pub(super) frame_block_width: u32,
     pub(super) frame_block_height: u32,
     pub(super) frame_width: u32,
@@ -949,7 +953,7 @@ fn decode_restoration_unit(
     reference: &mut RestorationReference,
     plane: usize,
     frame_type: RestorationType,
-) {
+) -> RestorationUnit {
     let unit_type = match frame_type {
         RestorationType::Switchable => match decoder.adaptive_symbol(&mut cdfs.switchable, 2) {
             0 => RestorationUnitType::None,
@@ -973,7 +977,7 @@ fn decode_restoration_unit(
     };
 
     match unit_type {
-        RestorationUnitType::None => {}
+        RestorationUnitType::None => RestorationUnit::None,
         RestorationUnitType::Wiener => {
             let vertical_zero = if plane == 0 {
                 decoder
@@ -1003,6 +1007,10 @@ fn decode_restoration_unit(
                 .wrapping_sub(17);
             reference.filter_vertical = [vertical_zero, vertical_one, vertical_two];
             reference.filter_horizontal = [horizontal_zero, horizontal_one, horizontal_two];
+            RestorationUnit::Wiener {
+                horizontal: [horizontal_zero, horizontal_one, horizontal_two],
+                vertical: [vertical_zero, vertical_one, vertical_two],
+            }
         }
         RestorationUnitType::SgrProjection => {
             let parameter_index = decoder.bits(4) as usize;
@@ -1022,6 +1030,9 @@ fn decode_restoration_unit(
                 95
             };
             reference.sgr_weights = [first, second];
+            // The first restoration tranche does not admit SGR projection,
+            // but retain the decoded sentence for the generic prefix path.
+            RestorationUnit::None
         }
     }
 }
@@ -1087,13 +1098,46 @@ fn decode_restoration_prefix_with_cdfs(
         };
         match restoration_unit_starts_at_first_block(context, plane) {
             Some(true) => {
-                decode_restoration_unit(decoder, cdfs, reference, plane, restoration_type);
+                let _ = decode_restoration_unit(decoder, cdfs, reference, plane, restoration_type);
             }
             Some(false) => {}
             None => return false,
         }
     }
     true
+}
+
+/// Decode the single-unit Wiener profile while retaining the parameters for
+/// the post-CDEF/post-superres pixel stage. This is the only restoration
+/// decoder that publishes pixel-affecting state; the generic prefix helper
+/// above remains a structural consumer for unsupported classes.
+fn decode_bounded_restoration_plan(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    context: &FirstBlockContext,
+    cdfs: &mut RestorationCdfs,
+) -> Option<RestorationPlan> {
+    if !context.single_tile || context.block_x != 0 || context.block_y != 0 {
+        return None;
+    }
+    let mut references = [RestorationReference::defaults(); 3];
+    let plane_count = if context.monochrome { 1 } else { 3 };
+    let mut units = [None; 3];
+    for (plane, reference) in references.iter_mut().enumerate().take(plane_count) {
+        let Some(restoration_type) = context.restoration_types[plane] else {
+            continue;
+        };
+        if !matches!(restoration_type, RestorationType::Wiener) {
+            return None;
+        }
+        units[plane] = Some(decode_restoration_unit(
+            decoder,
+            cdfs,
+            reference,
+            plane,
+            restoration_type,
+        ));
+    }
+    Some(RestorationPlan { units })
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/cdf.c:386-433. The values are dav1d's inverse
@@ -2572,6 +2616,7 @@ pub(super) struct Lossy420Reconstruction {
     pub(super) cdef_active: Vec<bool>,
     pub(super) loop_parameters: Option<super::filter::Parameters>,
     pub(super) cdef_parameters: Option<super::cdef::FrameParameters>,
+    pub(super) restoration: Option<RestorationPlan>,
     pub(super) cdfs: Option<FrameCdfs>,
 }
 
@@ -4142,6 +4187,7 @@ impl Lossy420Reconstruction {
             cdef_active,
             loop_parameters,
             cdef_parameters,
+            restoration: _,
             cdfs: _,
         } = self;
         let mut canvas =
@@ -4176,12 +4222,18 @@ pub(super) fn validate_complete_lossy_420_partition(
     previous_segment_map: Option<&SegmentMap>,
     inter_context: Option<&InterFrameContext<'_>>,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
+    let bounded_intra_restoration =
+        complete_bounded_wiener_intra_420_reconstruction_context(context);
+    let bounded_inter_restoration =
+        complete_bounded_wiener_inter_420_reconstruction_context(context);
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_420_reconstruction_context(context, inter_context)
+            || bounded_inter_restoration
     });
     let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
-        || complete_superres_lossy_420_reconstruction_context(context);
+        || complete_superres_lossy_420_reconstruction_context(context)
+        || bounded_intra_restoration;
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
         || segmentation
@@ -4212,9 +4264,19 @@ pub(super) fn validate_complete_lossy_420_partition(
     }
     #[cfg(coverage)]
     decoder.enable_operation_trace();
-    if !decode_restoration_prefix_with_cdfs(&mut decoder, context, &mut tile_cdfs.restoration) {
-        return Ok(None);
-    }
+    let restoration_plan = if bounded_intra_restoration || bounded_inter_restoration {
+        let Some(plan) =
+            decode_bounded_restoration_plan(&mut decoder, context, &mut tile_cdfs.restoration)
+        else {
+            return Ok(None);
+        };
+        Some(plan)
+    } else {
+        if !decode_restoration_prefix_with_cdfs(&mut decoder, context, &mut tile_cdfs.restoration) {
+            return Ok(None);
+        }
+        None
+    };
 
     let quantization = lossy_quantization_for_context(context)?;
     let tools = super::block::BlockTools {
@@ -4719,6 +4781,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         cdef_active,
         loop_parameters,
         cdef_parameters: cdef_frame_parameters,
+        restoration: restoration_plan,
         cdfs: Some(tile_cdfs),
     }))
 }
@@ -4768,6 +4831,100 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+}
+
+fn bounded_wiener_restoration_geometry(context: &FirstBlockContext) -> bool {
+    if !context.single_tile
+        || context.frame_height == 0
+        || context.frame_height > 56
+        || context.restoration_types == [None; 3]
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| kind == RestorationType::Wiener)
+        })
+    {
+        return false;
+    }
+    let chroma_width = context.upscaled_width.checked_add(1).map(|width| width / 2);
+    let chroma_height = context.frame_height.checked_add(1).map(|height| height / 2);
+    let Some(chroma_width) = chroma_width else {
+        return false;
+    };
+    let Some(chroma_height) = chroma_height else {
+        return false;
+    };
+    let dimensions = [
+        (context.upscaled_width, context.frame_height, 0_usize),
+        (chroma_width, chroma_height, 1_usize),
+        (chroma_width, chroma_height, 1_usize),
+    ];
+    for restoration_type in context.restoration_types.iter().enumerate() {
+        let (plane, restoration_type) = restoration_type;
+        if restoration_type.is_none() {
+            continue;
+        }
+        let (width, height, unit_index) = dimensions[plane];
+        let unit_size_log2 = context.restoration_unit_size_log2[unit_index];
+        let Some(unit_size) = 1_u32.checked_shl(unit_size_log2) else {
+            return false;
+        };
+        let Some(width_with_half) = width.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = height.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let units_x = width_with_half >> unit_size_log2;
+        let units_y = height_with_half >> unit_size_log2;
+        if units_x.max(1) != 1 || units_y.max(1) != 1 {
+            return false;
+        }
+    }
+    true
+}
+
+fn bounded_wiener_restoration_common(context: &FirstBlockContext) -> bool {
+    context.bit_depth == 8
+        && context.subsampling_x
+        && context.subsampling_y
+        && !context.monochrome
+        && !context.all_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && context.frame_tools.quantization.is_some()
+        && !context.frame_tools.film_grain_present
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && bounded_wiener_restoration_geometry(context)
+}
+
+fn bounded_wiener_cdef_supported(context: &FirstBlockContext) -> bool {
+    matches!(
+        context.frame_tools.cdef,
+        None | Some(CdefContext {
+            bits: 0..=2,
+            y_strength_count: 1..=4,
+            uv_strength_count: 1..=4,
+            first_y_strength: Some(_),
+            first_uv_strength: Some(_),
+            ..
+        })
+    )
+}
+
+fn complete_bounded_wiener_intra_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    context.intra_frame
+        && bounded_wiener_restoration_common(context)
+        && bounded_wiener_cdef_supported(context)
+}
+
+fn complete_bounded_wiener_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    !context.intra_frame
+        && bounded_wiener_restoration_common(context)
+        && context.frame_tools.transform_mode != 2
+        && !context.segmentation_enabled
+        && inter_cdef_supported(context)
 }
 
 /// First inter reconstruction tranche: 8-bit 4:2:0 translation blocks with
@@ -6936,6 +7093,7 @@ fn coverage_context() -> FirstBlockContext {
         block_y: 0,
         tile_origin_b4_x: 0,
         tile_origin_b4_y: 0,
+        single_tile: true,
         frame_block_width: 16,
         frame_block_height: 16,
         frame_width: 64,

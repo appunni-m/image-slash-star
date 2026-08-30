@@ -16,6 +16,7 @@ mod quantization;
 mod quantization_matrices;
 mod raster;
 mod resize;
+mod restoration;
 pub(super) mod sample_depth;
 mod sequence;
 mod surface;

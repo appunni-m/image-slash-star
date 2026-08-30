@@ -9,6 +9,7 @@ use super::motion::{
     GlobalMotion, GlobalMotionType, ScaleFactors, TemporalMotionField, relative_distance,
 };
 use super::resize;
+use super::restoration;
 use super::sample_depth::SampleDepth;
 use super::sequence::SequenceHeader;
 #[cfg(coverage)]
@@ -1947,6 +1948,7 @@ fn validate_tile_entropy_prefixes(
             block_y,
             tile_origin_b4_x: 0,
             tile_origin_b4_y: 0,
+            single_tile: tiling.tile_count() == 1 && ranges.len() == 1,
             frame_block_width: block_width,
             frame_block_height: block_height,
             frame_width: header.frame_width,
@@ -2040,8 +2042,9 @@ fn validate_tile_entropy_prefixes(
                 });
             }
             if tiling.tile_count() == 1 && ranges.len() == 1 {
+                let restoration_plan = reconstruction.restoration;
                 let leaf = reconstruction.into_filtered_leaf()?;
-                complete_color_leaf = Some(if header.superres_enabled {
+                let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
                         .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
                     resize::upscale_i420_leaf(
@@ -2054,7 +2057,15 @@ fn validate_tile_entropy_prefixes(
                     )?
                 } else {
                     leaf
-                });
+                };
+                let leaf = if let Some(plan) = restoration_plan {
+                    let depth = SampleDepth::new(sequence.bit_depth)
+                        .ok_or_else(|| malformed("restoration sample depth is unsupported"))?;
+                    restoration::restore_i420_leaf(leaf, plan, depth)?
+                } else {
+                    leaf
+                };
+                complete_color_leaf = Some(leaf);
             } else {
                 complete_color_tiles.push(ReconstructedColorTile {
                     x: tile_origin_x,
