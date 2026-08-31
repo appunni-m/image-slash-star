@@ -5325,7 +5325,13 @@ pub(super) fn validate_complete_lossy_420_partition(
         } else {
             canvas.finish_monochrome()?
         };
-        let planes = [plane.clone(), plane.clone(), plane];
+        // Monochrome surfaces publish only plane zero. Keep private chroma
+        // carriers empty so constructing a 128x128 result does not clone the
+        // luma plane twice just to satisfy the shared three-plane leaf type.
+        let empty_plane = super::block::ReconstructedPlane {
+            samples: Vec::new(),
+        };
+        let planes = [plane, empty_plane.clone(), empty_plane];
         (planes, true)
     } else {
         (canvas.finish()?, false)
@@ -8776,13 +8782,13 @@ fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
     })
 }
 
-/// Common admission for the first luma-only monochrome lossy tranche.
+/// Common admission for the luma-only monochrome lossy tranche.
 ///
 /// A monochrome sequence still carries the canonical `subsampling_x/y` bits
 /// in AV1C, but it has no U/V block syntax or post-filter planes. Keep this
 /// profile deliberately narrow until those independent carriers are wired:
-/// one tile, largest-transform blocks, no active filtering, and no frame-level
-/// state that would require a second plane or a separate publication path.
+/// one tile, largest-transform blocks, and no frame-level state that would
+/// require a second plane or a separate publication path.
 fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
     complete_monochrome_lossy_base(context)
         && complete_monochrome_cdef_inactive(context)
@@ -8792,8 +8798,8 @@ fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
 fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
     let dimensions_are_supported = context.frame_width >= 4
         && context.frame_height >= 4
-        && context.frame_width <= 64
-        && context.frame_height <= 64
+        && context.frame_width <= 128
+        && context.frame_height <= 128
         && context.frame_width.is_multiple_of(4)
         && context.frame_height.is_multiple_of(4)
         && context.block_width == context.frame_width / 4
@@ -8821,7 +8827,7 @@ fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
         && !context.frame_tools.film_grain_present
         && context.block_x == 0
         && context.block_y == 0
-        && context.level == 1
+        && matches!(context.level, 0 | 1)
         && dimensions_are_supported
 }
 
@@ -8863,7 +8869,8 @@ fn complete_monochrome_restoration_supported(context: &FirstBlockContext) -> boo
     if !matches!(
         restoration_type,
         RestorationType::Wiener | RestorationType::SgrProjection
-    ) || !(6..=8).contains(&context.restoration_unit_size_log2[0])
+    ) || !(if context.level == 0 { 7..=8 } else { 6..=8 })
+        .contains(&context.restoration_unit_size_log2[0])
         || context.frame_height > 56
     {
         return false;
