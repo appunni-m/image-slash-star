@@ -1155,8 +1155,16 @@ impl FrameState {
             );
             current_frame_id = Some(header.frame_id);
         }
-        let block_width = (header.frame_width.saturating_add(7) >> 3).wrapping_shl(1);
-        let block_height = (header.frame_height.saturating_add(7) >> 3).wrapping_shl(1);
+        let block_width = header
+            .frame_width
+            .div_ceil(8)
+            .checked_mul(2)
+            .ok_or_else(|| malformed("frame block width overflows"))?;
+        let block_height = header
+            .frame_height
+            .div_ceil(8)
+            .checked_mul(2)
+            .ok_or_else(|| malformed("frame block height overflows"))?;
         let primary_decode = if header.primary_ref_frame == PRIMARY_REF_NONE {
             None
         } else {
@@ -1917,9 +1925,18 @@ fn validate_tile_entropy_prefixes(
 ) -> Av1Result<TileValidation> {
     let root_level = u32::from(!sequence.use_128x128_superblock);
     // Frame dimensions and superblock mode were validated while parsing the
-    // sequence/frame headers, so these private unit conversions are total.
-    let block_width = (header.frame_width.saturating_add(7) >> 3).wrapping_shl(1);
-    let block_height = (header.frame_height.saturating_add(7) >> 3).wrapping_shl(1);
+    // sequence/frame headers, so overflow is unreachable for valid AV1. Keep
+    // the private unit conversion checked independently of that invariant.
+    let block_width = header
+        .frame_width
+        .div_ceil(8)
+        .checked_mul(2)
+        .ok_or_else(|| malformed("frame block width overflows"))?;
+    let block_height = header
+        .frame_height
+        .div_ceil(8)
+        .checked_mul(2)
+        .ok_or_else(|| malformed("frame block height overflows"))?;
     let block_shift = 4_u32.wrapping_add(u32::from(sequence.use_128x128_superblock));
     let (restoration_types, restoration_unit_size_log2) = header
         .restoration
