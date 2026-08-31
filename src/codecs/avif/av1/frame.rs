@@ -807,6 +807,7 @@ struct PendingFrame {
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
     temporal_samples: Vec<RetainedTemporalSample>,
+    complete_monochrome_tiles: Vec<ReconstructedMonochromeTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
 }
 
@@ -1288,6 +1289,7 @@ impl FrameState {
             complete_color_leaf: None,
             complete_color_tiles: Vec::new(),
             temporal_samples: Vec::new(),
+            complete_monochrome_tiles: Vec::new(),
             complete_monochrome_plane: None,
         });
         Ok(())
@@ -1462,6 +1464,7 @@ impl FrameState {
             complete_color_leaf: validation.complete_color_leaf,
             complete_color_tiles: validation.complete_color_tiles,
             temporal_samples: validation.temporal_samples,
+            complete_monochrome_tiles: validation.complete_monochrome_tiles,
             complete_monochrome_plane: validation.complete_monochrome_plane,
             selected_cdfs: validation.selected_cdfs,
             segment_map: validation.segment_map,
@@ -1505,6 +1508,14 @@ impl FrameState {
                         "unable to reserve retained AV1 temporal-MV samples".to_owned(),
                     )
                 })?;
+            pending
+                .complete_monochrome_tiles
+                .try_reserve(group.complete_monochrome_tiles.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to reserve reconstructed AV1 monochrome tiles".to_owned(),
+                    )
+                })?;
             pending.next_tile = next_tile;
             pending.first_leaf = pending.first_leaf.take().or(group.first_leaf);
             pending.complete_color_leaf = pending
@@ -1515,6 +1526,9 @@ impl FrameState {
                 .complete_color_tiles
                 .extend(group.complete_color_tiles);
             pending.temporal_samples.extend(group.temporal_samples);
+            pending
+                .complete_monochrome_tiles
+                .extend(group.complete_monochrome_tiles);
             pending.complete_monochrome_plane = pending
                 .complete_monochrome_plane
                 .take()
@@ -1526,7 +1540,25 @@ impl FrameState {
             return Ok(());
         }
 
+        let monochrome_tile_count = pending
+            .complete_monochrome_tiles
+            .len()
+            .saturating_add(group.complete_monochrome_tiles.len());
+        let color_tile_count = pending
+            .complete_color_tiles
+            .len()
+            .saturating_add(group.complete_color_tiles.len());
+        if monochrome_tile_count != 0
+            && (color_tile_count != 0
+                || pending.complete_color_leaf.is_some()
+                || group.complete_color_leaf.is_some())
+        {
+            return Err(malformed(
+                "assembled frame mixes monochrome and color tiles",
+            ));
+        }
         let mut assembled_color_leaf = None;
+        let mut assembled_monochrome_plane = None;
         if tile_count > 1
             && pending
                 .complete_color_tiles
@@ -1561,6 +1593,24 @@ impl FrameState {
                     .transpose()?;
             }
         }
+        if tile_count > 1
+            && pending
+                .complete_monochrome_tiles
+                .len()
+                .saturating_add(group.complete_monochrome_tiles.len())
+                == usize::try_from(tile_count).unwrap_or(0)
+        {
+            let sequence = self
+                .sequence
+                .as_ref()
+                .ok_or(malformed("assembled monochrome frame has no sequence"))?;
+            assembled_monochrome_plane = assemble_monochrome_tiles(
+                &pending.complete_monochrome_tiles,
+                &group.complete_monochrome_tiles,
+                &pending.header,
+                sequence,
+            )?;
+        }
         enum SurfacePlan {
             Color {
                 depth: SampleDepth,
@@ -1583,10 +1633,10 @@ impl FrameState {
             .as_ref()
             .or(pending.complete_color_leaf.as_ref())
             .or(group.complete_color_leaf.as_ref());
-        let monochrome_plane = pending
+        let monochrome_plane = assembled_monochrome_plane.as_ref().or(pending
             .complete_monochrome_plane
             .as_ref()
-            .or(group.complete_monochrome_plane.as_ref());
+            .or(group.complete_monochrome_plane.as_ref()));
         let surface_plan = if let Some(leaf) = color_leaf {
             let (depth, layout, strides) =
                 FrameSurface::validate_color_leaf(leaf, &pending.header, sequence)?;
@@ -1651,9 +1701,9 @@ impl FrameState {
         let complete_color_leaf = assembled_color_leaf
             .or(pending.complete_color_leaf)
             .or(group.complete_color_leaf);
-        let complete_monochrome_plane = pending
+        let complete_monochrome_plane = assembled_monochrome_plane.or(pending
             .complete_monochrome_plane
-            .or(group.complete_monochrome_plane);
+            .or(group.complete_monochrome_plane));
         let selected_cdfs = pending.selected_cdfs.or(group.selected_cdfs);
         let segment_map = group.segment_map.or(pending.segment_map);
         let decode_complete = pending.decode_complete && group.decode_complete;
@@ -1736,6 +1786,7 @@ struct TileGroup {
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
     temporal_samples: Vec<RetainedTemporalSample>,
+    complete_monochrome_tiles: Vec<ReconstructedMonochromeTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
     selected_cdfs: Option<entropy::FrameCdfs>,
     segment_map: Option<entropy::SegmentMap>,
@@ -1747,6 +1798,7 @@ struct TileValidation {
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
     temporal_samples: Vec<RetainedTemporalSample>,
+    complete_monochrome_tiles: Vec<ReconstructedMonochromeTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
     selected_cdfs: Option<entropy::FrameCdfs>,
     segment_map: Option<entropy::SegmentMap>,
@@ -1759,6 +1811,14 @@ struct ReconstructedColorTile {
     width: u32,
     height: u32,
     reconstruction: entropy::Lossy420Reconstruction,
+}
+
+struct ReconstructedMonochromeTile {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    plane: super::block::ReconstructedPlane,
 }
 
 fn assemble_color_tiles(
@@ -1983,6 +2043,33 @@ fn assemble_color_tiles(
     }))
 }
 
+fn assemble_monochrome_tiles(
+    tiles: &[ReconstructedMonochromeTile],
+    trailing_tiles: &[ReconstructedMonochromeTile],
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+) -> Av1Result<Option<super::block::ReconstructedPlane>> {
+    if tiles.is_empty() && trailing_tiles.is_empty() {
+        return Ok(None);
+    }
+    let depth = SampleDepth::new(sequence.bit_depth)
+        .ok_or_else(|| malformed("monochrome tile sample depth is unsupported"))?;
+    let mut canvas =
+        super::raster::MonochromeFrameCanvas::new(header.frame_width, header.frame_height)?;
+    for tile in tiles.iter().chain(trailing_tiles) {
+        canvas.place_cropped_plane(
+            tile.width,
+            tile.height,
+            tile.width,
+            tile.height,
+            tile.x,
+            tile.y,
+            &tile.plane,
+        )?;
+    }
+    canvas.finish(depth).map(Some)
+}
+
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:3149-3181 and libaom 3.13.2
 // av1/decoder/decodeframe.c:3618-3663. Every tile except the final tile in a
 // group carries little-endian `tile_size_minus_1`; the final tile consumes the
@@ -2159,6 +2246,7 @@ fn validate_tile_entropy_prefixes(
     let mut complete_color_leaf = None;
     let mut complete_color_tiles = Vec::new();
     let mut temporal_samples = Vec::new();
+    let mut complete_monochrome_tiles = Vec::new();
     let mut complete_monochrome_plane = None;
     let mut selected_cdfs = None;
     let mut segment_map = current_segment_map.cloned();
@@ -2371,6 +2459,25 @@ fn validate_tile_entropy_prefixes(
                     leaf
                 };
                 complete_color_leaf = Some(leaf);
+            } else if sequence.monochrome {
+                if reconstruction.restoration.is_some() {
+                    return Err(malformed(
+                        "multi-tile monochrome reconstruction carries a post-filter",
+                    ));
+                }
+                let plane = reconstruction.into_monochrome_plane()?;
+                complete_monochrome_tiles.try_reserve(1).map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
+                    )
+                })?;
+                complete_monochrome_tiles.push(ReconstructedMonochromeTile {
+                    x: tile_origin_x,
+                    y: tile_origin_y,
+                    width: tile_width,
+                    height: tile_height,
+                    plane,
+                });
             } else {
                 complete_color_tiles.push(ReconstructedColorTile {
                     x: tile_origin_x,
@@ -2406,6 +2513,7 @@ fn validate_tile_entropy_prefixes(
         complete_color_leaf,
         complete_color_tiles,
         temporal_samples,
+        complete_monochrome_tiles,
         complete_monochrome_plane,
         selected_cdfs,
         segment_map,
@@ -3787,6 +3895,7 @@ fn coverage_tile_group(start: u32, end: u32) -> TileGroup {
         complete_color_leaf: None,
         complete_color_tiles: Vec::new(),
         temporal_samples: Vec::new(),
+        complete_monochrome_tiles: Vec::new(),
         complete_monochrome_plane: None,
         selected_cdfs: None,
         segment_map: None,
@@ -4007,6 +4116,7 @@ fn coverage_pending(header: FrameHeader) -> PendingFrame {
         complete_color_leaf: None,
         complete_color_tiles: Vec::new(),
         temporal_samples: Vec::new(),
+        complete_monochrome_tiles: Vec::new(),
         complete_monochrome_plane: None,
     }
 }
