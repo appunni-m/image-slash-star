@@ -4389,9 +4389,13 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_intra_reconstruction =
         complete_monochrome_lossy_intra_reconstruction_context(context);
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
+    let high_depth_444_inter = inter_context.is_some_and(|inter_context| {
+        complete_high_depth_444_inter_reconstruction_context(context, inter_context)
+    });
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
+            || high_depth_444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
             || (!context.intra_frame
                 && monochrome_postfilter
@@ -4565,13 +4569,16 @@ pub(super) fn validate_complete_lossy_420_partition(
                     node.block_size
                 };
                 if complete_high_depth_422_intra_reconstruction_context(context)
-                    && syntax_block_size != BlockSize::B16x16
+                    || high_depth_444_inter
                 {
-                    // This tranche is proved only for the normalized
-                    // B16x16/Square16 terminal. Reject a split before any
-                    // block skip, quantization, or coefficient CDF mutates.
-                    unsupported = true;
-                    return Ok(PartitionVisitControl::Stop);
+                    if syntax_block_size != BlockSize::B16x16 {
+                        // These high-depth inter/intra tranches are proved only
+                        // for one normalized B16x16/Square16 terminal. Reject
+                        // a partition before any block skip, quantization, or
+                        // coefficient CDF mutates.
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    }
                 }
                 let streamed_large = super::block::uses_streamed_intra(syntax_block_size);
                 let transform_grid = if streamed_large {
@@ -5278,6 +5285,74 @@ fn complete_high_depth_inter_reconstruction_context(
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+        && references_match
+}
+
+/// Exact high-depth 4:4:4 inter tranche admitted by the full-resolution
+/// translation path.  The inter block engine already carries depth-parametric
+/// predictors and residuals for all three full-resolution planes, but its
+/// first proof is intentionally one normalized B16x16/Square16 terminal.  A
+/// separate gate keeps this class from inheriting the narrower 4:2:0/4:2:2
+/// admission or from silently accepting a partition that needs child-local
+/// context publication.
+fn complete_high_depth_444_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I444
+            && reference.surface.coded_width == 16
+            && reference.surface.upscaled_width == 16
+            && reference.surface.frame_height == 16
+            && !reference.scale.scaled
+    });
+    !context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && context.frame_width == 16
+        && context.frame_height == 16
+        && context.upscaled_width == 16
+        && context.block_width == 4
+        && context.block_height == 4
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
         && references_match
 }
 
