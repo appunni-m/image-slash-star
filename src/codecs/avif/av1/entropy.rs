@@ -9707,7 +9707,6 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
 ) -> bool {
     !context.intra_frame
         && complete_monochrome_lossy_common(context)
-        && !inter_context.enable_interintra_compound
         && complete_monochrome_references(context, inter_context)
 }
 
