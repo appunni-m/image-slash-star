@@ -3,7 +3,10 @@
 use crate::SequenceDecodeBudget;
 use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
-use crate::types::{ColorType, DecodedImage, ImageMode, SourceColor};
+use crate::types::{
+    ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    FrameDuration, FrameRect, ImageMode, SequenceKind, SourceColor, SourceDescriptor,
+};
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
 pub fn decode(
@@ -163,61 +166,229 @@ pub fn decode(
 
 /// Decode an AVIF sequence with the pure-Rust backend.
 ///
-/// Still-image decoding is available for the closed portable subset below,
-/// while sequence timing, track references, and multi-frame presentation are
-/// not implemented yet. A supported still is therefore exposed as a single
-/// frame, and an input outside the pure-Rust subset returns the same explicit
-/// gap rather than reaching for a foreign codec stack.
+/// Movie samples are decoded through one stateful AV1 track decoder so frame
+/// references, frame IDs, CDFs, and hidden/show-existing state remain intact.
+/// The public sequence is assembled transactionally after every displayable
+/// sample has produced a checked RGB8/RGBA8 image.
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
+    let file_type = read_avif_file_type(data)?;
     let extracted = extract_av1(data)?;
-    reserve_sequence_frames(data, &extracted, budget)?;
-    super::av1::validate_sequence(&extracted)
-        .map_err(|error| error.context("AVIF sequence validation failed"))?;
-    if extracted.sequence.is_some() {
-        return Err(CodecError::NotImplemented(
-            "AVIF sequence rendering is not implemented in the pure-Rust backend".to_owned(),
+
+    let Some(sequence_payload) = extracted.sequence.as_ref() else {
+        let (mut image, consumed) = decode(data, token)?;
+        let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+        let metadata = std::mem::take(&mut image.metadata);
+        let source_color = std::mem::take(&mut image.source_color);
+        let mut sequence = DecodedSequence::from_image(image);
+        sequence.opaque_blocks = opaque_blocks;
+        sequence.metadata = metadata;
+        sequence.source_color = source_color;
+        return Ok((sequence, consumed));
+    };
+
+    validate_sequence_timing(sequence_payload)?;
+    let portable_frames = super::av1::validate_sequence_frames(&extracted, token)
+        .map_err(|error| error.context("AVIF sequence validation failed"))?
+        .ok_or_else(|| {
+            CodecError::NotImplemented(
+                "AVIF sequence sample is outside the supported pure-Rust presentation subset"
+                    .to_owned(),
+            )
+        })?;
+    let first = portable_frames.first().ok_or_else(|| {
+        CodecError::Malformed("AVIF sequence has no displayable frame".to_owned())
+    })?;
+    let width = first.width;
+    let height = first.height;
+    let bit_depth = first.bit_depth;
+    let color_primaries = first.color_primaries;
+    let transfer_characteristics = first.transfer_characteristics;
+    let matrix_coefficients = first.matrix_coefficients;
+    let color_range = first.color_range;
+    let subsampling_x = first.subsampling_x;
+    let subsampling_y = first.subsampling_y;
+    let mode = if first.alpha_plane.is_some() {
+        ImageMode::Rgba8
+    } else {
+        ImageMode::Rgb8
+    };
+    let source_template = avif_sequence_source_template(
+        &extracted,
+        file_type,
+        mode == ImageMode::Rgba8,
+    );
+    let mut frames = Vec::new();
+    frames.try_reserve(portable_frames.len()).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
+    })?;
+    for (index, portable) in portable_frames.into_iter().enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
+        if portable.width != width
+            || portable.height != height
+            || portable.alpha_plane.is_some() != (mode == ImageMode::Rgba8)
+            || portable.bit_depth != bit_depth
+            || portable.color_primaries != color_primaries
+            || portable.transfer_characteristics != transfer_characteristics
+            || portable.matrix_coefficients != matrix_coefficients
+            || portable.color_range != color_range
+            || portable.subsampling_x != subsampling_x
+            || portable.subsampling_y != subsampling_y
+        {
+            return Err(CodecError::NotImplemented(
+                "AVIF sequence changes geometry or color format between samples".to_owned(),
+            ));
+        }
+        if index != 0 {
+            budget
+                .reserve_later_frame(mode, width, height)
+                .map_err(CodecError::LimitExceeded)?;
+        }
+        let image = super::av1::ValidatedAv1 {
+            portable_still: Some(portable),
+        };
+        let image = decode_portable(&image).ok_or_else(|| {
+            CodecError::NotImplemented(
+                "AVIF sequence frame is outside the supported pure-Rust color subset".to_owned(),
+            )
+        })?;
+        let image = image.with_source_descriptor(source_template.clone());
+        let sample =
+            sequence_payload.color.samples.get(index).ok_or_else(|| {
+                CodecError::Malformed("AVIF sequence sample disappeared".to_owned())
+            })?;
+        frames.push(DecodedFrame::rendered_canvas(
+            image,
+            FrameRect {
+                left: 0,
+                top: 0,
+                width,
+                height,
+            },
+            FrameDuration {
+                numerator: u64::from(sample.duration),
+                denominator: u64::from(sequence_payload.timescale.get()),
+            },
+            FrameDisposal::Unspecified,
+            FrameBlend::Unspecified,
         ));
     }
-    let (mut image, consumed) = decode(data, token)?;
-    let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
-    let metadata = std::mem::take(&mut image.metadata);
-    let source_color = std::mem::take(&mut image.source_color);
-    let mut sequence = crate::types::DecodedSequence::from_image(image);
-    sequence.opaque_blocks = opaque_blocks;
-    sequence.metadata = metadata;
-    sequence.source_color = source_color;
-    Ok((sequence, consumed))
+
+    let mut extracted = extracted;
+    let consumed = extracted.consumed;
+    let opaque_blocks = std::mem::take(&mut extracted.retained_boxes);
+    let metadata = std::mem::take(&mut extracted.metadata);
+    let source_color = std::mem::take(&mut extracted.source_color);
+    Ok((
+        DecodedSequence {
+            width,
+            height,
+            frames,
+            loop_count: crate::types::AnimationLoop::Unspecified,
+            background: None,
+            kind: SequenceKind::TimedAnimation,
+            opaque_blocks,
+            metadata,
+            source_color,
+        },
+        consumed,
+    ))
+}
+
+fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> CodecResult<()> {
+    if sequence.timescale.get() == 0 {
+        return Err(CodecError::Malformed(
+            "AVIF sequence timescale is zero".to_owned(),
+        ));
+    }
+    if sequence
+        .color
+        .samples
+        .iter()
+        .any(|sample| sample.duration == 0)
+    {
+        return Err(CodecError::Malformed(
+            "AVIF sequence sample duration is zero".to_owned(),
+        ));
+    }
+    if let Some(alpha) = &sequence.alpha {
+        if alpha.samples.len() != sequence.color.samples.len() {
+            return Err(CodecError::Malformed(
+                "AVIF sequence color and alpha sample counts differ".to_owned(),
+            ));
+        }
+        for (color, alpha) in sequence.color.samples.iter().zip(&alpha.samples) {
+            if alpha.duration == 0 || color.duration != alpha.duration {
+                return Err(CodecError::Malformed(
+                    "AVIF sequence color and alpha durations differ".to_owned(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn avif_sequence_source_template(
+    extracted: &super::samples::ExtractedAvif<'_>,
+    file_type: crate::types::AvifFileTypeProperties,
+    has_alpha: bool,
+) -> SourceDescriptor {
+    let mut source = SourceDescriptor::new();
+    if has_alpha {
+        source = source.with_alpha(crate::types::SourceAlpha::Auxiliary);
+    }
+    source = source.with_avif_file_type(file_type);
+    if let Some(transform) = extracted.transform {
+        source = source.with_avif_transform(transform);
+    }
+    if !extracted.auxiliary_relationships.is_empty() {
+        source =
+            source.with_avif_auxiliary_relationships(extracted.auxiliary_relationships.clone());
+    }
+    if let Some(relationship) = extracted.auxiliary_relationship {
+        source = source.with_avif_auxiliary_relationship(relationship);
+    }
+    if !extracted.item_relationships.is_empty() {
+        source = source.with_avif_item_relationships(extracted.item_relationships.clone());
+    }
+    if !extracted.premultiplied_relationships.is_empty() {
+        source = source
+            .with_avif_premultiplied_relationships(extracted.premultiplied_relationships.clone());
+    }
+    if !extracted.item_color_properties.is_empty() {
+        source = source.with_avif_item_color_properties(extracted.item_color_properties.clone());
+    }
+    if !extracted.item_icc_profiles.is_empty() {
+        source = source.with_avif_item_icc_profiles(extracted.item_icc_profiles.clone());
+    }
+    if !extracted.item_properties.is_empty() {
+        source = source.with_avif_item_properties(extracted.item_properties.clone());
+    }
+    if !extracted.item_plane_properties.is_empty() {
+        source = source.with_avif_item_plane_properties(extracted.item_plane_properties.clone());
+    }
+    if !extracted.item_codec_properties.is_empty() {
+        source = source.with_avif_item_codec_properties(extracted.item_codec_properties.clone());
+    }
+    if !extracted.item_locations.is_empty() {
+        source = source.with_avif_item_locations(extracted.item_locations.clone());
+    }
+    if !extracted.grid_item_ids.is_empty() {
+        source = source.with_avif_grid_item_ids(extracted.grid_item_ids.clone());
+    }
+    if let Some(properties) = extracted.grid_properties {
+        source = source.with_avif_grid_properties(properties);
+    }
+    source
 }
 
 fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
     super::samples::validated(data)
         .map_err(|error| error.context("AVIF container validation failed"))
-}
-
-/// Reserve every later AVIF frame before validating or eventually presenting
-/// the sequence. The portable renderer is still a planned gap, but policy
-/// limits must not disappear merely because presentation is not implemented.
-fn reserve_sequence_frames(
-    data: &[u8],
-    extracted: &super::samples::ExtractedAvif<'_>,
-    budget: &mut SequenceDecodeBudget,
-) -> CodecResult<()> {
-    if extracted.sequence.is_none() {
-        return Ok(());
-    }
-    let info = super::inspect::inspect(data)?;
-    let frame_count = info.frame_count.unwrap_or(1);
-    for _ in 1..frame_count {
-        budget
-            .reserve_later_frame(info.mode, info.width, info.height)
-            .map_err(CodecError::LimitExceeded)?;
-    }
-    Ok(())
 }
 
 fn read_avif_file_type(data: &[u8]) -> CodecResult<crate::types::AvifFileTypeProperties> {

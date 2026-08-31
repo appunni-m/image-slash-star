@@ -844,7 +844,8 @@ impl FrameState {
     /// Finish the one temporal unit carried by an AVIF sample. A temporal
     /// delimiter inside that sample validates placement but does not create a
     /// second boundary.
-    pub(super) fn sample_flush(&mut self) -> Av1Result<()> {
+    pub(super) fn sample_flush(&mut self) -> Av1Result<u64> {
+        let completed_temporal_unit = self.temporal_unit;
         self.advance_temporal_unit("AVIF sample ends during a pending frame")?;
         if self.completions.len() > 1
             && let Some(selected_index) = self.selected_completion_index()
@@ -853,7 +854,7 @@ impl FrameState {
             self.completions.clear();
             self.completions.push(selected);
         }
-        Ok(())
+        Ok(completed_temporal_unit)
     }
 
     pub(super) fn finish(&self) -> Av1Result<&SequenceHeader> {
@@ -901,6 +902,36 @@ impl FrameState {
         let Some(completion) = self.selected_completion() else {
             return Ok(SelectedDisplay::unavailable());
         };
+        self.materialize_completion_with_token(completion, token)
+    }
+
+    /// Materialize only the completion produced by one AVIF sample.
+    ///
+    /// A frame state can retain an earlier shown completion while a later
+    /// sample carries only hidden reference state. Sequence presentation must
+    /// not mistake that retained completion for a newly displayed frame, so
+    /// callers identify the temporal unit returned by `sample_flush`.
+    pub(super) fn selected_display_for_temporal_unit_with_token(
+        &self,
+        temporal_unit: u64,
+        token: Option<&crate::CancellationToken>,
+    ) -> Av1Result<Option<SelectedDisplay>> {
+        let Some(completion) = self
+            .completions
+            .iter()
+            .find(|completion| completion.temporal_unit == temporal_unit)
+        else {
+            return Ok(None);
+        };
+        self.materialize_completion_with_token(completion, token)
+            .map(Some)
+    }
+
+    fn materialize_completion_with_token(
+        &self,
+        completion: &FrameCompletion,
+        token: Option<&crate::CancellationToken>,
+    ) -> Av1Result<SelectedDisplay> {
         if completion.show_existing && completion.diagnostic_leaf.is_some() {
             return Err(malformed(
                 "show-existing completion contains diagnostic reconstruction",

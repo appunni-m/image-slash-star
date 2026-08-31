@@ -100,6 +100,14 @@ fn read_uleb128(data: &SegmentedData<'_, '_>, offset: &mut usize) -> Av1Result<u
 // ✅ VERIFIED: AV1 specification sections 5.3.1-5.3.3 and 6.2.2; dav1d
 // 1.5.3 src/obu.c:1169-1209.
 fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState) -> Av1Result<()> {
+    validate_sample_and_return_temporal_unit(input, sample, state).map(|_| ())
+}
+
+fn validate_sample_and_return_temporal_unit(
+    input: &[u8],
+    sample: &EncodedSample,
+    state: &mut FrameState,
+) -> Av1Result<u64> {
     let data = SegmentedData::new(input, &sample.spans)?;
     // The AVIF sample extractor constructs codec-configuration spans only
     // after validating them against the immutable input buffer.
@@ -225,6 +233,114 @@ fn validate_plane_state(input: &[u8], plane: &EncodedPlane) -> Av1Result<FrameSt
     }
     state.finish()?;
     Ok(state)
+}
+
+/// Validate and materialize every displayable sample in one AVIF track.
+///
+/// A movie sample is a temporal unit, not necessarily a complete intra frame.
+/// Keeping one [`FrameState`] alive across the loop preserves reference
+/// surfaces, frame IDs, CDFs, and segmentation state while the returned
+/// displays remain owned snapshots suitable for the public sequence API.
+pub(super) fn validate_sequence_frames(
+    extracted: &ExtractedAvif<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<Option<Vec<PortableStill>>> {
+    let Some(sequence) = &extracted.sequence else {
+        return Ok(None);
+    };
+    if sequence.color.samples.is_empty() {
+        return Err(malformed("AVIF sequence has no color samples"));
+    }
+
+    let mut color_state = FrameState::new();
+    let mut color_displays = Vec::new();
+    color_displays
+        .try_reserve(sequence.color.samples.len())
+        .map_err(|_| {
+            CodecError::Dimensions("unable to reserve AVIF color sequence state".to_owned())
+        })?;
+    for sample in &sequence.color.samples {
+        crate::codecs::error::check_cancelled(token)?;
+        let temporal_unit =
+            validate_sample_and_return_temporal_unit(extracted.input, sample, &mut color_state)?;
+        let display =
+            color_state.selected_display_for_temporal_unit_with_token(temporal_unit, token)?;
+        color_displays.push(display);
+    }
+    let color_sequence = color_state.finish()?.clone();
+
+    let mut alpha_displays = None;
+    let mut alpha_sequence = None;
+    if let Some(alpha) = &sequence.alpha {
+        let mut alpha_state = FrameState::new();
+        let mut displays = Vec::new();
+        displays.try_reserve(alpha.samples.len()).map_err(|_| {
+            CodecError::Dimensions("unable to reserve AVIF alpha sequence state".to_owned())
+        })?;
+        for sample in &alpha.samples {
+            crate::codecs::error::check_cancelled(token)?;
+            let temporal_unit = validate_sample_and_return_temporal_unit(
+                extracted.input,
+                sample,
+                &mut alpha_state,
+            )?;
+            let display =
+                alpha_state.selected_display_for_temporal_unit_with_token(temporal_unit, token)?;
+            displays.push(display);
+        }
+        alpha_sequence = Some(alpha_state.finish()?.clone());
+        alpha_displays = Some(displays);
+    }
+
+    if let Some(alpha_sequence) = &alpha_sequence
+        && (!alpha_sequence.monochrome
+            || !alpha_sequence.color_range
+            || alpha_sequence.bit_depth != 8
+            || alpha_sequence.subsampling_x
+            || alpha_sequence.subsampling_y
+            || alpha_sequence.film_grain_present)
+    {
+        return Ok(None);
+    }
+    if color_sequence.bit_depth != 8 || color_sequence.monochrome || !color_sequence.color_range {
+        return Ok(None);
+    }
+
+    let mut frames = Vec::new();
+    frames.try_reserve(color_displays.len()).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
+    })?;
+    for (index, display) in color_displays.iter_mut().enumerate() {
+        let Some(display) = display.take() else {
+            return Ok(None);
+        };
+        let Some(color_leaf) = display.color_leaf else {
+            return Ok(None);
+        };
+        if display.dimensions != Some((color_leaf.width, color_leaf.height)) {
+            return Ok(None);
+        }
+        let alpha_plane = if let Some(alpha_displays) = alpha_displays.as_mut() {
+            let Some(alpha_display) = alpha_displays.get_mut(index).and_then(Option::take) else {
+                return Ok(None);
+            };
+            let Some(alpha_plane) = alpha_display.monochrome_plane else {
+                return Ok(None);
+            };
+            if alpha_display.dimensions != Some((color_leaf.width, color_leaf.height)) {
+                return Ok(None);
+            }
+            Some(alpha_plane)
+        } else {
+            None
+        };
+        frames.push(portable_still(
+            color_leaf,
+            color_sequence.clone(),
+            alpha_plane,
+        ));
+    }
+    Ok(Some(frames))
 }
 
 #[allow(
@@ -734,16 +850,8 @@ pub(super) fn validate_first_with_token(
     Ok(ValidatedAv1 { portable_still })
 }
 
-/// Validate every AV1 sample in a sequence without promising that the
-/// sequence can be rendered yet.
-///
-/// Keeping this separate from [`validate_first`] matters for Pillow parity:
-/// decoding the first frame of an animated AVIF may succeed even when a later
-/// frame is malformed, while sequence decoding must report that later-frame
-/// failure.  The same stateful validator is used for all samples so AV1
-/// frame-ID continuity and reference-state rules are checked across sample
-/// boundaries in safe Rust.
-pub(super) fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> {
+#[cfg(test)]
+fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> {
     let Some(sequence) = &extracted.sequence else {
         return Ok(());
     };
