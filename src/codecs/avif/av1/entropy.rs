@@ -4796,8 +4796,8 @@ pub(super) fn validate_complete_lossy_420_partition(
     let collect_cdef = context.frame_tools.cdef.is_some();
     let mut filter_blocks = Vec::<super::filter::Block>::new();
     let bounded_i444_filter_reserve = bounded_i444_geometry
+        .filter(|_| collect_loop_filter)
         .map(|geometry| geometry.expected_leaf_count())
-        .filter(|&count| count == 2)
         .unwrap_or(0);
     let bounded_subsampled_filter_reserve = [
         bounded_i422_rect_loop_geometry,
@@ -7692,6 +7692,9 @@ enum BoundedI444InterGeometry {
     /// A level-2 SPLIT followed by two level-3 NONE B16x16 terminals in a
     /// 16x32 frame. The leaves are visited top-to-bottom at y=0 and y=4 MI.
     TwoVertical,
+    /// A level-2 SPLIT followed by four level-3 NONE B16x16 terminals in a
+    /// 32x32 frame. The leaves are visited in raster order.
+    FourSquare,
 }
 
 impl BoundedI444InterGeometry {
@@ -7700,6 +7703,7 @@ impl BoundedI444InterGeometry {
             Self::OneBlock => (16, 16),
             Self::TwoHorizontal => (32, 16),
             Self::TwoVertical => (16, 32),
+            Self::FourSquare => (32, 32),
         }
     }
 
@@ -7707,6 +7711,7 @@ impl BoundedI444InterGeometry {
         match self {
             Self::OneBlock => 1,
             Self::TwoHorizontal | Self::TwoVertical => 2,
+            Self::FourSquare => 4,
         }
     }
 }
@@ -7734,6 +7739,13 @@ fn bounded_i444_expected_terminal(
         BoundedI444InterGeometry::TwoVertical => match leaf_index {
             0 => (0, 0),
             1 => (0, 4),
+            _ => return false,
+        },
+        BoundedI444InterGeometry::FourSquare => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
             _ => return false,
         },
     };
@@ -7767,6 +7779,7 @@ fn bounded_i444_geometry_for_context(
         (16, 16, 4, 4, 0 | 1) => Some(BoundedI444InterGeometry::OneBlock),
         (32, 16, 8, 4, 1) => Some(BoundedI444InterGeometry::TwoHorizontal),
         (16, 32, 4, 8, 1) => Some(BoundedI444InterGeometry::TwoVertical),
+        (32, 32, 8, 8, 1) => Some(BoundedI444InterGeometry::FourSquare),
         _ => None,
     }
 }
@@ -8104,6 +8117,9 @@ fn bounded_i444_loop_filter_supported(
         }
         BoundedI444InterGeometry::TwoVertical => {
             loop_filter.level_y[1] != 0 && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::FourSquare => {
+            loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
     }
 }
