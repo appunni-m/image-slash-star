@@ -5572,7 +5572,6 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
                 || simple_422
         }
         && context.frame_tools.quantization.is_some()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && matches!(
             context.frame_tools.cdef,
@@ -5729,7 +5728,6 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && !context.allow_screen_content_tools
         && context.frame_tools.transform_mode != 2
         && inter_cdef_supported(context)
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && no_unsupported_film_grain(context)
         && !context.segmentation_enabled
@@ -5774,7 +5772,6 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && context.frame_tools.quantization.is_some()
         && (!high_depth || !context.frame_tools.reduced_transform_set)
         && (!high_depth || complete_high_depth_loop_filter_supported(context))
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && no_unsupported_film_grain(context)
         && cdef_supported
@@ -6174,7 +6171,6 @@ fn bounded_i420_cdef_common(
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context
             .frame_tools
@@ -6260,7 +6256,6 @@ fn bounded_i422_cdef_common(
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context
             .frame_tools
@@ -6342,7 +6337,6 @@ fn bounded_i422_rect_cdef_common(
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context
             .frame_tools
@@ -6533,7 +6527,6 @@ fn bounded_i420_rect_loop_common(
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.transform_mode == 1
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && bounded_subsampled_rect_loop_filter_supported(context, geometry)
 }
@@ -6622,7 +6615,6 @@ fn bounded_i420_rect_cdef_common(
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context
             .frame_tools
@@ -7550,7 +7542,6 @@ fn bounded_subsampled_loop_common(
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.transform_mode == 1
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && loop_filter.sharpness <= 7
         && loop_filter.level_y.iter().all(|&level| level <= 63)
@@ -8084,7 +8075,6 @@ fn bounded_i422_rect_loop_common(
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.transform_mode == 1
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && bounded_subsampled_rect_loop_filter_supported(context, geometry)
 }
@@ -8610,7 +8600,6 @@ fn bounded_i444_intra_cdef_geometry(
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context
             .frame_tools
@@ -8656,7 +8645,6 @@ fn bounded_i444_intra_loop_geometry(
         && context.frame_tools.transform_mode == 1
         && bounded_i444_loop_filter_supported(context, geometry)
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3])
         .then_some(geometry)
 }
@@ -8711,7 +8699,6 @@ fn bounded_i444_inter_reconstruction_geometry(
         && (bounded_i444_loop_filter_supported(context, geometry)
             || bounded_i444_loop_filter_inactive(context))
         && bounded_i444_cdef_supported(context)
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
@@ -9131,7 +9118,6 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
         && !context.frame_tools.reduced_transform_set
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.block_x == 0
         && context.block_y == 0
@@ -9157,7 +9143,6 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && !context.frame_tools.reduced_transform_set
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.block_x == 0
         && context.block_y == 0
@@ -9204,7 +9189,6 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && context.frame_tools.transform_mode == 1
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && matches!(context.level, 0 | 1)
 }
@@ -10008,7 +9992,6 @@ fn closed_lossy_444_16x16_reconstruction_context(context: &FirstBlockContext) ->
         && !context.frame_tools.segmentation.enabled
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.frame_tools.cdef.is_none()
         && context.frame_tools.loop_filter.level_y == [0; 2]
@@ -10118,7 +10101,6 @@ fn closed_lossy_420_qcat3_horizontal_four_context(context: &FirstBlockContext) -
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.restoration_unit_size_log2 == [8; 2];
     let transform_state = matches!(context.frame_tools.transform_mode, 1 | 2)
@@ -10182,7 +10164,6 @@ fn closed_lossy_420_qcat2_horizontal_four_context(context: &FirstBlockContext) -
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.restoration_unit_size_log2 == [8; 2];
     let transform_state = matches!(context.frame_tools.transform_mode, 1 | 2)
@@ -10241,7 +10222,6 @@ fn closed_lossy_420_qcat3_horizontal_rect_context(context: &FirstBlockContext) -
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.restoration_unit_size_log2 == [8; 2];
     let transform_state = matches!(context.frame_tools.transform_mode, 1 | 2)
