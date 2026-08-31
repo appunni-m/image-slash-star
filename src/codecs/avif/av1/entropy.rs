@@ -5696,8 +5696,8 @@ fn complete_bounded_restoration_inter_420_reconstruction_context(
 /// First inter reconstruction tranche: 8-bit 4:2:0 translation blocks with
 /// loop filtering and the bounded CDEF profile enabled. Single-reference and
 /// average compound prediction share the checked MC boundary; joint/masked
-/// compound, inter-intra, warped, and variable-transform branches are still
-/// rejected before a block publishes neighbor metadata.
+/// compound, inter-intra, OBMC/LOCALWARP selections, and variable-transform
+/// branches are still rejected before a block publishes neighbor metadata.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
     let Some(cdef) = context.frame_tools.cdef else {
         return true;
@@ -5930,8 +5930,6 @@ fn complete_bounded_i422_restoration_inter_reconstruction_context(
         && bounded_i422_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6070,8 +6068,6 @@ fn complete_bounded_i420_restoration_inter_reconstruction_context(
         && bounded_i420_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6219,8 +6215,6 @@ fn complete_bounded_i420_cdef_inter_reconstruction_context(
         && bounded_i420_cdef_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6307,8 +6301,6 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
         && bounded_i422_cdef_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6397,8 +6389,6 @@ fn complete_bounded_i422_rect_cdef_inter_reconstruction_context(
         && bounded_i422_rect_cdef_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6499,8 +6489,6 @@ fn complete_bounded_i422_rect_restoration_inter_reconstruction_context(
         && bounded_i422_rect_restoration_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6589,8 +6577,6 @@ fn complete_bounded_i420_rect_loop_inter_reconstruction_context(
         && bounded_i420_rect_loop_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6683,8 +6669,6 @@ fn complete_bounded_i420_rect_cdef_inter_reconstruction_context(
         && bounded_i420_rect_cdef_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6785,8 +6769,6 @@ fn complete_bounded_i420_rect_restoration_inter_reconstruction_context(
         && bounded_i420_rect_restoration_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6896,8 +6878,6 @@ fn complete_bounded_i420_cdef_restoration_inter_reconstruction_context(
         && bounded_subsampled_cdef_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -6942,8 +6922,6 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
         && bounded_subsampled_cdef_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7058,8 +7036,6 @@ fn complete_bounded_i420_rect_cdef_restoration_inter_reconstruction_context(
         && bounded_i420_rect_cdef_restoration_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7125,8 +7101,6 @@ fn complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
         && bounded_i422_rect_cdef_restoration_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7274,8 +7248,6 @@ fn complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
         && context.subsampling_y
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7331,8 +7303,6 @@ fn complete_bounded_i422_rect_loop_postfilters_inter_reconstruction_context(
         && !context.subsampling_y
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7482,8 +7452,6 @@ fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
         && context.subsampling_y
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7532,8 +7500,6 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
         && !context.subsampling_y
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7628,8 +7594,6 @@ fn complete_bounded_i420_loop_inter_reconstruction_context(
         && bounded_subsampled_loop_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -7672,8 +7636,6 @@ fn complete_bounded_i422_loop_inter_reconstruction_context(
         && bounded_subsampled_loop_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -8166,8 +8128,6 @@ fn complete_bounded_i422_rect_loop_inter_reconstruction_context(
         && bounded_i422_rect_loop_common(context, quantization, geometry)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -8753,8 +8713,6 @@ fn bounded_i444_inter_reconstruction_geometry(
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -8826,7 +8784,6 @@ fn complete_bounded_i444_restoration_inter_reconstruction_context(
         })
         && bounded_i444_restoration_units_supported(context, geometry)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
@@ -9071,9 +9028,10 @@ fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockCo
 }
 
 /// Luma-only inter admission. Block-level parsing still consumes the normal
-/// reference/MV sentence and rejects intra, compound, warped, or unsupported
-/// transform branches; the frame gate only proves that a successful leaf can
-/// be published as a persistent monochrome surface.
+/// reference/MV and motion-variation sentences and rejects intra, compound,
+/// OBMC/LOCALWARP selections, or unsupported transform branches; the frame
+/// gate only proves that a successful leaf can be published as a persistent
+/// monochrome surface.
 fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
