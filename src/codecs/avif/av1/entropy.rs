@@ -5661,9 +5661,12 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
 /// CDEF is limited to complete 8x8 luma geometry. I422 additionally requires
-/// skipped residuals and DCT-DCT chroma, enforced at the block boundary. Every
-/// retained reference is checked up front so a later reference choice cannot
-/// narrow the path back to eight-bit geometry.
+/// skipped residuals and DCT-DCT chroma, enforced at the block boundary. A
+/// switchable-motion frame is admitted only when warped motion is disabled:
+/// the block parser then consumes the binary OBMC sentence, accepts
+/// translation, and transactionally rejects an OBMC selection before any tile
+/// state is published. Every retained reference is checked up front so a
+/// later reference choice cannot narrow the path back to eight-bit geometry.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -5698,7 +5701,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.motion_mode_switchable
         && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
