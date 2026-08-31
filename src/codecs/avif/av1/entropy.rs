@@ -4915,8 +4915,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 } else {
                     node.block_size
                 };
-                if complete_high_depth_422_intra_reconstruction_context(context)
-                    || bounded_i444_inter
+                if bounded_i444_inter
                     || bounded_i444_restoration
                     || bounded_i444_intra_restoration
                     || bounded_i422_restoration
@@ -9051,26 +9050,27 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.block_y == 0
 }
 
-/// Exact high-depth 4:2:2 intra tranche admitted by the normalized streamed
-/// leaf.  The live walker has complete coefficient and predictor carriers for
-/// one B16x16/Square16 terminal (Y 16x16, U/V 8x16); other partition or
-/// transform geometries remain outside this proof until their independent
-/// context grids are wired.
+/// High-depth 4:2:2 intra tranche admitted by the depth-parametric streamed
+/// leaf.  The walker keeps nominal block identity separate from active plane
+/// extents, so every padded frame geometry and AV1 partition/block size can
+/// share the same checked coefficient, predictor, and raster carriers.
 fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
     };
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
         && context.single_tile
-        && context.frame_width == 16
-        && context.frame_height == 16
-        && context.upscaled_width == 16
-        && context.block_width == 4
-        && context.block_height == 4
+        && context.frame_width >= 4
+        && context.frame_height >= 4
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.upscaled_width == context.frame_width
         && context.block_x == 0
         && context.block_y == 0
         && !context.superres_enabled
