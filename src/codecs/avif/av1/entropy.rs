@@ -9043,9 +9043,10 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 }
 
 /// High-depth 4:2:2 intra tranche admitted by the depth-parametric streamed
-/// leaf.  The walker keeps nominal block identity separate from active plane
+/// leaf. The walker keeps nominal block identity separate from active plane
 /// extents, so every padded frame geometry and AV1 partition/block size can
-/// share the same checked coefficient, predictor, and raster carriers.
+/// share the same checked coefficient, predictor, raster, and plane-aware
+/// quantization-matrix carriers.
 fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -9077,7 +9078,6 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && !context.frame_tools.segment_lossless
         && context.frame_tools.segment_qindex == quantization.base
         && quantization.base != 0
-        && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.transform_mode == 1
         && context.frame_tools.loop_filter.level_y == [0; 2]
