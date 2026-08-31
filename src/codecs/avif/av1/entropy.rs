@@ -5290,11 +5290,11 @@ fn complete_high_depth_inter_reconstruction_context(
 
 /// Exact bounded 4:4:4 inter tranche admitted by the full-resolution
 /// translation path. The inter block engine carries depth-parametric
-/// predictors and residuals for all three full-resolution planes, but its
-/// first proof is intentionally one normalized B16x16/Square16 terminal. A
-/// separate gate keeps this class from inheriting the narrower 4:2:0/4:2:2
-/// admission or from silently accepting a partition that needs child-local
-/// context publication.
+/// predictors and residuals for all three full-resolution planes, including
+/// the average compound predictor. Its first proof is intentionally one
+/// normalized B16x16/Square16 terminal. A separate gate keeps this class from
+/// inheriting the narrower 4:2:0/4:2:2 admission or from silently accepting a
+/// partition that needs child-local context publication.
 fn complete_bounded_i444_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -5350,7 +5350,6 @@ fn complete_bounded_i444_inter_reconstruction_context(
         && bounded_i444_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
-        && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable
         && !inter_context.allow_warped_motion
