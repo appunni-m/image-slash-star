@@ -1030,9 +1030,10 @@ fn decode_restoration_unit(
                 95
             };
             reference.sgr_weights = [first, second];
-            // The first restoration tranche does not admit SGR projection,
-            // but retain the decoded sentence for the generic prefix path.
-            RestorationUnit::None
+            RestorationUnit::SgrProjection {
+                parameter_index: u8::try_from(parameter_index).unwrap_or_default(),
+                weights: [first, second],
+            }
         }
     }
 }
@@ -1107,7 +1108,7 @@ fn decode_restoration_prefix_with_cdfs(
     true
 }
 
-/// Decode the single-unit Wiener profile while retaining the parameters for
+/// Decode the single-unit Wiener/SGR profile while retaining the parameters for
 /// the post-CDEF/post-superres pixel stage. This is the only restoration
 /// decoder that publishes pixel-affecting state; the generic prefix helper
 /// above remains a structural consumer for unsupported classes.
@@ -1126,7 +1127,10 @@ fn decode_bounded_restoration_plan(
         let Some(restoration_type) = context.restoration_types[plane] else {
             continue;
         };
-        if !matches!(restoration_type, RestorationType::Wiener) {
+        if !matches!(
+            restoration_type,
+            RestorationType::Wiener | RestorationType::SgrProjection
+        ) {
             return None;
         }
         units[plane] = Some(decode_restoration_unit(
@@ -4223,9 +4227,9 @@ pub(super) fn validate_complete_lossy_420_partition(
     inter_context: Option<&InterFrameContext<'_>>,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
     let bounded_intra_restoration =
-        complete_bounded_wiener_intra_420_reconstruction_context(context);
+        complete_bounded_restoration_intra_420_reconstruction_context(context);
     let bounded_inter_restoration =
-        complete_bounded_wiener_inter_420_reconstruction_context(context);
+        complete_bounded_restoration_inter_420_reconstruction_context(context);
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_420_reconstruction_context(context, inter_context)
@@ -4833,13 +4837,18 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && matches!(context.level, 0 | 1)
 }
 
-fn bounded_wiener_restoration_geometry(context: &FirstBlockContext) -> bool {
+fn bounded_restoration_geometry(context: &FirstBlockContext) -> bool {
     if !context.single_tile
         || context.frame_height == 0
         || context.frame_height > 56
         || context.restoration_types == [None; 3]
         || !context.restoration_types.iter().all(|restoration_type| {
-            restoration_type.is_none_or(|kind| kind == RestorationType::Wiener)
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
         })
     {
         return false;
@@ -4882,7 +4891,7 @@ fn bounded_wiener_restoration_geometry(context: &FirstBlockContext) -> bool {
     true
 }
 
-fn bounded_wiener_restoration_common(context: &FirstBlockContext) -> bool {
+fn bounded_restoration_common(context: &FirstBlockContext) -> bool {
     context.bit_depth == 8
         && context.subsampling_x
         && context.subsampling_y
@@ -4896,10 +4905,10 @@ fn bounded_wiener_restoration_common(context: &FirstBlockContext) -> bool {
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
-        && bounded_wiener_restoration_geometry(context)
+        && bounded_restoration_geometry(context)
 }
 
-fn bounded_wiener_cdef_supported(context: &FirstBlockContext) -> bool {
+fn bounded_restoration_cdef_supported(context: &FirstBlockContext) -> bool {
     matches!(
         context.frame_tools.cdef,
         None | Some(CdefContext {
@@ -4913,15 +4922,19 @@ fn bounded_wiener_cdef_supported(context: &FirstBlockContext) -> bool {
     )
 }
 
-fn complete_bounded_wiener_intra_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+fn complete_bounded_restoration_intra_420_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
     context.intra_frame
-        && bounded_wiener_restoration_common(context)
-        && bounded_wiener_cdef_supported(context)
+        && bounded_restoration_common(context)
+        && bounded_restoration_cdef_supported(context)
 }
 
-fn complete_bounded_wiener_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+fn complete_bounded_restoration_inter_420_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
     !context.intra_frame
-        && bounded_wiener_restoration_common(context)
+        && bounded_restoration_common(context)
         && context.frame_tools.transform_mode != 2
         && !context.segmentation_enabled
         && inter_cdef_supported(context)
