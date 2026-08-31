@@ -5648,7 +5648,9 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms
 /// and a closed tool profile until the remaining AV1 syntax families publish
 /// their high-depth state. Plane-aware matrix dequantization remains optional
-/// and depth-parametric on the same terminal path. I422 additionally requires
+/// and depth-parametric on the same terminal path. Frame-level deblocking and
+/// bounded CDEF use the same validated metadata paths as high-depth intra;
+/// CDEF is limited to complete 8x8 luma geometry. I422 additionally requires
 /// skipped residuals and DCT-DCT chroma, enforced at the block boundary. Every
 /// retained reference is checked up front so a later reference choice cannot
 /// narrow the path back to eight-bit geometry.
@@ -5679,10 +5681,8 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
         && !context.frame_tools.delta_lf_present
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
-        && context.frame_tools.cdef.is_none()
+        && complete_high_depth_loop_filter_supported(context)
+        && complete_high_depth_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !inter_context.reference_mode_select

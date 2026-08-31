@@ -1692,8 +1692,26 @@ fn assemble_color_tiles(
         .map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
         })?;
-    let mut cdef_indices = vec![None; region_width.saturating_mul(region_height)];
-    let mut cdef_active = vec![false; active_width.saturating_mul(active_height)];
+    let cdef_region_count = region_width
+        .checked_mul(region_height)
+        .ok_or_else(|| malformed("assembled CDEF region map allocation overflows"))?;
+    let cdef_active_count = active_width
+        .checked_mul(active_height)
+        .ok_or_else(|| malformed("assembled CDEF active map allocation overflows"))?;
+    let mut cdef_indices = Vec::new();
+    cdef_indices
+        .try_reserve_exact(cdef_region_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate assembled AV1 CDEF region map".to_owned())
+        })?;
+    cdef_indices.resize(cdef_region_count, None);
+    let mut cdef_active = Vec::new();
+    cdef_active
+        .try_reserve_exact(cdef_active_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate assembled AV1 CDEF active map".to_owned())
+        })?;
+    cdef_active.resize(cdef_active_count, false);
     let mut loop_parameters: Option<super::filter::Parameters> = None;
     let mut cdef_parameters: Option<super::cdef::FrameParameters> = None;
     let mut filter_parameters_initialized = false;
