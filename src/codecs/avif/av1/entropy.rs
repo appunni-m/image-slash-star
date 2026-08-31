@@ -5574,7 +5574,7 @@ fn complete_bounded_i422_restoration_inter_reconstruction_context(
             )
     });
     !context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
@@ -5837,7 +5837,7 @@ fn complete_bounded_i420_cdef_inter_reconstruction_context(
         && references_match
 }
 
-/// Common frame-level proof for the first high-depth I422 CDEF tranche. The
+/// Common frame-level proof for the first bounded I422 CDEF tranche. The
 /// luma plane remains 16x16 while horizontally subsampled chroma is 8x16;
 /// the checked CDEF raster already owns that independent plane geometry.
 fn bounded_i422_cdef_common(
@@ -5888,7 +5888,7 @@ fn complete_bounded_i422_cdef_intra_reconstruction_context(context: &FirstBlockC
         return false;
     };
     context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_cdef_common(context, quantization)
 }
 
@@ -5913,7 +5913,7 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
             )
     });
     !context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_cdef_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
@@ -5925,11 +5925,11 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
         && references_match
 }
 
-/// Common frame-level proof for the combined high-depth I420/I422 CDEF and
+/// Common frame-level proof for the combined bounded I420/I422 CDEF and
 /// restoration tranche. The standalone predicates stay intentionally narrow;
 /// this separate class admits the legal filter order while retaining the same
 /// one-B16 geometry and checked one-unit restoration bounds.
-fn bounded_high_depth_subsampled_cdef_restoration_common(
+fn bounded_subsampled_cdef_restoration_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
 ) -> bool {
@@ -5999,7 +5999,7 @@ fn complete_bounded_i420_cdef_restoration_intra_reconstruction_context(
         && matches!(context.bit_depth, 10 | 12)
         && context.subsampling_x
         && context.subsampling_y
-        && bounded_high_depth_subsampled_cdef_restoration_common(context, quantization)
+        && bounded_subsampled_cdef_restoration_common(context, quantization)
 }
 
 fn complete_bounded_i420_cdef_restoration_inter_reconstruction_context(
@@ -6024,7 +6024,7 @@ fn complete_bounded_i420_cdef_restoration_inter_reconstruction_context(
     });
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
-        && bounded_high_depth_subsampled_cdef_restoration_common(context, quantization)
+        && bounded_subsampled_cdef_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable
@@ -6042,10 +6042,10 @@ fn complete_bounded_i422_cdef_restoration_intra_reconstruction_context(
         return false;
     };
     context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y
-        && bounded_high_depth_subsampled_cdef_restoration_common(context, quantization)
+        && bounded_subsampled_cdef_restoration_common(context, quantization)
 }
 
 fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
@@ -6069,8 +6069,8 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
             )
     });
     !context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
-        && bounded_high_depth_subsampled_cdef_restoration_common(context, quantization)
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && bounded_subsampled_cdef_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable
@@ -6086,12 +6086,12 @@ struct BoundedLoopPostfilters {
     restoration: bool,
 }
 
-/// Common frame-level proof for high-depth I420/I422 loop filtering combined
+/// Common frame-level proof for bounded I420/I422 loop filtering combined
 /// with one or both later post-filters. A separate profile keeps the existing
 /// loop-only, CDEF-only, restoration-only, and CDEF+restoration admissions
 /// narrow while selecting the restoration decoder only when restoration is
 /// actually active in the frame header.
-fn bounded_high_depth_subsampled_loop_postfilters_common(
+fn bounded_subsampled_loop_postfilters_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
 ) -> Option<BoundedLoopPostfilters> {
@@ -6191,7 +6191,7 @@ fn complete_bounded_i420_loop_postfilters_intra_reconstruction_context(
         && context.subsampling_x
         && context.subsampling_y)
         .then_some(())
-        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
+        .and_then(|_| bounded_subsampled_loop_postfilters_common(context, quantization))
 }
 
 fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
@@ -6227,7 +6227,7 @@ fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
         && !inter_context.enable_jnt_comp
         && references_match)
         .then_some(())
-        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
+        .and_then(|_| bounded_subsampled_loop_postfilters_common(context, quantization))
 }
 
 fn complete_bounded_i422_loop_postfilters_intra_reconstruction_context(
@@ -6237,11 +6237,11 @@ fn complete_bounded_i422_loop_postfilters_intra_reconstruction_context(
         return None;
     };
     (context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y)
         .then_some(())
-        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
+        .and_then(|_| bounded_subsampled_loop_postfilters_common(context, quantization))
 }
 
 fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
@@ -6265,7 +6265,7 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
             )
     });
     (!context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y
         && !inter_context.reference_mode_select
@@ -6277,16 +6277,16 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
         && !inter_context.enable_jnt_comp
         && references_match)
         .then_some(())
-        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
+        .and_then(|_| bounded_subsampled_loop_postfilters_common(context, quantization))
 }
 
-/// Common frame-level proof for the first high-depth I420/I422 loop-filter
+/// Common frame-level proof for the first bounded I420/I422 loop-filter
 /// tranche. The one B16x16 leaf has no internal edge on either subsampled
 /// layout, but retaining the complete bounded header still keeps every
 /// nonzero level and sharpness value within the checked AV1 domain. Filter
 /// metadata is therefore accepted without widening the partition or tool
 /// surface that the block path can safely publish.
-fn bounded_high_depth_subsampled_loop_common(
+fn bounded_subsampled_loop_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
 ) -> bool {
@@ -6338,7 +6338,7 @@ fn complete_bounded_i420_loop_intra_reconstruction_context(context: &FirstBlockC
         && matches!(context.bit_depth, 10 | 12)
         && context.subsampling_x
         && context.subsampling_y
-        && bounded_high_depth_subsampled_loop_common(context, quantization)
+        && bounded_subsampled_loop_common(context, quantization)
 }
 
 fn complete_bounded_i420_loop_inter_reconstruction_context(
@@ -6363,7 +6363,7 @@ fn complete_bounded_i420_loop_inter_reconstruction_context(
     });
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
-        && bounded_high_depth_subsampled_loop_common(context, quantization)
+        && bounded_subsampled_loop_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable
@@ -6379,10 +6379,10 @@ fn complete_bounded_i422_loop_intra_reconstruction_context(context: &FirstBlockC
         return false;
     };
     context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y
-        && bounded_high_depth_subsampled_loop_common(context, quantization)
+        && bounded_subsampled_loop_common(context, quantization)
 }
 
 fn complete_bounded_i422_loop_inter_reconstruction_context(
@@ -6406,8 +6406,8 @@ fn complete_bounded_i422_loop_inter_reconstruction_context(
             )
     });
     !context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
-        && bounded_high_depth_subsampled_loop_common(context, quantization)
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && bounded_subsampled_loop_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable
