@@ -5066,7 +5066,14 @@ pub(super) fn validate_complete_lossy_420_partition(
     let generic_i444_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_444_reconstruction_context(context, inter_context)
     });
-    let bounded_i444_inter_geometry = if generic_i444_inter {
+    let generic_high_depth_inter = inter_context.is_some_and(|inter_context| {
+        complete_high_depth_inter_reconstruction_context(context, inter_context)
+    });
+    let generic_high_depth_i444_inter = generic_high_depth_inter
+        && !context.monochrome
+        && !context.subsampling_x
+        && !context.subsampling_y;
+    let bounded_i444_inter_geometry = if generic_i444_inter || generic_high_depth_i444_inter {
         None
     } else {
         inter_context.and_then(|inter_context| {
@@ -5281,7 +5288,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_inter_420_reconstruction_context(context)
             || complete_inter_422_reconstruction_context(context, inter_context)
             || generic_i444_inter
-            || complete_high_depth_inter_reconstruction_context(context, inter_context)
+            || generic_high_depth_inter
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
             || (!context.intra_frame
