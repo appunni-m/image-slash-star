@@ -405,26 +405,20 @@ impl InterCdfs {
         &mut self.obmc[block_size.cdf_index()]
     }
 
-    pub(super) fn interintra_for(&mut self, size_group: usize) -> &mut Cdf<2> {
-        &mut self.interintra[size_group.min(self.interintra.len().saturating_sub(1))]
+    pub(super) fn interintra_for(&mut self, size_group: usize) -> Option<&mut Cdf<2>> {
+        self.interintra.get_mut(size_group)
     }
 
-    pub(super) fn interintra_mode_for(&mut self, size_group: usize) -> &mut Cdf<4> {
-        &mut self.interintra_mode[size_group.min(self.interintra_mode.len().saturating_sub(1))]
+    pub(super) fn interintra_mode_for(&mut self, size_group: usize) -> Option<&mut Cdf<4>> {
+        self.interintra_mode.get_mut(size_group)
     }
 
-    pub(super) fn interintra_wedge_for(&mut self, block_size: BlockSize) -> &mut Cdf<2> {
-        let context = block_size
-            .cdf_index()
-            .min(self.interintra_wedge.len().saturating_sub(1));
-        &mut self.interintra_wedge[context]
+    pub(super) fn interintra_wedge_for(&mut self, context: usize) -> Option<&mut Cdf<2>> {
+        self.interintra_wedge.get_mut(context)
     }
 
-    pub(super) fn wedge_index_for(&mut self, block_size: BlockSize) -> &mut Cdf<16> {
-        let context = block_size
-            .cdf_index()
-            .min(self.wedge_index.len().saturating_sub(1));
-        &mut self.wedge_index[context]
+    pub(super) fn wedge_index_for(&mut self, context: usize) -> Option<&mut Cdf<16>> {
+        self.wedge_index.get_mut(context)
     }
 }
 

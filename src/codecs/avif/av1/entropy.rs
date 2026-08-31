@@ -3145,14 +3145,24 @@ fn interintra_allowed(block_size: BlockSize) -> bool {
 }
 
 fn interintra_size_group(block_size: BlockSize) -> usize {
-    let (width, height) = block_size.mi_dimensions();
-    usize::try_from(width.ilog2().min(height.ilog2()).min(3)).unwrap_or(3)
+    match block_size {
+        BlockSize::B8x8 => 0,
+        BlockSize::B8x16 | BlockSize::B16x8 => 1,
+        BlockSize::B16x16 | BlockSize::B16x32 | BlockSize::B32x16 => 2,
+        BlockSize::B32x32 => 3,
+        _ => 3,
+    }
 }
 
-/// Consume the inter-intra sentence even though this reconstruction tranche
-/// deliberately rejects the blended predictor. Keeping the exact CDF rows
-/// and wedge context means the private decoder never mistakes an inter-intra
-/// block for a residual-bearing translation block.
+#[derive(Clone, Copy)]
+struct InterIntraSyntax {
+    mode: u8,
+    wedge_index: Option<u8>,
+}
+
+/// Consume and retain the complete inter-intra sentence. The selected mode
+/// and optional canonical wedge index are applied after motion compensation,
+/// before residual reconstruction.
 fn decode_interintra_syntax(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut FrameCdfs,
@@ -3160,30 +3170,54 @@ fn decode_interintra_syntax(
     block_size: BlockSize,
     compound: bool,
     skip_mode: bool,
-) -> Av1Result<bool> {
+) -> Av1Result<Option<InterIntraSyntax>> {
     if !inter_context.enable_interintra_compound
         || compound
         || skip_mode
         || !interintra_allowed(block_size)
     {
-        return Ok(false);
+        return Ok(None);
     }
     let size_group = interintra_size_group(block_size);
-    if !decoder.adaptive_bool(&mut cdfs.inter.interintra_for(size_group).0) {
-        return Ok(false);
+    let interintra = cdfs
+        .inter
+        .interintra_for(size_group)
+        .ok_or_else(|| malformed("inter-intra size context exceeds four rows"))?;
+    if !decoder.adaptive_bool(&mut interintra.0) {
+        return Ok(None);
     }
-    let mode = decoder.adaptive_symbol(&mut cdfs.inter.interintra_mode_for(size_group).0, 3);
+    let interintra_mode = cdfs
+        .inter
+        .interintra_mode_for(size_group)
+        .ok_or_else(|| malformed("inter-intra mode context exceeds four rows"))?;
+    let mode = decoder.adaptive_symbol(&mut interintra_mode.0, 3);
     if mode > 3 {
         return Err(malformed("inter-intra mode symbol is invalid"));
     }
-    let use_wedge = decoder.adaptive_bool(&mut cdfs.inter.interintra_wedge_for(block_size).0);
+    let context = wedge_context(block_size)
+        .ok_or_else(|| malformed("inter-intra wedge context is unavailable"))?;
+    let interintra_wedge = cdfs
+        .inter
+        .interintra_wedge_for(context)
+        .ok_or_else(|| malformed("inter-intra wedge context exceeds seven rows"))?;
+    let use_wedge = decoder.adaptive_bool(&mut interintra_wedge.0);
+    let mut wedge_index = None;
     if use_wedge {
-        let wedge = decoder.adaptive_symbol(&mut cdfs.inter.wedge_index_for(block_size).0, 15);
+        let wedge_cdf = cdfs
+            .inter
+            .wedge_index_for(context)
+            .ok_or_else(|| malformed("inter-intra wedge index context exceeds seven rows"))?;
+        let wedge = decoder.adaptive_symbol(&mut wedge_cdf.0, 15);
         if wedge > 15 {
             return Err(malformed("inter-intra wedge index is invalid"));
         }
+        wedge_index =
+            Some(u8::try_from(wedge).map_err(|_| malformed("inter-intra wedge index exceeds u8"))?);
     }
-    Ok(true)
+    Ok(Some(InterIntraSyntax {
+        mode: u8::try_from(mode).map_err(|_| malformed("inter-intra mode exceeds u8"))?,
+        wedge_index,
+    }))
 }
 
 fn has_overlappable_neighbor(tile_state: &TileState, node: PartitionNode) -> Av1Result<bool> {
@@ -4124,6 +4158,7 @@ fn decode_inter_leaf(
     cdfs: &mut FrameCdfs,
     block_decoder: &mut super::block::Lossy420Decoder,
     tile_state: &TileState,
+    canvas: &super::raster::FrameCanvas,
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
     node: PartitionNode,
@@ -4496,7 +4531,7 @@ fn decode_inter_leaf(
         .second
         .map(|reference| inter_context.reference(reference));
     let interintra = if compound {
-        false
+        None
     } else {
         decode_interintra_syntax(
             decoder,
@@ -4507,12 +4542,40 @@ fn decode_inter_leaf(
             skip_mode,
         )?
     };
-    if interintra {
-        return Ok(Err(super::block::PortableUnavailable));
-    }
+    let inter_intra_edges = if interintra.is_some() {
+        let (coded_mi_width, coded_mi_height) = node.block_size.mi_dimensions();
+        let has_chroma = partition_node_has_chroma(context, node, false);
+        let edges = match canvas.intra_edges(
+            node.x,
+            node.y,
+            coded_mi_width,
+            coded_mi_height,
+            has_chroma,
+            tools.sample_depth,
+            node.intra_edges,
+            [false; 3],
+        ) {
+            Ok(edges) => edges,
+            Err(_) => return Ok(Err(super::block::PortableUnavailable)),
+        };
+        Some(edges)
+    } else {
+        None
+    };
+    let inter_intra = match interintra {
+        Some(syntax) => Some(super::block::InterIntraPrediction {
+            mode: syntax.mode,
+            wedge_index: syntax.wedge_index,
+            edges: inter_intra_edges
+                .as_ref()
+                .ok_or_else(|| malformed("inter-intra edges are unavailable"))?,
+        }),
+        None => None,
+    };
     let motion_mode = if compound {
         MotionMode::Translation
-    } else if !skip_mode
+    } else if interintra.is_none()
+        && !skip_mode
         && !matches!(mode, InterMode::Global)
         && inter_context.motion_mode_switchable
         && block_width_b4.min(block_height_b4) >= 2
@@ -4784,6 +4847,7 @@ fn decode_inter_leaf(
             transform,
             coefficient_contexts,
             obmc,
+            inter_intra,
         )
     } {
         Ok(leaf) => leaf,
@@ -5634,6 +5698,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         &mut tile_cdfs,
                         &mut block_decoder,
                         &tile_state,
+                        &canvas,
                         context,
                         inter_context,
                         node,

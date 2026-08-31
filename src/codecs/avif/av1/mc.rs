@@ -342,6 +342,65 @@ impl MotionScratch {
         Ok(&self.predictor[..length])
     }
 
+    /// Blend a single-reference inter predictor with the selected intra
+    /// predictor. Inter-intra uses sample-domain u16 values and a direct
+    /// 6-bit round, unlike compound blending which first removes the
+    /// intermediate MC preparation bias.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "inter-intra blending keeps plane, luma-mask, sampling, and depth facts explicit"
+    )]
+    pub(super) fn blend_inter_intra_in_place(
+        &mut self,
+        inter: &mut [u16],
+        width: usize,
+        height: usize,
+        mode: u8,
+        wedge_index: Option<u8>,
+        plane: usize,
+        luma_width: usize,
+        luma_height: usize,
+        subsampling_x: bool,
+        subsampling_y: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<()> {
+        let length = Self::length(width, height)?;
+        (inter.len() == length)
+            .then_some(())
+            .ok_or_else(|| malformed("inter-intra predictor length is invalid"))?;
+        let intra = self
+            .predictor
+            .get(..length)
+            .ok_or_else(|| malformed("inter-intra predictor exceeds scratch"))?;
+        if let Some(index) = wedge_index {
+            if plane == 0 {
+                (width == luma_width && height == luma_height)
+                    .then_some(())
+                    .ok_or_else(|| malformed("luma inter-intra wedge geometry differs"))?;
+                fill_wedge_mask(&mut self.mask, width, height, index)?;
+                blend_inter_intra_samples(inter, intra, &self.mask[..length], depth)?;
+                reduce_wedge_mask(
+                    &mut self.mask,
+                    width,
+                    height,
+                    subsampling_x,
+                    subsampling_y,
+                    false,
+                )?;
+            } else {
+                let mask = self
+                    .mask
+                    .get(..length)
+                    .ok_or_else(|| malformed("retained inter-intra wedge mask is shorter"))?;
+                blend_inter_intra_samples(inter, intra, mask, depth)?;
+            }
+        } else {
+            fill_inter_intra_mask(&mut self.mask, width, height, mode)?;
+            blend_inter_intra_samples(inter, intra, &self.mask[..length], depth)?;
+        }
+        Ok(())
+    }
+
     pub(super) fn retained_capacity(&self) -> usize {
         self.horizontal
             .len()
@@ -658,6 +717,90 @@ fn reduce_wedge_mask(
                 .ok_or_else(|| malformed("wedge mask destination is unavailable"))? =
                 u8::try_from(reduced).map_err(|_| malformed("reduced wedge mask exceeds u8"))?;
         }
+    }
+    Ok(())
+}
+
+// The inter-intra weights below are an altered safe-Rust translation of the
+// pinned dav1d/libaom AV1 reference table. The repository retains their
+// BSD-2-Clause and patent notices in NOTICE.md, PATENTS, and third_party/.
+const INTER_INTRA_WEIGHTS: [u8; 32] = [
+    60, 52, 45, 39, 34, 30, 26, 22, 19, 17, 15, 13, 11, 10, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 2,
+    1, 1, 1, 1, 1,
+];
+
+fn fill_inter_intra_mask(mask: &mut [u8], width: usize, height: usize, mode: u8) -> Av1Result<()> {
+    if !(0..=3).contains(&mode) {
+        return Err(malformed("inter-intra mode exceeds smooth"));
+    }
+    let length = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("inter-intra mask size overflows"))?;
+    if width == 0 || height == 0 || mask.len() < length {
+        return Err(malformed("inter-intra mask geometry is invalid"));
+    }
+    if !matches!(width, 4 | 8 | 16 | 32) || !matches!(height, 4 | 8 | 16 | 32) {
+        return Err(malformed("inter-intra mask has a non-normative geometry"));
+    }
+    let max_axis = width.max(height);
+    let step = 32 / max_axis;
+    if mode == 0 {
+        mask[..length].fill(32);
+        return Ok(());
+    }
+    for (y, row) in mask[..length].chunks_exact_mut(width).enumerate() {
+        for (x, value) in row.iter_mut().enumerate() {
+            let coordinate = if mode == 1 {
+                y
+            } else if mode == 2 {
+                x
+            } else {
+                x.min(y)
+            };
+            let index = coordinate
+                .checked_mul(step)
+                .ok_or_else(|| malformed("inter-intra mask index overflows"))?;
+            *value = *INTER_INTRA_WEIGHTS
+                .get(index)
+                .ok_or_else(|| malformed("inter-intra mask index exceeds table"))?;
+        }
+    }
+    Ok(())
+}
+
+fn blend_inter_intra_samples(
+    inter: &mut [u16],
+    intra: &[u16],
+    mask: &[u8],
+    depth: SampleDepth,
+) -> Av1Result<()> {
+    let length = inter.len();
+    if intra.len() != length || mask.len() < length {
+        return Err(malformed(
+            "inter-intra blend buffers have different lengths",
+        ));
+    }
+    if mask[..length].iter().any(|&value| value > 64) {
+        return Err(malformed("inter-intra mask sample exceeds sixty-four"));
+    }
+    let maximum = i32::from(depth.maximum());
+    let vector_length = length / 8 * 8;
+    for offset in (0..vector_length).step_by(8) {
+        let inter_values = i32x8::new(std::array::from_fn(|lane| i32::from(inter[offset + lane])));
+        let intra_values = i32x8::new(std::array::from_fn(|lane| i32::from(intra[offset + lane])));
+        let weights = i32x8::new(std::array::from_fn(|lane| i32::from(mask[offset + lane])));
+        let value = (inter_values * (i32x8::new([64; 8]) - weights)
+            + intra_values * weights
+            + i32x8::new([32; 8]))
+        .unbounded_shr_scalar(6);
+        inter[offset..offset + 8].copy_from_slice(&narrow_samples(value, maximum));
+    }
+    for index in vector_length..length {
+        let weight = i32::from(mask[index]);
+        let value =
+            (i32::from(inter[index]) * (64 - weight) + i32::from(intra[index]) * weight + 32) >> 6;
+        inter[index] = u16::try_from(value.clamp(0, maximum))
+            .map_err(|_| malformed("inter-intra sample exceeds sample depth"))?;
     }
     Ok(())
 }

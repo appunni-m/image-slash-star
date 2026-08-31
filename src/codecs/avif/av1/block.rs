@@ -1156,6 +1156,10 @@ impl FullIntraEdges {
             FullIntraPlaneEdges::origin(chroma_width, chroma_height, sample_depth)?,
         ]))
     }
+
+    fn plane(&self, plane: usize) -> Option<&FullIntraPlaneEdges> {
+        self.planes.get(plane)
+    }
 }
 
 impl BlockSyntax {
@@ -30639,6 +30643,16 @@ enum LosslessPredictor {
     Paeth,
 }
 
+fn inter_intra_predictor(mode: u8) -> PortableResult<LosslessPredictor> {
+    match mode {
+        0 => Ok(LosslessPredictor::Dc),
+        1 => Ok(LosslessPredictor::Vertical),
+        2 => Ok(LosslessPredictor::Horizontal),
+        3 => Ok(LosslessPredictor::Smooth),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 fn lossless_luma_predictor(predictor: LumaPredictor) -> LosslessPredictor {
     match predictor {
         LumaPredictor::Dc => LosslessPredictor::Dc,
@@ -48386,6 +48400,13 @@ pub(super) struct ObmcContext<'a> {
 }
 
 #[derive(Clone, Copy)]
+pub(super) struct InterIntraPrediction<'a> {
+    pub(super) mode: u8,
+    pub(super) wedge_index: Option<u8>,
+    pub(super) edges: &'a FullIntraEdges,
+}
+
+#[derive(Clone, Copy)]
 struct InterPrediction<'a> {
     references: [&'a FrameSurface; 2],
     scales: [ScaleFactors; 2],
@@ -48393,6 +48414,7 @@ struct InterPrediction<'a> {
     block_x_b4: u32,
     block_y_b4: u32,
     compound: Option<PreparedCompound>,
+    inter_intra: Option<InterIntraPrediction<'a>>,
     obmc: Option<ObmcContext<'a>>,
 }
 
@@ -49019,6 +49041,7 @@ impl Lossy420Decoder {
         luma_transform: Av1TransformType,
         coefficient_contexts: InterCoefficientContexts,
         obmc: Option<ObmcContext<'_>>,
+        inter_intra: Option<InterIntraPrediction<'_>>,
     ) -> PortableResult<FirstLeaf> {
         self.decode_inter_translation_impl(
             decoder,
@@ -49034,6 +49057,7 @@ impl Lossy420Decoder {
                 block_x_b4,
                 block_y_b4,
                 compound: None,
+                inter_intra,
                 obmc,
             },
             block_skipped,
@@ -49085,6 +49109,7 @@ impl Lossy420Decoder {
                 block_x_b4,
                 block_y_b4,
                 compound: Some(compound),
+                inter_intra: None,
                 obmc: None,
             },
             block_skipped,
@@ -49137,6 +49162,14 @@ impl Lossy420Decoder {
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
+        if prediction_state.inter_intra.is_some() {
+            (matches!(chroma_sampling, ChromaSampling::Subsampled420)
+                && tools.sample_depth == SampleDepth::EIGHT
+                && prediction_state.compound.is_none()
+                && prediction_state.obmc.is_none())
+            .then_some(())
+            .portable()?;
+        }
         let pending = self.pending_block_geometry.take().portable()?;
         (pending.block_size == block_size)
             .then_some(())
@@ -49370,6 +49403,45 @@ impl Lossy420Decoder {
                         .map_err(|_| PortableUnavailable)?
                 };
                 prediction.extend_from_slice(predicted);
+            }
+            if let Some(inter_intra) = prediction_state.inter_intra {
+                let predictor = inter_intra_predictor(inter_intra.mode)?;
+                {
+                    let scratch = self.ensure_motion_scratch()?;
+                    let intra = scratch
+                        .predictor_mut(tx_width, tx_height)
+                        .map_err(|_| PortableUnavailable)?;
+                    let edges = inter_intra.edges.plane(plane).ok_or(PortableUnavailable)?;
+                    full_intra_prediction_into(
+                        intra,
+                        predictor,
+                        None,
+                        None,
+                        tx_width,
+                        tx_height,
+                        edges,
+                        tools.sample_depth,
+                        false,
+                    )?;
+                }
+                let (subsampling_x, subsampling_y) = chroma_sampling.plane_subsampling(plane);
+                let (luma_width, luma_height) = (tx_luma_width_usize, tx_luma_height_usize);
+                let scratch = self.ensure_motion_scratch()?;
+                scratch
+                    .blend_inter_intra_in_place(
+                        &mut prediction,
+                        tx_width,
+                        tx_height,
+                        inter_intra.mode,
+                        inter_intra.wedge_index,
+                        plane,
+                        luma_width,
+                        luma_height,
+                        subsampling_x == 2,
+                        subsampling_y == 2,
+                        tools.sample_depth,
+                    )
+                    .map_err(|_| PortableUnavailable)?;
             }
             if let Some(obmc) = prediction_state.obmc {
                 self.apply_obmc_prediction(
