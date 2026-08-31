@@ -295,14 +295,22 @@ pub(super) fn validate_sequence_frames(
     if let Some(alpha_sequence) = &alpha_sequence
         && (!alpha_sequence.monochrome
             || !alpha_sequence.color_range
-            || alpha_sequence.bit_depth != 8
-            || alpha_sequence.subsampling_x
-            || alpha_sequence.subsampling_y
-            || alpha_sequence.film_grain_present)
+            || alpha_sequence.bit_depth != color_sequence.bit_depth
+            || alpha_sequence.film_grain_present
+            || !matches!(alpha_sequence.bit_depth, 8 | 10 | 12))
     {
         return Ok(None);
     }
-    if color_sequence.bit_depth != 8 || color_sequence.monochrome || !color_sequence.color_range {
+    if !matches!(color_sequence.bit_depth, 8 | 10 | 12)
+        || color_sequence.monochrome
+        || !color_sequence.color_range
+        || (
+            color_sequence.color_primaries,
+            color_sequence.transfer_characteristics,
+            color_sequence.matrix_coefficients,
+        ) != (1, 13, 6)
+        || (!color_sequence.subsampling_x && color_sequence.subsampling_y)
+    {
         return Ok(None);
     }
 
