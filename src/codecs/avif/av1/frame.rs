@@ -1721,6 +1721,15 @@ fn assemble_color_tiles(
             });
         }
 
+        if tile_cdef_parameters.is_none() {
+            if !tile.reconstruction.cdef_active.is_empty()
+                || !tile.reconstruction.cdef_indices.is_empty()
+            {
+                return Err(malformed("CDEF-disabled tile carries non-empty CDEF maps"));
+            }
+            continue;
+        }
+
         let local_active_width = tile_width.div_ceil(8);
         let local_active_height = tile_height.div_ceil(8);
         if tile.reconstruction.cdef_active.len()
