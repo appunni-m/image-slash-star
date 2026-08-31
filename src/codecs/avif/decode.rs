@@ -217,11 +217,8 @@ pub fn decode_sequence(
     } else {
         ImageMode::Rgb8
     };
-    let source_template = avif_sequence_source_template(
-        &extracted,
-        file_type,
-        mode == ImageMode::Rgba8,
-    );
+    let source_template =
+        avif_sequence_source_template(&extracted, file_type, mode == ImageMode::Rgba8);
     let mut frames = Vec::new();
     frames.try_reserve(portable_frames.len()).map_err(|_| {
         CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
