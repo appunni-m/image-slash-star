@@ -953,6 +953,26 @@ impl FrameState {
         let Some(surface) = completion.surface.as_deref() else {
             return Ok(SelectedDisplay::unavailable());
         };
+        if surface.layout == PixelLayout::Monochrome {
+            if surface.depth.bits() != 8
+                || surface.coded_width != surface.upscaled_width
+                || surface.render_width != surface.upscaled_width
+                || surface.render_height != surface.frame_height
+            {
+                return Ok(SelectedDisplay::unavailable());
+            }
+            let Some(plane) = display.monochrome_plane.take() else {
+                return Ok(SelectedDisplay::unavailable());
+            };
+            display.monochrome_plane = Some(super::film_grain::apply_monochrome(
+                plane,
+                surface.upscaled_width,
+                surface.frame_height,
+                grain,
+                token,
+            )?);
+            return Ok(display);
+        }
         if surface.depth.bits() != 8
             || !matches!(
                 surface.layout,

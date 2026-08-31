@@ -7,7 +7,7 @@
 //! ungrained. The existing `NOTICE.md`, `PATENTS`, and third-party BSD notices
 //! cover this source-derived translation; no native codec is linked.
 
-use super::block::FirstLeaf;
+use super::block::{FirstLeaf, ReconstructedPlane};
 use super::frame::FilmGrain;
 use super::{Av1Result, malformed};
 use crate::CancellationToken;
@@ -270,6 +270,67 @@ pub(super) fn apply_i422(
     token: Option<&CancellationToken>,
 ) -> Av1Result<FirstLeaf> {
     apply_with_sampling(leaf, params, GrainSampling::I422, token)
+}
+
+/// Apply a parsed film-grain payload to an owned monochrome display plane.
+/// Monochrome AV1 carries only the luma grain sentence, so this path reuses
+/// the normative Y synthesis without allocating private chroma carriers.
+pub(super) fn apply_monochrome(
+    mut plane: ReconstructedPlane,
+    width: u32,
+    height: u32,
+    params: &FilmGrain,
+    token: Option<&CancellationToken>,
+) -> Av1Result<ReconstructedPlane> {
+    crate::codecs::error::check_cancelled(token)?;
+    if width == 0 || height == 0 || params.seed > u32::from(u16::MAX) {
+        return Err(malformed(
+            "monochrome film-grain display geometry or seed is invalid",
+        ));
+    }
+    if params.chroma_scaling_from_luma
+        || params.uv_points.iter().any(|points| !points.is_empty())
+        || params
+            .ar_coefficients_uv
+            .iter()
+            .any(|coefficients| !coefficients.is_empty())
+    {
+        return Err(malformed(
+            "monochrome film-grain payload contains chroma syntax",
+        ));
+    }
+    let width = usize::try_from(width)
+        .map_err(|_| malformed("monochrome film-grain width exceeds usize"))?;
+    let height = usize::try_from(height)
+        .map_err(|_| malformed("monochrome film-grain height exceeds usize"))?;
+    let expected = checked_count(width, height, "monochrome film-grain luma extent")?;
+    if plane.samples.len() != expected
+        || plane
+            .samples
+            .iter()
+            .any(|&sample| sample > u16::from(u8::MAX))
+    {
+        return Err(malformed(
+            "monochrome film-grain display plane has invalid extent",
+        ));
+    }
+    validate_parameters(params)?;
+    let y_lut = generate_luma_lut(params, token)?;
+    let y_scaling = generate_scaling(&params.y_points)?;
+    plane.samples = apply_plane(
+        &plane.samples,
+        (width, height),
+        false,
+        GrainSampling::I444,
+        &y_lut,
+        &y_scaling,
+        params,
+        0,
+        &[],
+        (width, height),
+        token,
+    )?;
+    Ok(plane)
 }
 
 /// Apply a parsed film-grain payload to an owned, post-filter I444 display

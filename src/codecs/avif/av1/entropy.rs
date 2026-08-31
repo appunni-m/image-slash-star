@@ -2599,7 +2599,7 @@ pub(super) fn validate_complete_monochrome_partition(
 
 fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
-        || (context.bit_depth == 8 && context.subsampling_x && !context.monochrome)
+        || (context.bit_depth == 8 && (context.monochrome || context.subsampling_x))
 }
 
 fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {
@@ -8821,7 +8821,7 @@ fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
