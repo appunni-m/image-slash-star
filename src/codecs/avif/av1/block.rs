@@ -15372,11 +15372,12 @@ fn decode_inter_lossy_terminal(
     .map_err(|_| PortableUnavailable)?;
     let context_width = tx_width / 4;
     let context_height = tx_height / 4;
+    let bounded_transform = tx_width <= 32 && tx_height <= 32;
+    let skipped_large_transform = block_skipped && tx_width <= 64 && tx_height <= 64;
     (above.len() == context_width
         && left.len() == context_height
         && matches!(plane, 0..=2)
-        && tx_width <= 32
-        && tx_height <= 32)
+        && (bounded_transform || skipped_large_transform))
         .then_some(())
         .portable()?;
     let transform = GenericTerminalTransform::Lossy(transform);
@@ -48715,16 +48716,20 @@ impl Lossy420Decoder {
         filters: [InterpolationFilter; 2],
     ) -> PortableResult<FirstLeaf> {
         let chroma_sampling = self.chroma_sampling;
+        let monochrome = matches!(chroma_sampling, ChromaSampling::Monochrome);
         let quantization = prepared_quantization.quantization;
         let references = prediction_state.references;
-        (chroma_sampling == ChromaSampling::Subsampled420
-            && tools.sample_depth == quantization.sample_depth
-            && references
-                .iter()
-                .all(|reference| tools.sample_depth == reference.depth)
+        let layout = chroma_sampling.pixel_layout();
+        (matches!(
+            chroma_sampling,
+            ChromaSampling::Subsampled420 | ChromaSampling::Monochrome
+        ) && tools.sample_depth == quantization.sample_depth
+            && references.iter().all(|reference| {
+                tools.sample_depth == reference.depth && reference.layout == layout
+            })
             && visible_width != 0
             && visible_height != 0
-            && block_size.valid_for_layout(PixelLayout::I420)
+            && block_size.valid_for_layout(layout)
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -48766,15 +48771,21 @@ impl Lossy420Decoder {
             && tx_luma_height == luma_height)
             .then_some(())
             .portable()?;
-        let layout = PixelLayout::I420;
-        let chroma_tx = block_size.maximum_chroma_tx(layout).portable()?;
-        let (tx_chroma_width, tx_chroma_height) = chroma_tx.pixel_dimensions();
-        (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
-            && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)? == tx_chroma_height
-            && u_geometry.0 == v_geometry.0
-            && u_geometry.1 == v_geometry.1)
-            .then_some(())
-            .portable()?;
+        let chroma_tx = if monochrome {
+            None
+        } else {
+            Some(block_size.maximum_chroma_tx(layout).portable()?)
+        };
+        if let Some(chroma_tx) = chroma_tx {
+            let (tx_chroma_width, tx_chroma_height) = chroma_tx.pixel_dimensions();
+            (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
+                && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)?
+                    == tx_chroma_height
+                && u_geometry.0 == v_geometry.0
+                && u_geometry.1 == v_geometry.1)
+                .then_some(())
+                .portable()?;
+        }
 
         let mut rasters = [
             PrivatePlaneRaster::new(
@@ -48800,9 +48811,14 @@ impl Lossy420Decoder {
             )?,
         ];
         let mut contexts = [0x40_u8; 3];
-        let tx_sizes = [luma_tx_size, chroma_tx, chroma_tx];
+        let tx_sizes = [
+            luma_tx_size,
+            chroma_tx.unwrap_or(luma_tx_size),
+            chroma_tx.unwrap_or(luma_tx_size),
+        ];
         let geometries = [y_geometry, u_geometry, v_geometry];
-        for plane in 0..3 {
+        let plane_count = if monochrome { 1 } else { 3 };
+        for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
             let (tx_width, tx_height) = tx_size.pixel_dimensions();
@@ -48952,18 +48968,20 @@ impl Lossy420Decoder {
             contexts[plane] = terminal.residual_context;
         }
         let [y, u, v] = rasters;
+        let y = y.into_visible_plane()?;
+        let planes = if monochrome {
+            [y.clone(), y.clone(), y]
+        } else {
+            [y, u.into_visible_plane()?, v.into_visible_plane()?]
+        };
         let (tx_context_width, tx_context_height) = luma_tx_size.context_dimensions();
         Ok(FirstLeaf {
             width: visible_width,
             height: visible_height,
             block_skipped: predecoded_skip,
-            planes: [
-                y.into_visible_plane()?,
-                u.into_visible_plane()?,
-                v.into_visible_plane()?,
-            ],
+            planes,
             luma_predictor: LumaPredictor::Dc,
-            chroma_predictor: Some(ChromaPredictor::Dc),
+            chroma_predictor: (!monochrome).then_some(ChromaPredictor::Dc),
             luma_context: contexts[0],
             chroma_contexts: [contexts[1], contexts[2]],
             chroma_right_contexts: [[contexts[1]; 16], [contexts[2]; 16]],

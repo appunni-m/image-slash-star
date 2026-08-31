@@ -2103,6 +2103,15 @@ fn validate_tile_entropy_prefixes(
             }
             if tiling.tile_count() == 1 && ranges.len() == 1 {
                 let restoration_plan = reconstruction.restoration;
+                if sequence.monochrome {
+                    if restoration_plan.is_some() || header.superres_enabled {
+                        return Err(malformed(
+                            "monochrome reconstruction carries an unsupported post-filter",
+                        ));
+                    }
+                    complete_monochrome_plane = Some(reconstruction.into_monochrome_plane()?);
+                    continue;
+                }
                 let leaf = reconstruction.into_filtered_leaf()?;
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)

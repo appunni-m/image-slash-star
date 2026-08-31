@@ -1287,6 +1287,36 @@ impl FrameCanvas {
         self.finish_after_cdef(None, None)
     }
 
+    /// Finish a luma-only canvas without requiring dummy chroma coverage.
+    ///
+    /// Monochrome AV1 frames still travel through the shared block walker so
+    /// their partition, motion, and adaptive-CDF state remains identical to
+    /// the colour path.  Only plane zero is normatively present, however;
+    /// requiring the two color-shaped scratch planes to be written would
+    /// turn a complete alpha frame into a false partial decode.
+    pub(super) fn finish_monochrome(self) -> Av1Result<ReconstructedPlane> {
+        let coded_dimensions = self.plane_dimensions(0);
+        let visible_dimensions = (self.visible_width, self.visible_height);
+        for row in 0..visible_dimensions.1 {
+            let start = row
+                .checked_mul(coded_dimensions.0)
+                .ok_or_else(|| malformed("monochrome canvas row offset overflows"))?;
+            let end = start
+                .checked_add(visible_dimensions.0)
+                .ok_or_else(|| malformed("monochrome canvas row end overflows"))?;
+            if self.written[0]
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed(
+                    "monochrome canvas is missing reconstructed samples",
+                ));
+            }
+        }
+        let [luma, _, _] = self.planes;
+        crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
+    }
+
     // The frame walker passes the frame-header strengths here. CDEF direction
     // selection is derived from the immutable post-deblock luma source, while
     // each chroma block uses the corresponding luma direction.

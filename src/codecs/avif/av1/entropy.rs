@@ -2623,6 +2623,7 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
 /// layout.
 pub(super) struct Lossy420Reconstruction {
     pub(super) leaf: super::block::FirstLeaf,
+    pub(super) monochrome: bool,
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
     pub(super) filter_blocks: Vec<super::filter::Block>,
@@ -3623,7 +3624,10 @@ fn decode_inter_leaf(
 ) -> Av1Result<super::block::PortableResult<DecodedInterLeaf>> {
     if matches!(context.bit_depth, 10 | 12) {
         let (block_width, block_height) = node.block_size.pixel_dimensions();
-        if !(8..=32).contains(&block_width) || !(8..=32).contains(&block_height) {
+        let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
+        if !(minimum..=maximum).contains(&block_width)
+            || !(minimum..=maximum).contains(&block_height)
+        {
             return Ok(Err(super::block::PortableUnavailable));
         }
     }
@@ -4073,7 +4077,7 @@ fn decode_inter_leaf(
             node.block_size,
             visible_width,
             visible_height,
-            true,
+            !context.monochrome,
             prepared_quantization,
             tools,
             [first_state.surface, second.surface],
@@ -4092,7 +4096,7 @@ fn decode_inter_leaf(
             node.block_size,
             visible_width,
             visible_height,
-            true,
+            !context.monochrome,
             prepared_quantization,
             tools,
             first_state.surface,
@@ -4194,6 +4198,7 @@ impl Lossy420Reconstruction {
     pub(super) fn into_filtered_leaf(self) -> Av1Result<super::block::FirstLeaf> {
         let Lossy420Reconstruction {
             mut leaf,
+            monochrome,
             subsampling_x,
             subsampling_y,
             filter_blocks,
@@ -4204,6 +4209,11 @@ impl Lossy420Reconstruction {
             restoration: _,
             cdfs: _,
         } = self;
+        if monochrome {
+            return Err(malformed(
+                "monochrome reconstruction cannot enter the color filter path",
+            ));
+        }
         let mut canvas =
             super::raster::FrameCanvas::new(leaf.width, leaf.height, subsampling_x, subsampling_y)?;
         canvas.place_planes(leaf.width, leaf.height, &leaf.planes, 0, 0)?;
@@ -4217,6 +4227,20 @@ impl Lossy420Reconstruction {
             &cdef_active,
         )?;
         Ok(leaf)
+    }
+
+    /// Extract a complete monochrome plane from the shared walker result.
+    ///
+    /// The monochrome tranche admits only inactive filters, so no color-shaped
+    /// post-filter canvas is needed here. Plane zero has already been checked
+    /// for full coverage by `FrameCanvas::finish_monochrome`.
+    pub(super) fn into_monochrome_plane(self) -> Av1Result<super::block::ReconstructedPlane> {
+        if !self.monochrome {
+            return Err(malformed(
+                "color reconstruction cannot enter the monochrome surface path",
+            ));
+        }
+        Ok(self.leaf.planes[0].clone())
     }
 }
 
@@ -4240,13 +4264,17 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_bounded_restoration_intra_420_reconstruction_context(context);
     let bounded_inter_restoration =
         complete_bounded_restoration_inter_420_reconstruction_context(context);
+    let monochrome_intra_reconstruction =
+        complete_monochrome_lossy_intra_reconstruction_context(context);
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_420_reconstruction_context(context, inter_context)
+            || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
             || bounded_inter_restoration
     });
     let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
         || complete_superres_lossy_420_reconstruction_context(context)
+        || monochrome_intra_reconstruction
         || bounded_intra_restoration;
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
@@ -4261,11 +4289,12 @@ pub(super) fn validate_complete_lossy_420_partition(
     {
         return Ok(None);
     }
-    let chroma_sampling = super::block::ChromaSampling::from_subsampling(
-        context.subsampling_x,
-        context.subsampling_y,
-    )
-    .ok_or_else(|| malformed("unsupported AV1 chroma subsampling"))?;
+    let chroma_sampling = if context.monochrome {
+        super::block::ChromaSampling::Monochrome
+    } else {
+        super::block::ChromaSampling::from_subsampling(context.subsampling_x, context.subsampling_y)
+            .ok_or_else(|| malformed("unsupported AV1 chroma subsampling"))?
+    };
     let mut decoder = RangeDecoder::new(data, range.start, range.end, context.disable_cdf_update)?;
     let mut tile_cdfs = input_cdfs.clone();
     if context.frame_tools.segmentation.enabled {
@@ -4756,7 +4785,13 @@ pub(super) fn validate_complete_lossy_420_partition(
     }
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
-    let planes = canvas.finish()?;
+    let (planes, monochrome) = if context.monochrome {
+        let plane = canvas.finish_monochrome()?;
+        let planes = [plane.clone(), plane.clone(), plane];
+        (planes, true)
+    } else {
+        (canvas.finish()?, false)
+    };
     if !segment_updates.is_empty() {
         let map = current_segment_map
             .as_deref_mut()
@@ -4788,6 +4823,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     };
     Ok(Some(Lossy420Reconstruction {
         leaf,
+        monochrome,
         subsampling_x: context.subsampling_x,
         subsampling_y: context.subsampling_y,
         filter_blocks,
@@ -5080,6 +5116,82 @@ fn complete_high_depth_inter_420_reconstruction_context(
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+        && references_match
+}
+
+/// Common admission for the first luma-only monochrome lossy tranche.
+///
+/// A monochrome sequence still carries the canonical `subsampling_x/y` bits
+/// in AV1C, but it has no U/V block syntax or post-filter planes. Keep this
+/// profile deliberately narrow until those independent carriers are wired:
+/// one tile, largest-transform blocks, no active filtering, and no frame-level
+/// state that would require a second plane or a separate publication path.
+fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
+    let dimensions_are_supported = context.frame_width >= 4
+        && context.frame_height >= 4
+        && context.frame_width <= 64
+        && context.frame_height <= 64
+        && context.frame_width.is_multiple_of(4)
+        && context.frame_height.is_multiple_of(4)
+        && context.block_width == context.frame_width / 4
+        && context.block_height == context.frame_height / 4
+        && context.upscaled_width == context.frame_width;
+    let cdef_is_inactive = context.frame_tools.cdef.is_none_or(|cdef| {
+        cdef.bits == 0
+            && cdef.y_strength_count == 1
+            && cdef.first_y_strength == Some(0)
+            && cdef.y_strengths[0] == 0
+            && cdef.uv_strength_count == 0
+            && cdef.first_uv_strength.is_none()
+    });
+    context.single_tile
+        && context.monochrome
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && !context.superres_enabled
+        && context.upscaled_width == context.frame_width
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && context.frame_tools.transform_mode == 1
+        && context
+            .frame_tools
+            .quantization
+            .is_some_and(|quantization| !quantization.using_matrix)
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && cdef_is_inactive
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.level == 1
+        && dimensions_are_supported
+}
+
+fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
+    context.intra_frame && complete_monochrome_lossy_common(context)
+}
+
+/// Luma-only inter admission. Block-level parsing still consumes the normal
+/// reference/MV sentence and rejects intra, compound, warped, or unsupported
+/// transform branches; the frame gate only proves that a successful leaf can
+/// be published as a persistent monochrome surface.
+fn complete_monochrome_lossy_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.layout == PixelLayout::Monochrome
+            && reference.surface.depth.bits() == context.bit_depth
+    });
+    !context.intra_frame
+        && complete_monochrome_lossy_common(context)
+        && !inter_context.reference_mode_select
         && references_match
 }
 
