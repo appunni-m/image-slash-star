@@ -4795,15 +4795,28 @@ pub(super) fn validate_complete_lossy_420_partition(
         || context.frame_tools.loop_filter.level_v != 0;
     let collect_cdef = context.frame_tools.cdef.is_some();
     let mut filter_blocks = Vec::<super::filter::Block>::new();
-    if bounded_i444_geometry.is_some_and(|geometry| geometry.expected_leaf_count() == 2)
-        || bounded_i422_rect_loop_geometry.is_some()
-        || bounded_i420_rect_loop_geometry.is_some()
-        || bounded_i420_rect_loop_postfilters.is_some()
-        || bounded_i422_rect_loop_postfilters.is_some()
-    {
-        filter_blocks.try_reserve_exact(2).map_err(|_| {
-            CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
-        })?;
+    let bounded_i444_filter_reserve = bounded_i444_geometry
+        .map(|geometry| geometry.expected_leaf_count())
+        .filter(|&count| count == 2)
+        .unwrap_or(0);
+    let bounded_subsampled_filter_reserve = [
+        bounded_i422_rect_loop_geometry,
+        bounded_i420_rect_loop_geometry,
+        bounded_i420_rect_loop_postfilters.map(|profile| profile.geometry),
+        bounded_i422_rect_loop_postfilters.map(|profile| profile.geometry),
+    ]
+    .into_iter()
+    .flatten()
+    .map(BoundedSubsampledRectGeometry::expected_leaf_count)
+    .max()
+    .unwrap_or(0);
+    let filter_reserve = bounded_i444_filter_reserve.max(bounded_subsampled_filter_reserve);
+    if filter_reserve != 0 {
+        filter_blocks
+            .try_reserve_exact(filter_reserve)
+            .map_err(|_| {
+                CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
+            })?;
     }
     let cdef_region_width = usize::try_from(context.frame_width)
         .map_err(|_| malformed("CDEF frame width exceeds usize"))?
@@ -7489,6 +7502,8 @@ enum BoundedSubsampledRectGeometry {
     TwoHorizontal,
     /// A level-2 split followed by two level-3 B16x16 leaves stacked.
     TwoVertical,
+    /// A level-2 split followed by four level-3 B16x16 leaves in raster order.
+    FourSquare,
 }
 
 impl BoundedSubsampledRectGeometry {
@@ -7496,11 +7511,15 @@ impl BoundedSubsampledRectGeometry {
         match self {
             Self::TwoHorizontal => (32, 16),
             Self::TwoVertical => (16, 32),
+            Self::FourSquare => (32, 32),
         }
     }
 
     const fn expected_leaf_count(self) -> usize {
-        2
+        match self {
+            Self::TwoHorizontal | Self::TwoVertical => 2,
+            Self::FourSquare => 4,
+        }
     }
 }
 
@@ -7516,6 +7535,7 @@ fn bounded_subsampled_rect_geometry_for_context(
     ) {
         (32, 16, 8, 4, 1) => Some(BoundedSubsampledRectGeometry::TwoHorizontal),
         (16, 32, 4, 8, 1) => Some(BoundedSubsampledRectGeometry::TwoVertical),
+        (32, 32, 8, 8, 1) => Some(BoundedSubsampledRectGeometry::FourSquare),
         _ => None,
     }
 }
@@ -7537,6 +7557,7 @@ fn bounded_subsampled_rect_loop_filter_supported(
     match geometry {
         BoundedSubsampledRectGeometry::TwoHorizontal => loop_filter.level_y[0] != 0,
         BoundedSubsampledRectGeometry::TwoVertical => loop_filter.level_y[1] != 0,
+        BoundedSubsampledRectGeometry::FourSquare => loop_filter.level_y != [0; 2],
     }
 }
 
@@ -7554,6 +7575,13 @@ fn bounded_subsampled_expected_rect_terminal(
         BoundedSubsampledRectGeometry::TwoVertical => match leaf_index {
             0 => (0, 0),
             1 => (0, 4),
+            _ => return false,
+        },
+        BoundedSubsampledRectGeometry::FourSquare => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
             _ => return false,
         },
     };
