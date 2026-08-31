@@ -6303,9 +6303,8 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// transactional until their transform-grid compositor is connected.
 /// Root-scoped delta-Q uses the shared prepared-quantization path; delta-LF
 /// remains closed until its loop-filter metadata path is independently proven.
-/// Frame-level postfilters and film grain stay closed here so each tile can be
-/// reconstructed locally before the complete unfiltered frame is assembled
-/// transactionally.
+/// Frame-level postfilters remain closed here; validated film grain is applied
+/// only to a full assembled display copy after each tile is reconstructed.
 fn complete_inter_422_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6332,7 +6331,7 @@ fn complete_inter_422_reconstruction_context(
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
