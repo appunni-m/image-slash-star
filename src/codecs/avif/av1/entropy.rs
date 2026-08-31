@@ -6232,7 +6232,9 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 }
 
 /// Exact high-depth 4:2:0/4:2:2 inter tranche admitted by the depth-parametric
-/// motion-compensation core. The block engine retains samples in `u16`, but
+/// motion-compensation core. Single-reference inter-intra is materialized for
+/// both layouts; bounded 8-bit I422 remains on its separate closed predicates.
+/// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms
 /// and a closed tool profile until the remaining AV1 syntax families publish
 /// their high-depth state. Plane-aware matrix dequantization remains optional
@@ -6281,10 +6283,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
-        // The depth-parametric inter-intra predictor is currently admitted
-        // only for 4:2:0. Keep the high-depth I422 branch closed until its
-        // distinct chroma edge/mask evidence is complete.
-        && (!inter_context.enable_interintra_compound || i420)
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && context.block_x == 0
