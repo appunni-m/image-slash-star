@@ -7537,6 +7537,10 @@ enum BoundedSubsampledRectGeometry {
     ThirtyTwoVertical,
     /// A complete level-0 root split into sixty-four level-3 B16x16 leaves.
     SixtyFourSquare,
+    /// A level-0 root with eight level-3 B16x16 leaves across a 128x16 band.
+    EightWide,
+    /// A level-0 root with eight level-3 B16x16 leaves down a 16x128 band.
+    EightTall,
 }
 
 impl BoundedSubsampledRectGeometry {
@@ -7553,6 +7557,8 @@ impl BoundedSubsampledRectGeometry {
             Self::ThirtyTwoHorizontal => (128, 64),
             Self::ThirtyTwoVertical => (64, 128),
             Self::SixtyFourSquare => (128, 128),
+            Self::EightWide => (128, 16),
+            Self::EightTall => (16, 128),
         }
     }
 
@@ -7565,6 +7571,7 @@ impl BoundedSubsampledRectGeometry {
             Self::SixteenHorizontal | Self::SixteenVertical => 16,
             Self::ThirtyTwoHorizontal | Self::ThirtyTwoVertical => 32,
             Self::SixtyFourSquare => 64,
+            Self::EightWide | Self::EightTall => 8,
         }
     }
 
@@ -7577,6 +7584,7 @@ impl BoundedSubsampledRectGeometry {
                 | Self::ThirtyTwoHorizontal
                 | Self::ThirtyTwoVertical
                 | Self::SixtyFourSquare
+                | Self::EightTall
         )
     }
 }
@@ -7602,6 +7610,8 @@ fn bounded_subsampled_rect_geometry_for_context(
         (128, 64, 32, 16, 0) => Some(BoundedSubsampledRectGeometry::ThirtyTwoHorizontal),
         (64, 128, 16, 32, 0) => Some(BoundedSubsampledRectGeometry::ThirtyTwoVertical),
         (128, 128, 32, 32, 0) => Some(BoundedSubsampledRectGeometry::SixtyFourSquare),
+        (128, 16, 32, 4, 0) => Some(BoundedSubsampledRectGeometry::EightWide),
+        (16, 128, 4, 32, 0) => Some(BoundedSubsampledRectGeometry::EightTall),
         _ => None,
     }
 }
@@ -7632,6 +7642,8 @@ fn bounded_subsampled_rect_loop_filter_supported(
         BoundedSubsampledRectGeometry::ThirtyTwoHorizontal
         | BoundedSubsampledRectGeometry::ThirtyTwoVertical => loop_filter.level_y != [0; 2],
         BoundedSubsampledRectGeometry::SixtyFourSquare => loop_filter.level_y != [0; 2],
+        BoundedSubsampledRectGeometry::EightWide => loop_filter.level_y[0] != 0,
+        BoundedSubsampledRectGeometry::EightTall => loop_filter.level_y[1] != 0,
     }
 }
 
@@ -7640,7 +7652,12 @@ fn bounded_subsampled_expected_rect_terminal(
     leaf_index: usize,
     node: PartitionNode,
 ) -> bool {
-    if matches!(geometry, BoundedSubsampledRectGeometry::SixtyFourSquare) {
+    if matches!(
+        geometry,
+        BoundedSubsampledRectGeometry::SixtyFourSquare
+            | BoundedSubsampledRectGeometry::EightWide
+            | BoundedSubsampledRectGeometry::EightTall
+    ) {
         return bounded_morton_terminal(geometry.dimensions(), leaf_index, node);
     }
     let expected = match geometry {
@@ -7811,6 +7828,9 @@ fn bounded_subsampled_expected_rect_terminal(
             _ => return false,
         },
         BoundedSubsampledRectGeometry::SixtyFourSquare => return false,
+        BoundedSubsampledRectGeometry::EightWide | BoundedSubsampledRectGeometry::EightTall => {
+            return false;
+        }
     };
     node.level == 3
         && node.x == expected.0
@@ -8001,6 +8021,12 @@ enum BoundedI444InterGeometry {
     /// A complete level-0 root split into sixty-four level-3 NONE B16x16
     /// terminals.
     SixtyFourSquare,
+    /// A level-0 root with eight level-3 NONE B16x16 terminals across a
+    /// 128x16 band.
+    EightWide,
+    /// A level-0 root with eight level-3 NONE B16x16 terminals down a
+    /// 16x128 band.
+    EightTall,
 }
 
 impl BoundedI444InterGeometry {
@@ -8018,6 +8044,8 @@ impl BoundedI444InterGeometry {
             Self::ThirtyTwoHorizontal => (128, 64),
             Self::ThirtyTwoVertical => (64, 128),
             Self::SixtyFourSquare => (128, 128),
+            Self::EightWide => (128, 16),
+            Self::EightTall => (16, 128),
         }
     }
 
@@ -8031,6 +8059,7 @@ impl BoundedI444InterGeometry {
             Self::SixteenHorizontal | Self::SixteenVertical => 16,
             Self::ThirtyTwoHorizontal | Self::ThirtyTwoVertical => 32,
             Self::SixtyFourSquare => 64,
+            Self::EightWide | Self::EightTall => 8,
         }
     }
 
@@ -8043,6 +8072,7 @@ impl BoundedI444InterGeometry {
                 | Self::ThirtyTwoHorizontal
                 | Self::ThirtyTwoVertical
                 | Self::SixtyFourSquare
+                | Self::EightTall
         )
     }
 }
@@ -8060,7 +8090,12 @@ fn bounded_i444_expected_terminal(
     leaf_index: usize,
     node: PartitionNode,
 ) -> bool {
-    if matches!(geometry, BoundedI444InterGeometry::SixtyFourSquare) {
+    if matches!(
+        geometry,
+        BoundedI444InterGeometry::SixtyFourSquare
+            | BoundedI444InterGeometry::EightWide
+            | BoundedI444InterGeometry::EightTall
+    ) {
         return bounded_morton_terminal(geometry.dimensions(), leaf_index, node);
     }
     let expected = match geometry {
@@ -8232,6 +8267,9 @@ fn bounded_i444_expected_terminal(
             _ => return false,
         },
         BoundedI444InterGeometry::SixtyFourSquare => return false,
+        BoundedI444InterGeometry::EightWide | BoundedI444InterGeometry::EightTall => {
+            return false;
+        }
     };
     node.level == 3
         && node.x == expected.0
@@ -8272,6 +8310,8 @@ fn bounded_i444_geometry_for_context(
         (128, 64, 32, 16, 0) => Some(BoundedI444InterGeometry::ThirtyTwoHorizontal),
         (64, 128, 16, 32, 0) => Some(BoundedI444InterGeometry::ThirtyTwoVertical),
         (128, 128, 32, 32, 0) => Some(BoundedI444InterGeometry::SixtyFourSquare),
+        (128, 16, 32, 4, 0) => Some(BoundedI444InterGeometry::EightWide),
+        (16, 128, 4, 32, 0) => Some(BoundedI444InterGeometry::EightTall),
         _ => None,
     }
 }
@@ -8636,6 +8676,12 @@ fn bounded_i444_loop_filter_supported(
         }
         BoundedI444InterGeometry::SixtyFourSquare => {
             loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::EightWide => {
+            loop_filter.level_y[0] != 0 && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::EightTall => {
+            loop_filter.level_y[1] != 0 && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
     }
 }
