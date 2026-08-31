@@ -279,12 +279,387 @@ impl MotionScratch {
         Ok(&self.predictor[..length])
     }
 
+    /// Construct and blend the canonical luma wedge mask. The mask is kept in
+    /// canonical orientation so the entropy sign can be applied consistently
+    /// by the shared vectorized compound kernel and by the later chroma pass.
+    pub(super) fn blend_wedge(
+        &mut self,
+        width: usize,
+        height: usize,
+        index: u8,
+        inverted: bool,
+        subsampling_x: bool,
+        subsampling_y: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        fill_wedge_mask(&mut self.mask, width, height, index)?;
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            Some(&self.mask[..length]),
+            CompoundBlend::Masked { inverted },
+            depth,
+        );
+        reduce_wedge_mask(
+            &mut self.mask,
+            width,
+            height,
+            subsampling_x,
+            subsampling_y,
+            inverted,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    /// Blend chroma predictors with the wedge mask reduced from luma. The
+    /// retained mask is shared by U and V so both planes observe identical
+    /// layout and sign-dependent rounding.
+    pub(super) fn blend_retained_wedge_mask(
+        &mut self,
+        width: usize,
+        height: usize,
+        inverted: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        let mask = self
+            .mask
+            .get(..length)
+            .ok_or_else(|| malformed("retained wedge mask is shorter than chroma"))?;
+        if mask.iter().any(|&value| value > 64) {
+            return Err(malformed("retained wedge mask sample exceeds sixty-four"));
+        }
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            Some(mask),
+            CompoundBlend::Masked { inverted },
+            depth,
+        );
+        Ok(&self.predictor[..length])
+    }
+
     pub(super) fn retained_capacity(&self) -> usize {
         self.horizontal
             .len()
             .saturating_add(self.edge.len())
             .saturating_add(self.warp.len())
     }
+}
+
+// The wedge codebooks and transition borders below are an altered safe-Rust
+// translation of the pinned dav1d/libaom AV1 reference tables. The repository
+// retains their BSD-2-Clause and patent notices in NOTICE.md, PATENTS, and
+// third_party/.
+const WEDGE_MASTER_EVEN: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4,
+    11, 27, 46, 58, 62, 63, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64,
+];
+const WEDGE_MASTER_ODD: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
+    6, 18, 37, 53, 60, 63, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64,
+];
+const WEDGE_MASTER_VERTICAL: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7,
+    21, 43, 57, 62, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64,
+];
+
+const WEDGE_DIRECTION_OBLIQUE27: u8 = 0;
+const WEDGE_DIRECTION_OBLIQUE63: u8 = 1;
+const WEDGE_DIRECTION_OBLIQUE117: u8 = 2;
+const WEDGE_DIRECTION_OBLIQUE153: u8 = 3;
+const WEDGE_DIRECTION_HORIZONTAL: u8 = 4;
+const WEDGE_DIRECTION_VERTICAL: u8 = 5;
+
+#[derive(Clone, Copy)]
+struct WedgeCode {
+    direction: u8,
+    x_offset: u8,
+    y_offset: u8,
+}
+
+impl WedgeCode {
+    const fn new(direction: u8, x_offset: u8, y_offset: u8) -> Self {
+        Self {
+            direction,
+            x_offset,
+            y_offset,
+        }
+    }
+}
+
+const WEDGE_CODEBOOK_HGTW: [WedgeCode; 16] = [
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 6, 4),
+];
+
+const WEDGE_CODEBOOK_HLTW: [WedgeCode; 16] = [
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 6, 4),
+];
+
+const WEDGE_CODEBOOK_HEQW: [WedgeCode; 16] = [
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 6, 4),
+];
+
+fn wedge_sign_flips(width: usize, height: usize) -> Option<u16> {
+    Some(match (width, height) {
+        (32, 32) | (16, 16) | (8, 8) => 0x7bfb,
+        (32, 16) | (16, 32) | (16, 8) | (8, 16) => 0x7beb,
+        (32, 8) => 0x6beb,
+        (8, 32) => 0x7aeb,
+        _ => return None,
+    })
+}
+
+fn wedge_code(width: usize, height: usize, index: u8) -> Option<(WedgeCode, bool)> {
+    let codes = match (width, height) {
+        (8, 16) | (16, 32) | (8, 32) => &WEDGE_CODEBOOK_HGTW,
+        (16, 8) | (32, 16) | (32, 8) => &WEDGE_CODEBOOK_HLTW,
+        (8, 8) | (16, 16) | (32, 32) => &WEDGE_CODEBOOK_HEQW,
+        _ => return None,
+    };
+    let sign_flips = wedge_sign_flips(width, height)?;
+    let index = usize::from(index);
+    codes
+        .get(index)
+        .copied()
+        .map(|code| (code, (sign_flips >> index) & 1 != 0))
+}
+
+fn wedge_oblique63(row: usize, column: usize) -> u8 {
+    let shift = 16_usize.saturating_sub(row.div_ceil(2));
+    let source_index = column.saturating_sub(shift).min(63);
+    let source = if row & 1 == 0 {
+        &WEDGE_MASTER_EVEN
+    } else {
+        &WEDGE_MASTER_ODD
+    };
+    source[source_index]
+}
+
+fn wedge_master_value(direction: u8, inverse: bool, row: usize, column: usize) -> u8 {
+    let row = row.min(63);
+    let column = column.min(63);
+    let (value, base_inverse) = match direction {
+        WEDGE_DIRECTION_OBLIQUE27 => (wedge_oblique63(column, row), false),
+        WEDGE_DIRECTION_OBLIQUE63 => (wedge_oblique63(row, column), false),
+        WEDGE_DIRECTION_OBLIQUE117 => (wedge_oblique63(row, 63 - column), true),
+        WEDGE_DIRECTION_OBLIQUE153 => (wedge_oblique63(63 - column, row), true),
+        WEDGE_DIRECTION_HORIZONTAL => (WEDGE_MASTER_VERTICAL[row], false),
+        WEDGE_DIRECTION_VERTICAL => (WEDGE_MASTER_VERTICAL[column], false),
+        _ => return 32,
+    };
+    if inverse ^ base_inverse {
+        64 - value
+    } else {
+        value
+    }
+}
+
+fn fill_wedge_mask(mask: &mut [u8], width: usize, height: usize, index: u8) -> Av1Result<()> {
+    if width == 0 || height == 0 {
+        return Err(malformed("wedge mask has empty block geometry"));
+    }
+    let length = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("wedge mask size overflows"))?;
+    if mask.len() < length {
+        return Err(malformed("wedge mask exceeds scratch"));
+    }
+    let (code, sign_flip) = wedge_code(width, height, index)
+        .ok_or_else(|| malformed("wedge mask has an unsupported block geometry or index"))?;
+    let x_offset = width
+        .checked_mul(usize::from(code.x_offset))
+        .ok_or_else(|| malformed("wedge mask x offset overflows"))?
+        >> 3;
+    let y_offset = height
+        .checked_mul(usize::from(code.y_offset))
+        .ok_or_else(|| malformed("wedge mask y offset overflows"))?
+        >> 3;
+    let x_origin = 32_usize
+        .checked_sub(x_offset)
+        .ok_or_else(|| malformed("wedge mask x origin underflows"))?;
+    let y_origin = 32_usize
+        .checked_sub(y_offset)
+        .ok_or_else(|| malformed("wedge mask y origin underflows"))?;
+    for (y, row) in mask[..length].chunks_exact_mut(width).enumerate() {
+        let master_y = y_origin
+            .checked_add(y)
+            .ok_or_else(|| malformed("wedge mask y coordinate overflows"))?;
+        for (x, value) in row.iter_mut().enumerate() {
+            let master_x = x_origin
+                .checked_add(x)
+                .ok_or_else(|| malformed("wedge mask x coordinate overflows"))?;
+            *value = wedge_master_value(code.direction, sign_flip, master_y, master_x);
+        }
+    }
+    Ok(())
+}
+
+fn reduce_wedge_mask(
+    mask: &mut [u8],
+    width: usize,
+    height: usize,
+    subsampling_x: bool,
+    subsampling_y: bool,
+    inverted: bool,
+) -> Av1Result<()> {
+    if width == 0 || height == 0 {
+        return Err(malformed("wedge source mask has empty geometry"));
+    }
+    let source_length = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("wedge source mask size overflows"))?;
+    if mask.len() < source_length {
+        return Err(malformed("wedge source mask exceeds scratch"));
+    }
+    if !subsampling_x && !subsampling_y {
+        return Ok(());
+    }
+    let destination_width = if subsampling_x {
+        width.div_ceil(2)
+    } else {
+        width
+    };
+    let destination_height = if subsampling_y {
+        height.div_ceil(2)
+    } else {
+        height
+    };
+    let sign = u16::from(inverted);
+    for destination_y in 0..destination_height {
+        let source_y = destination_y
+            .checked_mul(if subsampling_y { 2 } else { 1 })
+            .ok_or_else(|| malformed("wedge mask source y overflows"))?;
+        let source_y_next = source_y.saturating_add(1).min(height.saturating_sub(1));
+        for destination_x in 0..destination_width {
+            let source_x = destination_x
+                .checked_mul(if subsampling_x { 2 } else { 1 })
+                .ok_or_else(|| malformed("wedge mask source x overflows"))?;
+            let source_x_next = source_x.saturating_add(1).min(width.saturating_sub(1));
+            let first = mask
+                .get(
+                    source_y
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x))
+                        .ok_or_else(|| malformed("wedge mask first sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask first sample is unavailable"))?;
+            let second = mask
+                .get(
+                    source_y
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x_next))
+                        .ok_or_else(|| malformed("wedge mask second sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask second sample is unavailable"))?;
+            let third = mask
+                .get(
+                    source_y_next
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x))
+                        .ok_or_else(|| malformed("wedge mask third sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask third sample is unavailable"))?;
+            let fourth = mask
+                .get(
+                    source_y_next
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x_next))
+                        .ok_or_else(|| malformed("wedge mask fourth sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask fourth sample is unavailable"))?;
+            let reduced = match (subsampling_x, subsampling_y) {
+                (true, true) => {
+                    u16::from(first)
+                        .saturating_add(u16::from(second))
+                        .saturating_add(u16::from(third))
+                        .saturating_add(u16::from(fourth))
+                        .saturating_add(2)
+                        .saturating_sub(sign)
+                        >> 2
+                }
+                (true, false) => {
+                    u16::from(first)
+                        .saturating_add(u16::from(second))
+                        .saturating_add(1)
+                        .saturating_sub(sign)
+                        >> 1
+                }
+                (false, true) => {
+                    u16::from(first)
+                        .saturating_add(u16::from(third))
+                        .saturating_add(1)
+                        .saturating_sub(sign)
+                        >> 1
+                }
+                (false, false) => u16::from(first),
+            };
+            let destination = destination_y
+                .checked_mul(destination_width)
+                .and_then(|row| row.checked_add(destination_x))
+                .ok_or_else(|| malformed("wedge mask destination overflows"))?;
+            *mask
+                .get_mut(destination)
+                .ok_or_else(|| malformed("wedge mask destination is unavailable"))? =
+                u8::try_from(reduced).map_err(|_| malformed("reduced wedge mask exceeds u8"))?;
+        }
+    }
+    Ok(())
 }
 
 fn allocate_zeroed<T: Clone + Default>(length: usize, name: &'static str) -> Av1Result<Vec<T>> {

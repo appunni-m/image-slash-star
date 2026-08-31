@@ -2986,8 +2986,8 @@ fn wedge_context(block_size: BlockSize) -> Option<usize> {
 
 /// Consume the AV1 compound-type sentence and prepare the corresponding
 /// checked blend. Group-one masked syntax admits difference-weighted blending
-/// in this slice; wedge selections consume their complete sentence before
-/// returning a transactional unsupported result.
+/// and wedge blending in this slice; each path retains its independent mask
+/// construction and sign handling.
 fn decode_compound_type(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut FrameCdfs,
@@ -3034,10 +3034,13 @@ fn decode_compound_type(
             if wedge > 15 {
                 return Err(malformed("wedge compound index is invalid"));
             }
-            // Wedge sign is equiprobable and remains part of the consumed
-            // sentence even though wedge prediction is still transactional.
-            let _ = decoder.bits(1);
-            return Ok(None);
+            let index =
+                u8::try_from(wedge).map_err(|_| malformed("wedge compound index exceeds u8"))?;
+            let inverted = decoder.bits(1) != 0;
+            return Ok(Some((
+                CompoundType::Wedge { index, inverted },
+                super::block::PreparedCompound::Wedge { index, inverted },
+            )));
         }
         let inverted = decoder.bits(1) != 0;
         return Ok(Some((
@@ -6077,10 +6080,10 @@ fn complete_bounded_restoration_inter_420_reconstruction_context(
 /// First inter reconstruction tranche: 8-bit 4:2:0 translation blocks with
 /// loop filtering and the bounded CDEF profile enabled. Single-reference and
 /// average/distance compound prediction share the checked MC boundary;
-/// difference-weighted group-one prediction is also materialized from a
-/// luma-derived mask. Wedge, inter-intra, OBMC/LOCALWARP selections, and
-/// variable-transform branches are still rejected before a block publishes
-/// neighbor metadata.
+/// difference-weighted and wedge group-one predictions are materialized from
+/// checked masks. Inter-intra, OBMC/LOCALWARP selections, and variable-
+/// transform branches are still rejected before a block publishes neighbor
+/// metadata.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
     let Some(cdef) = context.frame_tools.cdef else {
         return true;

@@ -48400,12 +48400,15 @@ struct InterPrediction<'a> {
 /// sentence.  Keeping the prepared weight separate from
 /// [`super::motion::CompoundType`]
 /// prevents a single-reference block's default `Average` metadata from being
-/// mistaken for an actual compound predictor.
+/// mistaken for an actual compound predictor. Mask signs remain explicit so
+/// luma-derived difference masks and canonical wedge masks can share the
+/// checked SIMD blender without losing their distinct chroma rules.
 #[derive(Clone, Copy)]
 pub(super) enum PreparedCompound {
     Average,
     Distance(u8),
     Difference(bool),
+    Wedge { index: u8, inverted: bool },
 }
 
 /// Tile-local coefficient edges captured before an inter leaf is decoded.
@@ -49172,6 +49175,10 @@ impl Lossy420Decoder {
             && tx_luma_height == luma_height)
             .then_some(())
             .portable()?;
+        let tx_luma_width_usize =
+            usize::try_from(tx_luma_width).map_err(|_| PortableUnavailable)?;
+        let tx_luma_height_usize =
+            usize::try_from(tx_luma_height).map_err(|_| PortableUnavailable)?;
         let chroma_tx = if monochrome {
             None
         } else {
@@ -49312,6 +49319,33 @@ impl Lossy420Decoder {
                     }
                     PreparedCompound::Difference(inverted) => scratch
                         .blend_retained_difference_mask(
+                            tx_width,
+                            tx_height,
+                            inverted,
+                            tools.sample_depth,
+                        )
+                        .map_err(|_| PortableUnavailable)?,
+                    PreparedCompound::Wedge { index, inverted } if plane == 0 => {
+                        let subsampling_x = matches!(
+                            chroma_sampling,
+                            ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
+                        );
+                        let subsampling_y =
+                            matches!(chroma_sampling, ChromaSampling::Subsampled420);
+                        scratch
+                            .blend_wedge(
+                                tx_luma_width_usize,
+                                tx_luma_height_usize,
+                                index,
+                                inverted,
+                                subsampling_x,
+                                subsampling_y,
+                                tools.sample_depth,
+                            )
+                            .map_err(|_| PortableUnavailable)?
+                    }
+                    PreparedCompound::Wedge { inverted, .. } => scratch
+                        .blend_retained_wedge_mask(
                             tx_width,
                             tx_height,
                             inverted,
