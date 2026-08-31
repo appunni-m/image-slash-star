@@ -954,7 +954,7 @@ impl FrameState {
             return Ok(SelectedDisplay::unavailable());
         };
         if surface.layout == PixelLayout::Monochrome {
-            if surface.depth.bits() != 8
+            if !matches!(surface.depth.bits(), 8 | 10 | 12)
                 || surface.coded_width != surface.upscaled_width
                 || surface.render_width != surface.upscaled_width
                 || surface.render_height != surface.frame_height
@@ -968,12 +968,13 @@ impl FrameState {
                 plane,
                 surface.upscaled_width,
                 surface.frame_height,
+                surface.depth.bits(),
                 grain,
                 token,
             )?);
             return Ok(display);
         }
-        if surface.depth.bits() != 8
+        if !matches!(surface.depth.bits(), 8 | 10 | 12)
             || !matches!(
                 surface.layout,
                 PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
@@ -997,9 +998,15 @@ impl FrameState {
             return Ok(SelectedDisplay::unavailable());
         };
         display.color_leaf = Some(match surface.layout {
-            PixelLayout::I420 => super::film_grain::apply_i420(leaf, grain, token)?,
-            PixelLayout::I422 => super::film_grain::apply_i422(leaf, grain, token)?,
-            PixelLayout::I444 => super::film_grain::apply_i444(leaf, grain, token)?,
+            PixelLayout::I420 => {
+                super::film_grain::apply_i420(leaf, surface.depth.bits(), grain, token)?
+            }
+            PixelLayout::I422 => {
+                super::film_grain::apply_i422(leaf, surface.depth.bits(), grain, token)?
+            }
+            PixelLayout::I444 => {
+                super::film_grain::apply_i444(leaf, surface.depth.bits(), grain, token)?
+            }
             _ => return Ok(SelectedDisplay::unavailable()),
         });
         Ok(display)

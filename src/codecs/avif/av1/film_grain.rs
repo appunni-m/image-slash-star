@@ -255,10 +255,11 @@ impl GrainLut {
 /// never publish a partially mutated reference surface.
 pub(super) fn apply_i420(
     leaf: FirstLeaf,
+    bit_depth: u32,
     params: &FilmGrain,
     token: Option<&CancellationToken>,
 ) -> Av1Result<FirstLeaf> {
-    apply_with_sampling(leaf, params, GrainSampling::I420, token)
+    apply_with_sampling(leaf, bit_depth, params, GrainSampling::I420, token)
 }
 
 /// Apply a parsed film-grain payload to an owned, post-filter I422 display
@@ -266,10 +267,11 @@ pub(super) fn apply_i420(
 /// the vertical axis remains full resolution.
 pub(super) fn apply_i422(
     leaf: FirstLeaf,
+    bit_depth: u32,
     params: &FilmGrain,
     token: Option<&CancellationToken>,
 ) -> Av1Result<FirstLeaf> {
-    apply_with_sampling(leaf, params, GrainSampling::I422, token)
+    apply_with_sampling(leaf, bit_depth, params, GrainSampling::I422, token)
 }
 
 /// Apply a parsed film-grain payload to an owned monochrome display plane.
@@ -279,10 +281,12 @@ pub(super) fn apply_monochrome(
     mut plane: ReconstructedPlane,
     width: u32,
     height: u32,
+    bit_depth: u32,
     params: &FilmGrain,
     token: Option<&CancellationToken>,
 ) -> Av1Result<ReconstructedPlane> {
     crate::codecs::error::check_cancelled(token)?;
+    let max_sample = max_sample_for_depth(bit_depth)?;
     if width == 0 || height == 0 || params.seed > u32::from(u16::MAX) {
         return Err(malformed(
             "monochrome film-grain display geometry or seed is invalid",
@@ -308,14 +312,14 @@ pub(super) fn apply_monochrome(
         || plane
             .samples
             .iter()
-            .any(|&sample| sample > u16::from(u8::MAX))
+            .any(|&sample| u32::from(sample) > max_sample)
     {
         return Err(malformed(
             "monochrome film-grain display plane has invalid extent",
         ));
     }
     validate_parameters(params)?;
-    let y_lut = generate_luma_lut(params, token)?;
+    let y_lut = generate_luma_lut(params, bit_depth, token)?;
     let y_scaling = generate_scaling(&params.y_points)?;
     plane.samples = apply_plane(
         &plane.samples,
@@ -328,30 +332,34 @@ pub(super) fn apply_monochrome(
         0,
         &[],
         (width, height),
+        bit_depth,
         token,
     )?;
     Ok(plane)
 }
 
 /// Apply a parsed film-grain payload to an owned, post-filter I444 display
-/// leaf. I444 film grain is intentionally limited to eight-bit samples; the
-/// entropy admission and display materializer enforce that restriction.
+/// leaf. I444 grain remains limited to the bounded geometry whitelist, while
+/// the synthesis itself is depth-parametric for 8/10/12-bit samples.
 pub(super) fn apply_i444(
     leaf: FirstLeaf,
+    bit_depth: u32,
     params: &FilmGrain,
     token: Option<&CancellationToken>,
 ) -> Av1Result<FirstLeaf> {
-    apply_with_sampling(leaf, params, GrainSampling::I444, token)
+    apply_with_sampling(leaf, bit_depth, params, GrainSampling::I444, token)
 }
 
 fn apply_with_sampling(
     mut leaf: FirstLeaf,
+    bit_depth: u32,
     params: &FilmGrain,
     sampling: GrainSampling,
     token: Option<&CancellationToken>,
 ) -> Av1Result<FirstLeaf> {
     crate::codecs::error::check_cancelled(token)?;
     sampling.validate()?;
+    let max_sample = max_sample_for_depth(bit_depth)?;
     if leaf.width == 0 || leaf.height == 0 || params.seed > u32::from(u16::MAX) {
         return Err(malformed("film-grain display geometry or seed is invalid"));
     }
@@ -375,25 +383,29 @@ fn apply_with_sampling(
             plane
                 .samples
                 .iter()
-                .any(|&sample| sample > u16::from(u8::MAX))
+                .any(|&sample| u32::from(sample) > max_sample)
         })
     {
         return Err(malformed("film-grain display planes have invalid extents"));
     }
     validate_parameters(params)?;
 
-    let y_lut = generate_luma_lut(params, token)?;
+    let y_lut = generate_luma_lut(params, bit_depth, token)?;
     let y_scaling = generate_scaling(&params.y_points)?;
     let y_source = copy_samples(&leaf.planes[0].samples, "film-grain luma source")?;
     let u_lut = if params.uv_points[0].is_empty() && !params.chroma_scaling_from_luma {
         None
     } else {
-        Some(generate_chroma_lut(params, 0, &y_lut, sampling, token)?)
+        Some(generate_chroma_lut(
+            params, bit_depth, 0, &y_lut, sampling, token,
+        )?)
     };
     let v_lut = if params.uv_points[1].is_empty() && !params.chroma_scaling_from_luma {
         None
     } else {
-        Some(generate_chroma_lut(params, 1, &y_lut, sampling, token)?)
+        Some(generate_chroma_lut(
+            params, bit_depth, 1, &y_lut, sampling, token,
+        )?)
     };
     let u_scaling = if params.chroma_scaling_from_luma {
         None
@@ -419,6 +431,7 @@ fn apply_with_sampling(
                 0,
                 &y_source,
                 (width, height),
+                bit_depth,
                 token,
             )
         })
@@ -437,6 +450,7 @@ fn apply_with_sampling(
                 1,
                 &y_source,
                 (width, height),
+                bit_depth,
                 token,
             )
         })
@@ -452,6 +466,7 @@ fn apply_with_sampling(
         0,
         &[],
         (0, 0),
+        bit_depth,
         token,
     )?;
     if let Some(output) = u_output {
@@ -526,6 +541,33 @@ fn checked_count(width: usize, height: usize, label: &'static str) -> Av1Result<
     width.checked_mul(height).ok_or_else(|| malformed(label))
 }
 
+fn depth_shift(bit_depth: u32) -> Av1Result<u32> {
+    match bit_depth {
+        8 | 10 | 12 => bit_depth
+            .checked_sub(8)
+            .ok_or_else(|| malformed("film-grain bit depth underflows")),
+        _ => Err(malformed("film-grain bit depth is unsupported")),
+    }
+}
+
+fn max_sample_for_depth(bit_depth: u32) -> Av1Result<u32> {
+    depth_shift(bit_depth)?;
+    1_u32
+        .checked_shl(bit_depth)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| malformed("film-grain sample range overflows"))
+}
+
+fn grain_bounds(bit_depth: u32) -> Av1Result<(i32, i32)> {
+    let shift = depth_shift(bit_depth)?;
+    let center = 128_u32
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("film-grain grain range overflows"))?;
+    let center =
+        i32::try_from(center).map_err(|_| malformed("film-grain grain range exceeds i32"))?;
+    Ok((-center, center.saturating_sub(1)))
+}
+
 fn copy_samples(source: &[u16], label: &'static str) -> Av1Result<Vec<u16>> {
     let mut copy = Vec::new();
     copy.try_reserve_exact(source.len())
@@ -534,18 +576,26 @@ fn copy_samples(source: &[u16], label: &'static str) -> Av1Result<Vec<u16>> {
     Ok(copy)
 }
 
-fn generate_luma_lut(params: &FilmGrain, token: Option<&CancellationToken>) -> Av1Result<GrainLut> {
+fn generate_luma_lut(
+    params: &FilmGrain,
+    bit_depth: u32,
+    token: Option<&CancellationToken>,
+) -> Av1Result<GrainLut> {
     let mut lut = GrainLut::new(GRAIN_WIDTH, GRAIN_HEIGHT)?;
     let mut seed = params.seed;
-    let shift = 4_u32
-        .checked_add(params.grain_scale_shift)
+    let shift = 12_u32
+        .checked_sub(bit_depth)
+        .and_then(|value| value.checked_add(params.grain_scale_shift))
         .ok_or_else(|| malformed("film-grain luma shift overflows"))?;
-    fill_initial_lut(&mut lut, &mut seed, shift, token)?;
+    let (grain_min, grain_max) = grain_bounds(bit_depth)?;
+    fill_initial_lut(&mut lut, &mut seed, shift, grain_min, grain_max, token)?;
     apply_ar_lut(
         &mut lut,
         &params.ar_coefficients_y,
         params.ar_coefficient_lag,
         params.ar_coefficient_shift,
+        grain_min,
+        grain_max,
         token,
     )?;
     Ok(lut)
@@ -553,6 +603,7 @@ fn generate_luma_lut(params: &FilmGrain, token: Option<&CancellationToken>) -> A
 
 fn generate_chroma_lut(
     params: &FilmGrain,
+    bit_depth: u32,
     plane: usize,
     luma_lut: &GrainLut,
     sampling: GrainSampling,
@@ -561,11 +612,15 @@ fn generate_chroma_lut(
     let (width, height) = sampling.grain_dimensions();
     let mut lut = GrainLut::new(width, height)?;
     let mut seed = params.seed ^ if plane == 0 { 0xb524 } else { 0x49d8 };
-    let shift = 4_u32
-        .checked_add(params.grain_scale_shift)
+    let shift = 12_u32
+        .checked_sub(bit_depth)
+        .and_then(|value| value.checked_add(params.grain_scale_shift))
         .ok_or_else(|| malformed("film-grain chroma shift overflows"))?;
-    fill_initial_lut(&mut lut, &mut seed, shift, token)?;
-    apply_chroma_ar_lut(&mut lut, params, plane, luma_lut, sampling, token)?;
+    let (grain_min, grain_max) = grain_bounds(bit_depth)?;
+    fill_initial_lut(&mut lut, &mut seed, shift, grain_min, grain_max, token)?;
+    apply_chroma_ar_lut(
+        &mut lut, params, plane, luma_lut, sampling, grain_min, grain_max, token,
+    )?;
     Ok(lut)
 }
 
@@ -573,6 +628,8 @@ fn fill_initial_lut(
     lut: &mut GrainLut,
     seed: &mut u32,
     shift: u32,
+    grain_min: i32,
+    grain_max: i32,
     token: Option<&CancellationToken>,
 ) -> Av1Result<()> {
     let shift = u8::try_from(shift).map_err(|_| malformed("film-grain shift exceeds u8"))?;
@@ -584,7 +641,7 @@ fn fill_initial_lut(
             let index = usize::try_from(random_number(11, seed)?)
                 .map_err(|_| malformed("film-grain Gaussian index is negative"))?;
             let value = round_signed(i32::from(GAUSSIAN_SEQUENCE[index]), shift)?;
-            lut.set(x, y, value.clamp(-128, 127))?;
+            lut.set(x, y, value.clamp(grain_min, grain_max))?;
         }
     }
     Ok(())
@@ -595,6 +652,8 @@ fn apply_ar_lut(
     coefficients: &[i32],
     lag: u32,
     coefficient_shift: u32,
+    grain_min: i32,
+    grain_max: i32,
     token: Option<&CancellationToken>,
 ) -> Av1Result<()> {
     let lag = usize::try_from(lag).map_err(|_| malformed("film-grain AR lag exceeds usize"))?;
@@ -640,7 +699,7 @@ fn apply_ar_lut(
                         .map_err(|_| malformed("film-grain AR rounded value exceeds i32"))?,
                 )
                 .ok_or_else(|| malformed("film-grain AR output overflows"))?
-                .clamp(-128, 127);
+                .clamp(grain_min, grain_max);
             lut.set(x + AR_PAD, y + AR_PAD, updated)?;
             coefficient_index = 0;
         }
@@ -654,6 +713,8 @@ fn apply_chroma_ar_lut(
     plane: usize,
     luma_lut: &GrainLut,
     sampling: GrainSampling,
+    grain_min: i32,
+    grain_max: i32,
     token: Option<&CancellationToken>,
 ) -> Av1Result<()> {
     let lag = usize::try_from(params.ar_coefficient_lag)
@@ -746,7 +807,7 @@ fn apply_chroma_ar_lut(
                         .map_err(|_| malformed("film-grain chroma AR rounded value exceeds i32"))?,
                 )
                 .ok_or_else(|| malformed("film-grain chroma AR output overflows"))?
-                .clamp(-128, 127);
+                .clamp(grain_min, grain_max);
             lut.set(x + AR_PAD, y + AR_PAD, updated)?;
             coefficient_index = 0;
         }
@@ -817,6 +878,49 @@ fn generate_scaling(points: &[[u32; 2]]) -> Av1Result<Vec<i32>> {
     Ok(scaling)
 }
 
+fn scale_lut(scaling: &[i32], sample: i32, bit_depth: u32) -> Av1Result<i32> {
+    if scaling.len() != 256 || sample < 0 {
+        return Err(malformed("film-grain scaling LUT input is invalid"));
+    }
+    let shift = depth_shift(bit_depth)?;
+    let max_sample = i32::try_from(max_sample_for_depth(bit_depth)?)
+        .map_err(|_| malformed("film-grain scaling sample exceeds i32"))?;
+    let sample = sample.min(max_sample);
+    let index = usize::try_from(sample >> shift)
+        .map_err(|_| malformed("film-grain scaling index exceeds usize"))?;
+    let base = *scaling
+        .get(index)
+        .ok_or_else(|| malformed("film-grain scaling value is missing"))?;
+    if shift == 0 || index == 255 {
+        return Ok(base);
+    }
+    let mask = (1_i32
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("film-grain scaling fraction overflows"))?)
+    .saturating_sub(1);
+    let fraction = sample & mask;
+    let next = *scaling
+        .get(index.saturating_add(1))
+        .ok_or_else(|| malformed("film-grain scaling successor is missing"))?;
+    let delta = i64::from(next)
+        .checked_sub(i64::from(base))
+        .and_then(|value| value.checked_mul(i64::from(fraction)))
+        .ok_or_else(|| malformed("film-grain scaling interpolation overflows"))?;
+    let rounding = 1_i64
+        .checked_shl(shift.saturating_sub(1))
+        .ok_or_else(|| malformed("film-grain scaling rounding overflows"))?;
+    let adjustment = (delta
+        .checked_add(rounding)
+        .ok_or_else(|| malformed("film-grain scaling interpolation overflows"))?)
+        >> shift;
+    i32::try_from(
+        i64::from(base)
+            .checked_add(adjustment)
+            .ok_or_else(|| malformed("film-grain scaling value overflows"))?,
+    )
+    .map_err(|_| malformed("film-grain scaling value exceeds i32"))
+}
+
 fn apply_plane(
     source: &[u16],
     (width, height): (usize, usize),
@@ -828,8 +932,13 @@ fn apply_plane(
     plane: usize,
     luma: &[u16],
     (luma_width, luma_height): (usize, usize),
+    bit_depth: u32,
     token: Option<&CancellationToken>,
 ) -> Av1Result<Vec<u16>> {
+    let depth_shift = depth_shift(bit_depth)?;
+    let max_sample = i32::try_from(max_sample_for_depth(bit_depth)?)
+        .map_err(|_| malformed("film-grain sample range exceeds i32"))?;
+    let (grain_min, grain_max) = grain_bounds(bit_depth)?;
     let count = checked_count(width, height, "film-grain plane extent")?;
     if source.len() != count || scaling.len() != 256 {
         return Err(malformed("film-grain plane inputs have invalid lengths"));
@@ -887,7 +996,9 @@ fn apply_plane(
             };
             for y in 0..current_height {
                 for x in 0..current_width {
-                    let grain = overlapped_grain(lut, offsets, sampling, x, y, x_start, y_start)?;
+                    let grain = overlapped_grain(
+                        lut, offsets, sampling, x, y, x_start, y_start, grain_min, grain_max,
+                    )?;
                     let index = (row_num * block_height + y)
                         .checked_mul(width)
                         .and_then(|row| row.checked_add(bx + x))
@@ -932,10 +1043,13 @@ fn apply_plane(
                                 .get(plane)
                                 .copied()
                                 .ok_or_else(|| malformed("film-grain chroma plane exceeds two"))?;
-                            let offset =
-                                params.uv_offset.get(plane).copied().ok_or_else(|| {
-                                    malformed("film-grain chroma plane exceeds two")
-                                })?;
+                            let offset = params
+                                .uv_offset
+                                .get(plane)
+                                .copied()
+                                .ok_or_else(|| malformed("film-grain chroma plane exceeds two"))?
+                                .checked_shl(depth_shift)
+                                .ok_or_else(|| malformed("film-grain chroma offset overflows"))?;
                             (avg.checked_mul(luma_multiplier)
                                 .and_then(|value| {
                                     value.checked_add(source_sample.checked_mul(multiplier)?)
@@ -944,17 +1058,12 @@ fn apply_plane(
                                 >> 6)
                                 .checked_add(offset)
                                 .ok_or_else(|| malformed("film-grain chroma offset overflows"))?
-                                .clamp(0, 255)
+                                .clamp(0, max_sample)
                         }
                     } else {
                         source_sample
                     };
-                    let scaling_value = *scaling
-                        .get(
-                            usize::try_from(scale_index.clamp(0, 255))
-                                .map_err(|_| malformed("film-grain scaling index exceeds usize"))?,
-                        )
-                        .ok_or_else(|| malformed("film-grain scaling value is missing"))?;
+                    let scaling_value = scale_lut(scaling, scale_index, bit_depth)?;
                     let product = scaling_value
                         .checked_mul(grain)
                         .ok_or_else(|| malformed("film-grain noise product overflows"))?;
@@ -964,9 +1073,16 @@ fn apply_plane(
                             .map_err(|_| malformed("film-grain scaling shift exceeds u8"))?,
                     )?;
                     let (minimum, maximum) = if params.clip_to_restricted_range {
-                        (16_i32, if chroma { 240_i32 } else { 235_i32 })
+                        (
+                            16_i32
+                                .checked_shl(depth_shift)
+                                .ok_or_else(|| malformed("film-grain minimum range overflows"))?,
+                            (if chroma { 240_i32 } else { 235_i32 })
+                                .checked_shl(depth_shift)
+                                .ok_or_else(|| malformed("film-grain maximum range overflows"))?,
+                        )
                     } else {
-                        (0_i32, 255_i32)
+                        (0_i32, max_sample)
                     };
                     let value = source_sample
                         .checked_add(noise)
@@ -1016,23 +1132,25 @@ fn overlapped_grain(
     y: usize,
     x_start: usize,
     y_start: usize,
+    grain_min: i32,
+    grain_max: i32,
 ) -> Av1Result<i32> {
     let mut grain = sample_lut(lut, offsets, sampling, false, false, x, y)?;
     if x < x_start && y < y_start {
         let top_left = sample_lut(lut, offsets, sampling, true, true, x, y)?;
         let top = sample_lut(lut, offsets, sampling, false, true, x, y)?;
-        let top = blend(top_left, top, sampling.subx != 0, x)?;
+        let top = blend(top_left, top, sampling.subx != 0, x, grain_min, grain_max)?;
         let left = sample_lut(lut, offsets, sampling, true, false, x, y)?;
-        let left = blend(left, grain, sampling.subx != 0, x)?;
-        grain = blend(top, left, sampling.suby != 0, y)?;
+        let left = blend(left, grain, sampling.subx != 0, x, grain_min, grain_max)?;
+        grain = blend(top, left, sampling.suby != 0, y, grain_min, grain_max)?;
     } else if x < x_start {
         let old = sample_lut(lut, offsets, sampling, true, false, x, y)?;
-        grain = blend(old, grain, sampling.subx != 0, x)?;
+        grain = blend(old, grain, sampling.subx != 0, x, grain_min, grain_max)?;
     } else if y < y_start {
         let old = sample_lut(lut, offsets, sampling, false, true, x, y)?;
-        grain = blend(old, grain, sampling.suby != 0, y)?;
+        grain = blend(old, grain, sampling.suby != 0, y, grain_min, grain_max)?;
     }
-    Ok(grain.clamp(-128, 127))
+    Ok(grain.clamp(grain_min, grain_max))
 }
 
 fn sample_lut(
@@ -1064,7 +1182,14 @@ fn sample_lut(
     lut.get(x, y)
 }
 
-fn blend(old: i32, current: i32, chroma: bool, index: usize) -> Av1Result<i32> {
+fn blend(
+    old: i32,
+    current: i32,
+    chroma: bool,
+    index: usize,
+    grain_min: i32,
+    grain_max: i32,
+) -> Av1Result<i32> {
     let (old_weight, current_weight) = if chroma {
         if index == 0 { (23_i64, 22_i64) } else { (0, 0) }
     } else if index == 0 {
@@ -1077,7 +1202,7 @@ fn blend(old: i32, current: i32, chroma: bool, index: usize) -> Av1Result<i32> {
         .and_then(|value| value.checked_add(i64::from(current).checked_mul(current_weight)?))
         .ok_or_else(|| malformed("film-grain overlap blend overflows"))?;
     i32::try_from(round_signed_i64(sum, 5)?)
-        .map(|value| value.clamp(-128, 127))
+        .map(|value| value.clamp(grain_min, grain_max))
         .map_err(|_| malformed("film-grain overlap blend exceeds i32"))
 }
 

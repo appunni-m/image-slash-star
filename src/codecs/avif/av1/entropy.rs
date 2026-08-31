@@ -2623,7 +2623,8 @@ pub(super) fn validate_complete_monochrome_partition(
 
 fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
-        || (context.bit_depth == 8 && (context.monochrome || context.subsampling_x))
+        || (matches!(context.bit_depth, 8 | 10 | 12)
+            && (context.monochrome || context.subsampling_x))
 }
 
 fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {
@@ -8408,7 +8409,7 @@ pub(super) const fn bounded_i444_film_grain_dimensions(width: u32, height: u32) 
 
 fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
-        || (context.bit_depth == 8
+        || (matches!(context.bit_depth, 8 | 10 | 12)
             && bounded_i444_film_grain_dimensions(context.frame_width, context.frame_height))
 }
 
@@ -9052,7 +9053,7 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && !context.monochrome
         && context.subsampling_x
         && context.subsampling_y
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && !context.frame_tools.reduced_transform_set
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
@@ -9093,7 +9094,7 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.segment_lossless
@@ -9419,7 +9420,7 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
 }
 
 fn exact_lossless_i444_film_grain_profile(context: &FirstBlockContext) -> bool {
-    context.bit_depth == 8
+    matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i444_film_grain_dimensions(context.frame_width, context.frame_height)
         && context.upscaled_width == context.frame_width
         && context.block_width == context.frame_width / 4
