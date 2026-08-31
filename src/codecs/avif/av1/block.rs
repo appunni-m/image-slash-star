@@ -2204,6 +2204,11 @@ enum CoefficientPolicy {
     MonochromeContextual {
         above_contexts: [u8; 16],
         left_contexts: [u8; 16],
+        /// Number of active TX4 columns/rows after clipping the nominal
+        /// block at the padded frame boundary. The nominal transform grid
+        /// remains the carrier stride and syntax identity.
+        active_grid_width: usize,
+        active_grid_height: usize,
     },
 }
 
@@ -2657,8 +2662,14 @@ pub(super) struct MonochromeLeaf {
 pub(super) struct MonochromeBlockGeometry {
     pub(super) origin_x: u32,
     pub(super) origin_y: u32,
+    /// Active padded pixel extent retained by the reconstructed leaf. This
+    /// may be smaller than the nominal block at the frame edge.
     pub(super) width: u32,
     pub(super) height: u32,
+    /// Active TX4 dimensions. The transform grid itself remains nominal so
+    /// block syntax and coefficient carrier stride are preserved when clipped.
+    pub(super) active_grid_width: u32,
+    pub(super) active_grid_height: u32,
     pub(super) transform_grid: TransformGrid,
     pub(super) intra_edges: super::geometry::IntraEdgeFlags,
 }
@@ -8887,49 +8898,65 @@ fn decode_monochrome_contextual_coefficients(
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
     transform_grid_height: usize,
+    active_grid_width: usize,
+    active_grid_height: usize,
     mut above_contexts: [u8; 16],
     left_contexts: [u8; 16],
 ) -> PortableResult<PlaneCoefficients> {
-    if !(1..=16).contains(&transform_grid_width) || !(1..=16).contains(&transform_grid_height) {
+    if !(1..=16).contains(&transform_grid_width)
+        || !(1..=16).contains(&transform_grid_height)
+        || !(1..=16).contains(&active_grid_width)
+        || !(1..=16).contains(&active_grid_height)
+        || active_grid_width > transform_grid_width
+        || active_grid_height > transform_grid_height
+    {
         return Err(PortableUnavailable);
     }
     let mut coefficients = [[0_i32; 16]; 64];
-    let mut left_context = 0x40_u8;
-    let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
-    (transform_count <= coefficients.len())
+    let transform_count = transform_grid_width
+        .checked_mul(transform_grid_height)
+        .portable()?;
+    let active_count = active_grid_width
+        .checked_mul(active_grid_height)
+        .portable()?;
+    (transform_count <= coefficients.len() && active_count <= coefficients.len())
         .then_some(())
         .portable()?;
-    for (transform_index, coefficients) in coefficients.iter_mut().enumerate().take(transform_count)
-    {
-        let column = transform_index.rem_euclid(transform_grid_width);
-        let row = transform_index.div_euclid(transform_grid_width);
-        if column == 0 {
-            left_context = *left_contexts.get(row).ok_or(PortableUnavailable)?;
+    for row in 0..active_grid_height {
+        let mut left_context = *left_contexts.get(row).ok_or(PortableUnavailable)?;
+        for column in 0..active_grid_width {
+            let transform_index = row
+                .checked_mul(transform_grid_width)
+                .and_then(|offset| offset.checked_add(column))
+                .portable()?;
+            let coefficients = coefficients
+                .get_mut(transform_index)
+                .ok_or(PortableUnavailable)?;
+            let above_context = *above_contexts.get(column).ok_or(PortableUnavailable)?;
+            let skip_cdf_result = if transform_grid_width == 1 && transform_grid_height == 1 {
+                // In lossless AV1 the sole transform in a BLOCK_4X4 block is
+                // also TX_4X4. dav1d's get_skip_ctx() therefore selects
+                // coefficient skip context zero and does not consult the
+                // external coefficient edge contexts.
+                Ok(CoefficientSkipCdf::LumaContext(0))
+            } else {
+                contextual_skip_cdf(0, above_context, left_context)
+            };
+            let skip_cdf = skip_cdf_result?;
+            let skipped = decode_contextual_skip(decoder, 0, skip_cdf, cdfs);
+            let residual_context = if skipped {
+                0x40
+            } else {
+                let sign_context = coefficient_dc_sign_context(above_context, left_context);
+                let transform_result =
+                    decode_nonzero_lossless_transform_general(decoder, 0, sign_context, true, cdfs);
+                let transform = transform_result?;
+                *coefficients = transform;
+                coefficient_residual_context(&transform)
+            };
+            above_contexts[column] = residual_context;
+            left_context = residual_context;
         }
-        let above_context = *above_contexts.get(column).ok_or(PortableUnavailable)?;
-        let skip_cdf_result = if transform_grid_width == 1 && transform_grid_height == 1 {
-            // In lossless AV1 the sole transform in a BLOCK_4X4 block is also
-            // TX_4X4. dav1d's get_skip_ctx() therefore selects coefficient
-            // skip context zero and does not consult the external coefficient
-            // edge contexts.
-            Ok(CoefficientSkipCdf::LumaContext(0))
-        } else {
-            contextual_skip_cdf(0, above_context, left_context)
-        };
-        let skip_cdf = skip_cdf_result?;
-        let skipped = decode_contextual_skip(decoder, 0, skip_cdf, cdfs);
-        let residual_context = if skipped {
-            0x40
-        } else {
-            let sign_context = coefficient_dc_sign_context(above_context, left_context);
-            let transform_result =
-                decode_nonzero_lossless_transform_general(decoder, 0, sign_context, true, cdfs);
-            let transform = transform_result?;
-            *coefficients = transform;
-            coefficient_residual_context(&transform)
-        };
-        above_contexts[column] = residual_context;
-        left_context = residual_context;
     }
     Ok(coefficients)
 }
@@ -20813,6 +20840,8 @@ fn decode_syntax_with_cdef(
             CoefficientPolicy::MonochromeContextual {
                 above_contexts,
                 left_contexts,
+                active_grid_width,
+                active_grid_height,
             } => {
                 if plane == 0 {
                     decode_monochrome_contextual_coefficients(
@@ -20820,6 +20849,8 @@ fn decode_syntax_with_cdef(
                         cdfs,
                         plane_grid_width,
                         plane_grid_height,
+                        active_grid_width,
+                        active_grid_height,
                         above_contexts,
                         left_contexts,
                     )
@@ -46109,6 +46140,10 @@ impl MonochromeLosslessDecoder {
                 coefficient_policy: CoefficientPolicy::MonochromeContextual {
                     above_contexts,
                     left_contexts,
+                    active_grid_width: usize::try_from(geometry.active_grid_width)
+                        .map_err(|_| PortableUnavailable)?,
+                    active_grid_height: usize::try_from(geometry.active_grid_height)
+                        .map_err(|_| PortableUnavailable)?,
                 },
                 quantization_syntax: QuantizationSyntax::Lossless,
                 allow_horizontal_chroma: true,
@@ -47259,6 +47294,8 @@ fn finish_monochrome_leaf(
     coded_width: usize,
     grid_width: usize,
     grid_height: usize,
+    active_grid_width: usize,
+    active_grid_height: usize,
     coded_plane: ReconstructedPlane,
     predictor: LumaPredictor,
     coefficients: &PlaneCoefficients,
@@ -47267,10 +47304,16 @@ fn finish_monochrome_leaf(
     let visible_width = usize::try_from(width).map_err(|_| PortableUnavailable)?;
     let visible_height = usize::try_from(height).map_err(|_| PortableUnavailable)?;
     let coded_height = grid_height.checked_mul(4).portable()?;
+    let active_width = active_grid_width.checked_mul(4).portable()?;
+    let active_height = active_grid_height.checked_mul(4).portable()?;
     (visible_width != 0
+        && visible_width == active_width
         && visible_width <= coded_width
         && visible_height != 0
+        && visible_height == active_height
         && visible_height <= coded_height
+        && active_grid_width <= grid_width
+        && active_grid_height <= grid_height
         && coded_plane.samples.len() == coded_width.checked_mul(coded_height).portable()?)
     .then_some(())
     .portable()?;
@@ -47288,14 +47331,14 @@ fn finish_monochrome_leaf(
     }
     let mut right_contexts = [0x40_u8; 16];
     let mut bottom_contexts = [0x40_u8; 16];
-    let transform_width = grid_width.min(16);
-    let transform_height = grid_height.min(16);
+    let transform_width = active_grid_width;
+    let transform_height = active_grid_height;
     for row in 0..transform_height {
         right_contexts[row] = coefficient_residual_context(
             coefficients
                 .get(
                     row.checked_mul(grid_width)
-                        .and_then(|offset| offset.checked_add(transform_width.saturating_sub(1)))
+                        .and_then(|offset| offset.checked_add(transform_width.checked_sub(1)?))
                         .portable()?,
                 )
                 .portable()?,
@@ -47306,8 +47349,8 @@ fn finish_monochrome_leaf(
             coefficients
                 .get(
                     transform_height
-                        .saturating_sub(1)
-                        .checked_mul(grid_width)
+                        .checked_sub(1)
+                        .and_then(|row| row.checked_mul(grid_width))
                         .and_then(|offset| offset.checked_add(column))
                         .portable()?,
                 )
@@ -47340,6 +47383,8 @@ fn reconstruct_monochrome_leaf(
         origin_y,
         width,
         height,
+        active_grid_width: active_grid_width_u32,
+        active_grid_height: active_grid_height_u32,
         transform_grid: _,
         intra_edges,
     } = geometry;
@@ -47371,6 +47416,21 @@ fn reconstruct_monochrome_leaf(
         return Err(PortableUnavailable);
     };
     let (grid_width, grid_height, _) = transform_grid.properties();
+    let active_grid_width =
+        usize::try_from(active_grid_width_u32).map_err(|_| PortableUnavailable)?;
+    let active_grid_height =
+        usize::try_from(active_grid_height_u32).map_err(|_| PortableUnavailable)?;
+    let nominal_transform_count = grid_width.checked_mul(grid_height).portable()?;
+    let active_transform_count = active_grid_width
+        .checked_mul(active_grid_height)
+        .portable()?;
+    (nominal_transform_count <= 64
+        && active_transform_count != 0
+        && active_transform_count <= nominal_transform_count
+        && active_grid_width <= grid_width
+        && active_grid_height <= grid_height)
+        .then_some(())
+        .portable()?;
     let coded_width = grid_width.saturating_mul(4);
     let coded_height = grid_height.saturating_mul(4);
     let coded_width_u32 = u32::try_from(coded_width).map_err(|_| PortableUnavailable)?;
@@ -47431,6 +47491,8 @@ fn reconstruct_monochrome_leaf(
             coded_width,
             grid_width,
             grid_height,
+            active_grid_width,
+            active_grid_height,
             coded_plane,
             luma_predictor,
             &coefficients[0],
@@ -48069,6 +48131,8 @@ fn reconstruct_monochrome_leaf(
         coded_width,
         grid_width,
         grid_height,
+        active_grid_width,
+        active_grid_height,
         ReconstructedPlane { samples },
         luma_predictor,
         &coefficients[0],

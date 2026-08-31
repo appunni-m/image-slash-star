@@ -2532,11 +2532,32 @@ pub(super) fn validate_complete_monochrome_partition(
             walker.reset_root();
             walker.set_root_bounds(root_x, root_y, root_size)?;
             let control = walker.walk(root_level, root_x, root_y, &mut |decoder, node| {
-                let Some((transform_grid, width, height)) = monochrome_transform_geometry(node)
+                let Some((transform_grid, nominal_width, nominal_height)) =
+                    monochrome_transform_geometry(node)
                 else {
                     unsupported = true;
                     return Ok(PartitionVisitControl::Stop);
                 };
+                if node.width == 0
+                    || node.height == 0
+                    || node.width > node.coded_width
+                    || node.height > node.coded_height
+                {
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
+                }
+                let width = node
+                    .width
+                    .checked_mul(4)
+                    .ok_or_else(|| malformed("monochrome active width overflows pixels"))?;
+                let height = node
+                    .height
+                    .checked_mul(4)
+                    .ok_or_else(|| malformed("monochrome active height overflows pixels"))?;
+                if width > nominal_width || height > nominal_height {
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
+                }
                 let origin_x = node
                     .x
                     .checked_mul(4)
@@ -2550,6 +2571,8 @@ pub(super) fn validate_complete_monochrome_partition(
                     origin_y,
                     width,
                     height,
+                    active_grid_width: node.width,
+                    active_grid_height: node.height,
                     transform_grid,
                     intra_edges: node.intra_edges,
                 };
@@ -2604,14 +2627,20 @@ fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
 }
 
 fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let padded_block_width = context
+        .frame_width
+        .checked_add(7)
+        .and_then(|value| (value / 8).checked_mul(2));
+    let padded_block_height = context
+        .frame_height
+        .checked_add(7)
+        .and_then(|value| (value / 8).checked_mul(2));
     let dimensions_are_supported = context.frame_width >= 4
         && context.frame_height >= 4
         && context.frame_width <= 128
         && context.frame_height <= 128
-        && context.frame_width.is_multiple_of(4)
-        && context.frame_height.is_multiple_of(4)
-        && context.block_width == context.frame_width / 4
-        && context.block_height == context.frame_height / 4
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
         && context.upscaled_width == context.frame_width;
     context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
@@ -9446,39 +9475,28 @@ fn lossy_quantization_for_context(
 fn monochrome_transform_geometry(
     node: PartitionNode,
 ) -> Option<(super::block::TransformGrid, u32, u32)> {
-    match (node.width, node.height) {
-        (1, 1) => Some((super::block::TransformGrid::Square4, 4, 4)),
-        (1, 2) => Some((super::block::TransformGrid::Vertical4x8, 4, 8)),
-        (1, 4) => Some((super::block::TransformGrid::Vertical4x16, 4, 16)),
-        (2, 1) => Some((super::block::TransformGrid::Horizontal8x4, 8, 4)),
-        (2, 2) => Some((super::block::TransformGrid::Square8, 8, 8)),
-        (4, 1) => Some((super::block::TransformGrid::Horizontal16x4, 16, 4)),
-        (4, 2) => Some((super::block::TransformGrid::Horizontal16x8, 16, 8)),
-        (2, 4) => Some((super::block::TransformGrid::Vertical8x16, 8, 16)),
-        (4, 4) => Some((super::block::TransformGrid::Square16, 16, 16)),
-        (4, 8) => Some((super::block::TransformGrid::Vertical16x32, 16, 32)),
-        (4, 16) => Some((super::block::TransformGrid::Vertical16x64, 16, 64)),
-        (8, 4) => Some((super::block::TransformGrid::Horizontal32x16, 32, 16)),
-        (8, 2) => Some((super::block::TransformGrid::Horizontal32x8, 32, 8)),
-        (2, 8) => Some((super::block::TransformGrid::Vertical8x32, 8, 32)),
-        (8, 8) => Some((super::block::TransformGrid::Square32, 32, 32)),
-        // R64x16 is the largest monochrome lossless terminal representable by
-        // the fixed 64-entry WHT carrier.  Require the nominal block identity
-        // and unclipped coded extent so a clipped R64x32/R64x64 edge cannot be
-        // decoded with the R64x16 CDF sentence.
-        (16, 4)
-            if node.block_size == BlockSize::B64x16
-                && node.coded_width == 16
-                && node.coded_height == 4
-                && node.width == 16
-                && node.height == 4 =>
-        {
-            Some((super::block::TransformGrid::Horizontal64x16, 64, 16))
-        }
-        // S64x64 needs 256 lossless WHT carriers; the monochrome decoder keeps
-        // that larger dynamic carrier as a separate future slice.
-        _ => None,
+    let (nominal_width, nominal_height) = node.block_size.mi_dimensions();
+    if node.coded_width != nominal_width || node.coded_height != nominal_height {
+        return None;
     }
+    let transform_grid = super::block::TransformGrid::from_block_size(node.block_size).ok()?;
+    // S64x64 needs 256 lossless WHT carriers; the monochrome decoder keeps
+    // that larger dynamic carrier as a separate future slice. The adapter
+    // already rejects the wider B32x64/B64x32 and 128-pixel families.
+    if matches!(transform_grid, super::block::TransformGrid::Square64) {
+        return None;
+    }
+    let (grid_width, grid_height, _) = transform_grid.properties();
+    if (grid_width, grid_height) != (nominal_width as usize, nominal_height as usize) {
+        return None;
+    }
+    let coded_width = grid_width.checked_mul(4)?;
+    let coded_height = grid_height.checked_mul(4)?;
+    Some((
+        transform_grid,
+        u32::try_from(coded_width).ok()?,
+        u32::try_from(coded_height).ok()?,
+    ))
 }
 
 #[derive(Clone, Copy)]
@@ -10332,19 +10350,29 @@ pub(super) fn validate_first_partition(
         let mut block_decoder = super::block::MonochromeLosslessDecoder::new();
         let mut visited = 0_u32;
         let _ = walk_partition_until_stop(&mut decoder, context, |decoder, node| {
-            let (transform_grid, width, height) = match (node.width, node.height) {
-                (2, 2) => (super::block::TransformGrid::Square8, 8, 8),
-                (1, 1) => (super::block::TransformGrid::Square4, 4, 4),
-                (1, 2) => (super::block::TransformGrid::Vertical4x8, 4, 8),
-                (1, 4) => (super::block::TransformGrid::Vertical4x16, 4, 16),
-                (2, 1) => (super::block::TransformGrid::Horizontal8x4, 8, 4),
-                (4, 4) => (super::block::TransformGrid::Square16, 16, 16),
-                (4, 2) => (super::block::TransformGrid::Horizontal16x8, 16, 8),
-                (2, 4) => (super::block::TransformGrid::Vertical8x16, 8, 16),
-                (8, 2) => (super::block::TransformGrid::Horizontal32x8, 32, 8),
-                (2, 8) => (super::block::TransformGrid::Vertical8x32, 8, 32),
-                _ => return Ok(PartitionVisitControl::Stop),
+            let Some((transform_grid, nominal_width, nominal_height)) =
+                monochrome_transform_geometry(node)
+            else {
+                return Ok(PartitionVisitControl::Stop);
             };
+            if node.width == 0
+                || node.height == 0
+                || node.width > node.coded_width
+                || node.height > node.coded_height
+            {
+                return Ok(PartitionVisitControl::Stop);
+            }
+            let width = node
+                .width
+                .checked_mul(4)
+                .ok_or_else(|| malformed("monochrome active width overflows pixels"))?;
+            let height = node
+                .height
+                .checked_mul(4)
+                .ok_or_else(|| malformed("monochrome active height overflows pixels"))?;
+            if width > nominal_width || height > nominal_height {
+                return Ok(PartitionVisitControl::Stop);
+            }
             let tools = super::block::BlockTools {
                 sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
                     .ok_or_else(|| malformed("AV1 block sample depth is unsupported"))?,
@@ -10370,6 +10398,8 @@ pub(super) fn validate_first_partition(
                 origin_y,
                 width,
                 height,
+                active_grid_width: node.width,
+                active_grid_height: node.height,
                 transform_grid,
                 intra_edges: node.intra_edges,
             };
@@ -11557,9 +11587,31 @@ mod tests {
         )?;
         let mut leaves = Vec::new();
         let control = walker.walk(1, 0, 0, &mut |decoder, node| {
-            let Some((transform_grid, width, height)) = monochrome_transform_geometry(node) else {
+            let Some((transform_grid, nominal_width, nominal_height)) =
+                monochrome_transform_geometry(node)
+            else {
                 return Err(malformed("alpha auxiliary terminal geometry"));
             };
+            if node.width == 0
+                || node.height == 0
+                || node.width > node.coded_width
+                || node.height > node.coded_height
+            {
+                return Err(malformed("alpha auxiliary clipped terminal geometry"));
+            }
+            let width = node
+                .width
+                .checked_mul(4)
+                .ok_or_else(|| malformed("alpha auxiliary active width overflows pixels"))?;
+            let height = node
+                .height
+                .checked_mul(4)
+                .ok_or_else(|| malformed("alpha auxiliary active height overflows pixels"))?;
+            if width > nominal_width || height > nominal_height {
+                return Err(malformed(
+                    "alpha auxiliary active extent exceeds nominal block",
+                ));
+            }
             let origin_x = node
                 .x
                 .checked_mul(4)
@@ -11573,6 +11625,8 @@ mod tests {
                 origin_y,
                 width,
                 height,
+                active_grid_width: node.width,
+                active_grid_height: node.height,
                 transform_grid,
                 intra_edges: node.intra_edges,
             };
