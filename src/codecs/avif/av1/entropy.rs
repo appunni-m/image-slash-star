@@ -8812,7 +8812,8 @@ fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
 /// in AV1C, but it has no U/V block syntax or post-filter planes. Keep this
 /// profile deliberately narrow until those independent carriers are wired:
 /// one tile, largest-transform blocks, and no frame-level state that would
-/// require a second plane or a separate publication path.
+/// require a second plane or a separate publication path. Plane-zero
+/// quantization matrices remain on the generic depth-aware coefficient path.
 fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
     complete_monochrome_lossy_base(context)
         && complete_monochrome_cdef_inactive(context)
@@ -8841,10 +8842,7 @@ fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.transform_mode == 1
-        && context
-            .frame_tools
-            .quantization
-            .is_some_and(|quantization| !quantization.using_matrix)
+        && context.frame_tools.quantization.is_some()
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
@@ -8918,6 +8916,10 @@ fn complete_monochrome_postfilter_reconstruction_context(context: &FirstBlockCon
         && context.frame_height >= 8
         && context.frame_width.is_multiple_of(8)
         && context.frame_height.is_multiple_of(8)
+        && context
+            .frame_tools
+            .quantization
+            .is_some_and(|quantization| !quantization.using_matrix)
         && complete_monochrome_cdef_supported(context)
         && complete_monochrome_restoration_supported(context)
 }
