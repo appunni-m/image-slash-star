@@ -6,7 +6,8 @@ use super::bit_reader::{BitReader, SegmentedData};
 use super::entropy;
 use super::geometry::PixelLayout;
 use super::motion::{
-    GlobalMotion, GlobalMotionType, ScaleFactors, TemporalMotionField, relative_distance,
+    GlobalMotion, GlobalMotionType, ProjectedTemporalField, ReferenceFrame, RetainedTemporalSample,
+    ScaleFactors, TemporalMotionField, load_projected_temporal_field, relative_distance,
 };
 use super::resize;
 use super::restoration;
@@ -620,10 +621,29 @@ fn new_temporal_motion_field(
     )
 }
 
+fn populate_temporal_motion_field(
+    field: &mut TemporalMotionField,
+    pending_samples: &[RetainedTemporalSample],
+    current_samples: &[RetainedTemporalSample],
+    inter_frame: bool,
+) -> Av1Result<()> {
+    if !inter_frame && (!pending_samples.is_empty() || !current_samples.is_empty()) {
+        return Err(malformed("intra frame carries retained temporal MVs"));
+    }
+    for sample in pending_samples.iter().chain(current_samples) {
+        if field.get(sample.x8, sample.y8).is_some() {
+            return Err(malformed("duplicate retained temporal-MV sample"));
+        }
+        field.set(sample.x8, sample.y8, Some(sample.entry))?;
+    }
+    Ok(())
+}
+
 fn inter_frame_context<'a>(
     header: &FrameHeader,
     sequence: &SequenceHeader,
     references: &'a [Option<ReferenceState>; REFERENCE_SLOTS],
+    projected_temporal: Option<&'a ProjectedTemporalField>,
 ) -> Av1Result<entropy::InterFrameContext<'a>> {
     if !header.frame_type.is_inter() {
         return Err(malformed("intra frame requested inter reference context"));
@@ -679,6 +699,7 @@ fn inter_frame_context<'a>(
         .map_err(|_| malformed("inter reference table has invalid length"))?;
     Ok(entropy::InterFrameContext {
         references,
+        projected_temporal,
         current_order_hint: header.order_hint,
         order_hint_bits: sequence.order_hint_bits,
         reference_order_hints,
@@ -696,6 +717,51 @@ fn inter_frame_context<'a>(
         enable_masked_compound: sequence.enable_masked_compound,
         enable_jnt_comp: sequence.enable_jnt_comp,
     })
+}
+
+fn projected_temporal_field(
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    references: &[Option<ReferenceState>; REFERENCE_SLOTS],
+) -> Av1Result<Option<ProjectedTemporalField>> {
+    if !header.use_ref_frame_mvs {
+        return Ok(None);
+    }
+    let mut retained = [None; 7];
+    let mut reference_order_hints = [0_u32; 7];
+    for logical in ReferenceFrame::ALL {
+        let index = logical.index();
+        let slot = header
+            .reference_indices
+            .get(index)
+            .copied()
+            .ok_or_else(|| malformed("temporal reference index exceeds seven"))?;
+        let reference = references
+            .get(slot)
+            .and_then(Option::as_ref)
+            .ok_or_else(|| malformed("temporal reference slot is empty"))?;
+        let surface = reference
+            .surface
+            .as_deref()
+            .ok_or_else(|| malformed("temporal reference has no surface"))?;
+        surface.validate()?;
+        retained[index] = Some(&surface.motion);
+        reference_order_hints[index] = reference.header.order_hint;
+    }
+    let width8 = header.frame_width.div_ceil(8);
+    let height8 = header.frame_height.div_ceil(8);
+    Ok(Some(load_projected_temporal_field(
+        header.frame_width,
+        header.frame_height,
+        header.order_hint,
+        sequence.order_hint_bits,
+        reference_order_hints,
+        retained,
+        0,
+        width8,
+        0,
+        height8,
+    )?))
 }
 
 fn invalidate_reference_slots(
@@ -740,6 +806,7 @@ struct PendingFrame {
     first_leaf: Option<super::block::FirstLeaf>,
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
+    temporal_samples: Vec<RetainedTemporalSample>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
 }
 
@@ -1220,6 +1287,7 @@ impl FrameState {
             first_leaf: None,
             complete_color_leaf: None,
             complete_color_tiles: Vec::new(),
+            temporal_samples: Vec::new(),
             complete_monochrome_plane: None,
         });
         Ok(())
@@ -1352,11 +1420,17 @@ impl FrameState {
             return Err(malformed("frame syntax validation failed"));
         }
         bits.byte_align()?;
+        let projected_temporal = if header.frame_type.is_inter() {
+            projected_temporal_field(header, sequence, &pending.staged_references)?
+        } else {
+            None
+        };
         let inter_context = if header.frame_type.is_inter() {
             Some(inter_frame_context(
                 header,
                 sequence,
                 &pending.staged_references,
+                projected_temporal.as_ref(),
             )?)
         } else {
             None
@@ -1387,6 +1461,7 @@ impl FrameState {
             first_leaf: validation.first_leaf,
             complete_color_leaf: validation.complete_color_leaf,
             complete_color_tiles: validation.complete_color_tiles,
+            temporal_samples: validation.temporal_samples,
             complete_monochrome_plane: validation.complete_monochrome_plane,
             selected_cdfs: validation.selected_cdfs,
             segment_map: validation.segment_map,
@@ -1422,6 +1497,14 @@ impl FrameState {
                         "unable to reserve reconstructed AV1 tile state".to_owned(),
                     )
                 })?;
+            pending
+                .temporal_samples
+                .try_reserve(group.temporal_samples.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to reserve retained AV1 temporal-MV samples".to_owned(),
+                    )
+                })?;
             pending.next_tile = next_tile;
             pending.first_leaf = pending.first_leaf.take().or(group.first_leaf);
             pending.complete_color_leaf = pending
@@ -1431,6 +1514,7 @@ impl FrameState {
             pending
                 .complete_color_tiles
                 .extend(group.complete_color_tiles);
+            pending.temporal_samples.extend(group.temporal_samples);
             pending.complete_monochrome_plane = pending
                 .complete_monochrome_plane
                 .take()
@@ -1506,8 +1590,14 @@ impl FrameState {
         let surface_plan = if let Some(leaf) = color_leaf {
             let (depth, layout, strides) =
                 FrameSurface::validate_color_leaf(leaf, &pending.header, sequence)?;
-            let motion =
+            let mut motion =
                 new_temporal_motion_field(&pending.header, sequence, &pending.staged_references)?;
+            populate_temporal_motion_field(
+                &mut motion,
+                &pending.temporal_samples,
+                &group.temporal_samples,
+                pending.header.frame_type.is_inter(),
+            )?;
             SurfacePlan::Color {
                 depth,
                 layout,
@@ -1517,8 +1607,14 @@ impl FrameState {
         } else if let Some(plane) = monochrome_plane {
             let (depth, stride) =
                 FrameSurface::validate_monochrome_plane(plane, &pending.header, sequence)?;
-            let motion =
+            let mut motion =
                 new_temporal_motion_field(&pending.header, sequence, &pending.staged_references)?;
+            populate_temporal_motion_field(
+                &mut motion,
+                &pending.temporal_samples,
+                &group.temporal_samples,
+                pending.header.frame_type.is_inter(),
+            )?;
             SurfacePlan::Monochrome {
                 depth,
                 stride,
@@ -1639,6 +1735,7 @@ struct TileGroup {
     first_leaf: Option<super::block::FirstLeaf>,
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
+    temporal_samples: Vec<RetainedTemporalSample>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
     selected_cdfs: Option<entropy::FrameCdfs>,
     segment_map: Option<entropy::SegmentMap>,
@@ -1649,6 +1746,7 @@ struct TileValidation {
     first_leaf: Option<super::block::FirstLeaf>,
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
+    temporal_samples: Vec<RetainedTemporalSample>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
     selected_cdfs: Option<entropy::FrameCdfs>,
     segment_map: Option<entropy::SegmentMap>,
@@ -2060,6 +2158,7 @@ fn validate_tile_entropy_prefixes(
     let mut first_leaf = None;
     let mut complete_color_leaf = None;
     let mut complete_color_tiles = Vec::new();
+    let mut temporal_samples = Vec::new();
     let mut complete_monochrome_plane = None;
     let mut selected_cdfs = None;
     let mut segment_map = current_segment_map.cloned();
@@ -2190,6 +2289,15 @@ fn validate_tile_entropy_prefixes(
             inter_context,
         )?;
         if let Some(mut reconstruction) = complete {
+            let tile_temporal_samples = std::mem::take(&mut reconstruction.temporal_samples);
+            temporal_samples
+                .try_reserve(tile_temporal_samples.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to allocate AV1 tile-group temporal-MV samples".to_owned(),
+                    )
+                })?;
+            temporal_samples.extend(tile_temporal_samples);
             let tile_cdfs = reconstruction
                 .cdfs
                 .take()
@@ -2297,6 +2405,7 @@ fn validate_tile_entropy_prefixes(
         first_leaf,
         complete_color_leaf,
         complete_color_tiles,
+        temporal_samples,
         complete_monochrome_plane,
         selected_cdfs,
         segment_map,
@@ -3677,6 +3786,7 @@ fn coverage_tile_group(start: u32, end: u32) -> TileGroup {
         first_leaf: None,
         complete_color_leaf: None,
         complete_color_tiles: Vec::new(),
+        temporal_samples: Vec::new(),
         complete_monochrome_plane: None,
         selected_cdfs: None,
         segment_map: None,
@@ -3896,6 +4006,7 @@ fn coverage_pending(header: FrameHeader) -> PendingFrame {
         first_leaf: None,
         complete_color_leaf: None,
         complete_color_tiles: Vec::new(),
+        temporal_samples: Vec::new(),
         complete_monochrome_plane: None,
     }
 }

@@ -12,8 +12,8 @@ use super::mc::distance_weight;
 use super::motion::{
     CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter, MotionMode,
     MotionVector, ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget,
-    ReferencePair, ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField,
-    find_reference_mvs, global_motion_vector, relative_distance,
+    ReferencePair, RetainedTemporalSample, ScaleFactors, SpatialMotionSource, SpatialRefBlock,
+    TemporalMotionField, find_reference_mvs, global_motion_vector, relative_distance,
 };
 use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
@@ -591,6 +591,7 @@ pub(super) struct InterReference<'a> {
 #[derive(Clone, Copy)]
 pub(super) struct InterFrameContext<'a> {
     pub(super) references: [InterReference<'a>; 7],
+    pub(super) projected_temporal: Option<&'a ProjectedTemporalField>,
     pub(super) current_order_hint: u32,
     pub(super) order_hint_bits: u32,
     pub(super) reference_order_hints: [u32; 7],
@@ -629,8 +630,7 @@ impl<'a> InterFrameContext<'a> {
         frame_width_b4: u32,
         frame_height_b4: u32,
         top_has_right: bool,
-        temporal: Option<&ProjectedTemporalField>,
-    ) -> ReferenceMvRequest<'_> {
+    ) -> ReferenceMvRequest<'a> {
         ReferenceMvRequest {
             target,
             block_size,
@@ -653,7 +653,7 @@ impl<'a> InterFrameContext<'a> {
             order_hint_bits: self.order_hint_bits,
             reference_order_hints: self.reference_order_hints,
             use_ref_frame_mvs: self.use_ref_frame_mvs,
-            temporal,
+            temporal: self.projected_temporal,
         }
     }
 }
@@ -2672,6 +2672,7 @@ pub(super) struct Lossy420Reconstruction {
     pub(super) monochrome: bool,
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
+    pub(super) temporal_samples: Vec<RetainedTemporalSample>,
     pub(super) filter_blocks: Vec<super::filter::Block>,
     pub(super) cdef_indices: Vec<Option<usize>>,
     pub(super) cdef_active: Vec<bool>,
@@ -4275,7 +4276,6 @@ fn decode_inter_leaf(
             context.frame_block_width,
             context.frame_block_height,
             node.x.saturating_add(block_width_b4) < context.block_width,
-            None,
         );
         let stack = find_reference_mvs(tile_state, request)?;
         let mode_symbol = decoder.adaptive_symbol(
@@ -4438,7 +4438,6 @@ fn decode_inter_leaf(
             context.frame_block_width,
             context.frame_block_height,
             node.x.saturating_add(block_width_b4) < context.block_width,
-            None,
         );
         let stack = find_reference_mvs(tile_state, request)?;
         let stack_context = stack.context;
@@ -4998,6 +4997,7 @@ impl Lossy420Reconstruction {
             cdef_parameters,
             restoration: _,
             cdfs: _,
+            temporal_samples: _,
         } = self;
         if monochrome {
             return Err(malformed(
@@ -6017,6 +6017,46 @@ pub(super) fn validate_complete_lossy_420_partition(
             map.fill(update.x, update.y, update.width, update.height, update.id)?;
         }
     }
+    let mut temporal_samples = Vec::new();
+    if let Some(inter_context) = inter_context {
+        if context.block_width & 1 != 0
+            || context.block_height & 1 != 0
+            || context.frame_block_width & 1 != 0
+            || context.frame_block_height & 1 != 0
+            || context.tile_origin_b4_x & 1 != 0
+            || context.tile_origin_b4_y & 1 != 0
+        {
+            return Err(malformed("temporal-MV grid has unaligned geometry"));
+        }
+        let origin_x8 = context.tile_origin_b4_x / 2;
+        let origin_y8 = context.tile_origin_b4_y / 2;
+        let frame_width8 = context.frame_block_width / 2;
+        let frame_height8 = context.frame_block_height / 2;
+        for local_y8 in 0..context.block_height / 2 {
+            for local_x8 in 0..context.block_width / 2 {
+                let Some(entry) =
+                    tile_state.temporal_entry_at(local_x8, local_y8, inter_context.sign_bias)?
+                else {
+                    continue;
+                };
+                let x8 = origin_x8
+                    .checked_add(local_x8)
+                    .ok_or_else(|| malformed("temporal-MV x coordinate overflows"))?;
+                let y8 = origin_y8
+                    .checked_add(local_y8)
+                    .ok_or_else(|| malformed("temporal-MV y coordinate overflows"))?;
+                if x8 >= frame_width8 || y8 >= frame_height8 {
+                    return Err(malformed("temporal-MV sample exceeds frame grid"));
+                }
+                temporal_samples.try_reserve(1).map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to allocate AV1 retained temporal-MV samples".to_owned(),
+                    )
+                })?;
+                temporal_samples.push(RetainedTemporalSample { x8, y8, entry });
+            }
+        }
+    }
     let leaf = super::block::FirstLeaf {
         width: context.frame_width,
         height: context.frame_height,
@@ -6043,6 +6083,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         monochrome,
         subsampling_x: context.subsampling_x,
         subsampling_y: context.subsampling_y,
+        temporal_samples,
         filter_blocks,
         cdef_indices,
         cdef_active,
@@ -6455,7 +6496,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && complete_high_depth_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && no_unsupported_film_grain(context)
-        && !inter_context.use_ref_frame_mvs
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)

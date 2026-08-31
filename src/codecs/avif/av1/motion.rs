@@ -1261,24 +1261,36 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
     source: &S,
     request: ReferenceMvRequest<'_>,
 ) -> Av1Result<MotionCandidateStack> {
+    let origin_x_b4 = request
+        .absolute_x_b4
+        .checked_sub(request.local_x_b4)
+        .ok_or_else(|| malformed("reference-MV absolute x precedes local block"))?;
+    let origin_y_b4 = request
+        .absolute_y_b4
+        .checked_sub(request.local_y_b4)
+        .ok_or_else(|| malformed("reference-MV absolute y precedes local block"))?;
+    let tile_left_abs_b4 = origin_x_b4
+        .checked_add(request.tile_left_b4)
+        .ok_or_else(|| malformed("reference-MV absolute tile left overflows"))?;
+    let tile_top_abs_b4 = origin_y_b4
+        .checked_add(request.tile_top_b4)
+        .ok_or_else(|| malformed("reference-MV absolute tile top overflows"))?;
+    let tile_right_abs_b4 = origin_x_b4
+        .checked_add(request.tile_right_b4)
+        .ok_or_else(|| malformed("reference-MV absolute tile right overflows"))?;
+    let tile_bottom_abs_b4 = origin_y_b4
+        .checked_add(request.tile_bottom_b4)
+        .ok_or_else(|| malformed("reference-MV absolute tile bottom overflows"))?;
     if request.tile_left_b4 >= request.tile_right_b4
         || request.tile_top_b4 >= request.tile_bottom_b4
         || request.frame_width_b4 == 0
         || request.frame_height_b4 == 0
-        || request.tile_right_b4 > request.frame_width_b4
-        || request.tile_bottom_b4 > request.frame_height_b4
+        || tile_left_abs_b4 >= tile_right_abs_b4
+        || tile_top_abs_b4 >= tile_bottom_abs_b4
+        || tile_right_abs_b4 > request.frame_width_b4
+        || tile_bottom_abs_b4 > request.frame_height_b4
         || request.local_x_b4 < request.tile_left_b4
         || request.local_y_b4 < request.tile_top_b4
-        || request.absolute_x_b4
-            != request
-                .tile_left_b4
-                .checked_add(request.local_x_b4)
-                .ok_or_else(|| malformed("reference-MV absolute x coordinate overflows"))?
-        || request.absolute_y_b4
-            != request
-                .tile_top_b4
-                .checked_add(request.local_y_b4)
-                .ok_or_else(|| malformed("reference-MV absolute y coordinate overflows"))?
     {
         return Err(malformed("reference-MV tile/block geometry is invalid"));
     }
@@ -1365,9 +1377,12 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
     stack.add_weight_to_range(nearest_count, 640);
 
     let mut globalmv_context = i32::from(request.use_ref_frame_mvs);
-    if let Some(temporal) = request.temporal {
-        let base_x = request.local_x_b4 / 2;
-        let base_y = request.local_y_b4 / 2;
+    if request.use_ref_frame_mvs {
+        let temporal = request
+            .temporal
+            .ok_or_else(|| malformed("reference-MV temporal field is unavailable"))?;
+        let base_x = request.absolute_x_b4 / 2;
+        let base_y = request.absolute_y_b4 / 2;
         let step_h = if block_width >= 16 { 2 } else { 1 };
         let step_v = if block_height >= 16 { 2 } else { 1 };
         let temporal_width = ((width + 1) / 2).min(8);
@@ -1396,12 +1411,14 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
         if block_width.min(block_height) >= 2 && block_width.max(block_height) < 16 {
             let block_width8 = block_width / 2;
             let block_height8 = block_height / 2;
-            let has_bottom = request.local_y_b4.saturating_add(block_height)
-                < request.tile_bottom_b4
+            let has_bottom = request
+                .absolute_y_b4
+                .checked_add(block_height)
+                .is_some_and(|end| end < tile_bottom_abs_b4)
                 && base_y.saturating_add(block_height8)
-                    < ((base_y & !7) + 8).min(request.tile_bottom_b4 / 2);
+                    < ((base_y & !7) + 8).min(tile_bottom_abs_b4 / 2);
             if has_bottom
-                && base_x > request.tile_left_b4 / 2
+                && base_x > tile_left_abs_b4 / 2
                 && let Some(entry) = temporal.get(base_x, base_y.saturating_add(block_height8))
             {
                 add_temporal_candidate(
@@ -1413,8 +1430,7 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
                     None,
                 );
             }
-            if base_x.saturating_add(block_width8)
-                < ((base_x & !7) + 8).min(request.tile_right_b4 / 2)
+            if base_x.saturating_add(block_width8) < ((base_x & !7) + 8).min(tile_right_abs_b4 / 2)
             {
                 if has_bottom
                     && let Some(entry) = temporal.get(
@@ -1432,7 +1448,7 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
                     );
                 }
                 if base_y.saturating_add(block_height8).saturating_sub(1)
-                    < ((base_y & !7) + 8).min(request.tile_bottom_b4 / 2)
+                    < ((base_y & !7) + 8).min(tile_bottom_abs_b4 / 2)
                     && let Some(entry) = temporal.get(
                         base_x.saturating_add(block_width8),
                         base_y.saturating_add(block_height8).saturating_sub(1),
@@ -1921,6 +1937,16 @@ pub(super) struct RetainedTemporalEntry {
 }
 
 pub(super) type TemporalMotion = RetainedTemporalEntry;
+
+/// One sparse retained temporal-MV sample in the current frame's absolute
+/// 8x8 coded grid.  Empty cells are intentionally omitted so tile assembly
+/// can carry only the samples that may be projected by a later frame.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct RetainedTemporalSample {
+    pub(super) x8: u32,
+    pub(super) y8: u32,
+    pub(super) entry: RetainedTemporalEntry,
+}
 
 /// A temporal entry after source-frame relocation. The vector remains the
 /// source-frame MV; `denominator` is the validated source-to-entry order
