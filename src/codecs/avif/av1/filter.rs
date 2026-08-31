@@ -134,6 +134,13 @@ struct Masks {
     levels: Vec<[u8; 4]>,
 }
 
+fn fallible_filled_vec<T: Clone>(length: usize, value: T) -> Option<Vec<T>> {
+    let mut values = Vec::new();
+    values.try_reserve_exact(length).ok()?;
+    values.resize(length, value);
+    Some(values)
+}
+
 fn build_masks(
     dimensions: (usize, usize),
     blocks: &[Block],
@@ -146,12 +153,15 @@ fn build_masks(
     let height_units = height.div_ceil(4);
     let mask_width = width_units.checked_add(1)?;
     let mask_height = height_units.checked_add(1)?;
+    let vertical_len = mask_width.checked_mul(height_units)?;
+    let horizontal_len = mask_height.checked_mul(width_units)?;
+    let levels_len = width_units.checked_mul(height_units)?;
     let mut masks = Masks {
-        vertical: vec![NO_EDGE; mask_width.checked_mul(height_units)?],
-        horizontal: vec![NO_EDGE; mask_height.checked_mul(width_units)?],
+        vertical: fallible_filled_vec(vertical_len, NO_EDGE)?,
+        horizontal: fallible_filled_vec(horizontal_len, NO_EDGE)?,
         width_units,
         height_units,
-        levels: vec![[0; 4]; width_units.checked_mul(height_units)?],
+        levels: fallible_filled_vec(levels_len, [0; 4])?,
     };
 
     for block in blocks {
@@ -437,6 +447,32 @@ fn edge_level(
     ))
 }
 
+struct ReplacementBuffer {
+    entries: [(isize, i32); 12],
+    length: usize,
+}
+
+impl ReplacementBuffer {
+    const fn new() -> Self {
+        Self {
+            entries: [(0, 0); 12],
+            length: 0,
+        }
+    }
+
+    fn extend<const N: usize>(&mut self, values: [(isize, i32); N]) -> Option<()> {
+        let end = self.length.checked_add(N)?;
+        let destination = self.entries.get_mut(self.length..end)?;
+        destination.copy_from_slice(&values);
+        self.length = end;
+        Some(())
+    }
+
+    fn as_slice(&self) -> &[(isize, i32)] {
+        &self.entries[..self.length]
+    }
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "the scalar kernel keeps the validated plane, edge geometry, thresholds, and sample depth explicit"
@@ -585,7 +621,7 @@ fn filter_line(
         && (q4? - q0).abs() <= scale
         && (q5? - q0).abs() <= scale
         && (q6? - q0).abs() <= scale;
-    let mut replacements = Vec::new();
+    let mut replacements = ReplacementBuffer::new();
     if width_filter >= 16 && flat8in && flat8out {
         replacements.extend([
             (
@@ -754,7 +790,7 @@ fn filter_line(
                     + 8)
                     >> 4,
             ),
-        ]);
+        ])?;
     } else if width_filter >= 8 && flat8in {
         replacements.extend([
             (
@@ -772,14 +808,14 @@ fn filter_line(
             (0, (p2? + p1 + p0 + 2 * q0 + q1 + q2? + q3? + 4) >> 3),
             (1, (p1 + p0 + q0 + 2 * q1 + q2? + q3? + q3? + 4) >> 3),
             (2, (p0 + q0 + q1 + 2 * q2? + q3? + q3? + q3? + 4) >> 3),
-        ]);
+        ])?;
     } else if width_filter == 6 && flat8in {
         replacements.extend([
             (-2, (p2? + 2 * p2? + 2 * p1 + 2 * p0 + q0 + 4) >> 3),
             (-1, (p2? + 2 * p1 + 2 * p0 + 2 * q0 + q1 + 4) >> 3),
             (0, (p1 + 2 * p0 + 2 * q0 + 2 * q1 + q2? + 4) >> 3),
             (1, (p0 + 2 * q0 + 2 * q1 + 2 * q2? + q2? + 4) >> 3),
-        ]);
+        ])?;
     } else {
         let hev = (p1 - p0).abs() > h || (q1 - q0).abs() > h;
         let mut delta = 3 * (q0 - p0);
@@ -792,14 +828,14 @@ fn filter_line(
         }
         let f1 = (delta + 4).min(128 * scale - 1) >> 3;
         let f2 = (delta + 3).min(128 * scale - 1) >> 3;
-        replacements.extend([(-1, p0 + f2), (0, q0 - f1)]);
+        replacements.extend([(-1, p0 + f2), (0, q0 - f1)])?;
         if !hev {
             let correction = (f1 + 1) >> 1;
-            replacements.extend([(-2, p1 + correction), (1, q1 - correction)]);
+            replacements.extend([(-2, p1 + correction), (1, q1 - correction)])?;
         }
     }
 
-    for (offset, value) in replacements {
+    for &(offset, value) in replacements.as_slice() {
         let index = if vertical {
             let x = shift_coordinate(coordinate, offset)?;
             secondary_coordinate.checked_mul(width)?.checked_add(x)?

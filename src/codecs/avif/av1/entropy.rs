@@ -4534,6 +4534,11 @@ pub(super) fn validate_complete_lossy_420_partition(
         || context.frame_tools.loop_filter.level_v != 0;
     let collect_cdef = context.frame_tools.cdef.is_some();
     let mut filter_blocks = Vec::<super::filter::Block>::new();
+    if bounded_i444_inter_geometry.is_some_and(|geometry| geometry.expected_leaf_count() == 2) {
+        filter_blocks.try_reserve_exact(2).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
+        })?;
+    }
     let cdef_region_width = usize::try_from(context.frame_width)
         .map_err(|_| malformed("CDEF frame width exceeds usize"))?
         .div_ceil(64);
@@ -4912,6 +4917,11 @@ pub(super) fn validate_complete_lossy_420_partition(
                         .map_err(|_| malformed("loop-filter width exceeds usize"))?;
                     let height = usize::try_from(height)
                         .map_err(|_| malformed("loop-filter height exceeds usize"))?;
+                    filter_blocks.try_reserve(1).map_err(|_| {
+                        CodecError::Dimensions(
+                            "unable to allocate AV1 loop-filter metadata".to_owned(),
+                        )
+                    })?;
                     filter_blocks.push(super::filter::Block {
                         x,
                         y,
@@ -5473,9 +5483,7 @@ fn bounded_i444_inter_reconstruction_geometry(
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.transform_mode == 1
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
+        && bounded_i444_loop_filter_supported(context, geometry)
         && bounded_i444_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
@@ -5487,6 +5495,28 @@ fn bounded_i444_inter_reconstruction_geometry(
         && !inter_context.enable_jnt_comp
         && references_match)
         .then_some(geometry)
+}
+
+fn bounded_i444_loop_filter_supported(
+    context: &FirstBlockContext,
+    geometry: BoundedI444InterGeometry,
+) -> bool {
+    let loop_filter = context.frame_tools.loop_filter;
+    if loop_filter.sharpness > 7
+        || loop_filter.level_y.iter().any(|&level| level > 63)
+        || loop_filter.level_u > 63
+        || loop_filter.level_v > 63
+    {
+        return false;
+    }
+    match geometry {
+        BoundedI444InterGeometry::OneBlock => {
+            loop_filter.level_y == [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::TwoHorizontal | BoundedI444InterGeometry::TwoVertical => {
+            loop_filter.level_y != [0; 2] || (loop_filter.level_u == 0 && loop_filter.level_v == 0)
+        }
+    }
 }
 
 fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
