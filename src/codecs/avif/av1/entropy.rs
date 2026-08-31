@@ -3630,6 +3630,13 @@ fn decode_inter_leaf(
         {
             return Ok(Err(super::block::PortableUnavailable));
         }
+        if context.subsampling_x && !context.subsampling_y && !block_skipped {
+            // The first high-depth I422 tranche only has the complete
+            // zero-residual sentence. Non-skipped chroma needs per-transform
+            // coefficient contexts and a luma-derived transform type, which
+            // are deliberately not inferred from the I420 path.
+            return Ok(Err(super::block::PortableUnavailable));
+        }
     }
     if selected_segment.reference == 0 {
         return Ok(Err(super::block::PortableUnavailable));
@@ -4069,6 +4076,12 @@ fn decode_inter_leaf(
         context.frame_tools.reduced_transform_set,
         quantization.segment_lossless,
     )?;
+    if context.subsampling_x
+        && !context.subsampling_y
+        && !matches!(transform, super::block::Av1TransformType::DctDct)
+    {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
     let leaf = match if compound {
         let second = second_state
             .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
@@ -4273,7 +4286,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
-            || complete_high_depth_inter_420_reconstruction_context(context, inter_context)
+            || complete_high_depth_inter_reconstruction_context(context, inter_context)
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
             || (!context.intra_frame
                 && monochrome_postfilter
@@ -5090,24 +5103,29 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && matches!(context.level, 0 | 1)
 }
 
-/// Exact high-depth 4:2:0 inter tranche admitted by the depth-parametric
+/// Exact high-depth 4:2:0/4:2:2 inter tranche admitted by the depth-parametric
 /// motion-compensation core. The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms
 /// and a closed tool profile until the remaining AV1 syntax families publish
-/// their high-depth state. Every retained reference is checked up front so a
-/// later reference choice cannot narrow the path back to eight-bit geometry.
-fn complete_high_depth_inter_420_reconstruction_context(
+/// their high-depth state. I422 additionally requires skipped residuals and
+/// DCT-DCT chroma, enforced at the block boundary. Every retained reference is
+/// checked up front so a later reference choice cannot narrow the path back to
+/// eight-bit geometry.
+fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
+    let i420 = context.subsampling_x && context.subsampling_y;
+    let i422 = context.subsampling_x && !context.subsampling_y;
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.depth.bits() == context.bit_depth
-            && reference.surface.layout == PixelLayout::I420
+            && (reference.surface.layout == PixelLayout::I420 && i420
+                || reference.surface.layout == PixelLayout::I422 && i422)
+            && !reference.scale.scaled
     });
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
-        && context.subsampling_x
-        && context.subsampling_y
+        && (i420 || i422)
         && !context.superres_enabled
         && context.upscaled_width == context.frame_width
         && !context.monochrome
@@ -5129,6 +5147,7 @@ fn complete_high_depth_inter_420_reconstruction_context(
         && context.frame_tools.cdef.is_none()
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
+        && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable

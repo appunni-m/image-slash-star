@@ -48722,7 +48722,9 @@ impl Lossy420Decoder {
         let layout = chroma_sampling.pixel_layout();
         (matches!(
             chroma_sampling,
-            ChromaSampling::Subsampled420 | ChromaSampling::Monochrome
+            ChromaSampling::Subsampled420
+                | ChromaSampling::Subsampled422
+                | ChromaSampling::Monochrome
         ) && tools.sample_depth == quantization.sample_depth
             && references.iter().all(|reference| {
                 tools.sample_depth == reference.depth && reference.layout == layout
