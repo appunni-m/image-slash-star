@@ -4564,6 +4564,15 @@ pub(super) fn validate_complete_lossy_420_partition(
                 } else {
                     node.block_size
                 };
+                if complete_high_depth_422_intra_reconstruction_context(context)
+                    && syntax_block_size != BlockSize::B16x16
+                {
+                    // This tranche is proved only for the normalized
+                    // B16x16/Square16 terminal. Reject a split before any
+                    // block skip, quantization, or coefficient CDF mutates.
+                    unsupported = true;
+                    return Ok(PartitionVisitControl::Stop);
+                }
                 let streamed_large = super::block::uses_streamed_intra(syntax_block_size);
                 let transform_grid = if streamed_large {
                     None
@@ -4980,6 +4989,7 @@ pub(super) fn validate_complete_lossy_420_partition(
 fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     let high_depth_full = complete_high_depth_full_reconstruction_context(context);
     let high_depth_420 = complete_high_depth_420_reconstruction_context(context);
+    let high_depth_422 = complete_high_depth_422_intra_reconstruction_context(context);
     let simple_422 = context.subsampling_x
         && !context.subsampling_y
         && context.frame_width == 16
@@ -4994,12 +5004,17 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0;
-    (closed_base_reconstruction_context(context) || high_depth_full || high_depth_420)
+    (closed_base_reconstruction_context(context)
+        || high_depth_full
+        || high_depth_420
+        || high_depth_422)
         && !context.all_lossless
         && if high_depth_full {
             !context.subsampling_x && !context.subsampling_y
         } else if high_depth_420 {
             context.subsampling_x && context.subsampling_y
+        } else if high_depth_422 {
+            context.subsampling_x && !context.subsampling_y
         } else {
             (context.subsampling_x && context.subsampling_y)
                 || (!context.subsampling_x && !context.subsampling_y)
@@ -5505,6 +5520,53 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.restoration_types == [None; 3]
         && context.block_x == 0
         && context.block_y == 0
+}
+
+/// Exact high-depth 4:2:2 intra tranche admitted by the normalized streamed
+/// leaf.  The live walker has complete coefficient and predictor carriers for
+/// one B16x16/Square16 terminal (Y 16x16, U/V 8x16); other partition or
+/// transform geometries remain outside this proof until their independent
+/// context grids are wired.
+fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && context.frame_width == 16
+        && context.frame_height == 16
+        && context.upscaled_width == 16
+        && context.block_width == 4
+        && context.block_height == 4
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && matches!(context.level, 0 | 1)
 }
 
 fn record_cdef_metadata(
