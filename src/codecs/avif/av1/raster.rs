@@ -1317,6 +1317,232 @@ impl FrameCanvas {
         crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
     }
 
+    /// Finish a monochrome canvas after applying the frame's Y-only CDEF.
+    ///
+    /// Monochrome AV1 has no UV strength table or UV active map. Keeping this
+    /// operation separate from the three-plane color filter path lets the
+    /// caller prove luma coverage and all CDEF map invariants without asking
+    /// dummy chroma planes to participate. The source is immutable for the
+    /// whole pass, matching the AV1 CDEF requirement that neighboring blocks
+    /// observe the post-reconstruction, pre-CDEF frame.
+    pub(super) fn finish_monochrome_with_cdef(
+        mut self,
+        frame_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        let coded_dimensions = self.plane_dimensions(0);
+        let visible_dimensions = (self.visible_width, self.visible_height);
+        let (coded_width, coded_height) = coded_dimensions;
+        if coded_width == 0 || coded_height == 0 || coded_width % 8 != 0 || coded_height % 8 != 0 {
+            return Err(malformed(
+                "monochrome CDEF requires complete luma 8x8 blocks",
+            ));
+        }
+        let required_dimensions = if frame_parameters.is_some() {
+            coded_dimensions
+        } else {
+            visible_dimensions
+        };
+        for row in 0..required_dimensions.1 {
+            let start = row
+                .checked_mul(coded_width)
+                .ok_or_else(|| malformed("monochrome coverage row offset overflows"))?;
+            let end = start
+                .checked_add(required_dimensions.0)
+                .ok_or_else(|| malformed("monochrome coverage row end overflows"))?;
+            if self.written[0]
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed(
+                    "monochrome canvas is missing reconstructed samples",
+                ));
+            }
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome canvas sample exceeds bit depth"));
+        }
+
+        if let Some(frame) = frame_parameters {
+            if frame.bit_depth != sample_depth.bits()
+                || !(1..=4).contains(&frame.y_strength_count)
+                || frame.uv_strength_count != 0
+            {
+                return Err(malformed("monochrome CDEF strength tables are invalid"));
+            }
+            let expected_count = match frame.y_strength_count {
+                1 => 1,
+                2 => 2,
+                4 => 4,
+                _ => 0,
+            };
+            if expected_count == 0 || frame.y_strength_count != expected_count {
+                return Err(malformed("monochrome CDEF strength count is invalid"));
+            }
+            if frame.damping < 3 || frame.damping > 6 {
+                return Err(malformed("monochrome CDEF damping is invalid"));
+            }
+            let active_width = coded_width.div_ceil(8);
+            let active_height = coded_height.div_ceil(8);
+            let active_length = active_width
+                .checked_mul(active_height)
+                .ok_or_else(|| malformed("monochrome CDEF active map overflows"))?;
+            if cdef_active.len() != active_length {
+                return Err(malformed("monochrome CDEF active map has the wrong extent"));
+            }
+            let region_width = coded_width.div_ceil(64);
+            let region_height = coded_height.div_ceil(64);
+            let region_length = region_width
+                .checked_mul(region_height)
+                .ok_or_else(|| malformed("monochrome CDEF index map overflows"))?;
+            if cdef_indices.len() != region_length {
+                return Err(malformed("monochrome CDEF index map has the wrong extent"));
+            }
+            for index in cdef_indices.iter().flatten() {
+                if *index >= frame.y_strength_count {
+                    return Err(malformed("monochrome CDEF index is out of range"));
+                }
+            }
+            for (index, &active) in cdef_active.iter().enumerate() {
+                if !active {
+                    continue;
+                }
+                let row = index / active_width;
+                let column = index % active_width;
+                let region_index = row
+                    .checked_mul(8)
+                    .and_then(|y| y.checked_div(64))
+                    .and_then(|region_y| {
+                        column
+                            .checked_mul(8)
+                            .and_then(|x| x.checked_div(64))
+                            .and_then(|region_x| {
+                                region_y.checked_mul(region_width)?.checked_add(region_x)
+                            })
+                    })
+                    .ok_or_else(|| malformed("monochrome CDEF region index overflows"))?;
+                if cdef_indices
+                    .get(region_index)
+                    .and_then(|entry| *entry)
+                    .is_none()
+                {
+                    return Err(malformed(
+                        "monochrome CDEF active block has no region index",
+                    ));
+                }
+            }
+
+            let source = &self.planes[0];
+            let source_len = coded_width
+                .checked_mul(coded_height)
+                .ok_or_else(|| malformed("monochrome CDEF output size overflows"))?;
+            let mut output = Vec::new();
+            output
+                .try_reserve(source_len)
+                .map_err(|_| malformed("unable to allocate monochrome CDEF output"))?;
+            output.extend_from_slice(source);
+            let mut block_output = [0_u16; 64];
+            for (active_index, &active) in cdef_active.iter().enumerate() {
+                if !active {
+                    continue;
+                }
+                let block_x = (active_index % active_width)
+                    .checked_mul(8)
+                    .ok_or_else(|| malformed("monochrome CDEF block x overflows"))?;
+                let block_y = (active_index / active_width)
+                    .checked_mul(8)
+                    .ok_or_else(|| malformed("monochrome CDEF block y overflows"))?;
+                let region_index = (block_y / 64)
+                    .checked_mul(region_width)
+                    .and_then(|row| row.checked_add(block_x / 64))
+                    .ok_or_else(|| malformed("monochrome CDEF region index overflows"))?;
+                let cdef_index = cdef_indices
+                    .get(region_index)
+                    .and_then(|entry| *entry)
+                    .ok_or_else(|| malformed("monochrome CDEF region index is missing"))?;
+                let strength = *frame
+                    .y_strengths
+                    .get(cdef_index)
+                    .ok_or_else(|| malformed("monochrome CDEF strength is missing"))?;
+                let primary_code = strength >> 2;
+                let secondary_code = strength & 3;
+                let shift = sample_depth.bits().saturating_sub(8);
+                let primary_strength = primary_code
+                    .checked_shl(shift)
+                    .ok_or_else(|| malformed("monochrome CDEF primary strength overflows"))?;
+                let secondary_strength = secondary_code
+                    .saturating_add(u32::from(secondary_code == 3))
+                    .checked_shl(shift)
+                    .ok_or_else(|| malformed("monochrome CDEF secondary strength overflows"))?;
+                let mut parameters = CdefParameters {
+                    primary_strength,
+                    secondary_strength,
+                    direction: 0,
+                    damping: frame.damping.saturating_add(shift),
+                    bit_depth: frame.bit_depth,
+                };
+                if primary_strength != 0 {
+                    let (direction, variance) = cdef::direction_for_block(
+                        source,
+                        coded_dimensions,
+                        CdefBlock {
+                            x: block_x,
+                            y: block_y,
+                            width: 8,
+                            height: 8,
+                        },
+                        frame.bit_depth,
+                    )
+                    .ok_or_else(|| malformed("monochrome CDEF direction is unavailable"))?;
+                    parameters.direction =
+                        if cdef::adjust_primary_strength(primary_strength, variance) == 0 {
+                            0
+                        } else {
+                            direction
+                        };
+                    parameters.primary_strength =
+                        cdef::adjust_primary_strength(primary_strength, variance);
+                }
+                let block = CdefBlock {
+                    x: block_x,
+                    y: block_y,
+                    width: 8,
+                    height: 8,
+                };
+                cdef::filter_block_into(
+                    source,
+                    coded_dimensions,
+                    block,
+                    parameters,
+                    &mut block_output,
+                )
+                .ok_or_else(|| malformed("monochrome CDEF block exceeds its source plane"))?;
+                for row in 0..8 {
+                    let destination = block_y
+                        .checked_add(row)
+                        .and_then(|y| y.checked_mul(coded_width))
+                        .and_then(|row| row.checked_add(block_x))
+                        .ok_or_else(|| malformed("monochrome CDEF output offset overflows"))?;
+                    let end = destination
+                        .checked_add(8)
+                        .ok_or_else(|| malformed("monochrome CDEF output end overflows"))?;
+                    let source_start = row * 8;
+                    output[destination..end]
+                        .copy_from_slice(&block_output[source_start..source_start + 8]);
+                }
+            }
+            self.planes[0] = output;
+        }
+
+        let [luma, _, _] = self.planes;
+        crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
+    }
+
     // The frame walker passes the frame-header strengths here. CDEF direction
     // selection is derived from the immutable post-deblock luma source, while
     // each chroma block uses the corresponding luma direction.
@@ -1506,13 +1732,16 @@ impl FrameCanvas {
                             continue;
                         }
                         let secondary = strength & 3;
-                        let base = CdefParameters {
-                            primary_strength: strength >> 2,
-                            secondary_strength: if secondary == 3 { 4 } else { secondary },
-                            direction: 0,
-                            damping: frame.damping.saturating_sub(u32::from(plane != 0)),
-                            bit_depth: frame.bit_depth,
-                        };
+                        let base = scale_cdef_parameters(
+                            CdefParameters {
+                                primary_strength: strength >> 2,
+                                secondary_strength: if secondary == 3 { 4 } else { secondary },
+                                direction: 0,
+                                damping: frame.damping.saturating_sub(u32::from(plane != 0)),
+                                bit_depth: frame.bit_depth,
+                            },
+                            frame.bit_depth,
+                        )?;
                         let direction = cdef::direction_for_block(
                             &source[0],
                             luma_dimensions,
@@ -1554,6 +1783,7 @@ impl FrameCanvas {
                         let Some(base) = scalar_parameters else {
                             continue;
                         };
+                        let base = scale_cdef_parameters(base, base.bit_depth)?;
                         if plane == 0 {
                             let Some((direction, variance)) = cdef::direction_for_block(
                                 &source[0],
@@ -1730,6 +1960,26 @@ impl FrameCanvas {
             (chroma_width, chroma_height),
         ]
     }
+}
+
+fn scale_cdef_parameters(parameters: CdefParameters, bit_depth: u32) -> Av1Result<CdefParameters> {
+    let shift = bit_depth
+        .checked_sub(8)
+        .ok_or_else(|| malformed("CDEF bit depth is below eight"))?;
+    let primary_strength = parameters
+        .primary_strength
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("CDEF primary strength overflows"))?;
+    let secondary_strength = parameters
+        .secondary_strength
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("CDEF secondary strength overflows"))?;
+    Ok(CdefParameters {
+        primary_strength,
+        secondary_strength,
+        damping: parameters.damping.saturating_add(shift),
+        ..parameters
+    })
 }
 
 fn crop_canvas_plane(

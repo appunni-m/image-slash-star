@@ -100,6 +100,40 @@ pub(super) fn restore_i420_leaf(
     Ok(leaf)
 }
 
+/// Apply the bounded single-unit restoration plan to one monochrome frame.
+///
+/// The entropy admission proves that only plane zero is active and that the
+/// frame fits inside one restoration unit. This boundary still checks the
+/// dimensions and sample buffer before invoking the depth-aware kernels, and
+/// it consumes a private plane so a failure cannot publish partial state.
+pub(super) fn restore_monochrome_plane(
+    mut plane: ReconstructedPlane,
+    width: u32,
+    height: u32,
+    plan: Plan,
+    depth: SampleDepth,
+) -> Av1Result<ReconstructedPlane> {
+    if plan.units[1].is_some() || plan.units[2].is_some() {
+        return Err(malformed("monochrome restoration carries a chroma unit"));
+    }
+    let unit = plan.units[0];
+    if unit.is_none() {
+        return Ok(plane);
+    }
+    match unit.ok_or_else(|| malformed("monochrome restoration unit is missing"))? {
+        Unit::None => {}
+        Unit::Wiener {
+            horizontal,
+            vertical,
+        } => restore_wiener_plane(&mut plane, (width, height), horizontal, vertical, depth)?,
+        Unit::SgrProjection {
+            parameter_index,
+            weights,
+        } => restore_sgr_plane(&mut plane, (width, height), parameter_index, weights, depth)?,
+    }
+    Ok(plane)
+}
+
 fn restore_wiener_plane(
     plane: &mut ReconstructedPlane,
     (width, height): (u32, u32),

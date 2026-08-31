@@ -4231,16 +4231,20 @@ impl Lossy420Reconstruction {
 
     /// Extract a complete monochrome plane from the shared walker result.
     ///
-    /// The monochrome tranche admits only inactive filters, so no color-shaped
-    /// post-filter canvas is needed here. Plane zero has already been checked
-    /// for full coverage by `FrameCanvas::finish_monochrome`.
+    /// The plane is moved out of the private three-carrier leaf. The caller
+    /// applies any admitted frame-level CDEF/restoration stages before
+    /// publishing the resulting surface.
     pub(super) fn into_monochrome_plane(self) -> Av1Result<super::block::ReconstructedPlane> {
-        if !self.monochrome {
+        let Lossy420Reconstruction {
+            leaf, monochrome, ..
+        } = self;
+        if !monochrome {
             return Err(malformed(
                 "color reconstruction cannot enter the monochrome surface path",
             ));
         }
-        Ok(self.leaf.planes[0].clone())
+        let [plane, _, _] = leaf.planes;
+        Ok(plane)
     }
 }
 
@@ -4266,15 +4270,20 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_bounded_restoration_inter_420_reconstruction_context(context);
     let monochrome_intra_reconstruction =
         complete_monochrome_lossy_intra_reconstruction_context(context);
+    let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_420_reconstruction_context(context, inter_context)
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
+            || (!context.intra_frame
+                && monochrome_postfilter
+                && complete_monochrome_references(context, inter_context))
             || bounded_inter_restoration
     });
     let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
         || complete_superres_lossy_420_reconstruction_context(context)
         || monochrome_intra_reconstruction
+        || (context.intra_frame && monochrome_postfilter)
         || bounded_intra_restoration;
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
@@ -4307,7 +4316,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     }
     #[cfg(coverage)]
     decoder.enable_operation_trace();
-    let restoration_plan = if bounded_intra_restoration || bounded_inter_restoration {
+    let restoration_plan = if bounded_intra_restoration
+        || bounded_inter_restoration
+        || (monochrome_postfilter && context.restoration_types[0].is_some())
+    {
         let Some(plan) =
             decode_bounded_restoration_plan(&mut decoder, context, &mut tile_cdfs.restoration)
         else {
@@ -4786,7 +4798,18 @@ pub(super) fn validate_complete_lossy_420_partition(
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
     let (planes, monochrome) = if context.monochrome {
-        let plane = canvas.finish_monochrome()?;
+        let plane = if monochrome_postfilter {
+            let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("monochrome CDEF sample depth is unsupported"))?;
+            canvas.finish_monochrome_with_cdef(
+                cdef_frame_parameters,
+                &cdef_indices,
+                &cdef_active,
+                depth,
+            )?
+        } else {
+            canvas.finish_monochrome()?
+        };
         let planes = [plane.clone(), plane.clone(), plane];
         (planes, true)
     } else {
@@ -5127,6 +5150,12 @@ fn complete_high_depth_inter_420_reconstruction_context(
 /// one tile, largest-transform blocks, no active filtering, and no frame-level
 /// state that would require a second plane or a separate publication path.
 fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
+    complete_monochrome_lossy_base(context)
+        && complete_monochrome_cdef_inactive(context)
+        && context.restoration_types == [None; 3]
+}
+
+fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
     let dimensions_are_supported = context.frame_width >= 4
         && context.frame_height >= 4
         && context.frame_width <= 64
@@ -5136,19 +5165,10 @@ fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
         && context.block_width == context.frame_width / 4
         && context.block_height == context.frame_height / 4
         && context.upscaled_width == context.frame_width;
-    let cdef_is_inactive = context.frame_tools.cdef.is_none_or(|cdef| {
-        cdef.bits == 0
-            && cdef.y_strength_count == 1
-            && cdef.first_y_strength == Some(0)
-            && cdef.y_strengths[0] == 0
-            && cdef.uv_strength_count == 0
-            && cdef.first_uv_strength.is_none()
-    });
     context.single_tile
         && context.monochrome
         && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
-        && context.upscaled_width == context.frame_width
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
@@ -5164,13 +5184,77 @@ fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && cdef_is_inactive
-        && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
         && context.block_x == 0
         && context.block_y == 0
         && context.level == 1
         && dimensions_are_supported
+}
+
+fn complete_monochrome_cdef_inactive(context: &FirstBlockContext) -> bool {
+    let cdef_is_inactive = context.frame_tools.cdef.is_none_or(|cdef| {
+        cdef.bits == 0
+            && cdef.y_strength_count == 1
+            && cdef.first_y_strength == Some(0)
+            && cdef.y_strengths[0] == 0
+            && cdef.uv_strength_count == 0
+            && cdef.first_uv_strength.is_none()
+    });
+    cdef_is_inactive
+}
+
+fn complete_monochrome_cdef_supported(context: &FirstBlockContext) -> bool {
+    context.frame_tools.cdef.is_none_or(|cdef| {
+        let expected_count = match cdef.bits {
+            0 => 1,
+            1 => 2,
+            2 => 4,
+            _ => return false,
+        };
+        cdef.damping == cdef.damping.clamp(3, 6)
+            && cdef.y_strength_count == expected_count
+            && cdef.first_y_strength.is_some()
+            && cdef.uv_strength_count == 0
+            && cdef.first_uv_strength.is_none()
+    })
+}
+
+fn complete_monochrome_restoration_supported(context: &FirstBlockContext) -> bool {
+    if context.restoration_types[1].is_some() || context.restoration_types[2].is_some() {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return true;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) || !(6..=8).contains(&context.restoration_unit_size_log2[0])
+        || context.frame_height > 56
+    {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(context.restoration_unit_size_log2[0]) else {
+        return false;
+    };
+    let Some(width_with_half) = context.frame_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> context.restoration_unit_size_log2[0]).max(1) == 1
+        && (height_with_half >> context.restoration_unit_size_log2[0]).max(1) == 1
+}
+
+fn complete_monochrome_postfilter_reconstruction_context(context: &FirstBlockContext) -> bool {
+    complete_monochrome_lossy_base(context)
+        && context.frame_width >= 8
+        && context.frame_height >= 8
+        && context.frame_width.is_multiple_of(8)
+        && context.frame_height.is_multiple_of(8)
+        && complete_monochrome_cdef_supported(context)
+        && complete_monochrome_restoration_supported(context)
 }
 
 fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
@@ -5185,14 +5269,20 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    let references_match = inter_context.references.iter().all(|reference| {
-        reference.surface.layout == PixelLayout::Monochrome
-            && reference.surface.depth.bits() == context.bit_depth
-    });
     !context.intra_frame
         && complete_monochrome_lossy_common(context)
         && !inter_context.reference_mode_select
-        && references_match
+        && complete_monochrome_references(context, inter_context)
+}
+
+fn complete_monochrome_references(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    inter_context.references.iter().all(|reference| {
+        reference.surface.layout == PixelLayout::Monochrome
+            && reference.surface.depth.bits() == context.bit_depth
+    })
 }
 
 /// Color all-lossless frames share the canonical streamed coefficient state

@@ -186,6 +186,25 @@ pub(crate) fn filter_block(
     block: Block,
     parameters: Parameters,
 ) -> Option<Vec<u16>> {
+    let output_length = block.width.checked_mul(block.height)?;
+    let mut output = vec![0_u16; output_length];
+    filter_block_into(source, dimensions, block, parameters, &mut output)?;
+    Some(output)
+}
+
+/// Filter one reconstructed block into caller-owned storage.
+///
+/// The bounded frame paths use this entry point with a reusable stack scratch
+/// buffer (or a fallibly allocated frame output), so a malformed image never
+/// depends on an infallible per-block allocation. The scalar `filter_block`
+/// wrapper above remains available for the existing small callers.
+pub(crate) fn filter_block_into(
+    source: &[u16],
+    dimensions: (usize, usize),
+    block: Block,
+    parameters: Parameters,
+    output: &mut [u16],
+) -> Option<()> {
     let (width, height) = dimensions;
     let Block {
         x,
@@ -219,7 +238,9 @@ pub(crate) fn filter_block(
     let primary_taps = PRIMARY_TAPS[tap_set];
     let secondary_taps = SECONDARY_TAPS[tap_set];
     let damping = i32::try_from(damping).ok()?;
-    let mut output = vec![0_u16; block_width.checked_mul(block_height)?];
+    if output.len() != block_width.checked_mul(block_height)? {
+        return None;
+    }
 
     for row in 0..block_height {
         for column in 0..block_width {
@@ -285,7 +306,7 @@ pub(crate) fn filter_block(
             *output.get_mut(output_index)? = u16::try_from(filtered).ok()?;
         }
     }
-    Some(output)
+    Some(())
 }
 
 fn maximum_sample(bit_depth: u32) -> Option<u16> {
