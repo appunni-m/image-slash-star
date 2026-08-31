@@ -5391,8 +5391,7 @@ fn bounded_i422_restoration_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
 ) -> bool {
-    matches!(context.bit_depth, 10 | 12)
-        && context.subsampling_x
+    context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
         && context.single_tile
@@ -5443,7 +5442,9 @@ fn complete_bounded_i422_restoration_intra_reconstruction_context(
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
     };
-    context.intra_frame && bounded_i422_restoration_common(context, quantization)
+    context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && bounded_i422_restoration_common(context, quantization)
 }
 
 fn complete_bounded_i422_restoration_inter_reconstruction_context(
@@ -5467,6 +5468,7 @@ fn complete_bounded_i422_restoration_inter_reconstruction_context(
             )
     });
     !context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
         && bounded_i422_restoration_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
