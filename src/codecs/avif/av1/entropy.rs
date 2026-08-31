@@ -4413,10 +4413,14 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i444_restoration = inter_context.is_some_and(|inter_context| {
         complete_bounded_i444_restoration_inter_reconstruction_context(context, inter_context)
     });
+    let bounded_i444_intra_restoration_geometry = bounded_i444_intra_restoration_geometry(context);
+    let bounded_i444_intra_restoration = bounded_i444_intra_restoration_geometry.is_some();
     let bounded_i444_geometry = if bounded_i444_inter {
         bounded_i444_inter_geometry
     } else if bounded_i444_restoration {
         bounded_i444_geometry_for_context(context)
+    } else if bounded_i444_intra_restoration {
+        bounded_i444_intra_restoration_geometry
     } else {
         None
     };
@@ -4435,7 +4439,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         || complete_superres_lossy_420_reconstruction_context(context)
         || monochrome_intra_reconstruction
         || (context.intra_frame && monochrome_postfilter)
-        || bounded_intra_restoration;
+        || bounded_intra_restoration
+        || bounded_i444_intra_restoration;
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
         || segmentation
@@ -4470,6 +4475,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let restoration_plan = if bounded_intra_restoration
         || bounded_inter_restoration
         || bounded_i444_restoration
+        || bounded_i444_intra_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
     {
         let Some(plan) =
@@ -4623,6 +4629,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 if complete_high_depth_422_intra_reconstruction_context(context)
                     || bounded_i444_inter
                     || bounded_i444_restoration
+                    || bounded_i444_intra_restoration
                 {
                     if let Some(geometry) = bounded_i444_geometry {
                         if !bounded_i444_expected_terminal(geometry, bounded_i444_leaf_count, node)
@@ -5457,6 +5464,61 @@ fn bounded_i444_geometry_for_context(
 
 fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present || context.bit_depth == 8
+}
+
+/// Exact bounded 4:4:4 intra tranche with one Wiener/SGR unit per plane.
+///
+/// The generic intra block engine already carries full-resolution spatial
+/// edges, mode CDFs, and coefficient state for the three normalized geometries
+/// returned by `bounded_i444_geometry_for_context`. Keep this admission
+/// separate from the inter restoration predicate so an intra tile never
+/// inherits reference or motion requirements.
+fn bounded_i444_intra_restoration_geometry(
+    context: &FirstBlockContext,
+) -> Option<BoundedI444InterGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_i444_geometry_for_context(context)?;
+    (context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && context.upscaled_width == context.frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && bounded_i444_film_grain_supported(context)
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && bounded_i444_loop_filter_supported(context, geometry)
+        && bounded_i444_cdef_supported(context)
+        && context.frame_tools.restoration_present
+        && context.restoration_types.iter().any(Option::is_some)
+        && context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+        && bounded_i444_restoration_units_supported(context, geometry))
+    .then_some(geometry)
 }
 
 fn bounded_i444_inter_reconstruction_geometry(
