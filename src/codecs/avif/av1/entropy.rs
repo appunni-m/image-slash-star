@@ -6352,9 +6352,11 @@ fn complete_inter_422_reconstruction_context(
 /// full-resolution MC path as unscaled references. Compound, inter-intra, and
 /// OBMC syntax remain enabled; frame-level postfilters and film grain stay
 /// closed until their broad I444 geometry classes have independent composition
-/// evidence. Tile-local reconstructions are assembled into one complete frame.
-/// Root-scoped delta-Q is decoded by the shared prepared-quantization path;
-/// delta-LF remains closed with the other loop-filter metadata.
+/// evidence. Film grain is display-only and limited to the shared bounded
+/// dimension whitelist. Tile-local reconstructions are assembled into one
+/// complete frame. Root-scoped delta-Q is decoded by the shared
+/// prepared-quantization path; delta-LF remains closed with the other
+/// loop-filter metadata.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6381,7 +6383,7 @@ fn complete_inter_444_reconstruction_context(
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && !context.frame_tools.film_grain_present
+        && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
