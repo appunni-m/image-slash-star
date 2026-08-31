@@ -4435,6 +4435,16 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_bounded_i422_cdef_inter_reconstruction_context(context, inter_context)
     });
     let bounded_i422_cdef = bounded_i422_intra_cdef || bounded_i422_inter_cdef;
+    let bounded_i420_intra_loop = complete_bounded_i420_loop_intra_reconstruction_context(context);
+    let bounded_i420_inter_loop = inter_context.is_some_and(|inter_context| {
+        complete_bounded_i420_loop_inter_reconstruction_context(context, inter_context)
+    });
+    let bounded_i420_loop = bounded_i420_intra_loop || bounded_i420_inter_loop;
+    let bounded_i422_intra_loop = complete_bounded_i422_loop_intra_reconstruction_context(context);
+    let bounded_i422_inter_loop = inter_context.is_some_and(|inter_context| {
+        complete_bounded_i422_loop_inter_reconstruction_context(context, inter_context)
+    });
+    let bounded_i422_loop = bounded_i422_intra_loop || bounded_i422_inter_loop;
     let bounded_i444_intra_restoration_geometry = bounded_i444_intra_restoration_geometry(context);
     let bounded_i444_intra_restoration = bounded_i444_intra_restoration_geometry.is_some();
     let bounded_i444_intra_cdef_geometry = bounded_i444_intra_cdef_geometry(context);
@@ -4468,6 +4478,8 @@ pub(super) fn validate_complete_lossy_420_partition(
             || bounded_i420_inter_restoration
             || bounded_i420_inter_cdef
             || bounded_i422_inter_cdef
+            || bounded_i420_inter_loop
+            || bounded_i422_inter_loop
     });
     let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
         || complete_superres_lossy_420_reconstruction_context(context)
@@ -4479,6 +4491,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i420_intra_restoration
         || bounded_i420_intra_cdef
         || bounded_i422_intra_cdef
+        || bounded_i420_intra_loop
+        || bounded_i422_intra_loop
         || bounded_i444_intra_cdef
         || bounded_i444_intra_loop;
     let segmentation = context.frame_tools.segmentation;
@@ -4678,6 +4692,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     || bounded_i422_cdef
                     || bounded_i444_intra_cdef
                     || bounded_i444_intra_loop
+                    || bounded_i420_loop
+                    || bounded_i422_loop
                 {
                     if let Some(geometry) = bounded_i444_geometry {
                         if !bounded_i444_expected_terminal(geometry, bounded_i444_leaf_count, node)
@@ -5847,6 +5863,144 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_i422_cdef_common(context, quantization)
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match
+}
+
+/// Common frame-level proof for the first high-depth I420/I422 loop-filter
+/// tranche. The one B16x16 leaf has no internal edge on either subsampled
+/// layout, but retaining the complete bounded header still keeps every
+/// nonzero level and sharpness value within the checked AV1 domain. Filter
+/// metadata is therefore accepted without widening the partition or tool
+/// surface that the block path can safely publish.
+fn bounded_high_depth_subsampled_loop_common(
+    context: &FirstBlockContext,
+    quantization: QuantizationContext,
+) -> bool {
+    let i420 = context.subsampling_x && context.subsampling_y;
+    let i422 = context.subsampling_x && !context.subsampling_y;
+    let loop_filter = context.frame_tools.loop_filter;
+    (i420 || i422)
+        && !context.monochrome
+        && context.single_tile
+        && context.frame_width == 16
+        && context.frame_height == 16
+        && context.upscaled_width == 16
+        && context.block_width == 4
+        && context.block_height == 4
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && loop_filter.sharpness <= 7
+        && loop_filter.level_y.iter().all(|&level| level <= 63)
+        && loop_filter.level_u <= 63
+        && loop_filter.level_v <= 63
+        && (loop_filter.level_y != [0; 2] || loop_filter.level_u != 0 || loop_filter.level_v != 0)
+}
+
+fn complete_bounded_i420_loop_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && context.subsampling_y
+        && bounded_high_depth_subsampled_loop_common(context, quantization)
+}
+
+fn complete_bounded_i420_loop_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I420
+            && reference.surface.coded_width == 16
+            && reference.surface.upscaled_width == 16
+            && reference.surface.frame_height == 16
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    !context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && bounded_high_depth_subsampled_loop_common(context, quantization)
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match
+}
+
+fn complete_bounded_i422_loop_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && !context.subsampling_y
+        && bounded_high_depth_subsampled_loop_common(context, quantization)
+}
+
+fn complete_bounded_i422_loop_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I422
+            && reference.surface.coded_width == 16
+            && reference.surface.upscaled_width == 16
+            && reference.surface.frame_height == 16
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    !context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && bounded_high_depth_subsampled_loop_common(context, quantization)
         && !inter_context.reference_mode_select
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable
