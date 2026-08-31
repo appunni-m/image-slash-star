@@ -6656,7 +6656,34 @@ fn closed_lossy_444_16x16_reconstruction_context(context: &FirstBlockContext) ->
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
     };
-    let complete = complete_lossy_420_reconstruction_context(context);
+    let complete = context.intra_frame
+        && context.bit_depth == 8
+        && !context.superres_enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.monochrome
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && context.frame_tools.cdef.is_none()
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.transform_mode == 1
+        && !context.frame_tools.reduced_transform_set
+        && !quantization.using_matrix
+        && quantization.base != 0
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && matches!(context.level, 0 | 1);
     let geometry = !context.subsampling_x
         && !context.subsampling_y
         && context.frame_width == 16
@@ -6667,24 +6694,7 @@ fn closed_lossy_444_16x16_reconstruction_context(context: &FirstBlockContext) ->
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1);
-    let no_delta_q = !context.frame_tools.delta_q_present;
-    let no_cdef = context.frame_tools.cdef.is_none();
-    let zero_loop_filter = context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0;
-    let transform_state =
-        context.frame_tools.transform_mode == 1 && !context.frame_tools.reduced_transform_set;
-    let segment_state = !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base;
-    let quantization_state = quantization.base != 0;
-    complete
-        && geometry
-        && no_delta_q
-        && no_cdef
-        && zero_loop_filter
-        && transform_state
-        && segment_state
-        && quantization_state
+    complete && geometry && bounded_i444_film_grain_supported(context)
 }
 
 fn closed_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
