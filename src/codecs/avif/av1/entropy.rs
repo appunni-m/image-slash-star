@@ -5797,7 +5797,9 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// translation is currently materialized, while OBMC and LOCALWARP selections
 /// remain transactional unsupported outcomes. Every retained reference is
 /// checked up front so a later reference choice cannot narrow the path back to
-/// eight-bit geometry.
+/// eight-bit geometry. An all-NONE restoration header is a semantic no-op: it
+/// carries no tile restoration units or postfilter plan, while active
+/// restoration types remain outside this generic class.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -5827,7 +5829,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.frame_tools.delta_lf_present
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
