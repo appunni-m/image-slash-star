@@ -6248,13 +6248,35 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
         && !context.subsampling_y
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && !context.frame_tools.film_grain_present
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
         && dimensions_are_supported
         && context.all_lossless
         && context.restoration_types == [None; 3]
+        && (!context.frame_tools.film_grain_present
+            || exact_lossless_i444_film_grain_profile(context))
+}
+
+fn exact_lossless_i444_film_grain_profile(context: &FirstBlockContext) -> bool {
+    context.bit_depth == 8
+        && context.frame_width == 16
+        && context.frame_height == 16
+        && context.upscaled_width == 16
+        && context.block_width == 4
+        && context.block_height == 4
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && context.single_tile
+        && !context.frame_tools.segmentation.enabled
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && context.frame_tools.cdef.is_none()
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && !context.frame_tools.restoration_present
 }
 
 fn lossy_quantization_for_context(
