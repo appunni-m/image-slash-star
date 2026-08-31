@@ -16,7 +16,7 @@ use super::motion::{
 };
 use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
-use super::tile_state::{BlockCoding, BlockCommitMetadata, TileState};
+use super::tile_state::{BlockCoding, BlockCommitMetadata, NeighborMeta, TileState};
 use super::{Av1Result, malformed};
 
 const WINDOW_BITS: i32 = 64;
@@ -2994,6 +2994,124 @@ fn has_overlappable_neighbor(tile_state: &TileState, node: PartitionNode) -> Av1
     Ok(false)
 }
 
+/// Find the causal single-reference neighbours that make LOCALWARP syntax
+/// available for one block. The AV1 decoder scans the complete top and left
+/// edges, then optionally admits the top-left and top-right corner samples.
+/// Compound neighbours are valid for the outer OBMC-overlap test, but they
+/// must never become local-warp samples for a single-reference block.
+fn has_matching_warp_reference(
+    tile_state: &TileState,
+    node: PartitionNode,
+    reference: ReferenceFrame,
+    layout: PixelLayout,
+) -> Av1Result<bool> {
+    let (width, height) = node.block_size.mi_dimensions();
+    let have_top = node.y != 0;
+    let have_left = node.x != 0;
+    let top_right_x = node
+        .x
+        .checked_add(width)
+        .ok_or_else(|| malformed("top-right warp-neighbour x overflows"))?;
+    let mut have_topleft = have_top && have_left;
+    let mut have_topright =
+        width.max(height) < 32 && have_top && node.intra_edges.top_has_right(layout);
+
+    let matches_reference = |neighbor: Option<NeighborMeta>| {
+        neighbor.is_some_and(|neighbor| {
+            neighbor
+                .coding
+                .inter()
+                .is_some_and(|inter| inter.references == ReferencePair::single(reference))
+        })
+    };
+
+    if let Some(top_y) = node.y.checked_sub(1) {
+        let top = tile_state.neighbor_at_checked(node.x, top_y)?;
+        if matches_reference(top) {
+            return Ok(true);
+        }
+        if let Some(top) = top {
+            let (top_width, _) = top.block_size.mi_dimensions();
+            if top_width >= width {
+                let offset = node
+                    .x
+                    .checked_sub(top.origin_x)
+                    .ok_or_else(|| malformed("top warp neighbour starts after the block"))?;
+                if offset != 0 {
+                    have_topleft = false;
+                }
+                let remaining = top_width
+                    .checked_sub(offset)
+                    .ok_or_else(|| malformed("top warp neighbour width is inconsistent"))?;
+                if remaining > width {
+                    have_topright = false;
+                }
+            }
+        }
+        for offset in 1..width {
+            let x = node
+                .x
+                .checked_add(offset)
+                .ok_or_else(|| malformed("top warp-neighbour x overflows"))?;
+            if matches_reference(tile_state.neighbor_at_checked(x, top_y)?) {
+                return Ok(true);
+            }
+        }
+    }
+
+    if let Some(left_x) = node.x.checked_sub(1) {
+        let left = tile_state.neighbor_at_checked(left_x, node.y)?;
+        if matches_reference(left) {
+            return Ok(true);
+        }
+        if let Some(left) = left {
+            let (_, left_height) = left.block_size.mi_dimensions();
+            if left_height >= height {
+                let offset = node
+                    .y
+                    .checked_sub(left.origin_y)
+                    .ok_or_else(|| malformed("left warp neighbour starts after the block"))?;
+                if offset != 0 {
+                    have_topleft = false;
+                }
+            }
+        }
+        for offset in 1..height {
+            let y = node
+                .y
+                .checked_add(offset)
+                .ok_or_else(|| malformed("left warp-neighbour y overflows"))?;
+            if matches_reference(tile_state.neighbor_at_checked(left_x, y)?) {
+                return Ok(true);
+            }
+        }
+    }
+
+    if have_topleft {
+        let top_left_x = node
+            .x
+            .checked_sub(1)
+            .ok_or_else(|| malformed("top-left warp-neighbour x underflows"))?;
+        let top_left_y = node
+            .y
+            .checked_sub(1)
+            .ok_or_else(|| malformed("top-left warp-neighbour y underflows"))?;
+        if matches_reference(tile_state.neighbor_at_checked(top_left_x, top_left_y)?) {
+            return Ok(true);
+        }
+    }
+    if have_topright {
+        let top_y = node
+            .y
+            .checked_sub(1)
+            .ok_or_else(|| malformed("top-right warp-neighbour y underflows"))?;
+        if matches_reference(tile_state.neighbor_at_checked(top_right_x, top_y)?) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 fn interpolation_filter_symbol(filter: InterpolationFilter) -> usize {
     match filter {
         InterpolationFilter::Regular => 0,
@@ -4039,17 +4157,29 @@ fn decode_inter_leaf(
         && block_width_b4.min(block_height_b4) >= 2
         && has_overlappable_neighbor(tile_state, node)?
     {
-        // Local-warp sample discovery is not part of this private
-        // translation tranche. Refuse the potentially three-symbol sentence
-        // while retaining the frame flag, rather than consuming an OBMC CDF
-        // for a block whose bitstream may select local warp.
-        if inter_context.allow_warped_motion {
-            return Ok(Err(super::block::PortableUnavailable));
-        }
-        let symbol = decoder.adaptive_symbol(&mut cdfs.inter.obmc_for(node.block_size).0, 1);
+        let layout = PixelLayout::from_sequence(
+            context.monochrome,
+            context.subsampling_x,
+            context.subsampling_y,
+        )
+        .ok_or_else(|| malformed("motion-mode pixel layout is invalid"))?;
+        let allow_warp = if inter_context.allow_warped_motion
+            && !inter_context.force_integer_mv
+            && !first_state.scale.scaled
+        {
+            has_matching_warp_reference(tile_state, node, references.first, layout)?
+        } else {
+            false
+        };
+        let symbol = if allow_warp {
+            decoder.adaptive_symbol(&mut cdfs.inter.motion_mode_for(node.block_size).0, 2)
+        } else {
+            decoder.adaptive_symbol(&mut cdfs.inter.obmc_for(node.block_size).0, 1)
+        };
         match symbol {
             0 => MotionMode::Translation,
             1 => return Ok(Err(super::block::PortableUnavailable)),
+            2 if allow_warp => return Ok(Err(super::block::PortableUnavailable)),
             _ => return Err(malformed("OBMC motion-mode symbol is invalid")),
         }
     } else {
@@ -5662,11 +5792,12 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
 /// CDEF is limited to complete 8x8 luma geometry. I422 additionally requires
 /// skipped residuals and DCT-DCT chroma, enforced at the block boundary. A
-/// switchable-motion frame is admitted only when warped motion is disabled:
-/// the block parser then consumes the binary OBMC sentence, accepts
-/// translation, and transactionally rejects an OBMC selection before any tile
-/// state is published. Every retained reference is checked up front so a
-/// later reference choice cannot narrow the path back to eight-bit geometry.
+/// switchable-motion frame consumes the exact binary-OBMC or three-symbol
+/// motion-mode sentence selected by its causal matching-reference mask; only
+/// translation is currently materialized, while OBMC and LOCALWARP selections
+/// remain transactional unsupported outcomes. Every retained reference is
+/// checked up front so a later reference choice cannot narrow the path back to
+/// eight-bit geometry.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -5701,7 +5832,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
