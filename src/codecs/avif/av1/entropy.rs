@@ -6470,7 +6470,8 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// validated up front so a later reference choice cannot narrow the path back
 /// to eight-bit geometry. An all-NONE restoration header is a semantic no-op:
 /// it carries no tile restoration units or postfilter plan, while active
-/// restoration types remain outside this generic class.
+/// restoration types remain outside this generic class. I444 film grain is
+/// display-only and uses the shared bounded dimension whitelist.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6483,6 +6484,11 @@ fn complete_high_depth_inter_reconstruction_context(
         superres_i420
     } else {
         context.upscaled_width == context.frame_width
+    };
+    let film_grain_supported = if i444 {
+        bounded_i444_film_grain_supported(context)
+    } else {
+        no_unsupported_film_grain(context)
     };
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
@@ -6508,7 +6514,7 @@ fn complete_high_depth_inter_reconstruction_context(
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
         && context.restoration_types == [None; 3]
-        && no_unsupported_film_grain(context)
+        && film_grain_supported
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
