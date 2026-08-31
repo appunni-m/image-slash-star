@@ -13,7 +13,7 @@ pub fn decode(
     crate::codecs::error::check_cancelled(token)?;
     let file_type = read_avif_file_type(data)?;
     let extracted = extract_av1(data)?;
-    let validated = super::av1::validate_first(&extracted)
+    let validated = super::av1::validate_first_with_token(&extracted, token)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
     let image = decode_portable(&validated).ok_or_else(|| {
         CodecError::NotImplemented(

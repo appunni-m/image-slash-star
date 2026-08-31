@@ -5,6 +5,7 @@ mod block;
 mod cdef;
 mod coefficient_cdfs;
 mod entropy;
+mod film_grain;
 mod filter;
 mod frame;
 mod frame_cdfs;
@@ -226,10 +227,22 @@ fn validate_plane_state(input: &[u8], plane: &EncodedPlane) -> Av1Result<FrameSt
     Ok(state)
 }
 
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware production validation"
+)]
 fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Av1Result<ValidatedPlane> {
+    validate_plane_with_token(input, plane, None)
+}
+
+fn validate_plane_with_token(
+    input: &[u8],
+    plane: &EncodedPlane,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<ValidatedPlane> {
     let state = validate_plane_state(input, plane)?;
     let sequence = state.finish()?.clone();
-    let selected = state.selected_display()?;
+    let selected = state.selected_display_with_token(token)?;
     Ok(ValidatedPlane {
         first_leaf: selected.color_leaf,
         complete_monochrome_plane: selected.monochrome_plane,
@@ -296,9 +309,21 @@ fn assembled_leaf(
 /// is copied into a checked output canvas. This keeps grid composition free of
 /// native state and makes malformed overlap, gaps, and auxiliary geometry
 /// explicit errors rather than partially published pixels.
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware production validation"
+)]
 fn validate_grid(
     extracted: &ExtractedAvif<'_>,
     still: &super::samples::StillPayload,
+) -> Av1Result<Option<PortableStill>> {
+    validate_grid_with_token(extracted, still, None)
+}
+
+fn validate_grid_with_token(
+    extracted: &ExtractedAvif<'_>,
+    still: &super::samples::StillPayload,
+    token: Option<&crate::CancellationToken>,
 ) -> Av1Result<Option<PortableStill>> {
     let Some(properties) = extracted.grid_properties else {
         return Ok(None);
@@ -324,11 +349,12 @@ fn validate_grid(
 
     let mut cells = Vec::with_capacity(cell_count);
     for (index, sample) in still.color.samples.iter().enumerate() {
-        let color = validate_plane(
+        let color = validate_plane_with_token(
             extracted.input,
             &super::samples::EncodedPlane {
                 samples: vec![sample.clone()],
             },
+            token,
         )?;
         let Some(color_leaf) = color.first_leaf else {
             return Ok(None);
@@ -337,11 +363,12 @@ fn validate_grid(
             return Ok(None);
         }
         let alpha_plane = if let Some(alpha) = &still.alpha {
-            let alpha = validate_plane(
+            let alpha = validate_plane_with_token(
                 extracted.input,
                 &super::samples::EncodedPlane {
                     samples: vec![alpha.samples[index].clone()],
                 },
+                token,
             )?;
             let Some(alpha_plane) = alpha.complete_monochrome_plane else {
                 return Ok(None);
@@ -550,13 +577,24 @@ fn validate_grid(
     )))
 }
 
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware production validation"
+)]
 fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableStill>> {
+    validate_still_with_token(extracted, None)
+}
+
+fn validate_still_with_token(
+    extracted: &ExtractedAvif<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<Option<PortableStill>> {
     let mut portable = None;
     if let Some(still) = &extracted.still {
         if extracted.grid_properties.is_some() || !extracted.grid_item_ids.is_empty() {
-            return validate_grid(extracted, still);
+            return validate_grid_with_token(extracted, still, token);
         }
-        let color = validate_plane(extracted.input, &still.color)?;
+        let color = validate_plane_with_token(extracted.input, &still.color, token)?;
         let Some(color_leaf) = color.first_leaf.as_ref() else {
             return Ok(None);
         };
@@ -564,7 +602,7 @@ fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableSti
             return Ok(None);
         }
         let alpha_plane = if let Some(alpha) = &still.alpha {
-            let alpha = validate_plane(extracted.input, alpha)?;
+            let alpha = validate_plane_with_token(extracted.input, alpha, token)?;
             let Some(alpha_plane) = alpha.complete_monochrome_plane else {
                 return Ok(None);
             };
@@ -610,17 +648,19 @@ fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableSti
 fn validate_first_sequence_sample(
     extracted: &ExtractedAvif<'_>,
     sequence: &super::samples::SequencePayload,
+    token: Option<&crate::CancellationToken>,
 ) -> Av1Result<Option<PortableStill>> {
     let color_sample = sequence
         .color
         .samples
         .first()
         .ok_or_else(|| malformed("AVIF sequence has no color samples"))?;
-    let color = validate_plane(
+    let color = validate_plane_with_token(
         extracted.input,
         &super::samples::EncodedPlane {
             samples: vec![color_sample.clone()],
         },
+        token,
     )?;
     let Some((color_width, color_height)) = color
         .first_leaf
@@ -637,11 +677,12 @@ fn validate_first_sequence_sample(
             .samples
             .first()
             .ok_or_else(|| malformed("AVIF sequence has no alpha sample"))?;
-        let alpha = validate_plane(
+        let alpha = validate_plane_with_token(
             extracted.input,
             &super::samples::EncodedPlane {
                 samples: vec![alpha_sample.clone()],
             },
+            token,
         )?;
         let Some(alpha_plane) = alpha.complete_monochrome_plane else {
             return Ok(None);
@@ -671,11 +712,22 @@ fn validate_first_sequence_sample(
     )))
 }
 
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware display materialization"
+)]
 pub(super) fn validate_first(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
+    validate_first_with_token(extracted, None)
+}
+
+pub(super) fn validate_first_with_token(
+    extracted: &ExtractedAvif<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<ValidatedAv1> {
     let portable_still = if extracted.still.is_some() {
-        validate_still(extracted)?
+        validate_still_with_token(extracted, token)?
     } else if let Some(sequence) = &extracted.sequence {
-        validate_first_sequence_sample(extracted, sequence)?
+        validate_first_sequence_sample(extracted, sequence, token)?
     } else {
         None
     };

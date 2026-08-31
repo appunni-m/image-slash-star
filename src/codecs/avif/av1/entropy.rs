@@ -2578,6 +2578,14 @@ pub(super) fn validate_complete_monochrome_partition(
     canvas.finish().map(Some)
 }
 
+fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
+    !context.frame_tools.film_grain_present
+        || (context.bit_depth == 8
+            && context.subsampling_x
+            && context.subsampling_y
+            && !context.monochrome)
+}
+
 fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {
     let dimensions_are_supported = context.frame_width >= 4
         && context.frame_height >= 4
@@ -2596,7 +2604,7 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && context.block_x == 0
         && context.block_y == 0
         && context.level == 1
@@ -4901,7 +4909,7 @@ fn bounded_restoration_common(context: &FirstBlockContext) -> bool {
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
         && context.frame_tools.quantization.is_some()
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
@@ -4978,7 +4986,7 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && inter_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && !context.segmentation_enabled
         && context.block_x == 0
         && context.block_y == 0
@@ -5004,7 +5012,7 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && context.frame_tools.quantization.is_some()
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && matches!(
             context.frame_tools.cdef,
             None | Some(CdefContext {
@@ -5060,7 +5068,7 @@ fn complete_high_depth_inter_420_reconstruction_context(
         && context.frame_tools.cdef.is_none()
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.motion_mode_switchable
         && !inter_context.allow_warped_motion
@@ -5098,7 +5106,7 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.restoration_present
-        && !context.frame_tools.film_grain_present
+        && no_unsupported_film_grain(context)
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
@@ -5761,7 +5769,7 @@ fn closed_base_reconstruction_context(context: &FirstBlockContext) -> bool {
         & !context.skip_mode_enabled
         & !context.allow_intrabc
         & !context.monochrome
-        & !context.frame_tools.film_grain_present
+        & no_unsupported_film_grain(context)
         & (context.block_x == 0)
         & (context.block_y == 0)
 }

@@ -154,24 +154,25 @@ impl LoopFilter {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct FilmGrain {
-    seed: u32,
-    update: bool,
-    reference_slot: Option<usize>,
-    y_points: Vec<[u32; 2]>,
-    chroma_scaling_from_luma: bool,
-    uv_points: [Vec<[u32; 2]>; 2],
-    scaling_shift: u32,
-    ar_coefficient_lag: u32,
-    ar_coefficients_y: Vec<i32>,
-    ar_coefficients_uv: [Vec<i32>; 2],
-    ar_coefficient_shift: u32,
-    grain_scale_shift: u32,
-    uv_multiplier: [i32; 2],
-    uv_luma_multiplier: [i32; 2],
-    uv_offset: [i32; 2],
-    overlap: bool,
-    clip_to_restricted_range: bool,
+pub(super) struct FilmGrain {
+    pub(super) seed: u32,
+    pub(super) update: bool,
+    pub(super) reference_slot: Option<usize>,
+    pub(super) y_points: Vec<[u32; 2]>,
+    pub(super) chroma_scaling_from_luma: bool,
+    pub(super) uv_points: [Vec<[u32; 2]>; 2],
+    pub(super) scaling_shift: u32,
+    pub(super) ar_coefficient_lag: u32,
+    pub(super) ar_coefficients_y: Vec<i32>,
+    pub(super) ar_coefficients_uv: [Vec<i32>; 2],
+    pub(super) ar_coefficient_shift: u32,
+    pub(super) grain_scale_shift: u32,
+    pub(super) uv_multiplier: [i32; 2],
+    pub(super) uv_luma_multiplier: [i32; 2],
+    pub(super) uv_offset: [i32; 2],
+    pub(super) overlap: bool,
+    pub(super) clip_to_restricted_range: bool,
+    pub(super) matrix_coefficients: u32,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -885,7 +886,18 @@ impl FrameState {
             .and_then(|index| self.completions.get(index))
     }
 
+    #[allow(
+        dead_code,
+        reason = "compatibility wrapper for token-aware display materialization"
+    )]
     pub(super) fn selected_display(&self) -> Av1Result<SelectedDisplay> {
+        self.selected_display_with_token(None)
+    }
+
+    pub(super) fn selected_display_with_token(
+        &self,
+        token: Option<&crate::CancellationToken>,
+    ) -> Av1Result<SelectedDisplay> {
         let Some(completion) = self.selected_completion() else {
             return Ok(SelectedDisplay::unavailable());
         };
@@ -894,10 +906,7 @@ impl FrameState {
                 "show-existing completion contains diagnostic reconstruction",
             ));
         }
-        if completion.film_grain.is_some() {
-            return Ok(SelectedDisplay::unavailable());
-        }
-        if let Some(surface) = completion.surface.as_deref() {
+        let mut display = if let Some(surface) = completion.surface.as_deref() {
             surface.materialize()
         } else {
             Ok(SelectedDisplay {
@@ -905,7 +914,27 @@ impl FrameState {
                 monochrome_plane: None,
                 dimensions: completion.diagnostic_frame_dimensions,
             })
+        }?;
+        let Some(grain) = completion.film_grain.as_ref() else {
+            return Ok(display);
+        };
+        let Some(surface) = completion.surface.as_deref() else {
+            return Ok(SelectedDisplay::unavailable());
+        };
+        if surface.depth.bits() != 8
+            || surface.layout != PixelLayout::I420
+            || surface.render_width != surface.upscaled_width
+            || surface.render_height != surface.frame_height
+            || surface.planes.iter().any(Option::is_none)
+            || matches!(grain.matrix_coefficients, 0 | 3)
+        {
+            return Ok(SelectedDisplay::unavailable());
         }
+        let Some(leaf) = display.color_leaf.take() else {
+            return Ok(SelectedDisplay::unavailable());
+        };
+        display.color_leaf = Some(super::film_grain::apply_i420(leaf, grain, token)?);
+        Ok(display)
     }
 
     pub(super) fn frame_obu(
@@ -3319,6 +3348,7 @@ fn read_film_grain(
         uv_offset,
         overlap: bits.bit()?,
         clip_to_restricted_range: bits.bit()?,
+        matrix_coefficients: sequence.matrix_coefficients,
     }))
 }
 
@@ -5022,6 +5052,7 @@ fn coverage_prediction_and_grain_paths() {
         uv_offset: [0; 2],
         overlap: false,
         clip_to_restricted_range: false,
+        matrix_coefficients: 6,
     });
     let mut inherited = CoverageBitWriter::new();
     inherited.push(1, 1);
