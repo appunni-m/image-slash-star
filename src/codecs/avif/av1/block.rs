@@ -48392,8 +48392,19 @@ struct InterPrediction<'a> {
     motions: [MotionVector; 2],
     block_x_b4: u32,
     block_y_b4: u32,
-    compound_average: bool,
+    compound: Option<PreparedCompound>,
     obmc: Option<ObmcContext<'a>>,
+}
+
+/// A compound blend that has already consumed and validated its entropy
+/// sentence.  Keeping the prepared weight separate from
+/// [`super::motion::CompoundType`]
+/// prevents a single-reference block's default `Average` metadata from being
+/// mistaken for an actual compound predictor.
+#[derive(Clone, Copy)]
+pub(super) enum PreparedCompound {
+    Average,
+    Distance(u8),
 }
 
 /// Tile-local coefficient edges captured before an inter leaf is decoded.
@@ -48821,10 +48832,6 @@ impl Lossy420Decoder {
         self.motion_scratch.as_mut().portable()
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "OBMC carries plane geometry and the immutable causal-neighbour context"
-    )]
     fn apply_obmc_prediction(
         &mut self,
         prediction: &mut [u16],
@@ -49022,7 +49029,7 @@ impl Lossy420Decoder {
                 motions: [motion, MotionVector::ZERO],
                 block_x_b4,
                 block_y_b4,
-                compound_average: false,
+                compound: None,
                 obmc,
             },
             block_skipped,
@@ -49052,6 +49059,7 @@ impl Lossy420Decoder {
         block_x_b4: u32,
         block_y_b4: u32,
         motions: [MotionVector; 2],
+        compound: PreparedCompound,
         filters: [InterpolationFilter; 2],
         block_skipped: bool,
         luma_txb_skipped: bool,
@@ -49072,7 +49080,7 @@ impl Lossy420Decoder {
                 motions,
                 block_x_b4,
                 block_y_b4,
-                compound_average: true,
+                compound: Some(compound),
                 obmc: None,
             },
             block_skipped,
@@ -49232,7 +49240,7 @@ impl Lossy420Decoder {
             prediction
                 .try_reserve_exact(prediction_len)
                 .map_err(|_| PortableUnavailable)?;
-            if prediction_state.compound_average {
+            if let Some(compound) = prediction_state.compound {
                 let first_plane = prediction_state.references[0]
                     .plane(plane)
                     .map_err(|_| PortableUnavailable)?
@@ -49276,9 +49284,14 @@ impl Lossy420Decoder {
                     }
                 }
                 let scratch = self.ensure_motion_scratch()?;
-                let predicted = scratch
-                    .blend_average(tx_width, tx_height, tools.sample_depth)
-                    .map_err(|_| PortableUnavailable)?;
+                let predicted = match compound {
+                    PreparedCompound::Average => scratch
+                        .blend_average(tx_width, tx_height, tools.sample_depth)
+                        .map_err(|_| PortableUnavailable)?,
+                    PreparedCompound::Distance(weight) => scratch
+                        .blend_distance(tx_width, tx_height, weight, tools.sample_depth)
+                        .map_err(|_| PortableUnavailable)?,
+                };
                 prediction.extend_from_slice(predicted);
             } else {
                 let reference_plane = prediction_state.references[0]

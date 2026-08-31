@@ -8,11 +8,12 @@ use crate::codecs::CodecResult;
 
 use super::bit_reader::SegmentedData;
 use super::geometry::{BlockSize, IntraEdgeFlags, PixelLayout, TxSize};
+use super::mc::distance_weight;
 use super::motion::{
     CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter, MotionMode,
     MotionVector, ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget,
     ReferencePair, ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField,
-    find_reference_mvs, global_motion_vector,
+    find_reference_mvs, global_motion_vector, relative_distance,
 };
 use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
@@ -2860,6 +2861,121 @@ fn inter_neighbors(
     Ok([above, left])
 }
 
+/// Derive the six-row joint-compound CDF context from the causal compound
+/// metadata published by the blocks above and to the left of the current
+/// block.  The explicit compound check is important because single-reference
+/// metadata intentionally carries `CompoundType::Average` as its neutral
+/// value.
+fn joint_compound_context(
+    tile_state: &TileState,
+    node: PartitionNode,
+    inter_context: &InterFrameContext<'_>,
+    references: ReferencePair,
+) -> Av1Result<usize> {
+    let neighbor_bit = |neighbor: Option<NeighborMeta>| {
+        let Some(neighbor) = neighbor else {
+            return 0_usize;
+        };
+        let Some(inter) = neighbor.coding.inter() else {
+            return 0;
+        };
+        if inter.references.second.is_none() {
+            return 0;
+        }
+        usize::from(
+            matches!(
+                inter.compound_type,
+                CompoundType::Average
+                    | CompoundType::Difference { .. }
+                    | CompoundType::Wedge { .. }
+            ) || inter.references.first == ReferenceFrame::Alt,
+        )
+    };
+    let above = node
+        .y
+        .checked_sub(1)
+        .map(|y| tile_state.neighbor_at_checked(node.x, y))
+        .transpose()?
+        .flatten();
+    let left = node
+        .x
+        .checked_sub(1)
+        .map(|x| tile_state.neighbor_at_checked(x, node.y))
+        .transpose()?
+        .flatten();
+    let second = references
+        .second
+        .ok_or_else(|| malformed("joint compound context omits its second reference"))?;
+    let first_distance = relative_distance(
+        inter_context.order_hint_bits,
+        inter_context.reference(references.first).order_hint,
+        inter_context.current_order_hint,
+    )
+    .unsigned_abs();
+    let second_distance = relative_distance(
+        inter_context.order_hint_bits,
+        inter_context.current_order_hint,
+        inter_context.reference(second).order_hint,
+    )
+    .unsigned_abs();
+    Ok(3_usize
+        .saturating_mul(usize::from(first_distance == second_distance))
+        .saturating_add(neighbor_bit(above))
+        .saturating_add(neighbor_bit(left)))
+}
+
+/// Consume the AV1 joint-compound sentence and prepare the corresponding
+/// checked blend.  Masked-compound group syntax is kept outside this slice by
+/// the frame admission gates; when that sequence flag is set the caller
+/// rejects the tile before this helper can misalign the entropy stream.
+fn decode_joint_compound(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    tile_state: &TileState,
+    node: PartitionNode,
+    inter_context: &InterFrameContext<'_>,
+    references: ReferencePair,
+) -> Av1Result<Option<(CompoundType, super::block::PreparedCompound)>> {
+    let average = if inter_context.enable_jnt_comp {
+        let context = joint_compound_context(tile_state, node, inter_context, references)?;
+        let cdf = cdfs
+            .inter
+            .joint_compound
+            .get_mut(context)
+            .ok_or_else(|| malformed("joint compound context exceeds six rows"))?;
+        decoder.adaptive_bool(&mut cdf.0)
+    } else {
+        true
+    };
+    if average {
+        return Ok(Some((
+            CompoundType::Average,
+            super::block::PreparedCompound::Average,
+        )));
+    }
+    if inter_context.order_hint_bits == 0 {
+        return Ok(None);
+    }
+    let second = references
+        .second
+        .ok_or_else(|| malformed("distance compound omits its second reference"))?;
+    let first_distance = relative_distance(
+        inter_context.order_hint_bits,
+        inter_context.reference(references.first).order_hint,
+        inter_context.current_order_hint,
+    );
+    let second_distance = relative_distance(
+        inter_context.order_hint_bits,
+        inter_context.current_order_hint,
+        inter_context.reference(second).order_hint,
+    );
+    let weight = distance_weight(first_distance, second_distance);
+    Ok(Some((
+        CompoundType::Distance,
+        super::block::PreparedCompound::Distance(weight),
+    )))
+}
+
 fn inter_intra_context(neighbors: [Option<SpatialRefBlock>; 2]) -> usize {
     let count = neighbors
         .into_iter()
@@ -3945,10 +4061,11 @@ fn decode_inter_leaf(
         false
     };
     let (references, motions, mode, global, new_mv) = if compound {
-        // The average-only tranche deliberately closes the joint/masked
-        // compound tools at the block boundary. Frames may still contain
-        // supported single-reference blocks when those sequence flags are on.
-        if inter_context.enable_masked_compound || inter_context.enable_jnt_comp {
+        // Group-one masked/wedge/difference syntax is outside this bounded
+        // tranche. The frame admission gate closes masked-compound sequences;
+        // keep this local guard transactional if a future profile reaches the
+        // parser through a different route.
+        if inter_context.enable_masked_compound {
             return Ok(Err(super::block::PortableUnavailable));
         }
         let references = decode_inter_compound_references(decoder, cdfs, neighbors)?;
@@ -4252,6 +4369,16 @@ fn decode_inter_leaf(
             [mode == InterMode::New, false],
         )
     };
+    let (compound_type, compound_blend) = if compound {
+        let Some((compound_type, compound_blend)) =
+            decode_joint_compound(decoder, cdfs, tile_state, node, inter_context, references)?
+        else {
+            return Ok(Err(super::block::PortableUnavailable));
+        };
+        (compound_type, Some(compound_blend))
+    } else {
+        (CompoundType::Average, None)
+    };
     let first_state = inter_context.reference(references.first);
     let second_state = references
         .second
@@ -4516,6 +4643,7 @@ fn decode_inter_leaf(
             context.tile_origin_b4_x.saturating_add(node.x),
             context.tile_origin_b4_y.saturating_add(node.y),
             motions,
+            compound_blend.ok_or_else(|| malformed("compound blend is missing"))?,
             filters,
             block_skipped,
             luma_txb_skipped,
@@ -4555,7 +4683,7 @@ fn decode_inter_leaf(
             references,
             motion_vectors: motions,
             mode,
-            compound_type: CompoundType::Average,
+            compound_type,
             motion_mode,
             filters,
             global,
@@ -4702,8 +4830,10 @@ pub(super) fn validate_complete_lossy_420_partition(
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
     let bounded_intra_restoration =
         complete_bounded_restoration_intra_420_reconstruction_context(context);
-    let bounded_inter_restoration =
-        complete_bounded_restoration_inter_420_reconstruction_context(context);
+    let bounded_inter_restoration = inter_context.is_some_and(|inter_context| {
+        !inter_context.enable_masked_compound
+            && complete_bounded_restoration_inter_420_reconstruction_context(context)
+    });
     let monochrome_intra_reconstruction =
         complete_monochrome_lossy_intra_reconstruction_context(context);
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
@@ -4915,7 +5045,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         None
     };
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
-        complete_inter_420_reconstruction_context(context)
+        (complete_inter_420_reconstruction_context(context)
+            && !inter_context.enable_masked_compound)
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
@@ -5837,9 +5968,10 @@ fn complete_bounded_restoration_inter_420_reconstruction_context(
 
 /// First inter reconstruction tranche: 8-bit 4:2:0 translation blocks with
 /// loop filtering and the bounded CDEF profile enabled. Single-reference and
-/// average compound prediction share the checked MC boundary; joint/masked
-/// compound, inter-intra, OBMC/LOCALWARP selections, and variable-transform
-/// branches are still rejected before a block publishes neighbor metadata.
+/// average/distance compound prediction share the checked MC boundary;
+/// masked-compound, inter-intra, OBMC/LOCALWARP selections, and
+/// variable-transform branches are still rejected before a block publishes
+/// neighbor metadata.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
     let Some(cdef) = context.frame_tools.cdef else {
         return true;
@@ -8583,7 +8715,7 @@ fn bounded_i444_expected_terminal(
 /// Exact bounded 4:4:4 inter tranche admitted by the full-resolution
 /// translation path. The inter block engine carries depth-parametric
 /// predictors and residuals for all three full-resolution planes, including
-/// the average compound predictor. Keep each admitted geometry as an explicit
+/// average/distance compound predictors. Keep each admitted geometry as an explicit
 /// profile so a clipped partition cannot inherit the narrower 4:2:0/4:2:2
 /// admission or skip child-local context publication.
 fn bounded_i444_geometry_for_context(
