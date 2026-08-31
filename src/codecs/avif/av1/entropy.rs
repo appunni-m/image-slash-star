@@ -7529,6 +7529,12 @@ enum BoundedSubsampledRectGeometry {
     /// A level-0 root with four 32x32 quadrants down sixteen level-3
     /// B16x16 leaves.
     SixteenVertical,
+    /// A level-0 root with two 64x64 quadrants across thirty-two level-3
+    /// B16x16 leaves.
+    ThirtyTwoHorizontal,
+    /// A level-0 root with two 64x64 quadrants down thirty-two level-3
+    /// B16x16 leaves.
+    ThirtyTwoVertical,
 }
 
 impl BoundedSubsampledRectGeometry {
@@ -7542,6 +7548,8 @@ impl BoundedSubsampledRectGeometry {
             Self::EightVertical => (32, 64),
             Self::SixteenHorizontal => (128, 32),
             Self::SixteenVertical => (32, 128),
+            Self::ThirtyTwoHorizontal => (128, 64),
+            Self::ThirtyTwoVertical => (64, 128),
         }
     }
 
@@ -7552,13 +7560,18 @@ impl BoundedSubsampledRectGeometry {
             Self::SixteenSquare => 16,
             Self::EightHorizontal | Self::EightVertical => 8,
             Self::SixteenHorizontal | Self::SixteenVertical => 16,
+            Self::ThirtyTwoHorizontal | Self::ThirtyTwoVertical => 32,
         }
     }
 
     const fn restoration_supported(self) -> bool {
         !matches!(
             self,
-            Self::EightVertical | Self::SixteenSquare | Self::SixteenVertical
+            Self::EightVertical
+                | Self::SixteenSquare
+                | Self::SixteenVertical
+                | Self::ThirtyTwoHorizontal
+                | Self::ThirtyTwoVertical
         )
     }
 }
@@ -7581,6 +7594,8 @@ fn bounded_subsampled_rect_geometry_for_context(
         (32, 64, 8, 16, 0) => Some(BoundedSubsampledRectGeometry::EightVertical),
         (128, 32, 32, 8, 0) => Some(BoundedSubsampledRectGeometry::SixteenHorizontal),
         (32, 128, 8, 32, 0) => Some(BoundedSubsampledRectGeometry::SixteenVertical),
+        (128, 64, 32, 16, 0) => Some(BoundedSubsampledRectGeometry::ThirtyTwoHorizontal),
+        (64, 128, 16, 32, 0) => Some(BoundedSubsampledRectGeometry::ThirtyTwoVertical),
         _ => None,
     }
 }
@@ -7608,6 +7623,8 @@ fn bounded_subsampled_rect_loop_filter_supported(
         BoundedSubsampledRectGeometry::EightVertical => loop_filter.level_y != [0; 2],
         BoundedSubsampledRectGeometry::SixteenHorizontal
         | BoundedSubsampledRectGeometry::SixteenVertical => loop_filter.level_y != [0; 2],
+        BoundedSubsampledRectGeometry::ThirtyTwoHorizontal
+        | BoundedSubsampledRectGeometry::ThirtyTwoVertical => loop_filter.level_y != [0; 2],
     }
 }
 
@@ -7711,6 +7728,76 @@ fn bounded_subsampled_expected_rect_terminal(
             13 => (4, 24),
             14 => (0, 28),
             15 => (4, 28),
+            _ => return false,
+        },
+        BoundedSubsampledRectGeometry::ThirtyTwoHorizontal => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (8, 0),
+            5 => (12, 0),
+            6 => (8, 4),
+            7 => (12, 4),
+            8 => (0, 8),
+            9 => (4, 8),
+            10 => (0, 12),
+            11 => (4, 12),
+            12 => (8, 8),
+            13 => (12, 8),
+            14 => (8, 12),
+            15 => (12, 12),
+            16 => (16, 0),
+            17 => (20, 0),
+            18 => (16, 4),
+            19 => (20, 4),
+            20 => (24, 0),
+            21 => (28, 0),
+            22 => (24, 4),
+            23 => (28, 4),
+            24 => (16, 8),
+            25 => (20, 8),
+            26 => (16, 12),
+            27 => (20, 12),
+            28 => (24, 8),
+            29 => (28, 8),
+            30 => (24, 12),
+            31 => (28, 12),
+            _ => return false,
+        },
+        BoundedSubsampledRectGeometry::ThirtyTwoVertical => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (8, 0),
+            5 => (12, 0),
+            6 => (8, 4),
+            7 => (12, 4),
+            8 => (0, 8),
+            9 => (4, 8),
+            10 => (0, 12),
+            11 => (4, 12),
+            12 => (8, 8),
+            13 => (12, 8),
+            14 => (8, 12),
+            15 => (12, 12),
+            16 => (0, 16),
+            17 => (4, 16),
+            18 => (0, 20),
+            19 => (4, 20),
+            20 => (8, 16),
+            21 => (12, 16),
+            22 => (8, 20),
+            23 => (12, 20),
+            24 => (0, 24),
+            25 => (4, 24),
+            26 => (0, 28),
+            27 => (4, 28),
+            28 => (8, 24),
+            29 => (12, 24),
+            30 => (8, 28),
+            31 => (12, 28),
             _ => return false,
         },
     };
@@ -7837,6 +7924,12 @@ enum BoundedI444InterGeometry {
     /// A level-0 root with four 32x32 quadrants down sixteen level-3
     /// NONE B16x16 terminals.
     SixteenVertical,
+    /// A level-0 root with two 64x64 quadrants across thirty-two level-3
+    /// NONE B16x16 terminals.
+    ThirtyTwoHorizontal,
+    /// A level-0 root with two 64x64 quadrants down thirty-two level-3
+    /// NONE B16x16 terminals.
+    ThirtyTwoVertical,
 }
 
 impl BoundedI444InterGeometry {
@@ -7851,6 +7944,8 @@ impl BoundedI444InterGeometry {
             Self::EightVertical => (32, 64),
             Self::SixteenHorizontal => (128, 32),
             Self::SixteenVertical => (32, 128),
+            Self::ThirtyTwoHorizontal => (128, 64),
+            Self::ThirtyTwoVertical => (64, 128),
         }
     }
 
@@ -7862,13 +7957,18 @@ impl BoundedI444InterGeometry {
             Self::SixteenSquare => 16,
             Self::EightHorizontal | Self::EightVertical => 8,
             Self::SixteenHorizontal | Self::SixteenVertical => 16,
+            Self::ThirtyTwoHorizontal | Self::ThirtyTwoVertical => 32,
         }
     }
 
     const fn restoration_supported(self) -> bool {
         !matches!(
             self,
-            Self::EightVertical | Self::SixteenSquare | Self::SixteenVertical
+            Self::EightVertical
+                | Self::SixteenSquare
+                | Self::SixteenVertical
+                | Self::ThirtyTwoHorizontal
+                | Self::ThirtyTwoVertical
         )
     }
 }
@@ -7984,6 +8084,76 @@ fn bounded_i444_expected_terminal(
             15 => (4, 28),
             _ => return false,
         },
+        BoundedI444InterGeometry::ThirtyTwoHorizontal => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (8, 0),
+            5 => (12, 0),
+            6 => (8, 4),
+            7 => (12, 4),
+            8 => (0, 8),
+            9 => (4, 8),
+            10 => (0, 12),
+            11 => (4, 12),
+            12 => (8, 8),
+            13 => (12, 8),
+            14 => (8, 12),
+            15 => (12, 12),
+            16 => (16, 0),
+            17 => (20, 0),
+            18 => (16, 4),
+            19 => (20, 4),
+            20 => (24, 0),
+            21 => (28, 0),
+            22 => (24, 4),
+            23 => (28, 4),
+            24 => (16, 8),
+            25 => (20, 8),
+            26 => (16, 12),
+            27 => (20, 12),
+            28 => (24, 8),
+            29 => (28, 8),
+            30 => (24, 12),
+            31 => (28, 12),
+            _ => return false,
+        },
+        BoundedI444InterGeometry::ThirtyTwoVertical => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (8, 0),
+            5 => (12, 0),
+            6 => (8, 4),
+            7 => (12, 4),
+            8 => (0, 8),
+            9 => (4, 8),
+            10 => (0, 12),
+            11 => (4, 12),
+            12 => (8, 8),
+            13 => (12, 8),
+            14 => (8, 12),
+            15 => (12, 12),
+            16 => (0, 16),
+            17 => (4, 16),
+            18 => (0, 20),
+            19 => (4, 20),
+            20 => (8, 16),
+            21 => (12, 16),
+            22 => (8, 20),
+            23 => (12, 20),
+            24 => (0, 24),
+            25 => (4, 24),
+            26 => (0, 28),
+            27 => (4, 28),
+            28 => (8, 24),
+            29 => (12, 24),
+            30 => (8, 28),
+            31 => (12, 28),
+            _ => return false,
+        },
     };
     node.level == 3
         && node.x == expected.0
@@ -8021,6 +8191,8 @@ fn bounded_i444_geometry_for_context(
         (32, 64, 8, 16, 0) => Some(BoundedI444InterGeometry::EightVertical),
         (128, 32, 32, 8, 0) => Some(BoundedI444InterGeometry::SixteenHorizontal),
         (32, 128, 8, 32, 0) => Some(BoundedI444InterGeometry::SixteenVertical),
+        (128, 64, 32, 16, 0) => Some(BoundedI444InterGeometry::ThirtyTwoHorizontal),
+        (64, 128, 16, 32, 0) => Some(BoundedI444InterGeometry::ThirtyTwoVertical),
         _ => None,
     }
 }
@@ -8377,6 +8549,10 @@ fn bounded_i444_loop_filter_supported(
             loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
         BoundedI444InterGeometry::SixteenHorizontal | BoundedI444InterGeometry::SixteenVertical => {
+            loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::ThirtyTwoHorizontal
+        | BoundedI444InterGeometry::ThirtyTwoVertical => {
             loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
     }
