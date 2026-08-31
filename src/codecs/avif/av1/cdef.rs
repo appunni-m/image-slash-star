@@ -180,6 +180,10 @@ fn square(value: i64) -> u64 {
 /// Strengths use the six-bit AV1 frame-header values. The result is a newly
 /// owned block in row-major order; callers can validate the whole frame before
 /// copying it into a canvas.
+#[allow(
+    dead_code,
+    reason = "the allocating wrapper remains available to focused CDEF tests; frame paths use filter_block_into"
+)]
 pub(crate) fn filter_block(
     source: &[u16],
     dimensions: (usize, usize),

@@ -1651,10 +1651,59 @@ impl FrameCanvas {
         cdef_indices: &[Option<usize>],
         cdef_active: &[bool],
     ) -> Av1Result<()> {
-        let source = self.planes.clone();
         let luma_dimensions = self.plane_dimensions(0);
         let active_width = luma_dimensions.0.div_ceil(8);
+        let active_height = luma_dimensions.1.div_ceil(8);
         let region_width = self.width.div_ceil(64);
+        let region_height = self.height.div_ceil(64);
+        if let Some(frame) = frame_parameters {
+            let active_length = active_width
+                .checked_mul(active_height)
+                .ok_or_else(|| malformed("CDEF active-map size overflows"))?;
+            let region_length = region_width
+                .checked_mul(region_height)
+                .ok_or_else(|| malformed("CDEF index-map size overflows"))?;
+            if cdef_active.len() != active_length || cdef_indices.len() != region_length {
+                return Err(malformed("CDEF metadata maps have invalid extents"));
+            }
+            if !(1..=4).contains(&frame.y_strength_count)
+                || !(1..=4).contains(&frame.uv_strength_count)
+                || frame.y_strength_count > frame.y_strengths.len()
+                || frame.uv_strength_count > frame.uv_strengths.len()
+            {
+                return Err(malformed("CDEF strength counts are invalid"));
+            }
+            for (active_index, &active) in cdef_active.iter().enumerate() {
+                if !active {
+                    continue;
+                }
+                let block_x = active_index % active_width;
+                let block_y = active_index / active_width;
+                let region_index = block_y
+                    .checked_div(8)
+                    .and_then(|row| row.checked_mul(region_width))
+                    .and_then(|row| row.checked_add(block_x.checked_div(8)?))
+                    .ok_or_else(|| malformed("CDEF active region index overflows"))?;
+                let cdef_index = cdef_indices
+                    .get(region_index)
+                    .and_then(|entry| *entry)
+                    .or_else(|| {
+                        (frame.y_strength_count == 1 && frame.uv_strength_count == 1).then_some(0)
+                    })
+                    .ok_or_else(|| malformed("CDEF active region index is missing"))?;
+                if cdef_index >= frame.y_strength_count || cdef_index >= frame.uv_strength_count {
+                    return Err(malformed("CDEF active region index exceeds strengths"));
+                }
+            }
+        }
+
+        let mut source: [Vec<u16>; 3] = std::array::from_fn(|_| Vec::new());
+        let mut output: [Vec<u16>; 3] = std::array::from_fn(|_| Vec::new());
+        for plane in 0..3 {
+            source[plane] = clone_plane(&self.planes[plane], "CDEF source plane")?;
+            output[plane] = clone_plane(&self.planes[plane], "CDEF output plane")?;
+        }
+        let mut block_output = [0_u16; 64];
 
         for plane in 0..3 {
             let scalar_parameters = if plane == 0 {
@@ -1699,10 +1748,10 @@ impl FrameCanvas {
                             .checked_div(8)
                             .and_then(|row| row.checked_mul(active_width))
                             .and_then(|row| row.checked_add(luma_x.checked_div(8)?));
-                        if !active_index
+                        let active = active_index
                             .and_then(|index| cdef_active.get(index).copied())
-                            .unwrap_or(false)
-                        {
+                            .ok_or_else(|| malformed("CDEF active-map index exceeds frame"))?;
+                        if !active {
                             continue;
                         }
                         let region_index = luma_y
@@ -1715,19 +1764,17 @@ impl FrameCanvas {
                                 (frame.y_strength_count == 1 && frame.uv_strength_count == 1)
                                     .then_some(0)
                             });
-                        let Some(cdef_index) = cdef_index else {
-                            continue;
-                        };
+                        let cdef_index =
+                            cdef_index.ok_or_else(|| malformed("CDEF region index is missing"))?;
                         let (strengths, count) = if plane == 0 {
                             (frame.y_strengths, frame.y_strength_count)
                         } else {
                             (frame.uv_strengths, frame.uv_strength_count)
                         };
-                        let Some(&strength) =
-                            strengths.get(cdef_index).filter(|_| cdef_index < count)
-                        else {
-                            continue;
-                        };
+                        let strength = *strengths
+                            .get(cdef_index)
+                            .filter(|_| cdef_index < count)
+                            .ok_or_else(|| malformed("CDEF strength index exceeds count"))?;
                         if strength == 0 {
                             continue;
                         }
@@ -1827,9 +1874,20 @@ impl FrameCanvas {
                         }
                     };
 
-                    let filtered =
-                        cdef::filter_block(&source[plane], dimensions, block, parameters)
-                            .ok_or_else(|| malformed("CDEF block exceeds its source plane"))?;
+                    let block_length = block
+                        .width
+                        .checked_mul(block.height)
+                        .ok_or_else(|| malformed("CDEF block size overflows"))?;
+                    cdef::filter_block_into(
+                        &source[plane],
+                        dimensions,
+                        block,
+                        parameters,
+                        block_output
+                            .get_mut(..block_length)
+                            .ok_or_else(|| malformed("CDEF block exceeds scratch"))?,
+                    )
+                    .ok_or_else(|| malformed("CDEF block exceeds its source plane"))?;
                     for row in 0..block.height {
                         let source_start = row.saturating_mul(block.width);
                         let source_end = source_start.saturating_add(block.width);
@@ -1838,12 +1896,13 @@ impl FrameCanvas {
                             .saturating_mul(dimensions.0)
                             .saturating_add(x);
                         let destination_end = destination_start.saturating_add(block.width);
-                        self.planes[plane][destination_start..destination_end]
-                            .copy_from_slice(&filtered[source_start..source_end]);
+                        output[plane][destination_start..destination_end]
+                            .copy_from_slice(&block_output[source_start..source_end]);
                     }
                 }
             }
         }
+        self.planes = output;
         Ok(())
     }
 
@@ -2044,6 +2103,14 @@ fn rectangles_overlap(
         && second_x < first_end_x
         && first_y < second_end_y
         && second_y < first_end_y
+}
+
+fn clone_plane(source: &[u16], label: &str) -> Av1Result<Vec<u16>> {
+    let mut copy = Vec::new();
+    copy.try_reserve_exact(source.len())
+        .map_err(|_| CodecError::Dimensions(format!("unable to allocate {label}")))?;
+    copy.extend_from_slice(source);
+    Ok(copy)
 }
 
 fn allocate_zeroed<T: Clone + Default>(

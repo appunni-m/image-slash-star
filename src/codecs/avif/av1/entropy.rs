@@ -5347,7 +5347,7 @@ fn complete_bounded_i444_inter_reconstruction_context(
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && context.frame_tools.cdef.is_none()
+        && bounded_i444_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !inter_context.reference_mode_select
@@ -5358,6 +5358,28 @@ fn complete_bounded_i444_inter_reconstruction_context(
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
+}
+
+fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
+    context.frame_tools.cdef.is_none_or(|cdef| {
+        let count = match cdef.bits {
+            0 => 1,
+            1 => 2,
+            2 => 4,
+            _ => return false,
+        };
+        (3..=6).contains(&cdef.damping)
+            && cdef.y_strength_count == count
+            && cdef.uv_strength_count == count
+            && cdef.first_y_strength == cdef.y_strengths.first().copied()
+            && cdef.first_uv_strength == cdef.uv_strengths.first().copied()
+            && cdef.y_strengths[..count]
+                .iter()
+                .all(|&strength| strength <= 63)
+            && cdef.uv_strengths[..count]
+                .iter()
+                .all(|&strength| strength <= 63)
+    })
 }
 
 /// Common admission for the first luma-only monochrome lossy tranche.
