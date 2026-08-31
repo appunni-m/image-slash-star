@@ -1017,43 +1017,198 @@ pub(super) fn distance_weight(first: i32, second: i32) -> u8 {
     WEIGHTS[index][order]
 }
 
-/// Blend a staged neighbor prediction into a destination using an OBMC mask.
-pub(super) fn blend_obmc(
-    destination: &mut [u16],
-    neighbor: &[u16],
-    width: usize,
-    height: usize,
-    vertical_edge: bool,
-) -> Av1Result<()> {
-    const MASKS: [u8; 64] = [
-        0, 0, 19, 0, 25, 14, 5, 0, 28, 22, 16, 11, 7, 3, 0, 0, 30, 27, 24, 21, 18, 15, 12, 10, 8,
-        6, 4, 3, 0, 0, 0, 0, 31, 29, 28, 26, 24, 23, 21, 20, 19, 17, 16, 14, 13, 12, 11, 9, 8, 7,
-        6, 5, 4, 4, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0,
-    ];
-    let length = width
-        .checked_mul(height)
-        .ok_or_else(|| malformed("OBMC block size overflows"))?;
-    if destination.len() < length || neighbor.len() < length {
-        return Err(malformed("OBMC buffers are too short"));
-    }
-    let mask_extent = if vertical_edge { width } else { height };
-    if !matches!(mask_extent, 2 | 4 | 8 | 16 | 32) {
+const OBMC_MASKS: [u8; 64] = [
+    0, 0, 19, 0, 25, 14, 5, 0, 28, 22, 16, 11, 7, 3, 0, 0, 30, 27, 24, 21, 18, 15, 12, 10, 8, 6, 4,
+    3, 0, 0, 0, 0, 31, 29, 28, 26, 24, 23, 21, 20, 19, 17, 16, 14, 13, 12, 11, 9, 8, 7, 6, 5, 4, 4,
+    3, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+fn validate_obmc_extent(extent: usize) -> Av1Result<usize> {
+    if !matches!(extent, 2 | 4 | 8 | 16 | 32) {
         return Err(malformed("OBMC overlap has a non-normative extent"));
     }
-    let active = mask_extent.saturating_mul(3) >> 2;
-    for y in 0..height {
-        for x in 0..width {
-            let coordinate = if vertical_edge { x } else { y };
-            if coordinate >= active {
-                continue;
-            }
-            let mask = i32::from(MASKS[mask_extent + coordinate]);
-            let index = y * width + x;
-            let value = (i32::from(destination[index]) * (64 - mask)
-                + i32::from(neighbor[index]) * mask
+    Ok(extent.saturating_mul(3) >> 2)
+}
+
+fn blend_obmc_row(destination: &mut [u16], neighbor: &[u16], mask: u8) -> Av1Result<()> {
+    if destination.len() != neighbor.len() {
+        return Err(malformed("OBMC row buffers have different lengths"));
+    }
+    let mask = i32x8::new([i32::from(mask); 8]);
+    let complement = i32x8::new([64; 8]) - mask;
+    let vector_length = destination.len() / 8 * 8;
+    for offset in (0..vector_length).step_by(8) {
+        let current = i32x8::new(std::array::from_fn(|lane| {
+            i32::from(destination[offset + lane])
+        }));
+        let staged = i32x8::new(std::array::from_fn(|lane| {
+            i32::from(neighbor[offset + lane])
+        }));
+        let value =
+            (current * complement + staged * mask + i32x8::new([32; 8])).unbounded_shr_scalar(6);
+        destination[offset..offset + 8]
+            .copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
+    }
+    for (current, staged) in destination[vector_length..]
+        .iter_mut()
+        .zip(&neighbor[vector_length..])
+    {
+        let mask = i32::from(mask.to_array()[0]);
+        let value = (i32::from(*current) * (64 - mask) + i32::from(*staged) * mask + 32) >> 6;
+        *current = u16::try_from(value).map_err(|_| malformed("OBMC blend sample exceeds u16"))?;
+    }
+    Ok(())
+}
+
+/// Blend a top-neighbor predictor into the first three quarters of a full
+/// overlap-height strip. The neighbor predictor may contain one extra rounded
+/// source row; AV1 deliberately leaves that row unused by the mask.
+pub(super) fn blend_obmc_top(
+    destination: &mut [u16],
+    dst_stride: usize,
+    x_offset: usize,
+    neighbor: &[u16],
+    overlap_width: usize,
+    overlap_height: usize,
+) -> Av1Result<()> {
+    let active_height = validate_obmc_extent(overlap_height)?;
+    let destination_end = x_offset
+        .checked_add(overlap_width)
+        .ok_or_else(|| malformed("OBMC top destination span overflows"))?;
+    if overlap_width == 0 || destination_end > dst_stride {
+        return Err(malformed("OBMC top destination span is invalid"));
+    }
+    let neighbor_rows = neighbor
+        .len()
+        .checked_div(overlap_width)
+        .ok_or_else(|| malformed("OBMC top neighbor width is invalid"))?;
+    if neighbor_rows < active_height {
+        return Err(malformed("OBMC top neighbor rows are too short"));
+    }
+    let destination_rows = destination
+        .len()
+        .checked_div(dst_stride)
+        .ok_or_else(|| malformed("OBMC top destination stride is invalid"))?;
+    if destination_rows < active_height {
+        return Err(malformed("OBMC top destination rows are too short"));
+    }
+    for row in 0..active_height {
+        let destination_start = row
+            .checked_mul(dst_stride)
+            .and_then(|offset| offset.checked_add(x_offset))
+            .ok_or_else(|| malformed("OBMC top destination row overflows"))?;
+        let destination_end = destination_start
+            .checked_add(overlap_width)
+            .ok_or_else(|| malformed("OBMC top destination row exceeds buffer"))?;
+        let neighbor_start = row
+            .checked_mul(overlap_width)
+            .ok_or_else(|| malformed("OBMC top neighbor row overflows"))?;
+        let neighbor_end = neighbor_start
+            .checked_add(overlap_width)
+            .ok_or_else(|| malformed("OBMC top neighbor row exceeds buffer"))?;
+        let mask = *OBMC_MASKS
+            .get(overlap_height + row)
+            .ok_or_else(|| malformed("OBMC top mask index exceeds table"))?;
+        blend_obmc_row(
+            destination
+                .get_mut(destination_start..destination_end)
+                .ok_or_else(|| malformed("OBMC top destination row is unavailable"))?,
+            neighbor
+                .get(neighbor_start..neighbor_end)
+                .ok_or_else(|| malformed("OBMC top neighbor row is unavailable"))?,
+            mask,
+        )?;
+    }
+    Ok(())
+}
+
+/// Blend a left-neighbor predictor into the first three quarters of a full
+/// overlap-width strip. The top pass is applied before this pass, so the
+/// corner receives AV1's intentional two-stage blend.
+pub(super) fn blend_obmc_left(
+    destination: &mut [u16],
+    dst_stride: usize,
+    y_offset: usize,
+    neighbor: &[u16],
+    overlap_width: usize,
+    overlap_height: usize,
+) -> Av1Result<()> {
+    let active_width = validate_obmc_extent(overlap_width)?;
+    if overlap_height == 0 || overlap_width == 0 {
+        return Err(malformed("OBMC left overlap has zero extent"));
+    }
+    let neighbor_length = overlap_width
+        .checked_mul(overlap_height)
+        .ok_or_else(|| malformed("OBMC left neighbor size overflows"))?;
+    if neighbor.len() < neighbor_length {
+        return Err(malformed("OBMC left neighbor rows are too short"));
+    }
+    if dst_stride == 0 || active_width > dst_stride {
+        return Err(malformed("OBMC left destination stride is invalid"));
+    }
+    let destination_start = y_offset
+        .checked_mul(dst_stride)
+        .ok_or_else(|| malformed("OBMC left destination offset overflows"))?;
+    let destination_last = y_offset
+        .checked_add(overlap_height.saturating_sub(1))
+        .and_then(|row| row.checked_mul(dst_stride))
+        .and_then(|row| row.checked_add(active_width))
+        .ok_or_else(|| malformed("OBMC left destination span overflows"))?;
+    if destination_start > destination.len() || destination_last > destination.len() {
+        return Err(malformed("OBMC left destination span is invalid"));
+    }
+    for row in 0..overlap_height {
+        let destination_row = y_offset
+            .checked_add(row)
+            .and_then(|value| value.checked_mul(dst_stride))
+            .ok_or_else(|| malformed("OBMC left destination row overflows"))?;
+        let neighbor_row = row
+            .checked_mul(overlap_width)
+            .ok_or_else(|| malformed("OBMC left neighbor row overflows"))?;
+        let vector_length = active_width / 8 * 8;
+        for offset in (0..vector_length).step_by(8) {
+            let current = i32x8::new(std::array::from_fn(|lane| {
+                i32::from(destination[destination_row + offset + lane])
+            }));
+            let staged = i32x8::new(std::array::from_fn(|lane| {
+                i32::from(neighbor[neighbor_row + offset + lane])
+            }));
+            let masks = i32x8::new(std::array::from_fn(|lane| {
+                i32::from(OBMC_MASKS[overlap_width + offset + lane])
+            }));
+            let value =
+                (current * (i32x8::new([64; 8]) - masks) + staged * masks + i32x8::new([32; 8]))
+                    .unbounded_shr_scalar(6);
+            destination[destination_row + offset..destination_row + offset + 8]
+                .copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
+        }
+        for offset in vector_length..active_width {
+            let destination_index = destination_row
+                .checked_add(offset)
+                .ok_or_else(|| malformed("OBMC left destination index overflows"))?;
+            let neighbor_index = neighbor_row
+                .checked_add(offset)
+                .ok_or_else(|| malformed("OBMC left neighbor index overflows"))?;
+            let mask = i32::from(
+                *OBMC_MASKS
+                    .get(overlap_width + offset)
+                    .ok_or_else(|| malformed("OBMC left mask index exceeds table"))?,
+            );
+            let value = (i32::from(
+                *destination
+                    .get(destination_index)
+                    .ok_or_else(|| malformed("OBMC left destination sample is unavailable"))?,
+            ) * (64 - mask)
+                + i32::from(
+                    *neighbor
+                        .get(neighbor_index)
+                        .ok_or_else(|| malformed("OBMC left neighbor sample is unavailable"))?,
+                ) * mask
                 + 32)
                 >> 6;
-            destination[index] =
+            *destination
+                .get_mut(destination_index)
+                .ok_or_else(|| malformed("OBMC left destination sample is unavailable"))? =
                 u16::try_from(value).map_err(|_| malformed("OBMC blend sample exceeds u16"))?;
         }
     }

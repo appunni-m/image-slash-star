@@ -2994,6 +2994,127 @@ fn has_overlappable_neighbor(tile_state: &TileState, node: PartitionNode) -> Av1
     Ok(false)
 }
 
+/// Collect the causal inter neighbours used by AV1's single-reference OBMC
+/// predictor. The scan is deliberately MI-grid based: each query is O(1), a
+/// neighbour advances by its nominal edge width/height, and only admitted
+/// inter leaves occupy the bounded four-entry arrays. Compound neighbours are
+/// valid and contribute their first reference/MV exactly as the reference
+/// decoder does; intra and intra-BC leaves are skipped.
+fn collect_obmc_context<'a>(
+    tile_state: &TileState,
+    inter_context: &InterFrameContext<'a>,
+    node: PartitionNode,
+    tile_origin_b4_x: u32,
+    tile_origin_b4_y: u32,
+) -> Av1Result<super::block::ObmcContext<'a>> {
+    let (current_width_b4, current_height_b4) = node.block_size.mi_dimensions();
+    let top_capacity = usize::try_from(current_width_b4.ilog2().min(4))
+        .map_err(|_| malformed("OBMC top capacity exceeds usize"))?;
+    let left_capacity = usize::try_from(current_height_b4.ilog2().min(4))
+        .map_err(|_| malformed("OBMC left capacity exceeds usize"))?;
+    let mut top = [None; 4];
+    let mut left = [None; 4];
+
+    if let Some(top_y) = node.y.checked_sub(1) {
+        let mut x = 0_u32;
+        let mut admitted = 0_usize;
+        let top_overlap_height = current_height_b4.min(16) >> 1;
+        while x < node.width && admitted < top_capacity {
+            let query_x = node
+                .x
+                .checked_add(x)
+                .ok_or_else(|| malformed("OBMC top query x overflows"))?;
+            let neighbor = tile_state.neighbor_at_checked(query_x, top_y)?;
+            let step_b4 = neighbor.map_or(2, |neighbor| {
+                neighbor.block_size.mi_dimensions().0.clamp(2, 16)
+            });
+            if let Some(neighbor) = neighbor {
+                if let Some(inter) = neighbor.coding.inter() {
+                    let reference = inter_context.reference(inter.references.first);
+                    let overlap_width = step_b4.min(current_width_b4);
+                    let source_height = top_overlap_height
+                        .checked_mul(3)
+                        .and_then(|height| height.checked_add(3))
+                        .ok_or_else(|| malformed("OBMC top source height overflows"))?
+                        >> 2;
+                    let origin_x_b4 = tile_origin_b4_x
+                        .checked_add(node.x)
+                        .and_then(|origin| origin.checked_add(x))
+                        .ok_or_else(|| malformed("OBMC top origin x overflows"))?;
+                    let origin_y_b4 = tile_origin_b4_y
+                        .checked_add(node.y)
+                        .ok_or_else(|| malformed("OBMC top origin y overflows"))?;
+                    top[admitted] = Some(super::block::ObmcNeighbor {
+                        surface: reference.surface,
+                        scale: reference.scale,
+                        motion: inter.motion_vectors[0],
+                        filters: inter.filters,
+                        origin_x_b4,
+                        origin_y_b4,
+                        request_width_b4: overlap_width,
+                        request_height_b4: source_height,
+                        overlap_width_b4: overlap_width,
+                        overlap_height_b4: top_overlap_height,
+                        destination_offset_b4: x,
+                    });
+                    admitted = admitted.saturating_add(1);
+                }
+            }
+            x = x
+                .checked_add(step_b4)
+                .ok_or_else(|| malformed("OBMC top scan x overflows"))?;
+        }
+    }
+
+    if let Some(left_x) = node.x.checked_sub(1) {
+        let mut y = 0_u32;
+        let mut admitted = 0_usize;
+        let left_overlap_width = current_width_b4.min(16) >> 1;
+        while y < node.height && admitted < left_capacity {
+            let query_y = node
+                .y
+                .checked_add(y)
+                .ok_or_else(|| malformed("OBMC left query y overflows"))?;
+            let neighbor = tile_state.neighbor_at_checked(left_x, query_y)?;
+            let step_b4 = neighbor.map_or(2, |neighbor| {
+                neighbor.block_size.mi_dimensions().1.clamp(2, 16)
+            });
+            if let Some(neighbor) = neighbor {
+                if let Some(inter) = neighbor.coding.inter() {
+                    let reference = inter_context.reference(inter.references.first);
+                    let overlap_height = step_b4.min(current_height_b4);
+                    let origin_x_b4 = tile_origin_b4_x
+                        .checked_add(node.x)
+                        .ok_or_else(|| malformed("OBMC left origin x overflows"))?;
+                    let origin_y_b4 = tile_origin_b4_y
+                        .checked_add(node.y)
+                        .and_then(|origin| origin.checked_add(y))
+                        .ok_or_else(|| malformed("OBMC left origin y overflows"))?;
+                    left[admitted] = Some(super::block::ObmcNeighbor {
+                        surface: reference.surface,
+                        scale: reference.scale,
+                        motion: inter.motion_vectors[0],
+                        filters: inter.filters,
+                        origin_x_b4,
+                        origin_y_b4,
+                        request_width_b4: left_overlap_width,
+                        request_height_b4: overlap_height,
+                        overlap_width_b4: left_overlap_width,
+                        overlap_height_b4: overlap_height,
+                        destination_offset_b4: y,
+                    });
+                    admitted = admitted.saturating_add(1);
+                }
+            }
+            y = y
+                .checked_add(step_b4)
+                .ok_or_else(|| malformed("OBMC left scan y overflows"))?;
+        }
+    }
+
+    Ok(super::block::ObmcContext { top, left })
+}
+
 /// Find the causal single-reference neighbours that make LOCALWARP syntax
 /// available for one block. The AV1 decoder scans the complete top and left
 /// edges, then optionally admits the top-left and top-right corner samples.
@@ -4153,6 +4274,7 @@ fn decode_inter_leaf(
     let motion_mode = if compound {
         MotionMode::Translation
     } else if !skip_mode
+        && !matches!(mode, InterMode::Global)
         && inter_context.motion_mode_switchable
         && block_width_b4.min(block_height_b4) >= 2
         && has_overlappable_neighbor(tile_state, node)?
@@ -4178,7 +4300,7 @@ fn decode_inter_leaf(
         };
         match symbol {
             0 => MotionMode::Translation,
-            1 => return Ok(Err(super::block::PortableUnavailable)),
+            1 => MotionMode::Obmc,
             2 if allow_warp => return Ok(Err(super::block::PortableUnavailable)),
             _ => return Err(malformed("OBMC motion-mode symbol is invalid")),
         }
@@ -4196,7 +4318,7 @@ fn decode_inter_leaf(
                 GlobalMotionType::Translation
             ) || matches!(second.global_motion.kind, GlobalMotionType::Translation)
         }),
-        _ => !skip_mode && motion_mode == MotionMode::Translation,
+        _ => !skip_mode && matches!(motion_mode, MotionMode::Translation | MotionMode::Obmc),
     };
     let filters = if interpolation_needed && inter_context.interpolation_filter == 4 {
         // AV1 reads vertical first and horizontal second; the motion kernel
@@ -4228,6 +4350,26 @@ fn decode_inter_leaf(
         [filter; 2]
     } else {
         [InterpolationFilter::Regular; 2]
+    };
+    let obmc = if matches!(motion_mode, MotionMode::Obmc) {
+        let context = collect_obmc_context(
+            tile_state,
+            inter_context,
+            node,
+            context.tile_origin_b4_x,
+            context.tile_origin_b4_y,
+        )?;
+        if !context
+            .top
+            .iter()
+            .chain(context.left.iter())
+            .any(Option::is_some)
+        {
+            return Ok(Err(super::block::PortableUnavailable));
+        }
+        Some(context)
+    } else {
+        None
     };
     let tx_size = decode_inter_transform_size(
         decoder,
@@ -4401,6 +4543,7 @@ fn decode_inter_leaf(
             tx_size,
             transform,
             coefficient_contexts,
+            obmc,
         )
     } {
         Ok(leaf) => leaf,

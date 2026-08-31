@@ -15,7 +15,7 @@ use super::geometry::{BlockSize, IntraTxPlan, PixelLayout, TxSize};
 use super::large_cdfs::{
     LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
 };
-use super::mc::{MotionScratch, PredictionRequest};
+use super::mc::{MotionScratch, PredictionRequest, blend_obmc_left, blend_obmc_top};
 use super::motion::{InterpolationFilter, MotionVector, ScaleFactors};
 use super::quantization;
 use super::sample_depth::SampleDepth;
@@ -48361,6 +48361,31 @@ struct BlockSegmentState {
 }
 
 #[derive(Clone, Copy)]
+pub(super) struct ObmcNeighbor<'a> {
+    pub(super) surface: &'a FrameSurface,
+    pub(super) scale: ScaleFactors,
+    pub(super) motion: MotionVector,
+    pub(super) filters: [InterpolationFilter; 2],
+    /// Absolute origin of the current block in the tile's 4x4 grid.
+    pub(super) origin_x_b4: u32,
+    pub(super) origin_y_b4: u32,
+    /// Staged and blended dimensions in 4x4 units.  The top pass stores the
+    /// rounded source height separately from its full overlap height.
+    pub(super) request_width_b4: u32,
+    pub(super) request_height_b4: u32,
+    pub(super) overlap_width_b4: u32,
+    pub(super) overlap_height_b4: u32,
+    /// Horizontal (top) or vertical (left) destination offset in 4x4 units.
+    pub(super) destination_offset_b4: u32,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct ObmcContext<'a> {
+    pub(super) top: [Option<ObmcNeighbor<'a>>; 4],
+    pub(super) left: [Option<ObmcNeighbor<'a>>; 4],
+}
+
+#[derive(Clone, Copy)]
 struct InterPrediction<'a> {
     references: [&'a FrameSurface; 2],
     scales: [ScaleFactors; 2],
@@ -48368,6 +48393,7 @@ struct InterPrediction<'a> {
     block_x_b4: u32,
     block_y_b4: u32,
     compound_average: bool,
+    obmc: Option<ObmcContext<'a>>,
 }
 
 /// Tile-local coefficient edges captured before an inter leaf is decoded.
@@ -48797,6 +48823,168 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
+        reason = "OBMC carries plane geometry and the immutable causal-neighbour context"
+    )]
+    fn apply_obmc_prediction(
+        &mut self,
+        prediction: &mut [u16],
+        plane: usize,
+        width: usize,
+        height: usize,
+        block_size: BlockSize,
+        obmc: ObmcContext<'_>,
+    ) -> PortableResult<()> {
+        let expected_len = width.checked_mul(height).portable()?;
+        (prediction.len() == expected_len)
+            .then_some(())
+            .portable()?;
+        let (subsampling_x, subsampling_y) = self.chroma_sampling.plane_subsampling(plane);
+        let horizontal_mul = 4usize
+            .checked_shr(u32::from(subsampling_x == 2))
+            .ok_or(PortableUnavailable)?;
+        let vertical_mul = 4usize
+            .checked_shr(u32::from(subsampling_y == 2))
+            .ok_or(PortableUnavailable)?;
+        let (block_width_b4, block_height_b4) = block_size.mi_dimensions();
+        let block_width_b4 = usize::try_from(block_width_b4).map_err(|_| PortableUnavailable)?;
+        let block_height_b4 = usize::try_from(block_height_b4).map_err(|_| PortableUnavailable)?;
+
+        // AV1 suppresses the top pass for a small chroma block. The left pass
+        // is intentionally not covered by this gate and is applied below.
+        let top_allowed = plane == 0
+            || block_width_b4
+                .checked_mul(horizontal_mul)
+                .and_then(|width| {
+                    block_height_b4
+                        .checked_mul(vertical_mul)
+                        .and_then(|height| width.checked_add(height))
+                })
+                .is_some_and(|extent| extent >= 16);
+
+        if top_allowed {
+            for neighbor in obmc.top.into_iter().flatten() {
+                let request_width = usize::try_from(neighbor.request_width_b4)
+                    .map_err(|_| PortableUnavailable)?
+                    .checked_mul(horizontal_mul)
+                    .portable()?;
+                let request_height = usize::try_from(neighbor.request_height_b4)
+                    .map_err(|_| PortableUnavailable)?
+                    .checked_mul(vertical_mul)
+                    .portable()?;
+                let overlap_width = usize::try_from(neighbor.overlap_width_b4)
+                    .map_err(|_| PortableUnavailable)?
+                    .checked_mul(horizontal_mul)
+                    .portable()?;
+                let overlap_height = usize::try_from(neighbor.overlap_height_b4)
+                    .map_err(|_| PortableUnavailable)?
+                    .checked_mul(vertical_mul)
+                    .portable()?;
+                let x_offset = usize::try_from(neighbor.destination_offset_b4)
+                    .map_err(|_| PortableUnavailable)?
+                    .checked_mul(horizontal_mul)
+                    .portable()?;
+                let request = PredictionRequest {
+                    block_x_b4: neighbor.origin_x_b4,
+                    block_y_b4: neighbor.origin_y_b4,
+                    width: u32::try_from(request_width).map_err(|_| PortableUnavailable)?,
+                    height: u32::try_from(request_height).map_err(|_| PortableUnavailable)?,
+                    subsampling_x: subsampling_x == 2,
+                    subsampling_y: subsampling_y == 2,
+                    motion: neighbor.motion,
+                    filters: neighbor.filters,
+                };
+                let reference = neighbor
+                    .surface
+                    .plane(plane)
+                    .map_err(|_| PortableUnavailable)?
+                    .portable()?;
+                let staged = {
+                    let scratch = self.ensure_motion_scratch()?;
+                    if neighbor.scale.scaled {
+                        scratch
+                            .put_scaled(reference, request, neighbor.scale)
+                            .map_err(|_| PortableUnavailable)?
+                    } else {
+                        scratch
+                            .put_unscaled(reference, request)
+                            .map_err(|_| PortableUnavailable)?
+                    }
+                };
+                blend_obmc_top(
+                    prediction,
+                    width,
+                    x_offset,
+                    staged,
+                    overlap_width,
+                    overlap_height,
+                )
+                .map_err(|_| PortableUnavailable)?;
+            }
+        }
+
+        for neighbor in obmc.left.into_iter().flatten() {
+            let request_width = usize::try_from(neighbor.request_width_b4)
+                .map_err(|_| PortableUnavailable)?
+                .checked_mul(horizontal_mul)
+                .portable()?;
+            let request_height = usize::try_from(neighbor.request_height_b4)
+                .map_err(|_| PortableUnavailable)?
+                .checked_mul(vertical_mul)
+                .portable()?;
+            let overlap_width = usize::try_from(neighbor.overlap_width_b4)
+                .map_err(|_| PortableUnavailable)?
+                .checked_mul(horizontal_mul)
+                .portable()?;
+            let overlap_height = usize::try_from(neighbor.overlap_height_b4)
+                .map_err(|_| PortableUnavailable)?
+                .checked_mul(vertical_mul)
+                .portable()?;
+            let y_offset = usize::try_from(neighbor.destination_offset_b4)
+                .map_err(|_| PortableUnavailable)?
+                .checked_mul(vertical_mul)
+                .portable()?;
+            let request = PredictionRequest {
+                block_x_b4: neighbor.origin_x_b4,
+                block_y_b4: neighbor.origin_y_b4,
+                width: u32::try_from(request_width).map_err(|_| PortableUnavailable)?,
+                height: u32::try_from(request_height).map_err(|_| PortableUnavailable)?,
+                subsampling_x: subsampling_x == 2,
+                subsampling_y: subsampling_y == 2,
+                motion: neighbor.motion,
+                filters: neighbor.filters,
+            };
+            let reference = neighbor
+                .surface
+                .plane(plane)
+                .map_err(|_| PortableUnavailable)?
+                .portable()?;
+            let staged = {
+                let scratch = self.ensure_motion_scratch()?;
+                if neighbor.scale.scaled {
+                    scratch
+                        .put_scaled(reference, request, neighbor.scale)
+                        .map_err(|_| PortableUnavailable)?
+                } else {
+                    scratch
+                        .put_unscaled(reference, request)
+                        .map_err(|_| PortableUnavailable)?
+                }
+            };
+            blend_obmc_left(
+                prediction,
+                width,
+                y_offset,
+                staged,
+                overlap_width,
+                overlap_height,
+            )
+            .map_err(|_| PortableUnavailable)?;
+        }
+        Ok(())
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
         reason = "single-reference reconstruction carries block, frame, transform, and prediction state together"
     )]
     pub(super) fn decode_inter_translation(
@@ -48819,6 +49007,7 @@ impl Lossy420Decoder {
         luma_tx_size: TxSize,
         luma_transform: Av1TransformType,
         coefficient_contexts: InterCoefficientContexts,
+        obmc: Option<ObmcContext<'_>>,
     ) -> PortableResult<FirstLeaf> {
         self.decode_inter_translation_impl(
             decoder,
@@ -48834,6 +49023,7 @@ impl Lossy420Decoder {
                 block_x_b4,
                 block_y_b4,
                 compound_average: false,
+                obmc,
             },
             block_skipped,
             luma_txb_skipped,
@@ -48883,6 +49073,7 @@ impl Lossy420Decoder {
                 block_x_b4,
                 block_y_b4,
                 compound_average: true,
+                obmc: None,
             },
             block_skipped,
             luma_txb_skipped,
@@ -49105,6 +49296,16 @@ impl Lossy420Decoder {
                         .map_err(|_| PortableUnavailable)?
                 };
                 prediction.extend_from_slice(predicted);
+            }
+            if let Some(obmc) = prediction_state.obmc {
+                self.apply_obmc_prediction(
+                    &mut prediction,
+                    plane,
+                    tx_width,
+                    tx_height,
+                    block_size,
+                    obmc,
+                )?;
             }
             let context_width = tx_width / 4;
             let context_height = tx_height / 4;
