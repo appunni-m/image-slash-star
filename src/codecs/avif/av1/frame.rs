@@ -959,9 +959,9 @@ impl FrameState {
             || surface.render_height != surface.frame_height
             || (surface.layout == PixelLayout::I444
                 && (surface.coded_width != surface.upscaled_width
-                    || !matches!(
-                        (surface.upscaled_width, surface.frame_height),
-                        (16, 16) | (32, 16) | (16, 32)
+                    || !entropy::bounded_lossy_i444_dimensions(
+                        surface.upscaled_width,
+                        surface.frame_height,
                     )))
             || surface.planes.iter().any(Option::is_none)
             || matches!(grain.matrix_coefficients, 0 | 3)

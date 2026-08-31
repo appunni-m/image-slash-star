@@ -8350,13 +8350,36 @@ fn bounded_i444_geometry_for_context(
     }
 }
 
+/// Exact dimension whitelist for the bounded lossy full-resolution I444
+/// profiles.  Keep this separate from the reconstruction selector: dimensions
+/// alone must never admit a block topology, but the frame/display film-grain
+/// gates need to share the same narrow set without duplicating it in siblings.
+pub(super) const fn bounded_lossy_i444_dimensions(width: u32, height: u32) -> bool {
+    matches!(
+        (width, height),
+        (16, 16)
+            | (32, 16)
+            | (16, 32)
+            | (32, 32)
+            | (64, 16)
+            | (16, 64)
+            | (64, 32)
+            | (32, 64)
+            | (64, 64)
+            | (128, 16)
+            | (16, 128)
+            | (128, 32)
+            | (32, 128)
+            | (128, 64)
+            | (64, 128)
+            | (128, 128)
+    )
+}
+
 fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
         || (context.bit_depth == 8
-            && matches!(
-                (context.frame_width, context.frame_height),
-                (16, 16) | (32, 16) | (16, 32)
-            ))
+            && bounded_lossy_i444_dimensions(context.frame_width, context.frame_height))
 }
 
 /// Exact bounded 4:4:4 intra tranche with one Wiener/SGR unit per plane.
