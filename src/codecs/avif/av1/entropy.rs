@@ -5647,10 +5647,11 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// motion-compensation core. The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms
 /// and a closed tool profile until the remaining AV1 syntax families publish
-/// their high-depth state. I422 additionally requires skipped residuals and
-/// DCT-DCT chroma, enforced at the block boundary. Every retained reference is
-/// checked up front so a later reference choice cannot narrow the path back to
-/// eight-bit geometry.
+/// their high-depth state. Plane-aware matrix dequantization remains optional
+/// and depth-parametric on the same terminal path. I422 additionally requires
+/// skipped residuals and DCT-DCT chroma, enforced at the block boundary. Every
+/// retained reference is checked up front so a later reference choice cannot
+/// narrow the path back to eight-bit geometry.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -5676,10 +5677,7 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.segmentation_enabled
         && context.frame_tools.transform_mode == 1
         && !context.frame_tools.reduced_transform_set
-        && context
-            .frame_tools
-            .quantization
-            .is_some_and(|quantization| !quantization.using_matrix)
+        && context.frame_tools.quantization.is_some()
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
