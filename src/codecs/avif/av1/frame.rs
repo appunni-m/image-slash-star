@@ -2126,6 +2126,9 @@ fn validate_tile_entropy_prefixes(
                     complete_monochrome_plane = Some(plane);
                     continue;
                 }
+                let full_resolution =
+                    !reconstruction.subsampling_x && !reconstruction.subsampling_y;
+                let subsampled_420 = reconstruction.subsampling_x && reconstruction.subsampling_y;
                 let leaf = reconstruction.into_filtered_leaf()?;
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
@@ -2144,7 +2147,15 @@ fn validate_tile_entropy_prefixes(
                 let leaf = if let Some(plan) = restoration_plan {
                     let depth = SampleDepth::new(sequence.bit_depth)
                         .ok_or_else(|| malformed("restoration sample depth is unsupported"))?;
-                    restoration::restore_i420_leaf(leaf, plan, depth)?
+                    if full_resolution {
+                        restoration::restore_i444_leaf(leaf, plan, depth)?
+                    } else if subsampled_420 {
+                        restoration::restore_i420_leaf(leaf, plan, depth)?
+                    } else {
+                        return Err(malformed(
+                            "restoration carries an unsupported chroma sampling",
+                        ));
+                    }
                 } else {
                     leaf
                 };

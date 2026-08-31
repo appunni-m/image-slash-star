@@ -47,13 +47,10 @@ pub(super) struct Plan {
 /// all allocations, and consumes only a local leaf, so a failure cannot expose
 /// partially restored state.
 pub(super) fn restore_i420_leaf(
-    mut leaf: FirstLeaf,
+    leaf: FirstLeaf,
     plan: Plan,
     depth: SampleDepth,
 ) -> Av1Result<FirstLeaf> {
-    if leaf.width == 0 || leaf.height == 0 {
-        return Err(malformed("restoration leaf dimensions are empty"));
-    }
     let chroma_width = leaf
         .width
         .checked_add(1)
@@ -69,6 +66,41 @@ pub(super) fn restore_i420_leaf(
         (chroma_width, chroma_height),
         (chroma_width, chroma_height),
     ];
+    restore_leaf_with_dimensions(leaf, plan, depth, dimensions)
+}
+
+/// Apply the bounded single-unit restoration plan to a full-resolution I444
+/// leaf. Unlike 4:2:0, all three planes retain the visible frame dimensions.
+pub(super) fn restore_i444_leaf(
+    leaf: FirstLeaf,
+    plan: Plan,
+    depth: SampleDepth,
+) -> Av1Result<FirstLeaf> {
+    let dimensions = [(leaf.width, leaf.height); 3];
+    restore_leaf_with_dimensions(leaf, plan, depth, dimensions)
+}
+
+fn restore_leaf_with_dimensions(
+    mut leaf: FirstLeaf,
+    plan: Plan,
+    depth: SampleDepth,
+    dimensions: [(u32, u32); 3],
+) -> Av1Result<FirstLeaf> {
+    if leaf.width == 0 || leaf.height == 0 {
+        return Err(malformed("restoration leaf dimensions are empty"));
+    }
+    for (plane, &(width, height)) in dimensions.iter().enumerate() {
+        let width = usize::try_from(width)
+            .map_err(|_| malformed("restoration plane width exceeds usize"))?;
+        let height = usize::try_from(height)
+            .map_err(|_| malformed("restoration plane height exceeds usize"))?;
+        let sample_count = width
+            .checked_mul(height)
+            .ok_or_else(|| malformed("restoration plane sample count overflows"))?;
+        if width == 0 || height == 0 || leaf.planes[plane].samples.len() != sample_count {
+            return Err(malformed("restoration plane extent is invalid"));
+        }
+    }
     for (plane, unit) in plan.units.into_iter().enumerate() {
         let Some(unit) = unit else {
             continue;

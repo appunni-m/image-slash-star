@@ -4410,6 +4410,16 @@ pub(super) fn validate_complete_lossy_420_partition(
         bounded_i444_inter_reconstruction_geometry(context, inter_context)
     });
     let bounded_i444_inter = bounded_i444_inter_geometry.is_some();
+    let bounded_i444_restoration = inter_context.is_some_and(|inter_context| {
+        complete_bounded_i444_restoration_inter_reconstruction_context(context, inter_context)
+    });
+    let bounded_i444_geometry = if bounded_i444_inter {
+        bounded_i444_inter_geometry
+    } else if bounded_i444_restoration {
+        bounded_i444_geometry_for_context(context)
+    } else {
+        None
+    };
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
@@ -4419,6 +4429,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 && monochrome_postfilter
                 && complete_monochrome_references(context, inter_context))
             || bounded_inter_restoration
+            || bounded_i444_restoration
     });
     let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
         || complete_superres_lossy_420_reconstruction_context(context)
@@ -4458,6 +4469,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     decoder.enable_operation_trace();
     let restoration_plan = if bounded_intra_restoration
         || bounded_inter_restoration
+        || bounded_i444_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
     {
         let Some(plan) =
@@ -4534,7 +4546,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || context.frame_tools.loop_filter.level_v != 0;
     let collect_cdef = context.frame_tools.cdef.is_some();
     let mut filter_blocks = Vec::<super::filter::Block>::new();
-    if bounded_i444_inter_geometry.is_some_and(|geometry| geometry.expected_leaf_count() == 2) {
+    if bounded_i444_geometry.is_some_and(|geometry| geometry.expected_leaf_count() == 2) {
         filter_blocks.try_reserve_exact(2).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
         })?;
@@ -4610,8 +4622,9 @@ pub(super) fn validate_complete_lossy_420_partition(
                 };
                 if complete_high_depth_422_intra_reconstruction_context(context)
                     || bounded_i444_inter
+                    || bounded_i444_restoration
                 {
-                    if let Some(geometry) = bounded_i444_inter_geometry {
+                    if let Some(geometry) = bounded_i444_geometry {
                         if !bounded_i444_expected_terminal(geometry, bounded_i444_leaf_count, node)
                         {
                             // The bounded full-resolution inter profiles admit
@@ -4978,7 +4991,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             if unsupported || matches!(control, PartitionVisitControl::Stop) {
                 return Ok(None);
             }
-            if let Some(geometry) = bounded_i444_inter_geometry {
+            if let Some(geometry) = bounded_i444_geometry {
                 if bounded_i444_leaf_count != geometry.expected_leaf_count() {
                     return Ok(None);
                 }
@@ -5425,6 +5438,23 @@ fn bounded_i444_expected_terminal(
 /// the average compound predictor. Keep each admitted geometry as an explicit
 /// profile so a clipped partition cannot inherit the narrower 4:2:0/4:2:2
 /// admission or skip child-local context publication.
+fn bounded_i444_geometry_for_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedI444InterGeometry> {
+    match (
+        context.frame_width,
+        context.frame_height,
+        context.block_width,
+        context.block_height,
+        context.level,
+    ) {
+        (16, 16, 4, 4, 0 | 1) => Some(BoundedI444InterGeometry::OneBlock),
+        (32, 16, 8, 4, 1) => Some(BoundedI444InterGeometry::TwoHorizontal),
+        (16, 32, 4, 8, 1) => Some(BoundedI444InterGeometry::TwoVertical),
+        _ => None,
+    }
+}
+
 fn bounded_i444_inter_reconstruction_geometry(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -5432,18 +5462,7 @@ fn bounded_i444_inter_reconstruction_geometry(
     let Some(quantization) = context.frame_tools.quantization else {
         return None;
     };
-    let geometry = match (
-        context.frame_width,
-        context.frame_height,
-        context.block_width,
-        context.block_height,
-        context.level,
-    ) {
-        (16, 16, 4, 4, 0 | 1) => BoundedI444InterGeometry::OneBlock,
-        (32, 16, 8, 4, 1) => BoundedI444InterGeometry::TwoHorizontal,
-        (16, 32, 4, 8, 1) => BoundedI444InterGeometry::TwoVertical,
-        _ => return None,
-    };
+    let geometry = bounded_i444_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
@@ -5495,6 +5514,105 @@ fn bounded_i444_inter_reconstruction_geometry(
         && !inter_context.enable_jnt_comp
         && references_match)
         .then_some(geometry)
+}
+
+fn complete_bounded_i444_restoration_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let Some(geometry) = bounded_i444_geometry_for_context(context) else {
+        return false;
+    };
+    let (reference_width, reference_height) = geometry.dimensions();
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I444
+            && reference.surface.coded_width == reference_width
+            && reference.surface.upscaled_width == reference_width
+            && reference.surface.frame_height == reference_height
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+            && !reference.scale.scaled
+    });
+    !context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && context.upscaled_width == context.frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && bounded_i444_loop_filter_supported(context, geometry)
+        && bounded_i444_cdef_supported(context)
+        && context.frame_tools.restoration_present
+        && context.restoration_types.iter().any(Option::is_some)
+        && context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+        && bounded_i444_restoration_units_supported(context, geometry)
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match
+}
+
+fn bounded_i444_restoration_units_supported(
+    context: &FirstBlockContext,
+    geometry: BoundedI444InterGeometry,
+) -> bool {
+    let unit_log2 = context.restoration_unit_size_log2;
+    if unit_log2[0] != unit_log2[1]
+        || !match context.level {
+            0 => (7..=8).contains(&unit_log2[0]),
+            1 => (6..=8).contains(&unit_log2[0]),
+            _ => false,
+        }
+    {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(unit_log2[0]) else {
+        return false;
+    };
+    let (width, height) = geometry.dimensions();
+    let Some(width_with_half) = width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let units_x = (width_with_half >> unit_log2[0]).max(1);
+    let units_y = (height_with_half >> unit_log2[0]).max(1);
+    units_x == 1 && units_y == 1
 }
 
 fn bounded_i444_loop_filter_supported(
