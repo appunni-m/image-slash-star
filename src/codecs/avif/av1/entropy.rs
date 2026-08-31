@@ -6145,10 +6145,9 @@ fn complete_bounded_restoration_inter_420_reconstruction_context(
 /// First inter reconstruction tranche: 8-bit 4:2:0 translation blocks with
 /// loop filtering and the bounded CDEF profile enabled. Single-reference and
 /// average/distance compound prediction share the checked MC boundary;
-/// difference-weighted and wedge group-one predictions are materialized from
-/// checked masks. Inter-intra, OBMC/LOCALWARP selections, and variable-
-/// transform branches are still rejected before a block publishes neighbor
-/// metadata.
+/// difference-weighted, wedge, and inter-intra predictions are materialized
+/// from checked masks. OBMC/LOCALWARP selections and variable-transform
+/// branches are still rejected before a block publishes neighbor metadata.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
     let Some(cdef) = context.frame_tools.cdef else {
         return true;
@@ -6282,7 +6281,10 @@ fn complete_high_depth_inter_reconstruction_context(
         && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
+        // The depth-parametric inter-intra predictor is currently admitted
+        // only for 4:2:0. Keep the high-depth I422 branch closed until its
+        // distinct chroma edge/mask evidence is complete.
+        && (!inter_context.enable_interintra_compound || i420)
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && context.block_x == 0

@@ -49164,7 +49164,7 @@ impl Lossy420Decoder {
             .portable()?;
         if prediction_state.inter_intra.is_some() {
             (matches!(chroma_sampling, ChromaSampling::Subsampled420)
-                && tools.sample_depth == SampleDepth::EIGHT
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && prediction_state.compound.is_none()
                 && prediction_state.obmc.is_none())
             .then_some(())
