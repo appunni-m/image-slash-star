@@ -4548,13 +4548,39 @@ pub(super) fn validate_complete_lossy_420_partition(
         bounded_i422_intra_rect_cdef_restoration_geometry
             .or(bounded_i422_inter_rect_cdef_restoration_geometry);
     let bounded_i422_rect_cdef_restoration = bounded_i422_rect_cdef_restoration_geometry.is_some();
+    let bounded_i420_intra_rect_loop_postfilters =
+        complete_bounded_i420_rect_loop_postfilters_intra_reconstruction_context(context);
+    let bounded_i420_inter_rect_loop_postfilters = inter_context.and_then(|inter_context| {
+        complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
+            context,
+            inter_context,
+        )
+    });
+    let bounded_i420_rect_loop_postfilters =
+        bounded_i420_intra_rect_loop_postfilters.or(bounded_i420_inter_rect_loop_postfilters);
+    let bounded_i420_rect_loop_postfilters_restoration =
+        bounded_i420_rect_loop_postfilters.is_some_and(|profile| profile.restoration);
+    let bounded_i422_intra_rect_loop_postfilters =
+        complete_bounded_i422_rect_loop_postfilters_intra_reconstruction_context(context);
+    let bounded_i422_inter_rect_loop_postfilters = inter_context.and_then(|inter_context| {
+        complete_bounded_i422_rect_loop_postfilters_inter_reconstruction_context(
+            context,
+            inter_context,
+        )
+    });
+    let bounded_i422_rect_loop_postfilters =
+        bounded_i422_intra_rect_loop_postfilters.or(bounded_i422_inter_rect_loop_postfilters);
+    let bounded_i422_rect_loop_postfilters_restoration =
+        bounded_i422_rect_loop_postfilters.is_some_and(|profile| profile.restoration);
     let bounded_i420_rect_geometry = bounded_i420_rect_loop_geometry
         .or(bounded_i420_rect_cdef_geometry)
         .or(bounded_i420_rect_restoration_geometry)
-        .or(bounded_i420_rect_cdef_restoration_geometry);
+        .or(bounded_i420_rect_cdef_restoration_geometry)
+        .or(bounded_i420_rect_loop_postfilters.map(|profile| profile.geometry));
     let bounded_i420_rect = bounded_i420_rect_geometry.is_some();
-    let bounded_i422_rect_geometry =
-        bounded_i422_rect_geometry.or(bounded_i422_rect_cdef_restoration_geometry);
+    let bounded_i422_rect_geometry = bounded_i422_rect_geometry
+        .or(bounded_i422_rect_cdef_restoration_geometry)
+        .or(bounded_i422_rect_loop_postfilters.map(|profile| profile.geometry));
     let bounded_subsampled_rect_geometry =
         bounded_i420_rect_geometry.or(bounded_i422_rect_geometry);
     let bounded_subsampled_rect = bounded_subsampled_rect_geometry.is_some();
@@ -4609,10 +4635,12 @@ pub(super) fn validate_complete_lossy_420_partition(
             || bounded_i420_rect_cdef
             || bounded_i420_rect_restoration
             || bounded_i420_rect_cdef_restoration
+            || bounded_i420_rect_loop_postfilters.is_some()
             || bounded_i422_rect_loop
             || bounded_i422_rect_cdef
             || bounded_i422_rect_restoration
             || bounded_i422_rect_cdef_restoration
+            || bounded_i422_rect_loop_postfilters.is_some()
             || bounded_i420_inter_loop
             || bounded_i422_inter_loop
     });
@@ -4634,10 +4662,12 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i420_rect_cdef
         || bounded_i420_rect_restoration
         || bounded_i420_rect_cdef_restoration
+        || bounded_i420_rect_loop_postfilters.is_some()
         || bounded_i422_rect_loop
         || bounded_i422_rect_cdef
         || bounded_i422_rect_restoration
         || bounded_i422_rect_cdef_restoration
+        || bounded_i422_rect_loop_postfilters.is_some()
         || bounded_i420_intra_loop
         || bounded_i422_intra_loop
         || bounded_i444_intra_cdef
@@ -4685,8 +4715,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_loop_postfilter_restoration
         || bounded_i420_rect_restoration
         || bounded_i420_rect_cdef_restoration
+        || bounded_i420_rect_loop_postfilters_restoration
         || bounded_i422_rect_restoration
         || bounded_i422_rect_cdef_restoration
+        || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
     {
         let Some(plan) =
@@ -4766,6 +4798,8 @@ pub(super) fn validate_complete_lossy_420_partition(
     if bounded_i444_geometry.is_some_and(|geometry| geometry.expected_leaf_count() == 2)
         || bounded_i422_rect_loop_geometry.is_some()
         || bounded_i420_rect_loop_geometry.is_some()
+        || bounded_i420_rect_loop_postfilters.is_some()
+        || bounded_i422_rect_loop_postfilters.is_some()
     {
         filter_blocks.try_reserve_exact(2).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
@@ -6904,6 +6938,212 @@ fn complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
         && !inter_context.enable_jnt_comp
         && references_match)
         .then_some(geometry)
+}
+
+#[derive(Clone, Copy)]
+struct BoundedRectLoopPostfilters {
+    geometry: BoundedSubsampledRectGeometry,
+    restoration: bool,
+}
+
+/// Common rectangular proof for loop filtering followed by CDEF and/or
+/// restoration. Loop-only rectangles are admitted by their dedicated
+/// predicates; this helper requires at least one later post-filter so the
+/// restoration decoder is selected only for profiles that actually need it.
+fn bounded_subsampled_rect_loop_postfilters_common(
+    context: &FirstBlockContext,
+    quantization: QuantizationContext,
+    geometry: BoundedSubsampledRectGeometry,
+) -> Option<BoundedRectLoopPostfilters> {
+    let cdef = context.frame_tools.cdef.is_some();
+    if cdef && !bounded_i444_cdef_supported(context) {
+        return None;
+    }
+    let restoration = if context.frame_tools.restoration_present {
+        if !context.restoration_types.iter().any(Option::is_some)
+            || !context.restoration_types.iter().all(|restoration_type| {
+                restoration_type.is_none_or(|kind| {
+                    matches!(
+                        kind,
+                        RestorationType::Wiener | RestorationType::SgrProjection
+                    )
+                })
+            })
+        {
+            return None;
+        }
+        let supported = if context.subsampling_x && context.subsampling_y {
+            let (frame_width, frame_height) = geometry.dimensions();
+            bounded_i420_restoration_units_supported_for_dimensions(
+                context,
+                frame_width,
+                frame_height,
+            )
+        } else if context.subsampling_x && !context.subsampling_y {
+            let (frame_width, frame_height) = geometry.dimensions();
+            bounded_i422_restoration_units_supported_for_dimensions(
+                context,
+                frame_width,
+                frame_height,
+            )
+        } else {
+            false
+        };
+        if !supported {
+            return None;
+        }
+        true
+    } else {
+        if context.restoration_types != [None; 3] {
+            return None;
+        }
+        false
+    };
+    if !cdef && !restoration {
+        return None;
+    }
+    let (frame_width, frame_height) = geometry.dimensions();
+    (context.single_tile
+        && context.frame_width == frame_width
+        && context.frame_height == frame_height
+        && context.upscaled_width == frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && bounded_subsampled_rect_loop_filter_supported(context, geometry))
+    .then_some(BoundedRectLoopPostfilters {
+        geometry,
+        restoration,
+    })
+}
+
+fn complete_bounded_i420_rect_loop_postfilters_intra_reconstruction_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedRectLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    (context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && context.subsampling_y)
+        .then_some(())
+        .and_then(|_| {
+            bounded_subsampled_rect_loop_postfilters_common(context, quantization, geometry)
+        })
+}
+
+fn complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<BoundedRectLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    let (reference_width, reference_height) = geometry.dimensions();
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I420
+            && reference.surface.coded_width == reference_width
+            && reference.surface.upscaled_width == reference_width
+            && reference.surface.frame_height == reference_height
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    (!context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && context.subsampling_y
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match)
+        .then_some(())
+        .and_then(|_| {
+            bounded_subsampled_rect_loop_postfilters_common(context, quantization, geometry)
+        })
+}
+
+fn complete_bounded_i422_rect_loop_postfilters_intra_reconstruction_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedRectLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    (context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && context.subsampling_x
+        && !context.subsampling_y)
+        .then_some(())
+        .and_then(|_| {
+            bounded_subsampled_rect_loop_postfilters_common(context, quantization, geometry)
+        })
+}
+
+fn complete_bounded_i422_rect_loop_postfilters_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<BoundedRectLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    let (reference_width, reference_height) = geometry.dimensions();
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I422
+            && reference.surface.coded_width == reference_width
+            && reference.surface.upscaled_width == reference_width
+            && reference.surface.frame_height == reference_height
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    (!context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && context.subsampling_x
+        && !context.subsampling_y
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match)
+        .then_some(())
+        .and_then(|_| {
+            bounded_subsampled_rect_loop_postfilters_common(context, quantization, geometry)
+        })
 }
 
 #[derive(Clone, Copy)]
