@@ -9017,11 +9017,10 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
 
 /// Exact high-depth 4:2:0 tranche admitted by the normalized reconstruction
 /// core. The older geometry-specific 4:2:0 reconstructors narrow samples to
-/// eight-bit arithmetic, so high-depth I420 must remain on the generic
-/// edge-aware path until those carriers are depth-parametric. Keep the same
-/// conservative tool profile as the high-depth 4:4:4 tranche, while rejecting
-/// quantization matrices here because the 4:2:0 coefficient path does not yet
-/// carry their plane-specific high-depth proof.
+/// eight-bit arithmetic, so high-depth I420 remains on the generic edge-aware
+/// path. Its coefficient dispatcher carries the plane-specific matrix level
+/// and depth-aware dequantizer for every reachable I420 transform shape, while
+/// IDTX and one-dimensional transforms disable matrix use per AV1 syntax.
 fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -9033,10 +9032,6 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.subsampling_y
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.reduced_transform_set
-        && !context
-            .frame_tools
-            .quantization
-            .is_some_and(|quantization| quantization.using_matrix)
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
