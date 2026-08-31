@@ -8350,11 +8350,11 @@ fn bounded_i444_geometry_for_context(
     }
 }
 
-/// Exact dimension whitelist for the bounded lossy full-resolution I444
-/// profiles.  Keep this separate from the reconstruction selector: dimensions
+/// Exact dimension whitelist for the bounded full-resolution I444 film-grain
+/// profiles. Keep this separate from the reconstruction selector: dimensions
 /// alone must never admit a block topology, but the frame/display film-grain
 /// gates need to share the same narrow set without duplicating it in siblings.
-pub(super) const fn bounded_lossy_i444_dimensions(width: u32, height: u32) -> bool {
+pub(super) const fn bounded_i444_film_grain_dimensions(width: u32, height: u32) -> bool {
     matches!(
         (width, height),
         (16, 16)
@@ -8379,7 +8379,7 @@ pub(super) const fn bounded_lossy_i444_dimensions(width: u32, height: u32) -> bo
 fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
         || (context.bit_depth == 8
-            && bounded_lossy_i444_dimensions(context.frame_width, context.frame_height))
+            && bounded_i444_film_grain_dimensions(context.frame_width, context.frame_height))
 }
 
 /// Exact bounded 4:4:4 intra tranche with one Wiener/SGR unit per plane.
@@ -9303,6 +9303,9 @@ pub(super) fn validate_complete_lossless_444_partition(
                 unsupported = true;
                 return Ok(PartitionVisitControl::Stop);
             };
+            leaves.try_reserve(1).map_err(|_| {
+                CodecError::Dimensions("unable to allocate AV1 lossless 4:4:4 leaves".to_owned())
+            })?;
             canvas.place_partition_leaf(
                 node.x,
                 node.y,
@@ -9373,14 +9376,15 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
 
 fn exact_lossless_i444_film_grain_profile(context: &FirstBlockContext) -> bool {
     context.bit_depth == 8
-        && context.frame_width == 16
-        && context.frame_height == 16
-        && context.upscaled_width == 16
-        && context.block_width == 4
-        && context.block_height == 4
+        && bounded_i444_film_grain_dimensions(context.frame_width, context.frame_height)
+        && context.upscaled_width == context.frame_width
+        && context.block_width == context.frame_width / 4
+        && context.block_height == context.frame_height / 4
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+        && (context.level == 0
+            || (context.level == 1 && context.frame_width <= 64 && context.frame_height <= 64))
         && context.single_tile
         && !context.frame_tools.segmentation.enabled
         && !context.frame_tools.delta_q_present

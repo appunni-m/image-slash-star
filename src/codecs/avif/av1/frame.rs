@@ -959,7 +959,7 @@ impl FrameState {
             || surface.render_height != surface.frame_height
             || (surface.layout == PixelLayout::I444
                 && (surface.coded_width != surface.upscaled_width
-                    || !entropy::bounded_lossy_i444_dimensions(
+                    || !entropy::bounded_i444_film_grain_dimensions(
                         surface.upscaled_width,
                         surface.frame_height,
                     )))
