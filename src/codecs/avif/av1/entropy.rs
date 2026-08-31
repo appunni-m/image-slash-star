@@ -9792,6 +9792,9 @@ fn complete_high_depth_loop_filter_supported(context: &FirstBlockContext) -> boo
         && (!filtering_active || !context.frame_tools.delta_lf_present)
 }
 
+/// High-depth full-resolution intra frames use the streamed three-plane path;
+/// I444 film grain is display-only and limited to the shared bounded dimension
+/// whitelist after the assembled frame has been filtered.
 fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -9801,7 +9804,7 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
         && !context.monochrome
         && !context.subsampling_x
         && !context.subsampling_y
-        && !context.frame_tools.film_grain_present
+        && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.reduced_transform_set
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
