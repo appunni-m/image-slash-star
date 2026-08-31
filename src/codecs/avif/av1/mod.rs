@@ -649,8 +649,10 @@ fn validate_grid_with_token(
     }
 
     let planes = canvas.finish()?;
+    let alpha_sample_depth = sample_depth::SampleDepth::new(first.bit_depth)
+        .ok_or_else(|| malformed("AVIF alpha sample depth is unsupported"))?;
     let alpha_plane = alpha_canvas
-        .map(raster::MonochromeFrameCanvas::finish)
+        .map(|canvas| canvas.finish(alpha_sample_depth))
         .transpose()?;
     Ok(Some(portable_still(
         assembled_leaf(output_width, output_height, planes),

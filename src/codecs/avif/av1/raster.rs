@@ -221,9 +221,16 @@ impl MonochromeFrameCanvas {
         Ok(())
     }
 
-    pub(super) fn finish(self) -> Av1Result<ReconstructedPlane> {
+    pub(super) fn finish(self, sample_depth: SampleDepth) -> Av1Result<ReconstructedPlane> {
         if self.written.iter().any(|written| !written) {
             return Err(malformed("alpha canvas is missing reconstructed samples"));
+        }
+        if self
+            .samples
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("alpha canvas contains an out-of-range sample"));
         }
         Ok(ReconstructedPlane {
             samples: self.samples,

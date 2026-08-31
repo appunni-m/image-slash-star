@@ -2477,8 +2477,8 @@ where
 }
 
 /// Reconstruct the complete alpha tile for the bounded monochrome class whose
-/// block syntax is currently closed: an 8-bit, lossless, intra frame with no
-/// restoration or inter-frame tools.
+/// block syntax is currently closed: an 8/10/12-bit, lossless, intra frame
+/// with no restoration or inter-frame tools.
 ///
 /// The callback order is the AV1 block-payload order. Neighbor references are
 /// selected from already reconstructed leaves by their checked pixel
@@ -2575,7 +2575,9 @@ pub(super) fn validate_complete_monochrome_partition(
     if leaves.is_empty() {
         return Ok(None);
     }
-    canvas.finish().map(Some)
+    let sample_depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+        .ok_or_else(|| malformed("AV1 alpha sample depth is unsupported"))?;
+    canvas.finish(sample_depth).map(Some)
 }
 
 fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
@@ -2597,7 +2599,7 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         && context.block_height == context.frame_height / 4
         && context.upscaled_width == context.frame_width;
     context.intra_frame
-        && context.bit_depth == 8
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && context.monochrome
         && context.all_lossless
         && !context.superres_enabled
@@ -7618,7 +7620,7 @@ mod tests {
         })?;
         assert_eq!(control, PartitionVisitControl::Continue);
         assert!(!leaves.is_empty());
-        let plane = canvas.finish()?;
+        let plane = canvas.finish(super::super::sample_depth::SampleDepth::EIGHT)?;
         assert_eq!(plane.samples.len(), 64 * 64);
         assert!(plane.samples.iter().any(|&sample| sample != 0));
         Ok(())

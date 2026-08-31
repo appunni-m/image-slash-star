@@ -25558,6 +25558,16 @@ fn filter_intra_top_edge_4(
     angle: i32,
     smooth_edges: bool,
 ) -> [u16; 4] {
+    filter_intra_top_edge_4_with_max(edge, top_left, angle, smooth_edges, 255)
+}
+
+fn filter_intra_top_edge_4_with_max(
+    edge: [u16; 4],
+    top_left: u16,
+    angle: i32,
+    smooth_edges: bool,
+    maximum: u16,
+) -> [u16; 4] {
     let strength = filter_intra_filter_strength_4(angle, smooth_edges);
     let kernel = match strength {
         1 => [0_i32, 4, 8, 4, 0],
@@ -25573,13 +25583,7 @@ fn filter_intra_top_edge_4(
                 .clamp(0, source.len().saturating_sub(1));
             sum.saturating_add(i32::from(source[source_index]).saturating_mul(kernel[tap]))
         });
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the filtered eight-bit edge is explicitly clamped"
-        )]
-        {
-            ((sum.saturating_add(8)) >> 4).clamp(0, 255) as u16
-        }
+        u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum))).unwrap_or(maximum)
     })
 }
 
@@ -25588,6 +25592,16 @@ fn filter_intra_left_edge_4(
     top_left: u16,
     angle: i32,
     smooth_edges: bool,
+) -> [u16; 4] {
+    filter_intra_left_edge_4_with_max(edge, top_left, angle, smooth_edges, 255)
+}
+
+fn filter_intra_left_edge_4_with_max(
+    edge: [u16; 4],
+    top_left: u16,
+    angle: i32,
+    smooth_edges: bool,
+    maximum: u16,
 ) -> [u16; 4] {
     let strength = filter_intra_filter_strength_4(angle, smooth_edges);
     let kernel = match strength {
@@ -25604,13 +25618,7 @@ fn filter_intra_left_edge_4(
                 .clamp(0, source.len().saturating_sub(1));
             sum.saturating_add(i32::from(source[source_index]).saturating_mul(kernel[tap]))
         });
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the filtered eight-bit edge is explicitly clamped"
-        )]
-        {
-            ((sum.saturating_add(8)) >> 4).clamp(0, 255) as u16
-        }
+        u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum))).unwrap_or(maximum)
     });
     std::array::from_fn(|index| filtered[3_usize.saturating_sub(index)])
 }
@@ -46381,6 +46389,10 @@ fn upsample_z2_top_edge(top: [u16; 16], top_left: u16) -> [u16; 17] {
 
 /// Apply the AV1 Zone-2 four-tap upsampler to a 4×4 chroma top edge.
 fn upsample_z2_top_edge_4(top: [u16; 8], top_left: u16) -> [u16; 9] {
+    upsample_z2_top_edge_4_with_max(top, top_left, 255)
+}
+
+fn upsample_z2_top_edge_4_with_max(top: [u16; 8], top_left: u16, maximum: u16) -> [u16; 9] {
     const KERNEL: [i32; 4] = [-1, 9, 9, -1];
     let source = [top_left, top[0], top[1], top[2], top[3]];
     let mut upsampled = [0_u16; 9];
@@ -46394,14 +46406,32 @@ fn upsample_z2_top_edge_4(top: [u16; 8], top_left: u16) -> [u16; 9] {
                 .min(source.len().saturating_sub(1));
             sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
         }
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the upsampled intra edge is explicitly clamped to eight-bit range"
-        )]
-        {
-            upsampled[index.saturating_mul(2).saturating_add(1)] =
-                ((sum.saturating_add(8) >> 4).clamp(0, 255)) as u16;
+        upsampled[index.saturating_mul(2).saturating_add(1)] =
+            u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum)))
+                .unwrap_or(maximum);
+    }
+    upsampled[8] = source[4];
+    upsampled
+}
+
+/// Apply the AV1 Zone-2 four-tap upsampler to a lossless 4×4 left edge.
+fn upsample_z2_left_edge_4_with_max(left: [u16; 4], top_left: u16, maximum: u16) -> [u16; 9] {
+    const KERNEL: [i32; 4] = [-1, 9, 9, -1];
+    let source = [left[3], left[2], left[1], left[0], top_left];
+    let mut upsampled = [0_u16; 9];
+    for index in 0_usize..4 {
+        upsampled[index.saturating_mul(2)] = source[index];
+        let mut sum = 0_i32;
+        for (tap, weight) in KERNEL.into_iter().enumerate() {
+            let source_index = index
+                .saturating_add(tap)
+                .saturating_sub(1)
+                .min(source.len().saturating_sub(1));
+            sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
         }
+        upsampled[index.saturating_mul(2).saturating_add(1)] =
+            u16::try_from((sum.saturating_add(8) >> 4).clamp(0, i32::from(maximum)))
+                .unwrap_or(maximum);
     }
     upsampled[8] = source[4];
     upsampled
@@ -46933,6 +46963,7 @@ fn lossless_diagonal_z2_prediction_4x4(
     angle: i32,
     enable_intra_edge_filter: bool,
     smooth_edges: bool,
+    maximum: u16,
 ) -> PortableResult<[u16; 16]> {
     const DR_INTRA_DERIVATIVE: [i32; 44] = [
         0, 1023, 0, 547, 372, 0, 0, 273, 215, 0, 178, 151, 0, 132, 116, 0, 102, 0, 90, 80, 0, 71,
@@ -46949,12 +46980,24 @@ fn lossless_diagonal_z2_prediction_4x4(
     let upsample_left = enable_intra_edge_filter && 180_i32.saturating_sub(angle) < 40;
 
     let top = if enable_intra_edge_filter && !upsample_above {
-        filter_intra_top_edge_4(top, top_left, angle.saturating_sub(90), smooth_edges)
+        filter_intra_top_edge_4_with_max(
+            top,
+            top_left,
+            angle.saturating_sub(90),
+            smooth_edges,
+            maximum,
+        )
     } else {
         top
     };
     let left = if enable_intra_edge_filter && !upsample_left {
-        filter_intra_left_edge_4(left, top_left, 180_i32.saturating_sub(angle), smooth_edges)
+        filter_intra_left_edge_4_with_max(
+            left,
+            top_left,
+            180_i32.saturating_sub(angle),
+            smooth_edges,
+            maximum,
+        )
     } else {
         left
     };
@@ -46963,29 +47006,11 @@ fn lossless_diagonal_z2_prediction_4x4(
     let mut edge = [0_u16; 32];
     edge[TOP_LEFT_INDEX] = top_left;
     if upsample_above {
-        let source = [top_left, top[0], top[1], top[2], top[3]];
-        let mut upsampled = [0_u16; 9];
-        const KERNEL: [i32; 4] = [-1, 9, 9, -1];
-        for index in 0_usize..4 {
-            upsampled[index.saturating_mul(2)] = source[index];
-            let mut sum = 0_i32;
-            for (tap, weight) in KERNEL.into_iter().enumerate() {
-                let source_index = index
-                    .saturating_add(tap)
-                    .saturating_sub(1)
-                    .min(source.len().saturating_sub(1));
-                sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
-            }
-            #[expect(
-                clippy::cast_sign_loss,
-                reason = "the upsampled angular edge is explicitly clamped"
-            )]
-            {
-                upsampled[index.saturating_mul(2).saturating_add(1)] =
-                    ((sum.saturating_add(8)) >> 4).clamp(0, 255) as u16;
-            }
-        }
-        upsampled[8] = source[4];
+        let upsampled = upsample_z2_top_edge_4_with_max(
+            [top[0], top[1], top[2], top[3], 0, 0, 0, 0],
+            top_left,
+            maximum,
+        );
         edge[TOP_LEFT_INDEX..TOP_LEFT_INDEX.saturating_add(9)].copy_from_slice(&upsampled);
         dx = dx.saturating_mul(2);
     } else {
@@ -46994,29 +47019,7 @@ fn lossless_diagonal_z2_prediction_4x4(
     }
 
     if upsample_left {
-        let source = [left[3], left[2], left[1], left[0], top_left];
-        let mut upsampled = [0_u16; 9];
-        const KERNEL: [i32; 4] = [-1, 9, 9, -1];
-        for index in 0_usize..4 {
-            upsampled[index.saturating_mul(2)] = source[index];
-            let mut sum = 0_i32;
-            for (tap, weight) in KERNEL.into_iter().enumerate() {
-                let source_index = index
-                    .saturating_add(tap)
-                    .saturating_sub(1)
-                    .min(source.len().saturating_sub(1));
-                sum = sum.saturating_add(i32::from(source[source_index]).saturating_mul(weight));
-            }
-            #[expect(
-                clippy::cast_sign_loss,
-                reason = "the upsampled angular edge is explicitly clamped"
-            )]
-            {
-                upsampled[index.saturating_mul(2).saturating_add(1)] =
-                    ((sum.saturating_add(8)) >> 4).clamp(0, 255) as u16;
-            }
-        }
-        upsampled[8] = source[4];
+        let upsampled = upsample_z2_left_edge_4_with_max(left, top_left, maximum);
         edge[TOP_LEFT_INDEX.saturating_sub(8)..=TOP_LEFT_INDEX].copy_from_slice(&upsampled);
         dy = dy.saturating_mul(2);
     } else {
@@ -47078,14 +47081,9 @@ fn lossless_diagonal_z2_prediction_4x4(
                     .saturating_add(32)
                     >> 6
             };
-            #[expect(
-                clippy::cast_sign_loss,
-                reason = "the directional predictor is explicitly clamped to eight-bit range"
-            )]
-            {
-                prediction[y_index.saturating_mul(4).saturating_add(x_index)] =
-                    sample.clamp(0, 255) as u16;
-            }
+            prediction[y_index.saturating_mul(4).saturating_add(x_index)] =
+                u16::try_from(sample.clamp(0, i32::from(maximum)))
+                    .map_err(|_| PortableUnavailable)?;
         }
     }
     Ok(prediction)
@@ -47219,7 +47217,11 @@ fn finish_monochrome_leaf(
         && coded_plane.samples.len() == coded_width.checked_mul(coded_height).portable()?)
     .then_some(())
     .portable()?;
-    let mut visible = Vec::with_capacity(visible_width.checked_mul(visible_height).portable()?);
+    let visible_len = visible_width.checked_mul(visible_height).portable()?;
+    let mut visible = Vec::new();
+    visible
+        .try_reserve_exact(visible_len)
+        .map_err(|_| PortableUnavailable)?;
     for row in coded_plane
         .samples
         .chunks_exact(coded_width)
@@ -47313,9 +47315,18 @@ fn reconstruct_monochrome_leaf(
     let (grid_width, grid_height, _) = transform_grid.properties();
     let coded_width = grid_width.saturating_mul(4);
     let coded_height = grid_height.saturating_mul(4);
+    let top_default = sample_depth.top_edge_default();
+    let left_default = sample_depth.left_edge_default();
+    let midpoint = sample_depth.midpoint();
+    let maximum = sample_depth.maximum();
     let palette_cache = palette.cache_state();
     if palette.y.is_present() {
-        let mut prediction = vec![0_u16; coded_width.checked_mul(coded_height).portable()?];
+        let prediction_len = coded_width.checked_mul(coded_height).portable()?;
+        let mut prediction = Vec::new();
+        prediction
+            .try_reserve_exact(prediction_len)
+            .map_err(|_| PortableUnavailable)?;
+        prediction.resize(prediction_len, 0);
         full_palette_prediction_into(
             &mut prediction,
             palette.y,
@@ -47342,14 +47353,19 @@ fn reconstruct_monochrome_leaf(
             palette_cache,
         );
     }
-    let mut samples = vec![0_u16; coded_width.saturating_mul(coded_height)];
+    let sample_len = coded_width.checked_mul(coded_height).portable()?;
+    let mut samples = Vec::new();
+    samples
+        .try_reserve_exact(sample_len)
+        .map_err(|_| PortableUnavailable)?;
+    samples.resize(sample_len, 0);
     let fallback_top = if above.is_none() && above_right.iter().all(Option::is_none) {
         origin_x
             .checked_sub(1)
             .and_then(|left_x| monochrome_sample_from_neighbors(left, left_below, left_x, origin_y))
-            .unwrap_or(127)
+            .unwrap_or(top_default)
     } else {
-        127
+        top_default
     };
     let fallback_left = if left.is_none() && left_below.is_none() {
         origin_y
@@ -47357,9 +47373,9 @@ fn reconstruct_monochrome_leaf(
             .and_then(|top_y| {
                 monochrome_sample_from_above_neighbors(above, &above_right, origin_x, top_y)
             })
-            .unwrap_or(129)
+            .unwrap_or(left_default)
     } else {
-        129
+        left_default
     };
     let angular_luma_predictor = matches!(
         luma_predictor,
@@ -47379,7 +47395,9 @@ fn reconstruct_monochrome_leaf(
     let filter_intra_prediction = if let Some(mode) = filter_intra_mode {
         let has_top = above.is_some() || above_right.iter().any(Option::is_some);
         let has_left = left.is_some() || left_below.is_some();
-        let mut top = Vec::with_capacity(coded_width);
+        let mut top = Vec::new();
+        top.try_reserve_exact(coded_width)
+            .map_err(|_| PortableUnavailable)?;
         let mut top_last = fallback_top;
         for column in 0..coded_width {
             if has_top {
@@ -47397,7 +47415,10 @@ fn reconstruct_monochrome_leaf(
             }
             top.push(top_last);
         }
-        let mut left_edge = Vec::with_capacity(coded_height);
+        let mut left_edge = Vec::new();
+        left_edge
+            .try_reserve_exact(coded_height)
+            .map_err(|_| PortableUnavailable)?;
         let mut left_last = fallback_left;
         for row in 0..coded_height {
             if has_left {
@@ -47424,22 +47445,23 @@ fn reconstruct_monochrome_leaf(
                     .flatten()
                     .find_map(|leaf| monochrome_sample_at(leaf, top_left_x, top_left_y))
                     .or_else(|| top.first().copied())
-                    .unwrap_or(128)
+                    .unwrap_or(midpoint)
             } else {
-                top.first().copied().unwrap_or(128)
+                top.first().copied().unwrap_or(midpoint)
             }
         } else if has_left {
-            left_edge.first().copied().unwrap_or(128)
+            left_edge.first().copied().unwrap_or(midpoint)
         } else {
-            128
+            midpoint
         };
-        Some(reconstruct_filter_intra_prediction(
+        Some(reconstruct_filter_intra_prediction_with_max(
             mode,
             coded_width,
             coded_height,
             top_left,
             &top,
             &left_edge,
+            maximum,
         )?)
     } else {
         None
@@ -47458,8 +47480,11 @@ fn reconstruct_monochrome_leaf(
             .ok_or(PortableUnavailable)?;
         let max_base_y = coded_width.saturating_add(coded_height).saturating_sub(1);
         let left_x = origin_x.checked_sub(1);
-        let mut edge = Vec::with_capacity(max_base_y.saturating_add(1));
-        let mut last = 128_u16;
+        let edge_len = max_base_y.saturating_add(1);
+        let mut edge = Vec::new();
+        edge.try_reserve_exact(edge_len)
+            .map_err(|_| PortableUnavailable)?;
+        let mut last = midpoint;
         for row in 0..=max_base_y {
             if let (Some(left_x), Some(row)) = (
                 left_x,
@@ -47499,11 +47524,14 @@ fn reconstruct_monochrome_leaf(
         let mut last = if above.is_none() {
             left_x
                 .and_then(|x| monochrome_sample_from_neighbors(left, left_below, x, origin_y))
-                .unwrap_or(127)
+                .unwrap_or(top_default)
         } else {
-            127
+            top_default
         };
-        let mut edge = Vec::with_capacity(max_base_x.saturating_add(1));
+        let edge_len = max_base_x.saturating_add(1);
+        let mut edge = Vec::new();
+        edge.try_reserve_exact(edge_len)
+            .map_err(|_| PortableUnavailable)?;
         for column in 0..=max_base_x {
             if let (Some(top_y), Some(column)) = (
                 top_y,
@@ -47657,23 +47685,23 @@ fn reconstruct_monochrome_leaf(
         } else if left.is_some() || left_below.is_some() {
             left_edge[0]
         } else {
-            128
+            midpoint
         };
 
         let predictor = match luma_predictor {
             LumaPredictor::Dc => dc_predictor(top, left_edge),
             LumaPredictor::Vertical => top[0],
             LumaPredictor::Horizontal => left_edge[0],
-            LumaPredictor::Diagonal45 => 128,
-            LumaPredictor::DiagonalDownRight => 128,
-            LumaPredictor::Diagonal113 => 128,
-            LumaPredictor::Diagonal157 => 128,
-            LumaPredictor::Diagonal67 => 128,
-            LumaPredictor::Diagonal203 => 128,
-            LumaPredictor::Paeth => 128,
-            LumaPredictor::Smooth => 128,
-            LumaPredictor::SmoothVertical => 128,
-            LumaPredictor::SmoothHorizontal => 128,
+            LumaPredictor::Diagonal45 => midpoint,
+            LumaPredictor::DiagonalDownRight => midpoint,
+            LumaPredictor::Diagonal113 => midpoint,
+            LumaPredictor::Diagonal157 => midpoint,
+            LumaPredictor::Diagonal67 => midpoint,
+            LumaPredictor::Diagonal203 => midpoint,
+            LumaPredictor::Paeth => midpoint,
+            LumaPredictor::Smooth => midpoint,
+            LumaPredictor::SmoothVertical => midpoint,
+            LumaPredictor::SmoothHorizontal => midpoint,
         };
         let residual = inverse_wht_4x4(coefficient);
         for (offset, value) in residual.into_iter().enumerate() {
@@ -47698,7 +47726,7 @@ fn reconstruct_monochrome_leaf(
                 LosslessPredictor::Diagonal45 | LosslessPredictor::Diagonal67 => {
                     let (_, _, dx) = diagonal_z1_edges.as_ref().ok_or(PortableUnavailable)?;
                     let angle = luma_angle.ok_or(PortableUnavailable)?;
-                    let mut edge = [127_u16; 8];
+                    let mut edge = [top_default; 8];
                     if row > 0 {
                         let start = row
                             .saturating_mul(4)
@@ -47747,25 +47775,34 @@ fn reconstruct_monochrome_leaf(
                         if strength == 0 {
                             edge
                         } else {
-                            filter_intra_top_edge_8(edge, prediction_top_left, strength)
+                            filter_intra_top_edge_8_with_max(
+                                edge,
+                                prediction_top_left,
+                                strength,
+                                maximum,
+                            )
                         }
                     } else {
                         edge
                     };
-                    let upsampled_edge =
-                        upsample_intra_top_edge(filtered_edge, prediction_top_left);
+                    let upsampled_edge = upsample_intra_top_edge_with_max(
+                        filtered_edge,
+                        prediction_top_left,
+                        maximum,
+                    );
                     let (edge, max_base_x, dx) = if z1_upsample {
                         (&upsampled_edge[..], 14, (*dx).saturating_mul(2))
                     } else {
                         (&filtered_edge[..], 7, *dx)
                     };
-                    diagonal_z1_predictor_sample(
+                    diagonal_z1_predictor_sample_with_max(
                         edge,
                         max_base_x,
                         dx,
                         if z1_upsample { 2 } else { 1 },
                         local_column,
                         local_row,
+                        maximum,
                     )?
                 }
                 LosslessPredictor::DiagonalDownRight
@@ -47778,6 +47815,7 @@ fn reconstruct_monochrome_leaf(
                         luma_angle.ok_or(PortableUnavailable)?,
                         enable_intra_edge_filter,
                         smooth_edges,
+                        maximum,
                     )?;
                     diagonal_prediction
                         .get(offset)
@@ -47787,7 +47825,7 @@ fn reconstruct_monochrome_leaf(
                 LosslessPredictor::Diagonal203 => {
                     let (_, _, dy) = diagonal_z3_edges.as_ref().ok_or(PortableUnavailable)?;
                     let angle = luma_angle.ok_or(PortableUnavailable)?;
-                    let mut edge = [129_u16; 8];
+                    let mut edge = [left_default; 8];
                     if column > 0 {
                         let start = row
                             .saturating_mul(4)
@@ -47803,7 +47841,7 @@ fn reconstruct_monochrome_leaf(
                         let last = edge
                             .get(available_height.saturating_sub(1))
                             .copied()
-                            .unwrap_or(129);
+                            .unwrap_or(left_default);
                         edge[available_height..].fill(last);
                     } else {
                         let mut last = left_edge[3];
@@ -47831,25 +47869,34 @@ fn reconstruct_monochrome_leaf(
                         if strength == 0 {
                             edge
                         } else {
-                            filter_z2_left_edge(edge, prediction_top_left, strength)
+                            filter_z2_left_edge_with_max(
+                                edge,
+                                prediction_top_left,
+                                strength,
+                                maximum,
+                            )
                         }
                     } else {
                         edge
                     };
-                    let upsampled_edge =
-                        upsample_intra_left_edge(filtered_edge, prediction_top_left);
+                    let upsampled_edge = upsample_intra_left_edge_with_max(
+                        filtered_edge,
+                        prediction_top_left,
+                        maximum,
+                    );
                     let (edge, max_base_y, dy) = if z3_upsample {
                         (&upsampled_edge[..], 14, (*dy).saturating_mul(2))
                     } else {
                         (&filtered_edge[..], 7, *dy)
                     };
-                    diagonal_z3_predictor_sample(
+                    diagonal_z3_predictor_sample_with_max(
                         edge,
                         max_base_y,
                         dy,
                         if z3_upsample { 2 } else { 1 },
                         local_column,
                         local_row,
+                        maximum,
                     )?
                 }
                 LosslessPredictor::SmoothVertical => {
@@ -47868,7 +47915,8 @@ fn reconstruct_monochrome_leaf(
                         )
                         .saturating_add(128)
                         >> 8;
-                    u16::try_from(value.clamp(0, 255)).map_err(|_| PortableUnavailable)?
+                    u16::try_from(value.clamp(0, i32::from(maximum)))
+                        .map_err(|_| PortableUnavailable)?
                 }
                 LosslessPredictor::Paeth => {
                     paeth_predictor(top[local_column], left_edge[local_row], prediction_top_left)
@@ -47902,7 +47950,8 @@ fn reconstruct_monochrome_leaf(
                         )
                         .saturating_add(256)
                         >> 9;
-                    u16::try_from(value.clamp(0, 255)).map_err(|_| PortableUnavailable)?
+                    u16::try_from(value.clamp(0, i32::from(maximum)))
+                        .map_err(|_| PortableUnavailable)?
                 }
                 LosslessPredictor::SmoothHorizontal => {
                     let horizontal_weight = i32::from(
@@ -47920,15 +47969,16 @@ fn reconstruct_monochrome_leaf(
                         )
                         .saturating_add(128)
                         >> 8;
-                    u16::try_from(value.clamp(0, 255)).map_err(|_| PortableUnavailable)?
+                    u16::try_from(value.clamp(0, i32::from(maximum)))
+                        .map_err(|_| PortableUnavailable)?
                 }
             };
-            let reconstructed = i32::from(prediction).saturating_add(value).clamp(0, 255);
-            #[expect(
-                clippy::cast_sign_loss,
-                reason = "the reconstructed lossless sample is explicitly clamped to eight-bit range"
-            )]
-            let reconstructed = reconstructed as u16;
+            let reconstructed = u16::try_from(
+                i32::from(prediction)
+                    .saturating_add(value)
+                    .clamp(0, i32::from(maximum)),
+            )
+            .map_err(|_| PortableUnavailable)?;
             let output_index = row
                 .saturating_mul(4)
                 .saturating_add(local_row)
