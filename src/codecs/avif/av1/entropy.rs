@@ -6457,14 +6457,17 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// motion-mode sentence selected by their causal matching-reference mask;
 /// Translation and OBMC are materialized for the generic high-depth layouts,
 /// as are Average/Distance and masked Difference/Wedge compound predictors.
-/// Horizontal super-resolution is admitted only for I420; its scaled retained
-/// references use the same coded-coordinate MC path as the depth-aware resize
-/// compositor. LOCALWARP and affine GlobalGlobal selections remain transactional
-/// unsupported outcomes. Every retained reference is checked up front so a
-/// later reference choice cannot narrow the path back to eight-bit geometry. An
-/// all-NONE restoration header is a semantic no-op: it carries no tile
-/// restoration units or postfilter plan, while active restoration types remain
-/// outside this generic class.
+/// Horizontal super-resolution is admitted only for I420; its current-frame
+/// output still uses the coded-coordinate MC path followed by the depth-aware
+/// resize compositor. Dimension-scaled retained references are valid for all
+/// three layouts, including non-superres current frames, because the checked
+/// frame-wide scale factors and layout-specific MC kernels operate before the
+/// current frame is published. LOCALWARP and affine GlobalGlobal selections
+/// remain transactional unsupported outcomes. Every retained reference is
+/// validated up front so a later reference choice cannot narrow the path back
+/// to eight-bit geometry. An all-NONE restoration header is a semantic no-op:
+/// it carries no tile restoration units or postfilter plan, while active
+/// restoration types remain outside this generic class.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6479,11 +6482,11 @@ fn complete_high_depth_inter_reconstruction_context(
         context.upscaled_width == context.frame_width
     };
     let references_match = inter_context.references.iter().all(|reference| {
-        reference.surface.depth.bits() == context.bit_depth
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
             && (reference.surface.layout == PixelLayout::I420 && i420
                 || reference.surface.layout == PixelLayout::I422 && i422
                 || reference.surface.layout == PixelLayout::I444 && i444)
-            && (!reference.scale.scaled || superres_i420)
     });
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
