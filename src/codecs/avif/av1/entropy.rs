@@ -9065,7 +9065,6 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
-        && context.single_tile
         && context.frame_width >= 4
         && context.frame_height >= 4
         && padded_block_width == Some(context.block_width)
