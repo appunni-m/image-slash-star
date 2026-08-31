@@ -8959,12 +8959,12 @@ fn complete_monochrome_references(
 /// across all 22 block sizes without mixing the legacy lossless CDF copies.
 fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool {
     let layout_supported = context.subsampling_x || !context.subsampling_y;
-    let padded_block_width = (context.frame_width.saturating_add(7) >> 3).wrapping_shl(1);
-    let padded_block_height = (context.frame_height.saturating_add(7) >> 3).wrapping_shl(1);
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let dimensions_are_supported = context.frame_width != 0
         && context.frame_height != 0
-        && context.block_width == padded_block_width
-        && context.block_height == padded_block_height
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
         && context.upscaled_width == context.frame_width;
     context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
