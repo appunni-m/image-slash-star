@@ -7541,6 +7541,10 @@ enum BoundedSubsampledRectGeometry {
     EightWide,
     /// A level-0 root with eight level-3 B16x16 leaves down a 16x128 band.
     EightTall,
+    /// A level-0 root with four level-3 B16x16 leaves across a 64x16 band.
+    FourWide,
+    /// A level-0 root with four level-3 B16x16 leaves down a 16x64 band.
+    FourTall,
 }
 
 impl BoundedSubsampledRectGeometry {
@@ -7559,6 +7563,8 @@ impl BoundedSubsampledRectGeometry {
             Self::SixtyFourSquare => (128, 128),
             Self::EightWide => (128, 16),
             Self::EightTall => (16, 128),
+            Self::FourWide => (64, 16),
+            Self::FourTall => (16, 64),
         }
     }
 
@@ -7572,6 +7578,7 @@ impl BoundedSubsampledRectGeometry {
             Self::ThirtyTwoHorizontal | Self::ThirtyTwoVertical => 32,
             Self::SixtyFourSquare => 64,
             Self::EightWide | Self::EightTall => 8,
+            Self::FourWide | Self::FourTall => 4,
         }
     }
 
@@ -7585,6 +7592,7 @@ impl BoundedSubsampledRectGeometry {
                 | Self::ThirtyTwoVertical
                 | Self::SixtyFourSquare
                 | Self::EightTall
+                | Self::FourTall
         )
     }
 }
@@ -7612,6 +7620,8 @@ fn bounded_subsampled_rect_geometry_for_context(
         (128, 128, 32, 32, 0) => Some(BoundedSubsampledRectGeometry::SixtyFourSquare),
         (128, 16, 32, 4, 0) => Some(BoundedSubsampledRectGeometry::EightWide),
         (16, 128, 4, 32, 0) => Some(BoundedSubsampledRectGeometry::EightTall),
+        (64, 16, 16, 4, 0) => Some(BoundedSubsampledRectGeometry::FourWide),
+        (16, 64, 4, 16, 0) => Some(BoundedSubsampledRectGeometry::FourTall),
         _ => None,
     }
 }
@@ -7644,6 +7654,8 @@ fn bounded_subsampled_rect_loop_filter_supported(
         BoundedSubsampledRectGeometry::SixtyFourSquare => loop_filter.level_y != [0; 2],
         BoundedSubsampledRectGeometry::EightWide => loop_filter.level_y[0] != 0,
         BoundedSubsampledRectGeometry::EightTall => loop_filter.level_y[1] != 0,
+        BoundedSubsampledRectGeometry::FourWide => loop_filter.level_y[0] != 0,
+        BoundedSubsampledRectGeometry::FourTall => loop_filter.level_y[1] != 0,
     }
 }
 
@@ -7657,6 +7669,8 @@ fn bounded_subsampled_expected_rect_terminal(
         BoundedSubsampledRectGeometry::SixtyFourSquare
             | BoundedSubsampledRectGeometry::EightWide
             | BoundedSubsampledRectGeometry::EightTall
+            | BoundedSubsampledRectGeometry::FourWide
+            | BoundedSubsampledRectGeometry::FourTall
     ) {
         return bounded_morton_terminal(geometry.dimensions(), leaf_index, node);
     }
@@ -7829,6 +7843,9 @@ fn bounded_subsampled_expected_rect_terminal(
         },
         BoundedSubsampledRectGeometry::SixtyFourSquare => return false,
         BoundedSubsampledRectGeometry::EightWide | BoundedSubsampledRectGeometry::EightTall => {
+            return false;
+        }
+        BoundedSubsampledRectGeometry::FourWide | BoundedSubsampledRectGeometry::FourTall => {
             return false;
         }
     };
@@ -8027,6 +8044,12 @@ enum BoundedI444InterGeometry {
     /// A level-0 root with eight level-3 NONE B16x16 terminals down a
     /// 16x128 band.
     EightTall,
+    /// A level-0 root with four level-3 NONE B16x16 terminals across a
+    /// 64x16 band.
+    FourWide,
+    /// A level-0 root with four level-3 NONE B16x16 terminals down a
+    /// 16x64 band.
+    FourTall,
 }
 
 impl BoundedI444InterGeometry {
@@ -8046,6 +8069,8 @@ impl BoundedI444InterGeometry {
             Self::SixtyFourSquare => (128, 128),
             Self::EightWide => (128, 16),
             Self::EightTall => (16, 128),
+            Self::FourWide => (64, 16),
+            Self::FourTall => (16, 64),
         }
     }
 
@@ -8060,6 +8085,7 @@ impl BoundedI444InterGeometry {
             Self::ThirtyTwoHorizontal | Self::ThirtyTwoVertical => 32,
             Self::SixtyFourSquare => 64,
             Self::EightWide | Self::EightTall => 8,
+            Self::FourWide | Self::FourTall => 4,
         }
     }
 
@@ -8073,6 +8099,7 @@ impl BoundedI444InterGeometry {
                 | Self::ThirtyTwoVertical
                 | Self::SixtyFourSquare
                 | Self::EightTall
+                | Self::FourTall
         )
     }
 }
@@ -8095,6 +8122,8 @@ fn bounded_i444_expected_terminal(
         BoundedI444InterGeometry::SixtyFourSquare
             | BoundedI444InterGeometry::EightWide
             | BoundedI444InterGeometry::EightTall
+            | BoundedI444InterGeometry::FourWide
+            | BoundedI444InterGeometry::FourTall
     ) {
         return bounded_morton_terminal(geometry.dimensions(), leaf_index, node);
     }
@@ -8270,6 +8299,9 @@ fn bounded_i444_expected_terminal(
         BoundedI444InterGeometry::EightWide | BoundedI444InterGeometry::EightTall => {
             return false;
         }
+        BoundedI444InterGeometry::FourWide | BoundedI444InterGeometry::FourTall => {
+            return false;
+        }
     };
     node.level == 3
         && node.x == expected.0
@@ -8312,6 +8344,8 @@ fn bounded_i444_geometry_for_context(
         (128, 128, 32, 32, 0) => Some(BoundedI444InterGeometry::SixtyFourSquare),
         (128, 16, 32, 4, 0) => Some(BoundedI444InterGeometry::EightWide),
         (16, 128, 4, 32, 0) => Some(BoundedI444InterGeometry::EightTall),
+        (64, 16, 16, 4, 0) => Some(BoundedI444InterGeometry::FourWide),
+        (16, 64, 4, 16, 0) => Some(BoundedI444InterGeometry::FourTall),
         _ => None,
     }
 }
@@ -8681,6 +8715,12 @@ fn bounded_i444_loop_filter_supported(
             loop_filter.level_y[0] != 0 && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
         BoundedI444InterGeometry::EightTall => {
+            loop_filter.level_y[1] != 0 && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::FourWide => {
+            loop_filter.level_y[0] != 0 && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::FourTall => {
             loop_filter.level_y[1] != 0 && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
     }
