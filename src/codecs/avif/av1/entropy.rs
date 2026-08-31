@@ -4206,15 +4206,7 @@ fn decode_inter_leaf(
 ) -> Av1Result<super::block::PortableResult<DecodedInterLeaf>> {
     if matches!(context.bit_depth, 10 | 12) {
         let (block_width, block_height) = node.block_size.pixel_dimensions();
-        let i444_only_4x4 = !context.monochrome
-            && !context.subsampling_x
-            && !context.subsampling_y
-            && context.frame_tools.transform_mode == 0;
-        let (minimum, maximum) = if context.monochrome || i444_only_4x4 {
-            (4, 64)
-        } else {
-            (8, 32)
-        };
+        let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
         if !(minimum..=maximum).contains(&block_width)
             || !(minimum..=maximum).contains(&block_height)
         {
@@ -5081,14 +5073,6 @@ pub(super) fn validate_complete_lossy_420_partition(
         && !context.monochrome
         && !context.subsampling_x
         && !context.subsampling_y;
-    let monochrome_inter_reconstruction = inter_context.is_some_and(|inter_context| {
-        complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
-    });
-    let only_4x4_transform = context.frame_tools.transform_mode == 0
-        && (generic_i444_inter
-            || generic_high_depth_i444_inter
-            || monochrome_intra_reconstruction
-            || monochrome_inter_reconstruction);
     let bounded_i444_inter_geometry = if generic_i444_inter || generic_high_depth_i444_inter {
         None
     } else {
@@ -5306,7 +5290,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             || generic_i444_inter
             || generic_high_depth_inter
             || bounded_i444_inter
-            || monochrome_inter_reconstruction
+            || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
             || (!context.intra_frame
                 && monochrome_postfilter
                 && complete_monochrome_references(context, inter_context))
@@ -5577,14 +5561,6 @@ pub(super) fn validate_complete_lossy_420_partition(
                 } else {
                     node.block_size
                 };
-                if only_4x4_transform && syntax_block_size != BlockSize::B4x4 {
-                    // ONLY_4X4 carries one transform per coded B4x4 leaf in
-                    // the admitted monochrome/I444 profiles. Reject a larger
-                    // leaf before skip, CDEF, quantization, or mode syntax can
-                    // mutate the tile's adaptive state.
-                    unsupported = true;
-                    return Ok(PartitionVisitControl::Stop);
-                }
                 if bounded_i444_inter
                     || bounded_i444_restoration
                     || bounded_i444_intra_restoration
@@ -6376,9 +6352,7 @@ fn complete_inter_422_reconstruction_context(
 /// full-resolution MC path as unscaled references. Compound, inter-intra, and
 /// OBMC syntax remain enabled; frame-level postfilters and film grain stay
 /// closed until their broad I444 geometry classes have independent composition
-/// evidence. `ONLY_4X4` is admitted only for coded B4x4 terminals; the walker
-/// rejects larger leaves before block syntax can mutate state. Tile-local
-/// reconstructions are assembled into one complete frame.
+/// evidence. Tile-local reconstructions are assembled into one complete frame.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6409,7 +6383,7 @@ fn complete_inter_444_reconstruction_context(
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
-        && matches!(context.frame_tools.transform_mode, 0..=2)
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
@@ -6474,8 +6448,6 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// and a closed tool profile until the remaining AV1 syntax families publish
 /// their high-depth state. TX_MODE_SELECT is admitted only for an unsplit
 /// root transform; split trees return a transactional unsupported result.
-/// `ONLY_4X4` is admitted only for full-resolution I444 coded B4x4 terminals;
-/// subsampled layouts retain their existing transform-grid boundary.
 /// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
@@ -6526,8 +6498,7 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
         && !context.segmentation_enabled
-        && (matches!(context.frame_tools.transform_mode, 1 | 2)
-            || (context.frame_tools.transform_mode == 0 && i444))
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
         && !context.frame_tools.delta_lf_present
@@ -9604,9 +9575,7 @@ fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
 /// frame-level state that would require a second plane or a separate
 /// publication path. Intra leaves may materialize TX_MODE_SELECT depth; inter
 /// leaves admit only an unsplit maximum transform and reject transform-grid
-/// splits transactionally. `ONLY_4X4` is restricted to coded B4x4 terminals by
-/// the walker so monochrome intra cannot mistake its normative TX4 grid for a
-/// depth-zero maximum transform.
+/// splits transactionally.
 /// Plane-zero quantization matrices remain on the generic depth-aware
 /// coefficient path.
 fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
@@ -9637,7 +9606,7 @@ fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
         && !context.allow_screen_content_tools
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && matches!(context.frame_tools.transform_mode, 0..=2)
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && context.frame_tools.quantization.is_some()
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
