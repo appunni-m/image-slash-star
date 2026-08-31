@@ -4479,6 +4479,17 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i422_rect_loop_geometry =
         bounded_i422_intra_rect_loop_geometry.or(bounded_i422_inter_rect_loop_geometry);
     let bounded_i422_rect_loop = bounded_i422_rect_loop_geometry.is_some();
+    let bounded_i422_intra_rect_cdef_geometry =
+        complete_bounded_i422_rect_cdef_intra_reconstruction_context(context);
+    let bounded_i422_inter_rect_cdef_geometry = inter_context.and_then(|inter_context| {
+        complete_bounded_i422_rect_cdef_inter_reconstruction_context(context, inter_context)
+    });
+    let bounded_i422_rect_cdef_geometry =
+        bounded_i422_intra_rect_cdef_geometry.or(bounded_i422_inter_rect_cdef_geometry);
+    let bounded_i422_rect_cdef = bounded_i422_rect_cdef_geometry.is_some();
+    let bounded_i422_rect_geometry =
+        bounded_i422_rect_loop_geometry.or(bounded_i422_rect_cdef_geometry);
+    let bounded_i422_rect = bounded_i422_rect_geometry.is_some();
     let bounded_i420_intra_loop = complete_bounded_i420_loop_intra_reconstruction_context(context);
     let bounded_i420_inter_loop = inter_context.is_some_and(|inter_context| {
         complete_bounded_i420_loop_inter_reconstruction_context(context, inter_context)
@@ -4527,6 +4538,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             || bounded_i420_loop_postfilters
             || bounded_i422_loop_postfilters
             || bounded_i422_rect_loop
+            || bounded_i422_rect_cdef
             || bounded_i420_inter_loop
             || bounded_i422_inter_loop
     });
@@ -4545,6 +4557,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i420_loop_postfilters
         || bounded_i422_loop_postfilters
         || bounded_i422_rect_loop
+        || bounded_i422_rect_cdef
         || bounded_i420_intra_loop
         || bounded_i422_intra_loop
         || bounded_i444_intra_cdef
@@ -4717,7 +4730,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     for root_y in (0..context.block_height).step_by(root_step) {
         for root_x in (0..context.block_width).step_by(root_step) {
             let mut bounded_i444_leaf_count = 0usize;
-            let mut bounded_i422_rect_loop_leaf_count = 0usize;
+            let mut bounded_i422_rect_leaf_count = 0usize;
             let delta_q_at_root = context.frame_tools.delta_q_present;
             block_decoder.begin_superblock(
                 context.frame_tools.cdef.map_or(0, |cdef| cdef.bits),
@@ -4755,22 +4768,22 @@ pub(super) fn validate_complete_lossy_420_partition(
                     || bounded_i422_cdef_restoration
                     || bounded_i420_loop_postfilters
                     || bounded_i422_loop_postfilters
-                    || bounded_i422_rect_loop
+                    || bounded_i422_rect
                     || bounded_i444_intra_cdef
                     || bounded_i444_intra_loop
                     || bounded_i420_loop
                     || bounded_i422_loop
                 {
-                    if let Some(geometry) = bounded_i422_rect_loop_geometry {
-                        if !bounded_i422_expected_loop_terminal(
+                    if let Some(geometry) = bounded_i422_rect_geometry {
+                        if !bounded_i422_expected_rect_terminal(
                             geometry,
-                            bounded_i422_rect_loop_leaf_count,
+                            bounded_i422_rect_leaf_count,
                             node,
                         ) {
                             unsupported = true;
                             return Ok(PartitionVisitControl::Stop);
                         }
-                        bounded_i422_rect_loop_leaf_count = bounded_i422_rect_loop_leaf_count
+                        bounded_i422_rect_leaf_count = bounded_i422_rect_leaf_count
                             .checked_add(1)
                             .ok_or_else(|| malformed("bounded I422 loop leaf count overflows"))?;
                     }
@@ -5146,8 +5159,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     return Ok(None);
                 }
             }
-            if let Some(geometry) = bounded_i422_rect_loop_geometry {
-                if bounded_i422_rect_loop_leaf_count != geometry.expected_leaf_count() {
+            if let Some(geometry) = bounded_i422_rect_geometry {
+                if bounded_i422_rect_leaf_count != geometry.expected_leaf_count() {
                     return Ok(None);
                 }
             }
@@ -5957,6 +5970,97 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
         && references_match
 }
 
+fn bounded_i422_rect_cdef_common(
+    context: &FirstBlockContext,
+    quantization: QuantizationContext,
+    geometry: BoundedI422RectGeometry,
+) -> bool {
+    let (frame_width, frame_height) = geometry.dimensions();
+    context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && context.frame_width == frame_width
+        && context.frame_height == frame_height
+        && context.upscaled_width == frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && context
+            .frame_tools
+            .cdef
+            .is_some_and(|_| bounded_i444_cdef_supported(context))
+}
+
+fn complete_bounded_i422_rect_cdef_intra_reconstruction_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedI422RectGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_i422_rect_geometry_for_context(context)?;
+    (context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && bounded_i422_rect_cdef_common(context, quantization, geometry))
+    .then_some(geometry)
+}
+
+fn complete_bounded_i422_rect_cdef_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<BoundedI422RectGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_i422_rect_geometry_for_context(context)?;
+    let (reference_width, reference_height) = geometry.dimensions();
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I422
+            && reference.surface.coded_width == reference_width
+            && reference.surface.upscaled_width == reference_width
+            && reference.surface.frame_height == reference_height
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    (!context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && bounded_i422_rect_cdef_common(context, quantization, geometry)
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match)
+        .then_some(geometry)
+}
+
 /// Common frame-level proof for the combined bounded I420/I422 CDEF and
 /// restoration tranche. The standalone predicates stay intentionally narrow;
 /// this separate class admits the legal filter order while retaining the same
@@ -6451,14 +6555,14 @@ fn complete_bounded_i422_loop_inter_reconstruction_context(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum BoundedI422LoopGeometry {
+enum BoundedI422RectGeometry {
     /// A level-2 split followed by two level-3 B16x16 leaves side by side.
     TwoHorizontal,
     /// A level-2 split followed by two level-3 B16x16 leaves stacked.
     TwoVertical,
 }
 
-impl BoundedI422LoopGeometry {
+impl BoundedI422RectGeometry {
     const fn dimensions(self) -> (u32, u32) {
         match self {
             Self::TwoHorizontal => (32, 16),
@@ -6471,9 +6575,9 @@ impl BoundedI422LoopGeometry {
     }
 }
 
-fn bounded_i422_loop_geometry_for_context(
+fn bounded_i422_rect_geometry_for_context(
     context: &FirstBlockContext,
-) -> Option<BoundedI422LoopGeometry> {
+) -> Option<BoundedI422RectGeometry> {
     match (
         context.frame_width,
         context.frame_height,
@@ -6481,15 +6585,15 @@ fn bounded_i422_loop_geometry_for_context(
         context.block_height,
         context.level,
     ) {
-        (32, 16, 8, 4, 1) => Some(BoundedI422LoopGeometry::TwoHorizontal),
-        (16, 32, 4, 8, 1) => Some(BoundedI422LoopGeometry::TwoVertical),
+        (32, 16, 8, 4, 1) => Some(BoundedI422RectGeometry::TwoHorizontal),
+        (16, 32, 4, 8, 1) => Some(BoundedI422RectGeometry::TwoVertical),
         _ => None,
     }
 }
 
 fn bounded_i422_loop_filter_supported(
     context: &FirstBlockContext,
-    geometry: BoundedI422LoopGeometry,
+    geometry: BoundedI422RectGeometry,
 ) -> bool {
     let loop_filter = context.frame_tools.loop_filter;
     if loop_filter.sharpness > 7
@@ -6502,23 +6606,23 @@ fn bounded_i422_loop_filter_supported(
         return false;
     }
     match geometry {
-        BoundedI422LoopGeometry::TwoHorizontal => loop_filter.level_y[0] != 0,
-        BoundedI422LoopGeometry::TwoVertical => loop_filter.level_y[1] != 0,
+        BoundedI422RectGeometry::TwoHorizontal => loop_filter.level_y[0] != 0,
+        BoundedI422RectGeometry::TwoVertical => loop_filter.level_y[1] != 0,
     }
 }
 
-fn bounded_i422_expected_loop_terminal(
-    geometry: BoundedI422LoopGeometry,
+fn bounded_i422_expected_rect_terminal(
+    geometry: BoundedI422RectGeometry,
     leaf_index: usize,
     node: PartitionNode,
 ) -> bool {
     let expected = match geometry {
-        BoundedI422LoopGeometry::TwoHorizontal => match leaf_index {
+        BoundedI422RectGeometry::TwoHorizontal => match leaf_index {
             0 => (0, 0),
             1 => (4, 0),
             _ => return false,
         },
-        BoundedI422LoopGeometry::TwoVertical => match leaf_index {
+        BoundedI422RectGeometry::TwoVertical => match leaf_index {
             0 => (0, 0),
             1 => (0, 4),
             _ => return false,
@@ -6538,7 +6642,7 @@ fn bounded_i422_expected_loop_terminal(
 fn bounded_i422_rect_loop_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
-    geometry: BoundedI422LoopGeometry,
+    geometry: BoundedI422RectGeometry,
 ) -> bool {
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
@@ -6574,11 +6678,11 @@ fn bounded_i422_rect_loop_common(
 
 fn complete_bounded_i422_rect_loop_intra_reconstruction_context(
     context: &FirstBlockContext,
-) -> Option<BoundedI422LoopGeometry> {
+) -> Option<BoundedI422RectGeometry> {
     let Some(quantization) = context.frame_tools.quantization else {
         return None;
     };
-    let geometry = bounded_i422_loop_geometry_for_context(context)?;
+    let geometry = bounded_i422_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_rect_loop_common(context, quantization, geometry))
@@ -6588,11 +6692,11 @@ fn complete_bounded_i422_rect_loop_intra_reconstruction_context(
 fn complete_bounded_i422_rect_loop_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
-) -> Option<BoundedI422LoopGeometry> {
+) -> Option<BoundedI422RectGeometry> {
     let Some(quantization) = context.frame_tools.quantization else {
         return None;
     };
-    let geometry = bounded_i422_loop_geometry_for_context(context)?;
+    let geometry = bounded_i422_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
