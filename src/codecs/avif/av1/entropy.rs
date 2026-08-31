@@ -3154,6 +3154,28 @@ fn interintra_size_group(block_size: BlockSize) -> usize {
     }
 }
 
+/// The shared inter terminal decodes one luma and one chroma transform per
+/// leaf.  Keep blocks whose normative maximum transforms are smaller than the
+/// coded plane transactional until the transform-grid compositor is wired.
+fn inter_single_transform_geometry_supported(block_size: BlockSize, layout: PixelLayout) -> bool {
+    let (block_width, block_height) = block_size.pixel_dimensions();
+    if block_size.maximum_luma_tx().pixel_dimensions() != (block_width, block_height) {
+        return false;
+    }
+    let Some(chroma_tx) = block_size.maximum_chroma_tx(layout) else {
+        return true;
+    };
+    let chroma_width = match layout {
+        PixelLayout::I420 | PixelLayout::I422 => block_width.div_ceil(8).saturating_mul(4),
+        PixelLayout::I444 | PixelLayout::Monochrome => block_width,
+    };
+    let chroma_height = match layout {
+        PixelLayout::I420 => block_height.div_ceil(8).saturating_mul(4),
+        PixelLayout::I422 | PixelLayout::I444 | PixelLayout::Monochrome => block_height,
+    };
+    chroma_tx.pixel_dimensions() == (chroma_width, chroma_height)
+}
+
 #[derive(Clone, Copy)]
 struct InterIntraSyntax {
     mode: u8,
@@ -4191,6 +4213,15 @@ fn decode_inter_leaf(
         }
     }
     if selected_segment.reference == 0 {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+    let layout = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    )
+    .ok_or_else(|| malformed("inter pixel layout is invalid"))?;
+    if !inter_single_transform_geometry_supported(node.block_size, layout) {
         return Ok(Err(super::block::PortableUnavailable));
     }
     let neighbors = inter_neighbors(tile_state, node)?;
@@ -5241,6 +5272,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     };
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
+            || complete_inter_422_reconstruction_context(context, inter_context)
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
@@ -6206,6 +6238,56 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+}
+
+/// Narrow generic 8-bit 4:2:2 inter profile.  The shared motion and compound
+/// kernels are layout-complete, but this profile admits only leaves whose
+/// luma and chroma planes each fit one normative transform; multi-transform
+/// I422 leaves remain transactional until their transform-grid compositor is
+/// connected.  Frame-level postfilters and film grain stay closed here so the
+/// first generic I422 path publishes one unfiltered tile atomically.
+fn complete_inter_422_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == 8
+            && reference.surface.layout == PixelLayout::I422
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    !context.intra_frame
+        && context.bit_depth == 8
+        && context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && !context.superres_enabled
+        && context.upscaled_width == context.frame_width
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && context.frame_tools.quantization.is_some()
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && context.restoration_types == [None; 3]
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && references_match
 }
 
 /// The same bounded intra profile as the general lossy 4:2:0 decoder, with
