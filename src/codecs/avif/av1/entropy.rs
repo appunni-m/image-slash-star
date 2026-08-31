@@ -9521,9 +9521,12 @@ fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
 /// A monochrome sequence still carries the canonical `subsampling_x/y` bits
 /// in AV1C, but it has no U/V block syntax or post-filter planes. Keep this
 /// profile deliberately narrow until those independent carriers are wired:
-/// one tile, largest-transform blocks, and no frame-level state that would
-/// require a second plane or a separate publication path. Plane-zero
-/// quantization matrices remain on the generic depth-aware coefficient path.
+/// one tile, bounded transform-depth plans, and no frame-level state that
+/// would require a second plane or a separate publication path. Intra leaves
+/// may materialize TX_MODE_SELECT depth; inter leaves admit only an unsplit
+/// maximum transform and reject transform-grid splits transactionally.
+/// Plane-zero quantization matrices remain on the generic depth-aware
+/// coefficient path.
 fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
     complete_monochrome_lossy_base(context)
         && complete_monochrome_cdef_inactive(context)
@@ -9551,7 +9554,7 @@ fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
         && !context.allow_screen_content_tools
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && context.frame_tools.transform_mode == 1
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && context.frame_tools.quantization.is_some()
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
@@ -9622,6 +9625,7 @@ fn complete_monochrome_restoration_supported(context: &FirstBlockContext) -> boo
 
 fn complete_monochrome_postfilter_reconstruction_context(context: &FirstBlockContext) -> bool {
     complete_monochrome_lossy_base(context)
+        && context.frame_tools.transform_mode == 1
         && context.frame_width >= 8
         && context.frame_height >= 8
         && context.frame_width.is_multiple_of(8)
