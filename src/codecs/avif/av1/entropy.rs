@@ -2599,10 +2599,7 @@ pub(super) fn validate_complete_monochrome_partition(
 
 fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
-        || (context.bit_depth == 8
-            && context.subsampling_x
-            && context.subsampling_y
-            && !context.monochrome)
+        || (context.bit_depth == 8 && context.subsampling_x && !context.monochrome)
 }
 
 fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {

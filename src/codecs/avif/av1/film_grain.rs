@@ -27,6 +27,7 @@ struct GrainSampling {
 
 impl GrainSampling {
     const I420: Self = Self { subx: 1, suby: 1 };
+    const I422: Self = Self { subx: 1, suby: 0 };
     const I444: Self = Self { subx: 0, suby: 0 };
 
     fn validate(self) -> Av1Result<()> {
@@ -258,6 +259,17 @@ pub(super) fn apply_i420(
     token: Option<&CancellationToken>,
 ) -> Av1Result<FirstLeaf> {
     apply_with_sampling(leaf, params, GrainSampling::I420, token)
+}
+
+/// Apply a parsed film-grain payload to an owned, post-filter I422 display
+/// leaf. Horizontal chroma subsampling uses the same checked kernel as I420;
+/// the vertical axis remains full resolution.
+pub(super) fn apply_i422(
+    leaf: FirstLeaf,
+    params: &FilmGrain,
+    token: Option<&CancellationToken>,
+) -> Av1Result<FirstLeaf> {
+    apply_with_sampling(leaf, params, GrainSampling::I422, token)
 }
 
 /// Apply a parsed film-grain payload to an owned, post-filter I444 display
