@@ -15353,11 +15353,11 @@ fn decode_inter_lossy_terminal(
     arena: &mut LargeCoefficientArena,
     quantization: LossyQuantization,
     tx_size: TxSize,
-    _block_plane_width: usize,
-    _block_plane_height: usize,
+    block_plane_width: usize,
+    block_plane_height: usize,
     above: &[u8],
     left: &[u8],
-    block_skipped: bool,
+    txb_skipped: bool,
     transform: Av1TransformType,
 ) -> PortableResult<DecodedGenericTerminal> {
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
@@ -15373,16 +15373,24 @@ fn decode_inter_lossy_terminal(
     let context_width = tx_width / 4;
     let context_height = tx_height / 4;
     let bounded_transform = tx_width <= 32 && tx_height <= 32;
-    let skipped_large_transform = block_skipped && tx_width <= 64 && tx_height <= 64;
+    let skipped_large_transform = txb_skipped && tx_width <= 64 && tx_height <= 64;
     (above.len() == context_width
         && left.len() == context_height
         && matches!(plane, 0..=2)
         && (bounded_transform || skipped_large_transform))
         .then_some(())
         .portable()?;
+    generic_coefficient_skip_context(
+        plane,
+        tx_size,
+        block_plane_width,
+        block_plane_height,
+        above,
+        left,
+    )?;
     let transform = GenericTerminalTransform::Lossy(transform);
     arena.coefficients.clear();
-    if block_skipped {
+    if txb_skipped {
         return Ok(DecodedGenericTerminal {
             skipped: true,
             coefficient_count,
@@ -48234,6 +48242,21 @@ struct InterPrediction<'a> {
     compound_average: bool,
 }
 
+/// Tile-local coefficient edges captured before an inter leaf is decoded.
+///
+/// Inter residual syntax is decoded one transform at a time, before the
+/// completed block is published to [`TileState`].  Keeping the edge arrays in
+/// a copy-only carrier lets the block decoder consume the existing tile
+/// neighbors without borrowing or mutating the external state during
+/// reconstruction.  The arrays are intentionally bounded to the largest AV1
+/// transform context (64 pixels = 16 four-pixel cells); the remaining space
+/// stays neutral for exact-length slicing at each transform.
+#[derive(Clone, Copy)]
+pub(super) struct InterCoefficientContexts {
+    pub(super) above: [[u8; 32]; 3],
+    pub(super) left: [[u8; 32]; 3],
+}
+
 impl BlockSegmentState {
     const DEFAULT: Self = Self {
         delta_q: 0,
@@ -48418,6 +48441,43 @@ impl Lossy420Decoder {
         };
         self.pending_skip = Some(skip);
         Ok(skip)
+    }
+
+    /// Decode one inter transform block's coefficient-skip sentence.
+    ///
+    /// A mode-level skipped block has no transform-block skip symbol.  For a
+    /// non-skipped block this helper consumes the normative coefficient CDF
+    /// before transform type or coefficient syntax, using the caller's
+    /// tile-local above/left residual edges.
+    pub(super) fn decode_inter_txb_skip(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        plane: usize,
+        tx_size: TxSize,
+        block_plane_width: usize,
+        block_plane_height: usize,
+        above: &[u8],
+        left: &[u8],
+        block_skipped: bool,
+    ) -> PortableResult<bool> {
+        (matches!(plane, 0..=2)).then_some(()).portable()?;
+        let tx_context = tx_size.coefficient_context();
+        let skip_context = generic_coefficient_skip_context(
+            plane,
+            tx_size,
+            block_plane_width,
+            block_plane_height,
+            above,
+            left,
+        )?;
+        if block_skipped {
+            return Ok(true);
+        }
+        Ok(decoder.adaptive_bool(
+            self.cdfs.coefficient.skip[tx_context]
+                .get_mut(skip_context)
+                .portable()?,
+        ))
     }
 
     /// Preserve nominal coded geometry separately from the palette entropy
@@ -48627,8 +48687,10 @@ impl Lossy420Decoder {
         motion: MotionVector,
         filters: [InterpolationFilter; 2],
         block_skipped: bool,
+        luma_txb_skipped: bool,
         luma_tx_size: TxSize,
         luma_transform: Av1TransformType,
+        coefficient_contexts: InterCoefficientContexts,
     ) -> PortableResult<FirstLeaf> {
         self.decode_inter_translation_impl(
             decoder,
@@ -48646,9 +48708,11 @@ impl Lossy420Decoder {
                 compound_average: false,
             },
             block_skipped,
+            luma_txb_skipped,
             luma_tx_size,
             luma_transform,
             filters,
+            coefficient_contexts,
         )
     }
 
@@ -48672,8 +48736,10 @@ impl Lossy420Decoder {
         motions: [MotionVector; 2],
         filters: [InterpolationFilter; 2],
         block_skipped: bool,
+        luma_txb_skipped: bool,
         luma_tx_size: TxSize,
         luma_transform: Av1TransformType,
+        coefficient_contexts: InterCoefficientContexts,
     ) -> PortableResult<FirstLeaf> {
         self.decode_inter_translation_impl(
             decoder,
@@ -48691,9 +48757,11 @@ impl Lossy420Decoder {
                 compound_average: true,
             },
             block_skipped,
+            luma_txb_skipped,
             luma_tx_size,
             luma_transform,
             filters,
+            coefficient_contexts,
         )
     }
 
@@ -48711,9 +48779,11 @@ impl Lossy420Decoder {
         tools: BlockTools,
         prediction_state: InterPrediction<'_>,
         block_skipped: bool,
+        luma_txb_skipped: bool,
         luma_tx_size: TxSize,
         luma_transform: Av1TransformType,
         filters: [InterpolationFilter; 2],
+        coefficient_contexts: InterCoefficientContexts,
     ) -> PortableResult<FirstLeaf> {
         let chroma_sampling = self.chroma_sampling;
         let monochrome = matches!(chroma_sampling, ChromaSampling::Monochrome);
@@ -48909,12 +48979,30 @@ impl Lossy420Decoder {
             }
             let context_width = tx_width / 4;
             let context_height = tx_height / 4;
-            let above = vec![0x40_u8; context_width];
-            let left = vec![0x40_u8; context_height];
-            let transform = if plane == 0 {
-                luma_transform
+            let above = coefficient_contexts.above[plane]
+                .get(..context_width)
+                .portable()?;
+            let left = coefficient_contexts.left[plane]
+                .get(..context_height)
+                .portable()?;
+            let txb_skipped = if plane == 0 {
+                luma_txb_skipped
             } else {
+                self.decode_inter_txb_skip(
+                    decoder,
+                    plane,
+                    tx_size,
+                    geometry.0,
+                    geometry.1,
+                    above,
+                    left,
+                    predecoded_skip,
+                )?
+            };
+            let transform = if txb_skipped {
                 Av1TransformType::DctDct
+            } else {
+                luma_transform
             };
             let terminal = decode_inter_lossy_terminal(
                 decoder,
@@ -48925,9 +49013,9 @@ impl Lossy420Decoder {
                 tx_size,
                 geometry.0,
                 geometry.1,
-                &above,
-                &left,
-                predecoded_skip,
+                above,
+                left,
+                txb_skipped,
                 transform,
             )?;
             let coefficients = if terminal.skipped {

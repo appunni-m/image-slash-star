@@ -3630,13 +3630,6 @@ fn decode_inter_leaf(
         {
             return Ok(Err(super::block::PortableUnavailable));
         }
-        if context.subsampling_x && !context.subsampling_y && !block_skipped {
-            // The first high-depth I422 tranche only has the complete
-            // zero-residual sentence. Non-skipped chroma needs per-transform
-            // coefficient contexts and a luma-derived transform type, which
-            // are deliberately not inferred from the I420 path.
-            return Ok(Err(super::block::PortableUnavailable));
-        }
     }
     if selected_segment.reference == 0 {
         return Ok(Err(super::block::PortableUnavailable));
@@ -4069,19 +4062,127 @@ fn decode_inter_leaf(
     )
     .map_err(|_| malformed("variable inter transform is unavailable"))?;
     let quantization = prepared_quantization.quantization;
-    let transform = decode_inter_transform_type(
-        decoder,
-        cdfs,
-        tx_size,
-        context.frame_tools.reduced_transform_set,
-        quantization.segment_lossless,
-    )?;
-    if context.subsampling_x
-        && !context.subsampling_y
-        && !matches!(transform, super::block::Av1TransformType::DctDct)
-    {
-        return Ok(Err(super::block::PortableUnavailable));
+    let (tx_width, tx_height) = tx_size.pixel_dimensions();
+    let mut coefficient_contexts = super::block::InterCoefficientContexts {
+        above: [[0x40; 32]; 3],
+        left: [[0x40; 32]; 3],
+    };
+    let luma_context_width = tx_width
+        .checked_div(4)
+        .ok_or_else(|| malformed("inter luma transform width is not four-aligned"))?;
+    let luma_context_height = tx_height
+        .checked_div(4)
+        .ok_or_else(|| malformed("inter luma transform height is not four-aligned"))?;
+    let luma_context_width_usize = usize::try_from(luma_context_width)
+        .map_err(|_| malformed("inter luma context width exceeds scratch"))?;
+    let luma_context_height_usize = usize::try_from(luma_context_height)
+        .map_err(|_| malformed("inter luma context height exceeds scratch"))?;
+    (luma_context_width_usize <= coefficient_contexts.above[0].len()
+        && luma_context_height_usize <= coefficient_contexts.left[0].len())
+    .then_some(())
+    .ok_or_else(|| malformed("inter luma context exceeds scratch"))?;
+    coefficient_contexts.above[0][..luma_context_width_usize].copy_from_slice(
+        &tile_state.luma_contexts_above::<32>(node.x, node.y, luma_context_width)?
+            [..luma_context_width_usize],
+    );
+    coefficient_contexts.left[0][..luma_context_height_usize].copy_from_slice(
+        &tile_state.luma_contexts_left::<32>(node.x, node.y, luma_context_height)?
+            [..luma_context_height_usize],
+    );
+
+    let chroma_tx = if context.monochrome {
+        None
+    } else {
+        let chroma_sampling = super::block::ChromaSampling::from_subsampling(
+            context.subsampling_x,
+            context.subsampling_y,
+        )
+        .ok_or_else(|| malformed("inter chroma sampling is invalid"))?;
+        let chroma_layout = match chroma_sampling {
+            super::block::ChromaSampling::Full => PixelLayout::I444,
+            super::block::ChromaSampling::Subsampled420 => PixelLayout::I420,
+            super::block::ChromaSampling::Subsampled422 => PixelLayout::I422,
+            super::block::ChromaSampling::Monochrome => PixelLayout::Monochrome,
+        };
+        Some(
+            node.block_size
+                .maximum_chroma_tx(chroma_layout)
+                .ok_or_else(|| malformed("inter chroma transform is unavailable"))?,
+        )
+    };
+    if let Some(chroma_tx) = chroma_tx {
+        let (chroma_tx_width, chroma_tx_height) = chroma_tx.pixel_dimensions();
+        let chroma_context_width = chroma_tx_width
+            .checked_div(4)
+            .ok_or_else(|| malformed("inter chroma transform width is not four-aligned"))?;
+        let chroma_context_height = chroma_tx_height
+            .checked_div(4)
+            .ok_or_else(|| malformed("inter chroma transform height is not four-aligned"))?;
+        let chroma_context_width_usize = usize::try_from(chroma_context_width)
+            .map_err(|_| malformed("inter chroma context width exceeds scratch"))?;
+        let chroma_context_height_usize = usize::try_from(chroma_context_height)
+            .map_err(|_| malformed("inter chroma context height exceeds scratch"))?;
+        (chroma_context_width_usize <= coefficient_contexts.above[1].len()
+            && chroma_context_height_usize <= coefficient_contexts.left[1].len())
+        .then_some(())
+        .ok_or_else(|| malformed("inter chroma context exceeds scratch"))?;
+        let chroma_x = if context.subsampling_x {
+            node.x / 2
+        } else {
+            node.x
+        };
+        let chroma_y = if context.subsampling_y {
+            node.y / 2
+        } else {
+            node.y
+        };
+        for plane in 0..2 {
+            coefficient_contexts.above[plane + 1][..chroma_context_width_usize].copy_from_slice(
+                &tile_state.chroma_contexts_above::<32>(
+                    plane,
+                    chroma_x,
+                    chroma_y,
+                    chroma_context_width,
+                )?[..chroma_context_width_usize],
+            );
+            coefficient_contexts.left[plane + 1][..chroma_context_height_usize].copy_from_slice(
+                &tile_state.chroma_contexts_left::<32>(
+                    plane,
+                    chroma_x,
+                    chroma_y,
+                    chroma_context_height,
+                )?[..chroma_context_height_usize],
+            );
+        }
     }
+
+    let luma_block_width = usize::try_from(node.block_size.pixel_dimensions().0)
+        .map_err(|_| malformed("inter luma block width exceeds usize"))?;
+    let luma_block_height = usize::try_from(node.block_size.pixel_dimensions().1)
+        .map_err(|_| malformed("inter luma block height exceeds usize"))?;
+    let luma_txb_skipped = block_decoder
+        .decode_inter_txb_skip(
+            decoder,
+            0,
+            tx_size,
+            luma_block_width,
+            luma_block_height,
+            &coefficient_contexts.above[0][..luma_context_width_usize],
+            &coefficient_contexts.left[0][..luma_context_height_usize],
+            block_skipped,
+        )
+        .map_err(|_| malformed("inter luma coefficient-skip sentence is unavailable"))?;
+    let transform = if luma_txb_skipped {
+        super::block::Av1TransformType::DctDct
+    } else {
+        decode_inter_transform_type(
+            decoder,
+            cdfs,
+            tx_size,
+            context.frame_tools.reduced_transform_set,
+            quantization.segment_lossless,
+        )?
+    };
     let leaf = match if compound {
         let second = second_state
             .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
@@ -4100,8 +4201,10 @@ fn decode_inter_leaf(
             motions,
             filters,
             block_skipped,
+            luma_txb_skipped,
             tx_size,
             transform,
+            coefficient_contexts,
         )
     } else {
         block_decoder.decode_inter_translation(
@@ -4119,8 +4222,10 @@ fn decode_inter_leaf(
             motions[0],
             filters,
             block_skipped,
+            luma_txb_skipped,
             tx_size,
             transform,
+            coefficient_contexts,
         )
     } {
         Ok(leaf) => leaf,
