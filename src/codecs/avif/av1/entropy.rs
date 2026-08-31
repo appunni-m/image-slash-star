@@ -6300,8 +6300,9 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// kernels are layout-complete, but this profile admits only leaves whose
 /// luma and chroma planes each fit one normative transform; multi-transform
 /// I422 leaves remain transactional until their transform-grid compositor is
-/// connected.  Frame-level postfilters and film grain stay closed here so the
-/// first generic I422 path publishes one unfiltered tile atomically.
+/// connected. Frame-level postfilters and film grain stay closed here so each
+/// tile can be reconstructed locally before the complete unfiltered frame is
+/// assembled transactionally.
 fn complete_inter_422_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6321,7 +6322,6 @@ fn complete_inter_422_reconstruction_context(
         && context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
-        && context.single_tile
         && !context.superres_enabled
         && context.upscaled_width == context.frame_width
         && !context.all_lossless
@@ -6350,7 +6350,8 @@ fn complete_inter_422_reconstruction_context(
 /// the luma extent, so the shared single-transform guard proves all three
 /// planes together.  Compound, inter-intra, and OBMC syntax remain enabled;
 /// frame-level postfilters and film grain stay closed until their broad I444
-/// geometry classes have independent composition evidence.
+/// geometry classes have independent composition evidence. Tile-local
+/// reconstructions are assembled into one complete frame.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6370,7 +6371,6 @@ fn complete_inter_444_reconstruction_context(
         && !context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
-        && context.single_tile
         && !context.superres_enabled
         && context.upscaled_width == context.frame_width
         && !context.all_lossless
