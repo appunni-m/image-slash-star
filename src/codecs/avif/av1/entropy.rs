@@ -4389,9 +4389,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_intra_reconstruction =
         complete_monochrome_lossy_intra_reconstruction_context(context);
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
-    let bounded_i444_inter = inter_context.is_some_and(|inter_context| {
-        complete_bounded_i444_inter_reconstruction_context(context, inter_context)
+    let bounded_i444_inter_geometry = inter_context.and_then(|inter_context| {
+        bounded_i444_inter_reconstruction_geometry(context, inter_context)
     });
+    let bounded_i444_inter = bounded_i444_inter_geometry.is_some();
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
@@ -4543,6 +4544,7 @@ pub(super) fn validate_complete_lossy_420_partition(
 
     for root_y in (0..context.block_height).step_by(root_step) {
         for root_x in (0..context.block_width).step_by(root_step) {
+            let mut bounded_i444_leaf_count = 0usize;
             let delta_q_at_root = context.frame_tools.delta_q_present;
             block_decoder.begin_superblock(
                 context.frame_tools.cdef.map_or(0, |cdef| cdef.bits),
@@ -4571,6 +4573,21 @@ pub(super) fn validate_complete_lossy_420_partition(
                 if complete_high_depth_422_intra_reconstruction_context(context)
                     || bounded_i444_inter
                 {
+                    if let Some(geometry) = bounded_i444_inter_geometry {
+                        if !bounded_i444_expected_terminal(geometry, bounded_i444_leaf_count, node)
+                        {
+                            // The bounded full-resolution inter profiles admit
+                            // only the exact normalized terminal sequence. A
+                            // clipped B32x16, a deeper split, or a misplaced
+                            // sibling is rejected before skip/CDEF/
+                            // quantization syntax can mutate state.
+                            unsupported = true;
+                            return Ok(PartitionVisitControl::Stop);
+                        }
+                        bounded_i444_leaf_count = bounded_i444_leaf_count
+                            .checked_add(1)
+                            .ok_or_else(|| malformed("bounded I444 leaf count overflows"))?;
+                    }
                     if syntax_block_size != BlockSize::B16x16 {
                         // These bounded inter/intra tranches are proved only
                         // for one normalized B16x16/Square16 terminal. Reject
@@ -4917,6 +4934,11 @@ pub(super) fn validate_complete_lossy_420_partition(
             })?;
             if unsupported || matches!(control, PartitionVisitControl::Stop) {
                 return Ok(None);
+            }
+            if let Some(geometry) = bounded_i444_inter_geometry {
+                if bounded_i444_leaf_count != geometry.expected_leaf_count() {
+                    return Ok(None);
+                }
             }
         }
     }
@@ -5288,44 +5310,107 @@ fn complete_high_depth_inter_reconstruction_context(
         && references_match
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BoundedI444InterGeometry {
+    /// One normalized B16x16/Square16 terminal in a 16x16 frame.
+    OneBlock,
+    /// A level-2 SPLIT followed by two level-3 NONE B16x16 terminals in a
+    /// 32x16 frame. The leaves are visited left-to-right at x=0 and x=4 MI.
+    TwoHorizontal,
+}
+
+impl BoundedI444InterGeometry {
+    const fn dimensions(self) -> (u32, u32) {
+        match self {
+            Self::OneBlock => (16, 16),
+            Self::TwoHorizontal => (32, 16),
+        }
+    }
+
+    const fn expected_leaf_count(self) -> usize {
+        match self {
+            Self::OneBlock => 1,
+            Self::TwoHorizontal => 2,
+        }
+    }
+}
+
+/// Validate one exact terminal in the bounded full-resolution inter profiles.
+///
+/// `PartitionWalker` only calls the block callback for terminal footprints. For
+/// the 32x16 profile, the frame edge makes level 2 a horizontal-only node, so
+/// the only alternatives are SPLIT or HORIZONTAL. Requiring the two B16x16
+/// footprints below therefore forces the normative level-2 SPLIT and level-3
+/// NONE sequence before any block syntax is consumed.
+fn bounded_i444_expected_terminal(
+    geometry: BoundedI444InterGeometry,
+    leaf_index: usize,
+    node: PartitionNode,
+) -> bool {
+    let expected = match geometry {
+        BoundedI444InterGeometry::OneBlock => (0, 0),
+        BoundedI444InterGeometry::TwoHorizontal => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            _ => return false,
+        },
+    };
+    node.level == 3
+        && node.x == expected.0
+        && node.y == expected.1
+        && node.coded_width == 4
+        && node.coded_height == 4
+        && node.width == 4
+        && node.height == 4
+        && node.block_size == BlockSize::B16x16
+        && node.kind == PartitionKind::None
+}
+
 /// Exact bounded 4:4:4 inter tranche admitted by the full-resolution
 /// translation path. The inter block engine carries depth-parametric
 /// predictors and residuals for all three full-resolution planes, including
-/// the average compound predictor. Its first proof is intentionally one
-/// normalized B16x16/Square16 terminal. A separate gate keeps this class from
-/// inheriting the narrower 4:2:0/4:2:2 admission or from silently accepting a
-/// partition that needs child-local context publication.
-fn complete_bounded_i444_inter_reconstruction_context(
+/// the average compound predictor. Keep each admitted geometry as an explicit
+/// profile so a clipped partition cannot inherit the narrower 4:2:0/4:2:2
+/// admission or skip child-local context publication.
+fn bounded_i444_inter_reconstruction_geometry(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
-) -> bool {
+) -> Option<BoundedI444InterGeometry> {
     let Some(quantization) = context.frame_tools.quantization else {
-        return false;
+        return None;
     };
+    let geometry = match (
+        context.frame_width,
+        context.frame_height,
+        context.block_width,
+        context.block_height,
+        context.level,
+    ) {
+        (16, 16, 4, 4, 0 | 1) => BoundedI444InterGeometry::OneBlock,
+        (32, 16, 8, 4, 1) => BoundedI444InterGeometry::TwoHorizontal,
+        _ => return None,
+    };
+    let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == context.bit_depth
             && reference.surface.layout == PixelLayout::I444
-            && reference.surface.coded_width == 16
-            && reference.surface.upscaled_width == 16
-            && reference.surface.frame_height == 16
+            && reference.surface.coded_width == reference_width
+            && reference.surface.upscaled_width == reference_width
+            && reference.surface.frame_height == reference_height
             && matches!(
                 reference.global_motion.kind,
                 GlobalMotionType::Identity | GlobalMotionType::Translation
             )
             && !reference.scale.scaled
     });
-    !context.intra_frame
+    (!context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
         && context.single_tile
-        && context.frame_width == 16
-        && context.frame_height == 16
-        && context.upscaled_width == 16
-        && context.block_width == 4
-        && context.block_height == 4
+        && context.upscaled_width == context.frame_width
         && context.block_x == 0
         && context.block_y == 0
         && !context.superres_enabled
@@ -5356,7 +5441,8 @@ fn complete_bounded_i444_inter_reconstruction_context(
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
-        && references_match
+        && references_match)
+        .then_some(geometry)
 }
 
 fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
