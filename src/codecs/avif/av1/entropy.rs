@@ -6246,11 +6246,13 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// switchable-motion frames consume the exact binary-OBMC or three-symbol
 /// motion-mode sentence selected by their causal matching-reference mask;
 /// Translation and OBMC are materialized for the generic high-depth layouts,
-/// while LOCALWARP selections remain transactional unsupported outcomes. Every
-/// retained reference is checked up front so a later reference choice cannot
-/// narrow the path back to eight-bit geometry. An all-NONE restoration header
-/// is a semantic no-op: it carries no tile restoration units or postfilter
-/// plan, while active restoration types remain outside this generic class.
+/// as are Average/Distance and masked Difference/Wedge compound predictors.
+/// LOCALWARP and affine GlobalGlobal selections remain transactional unsupported
+/// outcomes. Every retained reference is checked up front so a later reference
+/// choice cannot narrow the path back to eight-bit geometry. An all-NONE
+/// restoration header is a semantic no-op: it carries no tile restoration
+/// units or postfilter plan, while active restoration types remain outside
+/// this generic class.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6283,11 +6285,8 @@ fn complete_high_depth_inter_reconstruction_context(
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
         && context.restoration_types == [None; 3]
-        && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_masked_compound
-        && !inter_context.enable_jnt_comp
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
