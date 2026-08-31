@@ -2551,6 +2551,7 @@ pub(super) fn validate_complete_monochrome_partition(
                     width,
                     height,
                     transform_grid,
+                    intra_edges: node.intra_edges,
                 };
                 let tools = super::block::BlockTools {
                     sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
@@ -9461,6 +9462,21 @@ fn monochrome_transform_geometry(
         (8, 2) => Some((super::block::TransformGrid::Horizontal32x8, 32, 8)),
         (2, 8) => Some((super::block::TransformGrid::Vertical8x32, 8, 32)),
         (8, 8) => Some((super::block::TransformGrid::Square32, 32, 32)),
+        // R64x16 is the largest monochrome lossless terminal representable by
+        // the fixed 64-entry WHT carrier.  Require the nominal block identity
+        // and unclipped coded extent so a clipped R64x32/R64x64 edge cannot be
+        // decoded with the R64x16 CDF sentence.
+        (16, 4)
+            if node.block_size == BlockSize::B64x16
+                && node.coded_width == 16
+                && node.coded_height == 4
+                && node.width == 16
+                && node.height == 4 =>
+        {
+            Some((super::block::TransformGrid::Horizontal64x16, 64, 16))
+        }
+        // S64x64 needs 256 lossless WHT carriers; the monochrome decoder keeps
+        // that larger dynamic carrier as a separate future slice.
         _ => None,
     }
 }
@@ -9469,9 +9485,35 @@ fn monochrome_transform_geometry(
 struct MonochromeNeighborIndices {
     above_left: Option<usize>,
     above: Option<usize>,
-    above_right: [Option<usize>; 8],
+    above_right: [Option<usize>; super::block::MONOCHROME_NEIGHBOR_CAPACITY],
     left: Option<usize>,
-    left_below: Option<usize>,
+    left_below: [Option<usize>; super::block::MONOCHROME_NEIGHBOR_CAPACITY],
+}
+
+fn insert_monochrome_neighbor(
+    candidates: &mut [(u32, usize); super::block::MONOCHROME_NEIGHBOR_CAPACITY],
+    count: &mut usize,
+    origin: u32,
+    index: usize,
+) -> Av1Result<()> {
+    let current = *count;
+    if current >= candidates.len() {
+        return Err(malformed(
+            "monochrome neighbor edge exceeds bounded capacity",
+        ));
+    }
+    let insert_at = (0..current)
+        .find(|&slot| {
+            let (candidate_origin, candidate_index) = candidates[slot];
+            origin < candidate_origin || (origin == candidate_origin && index < candidate_index)
+        })
+        .unwrap_or(current);
+    for slot in (insert_at..current).rev() {
+        candidates[slot + 1] = candidates[slot];
+    }
+    candidates[insert_at] = (origin, index);
+    *count = current + 1;
+    Ok(())
 }
 
 fn monochrome_neighbors<'a>(
@@ -9499,18 +9541,26 @@ fn monochrome_neighbors<'a>(
                 && leaf.contains_sample(geometry.origin_x, geometry.origin_y.saturating_sub(1))
         })
         .map(|(index, _)| index);
-    let mut above_right_candidates = leaves
-        .iter()
+    let mut above_right_candidates = [(0_u32, 0_usize); super::block::MONOCHROME_NEIGHBOR_CAPACITY];
+    let mut above_right_count = 0_usize;
+    for (index, leaf) in leaves.iter().enumerate() {
+        if leaf.origin_y().checked_add(leaf.height()) == Some(geometry.origin_y)
+            && leaf.origin_x() >= geometry.origin_x
+        {
+            insert_monochrome_neighbor(
+                &mut above_right_candidates,
+                &mut above_right_count,
+                leaf.origin_x(),
+                index,
+            )?;
+        }
+    }
+    let mut above_right = [None; super::block::MONOCHROME_NEIGHBOR_CAPACITY];
+    for (slot, (_, index)) in above_right_candidates
+        .into_iter()
+        .take(above_right_count)
         .enumerate()
-        .filter(|(_, leaf)| {
-            leaf.origin_y().checked_add(leaf.height()) == Some(geometry.origin_y)
-                && leaf.origin_x() >= geometry.origin_x
-        })
-        .map(|(index, leaf)| (leaf.origin_x(), index))
-        .collect::<Vec<_>>();
-    above_right_candidates.sort_unstable_by_key(|(origin_x, _)| *origin_x);
-    let mut above_right = [None; 8];
-    for (slot, (_, index)) in above_right_candidates.into_iter().take(8).enumerate() {
+    {
         above_right[slot] = Some(index);
     }
     let left = leaves
@@ -9522,15 +9572,28 @@ fn monochrome_neighbors<'a>(
                 && leaf.contains_sample(geometry.origin_x.saturating_sub(1), geometry.origin_y)
         })
         .map(|(index, _)| index);
-    let left_below = leaves
-        .iter()
+    let mut left_below_candidates = [(0_u32, 0_usize); super::block::MONOCHROME_NEIGHBOR_CAPACITY];
+    let mut left_below_count = 0_usize;
+    for (index, leaf) in leaves.iter().enumerate() {
+        if leaf.origin_x().checked_add(leaf.width()) == Some(geometry.origin_x)
+            && leaf.origin_y() > geometry.origin_y
+        {
+            insert_monochrome_neighbor(
+                &mut left_below_candidates,
+                &mut left_below_count,
+                leaf.origin_y(),
+                index,
+            )?;
+        }
+    }
+    let mut left_below = [None; super::block::MONOCHROME_NEIGHBOR_CAPACITY];
+    for (slot, (_, index)) in left_below_candidates
+        .into_iter()
+        .take(left_below_count)
         .enumerate()
-        .filter(|(_, leaf)| {
-            leaf.origin_x().checked_add(leaf.width()) == Some(geometry.origin_x)
-                && leaf.origin_y() > geometry.origin_y
-        })
-        .min_by_key(|(_, leaf)| leaf.origin_y())
-        .map(|(index, _)| index);
+    {
+        left_below[slot] = Some(index);
+    }
     let indices = MonochromeNeighborIndices {
         above_left,
         above,
@@ -9545,7 +9608,9 @@ fn monochrome_neighbors<'a>(
             indices.above_right[slot].and_then(|index| leaves.get(index))
         }),
         left: indices.left.and_then(|index| leaves.get(index)),
-        left_below: indices.left_below.and_then(|index| leaves.get(index)),
+        left_below: std::array::from_fn(|slot| {
+            indices.left_below[slot].and_then(|index| leaves.get(index))
+        }),
     })
 }
 
@@ -10306,6 +10371,7 @@ pub(super) fn validate_first_partition(
                 width,
                 height,
                 transform_grid,
+                intra_edges: node.intra_edges,
             };
             let decoded = if visited == 0 {
                 block_decoder.decode_origin(decoder, geometry, tools)
@@ -10319,9 +10385,9 @@ pub(super) fn validate_first_partition(
                     super::block::MonochromeNeighbors {
                         above_left: None,
                         above: None,
-                        above_right: [None; 8],
+                        above_right: [None; super::block::MONOCHROME_NEIGHBOR_CAPACITY],
                         left: Some(first),
-                        left_below: None,
+                        left_below: [None; super::block::MONOCHROME_NEIGHBOR_CAPACITY],
                     },
                     tools,
                 )
@@ -11508,6 +11574,7 @@ mod tests {
                 width,
                 height,
                 transform_grid,
+                intra_edges: node.intra_edges,
             };
             let tools = super::super::block::BlockTools {
                 sample_depth: super::super::sample_depth::SampleDepth::new(8)

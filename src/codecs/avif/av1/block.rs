@@ -42,6 +42,11 @@ impl<T> PortableOptionExt<T> for Option<T> {
 
 type TransformCoefficients = [i32; 16];
 type PlaneCoefficients = [TransformCoefficients; 64];
+
+/// Maximum number of four-pixel neighbor leaves needed to cover one complete
+/// 128-pixel AV1 edge.  The monochrome frame walker keeps this bounded array
+/// instead of allocating a temporary list while assembling intra references.
+pub(super) const MONOCHROME_NEIGHBOR_CAPACITY: usize = 32;
 type LossyTransformCoefficients = [i32; 64];
 type Lossy4x8TransformCoefficients = [i32; 32];
 type Lossy16x16TransformCoefficients = [i32; 256];
@@ -2655,6 +2660,7 @@ pub(super) struct MonochromeBlockGeometry {
     pub(super) width: u32,
     pub(super) height: u32,
     pub(super) transform_grid: TransformGrid,
+    pub(super) intra_edges: super::geometry::IntraEdgeFlags,
 }
 
 /// Shared adaptive block state for a lossless monochrome frame.
@@ -2767,17 +2773,17 @@ struct MonochromeDecodeContext<'a> {
     tools: BlockTools,
     above_left: Option<&'a MonochromeLeaf>,
     above: Option<&'a MonochromeLeaf>,
-    above_right: [Option<&'a MonochromeLeaf>; 8],
+    above_right: [Option<&'a MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
     left: Option<&'a MonochromeLeaf>,
-    left_below: Option<&'a MonochromeLeaf>,
+    left_below: [Option<&'a MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
 }
 
 pub(super) struct MonochromeNeighbors<'a> {
     pub(super) above_left: Option<&'a MonochromeLeaf>,
     pub(super) above: Option<&'a MonochromeLeaf>,
-    pub(super) above_right: [Option<&'a MonochromeLeaf>; 8],
+    pub(super) above_right: [Option<&'a MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
     pub(super) left: Option<&'a MonochromeLeaf>,
-    pub(super) left_below: Option<&'a MonochromeLeaf>,
+    pub(super) left_below: [Option<&'a MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
 }
 
 /// Neighboring reconstructed leaves needed by a vertical 4:2:0 child.
@@ -8890,6 +8896,9 @@ fn decode_monochrome_contextual_coefficients(
     let mut coefficients = [[0_i32; 16]; 64];
     let mut left_context = 0x40_u8;
     let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
+    (transform_count <= coefficients.len())
+        .then_some(())
+        .portable()?;
     for (transform_index, coefficients) in coefficients.iter_mut().enumerate().take(transform_count)
     {
         let column = transform_index.rem_euclid(transform_grid_width);
@@ -45988,9 +45997,9 @@ impl MonochromeLosslessDecoder {
                 tools,
                 above_left: None,
                 above: None,
-                above_right: [None; 8],
+                above_right: [None; MONOCHROME_NEIGHBOR_CAPACITY],
                 left: None,
-                left_below: None,
+                left_below: [None; MONOCHROME_NEIGHBOR_CAPACITY],
             },
         )
     }
@@ -46009,7 +46018,7 @@ impl MonochromeLosslessDecoder {
             left,
             left_below,
         } = neighbors;
-        let spatial_left = left.or(left_below);
+        let spatial_left = left.or_else(|| left_below.iter().flatten().next().copied());
         tools.palette_context = PaletteNeighborContext::from_cache_states(
             geometry.origin_y / 4,
             above.map(|leaf| leaf.palette_cache),
@@ -46037,7 +46046,7 @@ impl MonochromeLosslessDecoder {
             None => [0x40; 16],
         };
         let mut left_contexts = left_contexts;
-        if let Some(leaf) = left_below {
+        for leaf in left_below.iter().flatten() {
             if leaf.origin_y < geometry.origin_y {
                 return Err(PortableUnavailable);
             }
@@ -46221,19 +46230,14 @@ fn aligned_edge_contexts(
 
 fn aligned_above_edge_contexts(
     above: Option<&MonochromeLeaf>,
-    above_right: &[Option<&MonochromeLeaf>; 8],
+    above_right: &[Option<&MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
     origin_x: u32,
     origin_y: u32,
 ) -> PortableResult<[u8; 16]> {
     let mut result = [0x40_u8; 16];
-    let mut candidates = Vec::with_capacity(above_right.len().saturating_add(1));
-    if let Some(leaf) = above {
-        candidates.push(leaf);
-    }
-    candidates.extend(above_right.iter().flatten().copied());
-    for leaf in candidates {
+    let mut copy_edge = |leaf: &MonochromeLeaf| -> PortableResult<()> {
         if leaf.origin_y.checked_add(leaf.height) != Some(origin_y) {
-            continue;
+            return Ok(());
         }
         let (source_start, destination_start) = if leaf.origin_x <= origin_x {
             let offset = origin_x
@@ -46264,6 +46268,13 @@ fn aligned_above_edge_contexts(
                 *slot = leaf.bottom_contexts[source_start.saturating_add(source_index)];
             }
         }
+        Ok(())
+    };
+    if let Some(leaf) = above {
+        copy_edge(leaf)?;
+    }
+    for leaf in above_right.iter().flatten() {
+        copy_edge(leaf)?;
     }
     Ok(result)
 }
@@ -46283,13 +46294,18 @@ fn monochrome_sample_at(leaf: &MonochromeLeaf, x: u32, y: u32) -> Option<u16> {
 
 fn monochrome_sample_from_neighbors(
     first: Option<&MonochromeLeaf>,
-    second: Option<&MonochromeLeaf>,
+    second: &[Option<&MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
     x: u32,
     y: u32,
 ) -> Option<u16> {
     first
         .and_then(|leaf| monochrome_sample_at(leaf, x, y))
-        .or_else(|| second.and_then(|leaf| monochrome_sample_at(leaf, x, y)))
+        .or_else(|| {
+            second
+                .iter()
+                .flatten()
+                .find_map(|leaf| monochrome_sample_at(leaf, x, y))
+        })
 }
 
 fn diagonal_predictor_sample(
@@ -47189,7 +47205,7 @@ fn diagonal_z1_predictor_sample_with_max(
 
 fn monochrome_sample_from_above_neighbors(
     above: Option<&MonochromeLeaf>,
-    above_right: &[Option<&MonochromeLeaf>; 8],
+    above_right: &[Option<&MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
     x: u32,
     y: u32,
 ) -> Option<u16> {
@@ -47201,6 +47217,38 @@ fn monochrome_sample_from_above_neighbors(
                 .flatten()
                 .find_map(|leaf| monochrome_sample_at(leaf, x, y))
         })
+}
+
+fn monochrome_sample_from_top_edge(
+    above: Option<&MonochromeLeaf>,
+    above_right: &[Option<&MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
+    x: u32,
+    y: u32,
+    origin_x: u32,
+    coded_width: u32,
+    intra_edges: super::geometry::IntraEdgeFlags,
+) -> Option<u16> {
+    let end_x = origin_x.checked_add(coded_width)?;
+    if x >= end_x && !intra_edges.top_has_right(PixelLayout::Monochrome) {
+        return None;
+    }
+    monochrome_sample_from_above_neighbors(above, above_right, x, y)
+}
+
+fn monochrome_sample_from_left_edge(
+    left: Option<&MonochromeLeaf>,
+    left_below: &[Option<&MonochromeLeaf>; MONOCHROME_NEIGHBOR_CAPACITY],
+    x: u32,
+    y: u32,
+    origin_y: u32,
+    coded_height: u32,
+    intra_edges: super::geometry::IntraEdgeFlags,
+) -> Option<u16> {
+    let end_y = origin_y.checked_add(coded_height)?;
+    if y >= end_y && !intra_edges.left_has_bottom(PixelLayout::Monochrome) {
+        return None;
+    }
+    monochrome_sample_from_neighbors(left, left_below, x, y)
 }
 
 fn finish_monochrome_leaf(
@@ -47293,6 +47341,7 @@ fn reconstruct_monochrome_leaf(
         width,
         height,
         transform_grid: _,
+        intra_edges,
     } = geometry;
     let MonochromeNeighbors {
         above_left,
@@ -47324,6 +47373,32 @@ fn reconstruct_monochrome_leaf(
     let (grid_width, grid_height, _) = transform_grid.properties();
     let coded_width = grid_width.saturating_mul(4);
     let coded_height = grid_height.saturating_mul(4);
+    let coded_width_u32 = u32::try_from(coded_width).map_err(|_| PortableUnavailable)?;
+    let coded_height_u32 = u32::try_from(coded_height).map_err(|_| PortableUnavailable)?;
+    let has_top = above.is_some() || above_right.iter().any(Option::is_some);
+    let has_left = left.is_some() || left_below.iter().any(Option::is_some);
+    let sample_top = |x: u32, y: u32| {
+        monochrome_sample_from_top_edge(
+            above,
+            &above_right,
+            x,
+            y,
+            origin_x,
+            coded_width_u32,
+            intra_edges,
+        )
+    };
+    let sample_left = |x: u32, y: u32| {
+        monochrome_sample_from_left_edge(
+            left,
+            &left_below,
+            x,
+            y,
+            origin_y,
+            coded_height_u32,
+            intra_edges,
+        )
+    };
     let top_default = sample_depth.top_edge_default();
     let left_default = sample_depth.left_edge_default();
     let midpoint = sample_depth.midpoint();
@@ -47368,20 +47443,18 @@ fn reconstruct_monochrome_leaf(
         .try_reserve_exact(sample_len)
         .map_err(|_| PortableUnavailable)?;
     samples.resize(sample_len, 0);
-    let fallback_top = if above.is_none() && above_right.iter().all(Option::is_none) {
+    let fallback_top = if !has_top {
         origin_x
             .checked_sub(1)
-            .and_then(|left_x| monochrome_sample_from_neighbors(left, left_below, left_x, origin_y))
+            .and_then(|left_x| sample_left(left_x, origin_y))
             .unwrap_or(top_default)
     } else {
         top_default
     };
-    let fallback_left = if left.is_none() && left_below.is_none() {
+    let fallback_left = if !has_left {
         origin_y
             .checked_sub(1)
-            .and_then(|top_y| {
-                monochrome_sample_from_above_neighbors(above, &above_right, origin_x, top_y)
-            })
+            .and_then(|top_y| sample_top(origin_x, top_y))
             .unwrap_or(left_default)
     } else {
         left_default
@@ -47402,8 +47475,6 @@ fn reconstruct_monochrome_leaf(
     let z3_upsample =
         enable_intra_edge_filter && luma_angle.is_some_and(|angle| 180 < angle && angle < 220);
     let filter_intra_prediction = if let Some(mode) = filter_intra_mode {
-        let has_top = above.is_some() || above_right.iter().any(Option::is_some);
-        let has_left = left.is_some() || left_below.is_some();
         let mut top = Vec::new();
         top.try_reserve_exact(coded_width)
             .map_err(|_| PortableUnavailable)?;
@@ -47413,12 +47484,9 @@ fn reconstruct_monochrome_leaf(
                 let x = origin_x
                     .checked_add(u32::try_from(column).map_err(|_| PortableUnavailable)?)
                     .ok_or(PortableUnavailable)?;
-                if let Some(sample) = monochrome_sample_from_above_neighbors(
-                    above,
-                    &above_right,
-                    x,
-                    origin_y.checked_sub(1).ok_or(PortableUnavailable)?,
-                ) {
+                if let Some(sample) =
+                    sample_top(x, origin_y.checked_sub(1).ok_or(PortableUnavailable)?)
+                {
                     top_last = sample;
                 }
             }
@@ -47434,12 +47502,9 @@ fn reconstruct_monochrome_leaf(
                 let y = origin_y
                     .checked_add(u32::try_from(row).map_err(|_| PortableUnavailable)?)
                     .ok_or(PortableUnavailable)?;
-                if let Some(sample) = monochrome_sample_from_neighbors(
-                    left,
-                    left_below,
-                    origin_x.checked_sub(1).ok_or(PortableUnavailable)?,
-                    y,
-                ) {
+                if let Some(sample) =
+                    sample_left(origin_x.checked_sub(1).ok_or(PortableUnavailable)?, y)
+                {
                     left_last = sample;
                 }
             }
@@ -47449,10 +47514,16 @@ fn reconstruct_monochrome_leaf(
             if has_left && origin_x > 0 && origin_y > 0 {
                 let top_left_x = origin_x.saturating_sub(1);
                 let top_left_y = origin_y.saturating_sub(1);
-                [above_left, above, left, left_below]
+                [above_left, above, left]
                     .into_iter()
                     .flatten()
                     .find_map(|leaf| monochrome_sample_at(leaf, top_left_x, top_left_y))
+                    .or_else(|| {
+                        left_below
+                            .iter()
+                            .flatten()
+                            .find_map(|leaf| monochrome_sample_at(leaf, top_left_x, top_left_y))
+                    })
                     .or_else(|| top.first().copied())
                     .unwrap_or(midpoint)
             } else {
@@ -47500,8 +47571,7 @@ fn reconstruct_monochrome_leaf(
                 u32::try_from(row)
                     .ok()
                     .and_then(|row| origin_y.checked_add(row)),
-            ) && let Some(sample) =
-                monochrome_sample_from_neighbors(left, left_below, left_x, row)
+            ) && let Some(sample) = sample_left(left_x, row)
             {
                 last = sample;
             }
@@ -47532,7 +47602,7 @@ fn reconstruct_monochrome_leaf(
         let left_x = origin_x.checked_sub(1);
         let mut last = if above.is_none() {
             left_x
-                .and_then(|x| monochrome_sample_from_neighbors(left, left_below, x, origin_y))
+                .and_then(|x| sample_left(x, origin_y))
                 .unwrap_or(top_default)
         } else {
             top_default
@@ -47547,8 +47617,7 @@ fn reconstruct_monochrome_leaf(
                 u32::try_from(column)
                     .ok()
                     .and_then(|column| origin_x.checked_add(column)),
-            ) && let Some(sample) =
-                monochrome_sample_from_above_neighbors(above, &above_right, column, top_y)
+            ) && let Some(sample) = sample_top(column, top_y)
             {
                 last = sample;
             }
@@ -47583,8 +47652,7 @@ fn reconstruct_monochrome_leaf(
                             .map_err(|_| PortableUnavailable)?,
                     )
                     .ok_or(PortableUnavailable)?;
-                *value = monochrome_sample_from_above_neighbors(above, &above_right, x, top_y)
-                    .ok_or(PortableUnavailable)?;
+                *value = sample_top(x, top_y).ok_or(PortableUnavailable)?;
             }
         }
         if column > 0 {
@@ -47596,9 +47664,13 @@ fn reconstruct_monochrome_leaf(
                     .saturating_add(column.saturating_mul(4).saturating_sub(1));
                 *value = samples[index];
             }
-        } else if left.is_some() || left_below.is_some() {
+        } else if has_left {
             let left_x = origin_x.checked_sub(1).ok_or(PortableUnavailable)?;
             let mut last = left_below
+                .iter()
+                .flatten()
+                .next()
+                .copied()
                 .or(left)
                 .and_then(|leaf| {
                     leaf.origin_y
@@ -47613,8 +47685,7 @@ fn reconstruct_monochrome_leaf(
                             .map_err(|_| PortableUnavailable)?,
                     )
                     .ok_or(PortableUnavailable)?;
-                if let Some(sample) = monochrome_sample_from_neighbors(left, left_below, left_x, y)
-                {
+                if let Some(sample) = sample_left(left_x, y) {
                     last = sample;
                 }
                 *value = last;
@@ -47627,18 +47698,14 @@ fn reconstruct_monochrome_leaf(
         // rule applies to the first transform column below a reconstructed
         // top edge. Filling both edges with the frame midpoint changes DC
         // prediction for every skipped transform in a lossless block.
-        if row == 0 && above.is_none() && (column > 0 || left.is_some() || left_below.is_some()) {
+        if row == 0 && above.is_none() && (column > 0 || has_left) {
             top.fill(left_edge[0]);
         }
-        if column == 0
-            && left.is_none()
-            && left_below.is_none()
-            && (row > 0 || above.is_some() || above_right.iter().any(Option::is_some))
-        {
+        if column == 0 && left.is_none() && !has_left && (row > 0 || has_top) {
             left_edge.fill(top[0]);
         }
-        let top_available = row > 0 || above.is_some() || above_right.iter().any(Option::is_some);
-        let left_available = column > 0 || left.is_some() || left_below.is_some();
+        let top_available = row > 0 || has_top;
+        let left_available = column > 0 || has_left;
         let transform_predictor = resolve_lossless_predictor(
             lossless_luma_predictor(luma_predictor),
             luma_angle,
@@ -47653,7 +47720,7 @@ fn reconstruct_monochrome_leaf(
                 .saturating_add(column.saturating_mul(4).saturating_sub(1));
             *samples.get(index).ok_or(PortableUnavailable)?
         } else if row > 0 {
-            if (left.is_some() || left_below.is_some()) && origin_x > 0 {
+            if has_left && origin_x > 0 {
                 let x = origin_x.saturating_sub(1);
                 let y = origin_y
                     .checked_add(
@@ -47661,7 +47728,7 @@ fn reconstruct_monochrome_leaf(
                             .map_err(|_| PortableUnavailable)?,
                     )
                     .ok_or(PortableUnavailable)?;
-                monochrome_sample_from_neighbors(left, left_below, x, y).unwrap_or(top[0])
+                sample_left(x, y).unwrap_or(top[0])
             } else {
                 top[0]
             }
@@ -47674,24 +47741,29 @@ fn reconstruct_monochrome_leaf(
                     )
                     .ok_or(PortableUnavailable)?;
                 let y = origin_y.saturating_sub(1);
-                monochrome_sample_from_above_neighbors(above, &above_right, x, y)
-                    .unwrap_or(left_edge[0])
+                sample_top(x, y).unwrap_or(left_edge[0])
             } else {
                 left_edge[0]
             }
-        } else if above.is_some() || above_right.iter().any(Option::is_some) {
-            if left.is_some() || left_below.is_some() {
+        } else if has_top {
+            if has_left {
                 let x = origin_x.checked_sub(1).ok_or(PortableUnavailable)?;
                 let y = origin_y.checked_sub(1).ok_or(PortableUnavailable)?;
-                [above_left, above, left, left_below]
+                [above_left, above, left]
                     .into_iter()
                     .flatten()
                     .find_map(|leaf| monochrome_sample_at(leaf, x, y))
+                    .or_else(|| {
+                        left_below
+                            .iter()
+                            .flatten()
+                            .find_map(|leaf| monochrome_sample_at(leaf, x, y))
+                    })
                     .unwrap_or(top[0])
             } else {
                 top[0]
             }
-        } else if left.is_some() || left_below.is_some() {
+        } else if has_left {
             left_edge[0]
         } else {
             midpoint
@@ -47762,12 +47834,7 @@ fn reconstruct_monochrome_leaf(
                                         .map_err(|_| PortableUnavailable)?,
                                 )
                                 .ok_or(PortableUnavailable)?;
-                            if let Some(sample) = monochrome_sample_from_above_neighbors(
-                                above,
-                                &above_right,
-                                x,
-                                top_y,
-                            ) {
+                            if let Some(sample) = sample_top(x, top_y) {
                                 last = sample;
                             }
                             *value = last;
@@ -47861,12 +47928,9 @@ fn reconstruct_monochrome_leaf(
                                         .map_err(|_| PortableUnavailable)?,
                                 )
                                 .ok_or(PortableUnavailable)?;
-                            if let Some(sample) = monochrome_sample_from_neighbors(
-                                left,
-                                left_below,
-                                origin_x.checked_sub(1).ok_or(PortableUnavailable)?,
-                                y,
-                            ) {
+                            if let Some(sample) =
+                                sample_left(origin_x.checked_sub(1).ok_or(PortableUnavailable)?, y)
+                            {
                                 last = sample;
                             }
                             *value = last;
