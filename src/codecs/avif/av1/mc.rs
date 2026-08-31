@@ -215,7 +215,40 @@ impl MotionScratch {
             &self.compound[1][..length],
             &mut self.predictor[..length],
             Some(mask),
-            CompoundBlend::Masked,
+            CompoundBlend::Masked { inverted: false },
+            depth,
+        );
+        Ok(&self.predictor[..length])
+    }
+
+    /// Blend chroma predictors with the luma-derived difference mask retained
+    /// in this tile's scratch arena. AV1 derives that mask once from the full
+    /// luma predictors and reuses its layout-reduced form for both chroma
+    /// planes; recomputing it from a chroma predictor would change the coded
+    /// result.
+    pub(super) fn blend_retained_difference_mask(
+        &mut self,
+        width: usize,
+        height: usize,
+        inverted: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        let mask = self
+            .mask
+            .get(..length)
+            .ok_or_else(|| malformed("retained difference mask is shorter than chroma"))?;
+        if mask.iter().any(|&value| value > 64) {
+            return Err(malformed(
+                "retained difference mask sample exceeds sixty-four",
+            ));
+        }
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            Some(mask),
+            CompoundBlend::Masked { inverted },
             depth,
         );
         Ok(&self.predictor[..length])
@@ -813,7 +846,7 @@ fn prep_scaled_kernel(
 enum CompoundBlend {
     Average,
     Distance(u8),
-    Masked,
+    Masked { inverted: bool },
 }
 
 fn narrow_samples(values: i32x8, maximum: i32) -> [u16; 8] {
@@ -849,11 +882,13 @@ fn blend_compound(
                     + i32x8::new([(8 << bits) + 16 * bias; 8]))
                 .unbounded_shr_scalar(u32::try_from(bits + 4).unwrap_or(0))
             }
-            CompoundBlend::Masked => {
+            CompoundBlend::Masked { inverted } => {
                 let masks = i32x8::new(std::array::from_fn(|lane| {
-                    mask.and_then(|mask| mask.get(offset + lane))
+                    let value = mask
+                        .and_then(|mask| mask.get(offset + lane))
                         .copied()
-                        .map_or(32, i32::from)
+                        .map_or(32, i32::from);
+                    if inverted { 64 - value } else { value }
                 }));
                 (first * masks
                     + second * (i32x8::new([64; 8]) - masks)
@@ -872,11 +907,12 @@ fn blend_compound(
                 let weight = i32::from(weight);
                 (first * weight + second * (16 - weight) + (8 << bits) + 16 * bias) >> (bits + 4)
             }
-            CompoundBlend::Masked => {
+            CompoundBlend::Masked { inverted } => {
                 let mask = mask
                     .and_then(|mask| mask.get(index))
                     .copied()
                     .map_or(32, i32::from);
+                let mask = if inverted { 64 - mask } else { mask };
                 (first * mask + second * (64 - mask) + (32 << bits) + 64 * bias) >> (bits + 6)
             }
         };

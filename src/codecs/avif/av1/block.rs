@@ -48405,6 +48405,7 @@ struct InterPrediction<'a> {
 pub(super) enum PreparedCompound {
     Average,
     Distance(u8),
+    Difference(bool),
 }
 
 /// Tile-local coefficient edges captured before an inter leaf is decoded.
@@ -49290,6 +49291,32 @@ impl Lossy420Decoder {
                         .map_err(|_| PortableUnavailable)?,
                     PreparedCompound::Distance(weight) => scratch
                         .blend_distance(tx_width, tx_height, weight, tools.sample_depth)
+                        .map_err(|_| PortableUnavailable)?,
+                    PreparedCompound::Difference(inverted) if plane == 0 => {
+                        let subsampling_x = matches!(
+                            chroma_sampling,
+                            ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
+                        );
+                        let subsampling_y =
+                            matches!(chroma_sampling, ChromaSampling::Subsampled420);
+                        scratch
+                            .blend_difference(
+                                tx_width,
+                                tx_height,
+                                subsampling_x,
+                                subsampling_y,
+                                inverted,
+                                tools.sample_depth,
+                            )
+                            .map_err(|_| PortableUnavailable)?
+                    }
+                    PreparedCompound::Difference(inverted) => scratch
+                        .blend_retained_difference_mask(
+                            tx_width,
+                            tx_height,
+                            inverted,
+                            tools.sample_depth,
+                        )
                         .map_err(|_| PortableUnavailable)?,
                 };
                 prediction.extend_from_slice(predicted);

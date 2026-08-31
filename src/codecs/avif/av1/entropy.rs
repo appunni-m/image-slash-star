@@ -2879,16 +2879,15 @@ fn joint_compound_context(
         let Some(inter) = neighbor.coding.inter() else {
             return 0;
         };
-        if inter.references.second.is_none() {
-            return 0;
-        }
         usize::from(
-            matches!(
-                inter.compound_type,
-                CompoundType::Average
-                    | CompoundType::Difference { .. }
-                    | CompoundType::Wedge { .. }
-            ) || inter.references.first == ReferenceFrame::Alt,
+            (inter.references.second.is_some()
+                && matches!(
+                    inter.compound_type,
+                    CompoundType::Average
+                        | CompoundType::Difference { .. }
+                        | CompoundType::Wedge { .. }
+                ))
+                || inter.references.first == ReferenceFrame::Alt,
         )
     };
     let above = node
@@ -2924,18 +2923,128 @@ fn joint_compound_context(
         .saturating_add(neighbor_bit(left)))
 }
 
-/// Consume the AV1 joint-compound sentence and prepare the corresponding
-/// checked blend.  Masked-compound group syntax is kept outside this slice by
-/// the frame admission gates; when that sequence flag is set the caller
-/// rejects the tile before this helper can misalign the entropy stream.
-fn decode_joint_compound(
+/// Derive the comp-group context used when masked compound syntax is enabled.
+/// Group-one difference/wedge neighbours contribute one; all other compound
+/// neighbours contribute zero unless their first reference is ALT, which
+/// contributes three.  The latter priority deliberately does not override a
+/// group-one neighbour whose first reference is ALT.
+fn masked_compound_context(tile_state: &TileState, node: PartitionNode) -> Av1Result<usize> {
+    let neighbor_value = |neighbor: Option<NeighborMeta>| {
+        let Some(neighbor) = neighbor else {
+            return 0_usize;
+        };
+        let Some(inter) = neighbor.coding.inter() else {
+            return 0;
+        };
+        if inter.references.second.is_some()
+            && matches!(
+                inter.compound_type,
+                CompoundType::Difference { .. } | CompoundType::Wedge { .. }
+            )
+        {
+            1
+        } else if inter.references.first == ReferenceFrame::Alt {
+            3
+        } else {
+            0
+        }
+    };
+    let above = node
+        .y
+        .checked_sub(1)
+        .map(|y| tile_state.neighbor_at_checked(node.x, y))
+        .transpose()?
+        .flatten();
+    let left = node
+        .x
+        .checked_sub(1)
+        .map(|x| tile_state.neighbor_at_checked(x, node.y))
+        .transpose()?
+        .flatten();
+    Ok(neighbor_value(above)
+        .saturating_add(neighbor_value(left))
+        .min(5))
+}
+
+/// The nine AV1 block-size contexts that expose the wedge-vs-difference
+/// branch of masked compound syntax. Other compound block sizes force the
+/// difference-weighted mode and consume only its sign/mask literal.
+fn wedge_context(block_size: BlockSize) -> Option<usize> {
+    Some(match block_size {
+        BlockSize::B8x8 => 0,
+        BlockSize::B8x16 => 1,
+        BlockSize::B16x8 => 2,
+        BlockSize::B16x16 => 3,
+        BlockSize::B16x32 => 4,
+        BlockSize::B32x16 => 5,
+        BlockSize::B32x32 => 6,
+        BlockSize::B8x32 => 7,
+        BlockSize::B32x8 => 8,
+        _ => return None,
+    })
+}
+
+/// Consume the AV1 compound-type sentence and prepare the corresponding
+/// checked blend. Group-one masked syntax admits difference-weighted blending
+/// in this slice; wedge selections consume their complete sentence before
+/// returning a transactional unsupported result.
+fn decode_compound_type(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut FrameCdfs,
     tile_state: &TileState,
     node: PartitionNode,
     inter_context: &InterFrameContext<'_>,
+    block_size: BlockSize,
     references: ReferencePair,
 ) -> Av1Result<Option<(CompoundType, super::block::PreparedCompound)>> {
+    let group_one = if inter_context.enable_masked_compound {
+        let context = masked_compound_context(tile_state, node)?;
+        let cdf = cdfs
+            .inter
+            .masked_compound
+            .get_mut(context)
+            .ok_or_else(|| malformed("masked compound context exceeds six rows"))?;
+        decoder.adaptive_bool(&mut cdf.0)
+    } else {
+        false
+    };
+    if group_one {
+        let Some(wedge_index_context) = wedge_context(block_size) else {
+            let inverted = decoder.bits(1) != 0;
+            return Ok(Some((
+                CompoundType::Difference { inverted },
+                super::block::PreparedCompound::Difference(inverted),
+            )));
+        };
+        let difference = {
+            let cdf = cdfs
+                .inter
+                .wedge_compound
+                .get_mut(wedge_index_context)
+                .ok_or_else(|| malformed("wedge compound context exceeds nine rows"))?;
+            decoder.adaptive_bool(&mut cdf.0)
+        };
+        if !difference {
+            let wedge_cdf = cdfs
+                .inter
+                .wedge_index
+                .get_mut(wedge_index_context)
+                .ok_or_else(|| malformed("wedge index context exceeds nine rows"))?;
+            let wedge = decoder.adaptive_symbol(&mut wedge_cdf.0, 15);
+            if wedge > 15 {
+                return Err(malformed("wedge compound index is invalid"));
+            }
+            // Wedge sign is equiprobable and remains part of the consumed
+            // sentence even though wedge prediction is still transactional.
+            let _ = decoder.bits(1);
+            return Ok(None);
+        }
+        let inverted = decoder.bits(1) != 0;
+        return Ok(Some((
+            CompoundType::Difference { inverted },
+            super::block::PreparedCompound::Difference(inverted),
+        )));
+    }
     let average = if inter_context.enable_jnt_comp {
         let context = joint_compound_context(tile_state, node, inter_context, references)?;
         let cdf = cdfs
@@ -4061,13 +4170,6 @@ fn decode_inter_leaf(
         false
     };
     let (references, motions, mode, global, new_mv) = if compound {
-        // Group-one masked/wedge/difference syntax is outside this bounded
-        // tranche. The frame admission gate closes masked-compound sequences;
-        // keep this local guard transactional if a future profile reaches the
-        // parser through a different route.
-        if inter_context.enable_masked_compound {
-            return Ok(Err(super::block::PortableUnavailable));
-        }
         let references = decode_inter_compound_references(decoder, cdfs, neighbors)?;
         let second = references
             .second
@@ -4370,8 +4472,15 @@ fn decode_inter_leaf(
         )
     };
     let (compound_type, compound_blend) = if compound {
-        let Some((compound_type, compound_blend)) =
-            decode_joint_compound(decoder, cdfs, tile_state, node, inter_context, references)?
+        let Some((compound_type, compound_blend)) = decode_compound_type(
+            decoder,
+            cdfs,
+            tile_state,
+            node,
+            inter_context,
+            node.block_size,
+            references,
+        )?
         else {
             return Ok(Err(super::block::PortableUnavailable));
         };
@@ -5045,8 +5154,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         None
     };
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
-        (complete_inter_420_reconstruction_context(context)
-            && !inter_context.enable_masked_compound)
+        complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
@@ -5969,7 +6077,8 @@ fn complete_bounded_restoration_inter_420_reconstruction_context(
 /// First inter reconstruction tranche: 8-bit 4:2:0 translation blocks with
 /// loop filtering and the bounded CDEF profile enabled. Single-reference and
 /// average/distance compound prediction share the checked MC boundary;
-/// masked-compound, inter-intra, OBMC/LOCALWARP selections, and
+/// difference-weighted group-one prediction is also materialized from a
+/// luma-derived mask. Wedge, inter-intra, OBMC/LOCALWARP selections, and
 /// variable-transform branches are still rejected before a block publishes
 /// neighbor metadata.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
