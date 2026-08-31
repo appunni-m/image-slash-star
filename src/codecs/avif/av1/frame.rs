@@ -932,6 +932,7 @@ impl FrameState {
         completion: &FrameCompletion,
         token: Option<&crate::CancellationToken>,
     ) -> Av1Result<SelectedDisplay> {
+        crate::codecs::error::check_cancelled(token)?;
         if completion.show_existing && completion.diagnostic_leaf.is_some() {
             return Err(malformed(
                 "show-existing completion contains diagnostic reconstruction",
@@ -953,9 +954,15 @@ impl FrameState {
             return Ok(SelectedDisplay::unavailable());
         };
         if surface.depth.bits() != 8
-            || surface.layout != PixelLayout::I420
+            || !matches!(surface.layout, PixelLayout::I420 | PixelLayout::I444)
             || surface.render_width != surface.upscaled_width
             || surface.render_height != surface.frame_height
+            || (surface.layout == PixelLayout::I444
+                && (surface.coded_width != surface.upscaled_width
+                    || !matches!(
+                        (surface.upscaled_width, surface.frame_height),
+                        (16, 16) | (32, 16) | (16, 32)
+                    )))
             || surface.planes.iter().any(Option::is_none)
             || matches!(grain.matrix_coefficients, 0 | 3)
         {
@@ -964,7 +971,11 @@ impl FrameState {
         let Some(leaf) = display.color_leaf.take() else {
             return Ok(SelectedDisplay::unavailable());
         };
-        display.color_leaf = Some(super::film_grain::apply_i420(leaf, grain, token)?);
+        display.color_leaf = Some(match surface.layout {
+            PixelLayout::I420 => super::film_grain::apply_i420(leaf, grain, token)?,
+            PixelLayout::I444 => super::film_grain::apply_i444(leaf, grain, token)?,
+            _ => return Ok(SelectedDisplay::unavailable()),
+        });
         Ok(display)
     }
 
@@ -3288,7 +3299,12 @@ fn read_global_motion(
 }
 
 fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Av1Result<Vec<[u32; 2]>> {
-    let mut points: Vec<[u32; 2]> = Vec::with_capacity(count as usize);
+    let count =
+        usize::try_from(count).map_err(|_| malformed("film-grain point count exceeds usize"))?;
+    let mut points: Vec<[u32; 2]> = Vec::new();
+    points
+        .try_reserve_exact(count)
+        .map_err(|_| malformed("unable to allocate film-grain points"))?;
     for _ in 0..count {
         let point = [bits.bits(8)?, bits.bits(8)?];
         if points
@@ -3368,7 +3384,11 @@ fn read_film_grain(
         .saturating_mul(2);
     let mut ar_coefficients_y = Vec::new();
     if y_count != 0 {
-        ar_coefficients_y.reserve(ar_positions as usize);
+        let ar_count = usize::try_from(ar_positions)
+            .map_err(|_| malformed("film-grain AR coefficient count exceeds usize"))?;
+        ar_coefficients_y
+            .try_reserve_exact(ar_count)
+            .map_err(|_| malformed("unable to allocate film-grain luma AR coefficients"))?;
         for _ in 0..ar_positions {
             ar_coefficients_y.push((bits.bits(8)? as i32).saturating_sub(128));
         }
@@ -3377,7 +3397,11 @@ fn read_film_grain(
     for (plane, coefficients) in ar_coefficients_uv.iter_mut().enumerate() {
         if !uv_points[plane].is_empty() || chroma_scaling_from_luma {
             let count = ar_positions.saturating_add(u32::from(y_count != 0));
-            coefficients.reserve(count as usize);
+            let count = usize::try_from(count)
+                .map_err(|_| malformed("film-grain AR coefficient count exceeds usize"))?;
+            coefficients
+                .try_reserve_exact(count)
+                .map_err(|_| malformed("unable to allocate film-grain chroma AR coefficients"))?;
             for _ in 0..count {
                 coefficients.push((bits.bits(8)? as i32).saturating_sub(128));
             }

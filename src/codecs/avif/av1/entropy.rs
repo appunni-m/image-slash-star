@@ -5455,6 +5455,10 @@ fn bounded_i444_geometry_for_context(
     }
 }
 
+fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
+    !context.frame_tools.film_grain_present || context.bit_depth == 8
+}
+
 fn bounded_i444_inter_reconstruction_geometry(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -5493,7 +5497,7 @@ fn bounded_i444_inter_reconstruction_geometry(
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && !context.frame_tools.film_grain_present
+        && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.segment_lossless
@@ -5556,7 +5560,7 @@ fn complete_bounded_i444_restoration_inter_reconstruction_context(
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && !context.frame_tools.film_grain_present
+        && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.segment_lossless
