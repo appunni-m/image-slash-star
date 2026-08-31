@@ -6296,13 +6296,14 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && matches!(context.level, 0 | 1)
 }
 
-/// Narrow generic 8-bit 4:2:2 inter profile.  The shared motion and compound
-/// kernels are layout-complete, but this profile admits only leaves whose
-/// luma and chroma planes each fit one normative transform; multi-transform
-/// I422 leaves remain transactional until their transform-grid compositor is
-/// connected. Frame-level postfilters and film grain stay closed here so each
-/// tile can be reconstructed locally before the complete unfiltered frame is
-/// assembled transactionally.
+/// Narrow generic 8-bit 4:2:2 inter profile. The shared motion and compound
+/// kernels are layout-complete, including checked dimension-scaled retained
+/// references, but this profile admits only leaves whose luma and chroma
+/// planes each fit one normative transform; multi-transform I422 leaves remain
+/// transactional until their transform-grid compositor is connected.
+/// Frame-level postfilters and film grain stay closed here so each tile can be
+/// reconstructed locally before the complete unfiltered frame is assembled
+/// transactionally.
 fn complete_inter_422_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6311,7 +6312,6 @@ fn complete_inter_422_reconstruction_context(
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
             && reference.surface.layout == PixelLayout::I422
-            && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
                 GlobalMotionType::Identity | GlobalMotionType::Translation
@@ -6346,12 +6346,13 @@ fn complete_inter_422_reconstruction_context(
         && references_match
 }
 
-/// Narrow generic 8-bit 4:4:4 inter profile.  Full-resolution chroma shares
-/// the luma extent, so the shared single-transform guard proves all three
-/// planes together.  Compound, inter-intra, and OBMC syntax remain enabled;
-/// frame-level postfilters and film grain stay closed until their broad I444
-/// geometry classes have independent composition evidence. Tile-local
-/// reconstructions are assembled into one complete frame.
+/// Narrow generic 8-bit 4:4:4 inter profile. Full-resolution chroma shares the
+/// luma extent, so the shared single-transform guard proves all three planes
+/// together. Checked dimension-scaled retained references use the same
+/// full-resolution MC path as unscaled references. Compound, inter-intra, and
+/// OBMC syntax remain enabled; frame-level postfilters and film grain stay
+/// closed until their broad I444 geometry classes have independent composition
+/// evidence. Tile-local reconstructions are assembled into one complete frame.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6360,7 +6361,6 @@ fn complete_inter_444_reconstruction_context(
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
             && reference.surface.layout == PixelLayout::I444
-            && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
                 GlobalMotionType::Identity | GlobalMotionType::Translation
