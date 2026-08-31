@@ -8989,10 +8989,11 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && dimensions_are_supported
 }
 
-/// Exact high-depth Full-resolution tranche admitted by the generic unsplit
+/// High-depth full-resolution tranche admitted by the generic streamed
 /// reconstruction core. Optional post-filters and large implicit transform
 /// tilings stay closed until their high-depth arithmetic/state is connected;
-/// this gate therefore cannot silently route them through eight-bit code.
+/// the coefficient dispatcher carries quantization matrices when enabled and
+/// remains depth-parametric when they are absent.
 fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -9004,10 +9005,6 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
         && !context.subsampling_y
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.reduced_transform_set
-        && !context
-            .frame_tools
-            .quantization
-            .is_some_and(|quantization| quantization.using_matrix)
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
