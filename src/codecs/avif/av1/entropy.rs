@@ -6243,14 +6243,14 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
 /// CDEF is limited to complete 8x8 luma geometry. I422 additionally requires
 /// skipped residuals and DCT-DCT chroma, enforced at the block boundary. A
-/// switchable-motion frame consumes the exact binary-OBMC or three-symbol
-/// motion-mode sentence selected by its causal matching-reference mask; only
-/// translation is currently materialized, while OBMC and LOCALWARP selections
-/// remain transactional unsupported outcomes. Every retained reference is
-/// checked up front so a later reference choice cannot narrow the path back to
-/// eight-bit geometry. An all-NONE restoration header is a semantic no-op: it
-/// carries no tile restoration units or postfilter plan, while active
-/// restoration types remain outside this generic class.
+/// switchable-motion frames consume the exact binary-OBMC or three-symbol
+/// motion-mode sentence selected by their causal matching-reference mask;
+/// Translation and OBMC are materialized for the generic high-depth layouts,
+/// while LOCALWARP selections remain transactional unsupported outcomes. Every
+/// retained reference is checked up front so a later reference choice cannot
+/// narrow the path back to eight-bit geometry. An all-NONE restoration header
+/// is a semantic no-op: it carries no tile restoration units or postfilter
+/// plan, while active restoration types remain outside this generic class.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6286,10 +6286,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
-        // Keep this new full-resolution class translation-only until its
-        // separate OBMC/warped-motion evidence is complete. Existing
-        // high-depth I420/I422 OBMC handling remains available.
-        && (!i444 || !inter_context.motion_mode_switchable)
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && context.block_x == 0
