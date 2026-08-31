@@ -5611,24 +5611,15 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// The same bounded intra profile as the general lossy 4:2:0 decoder, with
 /// AV1's horizontal super-resolution flag admitted. Reconstruction remains in
 /// coded coordinates; the completed leaf is resized only after deblock/CDEF.
-/// High-depth, lossless, restoration, and film-grain classes stay explicitly
-/// outside this first super-resolution tranche.
+/// Eight-bit syntax keeps its established profile. Ten/twelve-bit syntax uses
+/// the depth-aware streamed engine with the same reduced-transform, validated
+/// loop-filter, and complete-8x8 CDEF proofs as the non-superres tranche.
 fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
-    context.intra_frame
-        && context.bit_depth == 8
-        && context.superres_enabled
-        && context.subsampling_x
-        && context.subsampling_y
-        && !context.monochrome
-        && !context.all_lossless
-        && !context.skip_mode_enabled
-        && !context.allow_intrabc
-        && !context.allow_screen_content_tools
-        && context.frame_tools.quantization.is_some()
-        && !context.frame_tools.restoration_present
-        && context.restoration_types == [None; 3]
-        && no_unsupported_film_grain(context)
-        && matches!(
+    let high_depth = matches!(context.bit_depth, 10 | 12);
+    let cdef_supported = if high_depth {
+        complete_high_depth_cdef_supported(context)
+    } else {
+        matches!(
             context.frame_tools.cdef,
             None | Some(CdefContext {
                 bits: 0..=2,
@@ -5639,6 +5630,24 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
                 ..
             })
         )
+    };
+    context.intra_frame
+        && (context.bit_depth == 8 || high_depth)
+        && context.superres_enabled
+        && context.subsampling_x
+        && context.subsampling_y
+        && !context.monochrome
+        && !context.all_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && context.frame_tools.quantization.is_some()
+        && (!high_depth || !context.frame_tools.reduced_transform_set)
+        && (!high_depth || complete_high_depth_loop_filter_supported(context))
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && no_unsupported_film_grain(context)
+        && cdef_supported
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
