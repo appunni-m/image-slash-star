@@ -1809,7 +1809,7 @@ struct PartitionContexts {
 }
 
 impl PartitionContexts {
-    fn new(context: &FirstBlockContext) -> Self {
+    fn new(context: &FirstBlockContext) -> Av1Result<Self> {
         let width = context
             .block_width
             .saturating_sub(context.block_x)
@@ -1818,12 +1818,26 @@ impl PartitionContexts {
             .block_height
             .saturating_sub(context.block_y)
             .div_ceil(2);
-        Self {
+        let width = usize::try_from(width)
+            .map_err(|_| malformed("partition context width exceeds usize"))?;
+        let height = usize::try_from(height)
+            .map_err(|_| malformed("partition context height exceeds usize"))?;
+        let mut above = Vec::new();
+        above.try_reserve_exact(width).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 partition context".to_owned())
+        })?;
+        above.resize(width, 0);
+        let mut left = Vec::new();
+        left.try_reserve_exact(height).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 partition context".to_owned())
+        })?;
+        left.resize(height, 0);
+        Ok(Self {
             origin_x: context.block_x,
             origin_y: context.block_y,
-            above: vec![0; usize::try_from(width).unwrap_or(0)],
-            left: vec![0; usize::try_from(height).unwrap_or(0)],
-        }
+            above,
+            left,
+        })
     }
 
     fn cell(&self, x: u32, y: u32) -> Av1Result<(usize, usize)> {
@@ -2046,7 +2060,7 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
     fn new(
         decoder: &'decoder mut RangeDecoder<'data, 'input, 'spans>,
         context: &FirstBlockContext,
-    ) -> Self {
+    ) -> Av1Result<Self> {
         Self::with_cdfs(decoder, context, PARTITION_CDFS)
     }
 
@@ -2054,11 +2068,11 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         decoder: &'decoder mut RangeDecoder<'data, 'input, 'spans>,
         context: &FirstBlockContext,
         cdfs: [[[u16; 10]; 4]; 5],
-    ) -> Self {
-        Self {
+    ) -> Av1Result<Self> {
+        Ok(Self {
             decoder,
             cdfs,
-            contexts: PartitionContexts::new(context),
+            contexts: PartitionContexts::new(context)?,
             frame_width: context.block_width,
             frame_height: context.block_height,
             root_end_x: context.block_width,
@@ -2067,7 +2081,7 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
             subsampling_x: context.subsampling_x,
             subsampling_y: context.subsampling_y,
             nodes: Vec::new(),
-        }
+        })
     }
 
     fn reset_root(&mut self) {
@@ -2160,6 +2174,9 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         if self.nodes.len() >= MAX_PARTITION_NODES {
             return Err(malformed("partition tree exceeds the safe node limit"));
         }
+        self.nodes.try_reserve(1).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 partition nodes".to_owned())
+        })?;
         self.nodes.push(node);
         Ok(())
     }
@@ -2472,7 +2489,7 @@ where
     if context.block_width == 0 || context.block_height == 0 {
         return Err(malformed("partition block dimensions are empty"));
     }
-    let mut walker = PartitionWalker::new(decoder, context);
+    let mut walker = PartitionWalker::new(decoder, context)?;
     walker.walk(context.level, context.block_x, context.block_y, &mut visit)
 }
 
@@ -2504,7 +2521,7 @@ pub(super) fn validate_complete_monochrome_partition(
         .ok_or_else(|| malformed("monochrome superblock root size is invalid"))?;
     let root_step =
         usize::try_from(root_size).map_err(|_| malformed("monochrome root size exceeds usize"))?;
-    let mut walker = PartitionWalker::new(&mut decoder, context);
+    let mut walker = PartitionWalker::new(&mut decoder, context)?;
     let mut block_decoder = super::block::MonochromeLosslessDecoder::new();
     let mut canvas =
         super::raster::MonochromeFrameCanvas::new(context.frame_width, context.frame_height)?;
@@ -4476,7 +4493,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         .ok_or_else(|| malformed("superblock root size is invalid"))?;
     let root_step =
         usize::try_from(root_size).map_err(|_| malformed("superblock root size exceeds usize"))?;
-    let mut walker = PartitionWalker::with_cdfs(&mut decoder, context, tile_cdfs.partition);
+    let mut walker = PartitionWalker::with_cdfs(&mut decoder, context, tile_cdfs.partition)?;
     let Some(mut block_decoder) = super::block::Lossy420Decoder::with_cdf_state(
         quantization.qindex,
         chroma_sampling,
@@ -4530,12 +4547,28 @@ pub(super) fn validate_complete_lossy_420_partition(
         .map_err(|_| malformed("CDEF frame height exceeds usize"))?
         .div_ceil(8);
     let mut cdef_indices = if collect_cdef {
-        vec![None; cdef_region_width.saturating_mul(cdef_region_height)]
+        let count = cdef_region_width
+            .checked_mul(cdef_region_height)
+            .ok_or_else(|| malformed("CDEF region map allocation overflows"))?;
+        let mut values = Vec::new();
+        values.try_reserve_exact(count).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 CDEF region map".to_owned())
+        })?;
+        values.resize(count, None);
+        values
     } else {
         Vec::new()
     };
     let mut cdef_active = if collect_cdef {
-        vec![false; cdef_active_width.saturating_mul(cdef_active_height)]
+        let count = cdef_active_width
+            .checked_mul(cdef_active_height)
+            .ok_or_else(|| malformed("CDEF active map allocation overflows"))?;
+        let mut values = Vec::new();
+        values.try_reserve_exact(count).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 CDEF active map".to_owned())
+        })?;
+        values.resize(count, false);
+        values
     } else {
         Vec::new()
     };
@@ -5317,6 +5350,9 @@ enum BoundedI444InterGeometry {
     /// A level-2 SPLIT followed by two level-3 NONE B16x16 terminals in a
     /// 32x16 frame. The leaves are visited left-to-right at x=0 and x=4 MI.
     TwoHorizontal,
+    /// A level-2 SPLIT followed by two level-3 NONE B16x16 terminals in a
+    /// 16x32 frame. The leaves are visited top-to-bottom at y=0 and y=4 MI.
+    TwoVertical,
 }
 
 impl BoundedI444InterGeometry {
@@ -5324,13 +5360,14 @@ impl BoundedI444InterGeometry {
         match self {
             Self::OneBlock => (16, 16),
             Self::TwoHorizontal => (32, 16),
+            Self::TwoVertical => (16, 32),
         }
     }
 
     const fn expected_leaf_count(self) -> usize {
         match self {
             Self::OneBlock => 1,
-            Self::TwoHorizontal => 2,
+            Self::TwoHorizontal | Self::TwoVertical => 2,
         }
     }
 }
@@ -5338,10 +5375,11 @@ impl BoundedI444InterGeometry {
 /// Validate one exact terminal in the bounded full-resolution inter profiles.
 ///
 /// `PartitionWalker` only calls the block callback for terminal footprints. For
-/// the 32x16 profile, the frame edge makes level 2 a horizontal-only node, so
-/// the only alternatives are SPLIT or HORIZONTAL. Requiring the two B16x16
-/// footprints below therefore forces the normative level-2 SPLIT and level-3
-/// NONE sequence before any block syntax is consumed.
+/// the rectangular profiles, the frame edge makes level 2 a one-axis node, so
+/// the only alternatives are SPLIT or the corresponding HORIZONTAL/VERTICAL
+/// terminal. Requiring the two B16x16 footprints below therefore forces the
+/// normative level-2 SPLIT and level-3 NONE sequence before any block syntax is
+/// consumed.
 fn bounded_i444_expected_terminal(
     geometry: BoundedI444InterGeometry,
     leaf_index: usize,
@@ -5352,6 +5390,11 @@ fn bounded_i444_expected_terminal(
         BoundedI444InterGeometry::TwoHorizontal => match leaf_index {
             0 => (0, 0),
             1 => (4, 0),
+            _ => return false,
+        },
+        BoundedI444InterGeometry::TwoVertical => match leaf_index {
+            0 => (0, 0),
+            1 => (0, 4),
             _ => return false,
         },
     };
@@ -5388,6 +5431,7 @@ fn bounded_i444_inter_reconstruction_geometry(
     ) {
         (16, 16, 4, 4, 0 | 1) => BoundedI444InterGeometry::OneBlock,
         (32, 16, 8, 4, 1) => BoundedI444InterGeometry::TwoHorizontal,
+        (16, 32, 4, 8, 1) => BoundedI444InterGeometry::TwoVertical,
         _ => return None,
     };
     let (reference_width, reference_height) = geometry.dimensions();
@@ -5867,7 +5911,7 @@ pub(super) fn validate_complete_lossless_444_partition(
     if !decode_restoration_prefix(&mut decoder, context) {
         return Ok(None);
     }
-    let mut walker = PartitionWalker::new(&mut decoder, context);
+    let mut walker = PartitionWalker::new(&mut decoder, context)?;
     let sample_depth = super::sample_depth::SampleDepth::new(context.bit_depth)
         .ok_or_else(|| malformed("unsupported lossless 4:4:4 sample depth"))?;
     let mut block_decoder = super::block::Lossless444Decoder::new(sample_depth);
@@ -8134,7 +8178,7 @@ mod tests {
         context.subsampling_y = true;
         context.all_lossless = true;
         let mut decoder = RangeDecoder::new(&data, 15, data.len(), false)?;
-        let mut walker = PartitionWalker::new(&mut decoder, &context);
+        let mut walker = PartitionWalker::new(&mut decoder, &context)?;
         let mut block_decoder = super::super::block::MonochromeLosslessDecoder::new();
         let mut canvas = super::super::raster::MonochromeFrameCanvas::new(
             context.frame_width,
