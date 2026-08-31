@@ -4106,41 +4106,53 @@ fn decode_inter_transform_type(
 fn decode_inter_transform_size(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut FrameCdfs,
+    tile_state: &TileState,
+    node: PartitionNode,
     block_size: BlockSize,
+    block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<TxSize> {
-    let mut tx_size = if transform_mode == 0 {
-        TxSize::Tx4x4
-    } else {
-        block_size.maximum_luma_tx()
-    };
+    let max_tx = block_size.maximum_luma_tx();
+    if transform_mode == 0 {
+        return Ok(TxSize::Tx4x4);
+    }
     if transform_mode != 2 {
-        return Ok(tx_size);
+        return Ok(max_tx);
     }
-    let max_depth = block_size.transform_size_max().min(2);
-    for depth in 0..max_depth {
-        if tx_size == TxSize::Tx4x4 {
-            break;
-        }
-        let max_axis = tx_size
-            .pixel_dimensions()
-            .0
-            .max(tx_size.pixel_dimensions().1);
-        let max_index = max_axis.ilog2().saturating_sub(2);
-        let category = 2_u32
-            .saturating_mul(4_u32.saturating_sub(max_index))
-            .saturating_sub(u32::try_from(depth).unwrap_or(2));
-        let category =
-            usize::try_from(category.min(6)).map_err(|_| super::block::PortableUnavailable)?;
-        let context = 0_usize;
-        let split =
-            decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
-        if !split {
-            return Ok(tx_size);
-        }
-        tx_size = tx_size.sub_size();
+    // TX_MODE_SELECT has no transform-partition sentence for skipped blocks
+    // or a TX4X4 root.  The decoder's vartx tree is likewise suppressed for
+    // both cases; consuming a bit here would shift every later coefficient
+    // symbol.
+    if block_skipped || max_tx == TxSize::Tx4x4 {
+        return Ok(max_tx);
     }
-    Err(super::block::PortableUnavailable)
+    // The shared inter terminal reconstructs one transform per coded leaf.
+    // Larger blocks whose maximum transform is capped below the block extent
+    // require a transform grid and remain outside this bounded sentence.
+    if max_tx.pixel_dimensions() != block_size.pixel_dimensions() {
+        return Err(super::block::PortableUnavailable);
+    }
+    let (max_tx_width, max_tx_height) = max_tx.context_dimensions();
+    let above_small = node
+        .y
+        .checked_sub(1)
+        .and_then(|y| tile_state.contexts_at(node.x, y))
+        .is_some_and(|cell| cell.tx_width < max_tx_width);
+    let left_small = node
+        .x
+        .checked_sub(1)
+        .and_then(|x| tile_state.contexts_at(x, node.y))
+        .is_some_and(|cell| cell.tx_height < max_tx_height);
+    let context = usize::from(above_small).saturating_add(usize::from(left_small));
+    let max_axis = max_tx.pixel_dimensions().0.max(max_tx.pixel_dimensions().1);
+    let max_index = max_axis.ilog2().saturating_sub(2);
+    let category = 2_u32.saturating_mul(4_u32.saturating_sub(max_index)).min(6);
+    let category = usize::try_from(category).map_err(|_| super::block::PortableUnavailable)?;
+    let split = decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
+    if split {
+        return Err(super::block::PortableUnavailable);
+    }
+    Ok(max_tx)
 }
 
 #[derive(Clone)]
@@ -4673,13 +4685,20 @@ fn decode_inter_leaf(
     } else {
         None
     };
-    let tx_size = decode_inter_transform_size(
+    let tx_size = match decode_inter_transform_size(
         decoder,
         cdfs,
+        tile_state,
+        node,
         node.block_size,
+        block_skipped,
         context.frame_tools.transform_mode,
-    )
-    .map_err(|_| malformed("variable inter transform is unavailable"))?;
+    ) {
+        Ok(tx_size) => tx_size,
+        Err(super::block::PortableUnavailable) => {
+            return Ok(Err(super::block::PortableUnavailable));
+        }
+    };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
     let mut coefficient_contexts = super::block::InterCoefficientContexts {
@@ -6146,8 +6165,10 @@ fn complete_bounded_restoration_inter_420_reconstruction_context(
 /// loop filtering and the bounded CDEF profile enabled. Single-reference and
 /// average/distance compound prediction share the checked MC boundary;
 /// difference-weighted, wedge, and inter-intra predictions are materialized
-/// from checked masks. OBMC/LOCALWARP selections and variable-transform
-/// branches are still rejected before a block publishes neighbor metadata.
+/// from checked masks. OBMC/LOCALWARP selections and transform-partition
+/// splits are still rejected before a block publishes neighbor metadata;
+/// TX_MODE_SELECT blocks whose root remains unsplit share the fixed-transform
+/// terminal below.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
     let Some(cdef) = context.frame_tools.cdef else {
         return true;
@@ -6177,7 +6198,7 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
-        && context.frame_tools.transform_mode != 2
+        && matches!(context.frame_tools.transform_mode, 0..=2)
         && inter_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && no_unsupported_film_grain(context)
@@ -6238,7 +6259,9 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms
 /// and a closed tool profile until the remaining AV1 syntax families publish
-/// their high-depth state. Plane-aware matrix dequantization remains optional
+/// their high-depth state. TX_MODE_SELECT is admitted only for an unsplit
+/// root transform; split trees return a transactional unsupported result.
+/// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
 /// CDEF is limited to complete 8x8 luma geometry. I422 additionally requires
@@ -6278,7 +6301,7 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
         && !context.segmentation_enabled
-        && context.frame_tools.transform_mode == 1
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
         && !context.frame_tools.delta_lf_present
