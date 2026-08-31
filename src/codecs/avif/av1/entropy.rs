@@ -8988,10 +8988,18 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 }
 
 /// High-depth full-resolution tranche admitted by the generic streamed
-/// reconstruction core. Optional post-filters and large implicit transform
-/// tilings stay closed until their high-depth arithmetic/state is connected;
-/// the coefficient dispatcher carries quantization matrices when enabled and
-/// remains depth-parametric when they are absent.
+/// reconstruction core. Bounded CDEF is available on complete 8x8 luma
+/// geometry; restoration and large implicit transform tilings stay closed
+/// until their high-depth arithmetic/state is connected. The coefficient
+/// dispatcher carries quantization matrices when enabled and remains
+/// depth-parametric when they are absent.
+fn complete_high_depth_cdef_supported(context: &FirstBlockContext) -> bool {
+    context.frame_tools.cdef.is_none()
+        || (context.frame_width.is_multiple_of(8)
+            && context.frame_height.is_multiple_of(8)
+            && bounded_i444_cdef_supported(context))
+}
+
 fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -9006,7 +9014,7 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && context.frame_tools.cdef.is_none()
+        && complete_high_depth_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.block_x == 0
@@ -9019,6 +9027,7 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
 /// path. Its coefficient dispatcher carries the plane-specific matrix level
 /// and depth-aware dequantizer for every reachable I420 transform shape, while
 /// IDTX and one-dimensional transforms disable matrix use per AV1 syntax.
+/// Bounded CDEF is admitted only when the luma raster has complete 8x8 units.
 fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -9033,7 +9042,7 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && context.frame_tools.cdef.is_none()
+        && complete_high_depth_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && context.block_x == 0
@@ -9044,7 +9053,8 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 /// leaf. The walker keeps nominal block identity separate from active plane
 /// extents, so every padded frame geometry and AV1 partition/block size can
 /// share the same checked coefficient, predictor, raster, and plane-aware
-/// quantization-matrix carriers.
+/// quantization-matrix carriers. Bounded CDEF is admitted only on complete
+/// 8x8 luma geometry so the horizontally subsampled direction map is total.
 fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -9081,7 +9091,7 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
-        && context.frame_tools.cdef.is_none()
+        && complete_high_depth_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && matches!(context.level, 0 | 1)
