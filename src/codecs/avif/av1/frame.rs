@@ -1679,7 +1679,19 @@ fn assemble_color_tiles(
         sequence.subsampling_x,
         sequence.subsampling_y,
     )?;
+    let filter_block_count = tiles
+        .iter()
+        .chain(trailing_tiles)
+        .try_fold(0_usize, |count, tile| {
+            count.checked_add(tile.reconstruction.filter_blocks.len())
+        })
+        .ok_or_else(|| malformed("assembled loop-filter block count overflows"))?;
     let mut filter_blocks = Vec::new();
+    filter_blocks
+        .try_reserve_exact(filter_block_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
+        })?;
     let mut cdef_indices = vec![None; region_width.saturating_mul(region_height)];
     let mut cdef_active = vec![false; active_width.saturating_mul(active_height)];
     let mut loop_parameters: Option<super::filter::Parameters> = None;

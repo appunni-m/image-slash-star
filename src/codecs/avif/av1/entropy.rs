@@ -9000,6 +9000,21 @@ fn complete_high_depth_cdef_supported(context: &FirstBlockContext) -> bool {
             && bounded_i444_cdef_supported(context))
 }
 
+fn complete_high_depth_loop_filter_supported(context: &FirstBlockContext) -> bool {
+    let loop_filter = context.frame_tools.loop_filter;
+    let levels_valid = loop_filter.sharpness <= 7
+        && loop_filter.level_y.iter().all(|&level| level <= 63)
+        && loop_filter.level_u <= 63
+        && loop_filter.level_v <= 63;
+    let luma_disabled = loop_filter.level_y == [0; 2];
+    let chroma_consistent =
+        !luma_disabled || (loop_filter.level_u == 0 && loop_filter.level_v == 0);
+    let filtering_active = !luma_disabled || loop_filter.level_u != 0 || loop_filter.level_v != 0;
+    levels_valid
+        && chroma_consistent
+        && (!filtering_active || !context.frame_tools.delta_lf_present)
+}
+
 fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -9011,9 +9026,7 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
         && !context.subsampling_y
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.reduced_transform_set
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
+        && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
@@ -9039,9 +9052,7 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.subsampling_y
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.reduced_transform_set
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
+        && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
@@ -9088,9 +9099,7 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && quantization.base != 0
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.transform_mode == 1
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
+        && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
