@@ -5776,7 +5776,12 @@ fn bounded_i422_restoration_units_supported_for_dimensions(
     luma_height: u32,
 ) -> bool {
     let unit_log2 = context.restoration_unit_size_log2;
-    if unit_log2[0] != unit_log2[1] || !(6..=8).contains(&unit_log2[0]) {
+    let minimum_log2 = match context.level {
+        0 => 7,
+        1 => 6,
+        _ => return false,
+    };
+    if unit_log2[0] != unit_log2[1] || !(minimum_log2..=8).contains(&unit_log2[0]) {
         return false;
     }
     let Some(unit_size) = 1_u32.checked_shl(unit_log2[0]) else {
@@ -7514,6 +7519,10 @@ enum BoundedSubsampledRectGeometry {
     /// A level-1 split followed by four level-2 splits and sixteen level-3
     /// B16x16 leaves in AV1's depth-first quadrant order.
     SixteenSquare,
+    /// A level-0 root with two 32x32 quadrants across eight level-3 leaves.
+    EightHorizontal,
+    /// A level-0 root with two 32x32 quadrants down eight level-3 leaves.
+    EightVertical,
 }
 
 impl BoundedSubsampledRectGeometry {
@@ -7523,6 +7532,8 @@ impl BoundedSubsampledRectGeometry {
             Self::TwoVertical => (16, 32),
             Self::FourSquare => (32, 32),
             Self::SixteenSquare => (64, 64),
+            Self::EightHorizontal => (64, 32),
+            Self::EightVertical => (32, 64),
         }
     }
 
@@ -7531,11 +7542,12 @@ impl BoundedSubsampledRectGeometry {
             Self::TwoHorizontal | Self::TwoVertical => 2,
             Self::FourSquare => 4,
             Self::SixteenSquare => 16,
+            Self::EightHorizontal | Self::EightVertical => 8,
         }
     }
 
     const fn restoration_supported(self) -> bool {
-        !matches!(self, Self::SixteenSquare)
+        !matches!(self, Self::EightVertical | Self::SixteenSquare)
     }
 }
 
@@ -7553,6 +7565,8 @@ fn bounded_subsampled_rect_geometry_for_context(
         (16, 32, 4, 8, 1) => Some(BoundedSubsampledRectGeometry::TwoVertical),
         (32, 32, 8, 8, 1) => Some(BoundedSubsampledRectGeometry::FourSquare),
         (64, 64, 16, 16, 0) => Some(BoundedSubsampledRectGeometry::SixteenSquare),
+        (64, 32, 16, 8, 0) => Some(BoundedSubsampledRectGeometry::EightHorizontal),
+        (32, 64, 8, 16, 0) => Some(BoundedSubsampledRectGeometry::EightVertical),
         _ => None,
     }
 }
@@ -7576,6 +7590,8 @@ fn bounded_subsampled_rect_loop_filter_supported(
         BoundedSubsampledRectGeometry::TwoVertical => loop_filter.level_y[1] != 0,
         BoundedSubsampledRectGeometry::FourSquare => loop_filter.level_y != [0; 2],
         BoundedSubsampledRectGeometry::SixteenSquare => loop_filter.level_y != [0; 2],
+        BoundedSubsampledRectGeometry::EightHorizontal => loop_filter.level_y != [0; 2],
+        BoundedSubsampledRectGeometry::EightVertical => loop_filter.level_y != [0; 2],
     }
 }
 
@@ -7619,6 +7635,28 @@ fn bounded_subsampled_expected_rect_terminal(
             13 => (12, 8),
             14 => (8, 12),
             15 => (12, 12),
+            _ => return false,
+        },
+        BoundedSubsampledRectGeometry::EightHorizontal => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (8, 0),
+            5 => (12, 0),
+            6 => (8, 4),
+            7 => (12, 4),
+            _ => return false,
+        },
+        BoundedSubsampledRectGeometry::EightVertical => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (0, 8),
+            5 => (4, 8),
+            6 => (0, 12),
+            7 => (4, 12),
             _ => return false,
         },
     };
@@ -7735,6 +7773,10 @@ enum BoundedI444InterGeometry {
     /// A level-1 SPLIT followed by four level-2 splits and sixteen level-3
     /// NONE B16x16 terminals in AV1's depth-first quadrant order.
     SixteenSquare,
+    /// A level-0 root with two 32x32 quadrants across eight level-3 leaves.
+    EightHorizontal,
+    /// A level-0 root with two 32x32 quadrants down eight level-3 leaves.
+    EightVertical,
 }
 
 impl BoundedI444InterGeometry {
@@ -7745,6 +7787,8 @@ impl BoundedI444InterGeometry {
             Self::TwoVertical => (16, 32),
             Self::FourSquare => (32, 32),
             Self::SixteenSquare => (64, 64),
+            Self::EightHorizontal => (64, 32),
+            Self::EightVertical => (32, 64),
         }
     }
 
@@ -7754,7 +7798,12 @@ impl BoundedI444InterGeometry {
             Self::TwoHorizontal | Self::TwoVertical => 2,
             Self::FourSquare => 4,
             Self::SixteenSquare => 16,
+            Self::EightHorizontal | Self::EightVertical => 8,
         }
+    }
+
+    const fn restoration_supported(self) -> bool {
+        !matches!(self, Self::EightVertical | Self::SixteenSquare)
     }
 }
 
@@ -7809,6 +7858,28 @@ fn bounded_i444_expected_terminal(
             15 => (12, 12),
             _ => return false,
         },
+        BoundedI444InterGeometry::EightHorizontal => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (8, 0),
+            5 => (12, 0),
+            6 => (8, 4),
+            7 => (12, 4),
+            _ => return false,
+        },
+        BoundedI444InterGeometry::EightVertical => match leaf_index {
+            0 => (0, 0),
+            1 => (4, 0),
+            2 => (0, 4),
+            3 => (4, 4),
+            4 => (0, 8),
+            5 => (4, 8),
+            6 => (0, 12),
+            7 => (4, 12),
+            _ => return false,
+        },
     };
     node.level == 3
         && node.x == expected.0
@@ -7842,13 +7913,19 @@ fn bounded_i444_geometry_for_context(
         (16, 32, 4, 8, 1) => Some(BoundedI444InterGeometry::TwoVertical),
         (32, 32, 8, 8, 1) => Some(BoundedI444InterGeometry::FourSquare),
         (64, 64, 16, 16, 0) => Some(BoundedI444InterGeometry::SixteenSquare),
+        (64, 32, 16, 8, 0) => Some(BoundedI444InterGeometry::EightHorizontal),
+        (32, 64, 8, 16, 0) => Some(BoundedI444InterGeometry::EightVertical),
         _ => None,
     }
 }
 
 fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
-        || (context.bit_depth == 8 && (context.frame_width, context.frame_height) != (64, 64))
+        || (context.bit_depth == 8
+            && matches!(
+                (context.frame_width, context.frame_height),
+                (16, 16) | (32, 16) | (16, 32)
+            ))
 }
 
 /// Exact bounded 4:4:4 intra tranche with one Wiener/SGR unit per plane.
@@ -8134,7 +8211,7 @@ fn bounded_i444_restoration_units_supported(
     context: &FirstBlockContext,
     geometry: BoundedI444InterGeometry,
 ) -> bool {
-    if matches!(geometry, BoundedI444InterGeometry::SixteenSquare) {
+    if !geometry.restoration_supported() {
         return false;
     }
     let unit_log2 = context.restoration_unit_size_log2;
@@ -8188,6 +8265,9 @@ fn bounded_i444_loop_filter_supported(
             loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
         BoundedI444InterGeometry::SixteenSquare => {
+            loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
+        }
+        BoundedI444InterGeometry::EightHorizontal | BoundedI444InterGeometry::EightVertical => {
             loop_filter.level_y != [0; 2] && loop_filter.level_u == 0 && loop_filter.level_v == 0
         }
     }
