@@ -6303,9 +6303,9 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// transactional until their transform-grid compositor is connected.
 /// Root-scoped delta-Q uses the shared prepared-quantization path; delta-LF
 /// remains closed until its loop-filter metadata path is independently proven.
-/// Bounded frame CDEF is applied after complete tile assembly; deblocking and
-/// restoration remain closed here. Validated film grain is applied only to a
-/// full assembled display copy after each tile is reconstructed.
+/// Checked frame deblocking and bounded CDEF are applied after complete tile
+/// assembly; restoration remains closed here. Validated film grain is applied
+/// only to a full assembled display copy after each tile is reconstructed.
 fn complete_inter_422_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6336,9 +6336,7 @@ fn complete_inter_422_reconstruction_context(
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
+        && complete_high_depth_loop_filter_supported(context)
         && inter_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && context.block_x == 0
@@ -6352,13 +6350,13 @@ fn complete_inter_422_reconstruction_context(
 /// together. Checked dimension-scaled retained references use the same
 /// full-resolution MC path as unscaled references. Compound, inter-intra, and
 /// OBMC syntax remain enabled; frame-level postfilters and film grain stay
-/// bounded frame CDEF is applied after complete tile assembly; deblocking and
-/// restoration remain closed until their broad I444 geometry classes have
-/// independent composition evidence. Film grain is display-only and limited
-/// to the shared bounded dimension whitelist. Tile-local reconstructions are
-/// assembled into one complete frame. Root-scoped delta-Q is decoded by the
-/// shared prepared-quantization path; delta-LF remains closed with the other
-/// loop-filter metadata.
+/// Checked frame deblocking and bounded frame CDEF are applied after complete
+/// tile assembly; restoration remains closed until its broad I444 geometry
+/// classes have independent composition evidence. Film grain is display-only
+/// and limited to the shared bounded dimension whitelist. Tile-local
+/// reconstructions are assembled into one complete frame. Root-scoped delta-Q
+/// is decoded by the shared prepared-quantization path; delta-LF remains closed
+/// with the other loop-filter metadata.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6389,9 +6387,7 @@ fn complete_inter_444_reconstruction_context(
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
-        && context.frame_tools.loop_filter.level_y == [0; 2]
-        && context.frame_tools.loop_filter.level_u == 0
-        && context.frame_tools.loop_filter.level_v == 0
+        && complete_high_depth_loop_filter_supported(context)
         && inter_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && context.block_x == 0
