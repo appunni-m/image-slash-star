@@ -6301,6 +6301,8 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// references, but this profile admits only leaves whose luma and chroma
 /// planes each fit one normative transform; multi-transform I422 leaves remain
 /// transactional until their transform-grid compositor is connected.
+/// Root-scoped delta-Q uses the shared prepared-quantization path; delta-LF
+/// remains closed until its loop-filter metadata path is independently proven.
 /// Frame-level postfilters and film grain stay closed here so each tile can be
 /// reconstructed locally before the complete unfiltered frame is assembled
 /// transactionally.
@@ -6331,7 +6333,6 @@ fn complete_inter_422_reconstruction_context(
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
-        && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
@@ -6353,6 +6354,8 @@ fn complete_inter_422_reconstruction_context(
 /// OBMC syntax remain enabled; frame-level postfilters and film grain stay
 /// closed until their broad I444 geometry classes have independent composition
 /// evidence. Tile-local reconstructions are assembled into one complete frame.
+/// Root-scoped delta-Q is decoded by the shared prepared-quantization path;
+/// delta-LF remains closed with the other loop-filter metadata.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6380,7 +6383,6 @@ fn complete_inter_444_reconstruction_context(
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
-        && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
