@@ -4449,6 +4449,28 @@ pub(super) fn validate_complete_lossy_420_partition(
     });
     let bounded_i422_cdef_restoration =
         bounded_i422_intra_cdef_restoration || bounded_i422_inter_cdef_restoration;
+    let bounded_i420_intra_loop_postfilters =
+        complete_bounded_i420_loop_postfilters_intra_reconstruction_context(context);
+    let bounded_i420_inter_loop_postfilters = inter_context.and_then(|inter_context| {
+        complete_bounded_i420_loop_postfilters_inter_reconstruction_context(context, inter_context)
+    });
+    let bounded_i420_loop_postfilters = bounded_i420_intra_loop_postfilters
+        .or(bounded_i420_inter_loop_postfilters)
+        .is_some();
+    let bounded_i420_loop_postfilter_restoration = bounded_i420_intra_loop_postfilters
+        .is_some_and(|profile| profile.restoration)
+        || bounded_i420_inter_loop_postfilters.is_some_and(|profile| profile.restoration);
+    let bounded_i422_intra_loop_postfilters =
+        complete_bounded_i422_loop_postfilters_intra_reconstruction_context(context);
+    let bounded_i422_inter_loop_postfilters = inter_context.and_then(|inter_context| {
+        complete_bounded_i422_loop_postfilters_inter_reconstruction_context(context, inter_context)
+    });
+    let bounded_i422_loop_postfilters = bounded_i422_intra_loop_postfilters
+        .or(bounded_i422_inter_loop_postfilters)
+        .is_some();
+    let bounded_i422_loop_postfilter_restoration = bounded_i422_intra_loop_postfilters
+        .is_some_and(|profile| profile.restoration)
+        || bounded_i422_inter_loop_postfilters.is_some_and(|profile| profile.restoration);
     let bounded_i420_intra_loop = complete_bounded_i420_loop_intra_reconstruction_context(context);
     let bounded_i420_inter_loop = inter_context.is_some_and(|inter_context| {
         complete_bounded_i420_loop_inter_reconstruction_context(context, inter_context)
@@ -4494,6 +4516,8 @@ pub(super) fn validate_complete_lossy_420_partition(
             || bounded_i422_inter_cdef
             || bounded_i420_inter_cdef_restoration
             || bounded_i422_inter_cdef_restoration
+            || bounded_i420_loop_postfilters
+            || bounded_i422_loop_postfilters
             || bounded_i420_inter_loop
             || bounded_i422_inter_loop
     });
@@ -4509,6 +4533,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_intra_cdef
         || bounded_i420_intra_cdef_restoration
         || bounded_i422_intra_cdef_restoration
+        || bounded_i420_loop_postfilters
+        || bounded_i422_loop_postfilters
         || bounded_i420_intra_loop
         || bounded_i422_intra_loop
         || bounded_i444_intra_cdef
@@ -4552,6 +4578,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i420_restoration
         || bounded_i420_cdef_restoration
         || bounded_i422_cdef_restoration
+        || bounded_i420_loop_postfilter_restoration
+        || bounded_i422_loop_postfilter_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
     {
         let Some(plan) =
@@ -4712,6 +4740,8 @@ pub(super) fn validate_complete_lossy_420_partition(
                     || bounded_i422_cdef
                     || bounded_i420_cdef_restoration
                     || bounded_i422_cdef_restoration
+                    || bounded_i420_loop_postfilters
+                    || bounded_i422_loop_postfilters
                     || bounded_i444_intra_cdef
                     || bounded_i444_intra_loop
                     || bounded_i420_loop
@@ -6049,6 +6079,205 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
+}
+
+#[derive(Clone, Copy)]
+struct BoundedLoopPostfilters {
+    restoration: bool,
+}
+
+/// Common frame-level proof for high-depth I420/I422 loop filtering combined
+/// with one or both later post-filters. A separate profile keeps the existing
+/// loop-only, CDEF-only, restoration-only, and CDEF+restoration admissions
+/// narrow while selecting the restoration decoder only when restoration is
+/// actually active in the frame header.
+fn bounded_high_depth_subsampled_loop_postfilters_common(
+    context: &FirstBlockContext,
+    quantization: QuantizationContext,
+) -> Option<BoundedLoopPostfilters> {
+    let i420 = context.subsampling_x && context.subsampling_y;
+    let i422 = context.subsampling_x && !context.subsampling_y;
+    let cdef = context.frame_tools.cdef.is_some();
+    if cdef && !bounded_i444_cdef_supported(context) {
+        return None;
+    }
+    let restoration = if context.frame_tools.restoration_present {
+        if !context.restoration_types.iter().any(Option::is_some)
+            || !context.restoration_types.iter().all(|restoration_type| {
+                restoration_type.is_none_or(|kind| {
+                    matches!(
+                        kind,
+                        RestorationType::Wiener | RestorationType::SgrProjection
+                    )
+                })
+            })
+        {
+            return None;
+        }
+        if i420 {
+            if !bounded_i420_restoration_units_supported(context) {
+                return None;
+            }
+        } else if i422 {
+            if !bounded_i422_restoration_units_supported(context) {
+                return None;
+            }
+        } else {
+            return None;
+        }
+        true
+    } else {
+        if context.restoration_types != [None; 3] {
+            return None;
+        }
+        false
+    };
+    if !cdef && !restoration {
+        return None;
+    }
+    (i420 || i422)
+        .then_some(())
+        .filter(|_| {
+            !context.monochrome
+                && context.single_tile
+                && context.frame_width == 16
+                && context.frame_height == 16
+                && context.upscaled_width == 16
+                && context.block_width == 4
+                && context.block_height == 4
+                && context.block_x == 0
+                && context.block_y == 0
+                && matches!(context.level, 0 | 1)
+                && !context.superres_enabled
+                && !context.all_lossless
+                && !context.segmentation_enabled
+                && !context.frame_tools.segmentation.enabled
+                && !context.skip_mode_enabled
+                && !context.allow_intrabc
+                && !context.allow_screen_content_tools
+                && !context.frame_tools.film_grain_present
+                && !context.frame_tools.delta_q_present
+                && !context.frame_tools.delta_lf_present
+                && !context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base
+                && quantization.base != 0
+                && !quantization.using_matrix
+                && !context.frame_tools.reduced_transform_set
+                && context.frame_tools.transform_mode == 1
+                && context.frame_tools.loop_filter.sharpness <= 7
+                && context
+                    .frame_tools
+                    .loop_filter
+                    .level_y
+                    .iter()
+                    .all(|&level| level <= 63)
+                && context.frame_tools.loop_filter.level_u <= 63
+                && context.frame_tools.loop_filter.level_v <= 63
+                && (context.frame_tools.loop_filter.level_y != [0; 2]
+                    || context.frame_tools.loop_filter.level_u != 0
+                    || context.frame_tools.loop_filter.level_v != 0)
+        })
+        .map(|_| BoundedLoopPostfilters { restoration })
+}
+
+fn complete_bounded_i420_loop_postfilters_intra_reconstruction_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    (context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && context.subsampling_y)
+        .then_some(())
+        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
+}
+
+fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<BoundedLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I420
+            && reference.surface.coded_width == 16
+            && reference.surface.upscaled_width == 16
+            && reference.surface.frame_height == 16
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    (!context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && context.subsampling_y
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match)
+        .then_some(())
+        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
+}
+
+fn complete_bounded_i422_loop_postfilters_intra_reconstruction_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    (context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && !context.subsampling_y)
+        .then_some(())
+        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
+}
+
+fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<BoundedLoopPostfilters> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I422
+            && reference.surface.coded_width == 16
+            && reference.surface.upscaled_width == 16
+            && reference.surface.frame_height == 16
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    (!context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && context.subsampling_x
+        && !context.subsampling_y
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match)
+        .then_some(())
+        .and_then(|_| bounded_high_depth_subsampled_loop_postfilters_common(context, quantization))
 }
 
 /// Common frame-level proof for the first high-depth I420/I422 loop-filter
