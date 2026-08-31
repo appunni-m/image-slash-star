@@ -9841,6 +9841,8 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 /// share the same checked coefficient, predictor, raster, and plane-aware
 /// quantization-matrix carriers. Bounded CDEF is admitted only on complete
 /// 8x8 luma geometry so the horizontally subsampled direction map is total.
+/// Root-scoped delta-Q is carried through the shared intra quantization path;
+/// delta-LF remains closed.
 fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -9867,7 +9869,6 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && !context.allow_intrabc
         && !context.allow_screen_content_tools
         && no_unsupported_film_grain(context)
-        && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.segment_lossless
         && context.frame_tools.segment_qindex == quantization.base
