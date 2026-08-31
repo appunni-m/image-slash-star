@@ -4389,13 +4389,13 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_intra_reconstruction =
         complete_monochrome_lossy_intra_reconstruction_context(context);
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
-    let high_depth_444_inter = inter_context.is_some_and(|inter_context| {
-        complete_high_depth_444_inter_reconstruction_context(context, inter_context)
+    let bounded_i444_inter = inter_context.is_some_and(|inter_context| {
+        complete_bounded_i444_inter_reconstruction_context(context, inter_context)
     });
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
-            || high_depth_444_inter
+            || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
             || (!context.intra_frame
                 && monochrome_postfilter
@@ -4569,10 +4569,10 @@ pub(super) fn validate_complete_lossy_420_partition(
                     node.block_size
                 };
                 if complete_high_depth_422_intra_reconstruction_context(context)
-                    || high_depth_444_inter
+                    || bounded_i444_inter
                 {
                     if syntax_block_size != BlockSize::B16x16 {
-                        // These high-depth inter/intra tranches are proved only
+                        // These bounded inter/intra tranches are proved only
                         // for one normalized B16x16/Square16 terminal. Reject
                         // a partition before any block skip, quantization, or
                         // coefficient CDF mutates.
@@ -5288,14 +5288,14 @@ fn complete_high_depth_inter_reconstruction_context(
         && references_match
 }
 
-/// Exact high-depth 4:4:4 inter tranche admitted by the full-resolution
-/// translation path.  The inter block engine already carries depth-parametric
+/// Exact bounded 4:4:4 inter tranche admitted by the full-resolution
+/// translation path. The inter block engine carries depth-parametric
 /// predictors and residuals for all three full-resolution planes, but its
-/// first proof is intentionally one normalized B16x16/Square16 terminal.  A
+/// first proof is intentionally one normalized B16x16/Square16 terminal. A
 /// separate gate keeps this class from inheriting the narrower 4:2:0/4:2:2
 /// admission or from silently accepting a partition that needs child-local
 /// context publication.
-fn complete_high_depth_444_inter_reconstruction_context(
+fn complete_bounded_i444_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
@@ -5309,10 +5309,14 @@ fn complete_high_depth_444_inter_reconstruction_context(
             && reference.surface.coded_width == 16
             && reference.surface.upscaled_width == 16
             && reference.surface.frame_height == 16
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
             && !reference.scale.scaled
     });
     !context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
