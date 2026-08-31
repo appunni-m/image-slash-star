@@ -4522,10 +4522,39 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i420_rect_restoration_geometry = bounded_i420_intra_rect_restoration_geometry
         .or(bounded_i420_inter_rect_restoration_geometry);
     let bounded_i420_rect_restoration = bounded_i420_rect_restoration_geometry.is_some();
+    let bounded_i420_intra_rect_cdef_restoration_geometry =
+        complete_bounded_i420_rect_cdef_restoration_intra_reconstruction_context(context);
+    let bounded_i420_inter_rect_cdef_restoration_geometry =
+        inter_context.and_then(|inter_context| {
+            complete_bounded_i420_rect_cdef_restoration_inter_reconstruction_context(
+                context,
+                inter_context,
+            )
+        });
+    let bounded_i420_rect_cdef_restoration_geometry =
+        bounded_i420_intra_rect_cdef_restoration_geometry
+            .or(bounded_i420_inter_rect_cdef_restoration_geometry);
+    let bounded_i420_rect_cdef_restoration = bounded_i420_rect_cdef_restoration_geometry.is_some();
+    let bounded_i422_intra_rect_cdef_restoration_geometry =
+        complete_bounded_i422_rect_cdef_restoration_intra_reconstruction_context(context);
+    let bounded_i422_inter_rect_cdef_restoration_geometry =
+        inter_context.and_then(|inter_context| {
+            complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
+                context,
+                inter_context,
+            )
+        });
+    let bounded_i422_rect_cdef_restoration_geometry =
+        bounded_i422_intra_rect_cdef_restoration_geometry
+            .or(bounded_i422_inter_rect_cdef_restoration_geometry);
+    let bounded_i422_rect_cdef_restoration = bounded_i422_rect_cdef_restoration_geometry.is_some();
     let bounded_i420_rect_geometry = bounded_i420_rect_loop_geometry
         .or(bounded_i420_rect_cdef_geometry)
-        .or(bounded_i420_rect_restoration_geometry);
+        .or(bounded_i420_rect_restoration_geometry)
+        .or(bounded_i420_rect_cdef_restoration_geometry);
     let bounded_i420_rect = bounded_i420_rect_geometry.is_some();
+    let bounded_i422_rect_geometry =
+        bounded_i422_rect_geometry.or(bounded_i422_rect_cdef_restoration_geometry);
     let bounded_subsampled_rect_geometry =
         bounded_i420_rect_geometry.or(bounded_i422_rect_geometry);
     let bounded_subsampled_rect = bounded_subsampled_rect_geometry.is_some();
@@ -4579,9 +4608,11 @@ pub(super) fn validate_complete_lossy_420_partition(
             || bounded_i420_rect_loop
             || bounded_i420_rect_cdef
             || bounded_i420_rect_restoration
+            || bounded_i420_rect_cdef_restoration
             || bounded_i422_rect_loop
             || bounded_i422_rect_cdef
             || bounded_i422_rect_restoration
+            || bounded_i422_rect_cdef_restoration
             || bounded_i420_inter_loop
             || bounded_i422_inter_loop
     });
@@ -4602,9 +4633,11 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i420_rect_loop
         || bounded_i420_rect_cdef
         || bounded_i420_rect_restoration
+        || bounded_i420_rect_cdef_restoration
         || bounded_i422_rect_loop
         || bounded_i422_rect_cdef
         || bounded_i422_rect_restoration
+        || bounded_i422_rect_cdef_restoration
         || bounded_i420_intra_loop
         || bounded_i422_intra_loop
         || bounded_i444_intra_cdef
@@ -4651,7 +4684,9 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i420_loop_postfilter_restoration
         || bounded_i422_loop_postfilter_restoration
         || bounded_i420_rect_restoration
+        || bounded_i420_rect_cdef_restoration
         || bounded_i422_rect_restoration
+        || bounded_i422_rect_cdef_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
     {
         let Some(plan) =
@@ -6687,6 +6722,188 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
+}
+
+/// Shared rectangular proof for the bounded CDEF+restoration profiles. The
+/// layout-specific wrappers below add the I420/I422 geometry and restoration
+/// exponent rules without widening the one-block predicates above.
+fn bounded_subsampled_rect_cdef_restoration_base(
+    context: &FirstBlockContext,
+    quantization: QuantizationContext,
+    geometry: BoundedSubsampledRectGeometry,
+) -> bool {
+    let (frame_width, frame_height) = geometry.dimensions();
+    context.single_tile
+        && context.frame_width == frame_width
+        && context.frame_height == frame_height
+        && context.upscaled_width == frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context
+            .frame_tools
+            .cdef
+            .is_some_and(|_| bounded_i444_cdef_supported(context))
+        && context.frame_tools.restoration_present
+        && context.restoration_types.iter().any(Option::is_some)
+        && context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+}
+
+fn bounded_i420_rect_cdef_restoration_common(
+    context: &FirstBlockContext,
+    quantization: QuantizationContext,
+    geometry: BoundedSubsampledRectGeometry,
+) -> bool {
+    let (frame_width, frame_height) = geometry.dimensions();
+    context.subsampling_x
+        && context.subsampling_y
+        && !context.monochrome
+        && bounded_subsampled_rect_cdef_restoration_base(context, quantization, geometry)
+        && bounded_i420_restoration_units_supported_for_dimensions(
+            context,
+            frame_width,
+            frame_height,
+        )
+}
+
+fn complete_bounded_i420_rect_cdef_restoration_intra_reconstruction_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedSubsampledRectGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    (context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && bounded_i420_rect_cdef_restoration_common(context, quantization, geometry))
+    .then_some(geometry)
+}
+
+fn complete_bounded_i420_rect_cdef_restoration_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<BoundedSubsampledRectGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    let (reference_width, reference_height) = geometry.dimensions();
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I420
+            && reference.surface.coded_width == reference_width
+            && reference.surface.upscaled_width == reference_width
+            && reference.surface.frame_height == reference_height
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    (!context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && bounded_i420_rect_cdef_restoration_common(context, quantization, geometry)
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match)
+        .then_some(geometry)
+}
+
+fn bounded_i422_rect_cdef_restoration_common(
+    context: &FirstBlockContext,
+    quantization: QuantizationContext,
+    geometry: BoundedSubsampledRectGeometry,
+) -> bool {
+    let (frame_width, frame_height) = geometry.dimensions();
+    context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && bounded_subsampled_rect_cdef_restoration_base(context, quantization, geometry)
+        && bounded_i422_restoration_units_supported_for_dimensions(
+            context,
+            frame_width,
+            frame_height,
+        )
+}
+
+fn complete_bounded_i422_rect_cdef_restoration_intra_reconstruction_context(
+    context: &FirstBlockContext,
+) -> Option<BoundedSubsampledRectGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    (context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && bounded_i422_rect_cdef_restoration_common(context, quantization, geometry))
+    .then_some(geometry)
+}
+
+fn complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<BoundedSubsampledRectGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
+    let (reference_width, reference_height) = geometry.dimensions();
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I422
+            && reference.surface.coded_width == reference_width
+            && reference.surface.upscaled_width == reference_width
+            && reference.surface.frame_height == reference_height
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    (!context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && bounded_i422_rect_cdef_restoration_common(context, quantization, geometry)
+        && !inter_context.reference_mode_select
+        && !inter_context.use_ref_frame_mvs
+        && !inter_context.motion_mode_switchable
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
+        && !inter_context.enable_masked_compound
+        && !inter_context.enable_jnt_comp
+        && references_match)
+        .then_some(geometry)
 }
 
 #[derive(Clone, Copy)]
