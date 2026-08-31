@@ -4437,12 +4437,16 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i422_cdef = bounded_i422_intra_cdef || bounded_i422_inter_cdef;
     let bounded_i444_intra_restoration_geometry = bounded_i444_intra_restoration_geometry(context);
     let bounded_i444_intra_restoration = bounded_i444_intra_restoration_geometry.is_some();
+    let bounded_i444_intra_cdef_geometry = bounded_i444_intra_cdef_geometry(context);
+    let bounded_i444_intra_cdef = bounded_i444_intra_cdef_geometry.is_some();
     let bounded_i444_geometry = if bounded_i444_inter {
         bounded_i444_inter_geometry
     } else if bounded_i444_restoration {
         bounded_i444_geometry_for_context(context)
     } else if bounded_i444_intra_restoration {
         bounded_i444_intra_restoration_geometry
+    } else if bounded_i444_intra_cdef {
+        bounded_i444_intra_cdef_geometry
     } else {
         None
     };
@@ -4470,7 +4474,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_intra_restoration
         || bounded_i420_intra_restoration
         || bounded_i420_intra_cdef
-        || bounded_i422_intra_cdef;
+        || bounded_i422_intra_cdef
+        || bounded_i444_intra_cdef;
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
         || segmentation
@@ -4666,6 +4671,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                     || bounded_i420_restoration
                     || bounded_i420_cdef
                     || bounded_i422_cdef
+                    || bounded_i444_intra_cdef
                 {
                     if let Some(geometry) = bounded_i444_geometry {
                         if !bounded_i444_expected_terminal(geometry, bounded_i444_leaf_count, node)
@@ -5990,6 +5996,54 @@ fn bounded_i444_intra_restoration_geometry(
             })
         })
         && bounded_i444_restoration_units_supported(context, geometry))
+    .then_some(geometry)
+}
+
+/// Exact bounded high-depth 4:4:4 intra tranche with CDEF enabled and the
+/// later restoration stage disabled. The geometry is shared with the bounded
+/// inter/restoration profiles so the terminal sequence and CDEF region maps
+/// remain one-to-one for both rectangular two-leaf shapes.
+fn bounded_i444_intra_cdef_geometry(
+    context: &FirstBlockContext,
+) -> Option<BoundedI444InterGeometry> {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return None;
+    };
+    let geometry = bounded_i444_geometry_for_context(context)?;
+    (context.intra_frame
+        && matches!(context.bit_depth, 10 | 12)
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && context.upscaled_width == context.frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == quantization.base
+        && quantization.base != 0
+        && !quantization.using_matrix
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.transform_mode == 1
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && context
+            .frame_tools
+            .cdef
+            .is_some_and(|_| bounded_i444_cdef_supported(context)))
     .then_some(geometry)
 }
 
