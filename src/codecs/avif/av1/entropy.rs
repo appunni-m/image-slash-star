@@ -5063,9 +5063,16 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_intra_reconstruction =
         complete_monochrome_lossy_intra_reconstruction_context(context);
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
-    let bounded_i444_inter_geometry = inter_context.and_then(|inter_context| {
-        bounded_i444_inter_reconstruction_geometry(context, inter_context)
+    let generic_i444_inter = inter_context.is_some_and(|inter_context| {
+        complete_inter_444_reconstruction_context(context, inter_context)
     });
+    let bounded_i444_inter_geometry = if generic_i444_inter {
+        None
+    } else {
+        inter_context.and_then(|inter_context| {
+            bounded_i444_inter_reconstruction_geometry(context, inter_context)
+        })
+    };
     let bounded_i444_inter = bounded_i444_inter_geometry.is_some();
     let bounded_i444_restoration = inter_context.is_some_and(|inter_context| {
         complete_bounded_i444_restoration_inter_reconstruction_context(context, inter_context)
@@ -5273,6 +5280,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context)
             || complete_inter_422_reconstruction_context(context, inter_context)
+            || generic_i444_inter
             || complete_high_depth_inter_reconstruction_context(context, inter_context)
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
@@ -6263,6 +6271,55 @@ fn complete_inter_422_reconstruction_context(
     !context.intra_frame
         && context.bit_depth == 8
         && context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.single_tile
+        && !context.superres_enabled
+        && context.upscaled_width == context.frame_width
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.allow_screen_content_tools
+        && !context.frame_tools.film_grain_present
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && context.frame_tools.quantization.is_some()
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && context.restoration_types == [None; 3]
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && references_match
+}
+
+/// Narrow generic 8-bit 4:4:4 inter profile.  Full-resolution chroma shares
+/// the luma extent, so the shared single-transform guard proves all three
+/// planes together.  Compound, inter-intra, and OBMC syntax remain enabled;
+/// frame-level postfilters and film grain stay closed until their broad I444
+/// geometry classes have independent composition evidence.
+fn complete_inter_444_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == 8
+            && reference.surface.layout == PixelLayout::I444
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    !context.intra_frame
+        && context.bit_depth == 8
+        && !context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
         && context.single_tile
