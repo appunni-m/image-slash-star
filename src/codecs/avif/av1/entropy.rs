@@ -6231,9 +6231,10 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && matches!(context.level, 0 | 1)
 }
 
-/// Exact high-depth 4:2:0/4:2:2 inter tranche admitted by the depth-parametric
-/// motion-compensation core. Single-reference inter-intra is materialized for
-/// both layouts; bounded 8-bit I422 remains on its separate closed predicates.
+/// Exact high-depth 4:2:0/4:2:2/4:4:4 inter tranche admitted by the
+/// depth-parametric motion-compensation core. Single-reference inter-intra is
+/// materialized for all three layouts; bounded 8-bit I422/I444 remains on its
+/// separate closed predicates.
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms
 /// and a closed tool profile until the remaining AV1 syntax families publish
@@ -6256,15 +6257,17 @@ fn complete_high_depth_inter_reconstruction_context(
 ) -> bool {
     let i420 = context.subsampling_x && context.subsampling_y;
     let i422 = context.subsampling_x && !context.subsampling_y;
+    let i444 = !context.subsampling_x && !context.subsampling_y;
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.depth.bits() == context.bit_depth
             && (reference.surface.layout == PixelLayout::I420 && i420
-                || reference.surface.layout == PixelLayout::I422 && i422)
+                || reference.surface.layout == PixelLayout::I422 && i422
+                || reference.surface.layout == PixelLayout::I444 && i444)
             && !reference.scale.scaled
     });
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
-        && (i420 || i422)
+        && (i420 || i422 || i444)
         && !context.superres_enabled
         && context.upscaled_width == context.frame_width
         && !context.monochrome
@@ -6283,6 +6286,10 @@ fn complete_high_depth_inter_reconstruction_context(
         && !inter_context.reference_mode_select
         && no_unsupported_film_grain(context)
         && !inter_context.use_ref_frame_mvs
+        // Keep this new full-resolution class translation-only until its
+        // separate OBMC/warped-motion evidence is complete. Existing
+        // high-depth I420/I422 OBMC handling remains available.
+        && (!i444 || !inter_context.motion_mode_switchable)
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && context.block_x == 0
