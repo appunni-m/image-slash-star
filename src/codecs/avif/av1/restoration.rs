@@ -69,6 +69,29 @@ pub(super) fn restore_i420_leaf(
     restore_leaf_with_dimensions(leaf, plan, depth, dimensions)
 }
 
+/// Apply the bounded single-unit Wiener/SGR plan to an I422 leaf.
+///
+/// Horizontal subsampling halves the chroma width, while the vertical extent
+/// remains full-height. The caller proves the one-unit/single-stripe profile;
+/// this boundary still revalidates the exact plane buffers before mutation.
+pub(super) fn restore_i422_leaf(
+    leaf: FirstLeaf,
+    plan: Plan,
+    depth: SampleDepth,
+) -> Av1Result<FirstLeaf> {
+    let chroma_width = leaf
+        .width
+        .checked_add(1)
+        .ok_or_else(|| malformed("restoration chroma width overflows"))?
+        / 2;
+    let dimensions = [
+        (leaf.width, leaf.height),
+        (chroma_width, leaf.height),
+        (chroma_width, leaf.height),
+    ];
+    restore_leaf_with_dimensions(leaf, plan, depth, dimensions)
+}
+
 /// Apply the bounded single-unit restoration plan to a full-resolution I444
 /// leaf. Unlike 4:2:0, all three planes retain the visible frame dimensions.
 pub(super) fn restore_i444_leaf(

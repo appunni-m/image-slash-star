@@ -2140,6 +2140,7 @@ fn validate_tile_entropy_prefixes(
                 let full_resolution =
                     !reconstruction.subsampling_x && !reconstruction.subsampling_y;
                 let subsampled_420 = reconstruction.subsampling_x && reconstruction.subsampling_y;
+                let subsampled_422 = reconstruction.subsampling_x && !reconstruction.subsampling_y;
                 let leaf = reconstruction.into_filtered_leaf()?;
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
@@ -2162,6 +2163,8 @@ fn validate_tile_entropy_prefixes(
                         restoration::restore_i444_leaf(leaf, plan, depth)?
                     } else if subsampled_420 {
                         restoration::restore_i420_leaf(leaf, plan, depth)?
+                    } else if subsampled_422 {
+                        restoration::restore_i422_leaf(leaf, plan, depth)?
                     } else {
                         return Err(malformed(
                             "restoration carries an unsupported chroma sampling",
