@@ -48440,8 +48440,8 @@ pub(super) enum PreparedCompound {
 /// completed block is published to [`TileState`].  Keeping the edge arrays in
 /// a copy-only carrier lets the block decoder consume the existing tile
 /// neighbors without borrowing or mutating the external state during
-/// reconstruction.  The arrays are intentionally bounded to the largest AV1
-/// transform context (64 pixels = 16 four-pixel cells); the remaining space
+/// reconstruction. The arrays are intentionally bounded to the largest
+/// admitted 128-pixel block edge (32 four-pixel cells); the remaining space
 /// stays neutral for exact-length slicing at each transform.
 #[derive(Clone, Copy)]
 pub(super) struct InterCoefficientContexts {
@@ -49318,11 +49318,14 @@ impl Lossy420Decoder {
         &self,
         block_size: BlockSize,
     ) -> PortableResult<InterTransformPlan> {
-        if lossless_grid_block_supported(block_size) {
+        if matches!(self.chroma_sampling, ChromaSampling::Monochrome)
+            || lossless_grid_block_supported(block_size)
+        {
             let (luma_width, luma_height) = block_size.pixel_dimensions();
             return (matches!(
                 self.chroma_sampling,
-                ChromaSampling::Subsampled420
+                ChromaSampling::Monochrome
+                    | ChromaSampling::Subsampled420
                     | ChromaSampling::Subsampled422
                     | ChromaSampling::Full
             ))
@@ -49578,7 +49581,8 @@ impl Lossy420Decoder {
         } = transform_plan
         {
             (sampling == chroma_sampling
-                && lossless_grid_block_supported(block_size)
+                && (matches!(sampling, ChromaSampling::Monochrome)
+                    || lossless_grid_block_supported(block_size))
                 && (luma_width, luma_height) == block_size.pixel_dimensions())
             .then_some(())
             .portable()?;
@@ -49617,6 +49621,13 @@ impl Lossy420Decoder {
                     ..
                 }
         );
+        let lossless_monochrome = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessGrid {
+                sampling: ChromaSampling::Monochrome,
+                ..
+            }
+        );
         let lossless_i422_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I422);
         let lossless_i444_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I444);
         let common_geometry = matches!(
@@ -49636,7 +49647,8 @@ impl Lossy420Decoder {
             && if lossless_grid {
                 matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled420
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                         | ChromaSampling::Full
                 ) && tools.sample_depth == SampleDepth::EIGHT
@@ -49709,9 +49721,11 @@ impl Lossy420Decoder {
             visible_width,
             visible_height,
         )?;
+        let plane_count = if monochrome { 1 } else { 3 };
         if lossless_grid {
             [y_geometry, u_geometry, v_geometry]
                 .into_iter()
+                .take(plane_count)
                 .all(|(coded_width, coded_height, active_width, active_height)| {
                     coded_width != 0
                         && coded_height != 0
@@ -49755,12 +49769,14 @@ impl Lossy420Decoder {
             (exact_geometry
                 && matches!(
                     chroma_sampling,
-                    ChromaSampling::Full
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Full
                         | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                 )
                 && (!split_b8 || tools.sample_depth == SampleDepth::EIGHT)
                 && (!lossless_grid
+                    || lossless_monochrome
                     || (lossless_i422
                         && matches!(chroma_sampling, ChromaSampling::Subsampled422))
                     || (lossless_i444 && matches!(chroma_sampling, ChromaSampling::Full))
@@ -49899,7 +49915,6 @@ impl Lossy420Decoder {
             chroma_tx.unwrap_or(luma_tx_size),
         ];
         let geometries = [y_geometry, u_geometry, v_geometry];
-        let plane_count = if monochrome { 1 } else { 3 };
         for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
@@ -50294,7 +50309,14 @@ impl Lossy420Decoder {
         let [y, u, v] = rasters;
         let y = y.into_visible_plane()?;
         let planes = if monochrome {
-            [y.clone(), y.clone(), y]
+            if lossless_grid {
+                let empty_plane = ReconstructedPlane {
+                    samples: Vec::new(),
+                };
+                [y, empty_plane.clone(), empty_plane]
+            } else {
+                [y.clone(), y.clone(), y]
+            }
         } else {
             [y, u.into_visible_plane()?, v.into_visible_plane()?]
         };

@@ -3300,10 +3300,13 @@ fn inter_lossless_grid_geometry_supported(
                 | BlockSize::B32x64
                 | BlockSize::B64x32
                 | BlockSize::B64x64
+                | BlockSize::B64x128
+                | BlockSize::B128x64
+                | BlockSize::B128x128
         )
         && matches!(
             layout,
-            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
@@ -4370,13 +4373,15 @@ fn decode_inter_transform_size(
             )
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && eight_bit
         {
             let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
             if exact_geometry {
-                if inter_lossless_grid_block_supported(block_size) {
+                if layout == PixelLayout::Monochrome
+                    || inter_lossless_grid_block_supported(block_size)
+                {
                     let (luma_width, luma_height) = block_size.pixel_dimensions();
                     return Ok(InterTransformPlan::LosslessGrid {
                         luma_width,
@@ -5642,6 +5647,9 @@ pub(super) fn validate_complete_lossy_420_partition(
     let generic_high_depth_inter = inter_context.is_some_and(|inter_context| {
         complete_high_depth_inter_reconstruction_context(context, inter_context)
     });
+    let lossless_monochrome_inter = inter_context.is_some_and(|inter_context| {
+        complete_lossless_inter_monochrome_reconstruction_context(context, inter_context)
+    });
     let generic_high_depth_i444_inter = generic_high_depth_inter
         && !context.monochrome
         && !context.subsampling_x
@@ -5859,6 +5867,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     };
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
         complete_lossless_inter_color_reconstruction_context(context, inter_context)
+            || lossless_monochrome_inter
             || complete_inter_420_reconstruction_context(context)
             || complete_inter_422_reconstruction_context(context, inter_context)
             || generic_i444_inter
@@ -10551,6 +10560,96 @@ fn complete_lossless_inter_color_reconstruction_context(
         && !context.allow_intrabc
         && !context.skip_mode_enabled
         && inter_context.skip_mode_references.is_none()
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && segmentation_closed
+        && dimensions_supported
+        && references_match
+}
+
+/// Admit the bounded monochrome all-lossless inter profile. The shared block
+/// walker visits only plane zero for this layout; U/V remain absent on the
+/// retained frame surface rather than being synthesized from luma. Keep the
+/// profile single-tile so the reference dimensions compared here are frame
+/// dimensions, not tile-local extents.
+fn complete_lossless_inter_monochrome_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == 0
+                && segment.lossless
+        });
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let dimensions_supported = context.frame_width != 0
+        && context.frame_height != 0
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.upscaled_width == context.frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.single_tile
+        && context.tile_origin_b4_x == 0
+        && context.tile_origin_b4_y == 0
+        && context.block_width == context.frame_block_width
+        && context.block_height == context.frame_block_height
+        && matches!(context.level, 0 | 1);
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == 8
+            && reference.surface.layout == PixelLayout::Monochrome
+            && reference.surface.coded_width == context.frame_width
+            && reference.surface.upscaled_width == context.frame_width
+            && reference.surface.frame_height == context.frame_height
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    !context.intra_frame
+        && context.monochrome
+        && context.all_lossless
+        && context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == 0
+        && context.frame_tools.transform_mode == 0
+        && context.bit_depth == 8
+        && quantization.base == 0
+        && quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == 0
+        && quantization.u_ac_delta == 0
+        && quantization.v_dc_delta == 0
+        && quantization.v_ac_delta == 0
+        && !quantization.using_matrix
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.superres_enabled
+        && !context.allow_intrabc
+        && !context.skip_mode_enabled
+        && inter_context.skip_mode_references.is_none()
+        && !inter_context.allow_warped_motion
+        && !inter_context.enable_interintra_compound
         && context.frame_tools.cdef.is_none()
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
