@@ -50298,6 +50298,13 @@ impl Lossy420Decoder {
         let split_b64 = matches!(transform_plan, InterTransformPlan::SplitB64);
         let split_b64_topology =
             matches!(transform_plan, InterTransformPlan::SplitB64Topology { .. });
+        let split_i444_small_chroma_terminal = chroma_sampling == ChromaSampling::Full
+            && matches!(
+                transform_plan,
+                InterTransformPlan::SplitB8x16
+                    | InterTransformPlan::SplitB8x32
+                    | InterTransformPlan::SplitB16x32
+            );
         let split_vertical_i422_tx4_chroma_grid = chroma_sampling == ChromaSampling::Subsampled422
             && matches!(
                 (block_size, &transform_plan),
@@ -50577,6 +50584,7 @@ impl Lossy420Decoder {
                 (block_size, chroma_sampling),
                 (BlockSize::B16x32, ChromaSampling::Subsampled420)
                     | (BlockSize::B16x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x32, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -50592,6 +50600,7 @@ impl Lossy420Decoder {
                     | (BlockSize::B8x16, ChromaSampling::Subsampled422)
                     | (BlockSize::B16x8, ChromaSampling::Subsampled420)
                     | (BlockSize::B16x8, ChromaSampling::Subsampled422)
+                    | (BlockSize::B8x16, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -50607,6 +50616,7 @@ impl Lossy420Decoder {
                     | (BlockSize::B8x32, ChromaSampling::Subsampled422)
                     | (BlockSize::B32x8, ChromaSampling::Subsampled420)
                     | (BlockSize::B32x8, ChromaSampling::Subsampled422)
+                    | (BlockSize::B8x32, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -51981,6 +51991,8 @@ impl Lossy420Decoder {
                 } else if split_b16 && plane != 0 {
                     inherited_inter_b16_chroma_transform(chroma_sampling, tx_size, luma_transform)?
                 } else if lossy_grid {
+                    inherited_inter_chroma_transform(tx_size, luma_transform)
+                } else if split_i444_small_chroma_terminal && plane != 0 {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else {
                     luma_transform

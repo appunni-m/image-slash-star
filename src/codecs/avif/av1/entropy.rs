@@ -5035,7 +5035,10 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB8);
         }
         if block_size == BlockSize::B8x16
-            && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 8
             && visible_height == 16
             && split_b8_rect_supported
@@ -5121,7 +5124,10 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB16x8);
         }
         if block_size == BlockSize::B8x32
-            && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 8
             && visible_height == 32
             && split_b8_wide_supported
@@ -5489,7 +5495,10 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB32);
         }
         if block_size == BlockSize::B16x32
-            && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 16
             && visible_height == 32
             && split_b16x32_supported
