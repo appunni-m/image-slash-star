@@ -48476,6 +48476,12 @@ enum InterTransformPlan {
     LosslessB16I420,
     LosslessB16I422,
     LosslessB16I444,
+    LosslessB8x16I420,
+    LosslessB8x16I422,
+    LosslessB8x16I444,
+    LosslessB16x8I420,
+    LosslessB16x8I422,
+    LosslessB16x8I444,
 }
 
 impl BlockSegmentState {
@@ -49277,6 +49283,20 @@ impl Lossy420Decoder {
                 Ok(InterTransformPlan::LosslessB16I422)
             }
             (BlockSize::B16x16, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB16I444),
+            (BlockSize::B8x16, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB8x16I420)
+            }
+            (BlockSize::B8x16, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB8x16I422)
+            }
+            (BlockSize::B8x16, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB8x16I444),
+            (BlockSize::B16x8, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB16x8I420)
+            }
+            (BlockSize::B16x8, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB16x8I422)
+            }
+            (BlockSize::B16x8, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB16x8I444),
             _ => Err(PortableUnavailable),
         }
     }
@@ -49415,14 +49435,29 @@ impl Lossy420Decoder {
                 | InterTransformPlan::LosslessB16I422
                 | InterTransformPlan::LosslessB16I444
         );
-        let lossless_grid = lossless_b8 || lossless_b16;
+        let lossless_rect = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessB8x16I420
+                | InterTransformPlan::LosslessB8x16I422
+                | InterTransformPlan::LosslessB8x16I444
+                | InterTransformPlan::LosslessB16x8I420
+                | InterTransformPlan::LosslessB16x8I422
+                | InterTransformPlan::LosslessB16x8I444
+        );
+        let lossless_grid = lossless_b8 || lossless_b16 || lossless_rect;
         let lossless_i422 = matches!(
             transform_plan,
-            InterTransformPlan::LosslessB8I422 | InterTransformPlan::LosslessB16I422
+            InterTransformPlan::LosslessB8I422
+                | InterTransformPlan::LosslessB16I422
+                | InterTransformPlan::LosslessB8x16I422
+                | InterTransformPlan::LosslessB16x8I422
         );
         let lossless_i444 = matches!(
             transform_plan,
-            InterTransformPlan::LosslessB8I444 | InterTransformPlan::LosslessB16I444
+            InterTransformPlan::LosslessB8I444
+                | InterTransformPlan::LosslessB16I444
+                | InterTransformPlan::LosslessB8x16I444
+                | InterTransformPlan::LosslessB16x8I444
         );
         let lossless_i422_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I422);
         let lossless_i444_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I444);
@@ -49447,6 +49482,7 @@ impl Lossy420Decoder {
                         | ChromaSampling::Subsampled422
                         | ChromaSampling::Full
                 ) && tools.sample_depth == SampleDepth::EIGHT
+                    && tools.transform_mode == 0
                     && quantization.segment_lossless
                     && quantization.qindex == 0
                     && quantization.segment_qindex == 0
@@ -49512,8 +49548,13 @@ impl Lossy420Decoder {
                 block_size == BlockSize::B8x8 && visible_width == 8 && visible_height == 8;
             let exact_b16 =
                 block_size == BlockSize::B16x16 && visible_width == 16 && visible_height == 16;
-            let exact_geometry =
-                (split_b8 || lossless_b8) && exact_b8 || (lossless_b16 && exact_b16);
+            let exact_b8x16 =
+                block_size == BlockSize::B8x16 && visible_width == 8 && visible_height == 16;
+            let exact_b16x8 =
+                block_size == BlockSize::B16x8 && visible_width == 16 && visible_height == 8;
+            let exact_geometry = ((split_b8 || lossless_b8) && exact_b8)
+                || (lossless_b16 && exact_b16)
+                || (lossless_rect && (exact_b8x16 || exact_b16x8));
             (exact_geometry
                 && matches!(
                     chroma_sampling,
@@ -49550,6 +49591,16 @@ impl Lossy420Decoder {
             | InterTransformPlan::LosslessB16I444 => {
                 (TxSize::Tx16x16, false, Av1TransformType::DctDct)
             }
+            InterTransformPlan::LosslessB8x16I420
+            | InterTransformPlan::LosslessB8x16I422
+            | InterTransformPlan::LosslessB8x16I444 => {
+                (TxSize::Tx8x16, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LosslessB16x8I420
+            | InterTransformPlan::LosslessB16x8I422
+            | InterTransformPlan::LosslessB16x8I444 => {
+                (TxSize::Tx16x8, false, Av1TransformType::DctDct)
+            }
         };
         let expected_luma = luma_tx_size;
         let (tx_luma_width, tx_luma_height) = expected_luma.pixel_dimensions();
@@ -49570,13 +49621,16 @@ impl Lossy420Decoder {
         };
         if let Some(chroma_tx) = chroma_tx {
             let (tx_chroma_width, tx_chroma_height) = chroma_tx.pixel_dimensions();
-            (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
-                && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)?
-                    == tx_chroma_height
-                && u_geometry.0 == v_geometry.0
-                && u_geometry.1 == v_geometry.1)
+            (u_geometry.0 == v_geometry.0 && u_geometry.1 == v_geometry.1)
                 .then_some(())
                 .portable()?;
+            if !lossless_grid {
+                (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
+                    && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)?
+                        == tx_chroma_height)
+                    .then_some(())
+                    .portable()?;
+            }
         }
 
         let mut rasters = [
@@ -49618,7 +49672,14 @@ impl Lossy420Decoder {
         for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
-            let (tx_width, tx_height) = tx_size.pixel_dimensions();
+            let (tx_width, tx_height) = if lossless_rect && plane != 0 {
+                (
+                    u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
+                    u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
+                )
+            } else {
+                tx_size.pixel_dimensions()
+            };
             let tx_width = usize::try_from(tx_width).map_err(|_| PortableUnavailable)?;
             let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
             let plane_subsampling = chroma_sampling.plane_subsampling(plane);
@@ -49809,8 +49870,8 @@ impl Lossy420Decoder {
                     obmc,
                 )?;
             }
-            if lossless_b16 {
-                let grid_contexts = self.decode_inter_lossless_plane_b16(
+            if lossless_b16 || lossless_rect {
+                let grid_contexts = self.decode_inter_lossless_plane_grid(
                     decoder,
                     &prediction,
                     &mut rasters[plane],
@@ -50196,6 +50257,7 @@ impl Lossy420Decoder {
             && raster.active_height == 8
             && matches!(plane, 0..=2)
             && tools.sample_depth == SampleDepth::EIGHT
+            && tools.transform_mode == 0
             && quantization.qindex == 0
             && quantization.segment_qindex == 0)
             .then_some(())
@@ -50282,9 +50344,9 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
-        reason = "the bounded B16 lossless grid keeps plane geometry, entropy edges, quantization, and prediction explicit"
+        reason = "the bounded rectangular lossless grid keeps plane geometry, entropy edges, quantization, and prediction explicit"
     )]
-    fn decode_inter_lossless_plane_b16(
+    fn decode_inter_lossless_plane_grid(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
         prediction: &[u16],
@@ -50306,6 +50368,7 @@ impl Lossy420Decoder {
             && raster.active_height == coded_height
             && matches!(plane, 0..=2)
             && tools.sample_depth == SampleDepth::EIGHT
+            && tools.transform_mode == 0
             && quantization.qindex == 0
             && quantization.segment_qindex == 0
             && quantization.y_dc_delta == 0
