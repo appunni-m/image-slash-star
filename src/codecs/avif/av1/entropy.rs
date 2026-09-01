@@ -4207,6 +4207,7 @@ enum InterTransformPlan {
     Single(TxSize),
     SplitB8,
     LosslessB8I420,
+    LosslessB8I422,
 }
 
 fn decode_inter_transform_size(
@@ -4225,16 +4226,21 @@ fn decode_inter_transform_size(
 ) -> super::block::PortableResult<InterTransformPlan> {
     let max_tx = block_size.maximum_luma_tx();
     if transform_mode == 0 {
-        // An all-lossless B8x8 I420 leaf is a fixed four-child TX4x4 grid;
+        // An all-lossless subsampled B8x8 leaf is a fixed TX4x4 grid;
         // mode 0 carries no transform-partition sentence. Other mode-0
         // blocks retain the existing single-terminal admission checks.
         if segment_lossless
             && block_size == BlockSize::B8x8
-            && layout == PixelLayout::I420
+            && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
             && visible_width == 8
             && visible_height == 8
+            && eight_bit
         {
-            return Ok(InterTransformPlan::LosslessB8I420);
+            return Ok(if layout == PixelLayout::I420 {
+                InterTransformPlan::LosslessB8I420
+            } else {
+                InterTransformPlan::LosslessB8I422
+            });
         }
         return Ok(InterTransformPlan::Single(TxSize::Tx4x4));
     }
@@ -4929,7 +4935,9 @@ fn decode_inter_leaf(
     let (tx_size, transform_split, lossless_transform) = match transform_plan {
         InterTransformPlan::Single(tx_size) => (tx_size, false, false),
         InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false),
-        InterTransformPlan::LosslessB8I420 => (TxSize::Tx8x8, false, true),
+        InterTransformPlan::LosslessB8I420 | InterTransformPlan::LosslessB8I422 => {
+            (TxSize::Tx8x8, false, true)
+        }
     };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
