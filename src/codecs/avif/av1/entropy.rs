@@ -6934,6 +6934,11 @@ fn complete_bounded_i420_cdef_inter_reconstruction_context(
 /// Common frame-level proof for the first bounded I422 CDEF tranche. The
 /// luma plane remains 16x16 while horizontally subsampled chroma is 8x16;
 /// the checked CDEF raster already owns that independent plane geometry.
+/// Screen-enabled I422 intra leaves may use depth-aware Y16x16/U/V8x16 palette
+/// prediction; inter leaves use parsed force-integer MV precision. CDEF
+/// consumes completed samples with the existing horizontal-subsampling
+/// direction remap; intraBC and intra/palette blocks within inter frames remain
+/// outside this profile.
 fn bounded_i422_cdef_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -6956,7 +6961,6 @@ fn bounded_i422_cdef_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
