@@ -3316,6 +3316,28 @@ fn inter_lossy_wide_chunk_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact mode-2 64px-root geometry for one-axis 128px blocks. Each admitted
+/// block owns two independent TX64x64 roots; the square 128px case remains on
+/// the existing mode-1 chunk path until its four-root syntax is evidenced.
+fn inter_lossy_wide_mode2_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && layout == PixelLayout::I420
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && transform_mode == 2
+        && quantization.segment_qindex > 0
+        && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 /// A square 64px lossy leaf is either a single TX64X64 terminal or the exact
 /// mode-2 depth-one TX64→four-TX32 split admitted by `decode_inter_transform_size`.
 /// Keep both paths separate from the 128px chunk compositor so an unsupported
@@ -4492,6 +4514,11 @@ enum InterTransformPlan {
         luma_height: u32,
         layout: PixelLayout,
     },
+    LossyWideMode2Unsplit {
+        luma_width: u32,
+        luma_height: u32,
+        layout: PixelLayout,
+    },
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
@@ -4549,6 +4576,7 @@ fn decode_inter_transform_size(
     lossless_grid_geometry: bool,
     lossy_grid_geometry: bool,
     lossy_wide_chunk_geometry: bool,
+    lossy_wide_mode2_geometry: bool,
     block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
@@ -4651,6 +4679,63 @@ fn decode_inter_transform_size(
         if exact_geometry {
             let (luma_width, luma_height) = block_size.pixel_dimensions();
             return Ok(InterTransformPlan::LossyWideChunked {
+                luma_width,
+                luma_height,
+                layout,
+            });
+        }
+    }
+    if lossy_wide_mode2_geometry && transform_mode == 2 {
+        let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
+        if exact_geometry && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64) {
+            // Mode 2 signals one TX64 root sentence per maximum-transform
+            // region. The bounded plan admits only two unsplit roots; a
+            // split root would require a recursive per-chunk compositor.
+            if block_skipped {
+                let (luma_width, luma_height) = block_size.pixel_dimensions();
+                return Ok(InterTransformPlan::LossyWideMode2Unsplit {
+                    luma_width,
+                    luma_height,
+                    layout,
+                });
+            }
+            let root_offsets = match block_size {
+                BlockSize::B64x128 => [(0_u32, 0_u32), (0, 16)],
+                BlockSize::B128x64 => [(0_u32, 0_u32), (16, 0)],
+                _ => return Err(super::block::PortableUnavailable),
+            };
+            for (offset_x, offset_y) in root_offsets {
+                let child_x = node
+                    .x
+                    .checked_add(offset_x)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_y = node
+                    .y
+                    .checked_add(offset_y)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let above_small = if offset_y == 0 {
+                    child_y
+                        .checked_sub(1)
+                        .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                        .is_some_and(|(tx_width, _)| tx_width < 4)
+                } else {
+                    false
+                };
+                let left_small = if offset_x == 0 {
+                    child_x
+                        .checked_sub(1)
+                        .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                        .is_some_and(|(_, tx_height)| tx_height < 4)
+                } else {
+                    false
+                };
+                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[0][context].0) {
+                    return Err(super::block::PortableUnavailable);
+                }
+            }
+            let (luma_width, luma_height) = block_size.pixel_dimensions();
+            return Ok(InterTransformPlan::LossyWideMode2Unsplit {
                 luma_width,
                 luma_height,
                 layout,
@@ -5395,6 +5480,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_wide_mode2_geometry = inter_lossy_wide_mode2_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let lossy_square64_geometry = inter_lossy_square64_geometry_supported(
         node.block_size,
         layout,
@@ -5442,7 +5536,8 @@ fn decode_inter_leaf(
             || lossy_square64_geometry
             || lossy_split64_geometry
             || lossy_wide_chunk_geometry
-            || lossy_thin64_split_geometry;
+            || lossy_thin64_split_geometry
+            || lossy_wide_mode2_geometry;
         if !wide_lossy_geometry
             && (!(minimum..=maximum).contains(&block_width)
                 || !(minimum..=maximum).contains(&block_height))
@@ -5460,6 +5555,7 @@ fn decode_inter_leaf(
         && !lossless_grid_geometry
         && !lossy_grid_geometry
         && !lossy_wide_chunk_geometry
+        && !lossy_wide_mode2_geometry
         && !lossy_split64_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
@@ -6068,6 +6164,7 @@ fn decode_inter_leaf(
         lossless_grid_geometry,
         lossy_grid_geometry,
         lossy_wide_chunk_geometry,
+        lossy_wide_mode2_geometry,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
@@ -6104,6 +6201,15 @@ fn decode_inter_leaf(
                 (TxSize::Tx4x4, false, false, true, false)
             }
             InterTransformPlan::LossyWideChunked {
+                layout: plan_layout,
+                ..
+            } => {
+                if plan_layout != layout {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (TxSize::Tx64x64, false, false, false, true)
+            }
+            InterTransformPlan::LossyWideMode2Unsplit {
                 layout: plan_layout,
                 ..
             } => {
@@ -6165,6 +6271,11 @@ fn decode_inter_leaf(
             ..
         } => (luma_width, luma_height),
         InterTransformPlan::LossyWideChunked {
+            luma_width,
+            luma_height,
+            ..
+        } => (luma_width, luma_height),
+        InterTransformPlan::LossyWideMode2Unsplit {
             luma_width,
             luma_height,
             ..
@@ -6443,6 +6554,10 @@ fn decode_inter_leaf(
                 filters,
                 block_skipped,
                 coefficient_contexts,
+                matches!(
+                    transform_plan,
+                    InterTransformPlan::LossyWideMode2Unsplit { .. }
+                ),
             )
         } else {
             block_decoder.decode_inter_translation_lossy_wide_chunked(
@@ -6460,6 +6575,10 @@ fn decode_inter_leaf(
                 motions[0],
                 filters,
                 coefficient_contexts,
+                matches!(
+                    transform_plan,
+                    InterTransformPlan::LossyWideMode2Unsplit { .. }
+                ),
             )
         }
     } else if lossy_transform_grid {

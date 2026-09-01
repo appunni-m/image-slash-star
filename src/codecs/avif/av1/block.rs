@@ -48526,6 +48526,11 @@ enum InterTransformPlan {
         luma_height: u32,
         sampling: ChromaSampling,
     },
+    LossyWideMode2Unsplit {
+        luma_width: u32,
+        luma_height: u32,
+        sampling: ChromaSampling,
+    },
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
@@ -49646,8 +49651,22 @@ impl Lossy420Decoder {
         motion: MotionVector,
         filters: [InterpolationFilter; 2],
         coefficient_contexts: InterCoefficientContexts,
+        mode2: bool,
     ) -> PortableResult<FirstLeaf> {
         let (luma_width, luma_height) = block_size.pixel_dimensions();
+        let transform_plan = if mode2 {
+            InterTransformPlan::LossyWideMode2Unsplit {
+                luma_width,
+                luma_height,
+                sampling: ChromaSampling::Subsampled420,
+            }
+        } else {
+            InterTransformPlan::LossyWideChunked {
+                luma_width,
+                luma_height,
+                sampling: ChromaSampling::Subsampled420,
+            }
+        };
         self.decode_inter_translation_impl(
             decoder,
             block_size,
@@ -49666,11 +49685,7 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             block_skipped,
-            InterTransformPlan::LossyWideChunked {
-                luma_width,
-                luma_height,
-                sampling: ChromaSampling::Subsampled420,
-            },
+            transform_plan,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -49698,8 +49713,22 @@ impl Lossy420Decoder {
         filters: [InterpolationFilter; 2],
         block_skipped: bool,
         coefficient_contexts: InterCoefficientContexts,
+        mode2: bool,
     ) -> PortableResult<FirstLeaf> {
         let (luma_width, luma_height) = block_size.pixel_dimensions();
+        let transform_plan = if mode2 {
+            InterTransformPlan::LossyWideMode2Unsplit {
+                luma_width,
+                luma_height,
+                sampling: ChromaSampling::Subsampled420,
+            }
+        } else {
+            InterTransformPlan::LossyWideChunked {
+                luma_width,
+                luma_height,
+                sampling: ChromaSampling::Subsampled420,
+            }
+        };
         self.decode_inter_translation_impl(
             decoder,
             block_size,
@@ -49718,11 +49747,7 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             block_skipped,
-            InterTransformPlan::LossyWideChunked {
-                luma_width,
-                luma_height,
-                sampling: ChromaSampling::Subsampled420,
-            },
+            transform_plan,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -49984,7 +50009,15 @@ impl Lossy420Decoder {
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
-        let lossy_wide = matches!(transform_plan, InterTransformPlan::LossyWideChunked { .. });
+        let lossy_wide = matches!(
+            transform_plan,
+            InterTransformPlan::LossyWideChunked { .. }
+                | InterTransformPlan::LossyWideMode2Unsplit { .. }
+        );
+        let lossy_wide_mode2 = matches!(
+            transform_plan,
+            InterTransformPlan::LossyWideMode2Unsplit { .. }
+        );
         let split_b8x16 = matches!(transform_plan, InterTransformPlan::SplitB8x16);
         let split_b16x8 = matches!(transform_plan, InterTransformPlan::SplitB16x8);
         let split_b8x32 = matches!(transform_plan, InterTransformPlan::SplitB8x32);
@@ -50090,6 +50123,24 @@ impl Lossy420Decoder {
                 && tools.transform_mode == 1
                 && !quantization.segment_lossless
                 && lossy_wide_chunked_block_supported(block_size)
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+        if let InterTransformPlan::LossyWideMode2Unsplit {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (sampling == ChromaSampling::Subsampled420
+                && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && tools.transform_mode == 2
+                && !quantization.segment_lossless
+                && quantization.segment_qindex > 0
+                && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
                 && (luma_width, luma_height) == block_size.pixel_dimensions())
             .then_some(())
             .portable()?;
@@ -50543,6 +50594,9 @@ impl Lossy420Decoder {
                 (TxSize::Tx4x4, true, Av1TransformType::DctDct)
             }
             InterTransformPlan::LossyWideChunked { .. } => {
+                (TxSize::Tx64x64, true, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LossyWideMode2Unsplit { .. } => {
                 (TxSize::Tx64x64, true, Av1TransformType::DctDct)
             }
             InterTransformPlan::LosslessB8I420
@@ -51392,6 +51446,7 @@ impl Lossy420Decoder {
                 quantization,
                 tools,
                 coefficient_contexts,
+                lossy_wide_mode2,
             )?;
             for plane in 0..3 {
                 contexts[plane] = grid_contexts[plane].bottom_right;
@@ -54044,6 +54099,7 @@ impl Lossy420Decoder {
         quantization: LossyQuantization,
         tools: BlockTools,
         coefficient_contexts: InterCoefficientContexts,
+        mode2: bool,
     ) -> PortableResult<[LosslessGridContexts; 3]> {
         let (luma_width, luma_height) = (rasters[0].coded_width, rasters[0].coded_height);
         (matches!(
@@ -54051,7 +54107,7 @@ impl Lossy420Decoder {
             (64, 128) | (128, 64) | (128, 128)
         ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.sample_depth == quantization.sample_depth
-            && tools.transform_mode == 1
+            && tools.transform_mode == if mode2 { 2 } else { 1 }
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
