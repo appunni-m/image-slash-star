@@ -30488,22 +30488,21 @@ fn reconstruct_leaf_with_luma_override(
                 }
             };
             if matches!(chroma_sampling, ChromaSampling::Full) {
-                let chroma = |plane: usize| {
+                let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
                     let predictor = predictors[plane + 1];
                     reconstruct_lossy_full_16x32_chroma(
                         chroma_predictor,
+                        chroma_angle,
                         [predictor; 16],
                         [predictor; 32],
-                        predictor,
+                        None,
                         false,
                         false,
+                        enable_intra_edge_filter,
                         lossy_chroma_16x32_coefficients[plane],
                     )
-                    .unwrap_or_else(|_| ReconstructedPlane {
-                        samples: vec![predictor; 512],
-                    })
                 };
-                [luma, chroma(0), chroma(1)]
+                [luma, chroma(0)?, chroma(1)?]
             } else {
                 let luma_for_chroma = luma.clone();
                 let chroma = |plane: usize, predictor: u16| match chroma_predictor {
@@ -39568,6 +39567,7 @@ fn reconstruct_following_lossy_full_horizontal_16x32_leaf(
         luma_angle,
         filter_intra_mode,
         chroma_predictor,
+        chroma_angle,
         lossy_luma_8x8_grid_split,
         lossy_luma_16x16_vertical_split,
         lossy_luma_16x32_coefficients,
@@ -39648,8 +39648,6 @@ fn reconstruct_following_lossy_full_horizontal_16x32_leaf(
             samples: prediction.to_vec(),
         }
     };
-    let luma_samples = luma.samples.clone();
-
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
         let left: [u16; 32] = if neighbor.planes[plane].samples.len() >= 512 {
             right_edge_at::<32>(&neighbor.planes[plane], 16, 32, 0)
@@ -39658,43 +39656,17 @@ fn reconstruct_following_lossy_full_horizontal_16x32_leaf(
             std::array::from_fn(|index| edge[index % 8])
         };
         let top = [left[0]; 16];
-        let prediction = match chroma_predictor {
-            ChromaPredictor::Dc => [one_sided_dc_predictor_32(left); 512],
-            ChromaPredictor::Vertical => std::array::from_fn(|index| top[index % 16]),
-            ChromaPredictor::Horizontal => std::array::from_fn(|index| left[index / 16]),
-            ChromaPredictor::Paeth => std::array::from_fn(|index| {
-                paeth_predictor(top[index % 16], left[index / 16], left[0])
-            }),
-            ChromaPredictor::Cfl { alpha_u, alpha_v } => {
-                let alpha = if plane == 1 { alpha_u } else { alpha_v };
-                let dc = one_sided_dc_predictor_32(left);
-                std::array::from_fn(|index| {
-                    reconstruct_cfl_sample(
-                        dc,
-                        alpha,
-                        i32::from(luma_samples[index]) - i32::from(dc),
-                        0,
-                    )
-                })
-            }
-            _ => [128; 512],
-        };
-
-        if let Some(coefficients) = lossy_chroma_16x32_coefficients[plane - 1] {
-            reconstruct_lossy_full_16x32_chroma(
-                chroma_predictor,
-                top,
-                left,
-                left[0],
-                false,
-                true,
-                Some(coefficients),
-            )
-        } else {
-            Ok(ReconstructedPlane {
-                samples: prediction.to_vec(),
-            })
-        }
+        reconstruct_lossy_full_16x32_chroma(
+            chroma_predictor,
+            chroma_angle,
+            top,
+            left,
+            None,
+            false,
+            true,
+            enable_intra_edge_filter,
+            lossy_chroma_16x32_coefficients[plane - 1],
+        )
     };
 
     Ok(ClosedLeaf {
@@ -39849,6 +39821,7 @@ fn reconstruct_following_lossy_full_vertical_16x32_leaf(
     above_left: &ClosedLeaf,
     above_right: &ClosedLeaf,
     left_neighbor: Option<&ClosedLeaf>,
+    chroma_top_left: [Option<u16>; 2],
     enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
     let BlockSyntax {
@@ -39856,6 +39829,7 @@ fn reconstruct_following_lossy_full_vertical_16x32_leaf(
         luma_angle,
         filter_intra_mode,
         chroma_predictor,
+        chroma_angle,
         lossy_luma_8x8_grid_split,
         lossy_luma_16x16_vertical_split,
         lossy_luma_16x32_coefficients,
@@ -39950,8 +39924,6 @@ fn reconstruct_following_lossy_full_vertical_16x32_leaf(
             samples: prediction.to_vec(),
         }
     };
-    let luma_samples = luma.samples.clone();
-
     let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
         let top: [u16; 16] = if above_left.planes[plane].samples.len() >= 512 {
             if std::ptr::eq(above_left, above_right) {
@@ -39989,43 +39961,17 @@ fn reconstruct_following_lossy_full_vertical_16x32_leaf(
                 std::array::from_fn(|index| edge[index % 8])
             }
         });
-        let prediction = match chroma_predictor {
-            ChromaPredictor::Dc => [rectangular_dc_predictor(&top, &left); 512],
-            ChromaPredictor::Vertical => std::array::from_fn(|index| top[index % 16]),
-            ChromaPredictor::Horizontal => std::array::from_fn(|index| left[index / 16]),
-            ChromaPredictor::Paeth => std::array::from_fn(|index| {
-                paeth_predictor(top[index % 16], left[index / 16], top[0])
-            }),
-            ChromaPredictor::Cfl { alpha_u, alpha_v } => {
-                let alpha = if plane == 1 { alpha_u } else { alpha_v };
-                let dc = rectangular_dc_predictor(&top, &left);
-                std::array::from_fn(|index| {
-                    reconstruct_cfl_sample(
-                        dc,
-                        alpha,
-                        i32::from(luma_samples[index]) - i32::from(dc),
-                        0,
-                    )
-                })
-            }
-            _ => [128; 512],
-        };
-
-        if let Some(coefficients) = lossy_chroma_16x32_coefficients[plane - 1] {
-            reconstruct_lossy_full_16x32_chroma(
-                chroma_predictor,
-                top,
-                left,
-                top[0],
-                true,
-                left_neighbor.is_some(),
-                Some(coefficients),
-            )
-        } else {
-            Ok(ReconstructedPlane {
-                samples: prediction.to_vec(),
-            })
-        }
+        reconstruct_lossy_full_16x32_chroma(
+            chroma_predictor,
+            chroma_angle,
+            top,
+            left,
+            chroma_top_left[plane - 1],
+            true,
+            left_neighbor.is_some(),
+            enable_intra_edge_filter,
+            lossy_chroma_16x32_coefficients[plane - 1],
+        )
     };
 
     Ok(ClosedLeaf {
@@ -41207,49 +41153,47 @@ fn reconstruct_lossy_full_16x16_chroma(
 
 fn reconstruct_lossy_full_16x32_chroma(
     predictor: ChromaPredictor,
+    angle: Option<i32>,
     top: [u16; 16],
     left: [u16; 32],
-    top_left: u16,
+    top_left: Option<u16>,
     has_top: bool,
     has_left: bool,
+    enable_intra_edge_filter: bool,
     coefficients: Option<Lossy16x32TransformCoefficients>,
 ) -> PortableResult<ReconstructedPlane> {
-    let prediction = match predictor {
-        ChromaPredictor::Dc => {
-            [if has_top && has_left {
-                rectangular_dc_predictor(&top, &left)
-            } else if has_left {
-                one_sided_dc_predictor_32(left)
-            } else {
-                one_sided_dc_predictor_16(top)
-            }; 512]
-        }
-        ChromaPredictor::Vertical => std::array::from_fn(|index| top[index % 16]),
-        ChromaPredictor::Horizontal => std::array::from_fn(|index| left[index / 16]),
-        ChromaPredictor::Paeth => std::array::from_fn(|index| {
-            paeth_predictor(top[index % 16], left[index / 16], top_left)
-        }),
-        ChromaPredictor::Diagonal45
-        | ChromaPredictor::DiagonalDownRight
-        | ChromaPredictor::Diagonal113
-        | ChromaPredictor::Diagonal157
-        | ChromaPredictor::Diagonal203
-        | ChromaPredictor::Diagonal67
-        | ChromaPredictor::Smooth
-        | ChromaPredictor::SmoothVertical
-        | ChromaPredictor::SmoothHorizontal
-        | ChromaPredictor::Cfl { .. } => return Err(PortableUnavailable),
-    };
+    if matches!(predictor, ChromaPredictor::Cfl { .. }) {
+        // CfL needs the reconstructed luma AC surface, which this legacy
+        // direct carrier does not own. Never silently map it to DC.
+        return Err(PortableUnavailable);
+    }
+    let edges = FullIntraPlaneEdges::prepare(
+        16,
+        32,
+        SampleDepth::EIGHT,
+        &top,
+        &left,
+        top_left,
+        has_top,
+        has_left,
+        false,
+        false,
+        false,
+    )?;
+    let mut prediction = [0_u16; 512];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        16,
+        32,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
     let coefficients = coefficients.unwrap_or([0_i32; 512]);
-    let residual = match chroma_transform_kind(predictor) {
-        LossyTransformKind::DctDct => transform::inverse_dct16x32(&coefficients),
-        LossyTransformKind::AdstDct => transform::inverse_adst_dct16x32(&coefficients),
-        LossyTransformKind::IdentityIdentity
-        | LossyTransformKind::IdentityDct
-        | LossyTransformKind::DctAdst
-        | LossyTransformKind::DctIdentity
-        | LossyTransformKind::AdstAdst => return Err(PortableUnavailable),
-    };
+    let residual = transform::inverse_dct16x32(&coefficients);
     Ok(reconstruct_lossy_predicted_plane(&prediction, &residual))
 }
 
@@ -58764,11 +58708,14 @@ impl Lossy420Decoder {
         if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Vertical16x32)
         {
+            let chroma_top_left =
+                std::array::from_fn(|plane| full_resolution_chroma_top_left(&neighbors, plane + 1));
             return reconstruct_following_lossy_full_vertical_16x32_leaf(
                 syntax,
                 &above_left,
                 &above_right,
                 left_neighbor.as_ref(),
+                chroma_top_left,
                 tools.enable_intra_edge_filter,
             )
             .map(visible);
