@@ -6771,15 +6771,15 @@ fn bounded_i422_restoration_common(
         && matches!(context.level, 0 | 1)
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -6912,15 +6912,15 @@ fn bounded_i420_restoration_common(
         && matches!(context.level, 0 | 1)
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7158,15 +7158,15 @@ fn bounded_i422_cdef_common(
         && matches!(context.level, 0 | 1)
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7241,15 +7241,15 @@ fn bounded_i422_rect_cdef_common(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7332,15 +7332,15 @@ fn bounded_i422_rect_restoration_common(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7437,15 +7437,15 @@ fn bounded_i420_rect_loop_common(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7525,15 +7525,15 @@ fn bounded_i420_rect_cdef_common(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7616,15 +7616,15 @@ fn bounded_i420_rect_restoration_common(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7731,15 +7731,15 @@ fn bounded_subsampled_cdef_restoration_common(
         && matches!(context.level, 0 | 1)
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -7873,15 +7873,15 @@ fn bounded_subsampled_rect_cdef_restoration_base(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -8113,15 +8113,15 @@ fn bounded_subsampled_rect_loop_postfilters_common(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -8315,15 +8315,15 @@ fn bounded_subsampled_loop_postfilters_common(
                 && matches!(context.level, 0 | 1)
                 && !context.superres_enabled
                 && !context.all_lossless
-                && !context.segmentation_enabled
-                && !context.frame_tools.segmentation.enabled
+                && postskip_altq_segmentation_supported(context)
                 && (!context.skip_mode_enabled || !context.intra_frame)
                 && !context.allow_intrabc
                 && !context.frame_tools.film_grain_present
                 && !context.frame_tools.delta_q_present
                 && !context.frame_tools.delta_lf_present
-                && !context.frame_tools.segment_lossless
-                && context.frame_tools.segment_qindex == quantization.base
+                && (!context.segmentation_enabled
+                    || (!context.frame_tools.segment_lossless
+                        && context.frame_tools.segment_qindex == quantization.base))
                 && quantization.base != 0
                 && !quantization.using_matrix
                 && !context.frame_tools.reduced_transform_set
@@ -8469,15 +8469,15 @@ fn bounded_subsampled_loop_common(
         && matches!(context.level, 0 | 1)
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
@@ -9005,15 +9005,15 @@ fn bounded_i422_rect_loop_common(
         && context.block_y == 0
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.segment_lossless
-        && context.frame_tools.segment_qindex == quantization.base
+        && (!context.segmentation_enabled
+            || (!context.frame_tools.segment_lossless
+                && context.frame_tools.segment_qindex == quantization.base))
         && quantization.base != 0
         && !quantization.using_matrix
         && !context.frame_tools.reduced_transform_set
