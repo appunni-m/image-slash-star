@@ -7480,6 +7480,8 @@ pub(super) fn validate_complete_lossy_420_partition(
     let superres_lossy_i420_intra = complete_superres_lossy_420_reconstruction_context(context);
     let lossy_i420_intra_active_restoration =
         superres_lossy_i420_intra && lossy_i420_intra_superres_restoration_supported(context);
+    let lossy_i422_intra_active_restoration =
+        lossy_i422_intra_superres_restoration_supported(context);
     let generic_i420_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context, inter_context)
     });
@@ -7809,6 +7811,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     });
     let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
         || superres_lossy_i420_intra
+        || lossy_i422_intra_active_restoration
         || monochrome_intra_reconstruction
         || (context.intra_frame && monochrome_postfilter)
         || bounded_intra_restoration
@@ -7885,6 +7888,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (monochrome_postfilter && context.restoration_types[0].is_some())
         || monochrome_lossy_active_restoration
         || lossy_i420_intra_active_restoration
+        || lossy_i422_intra_active_restoration
         || lossy_i420_active_restoration
         || lossy_i422_active_restoration
         || lossy_i444_active_restoration
@@ -14952,6 +14956,122 @@ fn complete_422_intra_reconstruction_context(context: &FirstBlockContext) -> boo
         && complete_high_depth_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && matches!(context.level, 0 | 1)
+}
+
+/// Admit active Wiener/SGR restoration for one lossy I422 intra
+/// super-resolution frame. Chroma remains full-height after resize and
+/// shares the luma restoration-unit exponent; inactive planes need no unit
+/// payload beyond the frame-level restoration header.
+fn lossy_i422_intra_superres_restoration_supported(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == quantization.base
+                && !segment.lossless
+        });
+    if !context.intra_frame
+        || !matches!(context.bit_depth, 8 | 10 | 12)
+        || !context.subsampling_x
+        || context.subsampling_y
+        || context.monochrome
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.all_lossless
+        || context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != quantization.base
+        || quantization.base == 0
+        || quantization.using_matrix
+        || context.frame_tools.reduced_transform_set
+        || context.frame_tools.transform_mode != 1
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || !context.frame_tools.restoration_present
+        || !segmentation_closed
+    {
+        return false;
+    }
+    if !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let log2_supported = match context.level {
+        0 => (7..=8).contains(&luma_log2),
+        1 => (6..=8).contains(&luma_log2),
+        _ => false,
+    };
+    if !log2_supported || chroma_log2 != luma_log2 || context.frame_height > 56 {
+        return false;
+    }
+    let Some(chroma_width) = context.upscaled_width.checked_add(1).map(|width| width / 2) else {
+        return false;
+    };
+    let dimensions = [
+        (context.upscaled_width, context.frame_height),
+        (chroma_width, context.frame_height),
+        (chroma_width, context.frame_height),
+    ];
+    let Some(unit_size) = 1_u32.checked_shl(luma_log2) else {
+        return false;
+    };
+    for (plane, restoration_type) in context.restoration_types.iter().enumerate() {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let Some(width_with_half) = dimensions[plane].0.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = dimensions[plane].1.checked_add(unit_size / 2) else {
+            return false;
+        };
+        if (width_with_half >> luma_log2).max(1) != 1 || (height_with_half >> luma_log2).max(1) != 1
+        {
+            return false;
+        }
+    }
+    true
 }
 
 fn record_cdef_metadata(
