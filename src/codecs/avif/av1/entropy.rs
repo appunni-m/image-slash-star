@@ -6445,9 +6445,10 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// materialized for all three layouts; bounded 8-bit I422/I444 remains on its
 /// separate closed predicates.
 /// The block engine retains samples in `u16`, but
-/// its inter path is intentionally limited to whole 8..=32-pixel transforms
-/// and a closed tool profile until the remaining AV1 syntax families publish
-/// their high-depth state. TX_MODE_SELECT is admitted only for an unsplit
+/// its inter path is intentionally limited to whole 8..=32-pixel transforms.
+/// Screen-content-enabled inter leaves are admitted through the parsed
+/// force-integer-MV precision path; intra blocks (including palette) and
+/// intraBC remain outside this profile. TX_MODE_SELECT is admitted only for an unsplit
 /// root transform; split trees return a transactional unsupported result.
 /// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
@@ -6503,7 +6504,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.all_lossless
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.segmentation_enabled
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && !context.frame_tools.reduced_transform_set
