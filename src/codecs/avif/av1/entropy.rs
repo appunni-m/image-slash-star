@@ -9845,7 +9845,9 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 /// quantization-matrix carriers. Bounded CDEF is admitted only on complete
 /// 8x8 luma geometry so the horizontally subsampled direction map is total.
 /// Root-scoped delta-Q is carried through the shared intra quantization path;
-/// delta-LF remains closed.
+/// delta-LF remains closed. TX_MODE_SELECT is consumed by `decode_intra_header`;
+/// `IntraTxPlan` materializes uniform depth-0..2 luma terminals while I422
+/// chroma retains its normative maximum transform.
 fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -9877,7 +9879,7 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && context.frame_tools.segment_qindex == quantization.base
         && quantization.base != 0
         && !context.frame_tools.reduced_transform_set
-        && context.frame_tools.transform_mode == 1
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
         && context.restoration_types == [None; 3]
