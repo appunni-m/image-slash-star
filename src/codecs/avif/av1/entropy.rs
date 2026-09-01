@@ -4398,6 +4398,7 @@ fn decode_inter_transform_type(
 enum InterTransformPlan {
     Single(TxSize),
     SplitB8,
+    SplitB16,
     LossyOnly4x4Grid {
         luma_width: u32,
         luma_height: u32,
@@ -4453,6 +4454,7 @@ fn decode_inter_transform_size(
     visible_height: u32,
     eight_bit: bool,
     split_depth_supported: bool,
+    split_b16_supported: bool,
     lossless_grid_geometry: bool,
     lossy_grid_geometry: bool,
     lossy_wide_chunk_geometry: bool,
@@ -4609,6 +4611,52 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx8x8
         {
             return Ok(InterTransformPlan::SplitB8);
+        }
+        if block_size == BlockSize::B16x16
+            && layout == PixelLayout::I420
+            && visible_width == 16
+            && visible_height == 16
+            && split_b16_supported
+            && max_tx == TxSize::Tx16x16
+        {
+            // A TX16 root split is followed by one TX8 split decision for
+            // each child. The bounded compositor admits only four terminal
+            // TX8 children; any deeper child tree remains transactional.
+            let child_offsets = [(0_u32, 0_u32), (2, 0), (0, 2), (2, 2)];
+            let mut deeper_split = false;
+            for (offset_x, offset_y) in child_offsets {
+                let child_x = node
+                    .x
+                    .checked_add(offset_x)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_y = node
+                    .y
+                    .checked_add(offset_y)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let above_small = if offset_y == 0 {
+                    child_y
+                        .checked_sub(1)
+                        .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                        .is_some_and(|(tx_width, _)| tx_width < 1)
+                } else {
+                    false
+                };
+                let left_small = if offset_x == 0 {
+                    child_x
+                        .checked_sub(1)
+                        .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                        .is_some_and(|(_, tx_height)| tx_height < 1)
+                } else {
+                    false
+                };
+                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                deeper_split |=
+                    decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
+            }
+            if deeper_split {
+                return Err(super::block::PortableUnavailable);
+            }
+            return Ok(InterTransformPlan::SplitB16);
         }
         return Err(super::block::PortableUnavailable);
     }
@@ -5310,6 +5358,9 @@ fn decode_inter_leaf(
         context.bit_depth == 8,
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth,
+        matches!(context.bit_depth, 8 | 10 | 12)
+            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+            && prepared_quantization.quantization.segment_qindex > 0,
         lossless_grid_geometry,
         lossy_grid_geometry,
         lossy_wide_chunk_geometry,
@@ -5325,6 +5376,7 @@ fn decode_inter_leaf(
         match transform_plan {
             InterTransformPlan::Single(tx_size) => (tx_size, false, false, false, false),
             InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false, false),
+            InterTransformPlan::SplitB16 => (TxSize::Tx16x16, true, false, false, false),
             InterTransformPlan::LossyOnly4x4Grid {
                 layout: plan_layout,
                 ..
@@ -7415,15 +7467,16 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// separate closed predicates.
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms,
-/// plus the exact B8x8 mode-2 split whose four TX4x4 luma terminals are
-/// reconstructed by the bounded child compositor below.
+/// plus exact B8x8/B16x16 mode-2 splits whose TX4x4/TX8x8 luma terminals are
+/// reconstructed by the bounded child compositors below.
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on
 /// transform modes 1/2 with fixed nearest-nearest average prediction.
 /// Update-map post-skip segmentation is admitted only for ALT_Q-only segments.
 /// TX_MODE_SELECT is admitted for an unsplit root and the exact B8x8 2x2
-/// TX4x4 split; larger split trees return a transactional unsupported result.
+/// TX4x4 or B16x16 2x2 TX8x8 split; larger split trees return a transactional
+/// unsupported result.
 /// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
