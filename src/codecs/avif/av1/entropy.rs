@@ -9251,8 +9251,10 @@ fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
 /// Exact bounded 4:4:4 intra tranche with one Wiener/SGR unit per plane.
 ///
 /// The generic intra block engine already carries full-resolution spatial
-/// edges, mode CDFs, and coefficient state for the three normalized geometries
-/// returned by `bounded_i444_geometry_for_context`. Keep this admission
+/// edges, mode CDFs, and coefficient state for the geometry-selected normalized
+/// B16 terminals returned by `bounded_i444_geometry_for_context`. Screen-enabled
+/// leaves may use depth-aware full-resolution palette prediction; restoration
+/// still requires the geometry and one-unit proofs below. Keep this admission
 /// separate from the inter restoration predicate so an intra tile never
 /// inherits reference or motion requirements.
 fn bounded_i444_intra_restoration_geometry(
@@ -9277,7 +9279,6 @@ fn bounded_i444_intra_restoration_geometry(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -9307,7 +9308,9 @@ fn bounded_i444_intra_restoration_geometry(
 /// Exact bounded high-depth 4:4:4 intra tranche with CDEF enabled and the
 /// later restoration stage disabled. The geometry is shared with the bounded
 /// inter/restoration profiles so the terminal sequence and CDEF region maps
-/// remain one-to-one for both rectangular two-leaf shapes.
+/// remain one-to-one for every geometry-selected normalized B16 terminal.
+/// Screen-enabled leaves may use depth-aware full-resolution palette
+/// prediction; CDEF consumes completed samples and intraBC remains closed.
 fn bounded_i444_intra_cdef_geometry(
     context: &FirstBlockContext,
 ) -> Option<BoundedI444InterGeometry> {
@@ -9330,7 +9333,6 @@ fn bounded_i444_intra_cdef_geometry(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -9352,8 +9354,10 @@ fn bounded_i444_intra_cdef_geometry(
 }
 
 /// Exact bounded high-depth 4:4:4 intra tranche with luma deblocking on the
-/// internal edge of a rectangular two-leaf frame. Chroma loop levels remain
-/// zero until their full-resolution edge ownership is independently proven.
+/// geometry-selected internal edges. Chroma loop levels remain zero until
+/// their full-resolution edge ownership is independently proven. Screen-
+/// enabled leaves may use depth-aware full-resolution palette prediction;
+/// inter leaves honor parsed MV precision and intraBC remains closed.
 fn bounded_i444_intra_loop_geometry(
     context: &FirstBlockContext,
 ) -> Option<BoundedI444InterGeometry> {
@@ -9376,7 +9380,6 @@ fn bounded_i444_intra_loop_geometry(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -9392,6 +9395,9 @@ fn bounded_i444_intra_loop_geometry(
         .then_some(geometry)
 }
 
+/// Bounded lossy I444 inter reconstruction. Screen-enabled leaves use the
+/// shared palette/MV paths; postfilters consume completed full-resolution
+/// samples while existing reference and compound restrictions remain intact.
 fn bounded_i444_inter_reconstruction_geometry(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -9429,7 +9435,6 @@ fn bounded_i444_inter_reconstruction_geometry(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -9451,6 +9456,9 @@ fn bounded_i444_inter_reconstruction_geometry(
         .then_some(geometry)
 }
 
+/// Bounded lossy I444 inter reconstruction with active Wiener/SGR restoration.
+/// Screen-enabled leaves honor parsed MV precision; restoration remains limited
+/// to the geometry-specific one-unit proof and consumes completed samples.
 fn complete_bounded_i444_restoration_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -9490,7 +9498,6 @@ fn complete_bounded_i444_restoration_inter_reconstruction_context(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
