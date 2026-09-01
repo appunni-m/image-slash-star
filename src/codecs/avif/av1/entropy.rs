@@ -13311,10 +13311,10 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
         || lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
 }
 
-/// Common frame-level proof for the high-depth lossy monochrome
-/// super-resolution restoration tranche. Monochrome owns only plane zero, so
-/// the active restoration plan is intentionally luma-only and is applied
-/// after the existing frame-wide resize compositor.
+/// Common frame-level proof for the lossy monochrome super-resolution
+/// restoration tranche. Monochrome owns only plane zero, so the active
+/// restoration plan is intentionally luma-only and is applied after the
+/// existing frame-wide resize compositor.
 fn lossy_monochrome_superres_restoration_common(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -13336,7 +13336,7 @@ fn lossy_monochrome_superres_restoration_common(context: &FirstBlockContext) -> 
                 && !segment.lossless
         });
     if !context.monochrome
-        || !matches!(context.bit_depth, 10 | 12)
+        || !matches!(context.bit_depth, 8 | 10 | 12)
         || !context.superres_enabled
         || !context.single_tile
         || context.frame_width < 4
