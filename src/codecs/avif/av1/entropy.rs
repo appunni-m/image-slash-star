@@ -4832,7 +4832,7 @@ fn decode_inter_transform_size(
                 let above_small = child_y
                     .checked_sub(1)
                     .and_then(|y| tile_state.transform_contexts_at(child_x, y))
-                    .is_some_and(|(tx_width, _)| tx_width < 3);
+                    .is_some_and(|(tx_width, _)| tx_width < 2);
                 let left_small = if offset_x == 0 {
                     child_x
                         .checked_sub(1)
