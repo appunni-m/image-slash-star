@@ -6333,15 +6333,17 @@ fn bounded_restoration_geometry(context: &FirstBlockContext) -> bool {
 
 /// Shared bounded I420 restoration admission. Screen-enabled intra leaves may
 /// decode palette prediction; inter leaves use force-integer MV precision.
-/// IntraBC and intra/palette blocks within inter frames remain outside the
-/// profile. Restoration consumes only completed post-CDEF samples.
+/// Frame-level skip mode is admitted only with transform mode 1 because this
+/// legacy path cannot materialize the transform-mode-0 TX4x4 extent. IntraBC
+/// and intra/palette blocks within inter frames remain outside the profile.
+/// Restoration consumes only completed post-CDEF samples.
 fn bounded_restoration_common(context: &FirstBlockContext) -> bool {
     context.bit_depth == 8
         && context.subsampling_x
         && context.subsampling_y
         && !context.monochrome
         && !context.all_lossless
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || context.frame_tools.transform_mode == 1)
         && !context.allow_intrabc
         && context.frame_tools.quantization.is_some()
         && no_unsupported_film_grain(context)
@@ -9519,8 +9521,10 @@ fn bounded_i444_intra_loop_geometry(
 }
 
 /// Bounded lossy I444 inter reconstruction. Screen-enabled leaves use the
-/// shared palette/MV paths; postfilters consume completed full-resolution
-/// samples while existing reference and compound restrictions remain intact.
+/// shared palette/MV paths; frame-level skip mode uses fixed
+/// nearest-nearest/average prediction while ordinary compound syntax remains
+/// available for non-skip leaves. Postfilters consume completed
+/// full-resolution samples while existing reference restrictions remain intact.
 fn bounded_i444_inter_reconstruction_geometry(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -9556,7 +9560,6 @@ fn bounded_i444_inter_reconstruction_geometry(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
         && !context.allow_intrabc
         && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_q_present
@@ -9580,8 +9583,10 @@ fn bounded_i444_inter_reconstruction_geometry(
 }
 
 /// Bounded lossy I444 inter reconstruction with active Wiener/SGR restoration.
-/// Screen-enabled leaves honor parsed MV precision; restoration remains limited
-/// to the geometry-specific one-unit proof and consumes completed samples.
+/// Screen-enabled leaves honor parsed MV precision; frame-level skip mode uses
+/// fixed nearest-nearest/average prediction while ordinary compound syntax
+/// remains available for non-skip leaves. Restoration remains limited to the
+/// geometry-specific one-unit proof and consumes completed samples.
 fn complete_bounded_i444_restoration_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -9619,7 +9624,6 @@ fn complete_bounded_i444_restoration_inter_reconstruction_context(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
         && !context.allow_intrabc
         && bounded_i444_film_grain_supported(context)
         && !context.frame_tools.delta_q_present
