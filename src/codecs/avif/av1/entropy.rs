@@ -7844,6 +7844,10 @@ struct BoundedRectLoopPostfilters {
 /// restoration. Loop-only rectangles are admitted by their dedicated
 /// predicates; this helper requires at least one later post-filter so the
 /// restoration decoder is selected only for profiles that actually need it.
+/// Screen-enabled intra leaves may use depth-aware I420/I422 palette
+/// prediction, while inter leaves honor parsed MV precision; intraBC remains
+/// closed. Active restoration is still limited by the geometry and one-unit
+/// proofs below.
 fn bounded_subsampled_rect_loop_postfilters_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -7912,7 +7916,6 @@ fn bounded_subsampled_rect_loop_postfilters_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -8049,6 +8052,9 @@ struct BoundedLoopPostfilters {
 /// loop-only, CDEF-only, restoration-only, and CDEF+restoration admissions
 /// narrow while selecting the restoration decoder only when restoration is
 /// actually active in the frame header.
+/// Screen-enabled intra leaves may use depth-aware I420/I422 palette
+/// prediction, while inter leaves honor parsed MV precision; intraBC remains
+/// closed. Active restoration retains the layout-specific one-unit proof.
 fn bounded_subsampled_loop_postfilters_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -8112,7 +8118,6 @@ fn bounded_subsampled_loop_postfilters_common(
                 && !context.frame_tools.segmentation.enabled
                 && !context.skip_mode_enabled
                 && !context.allow_intrabc
-                && !context.allow_screen_content_tools
                 && !context.frame_tools.film_grain_present
                 && !context.frame_tools.delta_q_present
                 && !context.frame_tools.delta_lf_present
@@ -8240,6 +8245,9 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
 /// nonzero level and sharpness value within the checked AV1 domain. Filter
 /// metadata is therefore accepted without widening the partition or tool
 /// surface that the block path can safely publish.
+/// Screen-enabled intra leaves may use depth-aware I420/I422 palette
+/// prediction, while inter leaves honor parsed MV precision; intraBC remains
+/// closed. CDEF and restoration remain disabled in this loop-only profile.
 fn bounded_subsampled_loop_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -8264,7 +8272,6 @@ fn bounded_subsampled_loop_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -8781,6 +8788,10 @@ fn bounded_i422_rect_loop_common(
     quantization: QuantizationContext,
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
+    // Screen-enabled intra leaves may use depth-aware I422 palette prediction;
+    // inter leaves honor parsed MV precision. This loop-only rectangle keeps
+    // CDEF/restoration disabled and retains the orientation-specific edge
+    // proof; intraBC remains closed.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && !context.subsampling_y
@@ -8797,7 +8808,6 @@ fn bounded_i422_rect_loop_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
