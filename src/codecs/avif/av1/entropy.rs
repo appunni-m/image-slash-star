@@ -6421,6 +6421,9 @@ fn complete_inter_444_reconstruction_context(
 /// the depth-aware streamed engine with the same reduced-transform, validated
 /// loop-filter (including dynamic delta-LF), and complete-8x8 CDEF proofs as
 /// the non-superres tranche.
+/// Screen-content-enabled superres intra leaves may decode palette prediction
+/// on the coded grid; intraBC remains outside the profile. Deblock/CDEF precede
+/// horizontal resize.
 fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     let high_depth = matches!(context.bit_depth, 10 | 12);
     let cdef_supported = if high_depth {
@@ -6447,7 +6450,6 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && !context.all_lossless
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && context.frame_tools.quantization.is_some()
         && (!high_depth || !context.frame_tools.reduced_transform_set)
         && (!high_depth || complete_high_depth_loop_filter_supported(context))
