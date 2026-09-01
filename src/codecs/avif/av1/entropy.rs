@@ -9602,6 +9602,9 @@ fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
 /// publication path. Intra leaves may materialize TX_MODE_SELECT depth; inter
 /// leaves admit only an unsplit maximum transform and reject transform-grid
 /// splits transactionally.
+/// Screen-enabled monochrome intra leaves may decode the luma-only palette
+/// syntax; screen-enabled inter leaves use force-integer MV precision. IntraBC
+/// and intra/palette blocks inside inter frames remain outside the profile.
 /// Plane-zero quantization matrices remain on the generic depth-aware
 /// coefficient path.
 fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
@@ -9629,7 +9632,6 @@ fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && matches!(context.frame_tools.transform_mode, 1 | 2)
