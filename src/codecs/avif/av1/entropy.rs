@@ -12414,7 +12414,7 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// this frame gate proves that every syntax feature around those leaves is
 /// likewise neutral, so no lossy or post-filter fallback can publish a
 /// partially reconstructed surface. The only super-resolution extension is
-/// the single-tile I420/I444 class below; its prediction samples come from a
+/// the single-tile I420/I422/I444 class below; its prediction samples come from a
 /// retained upscaled reference and its coded result is resized once after
 /// reconstruction.
 fn complete_lossless_inter_color_reconstruction_context(
@@ -12449,8 +12449,11 @@ fn complete_lossless_inter_color_reconstruction_context(
         });
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
-    let superres_color =
-        context.superres_enabled && matches!(layout, PixelLayout::I420 | PixelLayout::I444);
+    let superres_color = context.superres_enabled
+        && matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        );
     let dimensions_supported = if superres_color {
         context.frame_width >= 4
             && context.frame_height >= 4
