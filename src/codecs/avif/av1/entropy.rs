@@ -9023,15 +9023,17 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// motion-mode sentence selected by their causal matching-reference mask;
 /// Translation and OBMC are materialized for the generic high-depth layouts,
 /// as are Average/Distance and masked Difference/Wedge compound predictors.
-/// Horizontal super-resolution is admitted only for I420; its current-frame
-/// output still uses the coded-coordinate MC path followed by the depth-aware
-/// resize compositor. Dimension-scaled retained references are valid for all
-/// three layouts, including non-superres current frames, because the checked
-/// frame-wide scale factors and layout-specific MC kernels operate before the
-/// current frame is published. LOCALWARP and affine GlobalGlobal selections
-/// remain transactional unsupported outcomes. Every retained reference is
-/// validated up front so a later reference choice cannot narrow the path back
-/// to eight-bit geometry. An all-NONE restoration header is a semantic no-op:
+/// Horizontal super-resolution is admitted for I420 and I444; an I444
+/// superres frame excludes film grain because display materialization requires
+/// a same-width grain surface. Their current-frame output still uses the
+/// coded-coordinate MC path followed by the depth-aware resize compositor.
+/// Dimension-scaled retained references are valid for all three layouts,
+/// including non-superres current frames, because the checked frame-wide scale
+/// factors and layout-specific MC kernels operate before the current frame is
+/// published. LOCALWARP and affine GlobalGlobal selections remain transactional
+/// unsupported outcomes. Every retained reference is validated up front so a
+/// later reference choice cannot narrow the path back to eight-bit geometry. An
+/// all-NONE restoration header is a semantic no-op:
 /// it carries no tile restoration units or postfilter plan, while active
 /// restoration types remain outside this generic class. I444 film grain is
 /// display-only and uses the shared bounded dimension whitelist.
@@ -9042,13 +9044,23 @@ fn complete_high_depth_inter_reconstruction_context(
     let i420 = context.subsampling_x && context.subsampling_y;
     let i422 = context.subsampling_x && !context.subsampling_y;
     let i444 = !context.subsampling_x && !context.subsampling_y;
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let superres_i420 = i420 && context.superres_enabled;
+    let superres_i444 = i444
+        && context.superres_enabled
+        && context.frame_width >= 4
+        && context.frame_height >= 4
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height);
     let dimensions_supported = if context.superres_enabled {
-        superres_i420
+        superres_i420 || superres_i444
     } else {
         context.upscaled_width == context.frame_width
     };
-    let film_grain_supported = if i444 {
+    let film_grain_supported = if i444 && context.superres_enabled {
+        !context.frame_tools.film_grain_present
+    } else if i444 {
         bounded_i444_film_grain_supported(context)
     } else {
         no_unsupported_film_grain(context)
