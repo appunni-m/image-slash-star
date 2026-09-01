@@ -3316,9 +3316,9 @@ fn inter_lossy_wide_chunk_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
-/// Exact mode-2 64px-root geometry for one-axis 128px blocks. Each admitted
-/// block owns two independent TX64x64 roots; the square 128px case remains on
-/// the existing mode-1 chunk path until its four-root syntax is evidenced.
+/// Exact mode-2 64px-root geometry for the 128px block family. Each admitted
+/// block owns one TX64x64 root per maximum-transform region; the square case
+/// therefore owns the same 2x2 chunk grid already used by the mode-1 path.
 fn inter_lossy_wide_mode2_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3334,7 +3334,10 @@ fn inter_lossy_wide_mode2_geometry_supported(
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 2
         && quantization.segment_qindex > 0
-        && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
+        && matches!(
+            block_size,
+            BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+        )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
@@ -4687,10 +4690,15 @@ fn decode_inter_transform_size(
     }
     if lossy_wide_mode2_geometry && transform_mode == 2 {
         let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
-        if exact_geometry && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64) {
+        if exact_geometry
+            && matches!(
+                block_size,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            )
+        {
             // Mode 2 signals one TX64 root sentence per maximum-transform
-            // region. The bounded plan admits only two unsplit roots; a
-            // split root would require a recursive per-chunk compositor.
+            // region. The bounded plan admits only unsplit roots; a split
+            // root would require a recursive per-chunk compositor.
             if block_skipped {
                 let (luma_width, luma_height) = block_size.pixel_dimensions();
                 return Ok(InterTransformPlan::LossyWideMode2Unsplit {
@@ -4699,12 +4707,13 @@ fn decode_inter_transform_size(
                     layout,
                 });
             }
-            let root_offsets = match block_size {
-                BlockSize::B64x128 => [(0_u32, 0_u32), (0, 16)],
-                BlockSize::B128x64 => [(0_u32, 0_u32), (16, 0)],
+            let root_offsets: &[(u32, u32)] = match block_size {
+                BlockSize::B64x128 => &[(0_u32, 0_u32), (0, 16)],
+                BlockSize::B128x64 => &[(0_u32, 0_u32), (16, 0)],
+                BlockSize::B128x128 => &[(0_u32, 0_u32), (16, 0), (0, 16), (16, 16)],
                 _ => return Err(super::block::PortableUnavailable),
             };
-            for (offset_x, offset_y) in root_offsets {
+            for &(offset_x, offset_y) in root_offsets {
                 let child_x = node
                     .x
                     .checked_add(offset_x)

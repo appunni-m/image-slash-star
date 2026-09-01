@@ -50140,7 +50140,10 @@ impl Lossy420Decoder {
                 && tools.transform_mode == 2
                 && !quantization.segment_lossless
                 && quantization.segment_qindex > 0
-                && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
+                && matches!(
+                    block_size,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
                 && (luma_width, luma_height) == block_size.pixel_dimensions())
             .then_some(())
             .portable()?;
