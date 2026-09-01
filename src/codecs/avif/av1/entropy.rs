@@ -12666,7 +12666,7 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
 /// single-tile so reference geometry is frame-global and every visited grid
 /// cell has a complete four-pixel extent. The super-resolution extension is
 /// limited to monochrome/I420/I422/I444, whose coded result is resized once
-/// after reconstruction. Monochrome and I444 additionally admit a
+/// after reconstruction. Monochrome, I420, and I444 additionally admit a
 /// horizontally tiled, full-height layout so frame-wide resize taps remain
 /// intact.
 fn complete_high_depth_lossless_inter_reconstruction_context(
@@ -12707,7 +12707,10 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
     let horizontal_multitile_high_depth = context.superres_enabled
-        && matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
+        && matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I444
+        )
         && !context.single_tile
         && context.frame_width >= 4
         && context.frame_height >= 4
