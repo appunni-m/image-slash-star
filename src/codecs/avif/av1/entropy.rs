@@ -6671,6 +6671,7 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on
 /// transform modes 1/2 with fixed nearest-nearest average prediction.
+/// Update-map post-skip segmentation is admitted only for ALT_Q-only segments.
 /// TX_MODE_SELECT is admitted only for an unsplit root transform; split trees
 /// return a transactional unsupported result.
 /// Plane-aware matrix dequantization remains optional
@@ -6728,7 +6729,7 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.monochrome
         && !context.all_lossless
         && !context.allow_intrabc
-        && !context.segmentation_enabled
+        && postskip_altq_segmentation_supported(context)
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
