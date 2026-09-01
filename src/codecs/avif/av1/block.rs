@@ -50291,32 +50291,36 @@ impl Lossy420Decoder {
         let split_b64_topology =
             matches!(transform_plan, InterTransformPlan::SplitB64Topology { .. });
         // The direct lossy 64-axis tranche is deliberately narrow: exact
-        // depth-matched 4:2:0 B32x64/B64x32 terminals plus the B64x64 square,
-        // and the mode-2 thin B16x64/B64x16 roots. Their luma transform is
-        // forced DCT_DCT by the AV1 transform-type rules; all other wide
-        // shapes remain unavailable until their chunk/grid compositor exists.
-        let wide_lossy_single =
-            matches!(
-                transform_plan,
-                InterTransformPlan::Single {
-                    tx_size: TxSize::Tx16x64
-                        | TxSize::Tx32x64
-                        | TxSize::Tx64x16
-                        | TxSize::Tx64x32
-                        | TxSize::Tx64x64,
-                    transform: Av1TransformType::DctDct,
-                    ..
-                }
-            ) && (matches!(
-                block_size,
-                BlockSize::B32x64 | BlockSize::B64x32 | BlockSize::B64x64
-            ) || (matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
-                && tools.transform_mode == 2))
-                && chroma_sampling == ChromaSampling::Subsampled420
-                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-                && tools.sample_depth == quantization.sample_depth
-                && matches!(tools.transform_mode, 1 | 2)
-                && !quantization.segment_lossless;
+        // depth-matched 4:2:0 B16x64/B64x16/B32x64/B64x32 terminals plus the
+        // B64x64 square. Their luma transform is forced DCT_DCT by the AV1
+        // transform-type rules; all other wide shapes remain unavailable
+        // until their chunk/grid compositor exists.
+        let wide_lossy_single = matches!(
+            transform_plan,
+            InterTransformPlan::Single {
+                tx_size: TxSize::Tx16x64
+                    | TxSize::Tx32x64
+                    | TxSize::Tx64x16
+                    | TxSize::Tx64x32
+                    | TxSize::Tx64x64,
+                transform: Av1TransformType::DctDct,
+                ..
+            }
+        ) && matches!(
+            block_size,
+            BlockSize::B16x64
+                | BlockSize::B64x16
+                | BlockSize::B32x64
+                | BlockSize::B64x32
+                | BlockSize::B64x64
+        ) && chroma_sampling == ChromaSampling::Subsampled420
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.sample_depth == quantization.sample_depth
+            && matches!(tools.transform_mode, 1 | 2)
+            && (!matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
+                || tools.transform_mode == 1
+                || quantization.segment_qindex > 0)
+            && !quantization.segment_lossless;
         if matches!(
             transform_plan,
             InterTransformPlan::Single {

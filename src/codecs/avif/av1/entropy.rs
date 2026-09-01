@@ -3407,7 +3407,13 @@ fn inter_lossy_wide_single_geometry_supported(
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && matches!(transform_mode, 1 | 2)
-        && matches!(block_size, BlockSize::B32x64 | BlockSize::B64x32)
+        && matches!(
+            block_size,
+            BlockSize::B16x64 | BlockSize::B64x16 | BlockSize::B32x64 | BlockSize::B64x32
+        )
+        && (!matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
+            || transform_mode == 1
+            || quantization.segment_qindex > 0)
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
