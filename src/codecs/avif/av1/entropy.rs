@@ -12575,8 +12575,8 @@ fn complete_lossless_inter_color_reconstruction_context(
 /// retained frame surface rather than being synthesized from luma. Keep the
 /// profile single-tile so the reference dimensions compared here are frame
 /// dimensions, not tile-local extents. Its super-resolution extension uses
-/// retained upscaled references and accepts only a neutral all-`NONE`
-/// restoration header.
+/// retained upscaled references, permits one full-height horizontal tile row,
+/// and accepts only a neutral all-`NONE` restoration header.
 fn complete_lossless_inter_monochrome_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12611,17 +12611,35 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
             && context.frame_height != 0
             && context.upscaled_width == context.frame_width
     };
-    let dimensions_supported = resize_geometry_supported
+    let exact_local_geometry = resize_geometry_supported
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && context.block_x == 0
         && context.block_y == 0
+        && matches!(context.level, 0 | 1);
+    let horizontal_multitile_monochrome = exact_local_geometry
+        && context.superres_enabled
+        && !context.single_tile
+        && context.tile_origin_b4_y == 0
+        && context.block_height == context.frame_block_height
+        && context
+            .tile_origin_b4_x
+            .checked_add(context.block_width)
+            .is_some_and(|end| end <= context.frame_block_width)
+        && 32_u32
+            .checked_shr(context.level)
+            .is_some_and(|root_size_b4| {
+                root_size_b4 != 0
+                    && context.tile_origin_b4_x.is_multiple_of(root_size_b4)
+                    && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
+            });
+    let single_tile_dimensions_supported = exact_local_geometry
         && context.single_tile
         && context.tile_origin_b4_x == 0
         && context.tile_origin_b4_y == 0
         && context.block_width == context.frame_block_width
-        && context.block_height == context.frame_block_height
-        && matches!(context.level, 0 | 1);
+        && context.block_height == context.frame_block_height;
+    let dimensions_supported = single_tile_dimensions_supported || horizontal_multitile_monochrome;
     let references_match = inter_context.references.iter().all(|reference| {
         let geometry_matches = if context.superres_enabled {
             reference.surface.upscaled_width == context.upscaled_width
