@@ -6524,8 +6524,10 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// Screen-content-enabled inter leaves use the parsed force-integer-MV path;
 /// frame-level skip mode is supported on the existing transform-mode 1/2
 /// boundary and materializes fixed nearest-nearest average prediction.
-/// Intra blocks (including palette), active restoration, and post-skip
-/// segmentation remain outside this profile.
+/// Intra blocks (including palette) and active restoration remain outside this
+/// profile; update-map post-skip segmentation is admitted only for ALT_Q-only
+/// segments with frame delta-Q/LF, segment ALT_LF/lossless, and reference
+/// features closed.
 fn complete_inter_422_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6547,8 +6549,7 @@ fn complete_inter_422_reconstruction_context(
         && !context.superres_enabled
         && context.upscaled_width == context.frame_width
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && !context.allow_intrabc
         && no_unsupported_film_grain(context)
         && context.frame_tools.quantization.is_some()
@@ -6576,8 +6577,10 @@ fn complete_inter_422_reconstruction_context(
 /// reference/mode metadata supplies the per-block filter-level class.
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
 /// frame-level skip mode is supported on transform modes 1/2 with fixed
-/// nearest-nearest average prediction. Intra blocks (including palette),
-/// active restoration, and post-skip segmentation remain outside this profile.
+/// nearest-nearest average prediction. Intra blocks (including palette) and
+/// active restoration remain outside this profile; update-map post-skip
+/// segmentation is admitted only for ALT_Q-only segments with frame delta-Q/LF,
+/// segment ALT_LF/lossless, and reference features closed.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6599,8 +6602,7 @@ fn complete_inter_444_reconstruction_context(
         && !context.superres_enabled
         && context.upscaled_width == context.frame_width
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && postskip_altq_segmentation_supported(context)
         && !context.allow_intrabc
         && bounded_i444_film_grain_supported(context)
         && context.frame_tools.quantization.is_some()
