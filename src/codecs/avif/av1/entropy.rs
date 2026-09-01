@@ -3292,9 +3292,9 @@ fn inter_lossy_only_4x4_grid_geometry_supported(
 }
 
 /// Mode-1 lossy 4:2:0 blocks wider or taller than one 64px transform are
-/// traversed as a causal 64px chunk grid. Keep the first chunked tranche
-/// exact-visible and 8-bit so no clipped-edge or high-depth transform state
-/// can enter the still-bounded compositor.
+/// traversed as a causal 64px chunk grid. Keep the chunked tranche
+/// exact-visible and depth-matched so no clipped transform state can enter
+/// the still-bounded compositor.
 fn inter_lossy_wide_chunk_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3306,8 +3306,8 @@ fn inter_lossy_wide_chunk_geometry_supported(
 ) -> bool {
     !quantization.segment_lossless
         && layout == PixelLayout::I420
-        && bit_depth == 8
-        && quantization.sample_depth.bits() == 8
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 1
         && matches!(
             block_size,
@@ -3316,8 +3316,8 @@ fn inter_lossy_wide_chunk_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
-/// A square 64px lossy leaf is a single TX64X64 terminal.  Keep its direct
-/// path separate from the 128px chunk compositor so mode-2 split roots cannot
+/// A square 64px lossy leaf is a single TX64X64 terminal. Keep its direct path
+/// separate from the 128px chunk compositor so mode-2 split roots cannot
 /// accidentally consume the single-terminal residual sentence.
 fn inter_lossy_square64_geometry_supported(
     block_size: BlockSize,
@@ -3330,10 +3330,32 @@ fn inter_lossy_square64_geometry_supported(
 ) -> bool {
     !quantization.segment_lossless
         && layout == PixelLayout::I420
-        && bit_depth == 8
-        && quantization.sample_depth.bits() == 8
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
         && matches!(transform_mode, 1 | 2)
         && block_size == BlockSize::B64x64
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
+/// Direct rectangular 64-axis terminals use one compact transform per plane;
+/// unlike the 128px families they do not need a chunk compositor. This
+/// predicate is also the high-depth exemption from the generic small-axis
+/// admission gate below.
+fn inter_lossy_wide_single_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && layout == PixelLayout::I420
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && matches!(transform_mode, 1 | 2)
+        && matches!(block_size, BlockSize::B32x64 | BlockSize::B64x32)
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
@@ -4679,6 +4701,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_wide_single_geometry = inter_lossy_wide_single_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     // The generic lossless grid is depth-parametric and covers the complete
     // 4..=128px block family. Keep the narrower high-depth admission for
     // lossy inter leaves, whose transform/motion compositor is still bounded
@@ -4686,8 +4717,11 @@ fn decode_inter_leaf(
     if matches!(context.bit_depth, 10 | 12) && !lossless_grid_geometry {
         let (block_width, block_height) = node.block_size.pixel_dimensions();
         let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
-        if !(minimum..=maximum).contains(&block_width)
-            || !(minimum..=maximum).contains(&block_height)
+        let wide_lossy_geometry =
+            lossy_wide_single_geometry || lossy_square64_geometry || lossy_wide_chunk_geometry;
+        if !wide_lossy_geometry
+            && (!(minimum..=maximum).contains(&block_width)
+                || !(minimum..=maximum).contains(&block_height))
         {
             return Ok(Err(super::block::PortableUnavailable));
         }

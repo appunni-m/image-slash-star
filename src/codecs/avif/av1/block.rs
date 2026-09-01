@@ -49867,9 +49867,9 @@ impl Lossy420Decoder {
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
         let lossy_wide = matches!(transform_plan, InterTransformPlan::LossyWideChunked { .. });
         // The direct lossy 64-axis tranche is deliberately narrow: exact
-        // 8-bit 4:2:0 B32x64/B64x32 terminals plus the B64x64 square. Their
-        // luma transform is forced DCT_DCT by the AV1 transform-type rules;
-        // all other wide or high-depth shapes remain unavailable until their
+        // depth-matched 4:2:0 B32x64/B64x32 terminals plus the B64x64 square.
+        // Their luma transform is forced DCT_DCT by the AV1 transform-type
+        // rules; all other wide shapes remain unavailable until their
         // chunk/grid compositor exists.
         let wide_lossy_single = matches!(
             transform_plan,
@@ -49882,7 +49882,8 @@ impl Lossy420Decoder {
             block_size,
             BlockSize::B32x64 | BlockSize::B64x32 | BlockSize::B64x64
         ) && chroma_sampling == ChromaSampling::Subsampled420
-            && tools.sample_depth == SampleDepth::EIGHT
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.sample_depth == quantization.sample_depth
             && matches!(tools.transform_mode, 1 | 2)
             && !quantization.segment_lossless;
         if matches!(
@@ -49940,7 +49941,8 @@ impl Lossy420Decoder {
         {
             (sampling == ChromaSampling::Subsampled420
                 && sampling == chroma_sampling
-                && tools.sample_depth == SampleDepth::EIGHT
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 1
                 && !quantization.segment_lossless
                 && lossy_wide_chunked_block_supported(block_size)
@@ -51351,7 +51353,8 @@ impl Lossy420Decoder {
         (matches!(
             (luma_width, luma_height),
             (64, 128) | (128, 64) | (128, 128)
-        ) && tools.sample_depth == SampleDepth::EIGHT
+        ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.sample_depth == quantization.sample_depth
             && tools.transform_mode == 1
             && !quantization.segment_lossless)
             .then_some(())
