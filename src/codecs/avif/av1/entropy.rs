@@ -4651,49 +4651,64 @@ fn decode_inter_leaf(
     } else {
         MotionMode::Translation
     };
+    let minimum_dimension_is_four = block_width_b4.min(block_height_b4) == 1;
     let interpolation_needed = match mode {
-        InterMode::Global => matches!(
-            first_state.global_motion.kind,
-            GlobalMotionType::Translation
-        ),
-        InterMode::GlobalGlobal => second_state.is_some_and(|second| {
-            matches!(
-                first_state.global_motion.kind,
-                GlobalMotionType::Translation
-            ) || matches!(second.global_motion.kind, GlobalMotionType::Translation)
-        }),
+        InterMode::Global => {
+            minimum_dimension_is_four
+                || matches!(
+                    first_state.global_motion.kind,
+                    GlobalMotionType::Translation
+                )
+        }
+        InterMode::GlobalGlobal => {
+            minimum_dimension_is_four
+                || matches!(
+                    first_state.global_motion.kind,
+                    GlobalMotionType::Translation
+                )
+                || second_state.is_some_and(|second| {
+                    matches!(second.global_motion.kind, GlobalMotionType::Translation)
+                })
+        }
         _ => !skip_mode && matches!(motion_mode, MotionMode::Translation | MotionMode::Obmc),
     };
-    let filters = if interpolation_needed && inter_context.interpolation_filter == 4 {
-        // AV1 reads vertical first and horizontal second; the motion kernel
-        // stores horizontal then vertical.
-        let vertical_context =
-            switchable_interpolation_context(tile_state, node, references.first, compound, 0)?;
-        let vertical = decoder.adaptive_symbol(
-            &mut cdfs.inter.interpolation_filter[0][vertical_context].0,
-            2,
-        );
-        let vertical = InterpolationFilter::from_symbol(vertical)
-            .ok_or_else(|| malformed("vertical interpolation filter symbol is invalid"))?;
-        let horizontal = if inter_context.dual_filter {
-            let horizontal_context =
-                switchable_interpolation_context(tile_state, node, references.first, compound, 1)?;
-            let symbol = decoder.adaptive_symbol(
-                &mut cdfs.inter.interpolation_filter[1][horizontal_context].0,
+    let filters = if inter_context.interpolation_filter == 4 {
+        if interpolation_needed {
+            // AV1 reads vertical first and horizontal second; the motion kernel
+            // stores horizontal then vertical.
+            let vertical_context =
+                switchable_interpolation_context(tile_state, node, references.first, compound, 0)?;
+            let vertical = decoder.adaptive_symbol(
+                &mut cdfs.inter.interpolation_filter[0][vertical_context].0,
                 2,
             );
-            InterpolationFilter::from_symbol(symbol)
-                .ok_or_else(|| malformed("horizontal interpolation filter symbol is invalid"))?
+            let vertical = InterpolationFilter::from_symbol(vertical)
+                .ok_or_else(|| malformed("vertical interpolation filter symbol is invalid"))?;
+            let horizontal = if inter_context.dual_filter {
+                let horizontal_context = switchable_interpolation_context(
+                    tile_state,
+                    node,
+                    references.first,
+                    compound,
+                    1,
+                )?;
+                let symbol = decoder.adaptive_symbol(
+                    &mut cdfs.inter.interpolation_filter[1][horizontal_context].0,
+                    2,
+                );
+                InterpolationFilter::from_symbol(symbol)
+                    .ok_or_else(|| malformed("horizontal interpolation filter symbol is invalid"))?
+            } else {
+                vertical
+            };
+            [horizontal, vertical]
         } else {
-            vertical
-        };
-        [horizontal, vertical]
-    } else if interpolation_needed {
+            [InterpolationFilter::Regular; 2]
+        }
+    } else {
         let filter = InterpolationFilter::from_symbol(inter_context.interpolation_filter.min(3))
             .ok_or_else(|| malformed("fixed interpolation filter is invalid"))?;
         [filter; 2]
-    } else {
-        [InterpolationFilter::Regular; 2]
     };
     let obmc = if matches!(motion_mode, MotionMode::Obmc) {
         let context = collect_obmc_context(
