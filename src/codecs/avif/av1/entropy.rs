@@ -4613,7 +4613,10 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB8);
         }
         if block_size == BlockSize::B16x16
-            && layout == PixelLayout::I420
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 16
             && visible_height == 16
             && split_b16_supported
@@ -4623,7 +4626,6 @@ fn decode_inter_transform_size(
             // each child. The bounded compositor admits only four terminal
             // TX8 children; any deeper child tree remains transactional.
             let child_offsets = [(0_u32, 0_u32), (2, 0), (0, 2), (2, 2)];
-            let mut deeper_split = false;
             for (offset_x, offset_y) in child_offsets {
                 let child_x = node
                     .x
@@ -4650,11 +4652,12 @@ fn decode_inter_transform_size(
                     false
                 };
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                deeper_split |=
-                    decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
-            }
-            if deeper_split {
-                return Err(super::block::PortableUnavailable);
+                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
+                    // A child split changes the causal topology for later
+                    // siblings. Reject immediately instead of consuming
+                    // symbols under the terminal-child assumption.
+                    return Err(super::block::PortableUnavailable);
+                }
             }
             return Ok(InterTransformPlan::SplitB16);
         }
@@ -7467,8 +7470,9 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// separate closed predicates.
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms,
-/// plus exact B8x8/B16x16 mode-2 splits whose TX4x4/TX8x8 luma terminals are
-/// reconstructed by the bounded child compositors below.
+/// plus exact B8x8/B16x16 mode-2 splits in the supported 4:2:0/4:2:2/4:4:4
+/// layouts whose TX4x4/TX8x8 luma terminals are reconstructed by the bounded
+/// child compositors below.
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on

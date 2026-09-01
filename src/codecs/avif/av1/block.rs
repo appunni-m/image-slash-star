@@ -48620,6 +48620,31 @@ fn inherited_inter_chroma_transform(
     }
 }
 
+/// Map the TL luma transform inherited by the chroma terminals of a bounded
+/// B16x16 split. I420 keeps TX8x8's full inter transform set, I422 keeps the
+/// inherited TX8x16 type, and I444's TX16x16 terminal cannot represent the
+/// four one-dimensional ADST/flip-ADST forms. Those four forms therefore use
+/// the normative DCT_DCT fallback; IDTX and every two-dimensional form remain
+/// unchanged.
+fn inherited_inter_b16_chroma_transform(
+    sampling: ChromaSampling,
+    tx_size: TxSize,
+    transform: Av1TransformType,
+) -> PortableResult<Av1TransformType> {
+    match (sampling, tx_size) {
+        (ChromaSampling::Subsampled420, TxSize::Tx8x8)
+        | (ChromaSampling::Subsampled422, TxSize::Tx8x16) => Ok(transform),
+        (ChromaSampling::Full, TxSize::Tx16x16) => Ok(match transform {
+            Av1TransformType::VerticalAdst
+            | Av1TransformType::HorizontalAdst
+            | Av1TransformType::VerticalFlipAdst
+            | Av1TransformType::HorizontalFlipAdst => Av1TransformType::DctDct,
+            _ => transform,
+        }),
+        _ => Err(PortableUnavailable),
+    }
+}
+
 impl BlockSegmentState {
     const DEFAULT: Self = Self {
         delta_q: 0,
@@ -49969,7 +49994,12 @@ impl Lossy420Decoder {
         }
         if split_b16 {
             (block_size == BlockSize::B16x16
-                && chroma_sampling == ChromaSampling::Subsampled420
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -50690,6 +50720,8 @@ impl Lossy420Decoder {
                 };
                 let transform = if txb_skipped {
                     Av1TransformType::DctDct
+                } else if split_b16 && plane != 0 {
+                    inherited_inter_b16_chroma_transform(chroma_sampling, tx_size, luma_transform)?
                 } else if lossy_grid {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else {
