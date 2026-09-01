@@ -1,5 +1,5 @@
-//! AV1 normative horizontal super-resolution for retained 4:2:0 and 4:2:2
-//! pictures.
+//! AV1 normative horizontal super-resolution for retained 4:2:0, 4:2:2, and
+//! 4:4:4 pictures.
 //!
 //! The interpolation table and fixed-point placement follow the pinned
 //! libaom `av1/common/resize.c` / `aom_dsp/aom_filter.h` implementation and
@@ -109,6 +109,7 @@ pub(super) fn upscale_i420_leaf(
         superres_denominator,
         depth,
         true,
+        true,
     )
 }
 
@@ -133,6 +134,32 @@ pub(super) fn upscale_i422_leaf(
         frame_height,
         superres_denominator,
         depth,
+        true,
+        false,
+    )
+}
+
+/// Apply AV1's horizontal super-resolution step to a complete I444 leaf.
+///
+/// I444 has no chroma subsampling, so all three planes retain the coded and
+/// upscaled luma extents. Keeping this adapter explicit prevents an I420 or
+/// I422 plane-height/width assumption from entering the full-resolution path.
+pub(super) fn upscale_i444_leaf(
+    leaf: FirstLeaf,
+    coded_width: u32,
+    upscaled_width: u32,
+    frame_height: u32,
+    superres_denominator: u32,
+    depth: SampleDepth,
+) -> Av1Result<FirstLeaf> {
+    upscale_subsampled_leaf(
+        leaf,
+        coded_width,
+        upscaled_width,
+        frame_height,
+        superres_denominator,
+        depth,
+        false,
         false,
     )
 }
@@ -144,6 +171,7 @@ fn upscale_subsampled_leaf(
     frame_height: u32,
     superres_denominator: u32,
     depth: SampleDepth,
+    subsampling_x: bool,
     subsampling_y: bool,
 ) -> Av1Result<FirstLeaf> {
     validate_header_geometry(
@@ -156,7 +184,11 @@ fn upscale_subsampled_leaf(
     )?;
     if upscaled_width == coded_width {
         validate_plane(&leaf.planes[0], coded_width, frame_height, depth)?;
-        let chroma_width = coded_width.div_ceil(2);
+        let chroma_width = if subsampling_x {
+            coded_width.div_ceil(2)
+        } else {
+            coded_width
+        };
         let chroma_height = if subsampling_y {
             frame_height.div_ceil(2)
         } else {
@@ -167,8 +199,16 @@ fn upscale_subsampled_leaf(
         return Ok(leaf);
     }
 
-    let chroma_coded_width = coded_width.div_ceil(2);
-    let chroma_upscaled_width = upscaled_width.div_ceil(2);
+    let chroma_coded_width = if subsampling_x {
+        coded_width.div_ceil(2)
+    } else {
+        coded_width
+    };
+    let chroma_upscaled_width = if subsampling_x {
+        upscaled_width.div_ceil(2)
+    } else {
+        upscaled_width
+    };
     let chroma_height = if subsampling_y {
         frame_height.div_ceil(2)
     } else {

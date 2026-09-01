@@ -2081,6 +2081,14 @@ fn upscale_color_leaf_for_superres(
             header.superres_denominator,
             depth,
         ),
+        Some(PixelLayout::I444) => resize::upscale_i444_leaf(
+            leaf,
+            header.frame_width,
+            header.upscaled_width,
+            header.frame_height,
+            header.superres_denominator,
+            depth,
+        ),
         _ => Err(malformed(
             "super-resolution carries an unsupported chroma sampling",
         )),

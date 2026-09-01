@@ -8575,6 +8575,7 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
     let high_depth_full = complete_high_depth_full_reconstruction_context(context);
     let high_depth_420 = complete_high_depth_420_reconstruction_context(context);
     let complete_422 = complete_422_intra_reconstruction_context(context);
+    let superres_444 = complete_superres_lossy_444_intra_reconstruction_context(context);
     let simple_422 = context.subsampling_x
         && !context.subsampling_y
         && context.frame_width == 16
@@ -8592,7 +8593,8 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
     (closed_base_reconstruction_context(context)
         || high_depth_full
         || high_depth_420
-        || complete_422)
+        || complete_422
+        || superres_444)
         && !context.all_lossless
         && if high_depth_full {
             !context.subsampling_x && !context.subsampling_y
@@ -8600,6 +8602,8 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
             context.subsampling_x && context.subsampling_y
         } else if complete_422 {
             context.subsampling_x && !context.subsampling_y
+        } else if superres_444 {
+            !context.subsampling_x && !context.subsampling_y
         } else {
             (context.subsampling_x && context.subsampling_y)
                 || (!context.subsampling_x && !context.subsampling_y)
@@ -8932,6 +8936,47 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && cdef_supported
         && context.block_x == 0
         && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+}
+
+/// Narrow lossy I444 intra profile with AV1 horizontal super-resolution.
+/// Reconstruction, transform contexts, intra edges, and coded-frame filters
+/// all remain in the coded coordinate system; the frame compositor resizes
+/// the completed three-plane surface exactly once after tile assembly. I444's
+/// full-resolution chroma uses the same dimensions and interpolation phases
+/// as luma, so this profile adds no new entropy or plane-state carrier.
+fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    context.intra_frame
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && !context.monochrome
+        && context.superres_enabled
+        && context.frame_width >= 4
+        && context.frame_height >= 4
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.block_x == 0
+        && context.block_y == 0
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.frame_tools.film_grain_present
+        && quantization.base != 0
+        && context.frame_tools.segment_qindex == quantization.base
+        && !context.frame_tools.segment_lossless
+        && !context.frame_tools.reduced_transform_set
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && complete_high_depth_loop_filter_supported(context)
+        && complete_high_depth_cdef_supported(context)
+        && context.restoration_types == [None; 3]
         && matches!(context.level, 0 | 1)
 }
 
