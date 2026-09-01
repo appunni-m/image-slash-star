@@ -4445,6 +4445,8 @@ fn decode_inter_transform_type(
 enum InterTransformPlan {
     Single(TxSize),
     SplitB8,
+    SplitB8x16,
+    SplitB16x8,
     SplitB16,
     SplitB16x32,
     SplitB32x16,
@@ -4505,6 +4507,7 @@ fn decode_inter_transform_size(
     visible_height: u32,
     eight_bit: bool,
     split_depth_supported: bool,
+    split_b8_rect_supported: bool,
     split_b16_supported: bool,
     split_b16x32_supported: bool,
     split_b32x16_supported: bool,
@@ -4666,6 +4669,92 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx8x8
         {
             return Ok(InterTransformPlan::SplitB8);
+        }
+        if block_size == BlockSize::B8x16
+            && layout == PixelLayout::I420
+            && visible_width == 8
+            && visible_height == 16
+            && split_b8_rect_supported
+            && max_tx == TxSize::Tx8x16
+        {
+            // A TX8x16 root split is followed by one TX8 split decision for
+            // each row-stacked child. The bounded compositor admits only
+            // two terminal TX8x8 children; any deeper child tree remains
+            // transactional.
+            let child_offsets = [(0_u32, 0_u32), (0, 2)];
+            for (offset_x, offset_y) in child_offsets {
+                let child_x = node
+                    .x
+                    .checked_add(offset_x)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_y = node
+                    .y
+                    .checked_add(offset_y)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let above_small = if offset_y == 0 {
+                    child_y
+                        .checked_sub(1)
+                        .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                        .is_some_and(|(tx_width, _)| tx_width < 1)
+                } else {
+                    false
+                };
+                let left_small = child_x
+                    .checked_sub(1)
+                    .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                    .is_some_and(|(_, tx_height)| tx_height < 1);
+                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
+                    // A child split changes the causal topology for later
+                    // siblings. Reject immediately instead of consuming
+                    // symbols under the terminal-child assumption.
+                    return Err(super::block::PortableUnavailable);
+                }
+            }
+            return Ok(InterTransformPlan::SplitB8x16);
+        }
+        if block_size == BlockSize::B16x8
+            && layout == PixelLayout::I420
+            && visible_width == 16
+            && visible_height == 8
+            && split_b8_rect_supported
+            && max_tx == TxSize::Tx16x8
+        {
+            // A TX16x8 root split is followed by one TX8 split decision for
+            // each column-stacked child. The bounded compositor admits only
+            // two terminal TX8x8 children; any deeper child tree remains
+            // transactional.
+            let child_offsets = [(0_u32, 0_u32), (2, 0)];
+            for (offset_x, offset_y) in child_offsets {
+                let child_x = node
+                    .x
+                    .checked_add(offset_x)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_y = node
+                    .y
+                    .checked_add(offset_y)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let above_small = child_y
+                    .checked_sub(1)
+                    .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                    .is_some_and(|(tx_width, _)| tx_width < 1);
+                let left_small = if offset_x == 0 {
+                    child_x
+                        .checked_sub(1)
+                        .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                        .is_some_and(|(_, tx_height)| tx_height < 1)
+                } else {
+                    false
+                };
+                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
+                    // A child split changes the causal topology for the
+                    // sibling. Reject immediately instead of consuming
+                    // symbols under the terminal-child assumption.
+                    return Err(super::block::PortableUnavailable);
+                }
+            }
+            return Ok(InterTransformPlan::SplitB16x8);
         }
         if block_size == BlockSize::B16x16
             && matches!(
@@ -5642,6 +5731,9 @@ fn decode_inter_leaf(
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && prepared_quantization.quantization.segment_qindex > 0,
+        matches!(context.bit_depth, 8 | 10 | 12)
+            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+            && prepared_quantization.quantization.segment_qindex > 0,
         lossless_grid_geometry,
         lossy_grid_geometry,
         lossy_wide_chunk_geometry,
@@ -5657,6 +5749,8 @@ fn decode_inter_leaf(
         match transform_plan {
             InterTransformPlan::Single(tx_size) => (tx_size, false, false, false, false),
             InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false, false),
+            InterTransformPlan::SplitB8x16 => (TxSize::Tx8x16, true, false, false, false),
+            InterTransformPlan::SplitB16x8 => (TxSize::Tx16x8, true, false, false, false),
             InterTransformPlan::SplitB16 => (TxSize::Tx16x16, true, false, false, false),
             InterTransformPlan::SplitB16x32 => (TxSize::Tx16x32, true, false, false, false),
             InterTransformPlan::SplitB32x16 => (TxSize::Tx32x16, true, false, false, false),
