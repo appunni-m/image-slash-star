@@ -4452,6 +4452,7 @@ fn decode_inter_transform_size(
     visible_width: u32,
     visible_height: u32,
     eight_bit: bool,
+    split_depth_supported: bool,
     lossless_grid_geometry: bool,
     lossy_grid_geometry: bool,
     lossy_wide_chunk_geometry: bool,
@@ -4604,7 +4605,7 @@ fn decode_inter_transform_size(
             )
             && visible_width == 8
             && visible_height == 8
-            && eight_bit
+            && split_depth_supported
             && max_tx == TxSize::Tx8x8
         {
             return Ok(InterTransformPlan::SplitB8);
@@ -5307,6 +5308,8 @@ fn decode_inter_leaf(
         visible_width,
         visible_height,
         context.bit_depth == 8,
+        matches!(context.bit_depth, 8 | 10 | 12)
+            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth,
         lossless_grid_geometry,
         lossy_grid_geometry,
         lossy_wide_chunk_geometry,
@@ -7411,20 +7414,21 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// materialized for all three layouts; bounded 8-bit I422/I444 remains on its
 /// separate closed predicates.
 /// The block engine retains samples in `u16`, but
-/// its inter path is intentionally limited to whole 8..=32-pixel transforms.
+/// its inter path is intentionally limited to whole 8..=32-pixel transforms,
+/// plus the exact B8x8 mode-2 split whose four TX4x4 luma terminals are
+/// reconstructed by the bounded child compositor below.
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on
 /// transform modes 1/2 with fixed nearest-nearest average prediction.
 /// Update-map post-skip segmentation is admitted only for ALT_Q-only segments.
-/// TX_MODE_SELECT is admitted only for an unsplit root transform; split trees
-/// return a transactional unsupported result.
+/// TX_MODE_SELECT is admitted for an unsplit root and the exact B8x8 2x2
+/// TX4x4 split; larger split trees return a transactional unsupported result.
 /// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
-/// CDEF is limited to complete 8x8 luma geometry. I422 additionally requires
-/// skipped residuals and DCT-DCT chroma, enforced at the block boundary. A
-/// dynamic delta-LF sentence uses the staged inter reference/mode metadata for
+/// CDEF is limited to complete 8x8 luma geometry. A dynamic delta-LF sentence
+/// uses the staged inter reference/mode metadata for
 /// per-block levels before filter metadata is committed.
 /// switchable-motion frames consume the exact binary-OBMC or three-symbol
 /// motion-mode sentence selected by their causal matching-reference mask;

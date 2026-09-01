@@ -50147,7 +50147,9 @@ impl Lossy420Decoder {
                         | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                 )
-                && (!split_b8 || tools.sample_depth == SampleDepth::EIGHT)
+                && (!split_b8
+                    || (matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                        && tools.sample_depth == quantization.sample_depth))
                 && (!lossless_grid
                     || lossless_monochrome
                     || (lossless_i422
