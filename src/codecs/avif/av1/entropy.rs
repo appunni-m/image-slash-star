@@ -6306,6 +6306,8 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// Checked frame deblocking and bounded CDEF are applied after complete tile
 /// assembly; restoration remains closed here. Validated film grain is applied
 /// only to a full assembled display copy after each tile is reconstructed.
+/// Screen-content-enabled inter leaves use the parsed force-integer-MV path;
+/// intra blocks (including palette) and intraBC remain outside this profile.
 fn complete_inter_422_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6331,7 +6333,6 @@ fn complete_inter_422_reconstruction_context(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && no_unsupported_film_grain(context)
         && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
