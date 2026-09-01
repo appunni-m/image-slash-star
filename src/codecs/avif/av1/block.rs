@@ -48455,7 +48455,7 @@ pub(super) struct InterCoefficientContexts {
 /// plane/block.  The two edge vectors retain the last-column and last-row
 /// contexts so a following partition can consume only the edge cells it
 /// owns; unused entries remain neutral.
-const LOSSLESS_GRID_EDGE_CAPACITY: usize = 16;
+const LOSSLESS_GRID_EDGE_CAPACITY: usize = 32;
 
 #[derive(Clone, Copy)]
 struct LosslessGridContexts {
@@ -48500,7 +48500,8 @@ enum InterTransformPlan {
     LosslessB16x4I422,
     LosslessB16x4I444,
     LosslessGrid {
-        carrier: TxSize,
+        luma_width: u32,
+        luma_height: u32,
         sampling: ChromaSampling,
     },
 }
@@ -48519,6 +48520,18 @@ fn lossless_grid_large_block_supported(block_size: BlockSize) -> bool {
             | BlockSize::B64x32
             | BlockSize::B64x64
     ) && block_size.maximum_luma_tx().pixel_dimensions() == block_size.pixel_dimensions()
+}
+
+fn lossless_grid_wide_block_supported(block_size: BlockSize) -> bool {
+    matches!(
+        block_size,
+        BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+    )
+}
+
+fn lossless_grid_block_supported(block_size: BlockSize) -> bool {
+    lossless_grid_large_block_supported(block_size)
+        || lossless_grid_wide_block_supported(block_size)
 }
 
 impl BlockSegmentState {
@@ -49305,16 +49318,17 @@ impl Lossy420Decoder {
         &self,
         block_size: BlockSize,
     ) -> PortableResult<InterTransformPlan> {
-        if lossless_grid_large_block_supported(block_size) {
-            let carrier = block_size.maximum_luma_tx();
+        if lossless_grid_block_supported(block_size) {
+            let (luma_width, luma_height) = block_size.pixel_dimensions();
             return (matches!(
                 self.chroma_sampling,
                 ChromaSampling::Subsampled420
                     | ChromaSampling::Subsampled422
                     | ChromaSampling::Full
-            ) && carrier.pixel_dimensions() == block_size.pixel_dimensions())
+            ))
             .then_some(InterTransformPlan::LosslessGrid {
-                carrier,
+                luma_width,
+                luma_height,
                 sampling: self.chroma_sampling,
             })
             .portable();
@@ -49549,10 +49563,23 @@ impl Lossy420Decoder {
                 | InterTransformPlan::LosslessB16x4I444
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
-        if let InterTransformPlan::LosslessGrid { carrier, sampling } = transform_plan {
+        let lossless_wide = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessGrid {
+                luma_width,
+                luma_height,
+                ..
+            } if luma_width > 64 || luma_height > 64
+        );
+        if let InterTransformPlan::LosslessGrid {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
             (sampling == chroma_sampling
-                && carrier == block_size.maximum_luma_tx()
-                && carrier.pixel_dimensions() == block_size.pixel_dimensions())
+                && lossless_grid_block_supported(block_size)
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
             .then_some(())
             .portable()?;
         }
@@ -49682,6 +49709,22 @@ impl Lossy420Decoder {
             visible_width,
             visible_height,
         )?;
+        if lossless_grid {
+            [y_geometry, u_geometry, v_geometry]
+                .into_iter()
+                .all(|(coded_width, coded_height, active_width, active_height)| {
+                    coded_width != 0
+                        && coded_height != 0
+                        && coded_width == active_width
+                        && coded_height == active_height
+                        && coded_width.is_multiple_of(4)
+                        && coded_height.is_multiple_of(4)
+                        && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_width / 4))
+                        && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_height / 4))
+                })
+                .then_some(())
+                .portable()?;
+        }
         let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8);
         if split_b8 || lossless_grid {
             let exact_b8 =
@@ -49780,12 +49823,18 @@ impl Lossy420Decoder {
             | InterTransformPlan::LosslessB16x4I444 => {
                 (TxSize::Tx16x4, false, Av1TransformType::DctDct)
             }
-            InterTransformPlan::LosslessGrid { carrier, .. } => {
-                (carrier, false, Av1TransformType::DctDct)
-            }
+            InterTransformPlan::LosslessGrid { .. } => (
+                block_size.maximum_luma_tx(),
+                false,
+                Av1TransformType::DctDct,
+            ),
         };
         let expected_luma = luma_tx_size;
-        let (tx_luma_width, tx_luma_height) = expected_luma.pixel_dimensions();
+        let (tx_luma_width, tx_luma_height) = if lossless_grid {
+            (luma_width, luma_height)
+        } else {
+            expected_luma.pixel_dimensions()
+        };
         (u32::try_from(y_geometry.0).map_err(|_| PortableUnavailable)? == tx_luma_width
             && u32::try_from(y_geometry.1).map_err(|_| PortableUnavailable)? == tx_luma_height
             && tx_luma_width == luma_width
@@ -49839,10 +49888,10 @@ impl Lossy420Decoder {
             )?,
         ];
         let mut contexts = [0x40_u8; 3];
-        let mut luma_right_contexts = [0x40_u8; 16];
-        let mut luma_bottom_contexts = [0x40_u8; 16];
-        let mut chroma_right_contexts = [[0x40_u8; 16]; 2];
-        let mut chroma_bottom_contexts = [[0x40_u8; 16]; 2];
+        let mut luma_right_contexts = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut luma_bottom_contexts = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut chroma_right_contexts = [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; 2];
+        let mut chroma_bottom_contexts = [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; 2];
         let mut luma_transform_split = false;
         let tx_sizes = [
             luma_tx_size,
@@ -49854,7 +49903,7 @@ impl Lossy420Decoder {
         for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
-            let (tx_width, tx_height) = if lossless_grid && plane != 0 {
+            let (tx_width, tx_height) = if lossless_grid {
                 (
                     u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
                     u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
@@ -50238,8 +50287,8 @@ impl Lossy420Decoder {
             )?;
             contexts[plane] = terminal.residual_context;
             if plane != 0 {
-                chroma_right_contexts[plane - 1] = [contexts[plane]; 16];
-                chroma_bottom_contexts[plane - 1] = [contexts[plane]; 16];
+                chroma_right_contexts[plane - 1] = [contexts[plane]; LOSSLESS_GRID_EDGE_CAPACITY];
+                chroma_bottom_contexts[plane - 1] = [contexts[plane]; LOSSLESS_GRID_EDGE_CAPACITY];
             }
         }
         let [y, u, v] = rasters;
@@ -50254,6 +50303,20 @@ impl Lossy420Decoder {
         } else {
             luma_tx_size.context_dimensions()
         };
+        let legacy_luma_right_contexts = std::array::from_fn(|index| luma_right_contexts[index]);
+        let legacy_luma_bottom_contexts = std::array::from_fn(|index| luma_bottom_contexts[index]);
+        let legacy_chroma_right_contexts = std::array::from_fn(|plane| {
+            std::array::from_fn(|index| chroma_right_contexts[plane][index])
+        });
+        let legacy_chroma_bottom_contexts = std::array::from_fn(|plane| {
+            std::array::from_fn(|index| chroma_bottom_contexts[plane][index])
+        });
+        let wide_coefficient_contexts = lossless_wide.then_some(CoefficientEdgeContexts32 {
+            luma_right: luma_right_contexts,
+            luma_bottom: luma_bottom_contexts,
+            chroma_right: chroma_right_contexts,
+            chroma_bottom: chroma_bottom_contexts,
+        });
         Ok(FirstLeaf {
             width: visible_width,
             height: visible_height,
@@ -50263,22 +50326,22 @@ impl Lossy420Decoder {
             chroma_predictor: (!monochrome).then_some(ChromaPredictor::Dc),
             luma_context: contexts[0],
             chroma_contexts: [contexts[1], contexts[2]],
-            chroma_right_contexts,
-            chroma_bottom_contexts,
+            chroma_right_contexts: legacy_chroma_right_contexts,
+            chroma_bottom_contexts: legacy_chroma_bottom_contexts,
             tx_context_width,
             tx_context_height,
             luma_transform_split,
             luma_right_contexts: if luma_transform_split {
-                luma_right_contexts
+                legacy_luma_right_contexts
             } else {
                 [contexts[0]; 16]
             },
             luma_bottom_contexts: if luma_transform_split {
-                luma_bottom_contexts
+                legacy_luma_bottom_contexts
             } else {
                 [contexts[0]; 16]
             },
-            wide_coefficient_contexts: None,
+            wide_coefficient_contexts,
             palette_cache: PaletteCacheState::default(),
             #[cfg(coverage)]
             entropy_operations: Vec::new(),
