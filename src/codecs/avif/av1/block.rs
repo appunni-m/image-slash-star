@@ -48588,7 +48588,10 @@ fn lossy_only_4x4_grid_block_supported(block_size: BlockSize) -> bool {
 }
 
 fn lossy_wide_chunked_block_supported(block_size: BlockSize) -> bool {
-    matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
+    matches!(
+        block_size,
+        BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+    )
 }
 
 fn inherited_inter_chroma_transform(
@@ -51345,8 +51348,10 @@ impl Lossy420Decoder {
         coefficient_contexts: InterCoefficientContexts,
     ) -> PortableResult<[LosslessGridContexts; 3]> {
         let (luma_width, luma_height) = (rasters[0].coded_width, rasters[0].coded_height);
-        (matches!((luma_width, luma_height), (64, 128) | (128, 64))
-            && tools.sample_depth == SampleDepth::EIGHT
+        (matches!(
+            (luma_width, luma_height),
+            (64, 128) | (128, 64) | (128, 128)
+        ) && tools.sample_depth == SampleDepth::EIGHT
             && tools.transform_mode == 1
             && !quantization.segment_lossless)
             .then_some(())
@@ -51354,10 +51359,12 @@ impl Lossy420Decoder {
         let chunk_count_x = luma_width / 64;
         let chunk_count_y = luma_height / 64;
         (chunk_count_x <= 2
+            && chunk_count_x != 0
             && chunk_count_y <= 2
-            && chunk_count_x.saturating_mul(chunk_count_y) == 2)
-            .then_some(())
-            .portable()?;
+            && chunk_count_y != 0
+            && (2..=4).contains(&chunk_count_x.saturating_mul(chunk_count_y)))
+        .then_some(())
+        .portable()?;
         let geometries = [
             (luma_width, luma_height, 64_usize, 64_usize, TxSize::Tx64x64),
             (
@@ -51379,9 +51386,12 @@ impl Lossy420Decoder {
             geometries.iter().copied().enumerate()
         {
             let expected = if plane == 0 {
-                matches!((coded_width, coded_height), (64, 128) | (128, 64))
+                matches!(
+                    (coded_width, coded_height),
+                    (64, 128) | (128, 64) | (128, 128)
+                )
             } else {
-                matches!((coded_width, coded_height), (32, 64) | (64, 32))
+                matches!((coded_width, coded_height), (32, 64) | (64, 32) | (64, 64))
             };
             (expected
                 && predictions[plane].len() == coded_width.checked_mul(coded_height).portable()?

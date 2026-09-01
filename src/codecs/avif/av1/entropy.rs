@@ -3309,7 +3309,10 @@ fn inter_lossy_wide_chunk_geometry_supported(
         && bit_depth == 8
         && quantization.sample_depth.bits() == 8
         && transform_mode == 1
-        && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
+        && matches!(
+            block_size,
+            BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+        )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
