@@ -1,4 +1,5 @@
-//! AV1 normative horizontal super-resolution for retained 4:2:0 pictures.
+//! AV1 normative horizontal super-resolution for retained 4:2:0 and 4:2:2
+//! pictures.
 //!
 //! The interpolation table and fixed-point placement follow the pinned
 //! libaom `av1/common/resize.c` / `aom_dsp/aom_filter.h` implementation and
@@ -93,12 +94,57 @@ const RESIZE_FILTER: [[i16; 8]; 64] = [
 /// The transform consumes that private candidate, so allocation or geometry
 /// failures cannot publish a partial surface or mutate pending frame state.
 pub(super) fn upscale_i420_leaf(
+    leaf: FirstLeaf,
+    coded_width: u32,
+    upscaled_width: u32,
+    frame_height: u32,
+    superres_denominator: u32,
+    depth: SampleDepth,
+) -> Av1Result<FirstLeaf> {
+    upscale_subsampled_leaf(
+        leaf,
+        coded_width,
+        upscaled_width,
+        frame_height,
+        superres_denominator,
+        depth,
+        true,
+    )
+}
+
+/// Apply AV1's horizontal super-resolution step to a complete I422 leaf.
+///
+/// I422 shares the horizontal resize kernel with I420, but its chroma planes
+/// retain the full frame height. Keeping this adapter explicit prevents an
+/// I444 or vertically subsampled surface from silently entering the
+/// horizontal-only compositor.
+pub(super) fn upscale_i422_leaf(
+    leaf: FirstLeaf,
+    coded_width: u32,
+    upscaled_width: u32,
+    frame_height: u32,
+    superres_denominator: u32,
+    depth: SampleDepth,
+) -> Av1Result<FirstLeaf> {
+    upscale_subsampled_leaf(
+        leaf,
+        coded_width,
+        upscaled_width,
+        frame_height,
+        superres_denominator,
+        depth,
+        false,
+    )
+}
+
+fn upscale_subsampled_leaf(
     mut leaf: FirstLeaf,
     coded_width: u32,
     upscaled_width: u32,
     frame_height: u32,
     superres_denominator: u32,
     depth: SampleDepth,
+    subsampling_y: bool,
 ) -> Av1Result<FirstLeaf> {
     validate_header_geometry(
         leaf.width,
@@ -111,7 +157,11 @@ pub(super) fn upscale_i420_leaf(
     if upscaled_width == coded_width {
         validate_plane(&leaf.planes[0], coded_width, frame_height, depth)?;
         let chroma_width = coded_width.div_ceil(2);
-        let chroma_height = frame_height.div_ceil(2);
+        let chroma_height = if subsampling_y {
+            frame_height.div_ceil(2)
+        } else {
+            frame_height
+        };
         validate_plane(&leaf.planes[1], chroma_width, chroma_height, depth)?;
         validate_plane(&leaf.planes[2], chroma_width, chroma_height, depth)?;
         return Ok(leaf);
@@ -119,7 +169,11 @@ pub(super) fn upscale_i420_leaf(
 
     let chroma_coded_width = coded_width.div_ceil(2);
     let chroma_upscaled_width = upscaled_width.div_ceil(2);
-    let chroma_height = frame_height.div_ceil(2);
+    let chroma_height = if subsampling_y {
+        frame_height.div_ceil(2)
+    } else {
+        frame_height
+    };
     let [luma, chroma_u, chroma_v] = leaf.planes;
     let planes = [
         resize_plane(luma, coded_width, upscaled_width, frame_height, depth)?,

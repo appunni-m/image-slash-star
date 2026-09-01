@@ -12700,6 +12700,9 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 /// chroma retains its normative maximum transform. Screen-content palette
 /// flags, depth-scaled colors, clipped I422 index maps, and cache state are
 /// owned by the streamed header/leaf path; intraBC remains closed separately.
+/// Super-resolution is a frame-level horizontal post-filter, so this profile
+/// keeps all entropy and reconstruction state in coded coordinates and lets
+/// the frame compositor resize the completed I422 surface exactly once.
 fn complete_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -12715,10 +12718,9 @@ fn complete_422_intra_reconstruction_context(context: &FirstBlockContext) -> boo
         && context.frame_height >= 4
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
-        && context.upscaled_width == context.frame_width
+        && (context.superres_enabled || context.upscaled_width == context.frame_width)
         && context.block_x == 0
         && context.block_y == 0
-        && !context.superres_enabled
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled

@@ -1599,14 +1599,7 @@ impl FrameState {
                     .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
                 assembled_color_leaf = assembled_color_leaf
                     .map(|leaf| {
-                        resize::upscale_i420_leaf(
-                            leaf,
-                            pending.header.frame_width,
-                            pending.header.upscaled_width,
-                            pending.header.frame_height,
-                            pending.header.superres_denominator,
-                            depth,
-                        )
+                        upscale_color_leaf_for_superres(leaf, &pending.header, sequence, depth)
                     })
                     .transpose()?;
             }
@@ -2061,6 +2054,39 @@ fn assemble_color_tiles(
     }))
 }
 
+fn upscale_color_leaf_for_superres(
+    leaf: super::block::FirstLeaf,
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    depth: SampleDepth,
+) -> Av1Result<super::block::FirstLeaf> {
+    match PixelLayout::from_sequence(
+        sequence.monochrome,
+        sequence.subsampling_x,
+        sequence.subsampling_y,
+    ) {
+        Some(PixelLayout::I420) => resize::upscale_i420_leaf(
+            leaf,
+            header.frame_width,
+            header.upscaled_width,
+            header.frame_height,
+            header.superres_denominator,
+            depth,
+        ),
+        Some(PixelLayout::I422) => resize::upscale_i422_leaf(
+            leaf,
+            header.frame_width,
+            header.upscaled_width,
+            header.frame_height,
+            header.superres_denominator,
+            depth,
+        ),
+        _ => Err(malformed(
+            "super-resolution carries an unsupported chroma sampling",
+        )),
+    }
+}
+
 fn assemble_monochrome_tiles(
     tiles: &[ReconstructedMonochromeTile],
     trailing_tiles: &[ReconstructedMonochromeTile],
@@ -2448,14 +2474,7 @@ fn validate_tile_entropy_prefixes(
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
                         .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
-                    resize::upscale_i420_leaf(
-                        leaf,
-                        header.frame_width,
-                        header.upscaled_width,
-                        header.frame_height,
-                        header.superres_denominator,
-                        depth,
-                    )?
+                    upscale_color_leaf_for_superres(leaf, &header, sequence, depth)?
                 } else {
                     leaf
                 };
