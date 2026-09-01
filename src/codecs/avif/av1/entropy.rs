@@ -3149,6 +3149,21 @@ fn inter_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> u8 {
     compare_reference_counts(forward, backward)
 }
 
+/// Bounded I420/I422 profiles remain single-reference when frame-level skip
+/// mode is disabled. When skip mode is enabled, AV1 requires
+/// `reference_mode_select` and supplies a derived pair; non-skip leaves may
+/// then use the existing ordinary compound sentence, which resolves to the
+/// Average blend while masked and joint compound are disabled.
+fn bounded_reference_mode_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    (!context.skip_mode_enabled && !inter_context.reference_mode_select)
+        || (context.skip_mode_enabled
+            && inter_context.reference_mode_select
+            && inter_context.skip_mode_references.is_some())
+}
+
 fn interintra_allowed(block_size: BlockSize) -> bool {
     matches!(
         block_size,
@@ -6696,7 +6711,7 @@ fn bounded_i422_restoration_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -6758,7 +6773,7 @@ fn complete_bounded_i422_restoration_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_restoration_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -6837,7 +6852,7 @@ fn bounded_i420_restoration_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -6899,7 +6914,7 @@ fn complete_bounded_i420_restoration_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_i420_restoration_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -6995,7 +7010,7 @@ fn bounded_i420_cdef_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7048,7 +7063,7 @@ fn complete_bounded_i420_cdef_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_i420_cdef_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7084,7 +7099,7 @@ fn bounded_i422_cdef_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7137,7 +7152,7 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_cdef_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7167,7 +7182,7 @@ fn bounded_i422_rect_cdef_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7226,7 +7241,7 @@ fn complete_bounded_i422_rect_cdef_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_rect_cdef_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7258,7 +7273,7 @@ fn bounded_i422_rect_restoration_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7329,7 +7344,7 @@ fn complete_bounded_i422_rect_restoration_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_rect_restoration_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7363,7 +7378,7 @@ fn bounded_i420_rect_loop_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7417,7 +7432,7 @@ fn complete_bounded_i420_rect_loop_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_i420_rect_loop_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7451,7 +7466,7 @@ fn bounded_i420_rect_cdef_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7510,7 +7525,7 @@ fn complete_bounded_i420_rect_cdef_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_i420_rect_cdef_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7542,7 +7557,7 @@ fn bounded_i420_rect_restoration_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7613,7 +7628,7 @@ fn complete_bounded_i420_rect_restoration_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_i420_rect_restoration_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7657,7 +7672,7 @@ fn bounded_subsampled_cdef_restoration_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7724,7 +7739,7 @@ fn complete_bounded_i420_cdef_restoration_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_subsampled_cdef_restoration_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7768,7 +7783,7 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_subsampled_cdef_restoration_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7799,7 +7814,7 @@ fn bounded_subsampled_rect_cdef_restoration_base(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -7885,7 +7900,7 @@ fn complete_bounded_i420_rect_cdef_restoration_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_i420_rect_cdef_restoration_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -7950,7 +7965,7 @@ fn complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_rect_cdef_restoration_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -8039,7 +8054,7 @@ fn bounded_subsampled_rect_loop_postfilters_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -8100,7 +8115,7 @@ fn complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
         && matches!(context.bit_depth, 10 | 12)
         && context.subsampling_x
         && context.subsampling_y
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -8155,7 +8170,7 @@ fn complete_bounded_i422_rect_loop_postfilters_inter_reconstruction_context(
         && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -8241,7 +8256,7 @@ fn bounded_subsampled_loop_postfilters_common(
                 && !context.all_lossless
                 && !context.segmentation_enabled
                 && !context.frame_tools.segmentation.enabled
-                && !context.skip_mode_enabled
+                && (!context.skip_mode_enabled || !context.intra_frame)
                 && !context.allow_intrabc
                 && !context.frame_tools.film_grain_present
                 && !context.frame_tools.delta_q_present
@@ -8306,7 +8321,7 @@ fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
         && matches!(context.bit_depth, 10 | 12)
         && context.subsampling_x
         && context.subsampling_y
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -8354,7 +8369,7 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
         && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -8395,7 +8410,7 @@ fn bounded_subsampled_loop_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -8449,7 +8464,7 @@ fn complete_bounded_i420_loop_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && bounded_subsampled_loop_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -8491,7 +8506,7 @@ fn complete_bounded_i422_loop_inter_reconstruction_context(
     !context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_subsampled_loop_common(context, quantization)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
@@ -8931,7 +8946,7 @@ fn bounded_i422_rect_loop_common(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
@@ -8985,7 +9000,7 @@ fn complete_bounded_i422_rect_loop_inter_reconstruction_context(
     (!context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && bounded_i422_rect_loop_common(context, quantization, geometry)
-        && !inter_context.reference_mode_select
+        && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
         && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
