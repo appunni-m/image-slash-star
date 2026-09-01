@@ -7491,6 +7491,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         && inter_context.is_some_and(|inter_context| {
             high_depth_lossless_i420_superres_restoration_supported(context, inter_context)
         });
+    let high_depth_lossless_monochrome_active_restoration = generic_high_depth_lossless_inter
+        && inter_context.is_some_and(|inter_context| {
+            high_depth_lossless_monochrome_superres_restoration_supported(context, inter_context)
+        });
     let lossless_color_inter = inter_context.is_some_and(|inter_context| {
         complete_lossless_inter_color_reconstruction_context(context, inter_context)
     });
@@ -7842,6 +7846,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || high_depth_lossless_i444_active_restoration
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
+        || high_depth_lossless_monochrome_active_restoration
         || lossless_i420_active_restoration
         || lossless_i422_active_restoration
         || lossless_i444_active_restoration
@@ -13098,7 +13103,7 @@ fn lossless_monochrome_superres_restoration_supported(context: &FirstBlockContex
 /// horizontally tiled, full-height layout so frame-wide resize taps remain
 /// intact. Under super-resolution, a present restoration header is accepted
 /// only when every plane is `NONE`, except for the bounded single-tile 8-bit
-/// and high-depth I444/I422 active-restoration slices below.
+/// and high-depth I444/I422/I420/monochrome active-restoration slices below.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -13136,7 +13141,11 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
     let active_high_depth_restoration =
         high_depth_lossless_i444_superres_restoration_supported(context, inter_context)
             || high_depth_lossless_i422_superres_restoration_supported(context, inter_context)
-            || high_depth_lossless_i420_superres_restoration_supported(context, inter_context);
+            || high_depth_lossless_i420_superres_restoration_supported(context, inter_context)
+            || high_depth_lossless_monochrome_superres_restoration_supported(
+                context,
+                inter_context,
+            );
     let restoration_supported = (neutral_restoration && context.restoration_types == [None; 3])
         || active_high_depth_restoration;
     let superres_layout = context.superres_enabled
@@ -13553,6 +13562,87 @@ fn high_depth_lossless_i420_superres_restoration_supported(
         }
     }
     true
+}
+
+/// Admit active Wiener/SGR restoration for one high-depth monochrome
+/// super-resolution frame. Only the luma restoration unit is present; alpha
+/// callers use this same monochrome surface path without inventing chroma
+/// state.
+fn high_depth_lossless_monochrome_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    if context.intra_frame
+        || !context.all_lossless
+        || !context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != 0
+        || context.frame_tools.transform_mode != 0
+        || !matches!(context.bit_depth, 10 | 12)
+        || !context.monochrome
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.allow_warped_motion
+        || inter_context.enable_interintra_compound
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || !context.frame_tools.restoration_present
+        || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+    {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) {
+        return false;
+    }
+    let unit_log2 = context.restoration_unit_size_log2[0];
+    let unit_log2_supported = match context.level {
+        0 => (7..=8).contains(&unit_log2),
+        1 => (6..=8).contains(&unit_log2),
+        _ => false,
+    };
+    if !unit_log2_supported || context.frame_height > 56 {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+        return false;
+    };
+    let Some(width_with_half) = context.upscaled_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> unit_log2).max(1) == 1 && (height_with_half >> unit_log2).max(1) == 1
 }
 
 /// High-depth full-resolution tranche admitted by the generic streamed
