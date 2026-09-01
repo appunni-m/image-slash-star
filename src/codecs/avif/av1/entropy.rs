@@ -3164,6 +3164,36 @@ fn bounded_reference_mode_supported(
             && inter_context.skip_mode_references.is_some())
 }
 
+/// Admit only the post-skip segmentation sentence proved by the bounded
+/// high-depth I420 CDEF inter profile.  The segment map is updated after the
+/// block skip sentence, so every active segment must avoid features that move
+/// syntax before skip (reference/skip/global-motion), alter loop-filter
+/// metadata, or enter the lossless transform grammar.  Alternate qindex is
+/// handled by the existing per-block segment quantization path.
+fn bounded_postskip_segmentation_supported(context: &FirstBlockContext) -> bool {
+    let segmentation = context.frame_tools.segmentation;
+    if !context.segmentation_enabled {
+        return !segmentation.enabled;
+    }
+    if context.intra_frame
+        || !segmentation.enabled
+        || !segmentation.update_map
+        || segmentation.preskip
+    {
+        return false;
+    }
+    let active_count = usize::try_from(segmentation.last_active_id.saturating_add(1).clamp(0, 8))
+        .unwrap_or_default();
+    segmentation.segments[..active_count].iter().all(|segment| {
+        segment.reference < 0
+            && !segment.skip
+            && !segment.global_motion
+            && segment.delta_lf == [0; 4]
+            && segment.qindex > 0
+            && !segment.lossless
+    })
+}
+
 fn interintra_allowed(block_size: BlockSize) -> bool {
     matches!(
         block_size,
@@ -5838,12 +5868,27 @@ pub(super) fn validate_complete_lossy_420_partition(
                         };
                         (segment_id, segment_pred, segment, block_skipped, skip_mode)
                     } else {
-                        if context.skip_mode_enabled {
-                            unsupported = true;
-                            return Ok(PartitionVisitControl::Stop);
-                        }
+                        let skip_mode = if context.skip_mode_enabled
+                            && node
+                                .block_size
+                                .mi_dimensions()
+                                .0
+                                .min(node.block_size.mi_dimensions().1)
+                                > 1
+                        {
+                            let context_index = skip_mode_context_for_node(&tile_state, node)?;
+                            let cdf = tile_cdfs
+                                .inter
+                                .skip_mode
+                                .get_mut(context_index)
+                                .ok_or_else(|| malformed("skip-mode context exceeds three rows"))?;
+                            decoder.adaptive_bool(&mut cdf.0)
+                        } else {
+                            false
+                        };
                         let skip =
-                            match block_decoder.decode_skip(decoder, tools.skip_context, false) {
+                            match block_decoder.decode_skip(decoder, tools.skip_context, skip_mode)
+                            {
                                 Ok(skip) => skip,
                                 Err(_) => {
                                     unsupported = true;
@@ -5865,7 +5910,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                             segment.qindex,
                             segment.lossless,
                         );
-                        (segment_id, segment_pred, segment, skip, false)
+                        (segment_id, segment_pred, segment, skip, skip_mode)
                     };
                 block_decoder.begin_block(
                     syntax_block_size,
@@ -7008,8 +7053,7 @@ fn bounded_i420_cdef_common(
         && matches!(context.level, 0 | 1)
         && !context.superres_enabled
         && !context.all_lossless
-        && !context.segmentation_enabled
-        && !context.frame_tools.segmentation.enabled
+        && bounded_postskip_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
