@@ -6419,7 +6419,8 @@ fn complete_inter_444_reconstruction_context(
 /// coded coordinates; the completed leaf is resized only after deblock/CDEF.
 /// Eight-bit syntax keeps its established profile. Ten/twelve-bit syntax uses
 /// the depth-aware streamed engine with the same reduced-transform, validated
-/// loop-filter, and complete-8x8 CDEF proofs as the non-superres tranche.
+/// loop-filter (including dynamic delta-LF), and complete-8x8 CDEF proofs as
+/// the non-superres tranche.
 fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     let high_depth = matches!(context.bit_depth, 10 | 12);
     let cdef_supported = if high_depth {
@@ -9787,7 +9788,9 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// geometry; restoration and large implicit transform tilings stay closed
 /// until their high-depth arithmetic/state is connected. The coefficient
 /// dispatcher carries quantization matrices when enabled and remains
-/// depth-parametric when they are absent.
+/// depth-parametric when they are absent. Dynamic delta-LF levels are applied
+/// on planes whose frame-level base filter is enabled; header-disabled planes
+/// remain a zero-level no-op.
 fn complete_high_depth_cdef_supported(context: &FirstBlockContext) -> bool {
     context.frame_tools.cdef.is_none()
         || (context.frame_width.is_multiple_of(8)
@@ -9804,10 +9807,7 @@ fn complete_high_depth_loop_filter_supported(context: &FirstBlockContext) -> boo
     let luma_disabled = loop_filter.level_y == [0; 2];
     let chroma_consistent =
         !luma_disabled || (loop_filter.level_u == 0 && loop_filter.level_v == 0);
-    let filtering_active = !luma_disabled || loop_filter.level_u != 0 || loop_filter.level_v != 0;
-    levels_valid
-        && chroma_consistent
-        && (!filtering_active || !context.frame_tools.delta_lf_present)
+    levels_valid && chroma_consistent
 }
 
 /// High-depth full-resolution intra frames use the streamed three-plane path;
@@ -9838,6 +9838,7 @@ fn complete_high_depth_full_reconstruction_context(context: &FirstBlockContext) 
 /// and depth-aware dequantizer for every reachable I420 transform shape, while
 /// IDTX and one-dimensional transforms disable matrix use per AV1 syntax.
 /// Bounded CDEF is admitted only when the luma raster has complete 8x8 units.
+/// Dynamic delta-LF levels share the validated frame-filter metadata path.
 fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
