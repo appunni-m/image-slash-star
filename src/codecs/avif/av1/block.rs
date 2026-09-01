@@ -49317,8 +49317,10 @@ impl Lossy420Decoder {
     fn lossless_inter_transform_plan(
         &self,
         block_size: BlockSize,
+        sample_depth: SampleDepth,
     ) -> PortableResult<InterTransformPlan> {
-        if matches!(self.chroma_sampling, ChromaSampling::Monochrome)
+        if sample_depth != SampleDepth::EIGHT
+            || matches!(self.chroma_sampling, ChromaSampling::Monochrome)
             || lossless_grid_block_supported(block_size)
         {
             let (luma_width, luma_height) = block_size.pixel_dimensions();
@@ -49445,7 +49447,7 @@ impl Lossy420Decoder {
                 obmc,
             },
             block_skipped,
-            self.lossless_inter_transform_plan(block_size)?,
+            self.lossless_inter_transform_plan(block_size, tools.sample_depth)?,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -49492,7 +49494,7 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             block_skipped,
-            self.lossless_inter_transform_plan(block_size)?,
+            self.lossless_inter_transform_plan(block_size, tools.sample_depth)?,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -49581,7 +49583,8 @@ impl Lossy420Decoder {
         } = transform_plan
         {
             (sampling == chroma_sampling
-                && (matches!(sampling, ChromaSampling::Monochrome)
+                && (tools.sample_depth != SampleDepth::EIGHT
+                    || matches!(sampling, ChromaSampling::Monochrome)
                     || lossless_grid_block_supported(block_size))
                 && (luma_width, luma_height) == block_size.pixel_dimensions())
             .then_some(())
@@ -49651,8 +49654,11 @@ impl Lossy420Decoder {
                         | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                         | ChromaSampling::Full
-                ) && tools.sample_depth == SampleDepth::EIGHT
-                    && tools.transform_mode == 0
+                ) && (if lossless_large {
+                    matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                } else {
+                    tools.sample_depth == SampleDepth::EIGHT
+                }) && tools.transform_mode == 0
                     && quantization.segment_lossless
                     && quantization.qindex == 0
                     && quantization.segment_qindex == 0
@@ -50634,7 +50640,7 @@ impl Lossy420Decoder {
             && raster.active_width == coded_width
             && raster.active_height == coded_height
             && matches!(plane, 0..=2)
-            && tools.sample_depth == SampleDepth::EIGHT
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 0
             && quantization.qindex == 0
             && quantization.segment_qindex == 0
