@@ -12414,9 +12414,10 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// this frame gate proves that every syntax feature around those leaves is
 /// likewise neutral, so no lossy or post-filter fallback can publish a
 /// partially reconstructed surface. The only super-resolution extension is
-/// the single-tile I420/I422/I444 class below; its prediction samples come from a
-/// retained upscaled reference and its coded result is resized once after
-/// reconstruction.
+/// the I420/I422/I444 class below; its prediction samples come from a retained
+/// upscaled reference and its coded result is resized once after reconstruction.
+/// I420 additionally admits a horizontally tiled, full-height layout so the
+/// existing frame assembler can preserve cross-tile resize taps.
 fn complete_lossless_inter_color_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12454,8 +12455,31 @@ fn complete_lossless_inter_color_reconstruction_context(
             layout,
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
+    let horizontal_multitile_i420 = context.superres_enabled
+        && layout == PixelLayout::I420
+        && !context.single_tile
+        && context.frame_width >= 4
+        && context.frame_height >= 4
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.tile_origin_b4_y == 0
+        && context.block_height == context.frame_block_height
+        && context
+            .tile_origin_b4_x
+            .checked_add(context.block_width)
+            .is_some_and(|end| end <= context.frame_block_width)
+        && 32_u32
+            .checked_shr(context.level)
+            .is_some_and(|root_size_b4| {
+                root_size_b4 != 0
+                    && context.tile_origin_b4_x.is_multiple_of(root_size_b4)
+                    && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
+            })
+        && matches!(context.level, 0 | 1);
     let dimensions_supported = if superres_color {
-        context.frame_width >= 4
+        (context.frame_width >= 4
             && context.frame_height >= 4
             && padded_block_width == Some(context.block_width)
             && padded_block_height == Some(context.block_height)
@@ -12466,7 +12490,8 @@ fn complete_lossless_inter_color_reconstruction_context(
             && context.tile_origin_b4_y == 0
             && context.block_width == context.frame_block_width
             && context.block_height == context.frame_block_height
-            && matches!(context.level, 0 | 1)
+            && matches!(context.level, 0 | 1))
+            || horizontal_multitile_i420
     } else {
         !context.superres_enabled
             && context.frame_width != 0
