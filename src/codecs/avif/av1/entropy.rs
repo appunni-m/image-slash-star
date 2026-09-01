@@ -7025,6 +7025,9 @@ fn bounded_i422_rect_cdef_common(
     quantization: QuantizationContext,
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
+    // Screen-enabled I422 intra leaves may use depth-aware palette prediction;
+    // inter leaves use parsed force-integer MV precision. CDEF consumes
+    // completed samples, while intraBC remains closed in this profile.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && !context.subsampling_y
@@ -7041,7 +7044,6 @@ fn bounded_i422_rect_cdef_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -7113,6 +7115,10 @@ fn bounded_i422_rect_restoration_common(
     quantization: QuantizationContext,
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
+    // Screen-enabled I422 intra leaves may use depth-aware palette prediction;
+    // inter leaves use parsed force-integer MV precision. Restoration consumes
+    // completed samples for only the geometries admitted by its unit proof;
+    // intraBC remains closed in this profile.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && !context.subsampling_y
@@ -7129,7 +7135,6 @@ fn bounded_i422_rect_restoration_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
