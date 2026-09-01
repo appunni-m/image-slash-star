@@ -3259,15 +3259,34 @@ fn inter_lossless_grid_geometry_supported(
     visible_width: u32,
     visible_height: u32,
     bit_depth: u32,
-    segment_lossless: bool,
+    quantization: super::block::LossyQuantization,
     transform_mode: u32,
 ) -> bool {
-    segment_lossless
+    quantization.segment_lossless
         && transform_mode == 0
         && bit_depth == 8
+        && quantization.sample_depth.bits() == 8
+        && quantization.qindex == 0
+        && quantization.segment_qindex == 0
+        && !quantization.delta_q_present
+        && !quantization.using_matrix
+        && quantization.y_dc_delta == 0
+        && quantization.y_ac_delta == 0
+        && quantization.u_dc_delta == 0
+        && quantization.u_ac_delta == 0
+        && quantization.v_dc_delta == 0
+        && quantization.v_ac_delta == 0
         && matches!(
             block_size,
-            BlockSize::B8x8 | BlockSize::B16x16 | BlockSize::B8x16 | BlockSize::B16x8
+            BlockSize::B4x4
+                | BlockSize::B4x8
+                | BlockSize::B8x4
+                | BlockSize::B4x16
+                | BlockSize::B16x4
+                | BlockSize::B8x8
+                | BlockSize::B16x16
+                | BlockSize::B8x16
+                | BlockSize::B16x8
         )
         && matches!(
             layout,
@@ -4241,6 +4260,21 @@ enum InterTransformPlan {
     LosslessB16x8I420,
     LosslessB16x8I422,
     LosslessB16x8I444,
+    LosslessB4I420,
+    LosslessB4I422,
+    LosslessB4I444,
+    LosslessB4x8I420,
+    LosslessB4x8I422,
+    LosslessB4x8I444,
+    LosslessB8x4I420,
+    LosslessB8x4I422,
+    LosslessB8x4I444,
+    LosslessB4x16I420,
+    LosslessB4x16I422,
+    LosslessB4x16I444,
+    LosslessB16x4I420,
+    LosslessB16x4I422,
+    LosslessB16x4I444,
 }
 
 fn decode_inter_transform_size(
@@ -4253,7 +4287,7 @@ fn decode_inter_transform_size(
     visible_width: u32,
     visible_height: u32,
     eight_bit: bool,
-    segment_lossless: bool,
+    lossless_grid_geometry: bool,
     block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
@@ -4262,10 +4296,18 @@ fn decode_inter_transform_size(
         // An all-lossless B8x8/B16x16 or rectangular B8x16/B16x8 leaf is a
         // fixed TX4x4 grid; mode 0 carries no transform-partition sentence.
         // Other mode-0 blocks retain the existing single-terminal checks.
-        if segment_lossless
+        if lossless_grid_geometry
             && matches!(
                 block_size,
-                BlockSize::B8x8 | BlockSize::B16x16 | BlockSize::B8x16 | BlockSize::B16x8
+                BlockSize::B4x4
+                    | BlockSize::B4x8
+                    | BlockSize::B8x4
+                    | BlockSize::B4x16
+                    | BlockSize::B16x4
+                    | BlockSize::B8x8
+                    | BlockSize::B16x16
+                    | BlockSize::B8x16
+                    | BlockSize::B16x8
             )
             && matches!(
                 layout,
@@ -4273,15 +4315,24 @@ fn decode_inter_transform_size(
             )
             && eight_bit
         {
-            let exact_geometry = match block_size {
-                BlockSize::B8x8 => visible_width == 8 && visible_height == 8,
-                BlockSize::B16x16 => visible_width == 16 && visible_height == 16,
-                BlockSize::B8x16 => visible_width == 8 && visible_height == 16,
-                BlockSize::B16x8 => visible_width == 16 && visible_height == 8,
-                _ => false,
-            };
+            let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
             if exact_geometry {
                 return Ok(match (block_size, layout) {
+                    (BlockSize::B4x4, PixelLayout::I420) => InterTransformPlan::LosslessB4I420,
+                    (BlockSize::B4x4, PixelLayout::I422) => InterTransformPlan::LosslessB4I422,
+                    (BlockSize::B4x4, PixelLayout::I444) => InterTransformPlan::LosslessB4I444,
+                    (BlockSize::B4x8, PixelLayout::I420) => InterTransformPlan::LosslessB4x8I420,
+                    (BlockSize::B4x8, PixelLayout::I422) => InterTransformPlan::LosslessB4x8I422,
+                    (BlockSize::B4x8, PixelLayout::I444) => InterTransformPlan::LosslessB4x8I444,
+                    (BlockSize::B8x4, PixelLayout::I420) => InterTransformPlan::LosslessB8x4I420,
+                    (BlockSize::B8x4, PixelLayout::I422) => InterTransformPlan::LosslessB8x4I422,
+                    (BlockSize::B8x4, PixelLayout::I444) => InterTransformPlan::LosslessB8x4I444,
+                    (BlockSize::B4x16, PixelLayout::I420) => InterTransformPlan::LosslessB4x16I420,
+                    (BlockSize::B4x16, PixelLayout::I422) => InterTransformPlan::LosslessB4x16I422,
+                    (BlockSize::B4x16, PixelLayout::I444) => InterTransformPlan::LosslessB4x16I444,
+                    (BlockSize::B16x4, PixelLayout::I420) => InterTransformPlan::LosslessB16x4I420,
+                    (BlockSize::B16x4, PixelLayout::I422) => InterTransformPlan::LosslessB16x4I422,
+                    (BlockSize::B16x4, PixelLayout::I444) => InterTransformPlan::LosslessB16x4I444,
                     (BlockSize::B8x8, PixelLayout::I420) => InterTransformPlan::LosslessB8I420,
                     (BlockSize::B8x8, PixelLayout::I422) => InterTransformPlan::LosslessB8I422,
                     (BlockSize::B8x8, PixelLayout::I444) => InterTransformPlan::LosslessB8I444,
@@ -4294,7 +4345,7 @@ fn decode_inter_transform_size(
                     (BlockSize::B16x8, PixelLayout::I420) => InterTransformPlan::LosslessB16x8I420,
                     (BlockSize::B16x8, PixelLayout::I422) => InterTransformPlan::LosslessB16x8I422,
                     (BlockSize::B16x8, PixelLayout::I444) => InterTransformPlan::LosslessB16x8I444,
-                    _ => InterTransformPlan::Single(TxSize::Tx4x4),
+                    _ => return Err(super::block::PortableUnavailable),
                 });
             }
         }
@@ -4417,9 +4468,15 @@ fn decode_inter_leaf(
         visible_width,
         visible_height,
         context.bit_depth,
-        prepared_quantization.quantization.segment_lossless,
+        prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    if lossless_grid_geometry
+        && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
+        && !partition_node_has_chroma(context, node, false)
+    {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
     if !inter_single_transform_geometry_supported(node.block_size, layout)
         && !lossless_grid_geometry
     {
@@ -4990,7 +5047,7 @@ fn decode_inter_leaf(
         visible_width,
         visible_height,
         context.bit_depth == 8,
-        prepared_quantization.quantization.segment_lossless,
+        lossless_grid_geometry,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
@@ -5014,6 +5071,21 @@ fn decode_inter_leaf(
         InterTransformPlan::LosslessB16x8I420
         | InterTransformPlan::LosslessB16x8I422
         | InterTransformPlan::LosslessB16x8I444 => (TxSize::Tx16x8, false, true),
+        InterTransformPlan::LosslessB4I420
+        | InterTransformPlan::LosslessB4I422
+        | InterTransformPlan::LosslessB4I444 => (TxSize::Tx4x4, false, true),
+        InterTransformPlan::LosslessB4x8I420
+        | InterTransformPlan::LosslessB4x8I422
+        | InterTransformPlan::LosslessB4x8I444 => (TxSize::Tx4x8, false, true),
+        InterTransformPlan::LosslessB8x4I420
+        | InterTransformPlan::LosslessB8x4I422
+        | InterTransformPlan::LosslessB8x4I444 => (TxSize::Tx8x4, false, true),
+        InterTransformPlan::LosslessB4x16I420
+        | InterTransformPlan::LosslessB4x16I422
+        | InterTransformPlan::LosslessB4x16I444 => (TxSize::Tx4x16, false, true),
+        InterTransformPlan::LosslessB16x4I420
+        | InterTransformPlan::LosslessB16x4I422
+        | InterTransformPlan::LosslessB16x4I444 => (TxSize::Tx16x4, false, true),
     };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
@@ -5044,14 +5116,18 @@ fn decode_inter_leaf(
             [..luma_context_height_usize],
     );
 
-    let chroma_tx = if context.monochrome {
+    let block_chroma_sampling = if context.monochrome {
         None
     } else {
-        let chroma_sampling = super::block::ChromaSampling::from_subsampling(
-            context.subsampling_x,
-            context.subsampling_y,
+        Some(
+            super::block::ChromaSampling::from_subsampling(
+                context.subsampling_x,
+                context.subsampling_y,
+            )
+            .ok_or_else(|| malformed("inter chroma sampling is invalid"))?,
         )
-        .ok_or_else(|| malformed("inter chroma sampling is invalid"))?;
+    };
+    let chroma_tx = if let Some(chroma_sampling) = block_chroma_sampling {
         let chroma_layout = match chroma_sampling {
             super::block::ChromaSampling::Full => PixelLayout::I444,
             super::block::ChromaSampling::Subsampled420 => PixelLayout::I420,
@@ -5063,39 +5139,43 @@ fn decode_inter_leaf(
                 .maximum_chroma_tx(chroma_layout)
                 .ok_or_else(|| malformed("inter chroma transform is unavailable"))?,
         )
+    } else {
+        None
     };
     if let Some(chroma_tx) = chroma_tx {
         let (chroma_tx_width, chroma_tx_height) = chroma_tx.pixel_dimensions();
-        let (chroma_context_width, chroma_context_height) = if lossless_transform {
-            let (block_width, block_height) = node.block_size.pixel_dimensions();
-            let chroma_width = if context.subsampling_x {
-                block_width.div_ceil(2)
+        let (chroma_context_width, chroma_context_height) =
+            if lossless_transform {
+                let chroma_sampling = block_chroma_sampling
+                    .ok_or_else(|| malformed("inter lossless chroma sampling is unavailable"))?;
+                let (chroma_width, chroma_height, _, _) = super::block::generic_plane_geometry(
+                    node.block_size,
+                    chroma_sampling,
+                    1,
+                    visible_width,
+                    visible_height,
+                )
+                .map_err(|_| malformed("inter lossless chroma geometry is unavailable"))?;
+                (
+                    u32::try_from(chroma_width.checked_div(4).ok_or_else(|| {
+                        malformed("inter lossless chroma width is not four-aligned")
+                    })?)
+                    .map_err(|_| malformed("inter lossless chroma width exceeds u32"))?,
+                    u32::try_from(chroma_height.checked_div(4).ok_or_else(|| {
+                        malformed("inter lossless chroma height is not four-aligned")
+                    })?)
+                    .map_err(|_| malformed("inter lossless chroma height exceeds u32"))?,
+                )
             } else {
-                block_width
+                (
+                    chroma_tx_width.checked_div(4).ok_or_else(|| {
+                        malformed("inter chroma transform width is not four-aligned")
+                    })?,
+                    chroma_tx_height.checked_div(4).ok_or_else(|| {
+                        malformed("inter chroma transform height is not four-aligned")
+                    })?,
+                )
             };
-            let chroma_height = if context.subsampling_y {
-                block_height.div_ceil(2)
-            } else {
-                block_height
-            };
-            (
-                chroma_width
-                    .checked_div(4)
-                    .ok_or_else(|| malformed("inter lossless chroma width is not four-aligned"))?,
-                chroma_height
-                    .checked_div(4)
-                    .ok_or_else(|| malformed("inter lossless chroma height is not four-aligned"))?,
-            )
-        } else {
-            (
-                chroma_tx_width
-                    .checked_div(4)
-                    .ok_or_else(|| malformed("inter chroma transform width is not four-aligned"))?,
-                chroma_tx_height.checked_div(4).ok_or_else(|| {
-                    malformed("inter chroma transform height is not four-aligned")
-                })?,
-            )
-        };
         let chroma_context_width_usize = usize::try_from(chroma_context_width)
             .map_err(|_| malformed("inter chroma context width exceeds scratch"))?;
         let chroma_context_height_usize = usize::try_from(chroma_context_height)

@@ -48322,7 +48322,7 @@ impl GenericCoefficientState {
     }
 }
 
-fn generic_plane_geometry(
+pub(super) fn generic_plane_geometry(
     block_size: BlockSize,
     chroma_sampling: ChromaSampling,
     plane: usize,
@@ -48482,6 +48482,21 @@ enum InterTransformPlan {
     LosslessB16x8I420,
     LosslessB16x8I422,
     LosslessB16x8I444,
+    LosslessB4I420,
+    LosslessB4I422,
+    LosslessB4I444,
+    LosslessB4x8I420,
+    LosslessB4x8I422,
+    LosslessB4x8I444,
+    LosslessB8x4I420,
+    LosslessB8x4I422,
+    LosslessB8x4I444,
+    LosslessB4x16I420,
+    LosslessB4x16I422,
+    LosslessB4x16I444,
+    LosslessB16x4I420,
+    LosslessB16x4I422,
+    LosslessB16x4I444,
 }
 
 impl BlockSegmentState {
@@ -49297,6 +49312,41 @@ impl Lossy420Decoder {
                 Ok(InterTransformPlan::LosslessB16x8I422)
             }
             (BlockSize::B16x8, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB16x8I444),
+            (BlockSize::B4x4, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB4I420)
+            }
+            (BlockSize::B4x4, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB4I422)
+            }
+            (BlockSize::B4x4, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB4I444),
+            (BlockSize::B4x8, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB4x8I420)
+            }
+            (BlockSize::B4x8, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB4x8I422)
+            }
+            (BlockSize::B4x8, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB4x8I444),
+            (BlockSize::B8x4, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB8x4I420)
+            }
+            (BlockSize::B8x4, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB8x4I422)
+            }
+            (BlockSize::B8x4, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB8x4I444),
+            (BlockSize::B4x16, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB4x16I420)
+            }
+            (BlockSize::B4x16, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB4x16I422)
+            }
+            (BlockSize::B4x16, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB4x16I444),
+            (BlockSize::B16x4, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB16x4I420)
+            }
+            (BlockSize::B16x4, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB16x4I422)
+            }
+            (BlockSize::B16x4, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB16x4I444),
             _ => Err(PortableUnavailable),
         }
     }
@@ -49444,13 +49494,36 @@ impl Lossy420Decoder {
                 | InterTransformPlan::LosslessB16x8I422
                 | InterTransformPlan::LosslessB16x8I444
         );
-        let lossless_grid = lossless_b8 || lossless_b16 || lossless_rect;
+        let lossless_small = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessB4I420
+                | InterTransformPlan::LosslessB4I422
+                | InterTransformPlan::LosslessB4I444
+                | InterTransformPlan::LosslessB4x8I420
+                | InterTransformPlan::LosslessB4x8I422
+                | InterTransformPlan::LosslessB4x8I444
+                | InterTransformPlan::LosslessB8x4I420
+                | InterTransformPlan::LosslessB8x4I422
+                | InterTransformPlan::LosslessB8x4I444
+                | InterTransformPlan::LosslessB4x16I420
+                | InterTransformPlan::LosslessB4x16I422
+                | InterTransformPlan::LosslessB4x16I444
+                | InterTransformPlan::LosslessB16x4I420
+                | InterTransformPlan::LosslessB16x4I422
+                | InterTransformPlan::LosslessB16x4I444
+        );
+        let lossless_grid = lossless_b8 || lossless_b16 || lossless_rect || lossless_small;
         let lossless_i422 = matches!(
             transform_plan,
             InterTransformPlan::LosslessB8I422
                 | InterTransformPlan::LosslessB16I422
                 | InterTransformPlan::LosslessB8x16I422
                 | InterTransformPlan::LosslessB16x8I422
+                | InterTransformPlan::LosslessB4I422
+                | InterTransformPlan::LosslessB4x8I422
+                | InterTransformPlan::LosslessB8x4I422
+                | InterTransformPlan::LosslessB4x16I422
+                | InterTransformPlan::LosslessB16x4I422
         );
         let lossless_i444 = matches!(
             transform_plan,
@@ -49458,6 +49531,11 @@ impl Lossy420Decoder {
                 | InterTransformPlan::LosslessB16I444
                 | InterTransformPlan::LosslessB8x16I444
                 | InterTransformPlan::LosslessB16x8I444
+                | InterTransformPlan::LosslessB4I444
+                | InterTransformPlan::LosslessB4x8I444
+                | InterTransformPlan::LosslessB8x4I444
+                | InterTransformPlan::LosslessB4x16I444
+                | InterTransformPlan::LosslessB16x4I444
         );
         let lossless_i422_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I422);
         let lossless_i444_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I444);
@@ -49497,6 +49575,15 @@ impl Lossy420Decoder {
             } else {
                 !quantization.segment_lossless
             })
+        .then_some(())
+        .portable()?;
+        (if lossless_small {
+            prediction_state.compound.is_none()
+                && prediction_state.obmc.is_none()
+                && prediction_state.inter_intra.is_none()
+        } else {
+            true
+        })
         .then_some(())
         .portable()?;
         if prediction_state.inter_intra.is_some() {
@@ -49552,9 +49639,20 @@ impl Lossy420Decoder {
                 block_size == BlockSize::B8x16 && visible_width == 8 && visible_height == 16;
             let exact_b16x8 =
                 block_size == BlockSize::B16x8 && visible_width == 16 && visible_height == 8;
-            let exact_geometry = ((split_b8 || lossless_b8) && exact_b8)
-                || (lossless_b16 && exact_b16)
-                || (lossless_rect && (exact_b8x16 || exact_b16x8));
+            let exact_small = matches!(
+                block_size,
+                BlockSize::B4x4
+                    | BlockSize::B4x8
+                    | BlockSize::B8x4
+                    | BlockSize::B4x16
+                    | BlockSize::B16x4
+            ) && (visible_width, visible_height) == block_size.pixel_dimensions();
+            let exact_geometry = (split_b8 && exact_b8)
+                || (lossless_grid
+                    && ((lossless_b8 && exact_b8)
+                        || (lossless_b16 && exact_b16)
+                        || (lossless_rect && (exact_b8x16 || exact_b16x8))
+                        || (lossless_small && exact_small)));
             (exact_geometry
                 && matches!(
                     chroma_sampling,
@@ -49600,6 +49698,31 @@ impl Lossy420Decoder {
             | InterTransformPlan::LosslessB16x8I422
             | InterTransformPlan::LosslessB16x8I444 => {
                 (TxSize::Tx16x8, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LosslessB4I420
+            | InterTransformPlan::LosslessB4I422
+            | InterTransformPlan::LosslessB4I444 => {
+                (TxSize::Tx4x4, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LosslessB4x8I420
+            | InterTransformPlan::LosslessB4x8I422
+            | InterTransformPlan::LosslessB4x8I444 => {
+                (TxSize::Tx4x8, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LosslessB8x4I420
+            | InterTransformPlan::LosslessB8x4I422
+            | InterTransformPlan::LosslessB8x4I444 => {
+                (TxSize::Tx8x4, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LosslessB4x16I420
+            | InterTransformPlan::LosslessB4x16I422
+            | InterTransformPlan::LosslessB4x16I444 => {
+                (TxSize::Tx4x16, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LosslessB16x4I420
+            | InterTransformPlan::LosslessB16x4I422
+            | InterTransformPlan::LosslessB16x4I444 => {
+                (TxSize::Tx16x4, false, Av1TransformType::DctDct)
             }
         };
         let expected_luma = luma_tx_size;
@@ -49672,7 +49795,7 @@ impl Lossy420Decoder {
         for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
-            let (tx_width, tx_height) = if lossless_rect && plane != 0 {
+            let (tx_width, tx_height) = if lossless_grid && plane != 0 {
                 (
                     u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
                     u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
@@ -49870,7 +49993,7 @@ impl Lossy420Decoder {
                     obmc,
                 )?;
             }
-            if lossless_b16 || lossless_rect {
+            if lossless_b16 || lossless_rect || lossless_small {
                 let grid_contexts = self.decode_inter_lossless_plane_grid(
                     decoder,
                     &prediction,
