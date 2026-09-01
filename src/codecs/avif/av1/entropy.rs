@@ -7562,6 +7562,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     let streamed_lossless_color = complete_streamed_lossless_color_context(context);
     let lossless_intra_color_active_restoration =
         streamed_lossless_color && lossless_intra_color_superres_restoration_supported(context);
+    let lossless_intra_monochrome_active_restoration =
+        lossless_intra_monochrome_superres_restoration_supported(context);
+    let streamed_lossless_reconstruction =
+        streamed_lossless_color || lossless_intra_monochrome_active_restoration;
     let generic_high_depth_i444_inter = (generic_high_depth_inter
         || generic_high_depth_lossless_inter)
         && !context.monochrome
@@ -7850,7 +7854,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             .segments
             .iter()
             .all(|segment| segment.reference <= 0 && !segment.global_motion);
-    if (!intra_reconstruction && !streamed_lossless_color && !inter_reconstruction)
+    if (!intra_reconstruction && !streamed_lossless_reconstruction && !inter_reconstruction)
         || (context.intra_frame && !intra_segment_features_supported)
     {
         return Ok(None);
@@ -7909,6 +7913,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || lossless_i444_active_restoration
         || lossless_monochrome_active_restoration
         || lossless_intra_color_active_restoration
+        || lossless_intra_monochrome_active_restoration
     {
         let Some(plan) =
             decode_bounded_restoration_plan(&mut decoder, context, &mut tile_cdfs.restoration)
@@ -13594,6 +13599,108 @@ fn complete_monochrome_references(
         reference.surface.layout == PixelLayout::Monochrome
             && reference.surface.depth.bits() == context.bit_depth
     })
+}
+
+/// Admit active Wiener/SGR restoration for one all-lossless monochrome intra
+/// super-resolution frame. The main streamed walker reconstructs only plane
+/// zero and the frame compositor resizes that plane before applying this
+/// bounded one-unit restoration plan.
+fn lossless_intra_monochrome_superres_restoration_supported(context: &FirstBlockContext) -> bool {
+    if !context.intra_frame
+        || !context.monochrome
+        || !context.all_lossless
+        || !context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != 0
+        || context.frame_tools.transform_mode != 0
+        || !matches!(context.bit_depth, 8 | 10 | 12)
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || !context.frame_tools.restoration_present
+    {
+        return false;
+    }
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    if quantization.base != 0
+        || quantization.y_dc_delta != 0
+        || quantization.u_dc_delta != 0
+        || quantization.u_ac_delta != 0
+        || quantization.v_dc_delta != 0
+        || quantization.v_ac_delta != 0
+        || quantization.using_matrix
+    {
+        return false;
+    }
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == 0
+                && segment.lossless
+        });
+    if !segmentation_closed {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+    {
+        return false;
+    }
+    let unit_log2 = context.restoration_unit_size_log2[0];
+    let unit_log2_supported = match context.level {
+        0 => (7..=8).contains(&unit_log2),
+        1 => (6..=8).contains(&unit_log2),
+        _ => false,
+    };
+    if !unit_log2_supported || context.frame_height > 56 {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+        return false;
+    };
+    let Some(width_with_half) = context.upscaled_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> unit_log2).max(1) == 1 && (height_with_half >> unit_log2).max(1) == 1
 }
 
 /// Color all-lossless frames share the canonical streamed coefficient state
