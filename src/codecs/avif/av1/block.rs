@@ -50298,19 +50298,21 @@ impl Lossy420Decoder {
         let split_b64 = matches!(transform_plan, InterTransformPlan::SplitB64);
         let split_b64_topology =
             matches!(transform_plan, InterTransformPlan::SplitB64Topology { .. });
-        let split_small_i422_chroma_grid = chroma_sampling == ChromaSampling::Subsampled422
+        let split_vertical_i422_tx4_chroma_grid = chroma_sampling == ChromaSampling::Subsampled422
             && matches!(
                 (block_size, &transform_plan),
                 (BlockSize::B8x16, InterTransformPlan::SplitB8x16)
                     | (BlockSize::B8x32, InterTransformPlan::SplitB8x32)
                     | (BlockSize::B16x32, InterTransformPlan::SplitB16x32)
+                    | (BlockSize::B16x64, InterTransformPlan::SplitB16x64)
+                    | (BlockSize::B32x64, InterTransformPlan::SplitB32x64)
             );
         // The direct lossy chroma-grid tranche is deliberately narrow: exact
         // depth-matched 4:2:2/4:4:4 terminals whose chroma plane can be
         // consumed by the bounded grid compositor, plus the existing 4:2:0
-        // single-terminal tranche. The small I422 B8x16/B8x32/B16x32 roots
-        // inherit their unsplit luma transform into each TX4 chroma cell;
-        // 64-axis profiles retain their DCT-only transform restriction.
+        // single-terminal tranche. I422 roots in the bounded vertical split
+        // family inherit each luma child transform into its TX4 chroma rows;
+        // 64-axis direct profiles retain their DCT-only transform restriction.
         let wide_lossy_single = matches!(
             transform_plan,
             InterTransformPlan::Single {
@@ -50616,6 +50618,7 @@ impl Lossy420Decoder {
                 (block_size, chroma_sampling),
                 (BlockSize::B16x64, ChromaSampling::Subsampled420)
                     | (BlockSize::B64x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x64, ChromaSampling::Subsampled422)
                     | (BlockSize::B16x64, ChromaSampling::Full)
                     | (BlockSize::B64x16, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
@@ -50631,6 +50634,7 @@ impl Lossy420Decoder {
                 (block_size, chroma_sampling),
                 (BlockSize::B32x64, ChromaSampling::Subsampled420)
                     | (BlockSize::B64x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x64, ChromaSampling::Subsampled422)
                     | (BlockSize::B32x64, ChromaSampling::Full)
                     | (BlockSize::B64x32, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
@@ -51155,7 +51159,7 @@ impl Lossy420Decoder {
             if !grid_transform
                 && !split_b64_chroma_grid
                 && !split_rect64_i444_chroma_grid
-                && !split_small_i422_chroma_grid
+                && !split_vertical_i422_tx4_chroma_grid
                 && !lossy_direct_chroma_grid
             {
                 (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
@@ -51211,7 +51215,7 @@ impl Lossy420Decoder {
             let (tx_width, tx_height) = if grid_transform
                 || (split_b64_chroma_grid && plane != 0)
                 || (split_rect64_i444_chroma_grid && plane != 0)
-                || (split_small_i422_chroma_grid && plane != 0)
+                || (split_vertical_i422_tx4_chroma_grid && plane != 0)
                 || (lossy_direct_chroma_grid && plane != 0)
             {
                 (
@@ -51828,7 +51832,7 @@ impl Lossy420Decoder {
                 chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
                 continue;
             }
-            if split_small_i422_chroma_grid && plane != 0 {
+            if split_vertical_i422_tx4_chroma_grid && plane != 0 {
                 let split_transforms = luma_rect_split_transforms.ok_or(PortableUnavailable)?;
                 let grid_contexts = self.decode_inter_lossy_chroma_tx4_grid(
                     decoder,

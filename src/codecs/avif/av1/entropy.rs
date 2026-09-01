@@ -5207,7 +5207,10 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB32x8);
         }
         if block_size == BlockSize::B16x64
-            && matches!(layout, PixelLayout::I420 | PixelLayout::I444)
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 16
             && visible_height == 64
             && split_b16_wide_supported
@@ -5293,7 +5296,10 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB64x16);
         }
         if block_size == BlockSize::B32x64
-            && matches!(layout, PixelLayout::I420 | PixelLayout::I444)
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 32
             && visible_height == 64
             && split_b32x64_supported
@@ -6709,6 +6715,18 @@ fn decode_inter_leaf(
             | InterTransformPlan::SplitB32x64
             | InterTransformPlan::SplitB64x32
     ) && layout == PixelLayout::I444;
+    // Mode-2 vertical I422 roots retain a TX4 chroma grid while luma is
+    // represented by two vertically stacked transform children. Load the
+    // complete chroma-plane edge context so each TX4 cell sees its causal
+    // left/above neighbor rather than inheriting a single root value.
+    let split_vertical_i422_tx4_chroma_grid = matches!(
+        transform_plan,
+        InterTransformPlan::SplitB8x16
+            | InterTransformPlan::SplitB8x32
+            | InterTransformPlan::SplitB16x32
+            | InterTransformPlan::SplitB16x64
+            | InterTransformPlan::SplitB32x64
+    ) && layout == PixelLayout::I422;
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = match transform_plan {
         InterTransformPlan::LosslessGrid {
@@ -6821,6 +6839,7 @@ fn decode_inter_leaf(
                 || lossy_wide_chunked
                 || lossy_direct_chroma_grid
                 || split_rect64_i444_chroma_grid
+                || split_vertical_i422_tx4_chroma_grid
                 || split_b64_chroma_grid
             {
                 let chroma_sampling = block_chroma_sampling
