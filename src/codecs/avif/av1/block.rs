@@ -48491,8 +48491,9 @@ pub(super) struct WideMode2Topology {
 /// Complete TX64→TX32/TX16 topology for an exact B64x64 luma block.
 ///
 /// Each entry describes one 32x32 child in raster order. A false entry owns
-/// one TX32 terminal; a true entry owns four TX16 terminals. Chroma keeps its
-/// fixed TX32 grid and inherits the transform from each child's origin.
+/// one TX32 terminal; a true entry owns four TX16 terminals. I420 keeps one
+/// TX32 chroma terminal inheriting the TL origin; I422/I444 retain their
+/// fixed TX32 grids and inherit each child's corresponding origin.
 #[derive(Clone, Copy)]
 pub(super) struct B64SplitTopology {
     pub(super) child_splits: [[bool; 2]; 2],
@@ -50474,16 +50475,26 @@ impl Lossy420Decoder {
                 .portable()?;
         }
         if split_b64_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB64Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.iter().flatten().any(|&split| split);
+            let all_children_split = child_splits.iter().flatten().all(|&split| split);
             (block_size == BlockSize::B64x64
                 && matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled422 | ChromaSampling::Full
+                    ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
                 )
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
                 && quantization.segment_qindex > 0
-                && !quantization.segment_lossless)
+                && !quantization.segment_lossless
+                && any_child_split
+                && (chroma_sampling != ChromaSampling::Subsampled420 || !all_children_split))
                 .then_some(())
                 .portable()?;
         }
@@ -51609,6 +51620,8 @@ impl Lossy420Decoder {
                     Av1TransformType::DctDct
                 } else if split_b64 && plane != 0 {
                     inherited_inter_b64_chroma_transform(chroma_sampling, tx_size, luma_transform)?
+                } else if split_b64_topology && plane != 0 {
+                    inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if split_b64_deep && plane != 0 {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if split_b32 && plane != 0 {
@@ -53916,8 +53929,8 @@ impl Lossy420Decoder {
         }
         let mut right = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
         let mut bottom = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
-        right[..16].copy_from_slice(&left);
-        bottom[..16].copy_from_slice(&above);
+        right[..16].copy_from_slice(&left[..16]);
+        bottom[..16].copy_from_slice(&above[..16]);
         Ok((
             LosslessGridContexts {
                 bottom_right: left[15],

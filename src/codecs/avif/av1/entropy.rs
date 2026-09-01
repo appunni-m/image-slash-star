@@ -5528,7 +5528,10 @@ fn decode_inter_transform_size(
             if !any_child_split {
                 return Ok(InterTransformPlan::SplitB64);
             }
-            if matches!(layout, PixelLayout::I422 | PixelLayout::I444) {
+            if matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            ) {
                 return Ok(InterTransformPlan::SplitB64Topology { child_splits });
             }
             return Err(super::block::PortableUnavailable);
