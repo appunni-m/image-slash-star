@@ -7498,6 +7498,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         && inter_context.is_some_and(|inter_context| {
             high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
         });
+    let high_depth_lossy_i422_active_restoration = generic_high_depth_inter
+        && inter_context.is_some_and(|inter_context| {
+            high_depth_lossy_i422_superres_restoration_supported(context, inter_context)
+        });
     let generic_high_depth_lossless_inter = inter_context.is_some_and(|inter_context| {
         complete_high_depth_lossless_inter_reconstruction_context(context, inter_context)
     });
@@ -7869,6 +7873,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || lossy_i422_active_restoration
         || lossy_i444_active_restoration
         || high_depth_lossy_i444_active_restoration
+        || high_depth_lossy_i422_active_restoration
         || high_depth_lossless_i444_active_restoration
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
@@ -9551,7 +9556,8 @@ fn complete_high_depth_inter_reconstruction_context(
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
     let active_restoration =
-        high_depth_lossy_i444_superres_restoration_supported(context, inter_context);
+        high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
+            || high_depth_lossy_i422_superres_restoration_supported(context, inter_context);
     let i420 = context.subsampling_x && context.subsampling_y;
     let i422 = context.subsampling_x && !context.subsampling_y;
     let i444 = !context.subsampling_x && !context.subsampling_y;
@@ -9736,6 +9742,147 @@ fn high_depth_lossy_i444_superres_restoration_supported(
             return false;
         };
         let Some(height_with_half) = dimensions.1.checked_add(unit_size / 2) else {
+            return false;
+        };
+        if (width_with_half >> luma_log2).max(1) != 1 || (height_with_half >> luma_log2).max(1) != 1
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// Admit active Wiener/SGR restoration for one high-depth lossy I422
+/// super-resolution frame. I422 keeps full chroma height after resize, so the
+/// checked unit proof uses a ceil-halved width while sharing the luma
+/// restoration exponent across all active planes.
+fn high_depth_lossy_i422_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == quantization.base
+                && !segment.lossless
+        });
+    if context.intra_frame
+        || !matches!(context.bit_depth, 10 | 12)
+        || context.monochrome
+        || !context.subsampling_x
+        || context.subsampling_y
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.all_lossless
+        || context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != quantization.base
+        || quantization.base == 0
+        || quantization.using_matrix
+        || context.frame_tools.reduced_transform_set
+        || context.frame_tools.transform_mode != 1
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.allow_warped_motion
+        || inter_context.enable_interintra_compound
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || inter_context.motion_mode_switchable
+        || inter_context.use_ref_frame_mvs
+        || !context.frame_tools.restoration_present
+        || !segmentation_closed
+    {
+        return false;
+    }
+    if !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let log2_supported = match context.level {
+        0 => (7..=8).contains(&luma_log2),
+        1 => (6..=8).contains(&luma_log2),
+        _ => false,
+    };
+    if !log2_supported || chroma_log2 != luma_log2 || context.frame_height > 56 {
+        return false;
+    }
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::I422
+            && reference.surface.upscaled_width == context.upscaled_width
+            && reference.surface.frame_height == context.frame_height
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    if !references_match {
+        return false;
+    }
+    let Some(chroma_width) = context.upscaled_width.checked_add(1).map(|width| width / 2) else {
+        return false;
+    };
+    let dimensions = [
+        (context.upscaled_width, context.frame_height),
+        (chroma_width, context.frame_height),
+        (chroma_width, context.frame_height),
+    ];
+    let Some(unit_size) = 1_u32.checked_shl(luma_log2) else {
+        return false;
+    };
+    for (plane, restoration_type) in context.restoration_types.iter().enumerate() {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let Some(width_with_half) = dimensions[plane].0.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = dimensions[plane].1.checked_add(unit_size / 2) else {
             return false;
         };
         if (width_with_half >> luma_log2).max(1) != 1 || (height_with_half >> luma_log2).max(1) != 1
