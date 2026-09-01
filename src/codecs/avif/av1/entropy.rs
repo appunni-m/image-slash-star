@@ -12360,28 +12360,40 @@ fn complete_monochrome_references(
 /// with lossy intra. Keeping this gate beside the lossy admission makes the
 /// tile walker, context publication, and private reconstruction raster common
 /// across all 22 block sizes without mixing the legacy lossless CDF copies.
+/// Horizontal super-resolution is applied only after the complete coded frame
+/// is assembled. A restoration header is allowed to be present when every
+/// plane type is `NONE`; active restoration and display film grain remain
+/// outside this lossless-superres tranche.
 fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool {
     let layout_supported = context.subsampling_x || !context.subsampling_y;
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let resize_geometry_supported = if context.superres_enabled {
+        context.frame_width >= 4 && context.frame_height >= 4
+    } else {
+        context.upscaled_width == context.frame_width
+    };
     let dimensions_are_supported = context.frame_width != 0
         && context.frame_height != 0
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
-        && context.upscaled_width == context.frame_width;
+        && resize_geometry_supported;
+    let film_grain_supported = if context.superres_enabled {
+        !context.frame_tools.film_grain_present
+    } else {
+        no_unsupported_film_grain(context)
+    };
     context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && context.all_lossless
         && context.frame_tools.segment_lossless
         && !context.monochrome
         && layout_supported
-        && !context.superres_enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.frame_tools.restoration_present
-        && no_unsupported_film_grain(context)
+        && film_grain_supported
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
