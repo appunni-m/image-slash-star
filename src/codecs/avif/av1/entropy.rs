@@ -6846,6 +6846,10 @@ fn bounded_i420_restoration_units_supported_for_dimensions(
 /// is staged after the one B16x16 reconstruction while loop filtering and
 /// restoration remain inactive, keeping the filter order and metadata maps
 /// within the already checked single-tile path.
+/// Screen-enabled high-depth I420 intra leaves may use Y16x16/U/V8x8 palette
+/// prediction; inter leaves use parsed force-integer MV precision. CDEF is
+/// derived from completed samples, while intraBC and intra/palette blocks
+/// within inter frames remain outside this profile.
 fn bounded_i420_cdef_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -6868,7 +6872,6 @@ fn bounded_i420_cdef_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
