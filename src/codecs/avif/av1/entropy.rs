@@ -12730,7 +12730,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
                     && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
             })
         && matches!(context.level, 0 | 1);
-    let dimensions_supported = context.frame_width != 0
+    let single_tile_dimensions_supported = context.frame_width != 0
         && context.frame_height != 0
         && context.frame_width.is_multiple_of(4)
         && context.frame_height.is_multiple_of(4)
@@ -12740,12 +12740,13 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             || (!context.superres_enabled && context.upscaled_width == context.frame_width))
         && context.block_x == 0
         && context.block_y == 0
-        && (context.single_tile || horizontal_multitile_i444)
+        && context.single_tile
         && context.tile_origin_b4_x == 0
         && context.tile_origin_b4_y == 0
         && context.block_width == context.frame_block_width
         && context.block_height == context.frame_block_height
         && matches!(context.level, 0 | 1);
+    let dimensions_supported = single_tile_dimensions_supported || horizontal_multitile_i444;
     let references_match = inter_context.references.iter().all(|reference| {
         let geometry_matches = if superres_layout {
             reference.surface.upscaled_width == context.upscaled_width
