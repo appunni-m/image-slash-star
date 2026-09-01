@@ -12668,7 +12668,8 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
 /// limited to monochrome/I420/I422/I444, whose coded result is resized once
 /// after reconstruction. Monochrome, I420, I422, and I444 additionally admit a
 /// horizontally tiled, full-height layout so frame-wide resize taps remain
-/// intact.
+/// intact. Under super-resolution, a present restoration header is accepted
+/// only when every plane is `NONE`, so the parsed stage remains a no-op.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12701,6 +12702,8 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         });
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let neutral_restoration = !context.frame_tools.restoration_present
+        || (context.superres_enabled && context.restoration_types == [None; 3]);
     let superres_layout = context.superres_enabled
         && matches!(
             layout,
@@ -12795,7 +12798,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
+        && neutral_restoration
         && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
         && context.frame_tools.loop_filter.level_y == [0; 2]
