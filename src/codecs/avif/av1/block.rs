@@ -50591,6 +50591,7 @@ impl Lossy420Decoder {
                 (BlockSize::B8x16, ChromaSampling::Subsampled420)
                     | (BlockSize::B8x16, ChromaSampling::Subsampled422)
                     | (BlockSize::B16x8, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x8, ChromaSampling::Subsampled422)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -50605,6 +50606,7 @@ impl Lossy420Decoder {
                 (BlockSize::B8x32, ChromaSampling::Subsampled420)
                     | (BlockSize::B8x32, ChromaSampling::Subsampled422)
                     | (BlockSize::B32x8, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x8, ChromaSampling::Subsampled422)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
