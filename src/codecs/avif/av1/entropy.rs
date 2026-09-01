@@ -6410,7 +6410,10 @@ fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
 }
 
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
-/// intra blocks (including palette) and intraBC remain outside this profile.
+/// frame-level skip mode is admitted only for transform modes 1/2 so its
+/// predictor-only terminals retain a normative full-block transform extent.
+/// Intra blocks (including palette), intraBC, and post-skip segmentation remain
+/// outside this profile.
 fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     !context.intra_frame
         && context.bit_depth == 8
@@ -6419,7 +6422,7 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && (context.superres_enabled || context.upscaled_width == context.frame_width)
         && !context.monochrome
         && !context.all_lossless
-        && !context.skip_mode_enabled
+        && (!context.skip_mode_enabled || matches!(context.frame_tools.transform_mode, 1 | 2))
         && !context.allow_intrabc
         && matches!(context.frame_tools.transform_mode, 0..=2)
         && inter_cdef_supported(context)
