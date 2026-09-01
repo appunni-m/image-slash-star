@@ -6,8 +6,9 @@ use super::bit_reader::{BitReader, SegmentedData};
 use super::entropy;
 use super::geometry::PixelLayout;
 use super::motion::{
-    GlobalMotion, GlobalMotionType, ProjectedTemporalField, ReferenceFrame, RetainedTemporalSample,
-    ScaleFactors, TemporalMotionField, load_projected_temporal_field, relative_distance,
+    GlobalMotion, GlobalMotionType, ProjectedTemporalField, ReferenceFrame, ReferencePair,
+    RetainedTemporalSample, ScaleFactors, TemporalMotionField, load_projected_temporal_field,
+    relative_distance,
 };
 use super::resize;
 use super::restoration;
@@ -697,8 +698,25 @@ fn inter_frame_context<'a>(
     let references: [entropy::InterReference<'a>; 7] = references
         .try_into()
         .map_err(|_| malformed("inter reference table has invalid length"))?;
+    let skip_mode_references = header
+        .skip_mode_references
+        .map(|indices| {
+            let first = ReferenceFrame::from_index(indices[0])
+                .ok_or_else(|| malformed("skip mode first reference exceeds seven"))?;
+            let second = ReferenceFrame::from_index(indices[1])
+                .ok_or_else(|| malformed("skip mode second reference exceeds seven"))?;
+            if first == second {
+                return Err(malformed("skip mode references must be distinct"));
+            }
+            Ok(ReferencePair::compound(first, second))
+        })
+        .transpose()?;
+    if header.skip_mode_enabled && skip_mode_references.is_none() {
+        return Err(malformed("skip mode is enabled without derived references"));
+    }
     Ok(entropy::InterFrameContext {
         references,
+        skip_mode_references,
         projected_temporal,
         current_order_hint: header.order_hint,
         order_hint_bits: sequence.order_hint_bits,

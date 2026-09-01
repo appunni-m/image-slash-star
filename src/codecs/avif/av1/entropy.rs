@@ -591,6 +591,7 @@ pub(super) struct InterReference<'a> {
 #[derive(Clone, Copy)]
 pub(super) struct InterFrameContext<'a> {
     pub(super) references: [InterReference<'a>; 7],
+    pub(super) skip_mode_references: Option<ReferencePair>,
     pub(super) projected_temporal: Option<&'a ProjectedTemporalField>,
     pub(super) current_order_hint: u32,
     pub(super) order_hint_bits: u32,
@@ -2843,6 +2844,22 @@ fn skip_context_for_node(tile_state: &TileState, node: PartitionNode) -> Av1Resu
     )
 }
 
+fn skip_mode_context_for_node(tile_state: &TileState, node: PartitionNode) -> Av1Result<usize> {
+    let above = node
+        .y
+        .checked_sub(1)
+        .and_then(|y| tile_state.contexts_at(node.x, y));
+    let left = node
+        .x
+        .checked_sub(1)
+        .and_then(|x| tile_state.contexts_at(x, node.y));
+    let context = usize::from(above.is_some_and(|cell| cell.skip_mode))
+        .saturating_add(usize::from(left.is_some_and(|cell| cell.skip_mode)));
+    (context <= 2)
+        .then_some(context)
+        .ok_or_else(|| malformed("skip-mode context exceeds three rows"))
+}
+
 fn inter_neighbors(
     tile_state: &TileState,
     node: PartitionNode,
@@ -4201,6 +4218,7 @@ fn decode_inter_leaf(
     visible_height: u32,
     selected_segment: SegmentContext,
     block_skipped: bool,
+    skip_mode: bool,
     prepared_quantization: super::block::PreparedInterQuantization,
     tools: super::block::BlockTools,
 ) -> Av1Result<super::block::PortableResult<DecodedInterLeaf>> {
@@ -4216,6 +4234,21 @@ fn decode_inter_leaf(
     if selected_segment.reference == 0 {
         return Ok(Err(super::block::PortableUnavailable));
     }
+    if skip_mode
+        && (!context.skip_mode_enabled
+            || !block_skipped
+            || node
+                .block_size
+                .mi_dimensions()
+                .0
+                .min(node.block_size.mi_dimensions().1)
+                <= 1
+            || selected_segment.reference >= 0
+            || selected_segment.skip
+            || selected_segment.global_motion)
+    {
+        return Err(malformed("skip-mode block violates its frame-level proof"));
+    }
     let layout = PixelLayout::from_sequence(
         context.monochrome,
         context.subsampling_x,
@@ -4227,31 +4260,76 @@ fn decode_inter_leaf(
     }
     let neighbors = inter_neighbors(tile_state, node)?;
     let intra_context = inter_intra_context(neighbors);
-    let inter_flag = if selected_segment.reference > 0 || selected_segment.global_motion {
-        true
-    } else {
-        decoder.adaptive_bool(&mut cdfs.inter.intra[intra_context].0)
-    };
+    let inter_flag =
+        if skip_mode || selected_segment.reference > 0 || selected_segment.global_motion {
+            true
+        } else {
+            decoder.adaptive_bool(&mut cdfs.inter.intra[intra_context].0)
+        };
     if !inter_flag {
         return Ok(Err(super::block::PortableUnavailable));
     }
     let (block_width_b4, block_height_b4) = node.block_size.mi_dimensions();
-    // Frame-level skip mode is rejected by the current admission gate. Keep
-    // the per-block value explicit so compound/inter-intra syntax cannot be
-    // accidentally tied to residual skipping as that gate widens.
-    let skip_mode = false;
     let forced_global = selected_segment.global_motion || selected_segment.skip;
     let forced_reference = selected_segment.reference > 0 || forced_global;
-    let compound_allowed = inter_context.reference_mode_select
+    let compound_allowed = !skip_mode
+        && inter_context.reference_mode_select
         && block_width_b4.min(block_height_b4) > 1
-        && !skip_mode
         && !forced_reference;
-    let compound = if compound_allowed {
+    let compound = if skip_mode {
+        true
+    } else if compound_allowed {
         decoder.adaptive_bool(&mut cdfs.inter.compound[inter_compound_context(neighbors)].0)
     } else {
         false
     };
-    let (references, motions, mode, global, new_mv) = if compound {
+    let (references, motions, mode, global, new_mv) = if skip_mode {
+        let references = inter_context
+            .skip_mode_references
+            .ok_or_else(|| malformed("skip mode has no derived reference pair"))?;
+        let request = inter_context.mv_request(
+            ReferenceMvTarget::Compound(references),
+            node.block_size,
+            node.x,
+            node.y,
+            context
+                .tile_origin_b4_x
+                .checked_add(node.x)
+                .ok_or_else(|| malformed("skip-mode MV x coordinate overflows"))?,
+            context
+                .tile_origin_b4_y
+                .checked_add(node.y)
+                .ok_or_else(|| malformed("skip-mode MV y coordinate overflows"))?,
+            0,
+            0,
+            context.block_width,
+            context.block_height,
+            context.frame_block_width,
+            context.frame_block_height,
+            node.x.saturating_add(block_width_b4) < context.block_width,
+        );
+        let stack = find_reference_mvs(tile_state, request)?;
+        let nearest = stack
+            .slot(0)
+            .ok_or_else(|| malformed("skip-mode MV stack has no nearest slot"))?;
+        let motions = [
+            nearest.vectors[0].reduce_precision(
+                inter_context.force_integer_mv,
+                inter_context.high_precision_mv,
+            ),
+            nearest.vectors[1].reduce_precision(
+                inter_context.force_integer_mv,
+                inter_context.high_precision_mv,
+            ),
+        ];
+        (
+            references,
+            motions,
+            InterMode::NearestNearest,
+            [false; 2],
+            [false; 2],
+        )
+    } else if compound {
         let references = decode_inter_compound_references(decoder, cdfs, neighbors)?;
         let second = references
             .second
@@ -4551,7 +4629,12 @@ fn decode_inter_leaf(
             [mode == InterMode::New, false],
         )
     };
-    let (compound_type, compound_blend) = if compound {
+    let (compound_type, compound_blend) = if skip_mode {
+        (
+            CompoundType::Average,
+            Some(super::block::PreparedCompound::Average),
+        )
+    } else if compound {
         let Some((compound_type, compound_blend)) = decode_compound_type(
             decoder,
             cdfs,
@@ -5689,54 +5772,86 @@ pub(super) fn validate_complete_lossy_420_partition(
                 );
                 tools.skip_context = skip_context_for_node(&tile_state, node)?;
                 let segmentation = context.frame_tools.segmentation;
-                let (segment_id, segment_pred, selected_segment, block_skipped) = if !segmentation
-                    .update_map
-                    || segmentation.preskip
-                {
-                    let (segment_id, segment_pred) = decode_segment_id(
-                        decoder,
-                        &mut tile_cdfs,
-                        context,
-                        node,
-                        &tile_state,
-                        previous_segment_map,
-                        None,
-                    )?;
-                    let segment = segmentation.segments[usize::from(segment_id)];
-                    block_decoder.select_segment(segment.delta_q, segment.qindex, segment.lossless);
-                    let block_skipped = match block_decoder.decode_skip(
-                        decoder,
-                        tools.skip_context,
-                        segment.skip,
-                    ) {
-                        Ok(skip) => skip,
-                        Err(_) => {
+                let (segment_id, segment_pred, selected_segment, block_skipped, skip_mode) =
+                    if !segmentation.update_map || segmentation.preskip {
+                        let (segment_id, segment_pred) = decode_segment_id(
+                            decoder,
+                            &mut tile_cdfs,
+                            context,
+                            node,
+                            &tile_state,
+                            previous_segment_map,
+                            None,
+                        )?;
+                        let segment = segmentation.segments[usize::from(segment_id)];
+                        block_decoder.select_segment(
+                            segment.delta_q,
+                            segment.qindex,
+                            segment.lossless,
+                        );
+                        let skip_mode = if context.skip_mode_enabled
+                            && node
+                                .block_size
+                                .mi_dimensions()
+                                .0
+                                .min(node.block_size.mi_dimensions().1)
+                                > 1
+                            && segment.reference < 0
+                            && !segment.skip
+                            && !segment.global_motion
+                        {
+                            let context_index = skip_mode_context_for_node(&tile_state, node)?;
+                            let cdf = tile_cdfs
+                                .inter
+                                .skip_mode
+                                .get_mut(context_index)
+                                .ok_or_else(|| malformed("skip-mode context exceeds three rows"))?;
+                            decoder.adaptive_bool(&mut cdf.0)
+                        } else {
+                            false
+                        };
+                        let block_skipped = match block_decoder.decode_skip(
+                            decoder,
+                            tools.skip_context,
+                            segment.skip || skip_mode,
+                        ) {
+                            Ok(skip) => skip,
+                            Err(_) => {
+                                unsupported = true;
+                                return Ok(PartitionVisitControl::Stop);
+                            }
+                        };
+                        (segment_id, segment_pred, segment, block_skipped, skip_mode)
+                    } else {
+                        if context.skip_mode_enabled {
                             unsupported = true;
                             return Ok(PartitionVisitControl::Stop);
                         }
+                        let skip =
+                            match block_decoder.decode_skip(decoder, tools.skip_context, false) {
+                                Ok(skip) => skip,
+                                Err(_) => {
+                                    unsupported = true;
+                                    return Ok(PartitionVisitControl::Stop);
+                                }
+                            };
+                        let (segment_id, segment_pred) = decode_segment_id(
+                            decoder,
+                            &mut tile_cdfs,
+                            context,
+                            node,
+                            &tile_state,
+                            previous_segment_map,
+                            Some(skip),
+                        )?;
+                        let segment = segmentation.segments[usize::from(segment_id)];
+                        block_decoder.select_segment(
+                            segment.delta_q,
+                            segment.qindex,
+                            segment.lossless,
+                        );
+                        (segment_id, segment_pred, segment, skip, false)
                     };
-                    (segment_id, segment_pred, segment, block_skipped)
-                } else {
-                    let skip = match block_decoder.decode_skip(decoder, tools.skip_context, false) {
-                        Ok(skip) => skip,
-                        Err(_) => {
-                            unsupported = true;
-                            return Ok(PartitionVisitControl::Stop);
-                        }
-                    };
-                    let (segment_id, segment_pred) = decode_segment_id(
-                        decoder,
-                        &mut tile_cdfs,
-                        context,
-                        node,
-                        &tile_state,
-                        previous_segment_map,
-                        Some(skip),
-                    )?;
-                    let segment = segmentation.segments[usize::from(segment_id)];
-                    block_decoder.select_segment(segment.delta_q, segment.qindex, segment.lossless);
-                    (segment_id, segment_pred, segment, skip)
-                };
                 block_decoder.begin_block(
                     syntax_block_size,
                     palette_entropy_width,
@@ -5787,6 +5902,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         height,
                         selected_segment,
                         block_skipped,
+                        skip_mode,
                         prepared_quantization,
                         tools,
                     )? {
@@ -5960,7 +6076,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                     inter_metadata.map_or_else(BlockCommitMetadata::intra, |metadata| {
                         BlockCommitMetadata {
                             coding: BlockCoding::Inter(metadata),
-                            skip_mode: false,
+                            skip_mode,
                             tx_cells: None,
                         }
                     });
