@@ -7501,6 +7501,9 @@ fn complete_bounded_i420_rect_restoration_inter_reconstruction_context(
 /// restoration tranche. The standalone predicates stay intentionally narrow;
 /// this separate class admits the legal filter order while retaining the same
 /// one-B16 geometry and checked one-unit restoration bounds.
+/// Screen-enabled intra leaves may use depth-aware I420/I422 palette
+/// prediction, while inter leaves honor parsed MV precision; intraBC remains
+/// closed. Restoration remains bounded by the layout-specific one-unit proof.
 fn bounded_subsampled_cdef_restoration_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -7531,7 +7534,6 @@ fn bounded_subsampled_cdef_restoration_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -7652,6 +7654,10 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
 /// Shared rectangular proof for the bounded CDEF+restoration profiles. The
 /// layout-specific wrappers below add the I420/I422 geometry and restoration
 /// exponent rules without widening the one-block predicates above.
+/// Screen-enabled intra leaves may use depth-aware I420/I422 palette
+/// prediction, while inter leaves honor parsed MV precision; intraBC remains
+/// closed. Rectangular restoration is still restricted by each wrapper's
+/// `restoration_supported()` and one-unit checks.
 fn bounded_subsampled_rect_cdef_restoration_base(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -7670,7 +7676,6 @@ fn bounded_subsampled_rect_cdef_restoration_base(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
