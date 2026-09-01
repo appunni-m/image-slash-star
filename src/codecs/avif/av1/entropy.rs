@@ -3316,9 +3316,10 @@ fn inter_lossy_wide_chunk_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
-/// A square 64px lossy leaf is a single TX64X64 terminal. Keep its direct path
-/// separate from the 128px chunk compositor so mode-2 split roots cannot
-/// accidentally consume the single-terminal residual sentence.
+/// A square 64px lossy leaf is either a single TX64X64 terminal or the exact
+/// mode-2 depth-one TX64→four-TX32 split admitted by `decode_inter_transform_size`.
+/// Keep both paths separate from the 128px chunk compositor so an unsupported
+/// deeper tree cannot accidentally consume the single-terminal sentence.
 fn inter_lossy_square64_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -4420,6 +4421,7 @@ enum InterTransformPlan {
     SplitB8,
     SplitB16,
     SplitB32,
+    SplitB64,
     LossyOnly4x4Grid {
         luma_width: u32,
         luma_height: u32,
@@ -4477,6 +4479,7 @@ fn decode_inter_transform_size(
     split_depth_supported: bool,
     split_b16_supported: bool,
     split_b32_supported: bool,
+    split_b64_supported: bool,
     lossless_grid_geometry: bool,
     lossy_grid_geometry: bool,
     lossy_wide_chunk_geometry: bool,
@@ -4731,6 +4734,52 @@ fn decode_inter_transform_size(
                 }
             }
             return Ok(InterTransformPlan::SplitB32);
+        }
+        if block_size == BlockSize::B64x64
+            && layout == PixelLayout::I420
+            && visible_width == 64
+            && visible_height == 64
+            && split_b64_supported
+            && max_tx == TxSize::Tx64x64
+        {
+            // A TX64 root split is followed by one TX32 split decision for
+            // each child. The bounded compositor admits only four terminal
+            // TX32 children; any deeper child tree remains transactional.
+            let child_offsets = [(0_u32, 0_u32), (8, 0), (0, 8), (8, 8)];
+            for (offset_x, offset_y) in child_offsets {
+                let child_x = node
+                    .x
+                    .checked_add(offset_x)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_y = node
+                    .y
+                    .checked_add(offset_y)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let above_small = if offset_y == 0 {
+                    child_y
+                        .checked_sub(1)
+                        .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                        .is_some_and(|(tx_width, _)| tx_width < 3)
+                } else {
+                    false
+                };
+                let left_small = if offset_x == 0 {
+                    child_x
+                        .checked_sub(1)
+                        .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                        .is_some_and(|(_, tx_height)| tx_height < 3)
+                } else {
+                    false
+                };
+                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0) {
+                    // A child split changes the causal topology for later
+                    // siblings. Reject immediately instead of consuming
+                    // symbols under the terminal-child assumption.
+                    return Err(super::block::PortableUnavailable);
+                }
+            }
+            return Ok(InterTransformPlan::SplitB64);
         }
         return Err(super::block::PortableUnavailable);
     }
@@ -5438,6 +5487,9 @@ fn decode_inter_leaf(
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && prepared_quantization.quantization.segment_qindex > 0,
+        matches!(context.bit_depth, 8 | 10 | 12)
+            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+            && prepared_quantization.quantization.segment_qindex > 0,
         lossless_grid_geometry,
         lossy_grid_geometry,
         lossy_wide_chunk_geometry,
@@ -5455,6 +5507,7 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false, false),
             InterTransformPlan::SplitB16 => (TxSize::Tx16x16, true, false, false, false),
             InterTransformPlan::SplitB32 => (TxSize::Tx32x32, true, false, false, false),
+            InterTransformPlan::SplitB64 => (TxSize::Tx64x64, true, false, false, false),
             InterTransformPlan::LossyOnly4x4Grid {
                 layout: plan_layout,
                 ..
@@ -7546,16 +7599,17 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms,
 /// plus exact B8x8/B16x16/B32x32 mode-2 splits in the supported
-/// 4:2:0/4:2:2/4:4:4 layouts whose TX4x4/TX8x8/TX16x16 luma terminals are
-/// reconstructed by the bounded child compositors below.
+/// 4:2:0/4:2:2/4:4:4 layouts and the exact I420 B64x64 mode-2 split whose
+/// TX4x4/TX8x8/TX16x16/TX32x32 luma terminals are reconstructed by the bounded
+/// child compositors below.
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on
 /// transform modes 1/2 with fixed nearest-nearest average prediction.
 /// Update-map post-skip segmentation is admitted only for ALT_Q-only segments.
 /// TX_MODE_SELECT is admitted for an unsplit root and the exact B8x8 2x2
-/// TX4x4, B16x16 2x2 TX8x8, or B32x32 2x2 TX16x16 split; larger split trees
-/// return a transactional unsupported result.
+/// TX4x4, B16x16 2x2 TX8x8, B32x32 2x2 TX16x16, or exact I420 B64x64 2x2
+/// TX32x32 split; larger split trees return a transactional unsupported result.
 /// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
