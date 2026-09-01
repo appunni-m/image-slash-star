@@ -9847,7 +9847,9 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 /// Root-scoped delta-Q is carried through the shared intra quantization path;
 /// delta-LF remains closed. TX_MODE_SELECT is consumed by `decode_intra_header`;
 /// `IntraTxPlan` materializes uniform depth-0..2 luma terminals while I422
-/// chroma retains its normative maximum transform.
+/// chroma retains its normative maximum transform. Screen-content palette
+/// flags, depth-scaled colors, clipped I422 index maps, and cache state are
+/// owned by the streamed header/leaf path; intraBC remains closed separately.
 fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -9872,7 +9874,6 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && no_unsupported_film_grain(context)
         && !context.frame_tools.delta_lf_present
         && !context.frame_tools.segment_lossless
