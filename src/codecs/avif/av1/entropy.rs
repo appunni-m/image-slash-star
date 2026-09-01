@@ -17,7 +17,7 @@ use super::motion::{
 };
 use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
-use super::tile_state::{BlockCoding, BlockCommitMetadata, NeighborMeta, TileState};
+use super::tile_state::{BlockCoding, BlockCommitMetadata, NeighborMeta, TileState, TxCellUpdate};
 use super::{Av1Result, malformed};
 
 const WINDOW_BITS: i32 = 64;
@@ -4532,6 +4532,13 @@ enum InterTransformPlan {
         luma_height: u32,
         layout: PixelLayout,
     },
+    LossyWideMode2Mixed {
+        luma_width: u32,
+        luma_height: u32,
+        layout: PixelLayout,
+        root_splits: [[bool; 2]; 2],
+        child_splits: [[bool; 4]; 4],
+    },
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
@@ -4707,9 +4714,10 @@ fn decode_inter_transform_size(
             )
         {
             // Mode 2 signals one TX64 root sentence per maximum-transform
-            // region. Homogeneous roots are admitted as TX64 terminals, four
-            // TX32 children, or sixteen TX16 terminals; mixed and deeper
-            // trees remain transactional until their compositor exists.
+            // region. Preserve the complete root/child topology while
+            // parsing so mixed trees can consume residuals in their causal
+            // terminal order instead of being mistaken for a homogeneous
+            // tree.
             if block_skipped {
                 let (luma_width, luma_height) = block_size.pixel_dimensions();
                 return Ok(InterTransformPlan::LossyWideMode2Unsplit {
@@ -4727,9 +4735,7 @@ fn decode_inter_transform_size(
             let child_offsets = [(0_u32, 0_u32), (8, 0), (0, 8), (8, 8)];
             let mut root_splits = [[false; 2]; 2];
             let mut child_splits = [[false; 4]; 4];
-            let mut first_root_split = None;
-            let mut first_child_split = None;
-            for (root_index, &(offset_x, offset_y)) in root_offsets.iter().enumerate() {
+            for &(offset_x, offset_y) in root_offsets {
                 let root_row = usize::try_from(offset_y / 16)
                     .map_err(|_| super::block::PortableUnavailable)?;
                 let root_column = usize::try_from(offset_x / 16)
@@ -4761,13 +4767,6 @@ fn decode_inter_transform_size(
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
                 let split =
                     decoder.adaptive_bool(&mut cdfs.common.transform_partition[0][context].0);
-                if root_index == 0 {
-                    first_root_split = Some(split);
-                } else if first_root_split != Some(split) {
-                    // Mixed root states would require a topology-specific
-                    // compositor and are kept transactional.
-                    return Err(super::block::PortableUnavailable);
-                }
                 root_splits[root_row][root_column] = split;
                 if split {
                     for &(child_offset_x, child_offset_y) in &child_offsets {
@@ -4815,37 +4814,79 @@ fn decode_inter_transform_size(
                             usize::from(above_small).saturating_add(usize::from(left_small));
                         let child_split = decoder
                             .adaptive_bool(&mut cdfs.common.transform_partition[1][context].0);
-                        if first_child_split.is_none() {
-                            first_child_split = Some(child_split);
-                        } else if first_child_split != Some(child_split) {
-                            // Mixed TX32 child states would require a
-                            // topology-specific compositor; keep the parse
-                            // transactional instead.
-                            return Err(super::block::PortableUnavailable);
-                        }
                         child_splits[child_grid_row][child_grid_column] = child_split;
                     }
                 }
             }
             let (luma_width, luma_height) = block_size.pixel_dimensions();
-            return Ok(match (first_root_split, first_child_split) {
-                (Some(false), None) => InterTransformPlan::LossyWideMode2Unsplit {
+            let mut all_roots_unsplit = true;
+            let mut all_roots_split = true;
+            let mut all_children_unsplit = true;
+            let mut all_children_split = true;
+            for &(offset_x, offset_y) in root_offsets {
+                let root_row = usize::try_from(offset_y / 16)
+                    .map_err(|_| super::block::PortableUnavailable)?;
+                let root_column = usize::try_from(offset_x / 16)
+                    .map_err(|_| super::block::PortableUnavailable)?;
+                let root_split = root_splits
+                    .get(root_row)
+                    .and_then(|roots| roots.get(root_column))
+                    .copied()
+                    .ok_or(super::block::PortableUnavailable)?;
+                all_roots_unsplit &= !root_split;
+                all_roots_split &= root_split;
+                for &(child_offset_x, child_offset_y) in &child_offsets {
+                    let child_row = usize::try_from(
+                        offset_y
+                            .checked_add(child_offset_y)
+                            .ok_or(super::block::PortableUnavailable)?
+                            / 8,
+                    )
+                    .map_err(|_| super::block::PortableUnavailable)?;
+                    let child_column = usize::try_from(
+                        offset_x
+                            .checked_add(child_offset_x)
+                            .ok_or(super::block::PortableUnavailable)?
+                            / 8,
+                    )
+                    .map_err(|_| super::block::PortableUnavailable)?;
+                    let child_split = child_splits
+                        .get(child_row)
+                        .and_then(|children| children.get(child_column))
+                        .copied()
+                        .ok_or(super::block::PortableUnavailable)?;
+                    all_children_unsplit &= !child_split;
+                    all_children_split &= root_split && child_split;
+                }
+            }
+            let plan = if all_roots_unsplit {
+                InterTransformPlan::LossyWideMode2Unsplit {
                     luma_width,
                     luma_height,
                     layout,
-                },
-                (Some(true), Some(false)) => InterTransformPlan::LossyWideMode2Split32 {
+                }
+            } else if all_roots_split && all_children_unsplit {
+                InterTransformPlan::LossyWideMode2Split32 {
                     luma_width,
                     luma_height,
                     layout,
-                },
-                (Some(true), Some(true)) => InterTransformPlan::LossyWideMode2Deep16 {
+                }
+            } else if all_roots_split && all_children_split {
+                InterTransformPlan::LossyWideMode2Deep16 {
                     luma_width,
                     luma_height,
                     layout,
-                },
-                _ => return Err(super::block::PortableUnavailable),
-            });
+                }
+            } else {
+                InterTransformPlan::LossyWideMode2Mixed {
+                    luma_width,
+                    luma_height,
+                    layout,
+                    root_splits,
+                    child_splits,
+                }
+            };
+            return Ok(plan);
         }
     }
     if transform_mode != 2 {
@@ -5508,10 +5549,62 @@ fn decode_inter_transform_size(
     Ok(InterTransformPlan::Single(max_tx))
 }
 
+fn wide_mode2_tx_cells(
+    node: PartitionNode,
+    topology: super::block::WideMode2Topology,
+) -> super::block::PortableResult<Vec<TxCellUpdate>> {
+    let width = usize::try_from(node.width).map_err(|_| super::block::PortableUnavailable)?;
+    let height = usize::try_from(node.height).map_err(|_| super::block::PortableUnavailable)?;
+    let count = width
+        .checked_mul(height)
+        .ok_or(super::block::PortableUnavailable)?;
+    let mut cells = Vec::new();
+    cells
+        .try_reserve_exact(count)
+        .map_err(|_| super::block::PortableUnavailable)?;
+    for row in 0..height {
+        for column in 0..width {
+            let root_row = row / 16;
+            let root_column = column / 16;
+            let root_split = topology
+                .root_splits
+                .get(root_row)
+                .and_then(|roots| roots.get(root_column))
+                .copied()
+                .ok_or(super::block::PortableUnavailable)?;
+            let (width_log2, height_log2) = if !root_split {
+                (4, 4)
+            } else {
+                let child_row = root_row
+                    .checked_mul(2)
+                    .and_then(|value| value.checked_add((row % 16) / 8))
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_column = root_column
+                    .checked_mul(2)
+                    .and_then(|value| value.checked_add((column % 16) / 8))
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_split = topology
+                    .child_splits
+                    .get(child_row)
+                    .and_then(|children| children.get(child_column))
+                    .copied()
+                    .ok_or(super::block::PortableUnavailable)?;
+                if child_split { (2, 2) } else { (3, 3) }
+            };
+            cells.push(TxCellUpdate {
+                width_log2,
+                height_log2,
+            });
+        }
+    }
+    Ok(cells)
+}
+
 #[derive(Clone)]
 struct DecodedInterLeaf {
     leaf: super::block::FirstLeaf,
     metadata: super::tile_state::InterBlockMeta,
+    tx_cells: Option<Vec<TxCellUpdate>>,
 }
 
 #[expect(
@@ -6279,6 +6372,24 @@ fn decode_inter_leaf(
             return Ok(Err(super::block::PortableUnavailable));
         }
     };
+    let mode2_topology = match transform_plan {
+        InterTransformPlan::LossyWideMode2Mixed {
+            root_splits,
+            child_splits,
+            ..
+        } => Some(super::block::WideMode2Topology {
+            root_splits,
+            child_splits,
+        }),
+        _ => None,
+    };
+    let tx_cells = match mode2_topology {
+        Some(topology) => match wide_mode2_tx_cells(node, topology) {
+            Ok(cells) => Some(cells),
+            Err(_) => return Ok(Err(super::block::PortableUnavailable)),
+        },
+        None => None,
+    };
     let (tx_size, transform_split, lossless_transform, lossy_transform_grid, lossy_wide_chunked) =
         match transform_plan {
             InterTransformPlan::Single(tx_size) => (tx_size, false, false, false, false),
@@ -6334,6 +6445,15 @@ fn decode_inter_leaf(
                 (TxSize::Tx32x32, false, false, false, true)
             }
             InterTransformPlan::LossyWideMode2Deep16 {
+                layout: plan_layout,
+                ..
+            } => {
+                if plan_layout != layout {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (TxSize::Tx16x16, false, false, false, true)
+            }
+            InterTransformPlan::LossyWideMode2Mixed {
                 layout: plan_layout,
                 ..
             } => {
@@ -6410,6 +6530,11 @@ fn decode_inter_leaf(
             ..
         } => (luma_width, luma_height),
         InterTransformPlan::LossyWideMode2Deep16 {
+            luma_width,
+            luma_height,
+            ..
+        } => (luma_width, luma_height),
+        InterTransformPlan::LossyWideMode2Mixed {
             luma_width,
             luma_height,
             ..
@@ -6677,8 +6802,20 @@ fn decode_inter_leaf(
             transform_plan,
             InterTransformPlan::LossyWideMode2Deep16 { .. }
         );
+        let topology = match transform_plan {
+            InterTransformPlan::LossyWideMode2Mixed {
+                root_splits,
+                child_splits,
+                ..
+            } => Some(super::block::WideMode2Topology {
+                root_splits,
+                child_splits,
+            }),
+            _ => None,
+        };
         let mode2 = split32
             || deep16
+            || topology.is_some()
             || matches!(
                 transform_plan,
                 InterTransformPlan::LossyWideMode2Unsplit { .. }
@@ -6717,6 +6854,7 @@ fn decode_inter_leaf(
                 mode2,
                 split32,
                 deep16,
+                topology,
             )
         } else {
             block_decoder.decode_inter_translation_lossy_wide_chunked(
@@ -6738,6 +6876,7 @@ fn decode_inter_leaf(
                 mode2,
                 split32,
                 deep16,
+                topology,
             )
         }
     } else if lossy_transform_grid {
@@ -6856,6 +6995,7 @@ fn decode_inter_leaf(
             global,
             new_mv,
         },
+        tx_cells,
     }))
 }
 
@@ -7734,6 +7874,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 let legacy_transform_grid =
                     transform_grid.unwrap_or(super::block::TransformGrid::Square4);
                 let mut inter_metadata = None;
+                let mut inter_tx_cells = None;
                 let decoded = if !context.intra_frame {
                     let Some(inter_context) = inter_context else {
                         unsupported = true;
@@ -7777,6 +7918,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                     )? {
                         Ok(inter) => {
                             inter_metadata = Some(inter.metadata);
+                            inter_tx_cells = inter.tx_cells;
                             Ok(inter.leaf)
                         }
                         Err(error) => Err(error),
@@ -7901,6 +8043,19 @@ pub(super) fn validate_complete_lossy_420_partition(
                         .map_err(|_| malformed("loop-filter width exceeds usize"))?;
                     let height = usize::try_from(height)
                         .map_err(|_| malformed("loop-filter height exceeds usize"))?;
+                    let luma_tx_cells = if let Some(cells) = inter_tx_cells.as_ref() {
+                        let mut values = Vec::new();
+                        values.try_reserve_exact(cells.len()).map_err(|_| {
+                            CodecError::Dimensions(
+                                "unable to allocate AV1 variable-transform filter metadata"
+                                    .to_owned(),
+                            )
+                        })?;
+                        values.extend(cells.iter().map(|cell| (cell.width_log2, cell.height_log2)));
+                        Some(values)
+                    } else {
+                        None
+                    };
                     filter_blocks.try_reserve(1).map_err(|_| {
                         CodecError::Dimensions(
                             "unable to allocate AV1 loop-filter metadata".to_owned(),
@@ -7914,6 +8069,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         has_chroma,
                         luma_tx_width: luma_tx.0,
                         luma_tx_height: luma_tx.1,
+                        luma_tx_cells,
                         chroma_tx_width: chroma_tx.0,
                         chroma_tx_height: chroma_tx.1,
                         skip_internal_edges: block_skipped && inter_metadata.is_some(),
@@ -7946,7 +8102,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         BlockCommitMetadata {
                             coding: BlockCoding::Inter(metadata),
                             skip_mode,
-                            tx_cells: None,
+                            tx_cells: inter_tx_cells.as_deref(),
                         }
                     });
                 tile_state.commit_with_metadata(

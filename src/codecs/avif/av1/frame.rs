@@ -1938,7 +1938,7 @@ fn assemble_color_tiles(
                 y: tile_y
                     .checked_add(block.y)
                     .ok_or_else(|| malformed("assembled loop-filter y overflows"))?,
-                ..*block
+                ..block.clone()
             });
         }
 

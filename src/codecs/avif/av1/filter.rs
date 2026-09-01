@@ -10,7 +10,7 @@
     reason = "AV1 loop-filter formulas operate on validated 16-bit samples and bounded filter widths"
 )]
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Block {
     pub(crate) x: usize,
     pub(crate) y: usize,
@@ -19,6 +19,10 @@ pub(crate) struct Block {
     pub(crate) has_chroma: bool,
     pub(crate) luma_tx_width: usize,
     pub(crate) luma_tx_height: usize,
+    /// Optional per-4x4 luma transform dimensions for mixed variable-
+    /// transform trees. Entries are `(width_log2, height_log2)` in row-major
+    /// block order; when absent the scalar dimensions above apply.
+    pub(crate) luma_tx_cells: Option<Vec<(u8, u8)>>,
     pub(crate) chroma_tx_width: usize,
     pub(crate) chroma_tx_height: usize,
     /// Skipped inter prediction units have no internal transform edges.
@@ -260,27 +264,109 @@ fn build_masks(
         }
 
         if !block.skip_internal_edges {
-            let mut edge = x_units.saturating_add(horizontal_tx);
-            while edge < end_x {
-                for segment in y_units..end_y {
-                    set_min(
-                        &mut masks.vertical,
-                        segment.checked_mul(mask_width)?.checked_add(edge)?,
-                        edge_index(horizontal_tx),
-                    );
+            if !chroma {
+                if let Some(cells) = block.luma_tx_cells.as_deref() {
+                    let expected = block_width_units.checked_mul(block_height_units)?;
+                    if cells.len() != expected {
+                        return None;
+                    }
+                    for local_row in 0..block_height_units {
+                        for local_column in 0..block_width_units {
+                            let cell_index = local_row
+                                .checked_mul(block_width_units)?
+                                .checked_add(local_column)?;
+                            let &(width_log2, height_log2) = cells.get(cell_index)?;
+                            if !(2..=4).contains(&width_log2) || !(2..=4).contains(&height_log2) {
+                                return None;
+                            }
+                            let tx_width_units = 1usize.checked_shl(u32::from(width_log2))?;
+                            let tx_height_units = 1usize.checked_shl(u32::from(height_log2))?;
+                            if local_column > 0
+                                && local_column.is_multiple_of(tx_width_units)
+                                && local_row.is_multiple_of(tx_height_units)
+                            {
+                                let edge = x_units.checked_add(local_column)?;
+                                let end_row = local_row
+                                    .checked_add(tx_height_units)?
+                                    .min(block_height_units);
+                                for segment in
+                                    y_units.checked_add(local_row)?..y_units.checked_add(end_row)?
+                                {
+                                    set_min(
+                                        &mut masks.vertical,
+                                        segment.checked_mul(mask_width)?.checked_add(edge)?,
+                                        edge_index(tx_width_units),
+                                    );
+                                }
+                            }
+                            if local_row > 0
+                                && local_row.is_multiple_of(tx_height_units)
+                                && local_column.is_multiple_of(tx_width_units)
+                            {
+                                let edge = y_units.checked_add(local_row)?;
+                                let end_column = local_column
+                                    .checked_add(tx_width_units)?
+                                    .min(block_width_units);
+                                for segment in x_units.checked_add(local_column)?
+                                    ..x_units.checked_add(end_column)?
+                                {
+                                    set_min(
+                                        &mut masks.horizontal,
+                                        edge.checked_mul(masks.width_units)?
+                                            .checked_add(segment)?,
+                                        edge_index(tx_height_units),
+                                    );
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    let mut edge = x_units.saturating_add(horizontal_tx);
+                    while edge < end_x {
+                        for segment in y_units..end_y {
+                            set_min(
+                                &mut masks.vertical,
+                                segment.checked_mul(mask_width)?.checked_add(edge)?,
+                                edge_index(horizontal_tx),
+                            );
+                        }
+                        edge = edge.saturating_add(horizontal_tx);
+                    }
+                    let mut edge = y_units.saturating_add(vertical_tx);
+                    while edge < end_y {
+                        for segment in x_units..end_x {
+                            set_min(
+                                &mut masks.horizontal,
+                                edge.checked_mul(masks.width_units)?.checked_add(segment)?,
+                                edge_index(vertical_tx),
+                            );
+                        }
+                        edge = edge.saturating_add(vertical_tx);
+                    }
                 }
-                edge = edge.saturating_add(horizontal_tx);
-            }
-            let mut edge = y_units.saturating_add(vertical_tx);
-            while edge < end_y {
-                for segment in x_units..end_x {
-                    set_min(
-                        &mut masks.horizontal,
-                        edge.checked_mul(masks.width_units)?.checked_add(segment)?,
-                        edge_index(vertical_tx),
-                    );
+            } else {
+                let mut edge = x_units.saturating_add(horizontal_tx);
+                while edge < end_x {
+                    for segment in y_units..end_y {
+                        set_min(
+                            &mut masks.vertical,
+                            segment.checked_mul(mask_width)?.checked_add(edge)?,
+                            edge_index(horizontal_tx),
+                        );
+                    }
+                    edge = edge.saturating_add(horizontal_tx);
                 }
-                edge = edge.saturating_add(vertical_tx);
+                let mut edge = y_units.saturating_add(vertical_tx);
+                while edge < end_y {
+                    for segment in x_units..end_x {
+                        set_min(
+                            &mut masks.horizontal,
+                            edge.checked_mul(masks.width_units)?.checked_add(segment)?,
+                            edge_index(vertical_tx),
+                        );
+                    }
+                    edge = edge.saturating_add(vertical_tx);
+                }
             }
         }
     }
@@ -876,6 +962,7 @@ mod tests {
             has_chroma: true,
             luma_tx_width: 8,
             luma_tx_height: 8,
+            luma_tx_cells: None,
             chroma_tx_width: 4,
             chroma_tx_height: 4,
             skip_internal_edges: false,
