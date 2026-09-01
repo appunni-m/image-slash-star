@@ -7473,6 +7473,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     let generic_i444_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_444_reconstruction_context(context, inter_context)
     });
+    let lossy_i444_active_restoration = generic_i444_inter
+        && inter_context.is_some_and(|inter_context| {
+            lossy_i444_superres_restoration_supported(context, inter_context)
+        });
     let generic_high_depth_inter = inter_context.is_some_and(|inter_context| {
         complete_high_depth_inter_reconstruction_context(context, inter_context)
     });
@@ -7843,6 +7847,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_rect_cdef_restoration
         || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
+        || lossy_i444_active_restoration
         || high_depth_lossless_i444_active_restoration
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
@@ -8890,8 +8895,8 @@ fn complete_inter_422_reconstruction_context(
 /// full-resolution MC path as unscaled references. Compound, inter-intra, and
 /// OBMC syntax remain enabled; frame-level postfilters and film grain stay
 /// Checked frame deblocking and bounded frame CDEF are applied after complete
-/// tile assembly; restoration remains closed until its broad I444 geometry
-/// classes have independent composition evidence. Horizontal super-resolution
+/// tile assembly; active restoration is limited to the separate one-unit
+/// super-resolution profile below. Horizontal super-resolution
 /// resizes the complete coded I444 frame through the shared frame compositor;
 /// film grain remains disabled for that display-width transition. Tile-local
 /// reconstructions are assembled into one complete frame. Root-scoped delta-Q
@@ -8899,9 +8904,9 @@ fn complete_inter_422_reconstruction_context(
 /// reference/mode metadata supplies the per-block filter-level class.
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
 /// frame-level skip mode is supported on transform modes 1/2 with fixed
-/// nearest-nearest average prediction. Intra blocks (including palette) and
-/// active restoration remain outside this profile; update-map post-skip
-/// segmentation is admitted only for ALT_Q-only segments with frame delta-Q/LF,
+/// nearest-nearest average prediction. Intra blocks (including palette)
+/// remain outside this profile; update-map post-skip segmentation is admitted
+/// only for ALT_Q-only segments with frame delta-Q/LF,
 /// segment ALT_LF/lossless, and reference features closed.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
@@ -8922,6 +8927,7 @@ fn complete_inter_444_reconstruction_context(
     } else {
         bounded_i444_film_grain_supported(context)
     };
+    let active_restoration = lossy_i444_superres_restoration_supported(context, inter_context);
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
@@ -8945,11 +8951,144 @@ fn complete_inter_444_reconstruction_context(
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
         && inter_cdef_supported(context)
-        && context.restoration_types == [None; 3]
+        && (context.restoration_types == [None; 3] || active_restoration)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
         && references_match
+}
+
+/// Admit active Wiener/SGR restoration for one 8-bit I444 lossy
+/// super-resolution frame. This profile keeps the surrounding frame state
+/// closed and proves one post-resize restoration unit for every active plane;
+/// the generic I444 walker still owns block syntax and ordinary per-block skip.
+fn lossy_i444_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == quantization.base
+                && !segment.lossless
+        });
+    if context.intra_frame
+        || context.bit_depth != 8
+        || context.monochrome
+        || context.subsampling_x
+        || context.subsampling_y
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.all_lossless
+        || context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != quantization.base
+        || quantization.base == 0
+        || quantization.using_matrix
+        || context.frame_tools.reduced_transform_set
+        || context.frame_tools.transform_mode != 1
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.allow_warped_motion
+        || inter_context.enable_interintra_compound
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || inter_context.motion_mode_switchable
+        || inter_context.use_ref_frame_mvs
+        || !context.frame_tools.restoration_present
+        || !segmentation_closed
+    {
+        return false;
+    }
+    if !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let log2_supported = match context.level {
+        0 => (7..=8).contains(&luma_log2),
+        1 => (6..=8).contains(&luma_log2),
+        _ => false,
+    };
+    if !log2_supported || chroma_log2 != luma_log2 || context.frame_height > 56 {
+        return false;
+    }
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == 8
+            && reference.surface.layout == PixelLayout::I444
+            && reference.surface.upscaled_width == context.upscaled_width
+            && reference.surface.frame_height == context.frame_height
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    if !references_match {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(luma_log2) else {
+        return false;
+    };
+    for restoration_type in context.restoration_types {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let Some(width_with_half) = context.upscaled_width.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+            return false;
+        };
+        if (width_with_half >> luma_log2).max(1) != 1 || (height_with_half >> luma_log2).max(1) != 1
+        {
+            return false;
+        }
+    }
+    true
 }
 
 /// The same bounded intra profile as the general lossy 4:2:0 decoder, with
