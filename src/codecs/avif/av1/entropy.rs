@@ -2644,16 +2644,20 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         && context.frame_height <= 128
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
-        && context.upscaled_width == context.frame_width;
+        && (context.superres_enabled || context.upscaled_width == context.frame_width);
+    let film_grain_supported = if context.superres_enabled {
+        !context.frame_tools.film_grain_present
+    } else {
+        no_unsupported_film_grain(context)
+    };
     context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && context.monochrome
         && context.all_lossless
-        && !context.superres_enabled
         && !context.segmentation_enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && no_unsupported_film_grain(context)
+        && film_grain_supported
         && context.block_x == 0
         && context.block_y == 0
         && context.level == 1

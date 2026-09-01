@@ -453,11 +453,7 @@ impl FrameSurface {
     ) -> Av1Result<(SampleDepth, usize)> {
         let depth = SampleDepth::new(sequence.bit_depth)
             .ok_or_else(|| malformed("monochrome reference depth is unsupported"))?;
-        if !sequence.monochrome
-            || header.frame_width != header.upscaled_width
-            || header.render_width == 0
-            || header.render_height == 0
-        {
+        if !sequence.monochrome || header.render_width == 0 || header.render_height == 0 {
             return Err(malformed(
                 "decoded monochrome surface disagrees with its frame header",
             ));
@@ -2544,11 +2540,30 @@ fn validate_tile_entropy_prefixes(
                 )?);
             }
             if sequence.monochrome && tiling.tile_count() == 1 && ranges.len() == 1 {
-                complete_monochrome_plane = entropy::validate_complete_monochrome_partition(
+                let plane = entropy::validate_complete_monochrome_partition(
                     data,
                     range.clone(),
                     &tile_context,
                 )?;
+                complete_monochrome_plane = plane
+                    .map(|plane| {
+                        if header.superres_enabled {
+                            let depth = SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
+                                malformed("super-resolution sample depth is unsupported")
+                            })?;
+                            resize::upscale_monochrome_plane(
+                                plane,
+                                header.frame_width,
+                                header.upscaled_width,
+                                header.frame_height,
+                                header.superres_denominator,
+                                depth,
+                            )
+                        } else {
+                            Ok(plane)
+                        }
+                    })
+                    .transpose()?;
             }
             decode_complete = false;
         }

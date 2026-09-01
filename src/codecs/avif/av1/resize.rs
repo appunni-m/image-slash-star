@@ -1,5 +1,5 @@
-//! AV1 normative horizontal super-resolution for retained 4:2:0, 4:2:2, and
-//! 4:4:4 pictures.
+//! AV1 normative horizontal super-resolution for retained monochrome,
+//! 4:2:0, 4:2:2, and 4:4:4 pictures.
 //!
 //! The interpolation table and fixed-point placement follow the pinned
 //! libaom `av1/common/resize.c` / `aom_dsp/aom_filter.h` implementation and
@@ -162,6 +162,33 @@ pub(super) fn upscale_i444_leaf(
         false,
         false,
     )
+}
+
+/// Apply AV1's horizontal super-resolution step to a complete monochrome
+/// plane.
+///
+/// Monochrome/alpha reconstruction is kept on its own single-plane path so a
+/// color-shaped compositor cannot accidentally publish an auxiliary plane.
+/// The coded plane is complete before this adapter runs; all-lossless
+/// monochrome has no deblock, CDEF, restoration, or film-grain stage in the
+/// admitted profile.
+pub(super) fn upscale_monochrome_plane(
+    plane: ReconstructedPlane,
+    coded_width: u32,
+    upscaled_width: u32,
+    frame_height: u32,
+    superres_denominator: u32,
+    depth: SampleDepth,
+) -> Av1Result<ReconstructedPlane> {
+    validate_header_geometry(
+        coded_width,
+        frame_height,
+        coded_width,
+        upscaled_width,
+        frame_height,
+        superres_denominator,
+    )?;
+    resize_plane(plane, coded_width, upscaled_width, frame_height, depth)
 }
 
 fn upscale_subsampled_leaf(
