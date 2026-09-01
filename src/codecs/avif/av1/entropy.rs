@@ -4202,28 +4202,37 @@ fn decode_inter_transform_type(
         .ok_or_else(|| malformed("inter transform symbol is invalid"))
 }
 
+#[derive(Clone, Copy)]
+enum InterTransformPlan {
+    Single(TxSize),
+    SplitB8I420,
+}
+
 fn decode_inter_transform_size(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut FrameCdfs,
     tile_state: &TileState,
     node: PartitionNode,
     block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
     block_skipped: bool,
     transform_mode: u32,
-) -> super::block::PortableResult<TxSize> {
+) -> super::block::PortableResult<InterTransformPlan> {
     let max_tx = block_size.maximum_luma_tx();
     if transform_mode == 0 {
-        return Ok(TxSize::Tx4x4);
+        return Ok(InterTransformPlan::Single(TxSize::Tx4x4));
     }
     if transform_mode != 2 {
-        return Ok(max_tx);
+        return Ok(InterTransformPlan::Single(max_tx));
     }
     // TX_MODE_SELECT has no transform-partition sentence for skipped blocks
     // or a TX4X4 root.  The decoder's vartx tree is likewise suppressed for
     // both cases; consuming a bit here would shift every later coefficient
     // symbol.
     if block_skipped || max_tx == TxSize::Tx4x4 {
-        return Ok(max_tx);
+        return Ok(InterTransformPlan::Single(max_tx));
     }
     // The shared inter terminal reconstructs one transform per coded leaf.
     // Larger blocks whose maximum transform is capped below the block extent
@@ -4249,9 +4258,17 @@ fn decode_inter_transform_size(
     let category = usize::try_from(category).map_err(|_| super::block::PortableUnavailable)?;
     let split = decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
     if split {
+        if block_size == BlockSize::B8x8
+            && layout == PixelLayout::I420
+            && visible_width == 8
+            && visible_height == 8
+            && max_tx == TxSize::Tx8x8
+        {
+            return Ok(InterTransformPlan::SplitB8I420);
+        }
         return Err(super::block::PortableUnavailable);
     }
-    Ok(max_tx)
+    Ok(InterTransformPlan::Single(max_tx))
 }
 
 #[derive(Clone)]
@@ -4872,19 +4889,26 @@ fn decode_inter_leaf(
     } else {
         None
     };
-    let tx_size = match decode_inter_transform_size(
+    let transform_plan = match decode_inter_transform_size(
         decoder,
         cdfs,
         tile_state,
         node,
         node.block_size,
+        layout,
+        visible_width,
+        visible_height,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
-        Ok(tx_size) => tx_size,
+        Ok(plan) => plan,
         Err(super::block::PortableUnavailable) => {
             return Ok(Err(super::block::PortableUnavailable));
         }
+    };
+    let (tx_size, transform_split) = match transform_plan {
+        InterTransformPlan::Single(tx_size) => (tx_size, false),
+        InterTransformPlan::SplitB8I420 => (TxSize::Tx8x8, true),
     };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
@@ -4985,30 +5009,86 @@ fn decode_inter_leaf(
         .map_err(|_| malformed("inter luma block width exceeds usize"))?;
     let luma_block_height = usize::try_from(node.block_size.pixel_dimensions().1)
         .map_err(|_| malformed("inter luma block height exceeds usize"))?;
-    let luma_txb_skipped = block_decoder
-        .decode_inter_txb_skip(
-            decoder,
-            0,
-            tx_size,
-            luma_block_width,
-            luma_block_height,
-            &coefficient_contexts.above[0][..luma_context_width_usize],
-            &coefficient_contexts.left[0][..luma_context_height_usize],
-            block_skipped,
-        )
-        .map_err(|_| malformed("inter luma coefficient-skip sentence is unavailable"))?;
-    let transform = if luma_txb_skipped {
-        super::block::Av1TransformType::DctDct
+    let (luma_txb_skipped, transform) = if transform_split {
+        (true, super::block::Av1TransformType::DctDct)
     } else {
-        decode_inter_transform_type(
-            decoder,
-            cdfs,
-            tx_size,
-            context.frame_tools.reduced_transform_set,
-            quantization.segment_lossless,
-        )?
+        let txb_skipped = block_decoder
+            .decode_inter_txb_skip(
+                decoder,
+                0,
+                tx_size,
+                luma_block_width,
+                luma_block_height,
+                &coefficient_contexts.above[0][..luma_context_width_usize],
+                &coefficient_contexts.left[0][..luma_context_height_usize],
+                block_skipped,
+            )
+            .map_err(|_| malformed("inter luma coefficient-skip sentence is unavailable"))?;
+        let transform = if txb_skipped {
+            super::block::Av1TransformType::DctDct
+        } else {
+            decode_inter_transform_type(
+                decoder,
+                cdfs,
+                tx_size,
+                context.frame_tools.reduced_transform_set,
+                quantization.segment_lossless,
+            )?
+        };
+        (txb_skipped, transform)
     };
-    let leaf = match if compound {
+    let leaf = match if transform_split {
+        let decode_transform_type = |decoder: &mut RangeDecoder<'_, '_, '_>, tx_size: TxSize| {
+            decode_inter_transform_type(
+                decoder,
+                cdfs,
+                tx_size,
+                context.frame_tools.reduced_transform_set,
+                quantization.segment_lossless,
+            )
+            .map_err(|_| super::block::PortableUnavailable)
+        };
+        if compound {
+            let second = second_state
+                .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
+            block_decoder.decode_inter_compound_translation_split_b8(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                prepared_quantization,
+                tools,
+                [first_state.surface, second.surface],
+                [first_state.scale, second.scale],
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions,
+                compound_blend.ok_or_else(|| malformed("compound blend is missing"))?,
+                filters,
+                coefficient_contexts,
+                decode_transform_type,
+            )
+        } else {
+            block_decoder.decode_inter_translation_split_b8(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                prepared_quantization,
+                tools,
+                first_state.surface,
+                first_state.scale,
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions[0],
+                filters,
+                coefficient_contexts,
+                decode_transform_type,
+                obmc,
+                inter_intra,
+            )
+        }
+    } else if compound {
         let second = second_state
             .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
         block_decoder.decode_inter_compound_translation(

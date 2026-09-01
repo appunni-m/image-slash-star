@@ -48448,6 +48448,16 @@ pub(super) struct InterCoefficientContexts {
     pub(super) left: [[u8; 32]; 3],
 }
 
+#[derive(Clone, Copy)]
+enum InterTransformPlan {
+    Single {
+        tx_size: TxSize,
+        txb_skipped: bool,
+        transform: Av1TransformType,
+    },
+    SplitB8I420,
+}
+
 impl BlockSegmentState {
     const DEFAULT: Self = Self {
         delta_q: 0,
@@ -49061,11 +49071,14 @@ impl Lossy420Decoder {
                 obmc,
             },
             block_skipped,
-            luma_txb_skipped,
-            luma_tx_size,
-            luma_transform,
+            InterTransformPlan::Single {
+                tx_size: luma_tx_size,
+                txb_skipped: luma_txb_skipped,
+                transform: luma_transform,
+            },
             filters,
             coefficient_contexts,
+            |_, _| Err(PortableUnavailable),
         )
     }
 
@@ -49113,11 +49126,115 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             block_skipped,
-            luma_txb_skipped,
-            luma_tx_size,
-            luma_transform,
+            InterTransformPlan::Single {
+                tx_size: luma_tx_size,
+                txb_skipped: luma_txb_skipped,
+                transform: luma_transform,
+            },
             filters,
             coefficient_contexts,
+            |_, _| Err(PortableUnavailable),
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "split single-reference reconstruction carries block, frame, prediction, and transform callback state"
+    )]
+    pub(super) fn decode_inter_translation_split_b8(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        reference: &FrameSurface,
+        scale: ScaleFactors,
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motion: MotionVector,
+        filters: [InterpolationFilter; 2],
+        coefficient_contexts: InterCoefficientContexts,
+        decode_transform_type: impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
+        obmc: Option<ObmcContext<'_>>,
+        inter_intra: Option<InterIntraPrediction<'_>>,
+    ) -> PortableResult<FirstLeaf> {
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references: [reference, reference],
+                scales: [scale, scale],
+                motions: [motion, MotionVector::ZERO],
+                block_x_b4,
+                block_y_b4,
+                compound: None,
+                inter_intra,
+                obmc,
+            },
+            false,
+            InterTransformPlan::SplitB8I420,
+            filters,
+            coefficient_contexts,
+            decode_transform_type,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "split compound reconstruction carries block, frame, prediction, and transform callback state"
+    )]
+    pub(super) fn decode_inter_compound_translation_split_b8(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        references: [&FrameSurface; 2],
+        scales: [ScaleFactors; 2],
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motions: [MotionVector; 2],
+        compound: PreparedCompound,
+        filters: [InterpolationFilter; 2],
+        coefficient_contexts: InterCoefficientContexts,
+        decode_transform_type: impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
+    ) -> PortableResult<FirstLeaf> {
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references,
+                scales,
+                motions,
+                block_x_b4,
+                block_y_b4,
+                compound: Some(compound),
+                inter_intra: None,
+                obmc: None,
+            },
+            false,
+            InterTransformPlan::SplitB8I420,
+            filters,
+            coefficient_contexts,
+            decode_transform_type,
         )
     }
 
@@ -49135,11 +49252,13 @@ impl Lossy420Decoder {
         tools: BlockTools,
         prediction_state: InterPrediction<'_>,
         block_skipped: bool,
-        luma_txb_skipped: bool,
-        luma_tx_size: TxSize,
-        luma_transform: Av1TransformType,
+        transform_plan: InterTransformPlan,
         filters: [InterpolationFilter; 2],
         coefficient_contexts: InterCoefficientContexts,
+        mut decode_transform_type: impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
     ) -> PortableResult<FirstLeaf> {
         let chroma_sampling = self.chroma_sampling;
         let monochrome = matches!(chroma_sampling, ChromaSampling::Monochrome);
@@ -49205,6 +49324,24 @@ impl Lossy420Decoder {
             visible_width,
             visible_height,
         )?;
+        let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8I420);
+        if split_b8 {
+            (block_size == BlockSize::B8x8
+                && matches!(chroma_sampling, ChromaSampling::Subsampled420)
+                && visible_width == 8
+                && visible_height == 8
+                && !predecoded_skip)
+                .then_some(())
+                .portable()?;
+        }
+        let (luma_tx_size, luma_txb_skipped, mut luma_transform) = match transform_plan {
+            InterTransformPlan::Single {
+                tx_size,
+                txb_skipped,
+                transform,
+            } => (tx_size, txb_skipped, transform),
+            InterTransformPlan::SplitB8I420 => (TxSize::Tx8x8, false, Av1TransformType::DctDct),
+        };
         let expected_luma = luma_tx_size;
         let (tx_luma_width, tx_luma_height) = expected_luma.pixel_dimensions();
         (u32::try_from(y_geometry.0).map_err(|_| PortableUnavailable)? == tx_luma_width
@@ -49257,6 +49394,9 @@ impl Lossy420Decoder {
             )?,
         ];
         let mut contexts = [0x40_u8; 3];
+        let mut luma_right_contexts = [0x40_u8; 16];
+        let mut luma_bottom_contexts = [0x40_u8; 16];
+        let mut luma_transform_split = false;
         let tx_sizes = [
             luma_tx_size,
             chroma_tx.unwrap_or(luma_tx_size),
@@ -49458,6 +49598,25 @@ impl Lossy420Decoder {
                     obmc,
                 )?;
             }
+            if split_b8 && plane == 0 {
+                let (split_contexts, split_transform) = self.decode_inter_split_luma_b8(
+                    decoder,
+                    &prediction,
+                    &mut rasters[0],
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    &mut decode_transform_type,
+                )?;
+                contexts[0] = split_contexts[1][1];
+                luma_right_contexts[0] = split_contexts[0][1];
+                luma_right_contexts[1] = split_contexts[1][1];
+                luma_bottom_contexts[0] = split_contexts[1][0];
+                luma_bottom_contexts[1] = split_contexts[1][1];
+                luma_transform_split = true;
+                luma_transform = split_transform;
+                continue;
+            }
             let context_width = tx_width / 4;
             let context_height = tx_height / 4;
             let above = coefficient_contexts.above[plane]
@@ -49545,7 +49704,11 @@ impl Lossy420Decoder {
         } else {
             [y, u.into_visible_plane()?, v.into_visible_plane()?]
         };
-        let (tx_context_width, tx_context_height) = luma_tx_size.context_dimensions();
+        let (tx_context_width, tx_context_height) = if luma_transform_split {
+            TxSize::Tx4x4.context_dimensions()
+        } else {
+            luma_tx_size.context_dimensions()
+        };
         Ok(FirstLeaf {
             width: visible_width,
             height: visible_height,
@@ -49559,14 +49722,158 @@ impl Lossy420Decoder {
             chroma_bottom_contexts: [[contexts[1]; 16], [contexts[2]; 16]],
             tx_context_width,
             tx_context_height,
-            luma_transform_split: false,
-            luma_right_contexts: [contexts[0]; 16],
-            luma_bottom_contexts: [contexts[0]; 16],
+            luma_transform_split,
+            luma_right_contexts: if luma_transform_split {
+                luma_right_contexts
+            } else {
+                [contexts[0]; 16]
+            },
+            luma_bottom_contexts: if luma_transform_split {
+                luma_bottom_contexts
+            } else {
+                [contexts[0]; 16]
+            },
             wide_coefficient_contexts: None,
             palette_cache: PaletteCacheState::default(),
             #[cfg(coverage)]
             entropy_operations: Vec::new(),
         })
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the bounded B8 transform compositor keeps prediction, entropy edges, quantization, and callback state explicit"
+    )]
+    fn decode_inter_split_luma_b8(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        prediction: &[u16],
+        raster: &mut PrivatePlaneRaster,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+        decode_transform_type: &mut impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
+    ) -> PortableResult<([[u8; 2]; 2], Av1TransformType)> {
+        (prediction.len() == 64
+            && raster.coded_width == 8
+            && raster.coded_height == 8
+            && raster.active_width == 8
+            && raster.active_height == 8)
+            .then_some(())
+            .portable()?;
+        let above = [
+            coefficient_contexts.above[0][0],
+            coefficient_contexts.above[0][1],
+        ];
+        let left = [
+            coefficient_contexts.left[0][0],
+            coefficient_contexts.left[0][1],
+        ];
+        let mut residual_contexts = [[0x40_u8; 2]; 2];
+        let mut chroma_transform = Av1TransformType::DctDct;
+        for row in 0..2 {
+            for column in 0..2 {
+                let above_context = if row == 0 {
+                    [above[column]]
+                } else {
+                    [residual_contexts[row - 1][column]]
+                };
+                let left_context = if column == 0 {
+                    [left[row]]
+                } else {
+                    [residual_contexts[row][column - 1]]
+                };
+                let txb_skipped = self.decode_inter_txb_skip(
+                    decoder,
+                    0,
+                    TxSize::Tx4x4,
+                    8,
+                    8,
+                    &above_context,
+                    &left_context,
+                    false,
+                )?;
+                let transform = if txb_skipped {
+                    Av1TransformType::DctDct
+                } else {
+                    decode_transform_type(decoder, TxSize::Tx4x4)?
+                };
+                if row == 0 && column == 0 {
+                    chroma_transform = transform;
+                }
+                let terminal = decode_inter_lossy_terminal(
+                    decoder,
+                    0,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    quantization,
+                    TxSize::Tx4x4,
+                    8,
+                    8,
+                    &above_context,
+                    &left_context,
+                    txb_skipped,
+                    transform,
+                )?;
+                let coefficients = if terminal.skipped {
+                    None
+                } else {
+                    Some(
+                        self.large_coeff_arena
+                            .coefficients
+                            .get(..terminal.coefficient_count)
+                            .portable()?,
+                    )
+                };
+                let mut child_prediction = Vec::new();
+                child_prediction
+                    .try_reserve_exact(16)
+                    .map_err(|_| PortableUnavailable)?;
+                let offset_x = column.checked_mul(4).portable()?;
+                let offset_y = row.checked_mul(4).portable()?;
+                for child_row in 0..4 {
+                    let start = offset_y
+                        .checked_add(child_row)
+                        .and_then(|value| value.checked_mul(8))
+                        .and_then(|value| value.checked_add(offset_x))
+                        .portable()?;
+                    let end = start.checked_add(4).portable()?;
+                    child_prediction.extend_from_slice(prediction.get(start..end).portable()?);
+                }
+                let ReconstructionScratch { transform, .. } = &mut self.reconstruction_scratch;
+                let TransformScratch { rows, residual, .. } = transform;
+                reconstruct_full_unsplit_prediction_in_place(
+                    &mut child_prediction,
+                    CoeffBlockRef {
+                        width: 4,
+                        height: 4,
+                        coefficients,
+                        transform: match terminal.transform {
+                            GenericTerminalTransform::Lossy(value) => value,
+                            GenericTerminalTransform::LosslessWht4x4 => {
+                                return Err(PortableUnavailable);
+                            }
+                        },
+                    },
+                    tools.sample_depth,
+                    rows,
+                    residual,
+                )?;
+                raster.commit_transform(
+                    offset_x,
+                    offset_y,
+                    4,
+                    4,
+                    &child_prediction,
+                    tools.sample_depth,
+                )?;
+                residual_contexts[row][column] = terminal.residual_context;
+            }
+        }
+        Ok((residual_contexts, chroma_transform))
     }
 
     fn remember_qindex(&mut self, tile_qindex: u32, _decoder: &RangeDecoder<'_, '_, '_>) {
