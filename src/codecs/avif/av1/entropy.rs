@@ -6215,6 +6215,10 @@ fn bounded_restoration_geometry(context: &FirstBlockContext) -> bool {
     true
 }
 
+/// Shared bounded I420 restoration admission. Screen-enabled intra leaves may
+/// decode palette prediction; inter leaves use force-integer MV precision.
+/// IntraBC and intra/palette blocks within inter frames remain outside the
+/// profile. Restoration consumes only completed post-CDEF samples.
 fn bounded_restoration_common(context: &FirstBlockContext) -> bool {
     context.bit_depth == 8
         && context.subsampling_x
@@ -6223,7 +6227,6 @@ fn bounded_restoration_common(context: &FirstBlockContext) -> bool {
         && !context.all_lossless
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && context.frame_tools.quantization.is_some()
         && no_unsupported_film_grain(context)
         && context.block_x == 0
