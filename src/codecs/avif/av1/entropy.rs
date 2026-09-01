@@ -7477,6 +7477,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
         })
     };
+    let superres_lossy_i420_intra = complete_superres_lossy_420_reconstruction_context(context);
+    let lossy_i420_intra_active_restoration =
+        superres_lossy_i420_intra && lossy_i420_intra_superres_restoration_supported(context);
     let generic_i420_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context, inter_context)
     });
@@ -7805,7 +7808,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             || bounded_i422_inter_loop
     });
     let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
-        || complete_superres_lossy_420_reconstruction_context(context)
+        || superres_lossy_i420_intra
         || monochrome_intra_reconstruction
         || (context.intra_frame && monochrome_postfilter)
         || bounded_intra_restoration
@@ -7881,6 +7884,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
         || monochrome_lossy_active_restoration
+        || lossy_i420_intra_active_restoration
         || lossy_i420_active_restoration
         || lossy_i422_active_restoration
         || lossy_i444_active_restoration
@@ -9445,6 +9449,7 @@ fn lossy_i444_superres_restoration_supported(
 /// on the coded grid; intraBC remains outside the profile. Deblock/CDEF precede
 /// horizontal resize.
 fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
+    let active_restoration = lossy_i420_intra_superres_restoration_supported(context);
     let high_depth = matches!(context.bit_depth, 10 | 12);
     let cdef_supported = if high_depth {
         complete_high_depth_cdef_supported(context)
@@ -9473,12 +9478,142 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && context.frame_tools.quantization.is_some()
         && (!high_depth || !context.frame_tools.reduced_transform_set)
         && (!high_depth || complete_high_depth_loop_filter_supported(context))
-        && context.restoration_types == [None; 3]
+        && (context.restoration_types == [None; 3] || active_restoration)
         && no_unsupported_film_grain(context)
         && cdef_supported
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
+}
+
+/// Admit active Wiener/SGR restoration for one lossy I420 intra
+/// super-resolution frame. The generic intra path owns coded-coordinate
+/// prediction and residuals; this exception proves a single full-frame
+/// post-resize restoration unit for any active plane subset.
+fn lossy_i420_intra_superres_restoration_supported(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == quantization.base
+                && !segment.lossless
+        });
+    if !context.intra_frame
+        || !matches!(context.bit_depth, 8 | 10 | 12)
+        || !context.subsampling_x
+        || !context.subsampling_y
+        || context.monochrome
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.all_lossless
+        || context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != quantization.base
+        || quantization.base == 0
+        || quantization.using_matrix
+        || context.frame_tools.reduced_transform_set
+        || context.frame_tools.transform_mode != 1
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || !context.frame_tools.restoration_present
+        || !segmentation_closed
+    {
+        return false;
+    }
+    if !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let (luma_log2_supported, chroma_log2_supported) = match context.level {
+        0 => ((7..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2)),
+        1 => ((6..=8).contains(&luma_log2), (5..=8).contains(&chroma_log2)),
+        _ => (false, false),
+    };
+    if !luma_log2_supported || !chroma_log2_supported || context.frame_height > 56 {
+        return false;
+    }
+    let chroma_active =
+        context.restoration_types[1].is_some() || context.restoration_types[2].is_some();
+    let chroma_log_matches = if chroma_active {
+        chroma_log2 == luma_log2 || chroma_log2.checked_add(1) == Some(luma_log2)
+    } else {
+        chroma_log2 == luma_log2
+    };
+    if !chroma_log_matches {
+        return false;
+    }
+    let Some(chroma_width) = context.upscaled_width.checked_add(1).map(|width| width / 2) else {
+        return false;
+    };
+    let Some(chroma_height) = context.frame_height.checked_add(1).map(|height| height / 2) else {
+        return false;
+    };
+    let dimensions = [
+        (context.upscaled_width, context.frame_height),
+        (chroma_width, chroma_height),
+        (chroma_width, chroma_height),
+    ];
+    for (plane, restoration_type) in context.restoration_types.iter().enumerate() {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let unit_log2 = if plane == 0 { luma_log2 } else { chroma_log2 };
+        let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+            return false;
+        };
+        let Some(width_with_half) = dimensions[plane].0.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = dimensions[plane].1.checked_add(unit_size / 2) else {
+            return false;
+        };
+        if (width_with_half >> unit_log2).max(1) != 1 || (height_with_half >> unit_log2).max(1) != 1
+        {
+            return false;
+        }
+    }
+    true
 }
 
 /// Narrow lossy I444 intra profile with AV1 horizontal super-resolution.
