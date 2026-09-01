@@ -3431,7 +3431,11 @@ fn inter_lossy_i444_direct_geometry_supported(
         && (transform_mode != 2 || quantization.segment_qindex > 0)
         && matches!(
             block_size,
-            BlockSize::B32x64 | BlockSize::B64x32 | BlockSize::B64x64
+            BlockSize::B16x64
+                | BlockSize::B64x16
+                | BlockSize::B32x64
+                | BlockSize::B64x32
+                | BlockSize::B64x64
         )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
@@ -3454,7 +3458,10 @@ fn inter_lossy_i444_rect_split_geometry_supported(
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 2
         && quantization.segment_qindex > 0
-        && matches!(block_size, BlockSize::B32x64 | BlockSize::B64x32)
+        && matches!(
+            block_size,
+            BlockSize::B16x64 | BlockSize::B64x16 | BlockSize::B32x64 | BlockSize::B64x32
+        )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
@@ -5186,7 +5193,7 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB32x8);
         }
         if block_size == BlockSize::B16x64
-            && layout == PixelLayout::I420
+            && matches!(layout, PixelLayout::I420 | PixelLayout::I444)
             && visible_width == 16
             && visible_height == 64
             && split_b16_wide_supported
@@ -5229,7 +5236,7 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB16x64);
         }
         if block_size == BlockSize::B64x16
-            && layout == PixelLayout::I420
+            && matches!(layout, PixelLayout::I420 | PixelLayout::I444)
             && visible_width == 64
             && visible_height == 16
             && split_b16_wide_supported
@@ -6682,7 +6689,10 @@ fn decode_inter_leaf(
     );
     let split_rect64_i444_chroma_grid = matches!(
         transform_plan,
-        InterTransformPlan::SplitB32x64 | InterTransformPlan::SplitB64x32
+        InterTransformPlan::SplitB16x64
+            | InterTransformPlan::SplitB64x16
+            | InterTransformPlan::SplitB32x64
+            | InterTransformPlan::SplitB64x32
     ) && layout == PixelLayout::I444;
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = match transform_plan {
