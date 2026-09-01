@@ -8846,8 +8846,9 @@ fn complete_inter_422_reconstruction_context(
 /// OBMC syntax remain enabled; frame-level postfilters and film grain stay
 /// Checked frame deblocking and bounded frame CDEF are applied after complete
 /// tile assembly; restoration remains closed until its broad I444 geometry
-/// classes have independent composition evidence. Film grain is display-only
-/// and limited to the shared bounded dimension whitelist. Tile-local
+/// classes have independent composition evidence. Horizontal super-resolution
+/// resizes the complete coded I444 frame through the shared frame compositor;
+/// film grain remains disabled for that display-width transition. Tile-local
 /// reconstructions are assembled into one complete frame. Root-scoped delta-Q
 /// and dynamic delta-LF use the shared prepared-quantization path; staged inter
 /// reference/mode metadata supplies the per-block filter-level class.
@@ -8861,6 +8862,21 @@ fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let dimensions_supported = if context.superres_enabled {
+        context.frame_width >= 4
+            && context.frame_height >= 4
+            && padded_block_width == Some(context.block_width)
+            && padded_block_height == Some(context.block_height)
+    } else {
+        context.upscaled_width == context.frame_width
+    };
+    let film_grain_supported = if context.superres_enabled {
+        !context.frame_tools.film_grain_present
+    } else {
+        bounded_i444_film_grain_supported(context)
+    };
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
@@ -8875,12 +8891,11 @@ fn complete_inter_444_reconstruction_context(
         && !context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
-        && !context.superres_enabled
-        && context.upscaled_width == context.frame_width
+        && dimensions_supported
         && !context.all_lossless
         && postskip_altq_segmentation_supported(context)
         && !context.allow_intrabc
-        && bounded_i444_film_grain_supported(context)
+        && film_grain_supported
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
