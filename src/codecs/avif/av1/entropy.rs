@@ -6669,11 +6669,6 @@ fn decode_inter_leaf(
             )
         }
     } else if lossy_wide_chunked {
-        let mode2 = matches!(
-            transform_plan,
-            InterTransformPlan::LossyWideMode2Unsplit { .. }
-                | InterTransformPlan::LossyWideMode2Split32 { .. }
-        );
         let split32 = matches!(
             transform_plan,
             InterTransformPlan::LossyWideMode2Split32 { .. }
@@ -6682,6 +6677,12 @@ fn decode_inter_leaf(
             transform_plan,
             InterTransformPlan::LossyWideMode2Deep16 { .. }
         );
+        let mode2 = split32
+            || deep16
+            || matches!(
+                transform_plan,
+                InterTransformPlan::LossyWideMode2Unsplit { .. }
+            );
         let mut decode_transform_type = |decoder: &mut RangeDecoder<'_, '_, '_>,
                                          tx_size: TxSize| {
             decode_inter_transform_type(
