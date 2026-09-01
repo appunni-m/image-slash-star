@@ -13274,7 +13274,7 @@ fn high_depth_lossless_i444_superres_restoration_supported(
         || context.skip_mode_enabled
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
-        || !inter_context.allow_warped_motion
+        || inter_context.allow_warped_motion
         || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
