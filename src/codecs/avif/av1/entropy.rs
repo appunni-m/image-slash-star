@@ -4507,6 +4507,9 @@ enum InterTransformPlan {
     SplitB32x16,
     SplitB32,
     SplitB64,
+    SplitB64Topology {
+        child_splits: [[bool; 2]; 2],
+    },
     LossyOnly4x4Grid {
         luma_width: u32,
         luma_height: u32,
@@ -5474,11 +5477,11 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx64x64
         {
             // A TX64 root split is followed by one TX32 split decision for
-            // each child. A homogeneous all-false sentence retains the
-            // existing four-terminal TX32 compositor. An all-true sentence
-            // reaches the bounded depth-two TX16 compositor; mixed child
-            // states remain transactional until their complete topology is
-            // modeled.
+            // each child. The all-false sentence retains the existing
+            // four-terminal TX32 compositor. I420's all-true sentence uses
+            // the existing depth-two compositor; I422/I444 retain every
+            // child bit so their mixed luma tree can share the fixed chroma
+            // TX32 grid.
             let child_offsets = [(0_u32, 0_u32), (8, 0), (0, 8), (8, 8)];
             let mut child_splits = [[false; 2]; 2];
             let mut first_split = None;
@@ -5514,24 +5517,21 @@ fn decode_inter_transform_size(
                     decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0);
                 if first_split.is_none() {
                     first_split = Some(split);
-                    if split && layout != PixelLayout::I420 {
-                        // I422/I444 need chroma transforms inherited from
-                        // multiple TX16 regions; retain their proven
-                        // shallow all-false compositor only.
-                        return Err(super::block::PortableUnavailable);
-                    }
-                } else if first_split != Some(split) {
-                    // A child split changes the causal topology for later
-                    // siblings. Reject a mixed tree immediately instead of
-                    // consuming residual symbols under the wrong plan.
-                    return Err(super::block::PortableUnavailable);
                 }
                 child_splits[row][column] = split;
             }
-            if first_split == Some(true) {
+            let all_children_split = child_splits.iter().flatten().all(|&split| split);
+            let any_child_split = child_splits.iter().flatten().any(|&split| split);
+            if first_split == Some(true) && all_children_split && layout == PixelLayout::I420 {
                 return Ok(InterTransformPlan::SplitB64Deep);
             }
-            return Ok(InterTransformPlan::SplitB64);
+            if !any_child_split {
+                return Ok(InterTransformPlan::SplitB64);
+            }
+            if matches!(layout, PixelLayout::I422 | PixelLayout::I444) {
+                return Ok(InterTransformPlan::SplitB64Topology { child_splits });
+            }
+            return Err(super::block::PortableUnavailable);
         }
         return Err(super::block::PortableUnavailable);
     }
@@ -5597,6 +5597,44 @@ fn wide_mode2_tx_cells(
             });
         }
     }
+    Ok(cells)
+}
+
+fn b64_topology_tx_cells(
+    node: PartitionNode,
+    child_splits: [[bool; 2]; 2],
+) -> super::block::PortableResult<Vec<TxCellUpdate>> {
+    let width = usize::try_from(node.width).map_err(|_| super::block::PortableUnavailable)?;
+    let height = usize::try_from(node.height).map_err(|_| super::block::PortableUnavailable)?;
+    (width == 16 && height == 16)
+        .then_some(())
+        .ok_or(super::block::PortableUnavailable)?;
+    let count = width
+        .checked_mul(height)
+        .ok_or(super::block::PortableUnavailable)?;
+    let mut cells = Vec::new();
+    cells
+        .try_reserve_exact(count)
+        .map_err(|_| super::block::PortableUnavailable)?;
+    for row in 0..height {
+        for column in 0..width {
+            let child_row = row / 8;
+            let child_column = column / 8;
+            let child_split = child_splits
+                .get(child_row)
+                .and_then(|children| children.get(child_column))
+                .copied()
+                .ok_or(super::block::PortableUnavailable)?;
+            let (width_log2, height_log2) = if child_split { (2, 2) } else { (3, 3) };
+            cells.push(TxCellUpdate {
+                width_log2,
+                height_log2,
+            });
+        }
+    }
+    (cells.len() == count)
+        .then_some(())
+        .ok_or(super::block::PortableUnavailable)?;
     Ok(cells)
 }
 
@@ -6383,12 +6421,23 @@ fn decode_inter_leaf(
         }),
         _ => None,
     };
-    let tx_cells = match mode2_topology {
-        Some(topology) => match wide_mode2_tx_cells(node, topology) {
+    let b64_topology = match transform_plan {
+        InterTransformPlan::SplitB64Topology { child_splits } => {
+            Some(super::block::B64SplitTopology { child_splits })
+        }
+        _ => None,
+    };
+    let tx_cells = match (mode2_topology, b64_topology) {
+        (Some(topology), None) => match wide_mode2_tx_cells(node, topology) {
             Ok(cells) => Some(cells),
             Err(_) => return Ok(Err(super::block::PortableUnavailable)),
         },
-        None => None,
+        (None, Some(topology)) => match b64_topology_tx_cells(node, topology.child_splits) {
+            Ok(cells) => Some(cells),
+            Err(_) => return Ok(Err(super::block::PortableUnavailable)),
+        },
+        (None, None) => None,
+        (Some(_), Some(_)) => return Ok(Err(super::block::PortableUnavailable)),
     };
     let (tx_size, transform_split, lossless_transform, lossy_transform_grid, lossy_wide_chunked) =
         match transform_plan {
@@ -6408,6 +6457,9 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB32x16 => (TxSize::Tx32x16, true, false, false, false),
             InterTransformPlan::SplitB32 => (TxSize::Tx32x32, true, false, false, false),
             InterTransformPlan::SplitB64 => (TxSize::Tx64x64, true, false, false, false),
+            InterTransformPlan::SplitB64Topology { .. } => {
+                (TxSize::Tx64x64, true, false, false, false)
+            }
             InterTransformPlan::LossyOnly4x4Grid {
                 layout: plan_layout,
                 ..
@@ -6594,10 +6646,21 @@ fn decode_inter_leaf(
     } else {
         None
     };
+    let split_b64_chroma_grid = matches!(
+        transform_plan,
+        InterTransformPlan::SplitB64 | InterTransformPlan::SplitB64Topology { .. }
+    ) && !matches!(
+        block_chroma_sampling,
+        Some(super::block::ChromaSampling::Subsampled420)
+    );
     if let Some(chroma_tx) = chroma_tx {
         let (chroma_tx_width, chroma_tx_height) = chroma_tx.pixel_dimensions();
         let (chroma_context_width, chroma_context_height) =
-            if lossless_transform || lossy_transform_grid || lossy_wide_chunked {
+            if lossless_transform
+                || lossy_transform_grid
+                || lossy_wide_chunked
+                || split_b64_chroma_grid
+            {
                 let chroma_sampling = block_chroma_sampling
                     .ok_or_else(|| malformed("inter lossless chroma sampling is unavailable"))?;
                 let (chroma_width, chroma_height, _, _) = super::block::generic_plane_geometry(
@@ -6730,6 +6793,7 @@ fn decode_inter_leaf(
                 coefficient_contexts,
                 decode_transform_type,
                 matches!(transform_plan, InterTransformPlan::SplitB64Deep),
+                b64_topology,
             )
         } else {
             block_decoder.decode_inter_translation_split_b8(
@@ -6748,6 +6812,7 @@ fn decode_inter_leaf(
                 coefficient_contexts,
                 decode_transform_type,
                 matches!(transform_plan, InterTransformPlan::SplitB64Deep),
+                b64_topology,
                 obmc,
                 inter_intra,
             )
