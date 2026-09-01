@@ -3411,6 +3411,31 @@ fn inter_lossy_wide_single_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact direct 4:4:4 wide-lossy terminals.  The luma plane owns the wide
+/// transform while each chroma plane is reconstructed as a causal TX32 grid;
+/// keep this admission separate from the 4:2:0 single-terminal path.
+fn inter_lossy_i444_direct_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && layout == PixelLayout::I444
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && matches!(transform_mode, 1 | 2)
+        && (transform_mode != 2 || quantization.segment_qindex > 0)
+        && matches!(
+            block_size,
+            BlockSize::B32x64 | BlockSize::B64x32 | BlockSize::B64x64
+        )
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 /// Exact mode-2 64-axis rectangular split geometry. These thin blocks retain
 /// one 64-pixel axis at the root and split into two TX32-sized children; keep
 /// this predicate separate from the mode-1 wide-terminal admission so the
@@ -4520,6 +4545,12 @@ enum InterTransformPlan {
         luma_height: u32,
         layout: PixelLayout,
     },
+    LossyWideI444Direct {
+        luma_width: u32,
+        luma_height: u32,
+        luma_tx: TxSize,
+        layout: PixelLayout,
+    },
     LossyWideMode2Unsplit {
         luma_width: u32,
         luma_height: u32,
@@ -4600,6 +4631,7 @@ fn decode_inter_transform_size(
     lossy_grid_geometry: bool,
     lossy_wide_chunk_geometry: bool,
     lossy_wide_mode2_geometry: bool,
+    lossy_i444_direct_geometry: bool,
     block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
@@ -4892,6 +4924,18 @@ fn decode_inter_transform_size(
             return Ok(plan);
         }
     }
+    if lossy_i444_direct_geometry && transform_mode == 1 {
+        let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
+        if exact_geometry {
+            let (luma_width, luma_height) = block_size.pixel_dimensions();
+            return Ok(InterTransformPlan::LossyWideI444Direct {
+                luma_width,
+                luma_height,
+                luma_tx: max_tx,
+                layout,
+            });
+        }
+    }
     if transform_mode != 2 {
         return Ok(InterTransformPlan::Single(max_tx));
     }
@@ -4900,6 +4944,15 @@ fn decode_inter_transform_size(
     // both cases; consuming a bit here would shift every later coefficient
     // symbol.
     if block_skipped || max_tx == TxSize::Tx4x4 {
+        if lossy_i444_direct_geometry && block_skipped {
+            let (luma_width, luma_height) = block_size.pixel_dimensions();
+            return Ok(InterTransformPlan::LossyWideI444Direct {
+                luma_width,
+                luma_height,
+                luma_tx: max_tx,
+                layout,
+            });
+        }
         return Ok(InterTransformPlan::Single(max_tx));
     }
     // The shared inter terminal reconstructs one transform per coded leaf.
@@ -5539,7 +5592,7 @@ fn decode_inter_transform_size(
         return Err(super::block::PortableUnavailable);
     }
     if block_size == BlockSize::B64x64
-        && matches!(layout, PixelLayout::I422 | PixelLayout::I444)
+        && layout == PixelLayout::I422
         && visible_width == 64
         && visible_height == 64
         && split_b64_supported
@@ -5548,6 +5601,15 @@ fn decode_inter_transform_size(
         // I422/I444 B64 roots own a TX32 chroma grid only when the luma root
         // split is present; the unsplit TX64 sentence is not admitted here.
         return Err(super::block::PortableUnavailable);
+    }
+    if lossy_i444_direct_geometry {
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        return Ok(InterTransformPlan::LossyWideI444Direct {
+            luma_width,
+            luma_height,
+            luma_tx: max_tx,
+            layout,
+        });
     }
     Ok(InterTransformPlan::Single(max_tx))
 }
@@ -5756,6 +5818,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_i444_direct_geometry = inter_lossy_i444_direct_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let lossy_thin64_split_geometry = inter_lossy_thin64_split_geometry_supported(
         node.block_size,
         layout,
@@ -5773,6 +5844,7 @@ fn decode_inter_leaf(
         let (block_width, block_height) = node.block_size.pixel_dimensions();
         let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
         let wide_lossy_geometry = lossy_wide_single_geometry
+            || lossy_i444_direct_geometry
             || lossy_square64_geometry
             || lossy_split64_geometry
             || lossy_wide_chunk_geometry
@@ -5797,6 +5869,7 @@ fn decode_inter_leaf(
         && !lossy_wide_chunk_geometry
         && !lossy_wide_mode2_geometry
         && !lossy_split64_geometry
+        && !lossy_i444_direct_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -5804,6 +5877,7 @@ fn decode_inter_leaf(
         && !lossless_grid_geometry
         && !lossy_square64_geometry
         && !lossy_split64_geometry
+        && !lossy_i444_direct_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -6405,6 +6479,7 @@ fn decode_inter_leaf(
         lossy_grid_geometry,
         lossy_wide_chunk_geometry,
         lossy_wide_mode2_geometry,
+        lossy_i444_direct_geometry,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
@@ -6480,6 +6555,16 @@ fn decode_inter_leaf(
                     return Ok(Err(super::block::PortableUnavailable));
                 }
                 (TxSize::Tx64x64, false, false, false, true)
+            }
+            InterTransformPlan::LossyWideI444Direct {
+                layout: plan_layout,
+                luma_tx,
+                ..
+            } => {
+                if plan_layout != layout {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (luma_tx, false, false, false, false)
             }
             InterTransformPlan::LossyWideMode2Unsplit {
                 layout: plan_layout,
@@ -6557,6 +6642,10 @@ fn decode_inter_leaf(
                 (node.block_size.maximum_luma_tx(), false, true, false, false)
             }
         };
+    let lossy_i444_direct = matches!(
+        transform_plan,
+        InterTransformPlan::LossyWideI444Direct { .. }
+    );
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = match transform_plan {
         InterTransformPlan::LosslessGrid {
@@ -6590,6 +6679,11 @@ fn decode_inter_leaf(
             ..
         } => (luma_width, luma_height),
         InterTransformPlan::LossyWideMode2Mixed {
+            luma_width,
+            luma_height,
+            ..
+        } => (luma_width, luma_height),
+        InterTransformPlan::LossyWideI444Direct {
             luma_width,
             luma_height,
             ..
@@ -6662,6 +6756,7 @@ fn decode_inter_leaf(
             if lossless_transform
                 || lossy_transform_grid
                 || lossy_wide_chunked
+                || lossy_i444_direct
                 || split_b64_chroma_grid
             {
                 let chroma_sampling = block_chroma_sampling
@@ -6945,6 +7040,53 @@ fn decode_inter_leaf(
                 split32,
                 deep16,
                 topology,
+            )
+        }
+    } else if lossy_i444_direct {
+        if compound {
+            let second = second_state
+                .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
+            block_decoder.decode_inter_compound_translation_lossy_i444_direct(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                prepared_quantization,
+                tools,
+                [first_state.surface, second.surface],
+                [first_state.scale, second.scale],
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions,
+                compound_blend.ok_or_else(|| malformed("compound blend is missing"))?,
+                filters,
+                block_skipped,
+                luma_txb_skipped,
+                tx_size,
+                transform,
+                coefficient_contexts,
+            )
+        } else {
+            block_decoder.decode_inter_translation_lossy_i444_direct(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                block_skipped,
+                prepared_quantization,
+                tools,
+                first_state.surface,
+                first_state.scale,
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions[0],
+                filters,
+                luma_txb_skipped,
+                tx_size,
+                transform,
+                coefficient_contexts,
+                obmc,
+                inter_intra,
             )
         }
     } else if lossy_transform_grid {

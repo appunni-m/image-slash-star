@@ -48549,6 +48549,14 @@ enum InterTransformPlan {
         luma_height: u32,
         sampling: ChromaSampling,
     },
+    LossyWideI444Direct {
+        luma_width: u32,
+        luma_height: u32,
+        luma_tx: TxSize,
+        luma_txb_skipped: bool,
+        luma_transform: Av1TransformType,
+        sampling: ChromaSampling,
+    },
     LossyWideMode2Unsplit {
         luma_width: u32,
         luma_height: u32,
@@ -49420,6 +49428,123 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
+        reason = "direct I444 wide reconstruction carries block, frame, transform, prediction, and edge state"
+    )]
+    pub(super) fn decode_inter_translation_lossy_i444_direct(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        block_skipped: bool,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        reference: &FrameSurface,
+        scale: ScaleFactors,
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motion: MotionVector,
+        filters: [InterpolationFilter; 2],
+        luma_txb_skipped: bool,
+        luma_tx_size: TxSize,
+        luma_transform: Av1TransformType,
+        coefficient_contexts: InterCoefficientContexts,
+        obmc: Option<ObmcContext<'_>>,
+        inter_intra: Option<InterIntraPrediction<'_>>,
+    ) -> PortableResult<FirstLeaf> {
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references: [reference, reference],
+                scales: [scale, scale],
+                motions: [motion, MotionVector::ZERO],
+                block_x_b4,
+                block_y_b4,
+                compound: None,
+                inter_intra,
+                obmc,
+            },
+            block_skipped,
+            InterTransformPlan::LossyWideI444Direct {
+                luma_width,
+                luma_height,
+                luma_tx: luma_tx_size,
+                luma_txb_skipped,
+                luma_transform,
+                sampling: ChromaSampling::Full,
+            },
+            filters,
+            coefficient_contexts,
+            |_, _| Err(PortableUnavailable),
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "compound direct I444 wide reconstruction carries block, frame, transform, prediction, and edge state"
+    )]
+    pub(super) fn decode_inter_compound_translation_lossy_i444_direct(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        references: [&FrameSurface; 2],
+        scales: [ScaleFactors; 2],
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motions: [MotionVector; 2],
+        compound: PreparedCompound,
+        filters: [InterpolationFilter; 2],
+        block_skipped: bool,
+        luma_txb_skipped: bool,
+        luma_tx_size: TxSize,
+        luma_transform: Av1TransformType,
+        coefficient_contexts: InterCoefficientContexts,
+    ) -> PortableResult<FirstLeaf> {
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references,
+                scales,
+                motions,
+                block_x_b4,
+                block_y_b4,
+                compound: Some(compound),
+                inter_intra: None,
+                obmc: None,
+            },
+            block_skipped,
+            InterTransformPlan::LossyWideI444Direct {
+                luma_width,
+                luma_height,
+                luma_tx: luma_tx_size,
+                luma_txb_skipped,
+                luma_transform,
+                sampling: ChromaSampling::Full,
+            },
+            filters,
+            coefficient_contexts,
+            |_, _| Err(PortableUnavailable),
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
         reason = "split single-reference reconstruction carries block, frame, prediction, and transform callback state"
     )]
     pub(super) fn decode_inter_translation_split_b8(
@@ -50118,6 +50243,10 @@ impl Lossy420Decoder {
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
+        let lossy_i444_direct = matches!(
+            transform_plan,
+            InterTransformPlan::LossyWideI444Direct { .. }
+        );
         let lossy_wide = matches!(
             transform_plan,
             InterTransformPlan::LossyWideChunked { .. }
@@ -50255,6 +50384,32 @@ impl Lossy420Decoder {
                 && (luma_width, luma_height) == block_size.pixel_dimensions())
             .then_some(())
             .portable()?;
+        }
+        if let InterTransformPlan::LossyWideI444Direct {
+            luma_width,
+            luma_height,
+            luma_tx,
+            luma_txb_skipped: _,
+            luma_transform,
+            sampling,
+        } = transform_plan
+        {
+            (sampling == ChromaSampling::Full
+                && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.transform_mode, 1 | 2)
+                && (tools.transform_mode != 2 || quantization.segment_qindex > 0)
+                && !quantization.segment_lossless
+                && matches!(
+                    block_size,
+                    BlockSize::B32x64 | BlockSize::B64x32 | BlockSize::B64x64
+                )
+                && (luma_width, luma_height) == block_size.pixel_dimensions()
+                && luma_tx == block_size.maximum_luma_tx()
+                && luma_transform == Av1TransformType::DctDct)
+                .then_some(())
+                .portable()?;
         }
         if let InterTransformPlan::LossyWideMode2Unsplit {
             luma_width,
@@ -50672,6 +50827,7 @@ impl Lossy420Decoder {
             || split_b64
             || split_b64_topology
             || grid_transform
+            || lossy_i444_direct
         {
             let exact_b8 =
                 block_size == BlockSize::B8x8 && visible_width == 8 && visible_height == 8;
@@ -50715,6 +50871,9 @@ impl Lossy420Decoder {
                 lossy_grid && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_lossy_wide =
                 lossy_wide && (visible_width, visible_height) == block_size.pixel_dimensions();
+            let exact_lossy_i444_direct = lossy_i444_direct
+                && chroma_sampling == ChromaSampling::Full
+                && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_geometry = (split_b8 && exact_b8)
                 || (split_b8x16 && exact_b8x16)
                 || (split_b16x8 && exact_b16x8)
@@ -50738,7 +50897,8 @@ impl Lossy420Decoder {
                         || (lossless_small && exact_small)
                         || exact_large
                         || exact_lossy_grid
-                        || exact_lossy_wide));
+                        || exact_lossy_wide
+                        || exact_lossy_i444_direct));
             (exact_geometry
                 && matches!(
                     chroma_sampling,
@@ -50823,6 +50983,12 @@ impl Lossy420Decoder {
             InterTransformPlan::LossyWideChunked { .. } => {
                 (TxSize::Tx64x64, true, Av1TransformType::DctDct)
             }
+            InterTransformPlan::LossyWideI444Direct {
+                luma_tx,
+                luma_txb_skipped,
+                luma_transform,
+                ..
+            } => (luma_tx, luma_txb_skipped, luma_transform),
             InterTransformPlan::LossyWideMode2Unsplit { .. } => {
                 (TxSize::Tx64x64, true, Av1TransformType::DctDct)
             }
@@ -50914,7 +51080,7 @@ impl Lossy420Decoder {
             (u_geometry.0 == v_geometry.0 && u_geometry.1 == v_geometry.1)
                 .then_some(())
                 .portable()?;
-            if !grid_transform && !split_b64_chroma_grid {
+            if !grid_transform && !split_b64_chroma_grid && !lossy_i444_direct {
                 (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
                     && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)?
                         == tx_chroma_height)
@@ -50964,7 +51130,10 @@ impl Lossy420Decoder {
         for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
-            let (tx_width, tx_height) = if grid_transform || (split_b64_chroma_grid && plane != 0) {
+            let (tx_width, tx_height) = if grid_transform
+                || (split_b64_chroma_grid && plane != 0)
+                || (lossy_i444_direct && plane != 0)
+            {
                 (
                     u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
                     u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
@@ -51486,16 +51655,37 @@ impl Lossy420Decoder {
             }
             if split_b64_chroma_grid && plane != 0 {
                 let luma_transforms = luma_split_transforms.ok_or(PortableUnavailable)?;
-                let grid_contexts = self.decode_inter_split_chroma_b64(
+                let grid_contexts = self.decode_inter_chroma_tx32_grid(
                     decoder,
                     &prediction,
                     &mut rasters[plane],
                     plane,
+                    false,
                     quantization,
                     tools,
                     coefficient_contexts,
-                    luma_transforms,
+                    Some(luma_transforms),
                     split_b64_topology,
+                    false,
+                )?;
+                contexts[plane] = grid_contexts.bottom_right;
+                chroma_right_contexts[plane - 1] = grid_contexts.right;
+                chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
+                continue;
+            }
+            if lossy_i444_direct && plane != 0 {
+                let grid_contexts = self.decode_inter_chroma_tx32_grid(
+                    decoder,
+                    &prediction,
+                    &mut rasters[plane],
+                    plane,
+                    predecoded_skip,
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    None,
+                    false,
+                    true,
                 )?;
                 contexts[plane] = grid_contexts.bottom_right;
                 chroma_right_contexts[plane - 1] = grid_contexts.right;
@@ -53945,23 +54135,30 @@ impl Lossy420Decoder {
         clippy::too_many_arguments,
         reason = "the bounded B64 chroma compositor keeps plane geometry, entropy edges, luma inheritance, and transform state explicit"
     )]
-    fn decode_inter_split_chroma_b64(
+    fn decode_inter_chroma_tx32_grid(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
         prediction: &[u16],
         raster: &mut PrivatePlaneRaster,
         plane: usize,
+        block_skipped: bool,
         quantization: LossyQuantization,
         tools: BlockTools,
         coefficient_contexts: InterCoefficientContexts,
-        luma_transforms: [[Av1TransformType; 2]; 2],
+        luma_transforms: Option<[[Av1TransformType; 2]; 2]>,
         topology: bool,
+        uniform_dct: bool,
     ) -> PortableResult<LosslessGridContexts> {
-        let (grid_width, grid_height, coded_width, coded_height) = match self.chroma_sampling {
-            ChromaSampling::Subsampled422 => (1_usize, 2_usize, 32_usize, 64_usize),
-            ChromaSampling::Full => (2, 2, 64, 64),
-            _ => return Err(PortableUnavailable),
-        };
+        let coded_width = raster.coded_width;
+        let coded_height = raster.coded_height;
+        (coded_width.is_multiple_of(32) && coded_height.is_multiple_of(32))
+            .then_some(())
+            .portable()?;
+        let grid_width = coded_width / 32;
+        let grid_height = coded_height / 32;
+        (matches!((grid_width, grid_height), (1, 2) | (2, 1) | (2, 2)))
+            .then_some(())
+            .portable()?;
         (prediction.len() == coded_width.checked_mul(coded_height).portable()?
             && raster.coded_width == coded_width
             && raster.coded_height == coded_height
@@ -53970,8 +54167,8 @@ impl Lossy420Decoder {
             && matches!(plane, 1 | 2)
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-            && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
+            && matches!(tools.transform_mode, 1 | 2)
+            && (uniform_dct || (tools.transform_mode == 2 && quantization.segment_qindex > 0))
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -54004,13 +54201,19 @@ impl Lossy420Decoder {
                     coded_height,
                     &above_context,
                     &left_context,
-                    false,
+                    block_skipped,
                 )?;
                 let transform = if txb_skipped {
                     Av1TransformType::DctDct
+                } else if uniform_dct {
+                    Av1TransformType::DctDct
                 } else if topology {
-                    inherited_inter_chroma_transform(TxSize::Tx32x32, luma_transforms[row][column])
+                    inherited_inter_chroma_transform(
+                        TxSize::Tx32x32,
+                        luma_transforms.ok_or(PortableUnavailable)?[row][column],
+                    )
                 } else {
+                    let luma_transforms = luma_transforms.ok_or(PortableUnavailable)?;
                     inherited_inter_b64_chroma_transform(
                         self.chroma_sampling,
                         TxSize::Tx32x32,
