@@ -9863,8 +9863,8 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 /// share the same checked coefficient, predictor, raster, and plane-aware
 /// quantization-matrix carriers. Bounded CDEF is admitted only on complete
 /// 8x8 luma geometry so the horizontally subsampled direction map is total.
-/// Root-scoped delta-Q is carried through the shared intra quantization path;
-/// delta-LF remains closed. TX_MODE_SELECT is consumed by `decode_intra_header`;
+/// Root-scoped delta-Q and dynamic delta-LF are carried through the shared
+/// intra quantization path. TX_MODE_SELECT is consumed by `decode_intra_header`;
 /// `IntraTxPlan` materializes uniform depth-0..2 luma terminals while I422
 /// chroma retains its normative maximum transform. Screen-content palette
 /// flags, depth-scaled colors, clipped I422 index maps, and cache state are
@@ -9894,7 +9894,6 @@ fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockCont
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && no_unsupported_film_grain(context)
-        && !context.frame_tools.delta_lf_present
         && !context.frame_tools.segment_lossless
         && context.frame_tools.segment_qindex == quantization.base
         && quantization.base != 0
