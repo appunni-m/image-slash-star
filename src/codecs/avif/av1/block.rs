@@ -50409,6 +50409,8 @@ impl Lossy420Decoder {
                     | (ChromaSampling::Full, BlockSize::B64x64)
                     | (ChromaSampling::Subsampled422, BlockSize::B16x64)
                     | (ChromaSampling::Subsampled422, BlockSize::B64x16)
+                    | (ChromaSampling::Subsampled422, BlockSize::B32x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x32)
                     | (ChromaSampling::Subsampled422, BlockSize::B64x64)
             ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -54228,8 +54230,7 @@ impl Lossy420Decoder {
         let coded_width = raster.coded_width;
         let coded_height = raster.coded_height;
         (prediction.len() == coded_width.checked_mul(coded_height).portable()?
-            && coded_width == 8
-            && coded_height == 64
+            && matches!((coded_width, coded_height), (8, 64) | (16, 64))
             && raster.active_width == coded_width
             && raster.active_height == coded_height
             && matches!(plane, 1 | 2)
@@ -54241,11 +54242,17 @@ impl Lossy420Decoder {
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
-        let above = coefficient_contexts.above[plane].get(..2).portable()?;
-        let left = coefficient_contexts.left[plane].get(..16).portable()?;
+        let grid_width = coded_width.checked_div(4).portable()?;
+        let grid_height = coded_height.checked_div(4).portable()?;
+        let above = coefficient_contexts.above[plane]
+            .get(..grid_width)
+            .portable()?;
+        let left = coefficient_contexts.left[plane]
+            .get(..grid_height)
+            .portable()?;
         let mut residual_contexts = [[0x40_u8; 32]; 32];
-        for row in 0..16 {
-            for column in 0..2 {
+        for row in 0..grid_height {
+            for column in 0..grid_width {
                 let above_context = if row == 0 {
                     [above[column]]
                 } else {
@@ -54338,14 +54345,16 @@ impl Lossy420Decoder {
         }
         let mut right = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
         let mut bottom = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
-        for row in 0..16 {
-            right[row] = residual_contexts[row][1];
+        let last_column = grid_width.checked_sub(1).portable()?;
+        let last_row = grid_height.checked_sub(1).portable()?;
+        for row in 0..grid_height {
+            right[row] = residual_contexts[row][last_column];
         }
-        for column in 0..2 {
-            bottom[column] = residual_contexts[15][column];
+        for column in 0..grid_width {
+            bottom[column] = residual_contexts[last_row][column];
         }
         Ok(LosslessGridContexts {
-            bottom_right: residual_contexts[15][1],
+            bottom_right: residual_contexts[last_row][last_column],
             right,
             bottom,
         })

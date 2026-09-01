@@ -3440,6 +3440,8 @@ fn inter_lossy_direct_chroma_grid_geometry_supported(
             (PixelLayout::I422, BlockSize::B64x64)
                 | (PixelLayout::I422, BlockSize::B16x64)
                 | (PixelLayout::I422, BlockSize::B64x16)
+                | (PixelLayout::I422, BlockSize::B32x64)
+                | (PixelLayout::I422, BlockSize::B64x32)
                 | (PixelLayout::I444, BlockSize::B16x64)
                 | (PixelLayout::I444, BlockSize::B64x16)
                 | (PixelLayout::I444, BlockSize::B32x64)
