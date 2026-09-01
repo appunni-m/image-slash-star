@@ -8574,7 +8574,7 @@ pub(super) fn validate_complete_lossy_420_partition(
 fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     let high_depth_full = complete_high_depth_full_reconstruction_context(context);
     let high_depth_420 = complete_high_depth_420_reconstruction_context(context);
-    let high_depth_422 = complete_high_depth_422_intra_reconstruction_context(context);
+    let complete_422 = complete_422_intra_reconstruction_context(context);
     let simple_422 = context.subsampling_x
         && !context.subsampling_y
         && context.frame_width == 16
@@ -8592,13 +8592,13 @@ fn complete_lossy_420_reconstruction_context(context: &FirstBlockContext) -> boo
     (closed_base_reconstruction_context(context)
         || high_depth_full
         || high_depth_420
-        || high_depth_422)
+        || complete_422)
         && !context.all_lossless
         && if high_depth_full {
             !context.subsampling_x && !context.subsampling_y
         } else if high_depth_420 {
             context.subsampling_x && context.subsampling_y
-        } else if high_depth_422 {
+        } else if complete_422 {
             context.subsampling_x && !context.subsampling_y
         } else {
             (context.subsampling_x && context.subsampling_y)
@@ -12688,10 +12688,10 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.block_y == 0
 }
 
-/// High-depth 4:2:2 intra tranche admitted by the depth-parametric streamed
-/// leaf. The walker keeps nominal block identity separate from active plane
-/// extents, so every padded frame geometry and AV1 partition/block size can
-/// share the same checked coefficient, predictor, raster, and plane-aware
+/// 4:2:2 intra tranche admitted by the depth-parametric streamed leaf. The
+/// walker keeps nominal block identity separate from active plane extents, so
+/// every padded frame geometry and AV1 partition/block size can share the same
+/// checked coefficient, predictor, raster, and plane-aware
 /// quantization-matrix carriers. Bounded CDEF is admitted only on complete
 /// 8x8 luma geometry so the horizontally subsampled direction map is total.
 /// Root-scoped delta-Q and dynamic delta-LF are carried through the shared
@@ -12700,14 +12700,14 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
 /// chroma retains its normative maximum transform. Screen-content palette
 /// flags, depth-scaled colors, clipped I422 index maps, and cache state are
 /// owned by the streamed header/leaf path; intraBC remains closed separately.
-fn complete_high_depth_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
+fn complete_422_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
     };
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     context.intra_frame
-        && matches!(context.bit_depth, 10 | 12)
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
         && !context.subsampling_y
         && !context.monochrome
