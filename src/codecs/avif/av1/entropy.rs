@@ -3341,8 +3341,8 @@ fn inter_lossy_wide_mode2_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
-/// A square 64px lossy leaf is either a single TX64X64 terminal or the exact
-/// mode-2 depth-one TX64→four-TX32 split admitted by `decode_inter_transform_size`.
+/// A square 64px lossy leaf is either a single TX64X64 terminal or an exact
+/// mode-2 TX64→TX32/TX16 split admitted by `decode_inter_transform_size`.
 /// Keep both paths separate from the 128px chunk compositor so an unsupported
 /// deeper tree cannot accidentally consume the single-terminal sentence.
 fn inter_lossy_square64_geometry_supported(
@@ -4527,6 +4527,11 @@ enum InterTransformPlan {
         luma_height: u32,
         layout: PixelLayout,
     },
+    LossyWideMode2Deep16 {
+        luma_width: u32,
+        luma_height: u32,
+        layout: PixelLayout,
+    },
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
@@ -4702,9 +4707,9 @@ fn decode_inter_transform_size(
             )
         {
             // Mode 2 signals one TX64 root sentence per maximum-transform
-            // region. Homogeneous roots are admitted either as TX64
-            // terminals or as four TX32 children; mixed roots and deeper
-            // child trees remain transactional until their compositor exists.
+            // region. Homogeneous roots are admitted as TX64 terminals, four
+            // TX32 children, or sixteen TX16 terminals; mixed and deeper
+            // trees remain transactional until their compositor exists.
             if block_skipped {
                 let (luma_width, luma_height) = block_size.pixel_dimensions();
                 return Ok(InterTransformPlan::LossyWideMode2Unsplit {
@@ -4721,7 +4726,9 @@ fn decode_inter_transform_size(
             };
             let child_offsets = [(0_u32, 0_u32), (8, 0), (0, 8), (8, 8)];
             let mut root_splits = [[false; 2]; 2];
-            let mut first_split = None;
+            let mut child_splits = [[false; 4]; 4];
+            let mut first_root_split = None;
+            let mut first_child_split = None;
             for (root_index, &(offset_x, offset_y)) in root_offsets.iter().enumerate() {
                 let root_row = usize::try_from(offset_y / 16)
                     .map_err(|_| super::block::PortableUnavailable)?;
@@ -4755,8 +4762,8 @@ fn decode_inter_transform_size(
                 let split =
                     decoder.adaptive_bool(&mut cdfs.common.transform_partition[0][context].0);
                 if root_index == 0 {
-                    first_split = Some(split);
-                } else if first_split != Some(split) {
+                    first_root_split = Some(split);
+                } else if first_root_split != Some(split) {
                     // Mixed root states would require a topology-specific
                     // compositor and are kept transactional.
                     return Err(super::block::PortableUnavailable);
@@ -4764,6 +4771,20 @@ fn decode_inter_transform_size(
                 root_splits[root_row][root_column] = split;
                 if split {
                     for &(child_offset_x, child_offset_y) in &child_offsets {
+                        let child_grid_row = usize::try_from(
+                            offset_y
+                                .checked_add(child_offset_y)
+                                .ok_or(super::block::PortableUnavailable)?
+                                / 8,
+                        )
+                        .map_err(|_| super::block::PortableUnavailable)?;
+                        let child_grid_column = usize::try_from(
+                            offset_x
+                                .checked_add(child_offset_x)
+                                .ok_or(super::block::PortableUnavailable)?
+                                / 8,
+                        )
+                        .map_err(|_| super::block::PortableUnavailable)?;
                         let child_x = node
                             .x
                             .checked_add(offset_x)
@@ -4774,46 +4795,56 @@ fn decode_inter_transform_size(
                             .checked_add(offset_y)
                             .and_then(|value| value.checked_add(child_offset_y))
                             .ok_or(super::block::PortableUnavailable)?;
-                        let above_small = if offset_y.saturating_add(child_offset_y) == 0 {
+                        let above_small = if child_grid_row == 0 {
                             child_y
                                 .checked_sub(1)
                                 .and_then(|y| tile_state.transform_contexts_at(child_x, y))
                                 .is_some_and(|(tx_width, _)| tx_width < 3)
                         } else {
-                            false
+                            child_splits[child_grid_row - 1][child_grid_column]
                         };
-                        let left_small = if offset_x.saturating_add(child_offset_x) == 0 {
+                        let left_small = if child_grid_column == 0 {
                             child_x
                                 .checked_sub(1)
                                 .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                                 .is_some_and(|(_, tx_height)| tx_height < 3)
                         } else {
-                            false
+                            child_splits[child_grid_row][child_grid_column - 1]
                         };
                         let context =
                             usize::from(above_small).saturating_add(usize::from(left_small));
-                        if decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0)
-                        {
-                            // A true child bit enters the unsupported
-                            // TX16 depth; rollback restores this sentence.
+                        let child_split = decoder
+                            .adaptive_bool(&mut cdfs.common.transform_partition[1][context].0);
+                        if first_child_split.is_none() {
+                            first_child_split = Some(child_split);
+                        } else if first_child_split != Some(child_split) {
+                            // Mixed TX32 child states would require a
+                            // topology-specific compositor; keep the parse
+                            // transactional instead.
                             return Err(super::block::PortableUnavailable);
                         }
+                        child_splits[child_grid_row][child_grid_column] = child_split;
                     }
                 }
             }
             let (luma_width, luma_height) = block_size.pixel_dimensions();
-            return Ok(if first_split == Some(true) {
-                InterTransformPlan::LossyWideMode2Split32 {
+            return Ok(match (first_root_split, first_child_split) {
+                (Some(false), None) => InterTransformPlan::LossyWideMode2Unsplit {
                     luma_width,
                     luma_height,
                     layout,
-                }
-            } else {
-                InterTransformPlan::LossyWideMode2Unsplit {
+                },
+                (Some(true), Some(false)) => InterTransformPlan::LossyWideMode2Split32 {
                     luma_width,
                     luma_height,
                     layout,
-                }
+                },
+                (Some(true), Some(true)) => InterTransformPlan::LossyWideMode2Deep16 {
+                    luma_width,
+                    luma_height,
+                    layout,
+                },
+                _ => return Err(super::block::PortableUnavailable),
             });
         }
     }
@@ -6302,6 +6333,15 @@ fn decode_inter_leaf(
                 }
                 (TxSize::Tx32x32, false, false, false, true)
             }
+            InterTransformPlan::LossyWideMode2Deep16 {
+                layout: plan_layout,
+                ..
+            } => {
+                if plan_layout != layout {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (TxSize::Tx16x16, false, false, false, true)
+            }
             InterTransformPlan::LosslessB8I420
             | InterTransformPlan::LosslessB8I422
             | InterTransformPlan::LosslessB8I444 => (TxSize::Tx8x8, false, true, false, false),
@@ -6365,6 +6405,11 @@ fn decode_inter_leaf(
             ..
         } => (luma_width, luma_height),
         InterTransformPlan::LossyWideMode2Split32 {
+            luma_width,
+            luma_height,
+            ..
+        } => (luma_width, luma_height),
+        InterTransformPlan::LossyWideMode2Deep16 {
             luma_width,
             luma_height,
             ..
@@ -6633,6 +6678,10 @@ fn decode_inter_leaf(
             transform_plan,
             InterTransformPlan::LossyWideMode2Split32 { .. }
         );
+        let deep16 = matches!(
+            transform_plan,
+            InterTransformPlan::LossyWideMode2Deep16 { .. }
+        );
         let mut decode_transform_type = |decoder: &mut RangeDecoder<'_, '_, '_>,
                                          tx_size: TxSize| {
             decode_inter_transform_type(
@@ -6666,6 +6715,7 @@ fn decode_inter_leaf(
                 &mut decode_transform_type,
                 mode2,
                 split32,
+                deep16,
             )
         } else {
             block_decoder.decode_inter_translation_lossy_wide_chunked(
@@ -6686,6 +6736,7 @@ fn decode_inter_leaf(
                 &mut decode_transform_type,
                 mode2,
                 split32,
+                deep16,
             )
         }
     } else if lossy_transform_grid {
