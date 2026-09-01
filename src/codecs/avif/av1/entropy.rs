@@ -3313,6 +3313,27 @@ fn inter_lossy_wide_chunk_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// A square 64px lossy leaf is a single TX64X64 terminal.  Keep its direct
+/// path separate from the 128px chunk compositor so mode-2 split roots cannot
+/// accidentally consume the single-terminal residual sentence.
+fn inter_lossy_square64_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && layout == PixelLayout::I420
+        && bit_depth == 8
+        && quantization.sample_depth.bits() == 8
+        && matches!(transform_mode, 1 | 2)
+        && block_size == BlockSize::B64x64
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 fn inter_lossless_grid_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -4537,13 +4558,13 @@ fn decode_inter_transform_size(
     let above_small = node
         .y
         .checked_sub(1)
-        .and_then(|y| tile_state.contexts_at(node.x, y))
-        .is_some_and(|cell| cell.tx_width < max_tx_width);
+        .and_then(|y| tile_state.transform_contexts_at(node.x, y))
+        .is_some_and(|(tx_width, _)| tx_width < max_tx_width);
     let left_small = node
         .x
         .checked_sub(1)
-        .and_then(|x| tile_state.contexts_at(x, node.y))
-        .is_some_and(|cell| cell.tx_height < max_tx_height);
+        .and_then(|x| tile_state.transform_contexts_at(x, node.y))
+        .is_some_and(|(_, tx_height)| tx_height < max_tx_height);
     let context = usize::from(above_small).saturating_add(usize::from(left_small));
     let max_axis = max_tx.pixel_dimensions().0.max(max_tx.pixel_dimensions().1);
     let max_index = max_axis.ilog2().saturating_sub(2);
@@ -4646,6 +4667,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_square64_geometry = inter_lossy_square64_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     // The generic lossless grid is depth-parametric and covers the complete
     // 4..=128px block family. Keep the narrower high-depth admission for
     // lossy inter leaves, whose transform/motion compositor is still bounded
@@ -4670,6 +4700,9 @@ fn decode_inter_leaf(
         && !lossy_grid_geometry
         && !lossy_wide_chunk_geometry
     {
+        return Ok(Err(super::block::PortableUnavailable));
+    }
+    if node.block_size == BlockSize::B64x64 && !lossless_grid_geometry && !lossy_square64_geometry {
         return Ok(Err(super::block::PortableUnavailable));
     }
     let neighbors = inter_neighbors(tile_state, node)?;

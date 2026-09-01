@@ -342,6 +342,33 @@ impl TileState {
         })
     }
 
+    /// Return transform-size context dimensions for a neighboring cell.
+    ///
+    /// A skipped inter block suppresses its transform syntax, so its
+    /// transform context is the block's normative maximum rather than a
+    /// stale per-cell value left by a smaller terminal or a clipped grid.
+    /// Intra and non-skipped cells retain the exact dimensions published by
+    /// their decoded transform plan.
+    pub(super) fn transform_contexts_at(&self, x: u32, y: u32) -> Option<(u8, u8)> {
+        let x = usize::try_from(x).ok()?;
+        let y = usize::try_from(y).ok()?;
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        let index = y.checked_mul(self.width)?.checked_add(x)?;
+        let cell = self.cells.get(index)?;
+        let owner = cell.owner?;
+        if cell.skip && !cell.intra {
+            return Some(
+                self.block(owner)?
+                    .block_size
+                    .maximum_luma_tx()
+                    .context_dimensions(),
+            );
+        }
+        Some((cell.tx_context_width, cell.tx_context_height))
+    }
+
     pub(super) fn block_at(&self, x: u32, y: u32) -> Option<(OwnerId, &DecodedBlockMeta)> {
         let owner = self.owner_at(x, y)?;
         Some((owner, self.block(owner)?))

@@ -49863,44 +49863,33 @@ impl Lossy420Decoder {
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
         let lossy_wide = matches!(transform_plan, InterTransformPlan::LossyWideChunked { .. });
-        // The first reachable lossy 64-axis tranche is deliberately narrow:
-        // exact 8-bit 4:2:0 B32x64/B64x32 mode-1 (or an unsplit mode-2)
-        // terminals.  Their luma transform is forced DCT_DCT by the AV1
-        // transform-type rules; all other wide or high-depth shapes remain
-        // on the unavailable path until their chunk/grid compositor exists.
+        // The direct lossy 64-axis tranche is deliberately narrow: exact
+        // 8-bit 4:2:0 B32x64/B64x32 terminals plus the B64x64 square. Their
+        // luma transform is forced DCT_DCT by the AV1 transform-type rules;
+        // all other wide or high-depth shapes remain unavailable until their
+        // chunk/grid compositor exists.
         let wide_lossy_single = matches!(
             transform_plan,
             InterTransformPlan::Single {
-                tx_size: TxSize::Tx32x64 | TxSize::Tx64x32,
+                tx_size: TxSize::Tx32x64 | TxSize::Tx64x32 | TxSize::Tx64x64,
                 transform: Av1TransformType::DctDct,
                 ..
             }
-        ) && matches!(block_size, BlockSize::B32x64 | BlockSize::B64x32)
-            && chroma_sampling == ChromaSampling::Subsampled420
+        ) && matches!(
+            block_size,
+            BlockSize::B32x64 | BlockSize::B64x32 | BlockSize::B64x64
+        ) && chroma_sampling == ChromaSampling::Subsampled420
             && tools.sample_depth == SampleDepth::EIGHT
             && matches!(tools.transform_mode, 1 | 2)
             && !quantization.segment_lossless;
         if matches!(
             transform_plan,
             InterTransformPlan::Single {
-                tx_size: TxSize::Tx32x64 | TxSize::Tx64x32,
+                tx_size: TxSize::Tx32x64 | TxSize::Tx64x32 | TxSize::Tx64x64,
                 ..
             }
         ) {
             wide_lossy_single.then_some(()).portable()?;
-        }
-        // A lossy TX64X64 is valid only as one terminal of the explicit
-        // B64x128/B128x64 mode-1 chunk grid.  Keep the otherwise similar
-        // direct B64x64 path unavailable until its independent syntax and
-        // context evidence is wired.
-        if matches!(
-            transform_plan,
-            InterTransformPlan::Single {
-                tx_size: TxSize::Tx64x64,
-                ..
-            }
-        ) {
-            return Err(PortableUnavailable);
         }
         let lossless_wide = matches!(
             transform_plan,
