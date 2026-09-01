@@ -48459,6 +48459,7 @@ enum InterTransformPlan {
     SplitB8,
     LosslessB8I420,
     LosslessB8I422,
+    LosslessB8I444,
 }
 
 impl BlockSegmentState {
@@ -49282,10 +49283,10 @@ impl Lossy420Decoder {
                 obmc,
             },
             block_skipped,
-            if matches!(self.chroma_sampling, ChromaSampling::Subsampled422) {
-                InterTransformPlan::LosslessB8I422
-            } else {
-                InterTransformPlan::LosslessB8I420
+            match self.chroma_sampling {
+                ChromaSampling::Subsampled422 => InterTransformPlan::LosslessB8I422,
+                ChromaSampling::Full => InterTransformPlan::LosslessB8I444,
+                _ => InterTransformPlan::LosslessB8I420,
             },
             filters,
             coefficient_contexts,
@@ -49333,10 +49334,10 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             block_skipped,
-            if matches!(self.chroma_sampling, ChromaSampling::Subsampled422) {
-                InterTransformPlan::LosslessB8I422
-            } else {
-                InterTransformPlan::LosslessB8I420
+            match self.chroma_sampling {
+                ChromaSampling::Subsampled422 => InterTransformPlan::LosslessB8I422,
+                ChromaSampling::Full => InterTransformPlan::LosslessB8I444,
+                _ => InterTransformPlan::LosslessB8I420,
             },
             filters,
             coefficient_contexts,
@@ -49373,9 +49374,12 @@ impl Lossy420Decoder {
         let layout = chroma_sampling.pixel_layout();
         let lossless_b8 = matches!(
             transform_plan,
-            InterTransformPlan::LosslessB8I420 | InterTransformPlan::LosslessB8I422
+            InterTransformPlan::LosslessB8I420
+                | InterTransformPlan::LosslessB8I422
+                | InterTransformPlan::LosslessB8I444
         );
         let lossless_i422_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I422);
+        let lossless_i444_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I444);
         let common_geometry = matches!(
             chroma_sampling,
             ChromaSampling::Full
@@ -49393,7 +49397,9 @@ impl Lossy420Decoder {
             && if lossless_b8 {
                 matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
+                    ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
                 ) && tools.sample_depth == SampleDepth::EIGHT
                     && quantization.segment_lossless
                     && quantization.qindex == 0
@@ -49463,7 +49469,9 @@ impl Lossy420Decoder {
                 && (!lossless_b8
                     || (lossless_i422_b8
                         && matches!(chroma_sampling, ChromaSampling::Subsampled422))
+                    || (lossless_i444_b8 && matches!(chroma_sampling, ChromaSampling::Full))
                     || (!lossless_i422_b8
+                        && !lossless_i444_b8
                         && matches!(chroma_sampling, ChromaSampling::Subsampled420)))
                 && (!split_b8 || !predecoded_skip))
                 .then_some(())
@@ -49476,7 +49484,9 @@ impl Lossy420Decoder {
                 transform,
             } => (tx_size, txb_skipped, transform),
             InterTransformPlan::SplitB8 => (TxSize::Tx8x8, false, Av1TransformType::DctDct),
-            InterTransformPlan::LosslessB8I420 | InterTransformPlan::LosslessB8I422 => {
+            InterTransformPlan::LosslessB8I420
+            | InterTransformPlan::LosslessB8I422
+            | InterTransformPlan::LosslessB8I444 => {
                 (TxSize::Tx8x8, false, Av1TransformType::DctDct)
             }
         };
@@ -49738,12 +49748,13 @@ impl Lossy420Decoder {
                     obmc,
                 )?;
             }
-            if (split_b8 || lossless_b8) && plane == 0 {
+            if (split_b8 || lossless_b8) && (plane == 0 || lossless_i444_b8) {
                 let (split_contexts, split_transform) = if lossless_b8 {
-                    self.decode_inter_lossless_split_luma_b8(
+                    self.decode_inter_lossless_plane_2x2(
                         decoder,
                         &prediction,
-                        &mut rasters[0],
+                        &mut rasters[plane],
+                        plane,
                         predecoded_skip,
                         quantization,
                         tools,
@@ -49760,13 +49771,21 @@ impl Lossy420Decoder {
                         &mut decode_transform_type,
                     )?
                 };
-                contexts[0] = split_contexts[1][1];
-                luma_right_contexts[0] = split_contexts[0][1];
-                luma_right_contexts[1] = split_contexts[1][1];
-                luma_bottom_contexts[0] = split_contexts[1][0];
-                luma_bottom_contexts[1] = split_contexts[1][1];
-                luma_transform_split = true;
-                luma_transform = split_transform;
+                if plane == 0 {
+                    contexts[0] = split_contexts[1][1];
+                    luma_right_contexts[0] = split_contexts[0][1];
+                    luma_right_contexts[1] = split_contexts[1][1];
+                    luma_bottom_contexts[0] = split_contexts[1][0];
+                    luma_bottom_contexts[1] = split_contexts[1][1];
+                    luma_transform_split = true;
+                    luma_transform = split_transform;
+                } else {
+                    contexts[plane] = split_contexts[1][1];
+                    chroma_right_contexts[plane - 1][0] = split_contexts[0][1];
+                    chroma_right_contexts[plane - 1][1] = split_contexts[1][1];
+                    chroma_bottom_contexts[plane - 1][0] = split_contexts[1][0];
+                    chroma_bottom_contexts[plane - 1][1] = split_contexts[1][1];
+                }
                 continue;
             }
             let context_width = tx_width / 4;
@@ -50075,11 +50094,12 @@ impl Lossy420Decoder {
         Ok((residual_contexts, chroma_transform))
     }
 
-    fn decode_inter_lossless_split_luma_b8(
+    fn decode_inter_lossless_plane_2x2(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
         prediction: &[u16],
         raster: &mut PrivatePlaneRaster,
+        plane: usize,
         block_skipped: bool,
         quantization: LossyQuantization,
         tools: BlockTools,
@@ -50090,18 +50110,19 @@ impl Lossy420Decoder {
             && raster.coded_height == 8
             && raster.active_width == 8
             && raster.active_height == 8
+            && matches!(plane, 0..=2)
             && tools.sample_depth == SampleDepth::EIGHT
             && quantization.qindex == 0
             && quantization.segment_qindex == 0)
             .then_some(())
             .portable()?;
         let above = [
-            coefficient_contexts.above[0][0],
-            coefficient_contexts.above[0][1],
+            coefficient_contexts.above[plane][0],
+            coefficient_contexts.above[plane][1],
         ];
         let left = [
-            coefficient_contexts.left[0][0],
-            coefficient_contexts.left[0][1],
+            coefficient_contexts.left[plane][0],
+            coefficient_contexts.left[plane][1],
         ];
         let mut residual_contexts = [[0x40_u8; 2]; 2];
         for row in 0..2 {
@@ -50118,7 +50139,7 @@ impl Lossy420Decoder {
                 };
                 let terminal = decode_generic_lossless_terminal(
                     decoder,
-                    0,
+                    plane,
                     &mut self.cdfs,
                     &mut self.large_coeff_arena,
                     quantization,

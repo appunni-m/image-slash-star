@@ -4208,6 +4208,7 @@ enum InterTransformPlan {
     SplitB8,
     LosslessB8I420,
     LosslessB8I422,
+    LosslessB8I444,
 }
 
 fn decode_inter_transform_size(
@@ -4231,15 +4232,19 @@ fn decode_inter_transform_size(
         // blocks retain the existing single-terminal admission checks.
         if segment_lossless
             && block_size == BlockSize::B8x8
-            && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 8
             && visible_height == 8
             && eight_bit
         {
-            return Ok(if layout == PixelLayout::I420 {
-                InterTransformPlan::LosslessB8I420
-            } else {
-                InterTransformPlan::LosslessB8I422
+            return Ok(match layout {
+                PixelLayout::I420 => InterTransformPlan::LosslessB8I420,
+                PixelLayout::I422 => InterTransformPlan::LosslessB8I422,
+                PixelLayout::I444 => InterTransformPlan::LosslessB8I444,
+                PixelLayout::Monochrome => InterTransformPlan::Single(TxSize::Tx4x4),
             });
         }
         return Ok(InterTransformPlan::Single(TxSize::Tx4x4));
@@ -4935,9 +4940,9 @@ fn decode_inter_leaf(
     let (tx_size, transform_split, lossless_transform) = match transform_plan {
         InterTransformPlan::Single(tx_size) => (tx_size, false, false),
         InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false),
-        InterTransformPlan::LosslessB8I420 | InterTransformPlan::LosslessB8I422 => {
-            (TxSize::Tx8x8, false, true)
-        }
+        InterTransformPlan::LosslessB8I420
+        | InterTransformPlan::LosslessB8I422
+        | InterTransformPlan::LosslessB8I444 => (TxSize::Tx8x8, false, true),
     };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
