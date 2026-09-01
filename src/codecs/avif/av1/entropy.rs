@@ -4476,6 +4476,7 @@ enum InterTransformPlan {
     SplitB64x16,
     SplitB32x64,
     SplitB64x32,
+    SplitB64Deep,
     SplitB16,
     SplitB16x32,
     SplitB32x16,
@@ -5241,10 +5242,17 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx64x64
         {
             // A TX64 root split is followed by one TX32 split decision for
-            // each child. The bounded compositor admits only four terminal
-            // TX32 children; any deeper child tree remains transactional.
+            // each child. A homogeneous all-false sentence retains the
+            // existing four-terminal TX32 compositor. An all-true sentence
+            // reaches the bounded depth-two TX16 compositor; mixed child
+            // states remain transactional until their complete topology is
+            // modeled.
             let child_offsets = [(0_u32, 0_u32), (8, 0), (0, 8), (8, 8)];
-            for (offset_x, offset_y) in child_offsets {
+            let mut child_splits = [[false; 2]; 2];
+            let mut first_split = None;
+            for (child_index, (offset_x, offset_y)) in child_offsets.into_iter().enumerate() {
+                let row = child_index / 2;
+                let column = child_index % 2;
                 let child_x = node
                     .x
                     .checked_add(offset_x)
@@ -5259,7 +5267,7 @@ fn decode_inter_transform_size(
                         .and_then(|y| tile_state.transform_contexts_at(child_x, y))
                         .is_some_and(|(tx_width, _)| tx_width < 3)
                 } else {
-                    false
+                    child_splits[row - 1][column]
                 };
                 let left_small = if offset_x == 0 {
                     child_x
@@ -5267,15 +5275,29 @@ fn decode_inter_transform_size(
                         .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                         .is_some_and(|(_, tx_height)| tx_height < 3)
                 } else {
-                    false
+                    child_splits[row][column - 1]
                 };
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0) {
+                let split =
+                    decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0);
+                if first_split.is_none() {
+                    first_split = Some(split);
+                    if split && layout != PixelLayout::I420 {
+                        // I422/I444 need chroma transforms inherited from
+                        // multiple TX16 regions; retain their proven
+                        // shallow all-false compositor only.
+                        return Err(super::block::PortableUnavailable);
+                    }
+                } else if first_split != Some(split) {
                     // A child split changes the causal topology for later
-                    // siblings. Reject immediately instead of consuming
-                    // symbols under the terminal-child assumption.
+                    // siblings. Reject a mixed tree immediately instead of
+                    // consuming residual symbols under the wrong plan.
                     return Err(super::block::PortableUnavailable);
                 }
+                child_splits[row][column] = split;
+            }
+            if first_split == Some(true) {
+                return Ok(InterTransformPlan::SplitB64Deep);
             }
             return Ok(InterTransformPlan::SplitB64);
         }
@@ -6066,6 +6088,7 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB64x16 => (TxSize::Tx64x16, true, false, false, false),
             InterTransformPlan::SplitB32x64 => (TxSize::Tx32x64, true, false, false, false),
             InterTransformPlan::SplitB64x32 => (TxSize::Tx64x32, true, false, false, false),
+            InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, true, false, false, false),
             InterTransformPlan::SplitB16 => (TxSize::Tx16x16, true, false, false, false),
             InterTransformPlan::SplitB16x32 => (TxSize::Tx16x32, true, false, false, false),
             InterTransformPlan::SplitB32x16 => (TxSize::Tx32x16, true, false, false, false),
@@ -6336,6 +6359,7 @@ fn decode_inter_leaf(
                 filters,
                 coefficient_contexts,
                 decode_transform_type,
+                matches!(transform_plan, InterTransformPlan::SplitB64Deep),
             )
         } else {
             block_decoder.decode_inter_translation_split_b8(
@@ -6353,6 +6377,7 @@ fn decode_inter_leaf(
                 filters,
                 coefficient_contexts,
                 decode_transform_type,
+                matches!(transform_plan, InterTransformPlan::SplitB64Deep),
                 obmc,
                 inter_intra,
             )
