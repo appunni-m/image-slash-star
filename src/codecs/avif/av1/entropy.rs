@@ -12666,7 +12666,8 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
 /// single-tile so reference geometry is frame-global and every visited grid
 /// cell has a complete four-pixel extent. The super-resolution extension is
 /// limited to monochrome/I420/I422/I444, whose coded result is resized once
-/// after reconstruction.
+/// after reconstruction. I444 additionally admits a horizontally tiled,
+/// full-height layout so frame-wide resize taps remain intact.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12704,6 +12705,31 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
+    let horizontal_multitile_i444 = context.superres_enabled
+        && layout == PixelLayout::I444
+        && !context.single_tile
+        && context.frame_width >= 4
+        && context.frame_height >= 4
+        && context.frame_width.is_multiple_of(4)
+        && context.frame_height.is_multiple_of(4)
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.tile_origin_b4_y == 0
+        && context.block_height == context.frame_block_height
+        && context
+            .tile_origin_b4_x
+            .checked_add(context.block_width)
+            .is_some_and(|end| end <= context.frame_block_width)
+        && 32_u32
+            .checked_shr(context.level)
+            .is_some_and(|root_size_b4| {
+                root_size_b4 != 0
+                    && context.tile_origin_b4_x.is_multiple_of(root_size_b4)
+                    && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
+            })
+        && matches!(context.level, 0 | 1);
     let dimensions_supported = context.frame_width != 0
         && context.frame_height != 0
         && context.frame_width.is_multiple_of(4)
@@ -12714,7 +12740,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             || (!context.superres_enabled && context.upscaled_width == context.frame_width))
         && context.block_x == 0
         && context.block_y == 0
-        && context.single_tile
+        && (context.single_tile || horizontal_multitile_i444)
         && context.tile_origin_b4_x == 0
         && context.tile_origin_b4_y == 0
         && context.block_width == context.frame_block_width
