@@ -6547,6 +6547,10 @@ fn complete_high_depth_inter_reconstruction_context(
 /// high-depth I422 block path is already limited to one 16x16 B16x16 leaf;
 /// keep restoration on that same exact geometry and leave loop/CDEF inactive
 /// until their I422 boundary metadata has independent parity evidence.
+/// Screen-enabled I422 intra leaves may use depth-aware Y16x16/U/V8x16 palette
+/// prediction; inter leaves use parsed force-integer MV precision. IntraBC and
+/// intra/palette blocks within inter frames remain outside the profile;
+/// restoration consumes completed samples.
 fn bounded_i422_restoration_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -6569,7 +6573,6 @@ fn bounded_i422_restoration_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
