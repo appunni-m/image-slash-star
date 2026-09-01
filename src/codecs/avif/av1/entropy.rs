@@ -3338,6 +3338,32 @@ fn inter_lossy_square64_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact mode-2 B64x64 split geometry. Unlike the existing one-terminal I420
+/// square-64 predicate, this profile owns a TX32x32 chroma grid for I422 and
+/// I444, so it must remain distinct until the block compositor has consumed
+/// every chroma child.
+fn inter_lossy_split64_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && transform_mode == 2
+        && quantization.segment_qindex > 0
+        && block_size == BlockSize::B64x64
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 /// Direct rectangular 64-axis terminals use one compact transform per plane;
 /// unlike the 128px families they do not need a chunk compositor. This
 /// predicate is also the high-depth exemption from the generic small-axis
@@ -4736,7 +4762,10 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB32);
         }
         if block_size == BlockSize::B64x64
-            && layout == PixelLayout::I420
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 64
             && visible_height == 64
             && split_b64_supported
@@ -4781,6 +4810,17 @@ fn decode_inter_transform_size(
             }
             return Ok(InterTransformPlan::SplitB64);
         }
+        return Err(super::block::PortableUnavailable);
+    }
+    if block_size == BlockSize::B64x64
+        && matches!(layout, PixelLayout::I422 | PixelLayout::I444)
+        && visible_width == 64
+        && visible_height == 64
+        && split_b64_supported
+        && max_tx == TxSize::Tx64x64
+    {
+        // I422/I444 B64 roots own a TX32 chroma grid only when the luma root
+        // split is present; the unsplit TX64 sentence is not admitted here.
         return Err(super::block::PortableUnavailable);
     }
     Ok(InterTransformPlan::Single(max_tx))
@@ -4873,6 +4913,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_split64_geometry = inter_lossy_split64_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let lossy_wide_single_geometry = inter_lossy_wide_single_geometry_supported(
         node.block_size,
         layout,
@@ -4889,8 +4938,10 @@ fn decode_inter_leaf(
     if matches!(context.bit_depth, 10 | 12) && !lossless_grid_geometry {
         let (block_width, block_height) = node.block_size.pixel_dimensions();
         let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
-        let wide_lossy_geometry =
-            lossy_wide_single_geometry || lossy_square64_geometry || lossy_wide_chunk_geometry;
+        let wide_lossy_geometry = lossy_wide_single_geometry
+            || lossy_square64_geometry
+            || lossy_split64_geometry
+            || lossy_wide_chunk_geometry;
         if !wide_lossy_geometry
             && (!(minimum..=maximum).contains(&block_width)
                 || !(minimum..=maximum).contains(&block_height))
@@ -4908,10 +4959,15 @@ fn decode_inter_leaf(
         && !lossless_grid_geometry
         && !lossy_grid_geometry
         && !lossy_wide_chunk_geometry
+        && !lossy_split64_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
-    if node.block_size == BlockSize::B64x64 && !lossless_grid_geometry && !lossy_square64_geometry {
+    if node.block_size == BlockSize::B64x64
+        && !lossless_grid_geometry
+        && !lossy_square64_geometry
+        && !lossy_split64_geometry
+    {
         return Ok(Err(super::block::PortableUnavailable));
     }
     let neighbors = inter_neighbors(tile_state, node)?;
@@ -7599,17 +7655,17 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms,
 /// plus exact B8x8/B16x16/B32x32 mode-2 splits in the supported
-/// 4:2:0/4:2:2/4:4:4 layouts and the exact I420 B64x64 mode-2 split whose
-/// TX4x4/TX8x8/TX16x16/TX32x32 luma terminals are reconstructed by the bounded
-/// child compositors below.
+/// 4:2:0/4:2:2/4:4:4 layouts and the exact B64x64 mode-2 split whose
+/// TX4x4/TX8x8/TX16x16/TX32x32 luma terminals plus TX32x32 chroma grid are
+/// reconstructed by the bounded child compositors below.
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on
 /// transform modes 1/2 with fixed nearest-nearest average prediction.
 /// Update-map post-skip segmentation is admitted only for ALT_Q-only segments.
 /// TX_MODE_SELECT is admitted for an unsplit root and the exact B8x8 2x2
-/// TX4x4, B16x16 2x2 TX8x8, B32x32 2x2 TX16x16, or exact I420 B64x64 2x2
-/// TX32x32 split; larger split trees return a transactional unsupported result.
+/// TX4x4, B16x16 2x2 TX8x8, B32x32 2x2 TX16x16, or B64x64 2x2 TX32x32 split;
+/// larger split trees return a transactional unsupported result.
 /// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
