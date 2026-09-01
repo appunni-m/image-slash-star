@@ -50292,11 +50292,12 @@ impl Lossy420Decoder {
         let split_b64 = matches!(transform_plan, InterTransformPlan::SplitB64);
         let split_b64_topology =
             matches!(transform_plan, InterTransformPlan::SplitB64Topology { .. });
-        // The direct lossy 64-axis tranche is deliberately narrow: exact
-        // depth-matched 4:2:0 B16x64/B64x16/B32x64/B64x32 terminals plus the
-        // B64x64 square. Their luma transform is forced DCT_DCT by the AV1
-        // transform-type rules; all other wide shapes remain unavailable
-        // until their chunk/grid compositor exists.
+        // The direct lossy chroma-grid tranche is deliberately narrow: exact
+        // depth-matched 4:2:2/4:4:4 terminals whose chroma plane can be
+        // consumed by the bounded grid compositor, plus the existing 4:2:0
+        // single-terminal tranche. The small I422 B8x16/B8x32/B16x32 roots
+        // inherit their unsplit luma transform into each TX4 chroma cell;
+        // 64-axis profiles retain their DCT-only transform restriction.
         let wide_lossy_single = matches!(
             transform_plan,
             InterTransformPlan::Single {
@@ -50407,6 +50408,9 @@ impl Lossy420Decoder {
                     | (ChromaSampling::Full, BlockSize::B32x64)
                     | (ChromaSampling::Full, BlockSize::B64x32)
                     | (ChromaSampling::Full, BlockSize::B64x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B8x16)
+                    | (ChromaSampling::Subsampled422, BlockSize::B8x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B16x32)
                     | (ChromaSampling::Subsampled422, BlockSize::B16x64)
                     | (ChromaSampling::Subsampled422, BlockSize::B64x16)
                     | (ChromaSampling::Subsampled422, BlockSize::B32x64)
@@ -50428,9 +50432,29 @@ impl Lossy420Decoder {
                 )
                 && (luma_width, luma_height) == block_size.pixel_dimensions()
                 && luma_tx == block_size.maximum_luma_tx()
-                && luma_transform == Av1TransformType::DctDct)
-                .then_some(())
-                .portable()?;
+                && match (chroma_sampling, block_size) {
+                    (ChromaSampling::Subsampled422, BlockSize::B8x16) => true,
+                    (ChromaSampling::Subsampled422, BlockSize::B8x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B16x32) => matches!(
+                        luma_transform,
+                        Av1TransformType::DctDct | Av1TransformType::IdentityIdentity
+                    ),
+                    (ChromaSampling::Subsampled422, BlockSize::B16x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x16)
+                    | (ChromaSampling::Subsampled422, BlockSize::B32x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x32)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x64)
+                    | (ChromaSampling::Full, BlockSize::B16x64)
+                    | (ChromaSampling::Full, BlockSize::B64x16)
+                    | (ChromaSampling::Full, BlockSize::B32x64)
+                    | (ChromaSampling::Full, BlockSize::B64x32)
+                    | (ChromaSampling::Full, BlockSize::B64x64) => {
+                        luma_transform == Av1TransformType::DctDct
+                    }
+                    _ => false,
+                })
+            .then_some(())
+            .portable()?;
         }
         if let InterTransformPlan::LossyWideMode2Unsplit {
             luma_width,
@@ -51759,6 +51783,7 @@ impl Lossy420Decoder {
                         quantization,
                         tools,
                         coefficient_contexts,
+                        luma_transform,
                     )?
                 } else {
                     self.decode_inter_chroma_grid(
@@ -54214,7 +54239,7 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
-        reason = "the bounded I422 TX4 chroma grid keeps plane geometry, entropy edges, quantization, prediction, and raster state explicit"
+        reason = "the bounded I422 TX4 chroma grid keeps plane geometry, entropy edges, quantization, prediction, transform, and raster state explicit"
     )]
     fn decode_inter_lossy_chroma_tx4_grid(
         &mut self,
@@ -54226,11 +54251,15 @@ impl Lossy420Decoder {
         quantization: LossyQuantization,
         tools: BlockTools,
         coefficient_contexts: InterCoefficientContexts,
+        luma_transform: Av1TransformType,
     ) -> PortableResult<LosslessGridContexts> {
         let coded_width = raster.coded_width;
         let coded_height = raster.coded_height;
         (prediction.len() == coded_width.checked_mul(coded_height).portable()?
-            && matches!((coded_width, coded_height), (8, 64) | (16, 64))
+            && matches!(
+                (coded_width, coded_height),
+                (4, 16) | (4, 32) | (8, 32) | (8, 64) | (16, 64)
+            )
             && raster.active_width == coded_width
             && raster.active_height == coded_height
             && matches!(plane, 1 | 2)
@@ -54285,7 +54314,7 @@ impl Lossy420Decoder {
                     &above_context,
                     &left_context,
                     txb_skipped,
-                    Av1TransformType::DctDct,
+                    inherited_inter_chroma_transform(TxSize::Tx4x4, luma_transform),
                 )?;
                 let coefficients = if terminal.skipped {
                     None

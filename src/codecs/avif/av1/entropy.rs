@@ -3437,7 +3437,10 @@ fn inter_lossy_direct_chroma_grid_geometry_supported(
         && (transform_mode != 2 || quantization.segment_qindex > 0)
         && matches!(
             (layout, block_size),
-            (PixelLayout::I422, BlockSize::B64x64)
+            (PixelLayout::I422, BlockSize::B8x16)
+                | (PixelLayout::I422, BlockSize::B8x32)
+                | (PixelLayout::I422, BlockSize::B16x32)
+                | (PixelLayout::I422, BlockSize::B64x64)
                 | (PixelLayout::I422, BlockSize::B16x64)
                 | (PixelLayout::I422, BlockSize::B64x16)
                 | (PixelLayout::I422, BlockSize::B32x64)
