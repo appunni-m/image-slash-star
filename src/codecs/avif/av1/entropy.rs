@@ -7479,6 +7479,13 @@ pub(super) fn validate_complete_lossy_420_partition(
     let generic_high_depth_lossless_inter = inter_context.is_some_and(|inter_context| {
         complete_high_depth_lossless_inter_reconstruction_context(context, inter_context)
     });
+    let lossless_color_inter = inter_context.is_some_and(|inter_context| {
+        complete_lossless_inter_color_reconstruction_context(context, inter_context)
+    });
+    let lossless_i420_active_restoration = lossless_color_inter
+        && inter_context.is_some_and(|inter_context| {
+            lossless_i420_superres_restoration_supported(context, inter_context)
+        });
     let lossless_monochrome_inter = inter_context.is_some_and(|inter_context| {
         complete_lossless_inter_monochrome_reconstruction_context(context, inter_context)
     });
@@ -7701,7 +7708,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         None
     };
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
-        complete_lossless_inter_color_reconstruction_context(context, inter_context)
+        lossless_color_inter
             || lossless_monochrome_inter
             || complete_inter_420_reconstruction_context(context)
             || complete_inter_422_reconstruction_context(context, inter_context)
@@ -7812,6 +7819,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_rect_cdef_restoration
         || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
+        || lossless_i420_active_restoration
         || lossless_monochrome_active_restoration
     {
         let Some(plan) =
@@ -12421,6 +12429,8 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// upscaled reference and its coded result is resized once after reconstruction.
 /// I420, I422, and I444 additionally admit a horizontally tiled, full-height
 /// layout so the existing frame assembler can preserve cross-tile resize taps.
+/// A single-tile I420 super-resolution frame may also carry one active
+/// Wiener/SGR unit on any subset of its planes.
 fn complete_lossless_inter_color_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12458,6 +12468,8 @@ fn complete_lossless_inter_color_reconstruction_context(
             layout,
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
+    let active_i420_restoration =
+        lossless_i420_superres_restoration_supported(context, inter_context);
     let horizontal_multitile_color = context.superres_enabled
         && matches!(
             layout,
@@ -12563,7 +12575,7 @@ fn complete_lossless_inter_color_reconstruction_context(
         && !context.skip_mode_enabled
         && inter_context.skip_mode_references.is_none()
         && context.frame_tools.cdef.is_none()
-        && context.restoration_types == [None; 3]
+        && (context.restoration_types == [None; 3] || active_i420_restoration)
         && !context.frame_tools.film_grain_present
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
@@ -12571,6 +12583,119 @@ fn complete_lossless_inter_color_reconstruction_context(
         && segmentation_closed
         && dimensions_supported
         && references_match
+}
+
+/// Admit active Wiener/SGR restoration for one 8-bit I420 super-resolution
+/// frame. The bounded restoration decoder consumes one unit per active plane;
+/// all unit-count arithmetic therefore uses the post-resize plane extents and
+/// rejects any overflow before entropy state or a surface can be published.
+fn lossless_i420_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    if context.intra_frame
+        || !context.all_lossless
+        || !context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != 0
+        || context.frame_tools.transform_mode != 0
+        || context.bit_depth != 8
+        || context.monochrome
+        || !context.subsampling_x
+        || !context.subsampling_y
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.enable_interintra_compound
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || !context.frame_tools.restoration_present
+    {
+        return false;
+    }
+    if !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let (luma_log2_supported, chroma_log2_supported) = match context.level {
+        0 => ((7..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2)),
+        1 => ((6..=8).contains(&luma_log2), (5..=8).contains(&chroma_log2)),
+        _ => (false, false),
+    };
+    if !luma_log2_supported || !chroma_log2_supported || context.frame_height > 56 {
+        return false;
+    }
+    let chroma_active =
+        context.restoration_types[1].is_some() || context.restoration_types[2].is_some();
+    let chroma_log_matches = if chroma_active {
+        chroma_log2 == luma_log2 || chroma_log2.checked_add(1) == Some(luma_log2)
+    } else {
+        chroma_log2 == luma_log2
+    };
+    if !chroma_log_matches {
+        return false;
+    }
+
+    let Some(chroma_width) = context.upscaled_width.checked_add(1).map(|width| width / 2) else {
+        return false;
+    };
+    let Some(chroma_height) = context.frame_height.checked_add(1).map(|height| height / 2) else {
+        return false;
+    };
+    let dimensions = [
+        (context.upscaled_width, context.frame_height),
+        (chroma_width, chroma_height),
+        (chroma_width, chroma_height),
+    ];
+    for (plane, restoration_type) in context.restoration_types.iter().enumerate() {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let unit_log2 = if plane == 0 { luma_log2 } else { chroma_log2 };
+        let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+            return false;
+        };
+        let Some(width_with_half) = dimensions[plane].0.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = dimensions[plane].1.checked_add(unit_size / 2) else {
+            return false;
+        };
+        if (width_with_half >> unit_log2).max(1) != 1 || (height_with_half >> unit_log2).max(1) != 1
+        {
+            return false;
+        }
+    }
+    true
 }
 
 /// Admit the bounded monochrome all-lossless inter profile. The shared block
