@@ -4209,6 +4209,9 @@ enum InterTransformPlan {
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
+    LosslessB16I420,
+    LosslessB16I422,
+    LosslessB16I444,
 }
 
 fn decode_inter_transform_size(
@@ -4227,25 +4230,33 @@ fn decode_inter_transform_size(
 ) -> super::block::PortableResult<InterTransformPlan> {
     let max_tx = block_size.maximum_luma_tx();
     if transform_mode == 0 {
-        // An all-lossless subsampled B8x8 leaf is a fixed TX4x4 grid;
-        // mode 0 carries no transform-partition sentence. Other mode-0
-        // blocks retain the existing single-terminal admission checks.
+        // An all-lossless B8x8/B16x16 leaf is a fixed TX4x4 grid; mode 0
+        // carries no transform-partition sentence. Other mode-0 blocks
+        // retain the existing single-terminal admission checks.
         if segment_lossless
-            && block_size == BlockSize::B8x8
+            && matches!(block_size, BlockSize::B8x8 | BlockSize::B16x16)
             && matches!(
                 layout,
                 PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
-            && visible_width == 8
-            && visible_height == 8
             && eight_bit
         {
-            return Ok(match layout {
-                PixelLayout::I420 => InterTransformPlan::LosslessB8I420,
-                PixelLayout::I422 => InterTransformPlan::LosslessB8I422,
-                PixelLayout::I444 => InterTransformPlan::LosslessB8I444,
-                PixelLayout::Monochrome => InterTransformPlan::Single(TxSize::Tx4x4),
-            });
+            let exact_geometry = match block_size {
+                BlockSize::B8x8 => visible_width == 8 && visible_height == 8,
+                BlockSize::B16x16 => visible_width == 16 && visible_height == 16,
+                _ => false,
+            };
+            if exact_geometry {
+                return Ok(match (block_size, layout) {
+                    (BlockSize::B8x8, PixelLayout::I420) => InterTransformPlan::LosslessB8I420,
+                    (BlockSize::B8x8, PixelLayout::I422) => InterTransformPlan::LosslessB8I422,
+                    (BlockSize::B8x8, PixelLayout::I444) => InterTransformPlan::LosslessB8I444,
+                    (BlockSize::B16x16, PixelLayout::I420) => InterTransformPlan::LosslessB16I420,
+                    (BlockSize::B16x16, PixelLayout::I422) => InterTransformPlan::LosslessB16I422,
+                    (BlockSize::B16x16, PixelLayout::I444) => InterTransformPlan::LosslessB16I444,
+                    _ => InterTransformPlan::Single(TxSize::Tx4x4),
+                });
+            }
         }
         return Ok(InterTransformPlan::Single(TxSize::Tx4x4));
     }
@@ -4943,6 +4954,9 @@ fn decode_inter_leaf(
         InterTransformPlan::LosslessB8I420
         | InterTransformPlan::LosslessB8I422
         | InterTransformPlan::LosslessB8I444 => (TxSize::Tx8x8, false, true),
+        InterTransformPlan::LosslessB16I420
+        | InterTransformPlan::LosslessB16I422
+        | InterTransformPlan::LosslessB16I444 => (TxSize::Tx16x16, false, true),
     };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
@@ -5126,7 +5140,7 @@ fn decode_inter_leaf(
         if compound {
             let second = second_state
                 .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
-            block_decoder.decode_inter_compound_translation_lossless_b8(
+            block_decoder.decode_inter_compound_translation_lossless_grid(
                 decoder,
                 node.block_size,
                 visible_width,
@@ -5144,7 +5158,7 @@ fn decode_inter_leaf(
                 coefficient_contexts,
             )
         } else {
-            block_decoder.decode_inter_translation_lossless_b8(
+            block_decoder.decode_inter_translation_lossless_grid(
                 decoder,
                 node.block_size,
                 visible_width,

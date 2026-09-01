@@ -48449,6 +48449,19 @@ pub(super) struct InterCoefficientContexts {
     pub(super) left: [[u8; 32]; 3],
 }
 
+/// Residual contexts published by one bounded lossless transform grid.
+///
+/// The terminal at the bottom-right supplies the scalar context for the next
+/// plane/block.  The two edge vectors retain the last-column and last-row
+/// contexts so a following partition can consume only the edge cells it
+/// owns; unused entries remain neutral.
+#[derive(Clone, Copy)]
+struct LosslessGridContexts {
+    bottom_right: u8,
+    right: [u8; 16],
+    bottom: [u8; 16],
+}
+
 #[derive(Clone, Copy)]
 enum InterTransformPlan {
     Single {
@@ -48460,6 +48473,9 @@ enum InterTransformPlan {
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
+    LosslessB16I420,
+    LosslessB16I422,
+    LosslessB16I444,
 }
 
 impl BlockSegmentState {
@@ -49242,11 +49258,34 @@ impl Lossy420Decoder {
         )
     }
 
+    fn lossless_inter_transform_plan(
+        &self,
+        block_size: BlockSize,
+    ) -> PortableResult<InterTransformPlan> {
+        match (block_size, self.chroma_sampling) {
+            (BlockSize::B8x8, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB8I420)
+            }
+            (BlockSize::B8x8, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB8I422)
+            }
+            (BlockSize::B8x8, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB8I444),
+            (BlockSize::B16x16, ChromaSampling::Subsampled420) => {
+                Ok(InterTransformPlan::LosslessB16I420)
+            }
+            (BlockSize::B16x16, ChromaSampling::Subsampled422) => {
+                Ok(InterTransformPlan::LosslessB16I422)
+            }
+            (BlockSize::B16x16, ChromaSampling::Full) => Ok(InterTransformPlan::LosslessB16I444),
+            _ => Err(PortableUnavailable),
+        }
+    }
+
     #[expect(
         clippy::too_many_arguments,
-        reason = "lossless split single-reference reconstruction carries block, frame, prediction, and residual state"
+        reason = "lossless grid single-reference reconstruction carries block, frame, prediction, and residual state"
     )]
-    pub(super) fn decode_inter_translation_lossless_b8(
+    pub(super) fn decode_inter_translation_lossless_grid(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
         block_size: BlockSize,
@@ -49283,11 +49322,7 @@ impl Lossy420Decoder {
                 obmc,
             },
             block_skipped,
-            match self.chroma_sampling {
-                ChromaSampling::Subsampled422 => InterTransformPlan::LosslessB8I422,
-                ChromaSampling::Full => InterTransformPlan::LosslessB8I444,
-                _ => InterTransformPlan::LosslessB8I420,
-            },
+            self.lossless_inter_transform_plan(block_size)?,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -49296,9 +49331,9 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
-        reason = "lossless split compound reconstruction carries block, frame, prediction, and residual state"
+        reason = "lossless grid compound reconstruction carries block, frame, prediction, and residual state"
     )]
-    pub(super) fn decode_inter_compound_translation_lossless_b8(
+    pub(super) fn decode_inter_compound_translation_lossless_grid(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
         block_size: BlockSize,
@@ -49334,11 +49369,7 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             block_skipped,
-            match self.chroma_sampling {
-                ChromaSampling::Subsampled422 => InterTransformPlan::LosslessB8I422,
-                ChromaSampling::Full => InterTransformPlan::LosslessB8I444,
-                _ => InterTransformPlan::LosslessB8I420,
-            },
+            self.lossless_inter_transform_plan(block_size)?,
             filters,
             coefficient_contexts,
             |_, _| Err(PortableUnavailable),
@@ -49378,6 +49409,21 @@ impl Lossy420Decoder {
                 | InterTransformPlan::LosslessB8I422
                 | InterTransformPlan::LosslessB8I444
         );
+        let lossless_b16 = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessB16I420
+                | InterTransformPlan::LosslessB16I422
+                | InterTransformPlan::LosslessB16I444
+        );
+        let lossless_grid = lossless_b8 || lossless_b16;
+        let lossless_i422 = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessB8I422 | InterTransformPlan::LosslessB16I422
+        );
+        let lossless_i444 = matches!(
+            transform_plan,
+            InterTransformPlan::LosslessB8I444 | InterTransformPlan::LosslessB16I444
+        );
         let lossless_i422_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I422);
         let lossless_i444_b8 = matches!(transform_plan, InterTransformPlan::LosslessB8I444);
         let common_geometry = matches!(
@@ -49394,7 +49440,7 @@ impl Lossy420Decoder {
             && visible_height != 0
             && block_size.valid_for_layout(layout);
         (common_geometry
-            && if lossless_b8 {
+            && if lossless_grid {
                 matches!(
                     chroma_sampling,
                     ChromaSampling::Subsampled420
@@ -49406,6 +49452,12 @@ impl Lossy420Decoder {
                     && quantization.segment_qindex == 0
                     && !quantization.delta_q_present
                     && !quantization.using_matrix
+                    && quantization.y_dc_delta == 0
+                    && quantization.y_ac_delta == 0
+                    && quantization.u_dc_delta == 0
+                    && quantization.u_ac_delta == 0
+                    && quantization.v_dc_delta == 0
+                    && quantization.v_ac_delta == 0
             } else {
                 !quantization.segment_lossless
             })
@@ -49455,23 +49507,27 @@ impl Lossy420Decoder {
             visible_height,
         )?;
         let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8);
-        if split_b8 || lossless_b8 {
-            (block_size == BlockSize::B8x8
+        if split_b8 || lossless_grid {
+            let exact_b8 =
+                block_size == BlockSize::B8x8 && visible_width == 8 && visible_height == 8;
+            let exact_b16 =
+                block_size == BlockSize::B16x16 && visible_width == 16 && visible_height == 16;
+            let exact_geometry =
+                (split_b8 || lossless_b8) && exact_b8 || (lossless_b16 && exact_b16);
+            (exact_geometry
                 && matches!(
                     chroma_sampling,
                     ChromaSampling::Full
                         | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                 )
-                && visible_width == 8
-                && visible_height == 8
                 && (!split_b8 || tools.sample_depth == SampleDepth::EIGHT)
-                && (!lossless_b8
-                    || (lossless_i422_b8
+                && (!lossless_grid
+                    || (lossless_i422
                         && matches!(chroma_sampling, ChromaSampling::Subsampled422))
-                    || (lossless_i444_b8 && matches!(chroma_sampling, ChromaSampling::Full))
-                    || (!lossless_i422_b8
-                        && !lossless_i444_b8
+                    || (lossless_i444 && matches!(chroma_sampling, ChromaSampling::Full))
+                    || (!lossless_i422
+                        && !lossless_i444
                         && matches!(chroma_sampling, ChromaSampling::Subsampled420)))
                 && (!split_b8 || !predecoded_skip))
                 .then_some(())
@@ -49488,6 +49544,11 @@ impl Lossy420Decoder {
             | InterTransformPlan::LosslessB8I422
             | InterTransformPlan::LosslessB8I444 => {
                 (TxSize::Tx8x8, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LosslessB16I420
+            | InterTransformPlan::LosslessB16I422
+            | InterTransformPlan::LosslessB16I444 => {
+                (TxSize::Tx16x16, false, Av1TransformType::DctDct)
             }
         };
         let expected_luma = luma_tx_size;
@@ -49747,6 +49808,29 @@ impl Lossy420Decoder {
                     block_size,
                     obmc,
                 )?;
+            }
+            if lossless_b16 {
+                let grid_contexts = self.decode_inter_lossless_plane_b16(
+                    decoder,
+                    &prediction,
+                    &mut rasters[plane],
+                    plane,
+                    predecoded_skip,
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                )?;
+                contexts[plane] = grid_contexts.bottom_right;
+                if plane == 0 {
+                    luma_right_contexts = grid_contexts.right;
+                    luma_bottom_contexts = grid_contexts.bottom;
+                    luma_transform_split = true;
+                    luma_transform = Av1TransformType::DctDct;
+                } else {
+                    chroma_right_contexts[plane - 1] = grid_contexts.right;
+                    chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
+                }
+                continue;
             }
             if (split_b8 || lossless_b8) && (plane == 0 || lossless_i444_b8) {
                 let (split_contexts, split_transform) = if lossless_b8 {
@@ -50194,6 +50278,138 @@ impl Lossy420Decoder {
             }
         }
         Ok((residual_contexts, Av1TransformType::DctDct))
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the bounded B16 lossless grid keeps plane geometry, entropy edges, quantization, and prediction explicit"
+    )]
+    fn decode_inter_lossless_plane_b16(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        prediction: &[u16],
+        raster: &mut PrivatePlaneRaster,
+        plane: usize,
+        block_skipped: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+    ) -> PortableResult<LosslessGridContexts> {
+        let coded_width = raster.coded_width;
+        let coded_height = raster.coded_height;
+        (prediction.len() == coded_width.checked_mul(coded_height).portable()?
+            && coded_width.is_multiple_of(4)
+            && coded_height.is_multiple_of(4)
+            && (1..=4).contains(&(coded_width / 4))
+            && (1..=4).contains(&(coded_height / 4))
+            && raster.active_width == coded_width
+            && raster.active_height == coded_height
+            && matches!(plane, 0..=2)
+            && tools.sample_depth == SampleDepth::EIGHT
+            && quantization.qindex == 0
+            && quantization.segment_qindex == 0
+            && quantization.y_dc_delta == 0
+            && quantization.y_ac_delta == 0
+            && quantization.u_dc_delta == 0
+            && quantization.u_ac_delta == 0
+            && quantization.v_dc_delta == 0
+            && quantization.v_ac_delta == 0)
+            .then_some(())
+            .portable()?;
+        let grid_width = coded_width / 4;
+        let grid_height = coded_height / 4;
+        let mut residual_contexts = [[0x40_u8; 16]; 16];
+        for row in 0..grid_height {
+            for column in 0..grid_width {
+                let above_context = if row == 0 {
+                    [coefficient_contexts.above[plane]
+                        .get(column)
+                        .copied()
+                        .portable()?]
+                } else {
+                    [residual_contexts[row - 1][column]]
+                };
+                let left_context = if column == 0 {
+                    [coefficient_contexts.left[plane]
+                        .get(row)
+                        .copied()
+                        .portable()?]
+                } else {
+                    [residual_contexts[row][column - 1]]
+                };
+                let terminal = decode_generic_lossless_terminal(
+                    decoder,
+                    plane,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    quantization,
+                    TxSize::Tx4x4,
+                    coded_width,
+                    coded_height,
+                    &above_context,
+                    &left_context,
+                    block_skipped,
+                )?;
+                let coefficients = if terminal.skipped {
+                    None
+                } else {
+                    Some(
+                        self.large_coeff_arena
+                            .coefficients
+                            .get(..terminal.coefficient_count)
+                            .portable()?,
+                    )
+                };
+                let offset_x = column.checked_mul(4).portable()?;
+                let offset_y = row.checked_mul(4).portable()?;
+                let mut child_prediction = [0_u16; 16];
+                for child_row in 0..4 {
+                    let start = offset_y
+                        .checked_add(child_row)
+                        .and_then(|value| value.checked_mul(coded_width))
+                        .and_then(|value| value.checked_add(offset_x))
+                        .portable()?;
+                    let end = start.checked_add(4).portable()?;
+                    let source = prediction.get(start..end).portable()?;
+                    let destination = child_row.checked_mul(4).portable()?;
+                    child_prediction
+                        .get_mut(destination..destination.checked_add(4).portable()?)
+                        .portable()?
+                        .copy_from_slice(source);
+                }
+                if let Some(coefficients) = coefficients {
+                    reconstruct_lossless_wht_prediction_in_place(
+                        &mut child_prediction,
+                        coefficients,
+                        tools.sample_depth,
+                    )?;
+                }
+                raster.commit_transform(
+                    offset_x,
+                    offset_y,
+                    4,
+                    4,
+                    &child_prediction,
+                    tools.sample_depth,
+                )?;
+                residual_contexts[row][column] = terminal.residual_context;
+            }
+        }
+        let last_column = grid_width.saturating_sub(1);
+        let last_row = grid_height.saturating_sub(1);
+        let mut right = [0x40_u8; 16];
+        let mut bottom = [0x40_u8; 16];
+        for row in 0..grid_height {
+            right[row] = residual_contexts[row][last_column];
+        }
+        for column in 0..grid_width {
+            bottom[column] = residual_contexts[last_row][column];
+        }
+        Ok(LosslessGridContexts {
+            bottom_right: residual_contexts[last_row][last_column],
+            right,
+            bottom,
+        })
     }
 
     #[expect(
