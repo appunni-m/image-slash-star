@@ -6372,8 +6372,8 @@ fn complete_inter_422_reconstruction_context(
 /// classes have independent composition evidence. Film grain is display-only
 /// and limited to the shared bounded dimension whitelist. Tile-local
 /// reconstructions are assembled into one complete frame. Root-scoped delta-Q
-/// is decoded by the shared prepared-quantization path; delta-LF remains closed
-/// with the other loop-filter metadata.
+/// and dynamic delta-LF use the shared prepared-quantization path; staged inter
+/// reference/mode metadata supplies the per-block filter-level class.
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
 /// intra blocks (including palette) and intraBC remain outside this profile.
 fn complete_inter_444_reconstruction_context(
@@ -6402,7 +6402,6 @@ fn complete_inter_444_reconstruction_context(
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && bounded_i444_film_grain_supported(context)
-        && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
