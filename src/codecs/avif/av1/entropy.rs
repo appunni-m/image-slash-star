@@ -7482,6 +7482,8 @@ pub(super) fn validate_complete_lossy_420_partition(
     let lossless_monochrome_inter = inter_context.is_some_and(|inter_context| {
         complete_lossless_inter_monochrome_reconstruction_context(context, inter_context)
     });
+    let lossless_monochrome_active_restoration =
+        lossless_monochrome_inter && lossless_monochrome_superres_restoration_supported(context);
     let generic_high_depth_i444_inter = (generic_high_depth_inter
         || generic_high_depth_lossless_inter)
         && !context.monochrome
@@ -7810,6 +7812,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_rect_cdef_restoration
         || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
+        || lossless_monochrome_active_restoration
     {
         let Some(plan) =
             decode_bounded_restoration_plan(&mut decoder, context, &mut tile_cdfs.restoration)
@@ -12576,7 +12579,10 @@ fn complete_lossless_inter_color_reconstruction_context(
 /// profile single-tile so the reference dimensions compared here are frame
 /// dimensions, not tile-local extents. Its super-resolution extension uses
 /// retained upscaled references, permits one full-height horizontal tile row,
-/// and accepts only a neutral all-`NONE` restoration header.
+/// and accepts a neutral all-`NONE` restoration header. A single-tile
+/// super-resolution variant additionally admits one active luma Wiener/SGR
+/// unit, decoded before the coded plane is resized and restored at frame
+/// resolution.
 fn complete_lossless_inter_monochrome_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12604,6 +12610,9 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let neutral_restoration = !context.frame_tools.restoration_present
         || (context.superres_enabled && context.restoration_types == [None; 3]);
+    let active_restoration = lossless_monochrome_superres_restoration_supported(context);
+    let restoration_supported =
+        (neutral_restoration && context.restoration_types == [None; 3]) || active_restoration;
     let resize_geometry_supported = if context.superres_enabled {
         context.frame_width >= 4 && context.frame_height >= 4
     } else {
@@ -12681,8 +12690,7 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
         && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && context.frame_tools.cdef.is_none()
-        && neutral_restoration
-        && context.restoration_types == [None; 3]
+        && restoration_supported
         && !context.frame_tools.film_grain_present
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
@@ -12690,6 +12698,50 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
         && segmentation_closed
         && dimensions_supported
         && references_match
+}
+
+/// Admit the one active-restoration unit that can be decoded and applied
+/// transactionally for a monochrome all-lossless super-resolution frame.
+/// Restoration is applied after resize, so the unit-count proof uses the
+/// upscaled width and visible frame height rather than coded dimensions.
+fn lossless_monochrome_superres_restoration_supported(context: &FirstBlockContext) -> bool {
+    if !context.monochrome
+        || !context.superres_enabled
+        || !context.single_tile
+        || !context.frame_tools.restoration_present
+        || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+    {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) {
+        return false;
+    }
+    let unit_log2 = context.restoration_unit_size_log2[0];
+    let unit_log2_supported = match context.level {
+        0 => (7..=8).contains(&unit_log2),
+        1 => (6..=8).contains(&unit_log2),
+        _ => false,
+    };
+    if !unit_log2_supported || context.frame_height > 56 {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+        return false;
+    };
+    let Some(width_with_half) = context.upscaled_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> unit_log2).max(1) == 1 && (height_with_half >> unit_log2).max(1) == 1
 }
 
 /// Admit the bounded high-depth all-lossless inter profile. The generic
