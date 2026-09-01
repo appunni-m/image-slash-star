@@ -12666,8 +12666,9 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
 /// single-tile so reference geometry is frame-global and every visited grid
 /// cell has a complete four-pixel extent. The super-resolution extension is
 /// limited to monochrome/I420/I422/I444, whose coded result is resized once
-/// after reconstruction. I444 additionally admits a horizontally tiled,
-/// full-height layout so frame-wide resize taps remain intact.
+/// after reconstruction. Monochrome and I444 additionally admit a
+/// horizontally tiled, full-height layout so frame-wide resize taps remain
+/// intact.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12705,8 +12706,8 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
-    let horizontal_multitile_i444 = context.superres_enabled
-        && layout == PixelLayout::I444
+    let horizontal_multitile_high_depth = context.superres_enabled
+        && matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
         && !context.single_tile
         && context.frame_width >= 4
         && context.frame_height >= 4
@@ -12746,7 +12747,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         && context.block_width == context.frame_block_width
         && context.block_height == context.frame_block_height
         && matches!(context.level, 0 | 1);
-    let dimensions_supported = single_tile_dimensions_supported || horizontal_multitile_i444;
+    let dimensions_supported = single_tile_dimensions_supported || horizontal_multitile_high_depth;
     let references_match = inter_context.references.iter().all(|reference| {
         let geometry_matches = if superres_layout {
             reference.surface.upscaled_width == context.upscaled_width
