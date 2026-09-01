@@ -6685,6 +6685,10 @@ fn bounded_i422_restoration_units_supported_for_dimensions(
 /// Common frame-level proof for the first high-depth I420 restoration
 /// tranche. I420's chroma restoration exponent can be one step smaller than
 /// luma, so its unit validation remains separate from the I422/I444 helpers.
+/// Screen-enabled intra leaves may use depth-aware I420 palette prediction;
+/// inter leaves use parsed force-integer MV precision. IntraBC and
+/// intra/palette blocks inside inter frames remain outside the profile;
+/// restoration consumes completed high-depth samples.
 fn bounded_i420_restoration_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -6707,7 +6711,6 @@ fn bounded_i420_restoration_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
