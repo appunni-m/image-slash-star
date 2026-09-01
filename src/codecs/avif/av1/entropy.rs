@@ -12574,7 +12574,9 @@ fn complete_lossless_inter_color_reconstruction_context(
 /// walker visits only plane zero for this layout; U/V remain absent on the
 /// retained frame surface rather than being synthesized from luma. Keep the
 /// profile single-tile so the reference dimensions compared here are frame
-/// dimensions, not tile-local extents.
+/// dimensions, not tile-local extents. Its super-resolution extension uses
+/// retained upscaled references and accepts only a neutral all-`NONE`
+/// restoration header.
 fn complete_lossless_inter_monochrome_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12600,11 +12602,18 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
         });
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
-    let dimensions_supported = context.frame_width != 0
-        && context.frame_height != 0
+    let neutral_restoration = !context.frame_tools.restoration_present
+        || (context.superres_enabled && context.restoration_types == [None; 3]);
+    let resize_geometry_supported = if context.superres_enabled {
+        context.frame_width >= 4 && context.frame_height >= 4
+    } else {
+        context.frame_width != 0
+            && context.frame_height != 0
+            && context.upscaled_width == context.frame_width
+    };
+    let dimensions_supported = resize_geometry_supported
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
-        && context.upscaled_width == context.frame_width
         && context.block_x == 0
         && context.block_y == 0
         && context.single_tile
@@ -12614,13 +12623,19 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
         && context.block_height == context.frame_block_height
         && matches!(context.level, 0 | 1);
     let references_match = inter_context.references.iter().all(|reference| {
+        let geometry_matches = if context.superres_enabled {
+            reference.surface.upscaled_width == context.upscaled_width
+                && reference.surface.frame_height == context.frame_height
+        } else {
+            reference.surface.coded_width == context.frame_width
+                && reference.surface.upscaled_width == context.frame_width
+                && reference.surface.frame_height == context.frame_height
+                && !reference.scale.scaled
+        };
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
             && reference.surface.layout == PixelLayout::Monochrome
-            && reference.surface.coded_width == context.frame_width
-            && reference.surface.upscaled_width == context.frame_width
-            && reference.surface.frame_height == context.frame_height
-            && !reference.scale.scaled
+            && geometry_matches
             && matches!(
                 reference.global_motion.kind,
                 GlobalMotionType::Identity | GlobalMotionType::Translation
@@ -12642,14 +12657,13 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
         && !quantization.using_matrix
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.superres_enabled
         && !context.allow_intrabc
         && !context.skip_mode_enabled
         && inter_context.skip_mode_references.is_none()
         && !inter_context.allow_warped_motion
         && !inter_context.enable_interintra_compound
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
+        && neutral_restoration
         && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
         && context.frame_tools.loop_filter.level_y == [0; 2]
