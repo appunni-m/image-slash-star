@@ -3262,7 +3262,10 @@ fn inter_lossless_grid_geometry_supported(
     quantization: super::block::LossyQuantization,
     transform_mode: u32,
 ) -> bool {
+    let luma_geometry_matches =
+        block_size.maximum_luma_tx().pixel_dimensions() == block_size.pixel_dimensions();
     quantization.segment_lossless
+        && luma_geometry_matches
         && transform_mode == 0
         && bit_depth == 8
         && quantization.sample_depth.bits() == 8
@@ -3287,12 +3290,38 @@ fn inter_lossless_grid_geometry_supported(
                 | BlockSize::B16x16
                 | BlockSize::B8x16
                 | BlockSize::B16x8
+                | BlockSize::B8x32
+                | BlockSize::B32x8
+                | BlockSize::B16x32
+                | BlockSize::B32x16
+                | BlockSize::B32x32
+                | BlockSize::B16x64
+                | BlockSize::B64x16
+                | BlockSize::B32x64
+                | BlockSize::B64x32
+                | BlockSize::B64x64
         )
         && matches!(
             layout,
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
+fn inter_lossless_grid_large_block_supported(block_size: BlockSize) -> bool {
+    matches!(
+        block_size,
+        BlockSize::B8x32
+            | BlockSize::B32x8
+            | BlockSize::B16x32
+            | BlockSize::B32x16
+            | BlockSize::B32x32
+            | BlockSize::B16x64
+            | BlockSize::B64x16
+            | BlockSize::B32x64
+            | BlockSize::B64x32
+            | BlockSize::B64x64
+    ) && block_size.maximum_luma_tx().pixel_dimensions() == block_size.pixel_dimensions()
 }
 
 #[derive(Clone, Copy)]
@@ -4275,6 +4304,10 @@ enum InterTransformPlan {
     LosslessB16x4I420,
     LosslessB16x4I422,
     LosslessB16x4I444,
+    LosslessGrid {
+        carrier: TxSize,
+        layout: PixelLayout,
+    },
 }
 
 fn decode_inter_transform_size(
@@ -4308,6 +4341,16 @@ fn decode_inter_transform_size(
                     | BlockSize::B16x16
                     | BlockSize::B8x16
                     | BlockSize::B16x8
+                    | BlockSize::B8x32
+                    | BlockSize::B32x8
+                    | BlockSize::B16x32
+                    | BlockSize::B32x16
+                    | BlockSize::B32x32
+                    | BlockSize::B16x64
+                    | BlockSize::B64x16
+                    | BlockSize::B32x64
+                    | BlockSize::B64x32
+                    | BlockSize::B64x64
             )
             && matches!(
                 layout,
@@ -4317,6 +4360,12 @@ fn decode_inter_transform_size(
         {
             let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
             if exact_geometry {
+                if inter_lossless_grid_large_block_supported(block_size) {
+                    return Ok(InterTransformPlan::LosslessGrid {
+                        carrier: max_tx,
+                        layout,
+                    });
+                }
                 return Ok(match (block_size, layout) {
                     (BlockSize::B4x4, PixelLayout::I420) => InterTransformPlan::LosslessB4I420,
                     (BlockSize::B4x4, PixelLayout::I422) => InterTransformPlan::LosslessB4I422,
@@ -5086,6 +5135,15 @@ fn decode_inter_leaf(
         InterTransformPlan::LosslessB16x4I420
         | InterTransformPlan::LosslessB16x4I422
         | InterTransformPlan::LosslessB16x4I444 => (TxSize::Tx16x4, false, true),
+        InterTransformPlan::LosslessGrid {
+            carrier,
+            layout: plan_layout,
+        } => {
+            if plan_layout != layout {
+                return Ok(Err(super::block::PortableUnavailable));
+            }
+            (carrier, false, true)
+        }
     };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
