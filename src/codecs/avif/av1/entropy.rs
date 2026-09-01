@@ -6446,7 +6446,10 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// assembly; restoration remains closed here. Validated film grain is applied
 /// only to a full assembled display copy after each tile is reconstructed.
 /// Screen-content-enabled inter leaves use the parsed force-integer-MV path;
-/// intra blocks (including palette) and intraBC remain outside this profile.
+/// frame-level skip mode is supported on the existing transform-mode 1/2
+/// boundary and materializes fixed nearest-nearest average prediction.
+/// Intra blocks (including palette), active restoration, and post-skip
+/// segmentation remain outside this profile.
 fn complete_inter_422_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6470,7 +6473,6 @@ fn complete_inter_422_reconstruction_context(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
         && !context.allow_intrabc
         && no_unsupported_film_grain(context)
         && context.frame_tools.quantization.is_some()
@@ -6497,7 +6499,9 @@ fn complete_inter_422_reconstruction_context(
 /// and dynamic delta-LF use the shared prepared-quantization path; staged inter
 /// reference/mode metadata supplies the per-block filter-level class.
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
-/// intra blocks (including palette) and intraBC remain outside this profile.
+/// frame-level skip mode is supported on transform modes 1/2 with fixed
+/// nearest-nearest average prediction. Intra blocks (including palette),
+/// active restoration, and post-skip segmentation remain outside this profile.
 fn complete_inter_444_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -6521,7 +6525,6 @@ fn complete_inter_444_reconstruction_context(
         && !context.all_lossless
         && !context.segmentation_enabled
         && !context.frame_tools.segmentation.enabled
-        && !context.skip_mode_enabled
         && !context.allow_intrabc
         && bounded_i444_film_grain_supported(context)
         && context.frame_tools.quantization.is_some()
@@ -6590,8 +6593,10 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms.
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
-/// intraBC remain outside this profile. TX_MODE_SELECT is admitted only for an unsplit
-/// root transform; split trees return a transactional unsupported result.
+/// intraBC remain outside this profile. Frame-level skip mode is supported on
+/// transform modes 1/2 with fixed nearest-nearest average prediction.
+/// TX_MODE_SELECT is admitted only for an unsplit root transform; split trees
+/// return a transactional unsupported result.
 /// Plane-aware matrix dequantization remains optional
 /// and depth-parametric on the same terminal path. Frame-level deblocking and
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
@@ -6646,7 +6651,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && dimensions_supported
         && !context.monochrome
         && !context.all_lossless
-        && !context.skip_mode_enabled
         && !context.allow_intrabc
         && !context.segmentation_enabled
         && matches!(context.frame_tools.transform_mode, 1 | 2)
