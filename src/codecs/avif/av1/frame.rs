@@ -1617,6 +1617,22 @@ impl FrameState {
                 &pending.header,
                 sequence,
             )?;
+            if pending.header.superres_enabled {
+                let depth = SampleDepth::new(sequence.bit_depth)
+                    .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
+                assembled_monochrome_plane = assembled_monochrome_plane
+                    .map(|plane| {
+                        resize::upscale_monochrome_plane(
+                            plane,
+                            pending.header.frame_width,
+                            pending.header.upscaled_width,
+                            pending.header.frame_height,
+                            pending.header.superres_denominator,
+                            depth,
+                        )
+                    })
+                    .transpose()?;
+            }
         }
         enum SurfacePlan {
             Color {
@@ -2539,31 +2555,49 @@ fn validate_tile_entropy_prefixes(
                     &tile_context,
                 )?);
             }
-            if sequence.monochrome && tiling.tile_count() == 1 && ranges.len() == 1 {
+            if sequence.monochrome {
                 let plane = entropy::validate_complete_monochrome_partition(
                     data,
                     range.clone(),
                     &tile_context,
                 )?;
-                complete_monochrome_plane = plane
-                    .map(|plane| {
-                        if header.superres_enabled {
-                            let depth = SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
-                                malformed("super-resolution sample depth is unsupported")
-                            })?;
-                            resize::upscale_monochrome_plane(
-                                plane,
-                                header.frame_width,
-                                header.upscaled_width,
-                                header.frame_height,
-                                header.superres_denominator,
-                                depth,
+                if tiling.tile_count() == 1 && ranges.len() == 1 {
+                    complete_monochrome_plane = plane
+                        .map(|plane| {
+                            if header.superres_enabled {
+                                let depth =
+                                    SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
+                                        malformed("super-resolution sample depth is unsupported")
+                                    })?;
+                                resize::upscale_monochrome_plane(
+                                    plane,
+                                    header.frame_width,
+                                    header.upscaled_width,
+                                    header.frame_height,
+                                    header.superres_denominator,
+                                    depth,
+                                )
+                            } else {
+                                Ok(plane)
+                            }
+                        })
+                        .transpose()?;
+                } else if header.superres_enabled {
+                    if let Some(plane) = plane {
+                        complete_monochrome_tiles.try_reserve(1).map_err(|_| {
+                            CodecError::Dimensions(
+                                "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
                             )
-                        } else {
-                            Ok(plane)
-                        }
-                    })
-                    .transpose()?;
+                        })?;
+                        complete_monochrome_tiles.push(ReconstructedMonochromeTile {
+                            x: tile_origin_x,
+                            y: tile_origin_y,
+                            width: tile_width,
+                            height: tile_height,
+                            plane,
+                        });
+                    }
+                }
             }
             decode_complete = false;
         }
