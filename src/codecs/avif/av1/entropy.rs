@@ -3164,13 +3164,12 @@ fn bounded_reference_mode_supported(
             && inter_context.skip_mode_references.is_some())
 }
 
-/// Admit only the post-skip segmentation sentence proved by the bounded
-/// high-depth I420 CDEF inter profile.  The segment map is updated after the
-/// block skip sentence, so every active segment must avoid features that move
-/// syntax before skip (reference/skip/global-motion), alter loop-filter
-/// metadata, or enter the lossless transform grammar.  Alternate qindex is
-/// handled by the existing per-block segment quantization path.
-fn bounded_postskip_segmentation_supported(context: &FirstBlockContext) -> bool {
+/// Admit the post-skip ALT_Q-only segmentation sentence.  The segment map is
+/// updated after the block skip sentence, so every active segment must avoid
+/// features that move syntax before skip (reference/skip/global-motion), alter
+/// loop-filter metadata, or enter the lossless transform grammar. Alternate
+/// qindex is handled by the existing per-block segment quantization path.
+fn postskip_altq_segmentation_supported(context: &FirstBlockContext) -> bool {
     let segmentation = context.frame_tools.segmentation;
     if !context.segmentation_enabled {
         return !segmentation.enabled;
@@ -3182,15 +3181,30 @@ fn bounded_postskip_segmentation_supported(context: &FirstBlockContext) -> bool 
     {
         return false;
     }
-    let active_count = usize::try_from(segmentation.last_active_id.saturating_add(1).clamp(0, 8))
-        .unwrap_or_default();
+    let Some(last_active) = usize::try_from(segmentation.last_active_id)
+        .ok()
+        .filter(|&index| index < segmentation.segments.len())
+    else {
+        return false;
+    };
+    if context.frame_tools.delta_q_present || context.frame_tools.delta_lf_present {
+        return false;
+    }
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let active_count = last_active.saturating_add(1);
     segmentation.segments[..active_count].iter().all(|segment| {
+        let expected_qindex = i64::from(quantization.base)
+            .saturating_add(i64::from(segment.delta_q))
+            .clamp(0, 255);
         segment.reference < 0
             && !segment.skip
             && !segment.global_motion
             && segment.delta_lf == [0; 4]
             && segment.qindex > 0
             && !segment.lossless
+            && u32::try_from(expected_qindex).ok() == Some(segment.qindex)
     })
 }
 
@@ -6474,8 +6488,8 @@ fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
 /// frame-level skip mode is admitted only for transform modes 1/2 so its
 /// predictor-only terminals retain a normative full-block transform extent.
-/// Intra blocks (including palette), intraBC, and post-skip segmentation remain
-/// outside this profile.
+/// Intra blocks (including palette) and intraBC remain outside this profile;
+/// update-map post-skip segmentation is admitted only for ALT_Q-only segments.
 fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     !context.intra_frame
         && context.bit_depth == 8
@@ -6490,7 +6504,7 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && inter_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && no_unsupported_film_grain(context)
-        && !context.segmentation_enabled
+        && postskip_altq_segmentation_supported(context)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
@@ -7053,7 +7067,7 @@ fn bounded_i420_cdef_common(
         && matches!(context.level, 0 | 1)
         && !context.superres_enabled
         && !context.all_lossless
-        && bounded_postskip_segmentation_supported(context)
+        && postskip_altq_segmentation_supported(context)
         && (!context.skip_mode_enabled || !context.intra_frame)
         && !context.allow_intrabc
         && !context.frame_tools.film_grain_present
