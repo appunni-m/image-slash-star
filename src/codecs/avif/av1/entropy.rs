@@ -12416,8 +12416,8 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// partially reconstructed surface. The only super-resolution extension is
 /// the I420/I422/I444 class below; its prediction samples come from a retained
 /// upscaled reference and its coded result is resized once after reconstruction.
-/// I420 and I444 additionally admit a horizontally tiled, full-height layout
-/// so the existing frame assembler can preserve cross-tile resize taps.
+/// I420, I422, and I444 additionally admit a horizontally tiled, full-height
+/// layout so the existing frame assembler can preserve cross-tile resize taps.
 fn complete_lossless_inter_color_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12456,7 +12456,10 @@ fn complete_lossless_inter_color_reconstruction_context(
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
     let horizontal_multitile_color = context.superres_enabled
-        && matches!(layout, PixelLayout::I420 | PixelLayout::I444)
+        && matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
         && !context.single_tile
         && context.frame_width >= 4
         && context.frame_height >= 4
