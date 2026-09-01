@@ -6476,6 +6476,8 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
 /// bounded CDEF use the same validated metadata paths as high-depth intra;
 /// CDEF is limited to complete 8x8 luma geometry. I422 additionally requires
 /// skipped residuals and DCT-DCT chroma, enforced at the block boundary. A
+/// dynamic delta-LF sentence uses the staged inter reference/mode metadata for
+/// per-block levels before filter metadata is committed.
 /// switchable-motion frames consume the exact binary-OBMC or three-symbol
 /// motion-mode sentence selected by their causal matching-reference mask;
 /// Translation and OBMC are materialized for the generic high-depth layouts,
@@ -6529,7 +6531,6 @@ fn complete_high_depth_inter_reconstruction_context(
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
-        && !context.frame_tools.delta_lf_present
         && complete_high_depth_loop_filter_supported(context)
         && complete_high_depth_cdef_supported(context)
         && context.restoration_types == [None; 3]
