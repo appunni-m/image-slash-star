@@ -50304,6 +50304,9 @@ impl Lossy420Decoder {
                 InterTransformPlan::SplitB8x16
                     | InterTransformPlan::SplitB8x32
                     | InterTransformPlan::SplitB16x32
+                    | InterTransformPlan::SplitB16x8
+                    | InterTransformPlan::SplitB32x8
+                    | InterTransformPlan::SplitB32x16
             );
         let split_vertical_i422_tx4_chroma_grid = chroma_sampling == ChromaSampling::Subsampled422
             && matches!(
@@ -50601,6 +50604,7 @@ impl Lossy420Decoder {
                     | (BlockSize::B16x8, ChromaSampling::Subsampled420)
                     | (BlockSize::B16x8, ChromaSampling::Subsampled422)
                     | (BlockSize::B8x16, ChromaSampling::Full)
+                    | (BlockSize::B16x8, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -50617,6 +50621,7 @@ impl Lossy420Decoder {
                     | (BlockSize::B32x8, ChromaSampling::Subsampled420)
                     | (BlockSize::B32x8, ChromaSampling::Subsampled422)
                     | (BlockSize::B8x32, ChromaSampling::Full)
+                    | (BlockSize::B32x8, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
