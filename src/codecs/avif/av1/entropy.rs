@@ -7490,6 +7490,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         && inter_context.is_some_and(|inter_context| {
             lossless_i422_superres_restoration_supported(context, inter_context)
         });
+    let lossless_i444_active_restoration = lossless_color_inter
+        && inter_context.is_some_and(|inter_context| {
+            lossless_i444_superres_restoration_supported(context, inter_context)
+        });
     let lossless_monochrome_inter = inter_context.is_some_and(|inter_context| {
         complete_lossless_inter_monochrome_reconstruction_context(context, inter_context)
     });
@@ -7825,6 +7829,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (monochrome_postfilter && context.restoration_types[0].is_some())
         || lossless_i420_active_restoration
         || lossless_i422_active_restoration
+        || lossless_i444_active_restoration
         || lossless_monochrome_active_restoration
     {
         let Some(plan) =
@@ -12434,7 +12439,7 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// upscaled reference and its coded result is resized once after reconstruction.
 /// I420, I422, and I444 additionally admit a horizontally tiled, full-height
 /// layout so the existing frame assembler can preserve cross-tile resize taps.
-/// A single-tile I420 or I422 super-resolution frame may also carry one
+/// A single-tile I420, I422, or I444 super-resolution frame may also carry one
 /// active Wiener/SGR unit on any subset of its planes.
 fn complete_lossless_inter_color_reconstruction_context(
     context: &FirstBlockContext,
@@ -12475,7 +12480,8 @@ fn complete_lossless_inter_color_reconstruction_context(
         );
     let active_color_restoration =
         lossless_i420_superres_restoration_supported(context, inter_context)
-            || lossless_i422_superres_restoration_supported(context, inter_context);
+            || lossless_i422_superres_restoration_supported(context, inter_context)
+            || lossless_i444_superres_restoration_supported(context, inter_context);
     let horizontal_multitile_color = context.superres_enabled
         && matches!(
             layout,
@@ -12795,6 +12801,97 @@ fn lossless_i422_superres_restoration_supported(
             return false;
         };
         let Some(height_with_half) = dimensions[plane].1.checked_add(unit_size / 2) else {
+            return false;
+        };
+        if (width_with_half >> luma_log2).max(1) != 1 || (height_with_half >> luma_log2).max(1) != 1
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// Admit active Wiener/SGR restoration for one 8-bit I444 super-resolution
+/// frame. All planes retain the full visible extent and the parser supplies a
+/// single restoration-unit exponent for the entire frame.
+fn lossless_i444_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    if context.intra_frame
+        || !context.all_lossless
+        || !context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != 0
+        || context.frame_tools.transform_mode != 0
+        || context.bit_depth != 8
+        || context.monochrome
+        || context.subsampling_x
+        || context.subsampling_y
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.enable_interintra_compound
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || !context.frame_tools.restoration_present
+    {
+        return false;
+    }
+    if !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let log2_supported = match context.level {
+        0 => (7..=8).contains(&luma_log2),
+        1 => (6..=8).contains(&luma_log2),
+        _ => false,
+    };
+    if !log2_supported || chroma_log2 != luma_log2 || context.frame_height > 56 {
+        return false;
+    }
+    let dimensions = (context.upscaled_width, context.frame_height);
+    for restoration_type in context.restoration_types {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let Some(unit_size) = 1_u32.checked_shl(luma_log2) else {
+            return false;
+        };
+        let Some(width_with_half) = dimensions.0.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = dimensions.1.checked_add(unit_size / 2) else {
             return false;
         };
         if (width_with_half >> luma_log2).max(1) != 1 || (height_with_half >> luma_log2).max(1) != 1
