@@ -7214,9 +7214,11 @@ fn complete_bounded_i422_rect_restoration_inter_reconstruction_context(
 }
 
 /// Common frame-level proof for the bounded high-depth I420 rectangular loop
-/// tranche. Each admitted partition is exactly two B16x16 leaves in a 32x16
-/// or 16x32 frame, with only the luma edge that exists in that orientation
-/// enabled; CDEF and restoration remain inactive.
+/// tranche. Each admitted geometry is tiled by complete B16x16 terminals with
+/// orientation-specific luma edge metadata; CDEF and restoration remain
+/// inactive. Screen-enabled intra leaves may use depth-aware I420 palette
+/// prediction, while inter leaves use parsed force-integer MV precision;
+/// intraBC remains closed in this profile.
 fn bounded_i420_rect_loop_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -7238,7 +7240,6 @@ fn bounded_i420_rect_loop_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -7301,8 +7302,11 @@ fn complete_bounded_i420_rect_loop_inter_reconstruction_context(
 }
 
 /// Common frame-level proof for the bounded high-depth I420 rectangular CDEF
-/// tranche. The two-leaf geometry is shared with the loop path while both
-/// luma edge levels and chroma levels stay disabled.
+/// tranche. The complete-B16 terminal geometry is shared with the loop path
+/// while both luma edge levels and chroma levels stay disabled. Screen-enabled
+/// intra leaves may use depth-aware I420 palette prediction, while inter leaves
+/// use parsed force-integer MV precision; CDEF consumes completed samples and
+/// intraBC remains closed in this profile.
 fn bounded_i420_rect_cdef_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -7324,7 +7328,6 @@ fn bounded_i420_rect_cdef_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
@@ -7396,6 +7399,10 @@ fn bounded_i420_rect_restoration_common(
     quantization: QuantizationContext,
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
+    // Screen-enabled intra leaves may use depth-aware I420 palette prediction;
+    // inter leaves use parsed force-integer MV precision. Restoration consumes
+    // completed samples only for geometries admitted by its one-unit proof;
+    // intraBC remains closed in this profile.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && context.subsampling_y
@@ -7412,7 +7419,6 @@ fn bounded_i420_rect_restoration_common(
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && !context.frame_tools.film_grain_present
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
