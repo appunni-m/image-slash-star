@@ -7470,6 +7470,13 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_intra_reconstruction =
         complete_monochrome_lossy_intra_reconstruction_context(context);
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
+    let monochrome_lossy_active_restoration = if context.intra_frame {
+        lossy_monochrome_intra_superres_restoration_supported(context)
+    } else {
+        inter_context.is_some_and(|inter_context| {
+            lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
+        })
+    };
     let generic_i420_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context, inter_context)
     });
@@ -7873,6 +7880,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_rect_cdef_restoration
         || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
+        || monochrome_lossy_active_restoration
         || lossy_i420_active_restoration
         || lossy_i422_active_restoration
         || lossy_i444_active_restoration
@@ -13283,7 +13291,8 @@ fn complete_monochrome_postfilter_reconstruction_context(context: &FirstBlockCon
 }
 
 fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
-    context.intra_frame && complete_monochrome_lossy_common(context)
+    (context.intra_frame && complete_monochrome_lossy_common(context))
+        || lossy_monochrome_intra_superres_restoration_supported(context)
 }
 
 /// Luma-only inter admission. Block-level parsing consumes the normal
@@ -13296,9 +13305,140 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    !context.intra_frame
+    (!context.intra_frame
         && complete_monochrome_lossy_common(context)
-        && complete_monochrome_references(context, inter_context)
+        && complete_monochrome_references(context, inter_context))
+        || lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
+}
+
+/// Common frame-level proof for the high-depth lossy monochrome
+/// super-resolution restoration tranche. Monochrome owns only plane zero, so
+/// the active restoration plan is intentionally luma-only and is applied
+/// after the existing frame-wide resize compositor.
+fn lossy_monochrome_superres_restoration_common(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == quantization.base
+                && !segment.lossless
+        });
+    if !context.monochrome
+        || !matches!(context.bit_depth, 10 | 12)
+        || !context.superres_enabled
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_width > 128
+        || context.frame_height < 4
+        || context.frame_height > 128
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.all_lossless
+        || context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != quantization.base
+        || quantization.base == 0
+        || quantization.using_matrix
+        || context.frame_tools.reduced_transform_set
+        || context.frame_tools.transform_mode != 1
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || !context.frame_tools.restoration_present
+        || !segmentation_closed
+        || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+    {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) {
+        return false;
+    }
+    let unit_log2 = context.restoration_unit_size_log2[0];
+    let unit_log2_supported = match context.level {
+        0 => (7..=8).contains(&unit_log2),
+        1 => (6..=8).contains(&unit_log2),
+        _ => false,
+    };
+    if !unit_log2_supported || context.frame_height > 56 {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+        return false;
+    };
+    let Some(width_with_half) = context.upscaled_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> unit_log2).max(1) == 1 && (height_with_half >> unit_log2).max(1) == 1
+}
+
+fn lossy_monochrome_intra_superres_restoration_supported(context: &FirstBlockContext) -> bool {
+    context.intra_frame && lossy_monochrome_superres_restoration_common(context)
+}
+
+fn lossy_monochrome_inter_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    if context.intra_frame
+        || !lossy_monochrome_superres_restoration_common(context)
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.allow_warped_motion
+        || inter_context.enable_interintra_compound
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || inter_context.motion_mode_switchable
+        || inter_context.use_ref_frame_mvs
+    {
+        return false;
+    }
+    inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == PixelLayout::Monochrome
+            && reference.surface.upscaled_width == context.upscaled_width
+            && reference.surface.frame_height == context.frame_height
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    })
 }
 
 fn complete_monochrome_references(
