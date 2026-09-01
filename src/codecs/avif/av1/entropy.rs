@@ -4206,6 +4206,7 @@ fn decode_inter_transform_type(
 enum InterTransformPlan {
     Single(TxSize),
     SplitB8I420,
+    LosslessB8I420,
 }
 
 fn decode_inter_transform_size(
@@ -4217,11 +4218,23 @@ fn decode_inter_transform_size(
     layout: PixelLayout,
     visible_width: u32,
     visible_height: u32,
+    segment_lossless: bool,
     block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
     let max_tx = block_size.maximum_luma_tx();
     if transform_mode == 0 {
+        // An all-lossless B8x8 I420 leaf is a fixed four-child TX4x4 grid;
+        // mode 0 carries no transform-partition sentence. Other mode-0
+        // blocks retain the existing single-terminal admission checks.
+        if segment_lossless
+            && block_size == BlockSize::B8x8
+            && layout == PixelLayout::I420
+            && visible_width == 8
+            && visible_height == 8
+        {
+            return Ok(InterTransformPlan::LosslessB8I420);
+        }
         return Ok(InterTransformPlan::Single(TxSize::Tx4x4));
     }
     if transform_mode != 2 {
@@ -4898,6 +4911,7 @@ fn decode_inter_leaf(
         layout,
         visible_width,
         visible_height,
+        prepared_quantization.quantization.segment_lossless,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
@@ -4906,9 +4920,10 @@ fn decode_inter_leaf(
             return Ok(Err(super::block::PortableUnavailable));
         }
     };
-    let (tx_size, transform_split) = match transform_plan {
-        InterTransformPlan::Single(tx_size) => (tx_size, false),
-        InterTransformPlan::SplitB8I420 => (TxSize::Tx8x8, true),
+    let (tx_size, transform_split, lossless_transform) = match transform_plan {
+        InterTransformPlan::Single(tx_size) => (tx_size, false, false),
+        InterTransformPlan::SplitB8I420 => (TxSize::Tx8x8, true, false),
+        InterTransformPlan::LosslessB8I420 => (TxSize::Tx8x8, false, true),
     };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = tx_size.pixel_dimensions();
@@ -5009,7 +5024,7 @@ fn decode_inter_leaf(
         .map_err(|_| malformed("inter luma block width exceeds usize"))?;
     let luma_block_height = usize::try_from(node.block_size.pixel_dimensions().1)
         .map_err(|_| malformed("inter luma block height exceeds usize"))?;
-    let (luma_txb_skipped, transform) = if transform_split {
+    let (luma_txb_skipped, transform) = if transform_split || lossless_transform {
         (true, super::block::Av1TransformType::DctDct)
     } else {
         let txb_skipped = block_decoder
@@ -5084,6 +5099,47 @@ fn decode_inter_leaf(
                 filters,
                 coefficient_contexts,
                 decode_transform_type,
+                obmc,
+                inter_intra,
+            )
+        }
+    } else if lossless_transform {
+        if compound {
+            let second = second_state
+                .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
+            block_decoder.decode_inter_compound_translation_lossless_b8(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                block_skipped,
+                prepared_quantization,
+                tools,
+                [first_state.surface, second.surface],
+                [first_state.scale, second.scale],
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions,
+                compound_blend.ok_or_else(|| malformed("compound blend is missing"))?,
+                filters,
+                coefficient_contexts,
+            )
+        } else {
+            block_decoder.decode_inter_translation_lossless_b8(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                block_skipped,
+                prepared_quantization,
+                tools,
+                first_state.surface,
+                first_state.scale,
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions[0],
+                filters,
+                coefficient_contexts,
                 obmc,
                 inter_intra,
             )
