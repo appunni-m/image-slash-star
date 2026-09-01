@@ -15430,11 +15430,18 @@ fn decode_inter_lossy_terminal(
     let context_width = tx_width / 4;
     let context_height = tx_height / 4;
     let bounded_transform = tx_width <= 32 && tx_height <= 32;
+    // AV1's 32x64 and 64x32 terminals carry a compact 32x32 coefficient
+    // window but reconstruct across the full 64-pixel axis.  The generic
+    // inverse-transform path is already dimension-aware for these exact
+    // DCT-only shapes; keep the admission narrow so the still-unwired
+    // 64x64/non-DCT terminal families cannot fall through this compositor.
+    let wide_dct_transform = matches!(tx_size, TxSize::Tx32x64 | TxSize::Tx64x32)
+        && transform == Av1TransformType::DctDct;
     let skipped_large_transform = txb_skipped && tx_width <= 64 && tx_height <= 64;
     (above.len() == context_width
         && left.len() == context_height
         && matches!(plane, 0..=2)
-        && (bounded_transform || skipped_large_transform))
+        && (bounded_transform || wide_dct_transform || skipped_large_transform))
         .then_some(())
         .portable()?;
     generic_coefficient_skip_context(
@@ -49743,6 +49750,32 @@ impl Lossy420Decoder {
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
+        // The first reachable lossy 64-axis tranche is deliberately narrow:
+        // exact 8-bit 4:2:0 B32x64/B64x32 mode-1 (or an unsplit mode-2)
+        // terminals.  Their luma transform is forced DCT_DCT by the AV1
+        // transform-type rules; all other wide or high-depth shapes remain
+        // on the unavailable path until their chunk/grid compositor exists.
+        let wide_lossy_single = matches!(
+            transform_plan,
+            InterTransformPlan::Single {
+                tx_size: TxSize::Tx32x64 | TxSize::Tx64x32,
+                transform: Av1TransformType::DctDct,
+                ..
+            }
+        ) && matches!(block_size, BlockSize::B32x64 | BlockSize::B64x32)
+            && chroma_sampling == ChromaSampling::Subsampled420
+            && tools.sample_depth == SampleDepth::EIGHT
+            && matches!(tools.transform_mode, 1 | 2)
+            && !quantization.segment_lossless;
+        if matches!(
+            transform_plan,
+            InterTransformPlan::Single {
+                tx_size: TxSize::Tx32x64 | TxSize::Tx64x32,
+                ..
+            }
+        ) {
+            wide_lossy_single.then_some(()).portable()?;
+        }
         let lossless_wide = matches!(
             transform_plan,
             InterTransformPlan::LosslessGrid {
