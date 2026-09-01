@@ -5772,7 +5772,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         None
     };
     let inter_reconstruction = inter_context.is_some_and(|inter_context| {
-        complete_inter_420_reconstruction_context(context)
+        complete_lossless_inter_color_reconstruction_context(context, inter_context)
+            || complete_inter_420_reconstruction_context(context)
             || complete_inter_422_reconstruction_context(context, inter_context)
             || generic_i444_inter
             || generic_high_depth_inter
@@ -10367,6 +10368,113 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
         && dimensions_are_supported
+}
+
+/// Admit the fully closed, eight-bit lossless inter profile.  The block
+/// decoder already has exact TX4x4 lossless carriers for I420/I422/I444;
+/// this frame gate proves that every syntax feature around those leaves is
+/// likewise neutral, so no lossy or post-filter fallback can publish a
+/// partially reconstructed surface.
+fn complete_lossless_inter_color_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == 0
+                && segment.lossless
+        });
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let dimensions_supported = context.frame_width != 0
+        && context.frame_height != 0
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.upscaled_width == context.frame_width
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && context
+            .tile_origin_b4_x
+            .checked_add(context.block_width)
+            .is_some_and(|end| end <= context.frame_block_width)
+        && context
+            .tile_origin_b4_y
+            .checked_add(context.block_height)
+            .is_some_and(|end| end <= context.frame_block_height)
+        && 32_u32
+            .checked_shr(context.level)
+            .is_some_and(|root_size_b4| {
+                context.tile_origin_b4_x.is_multiple_of(root_size_b4)
+                    && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
+            });
+    let references_match = inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == 8
+            && reference.surface.layout == layout
+            && reference.surface.coded_width == context.upscaled_width
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity | GlobalMotionType::Translation
+            )
+    });
+    !context.intra_frame
+        && context.all_lossless
+        && context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == 0
+        && context.frame_tools.transform_mode == 0
+        && context.bit_depth == 8
+        && !context.monochrome
+        && matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        && quantization.base == 0
+        && quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == 0
+        && quantization.u_ac_delta == 0
+        && quantization.v_dc_delta == 0
+        && quantization.v_ac_delta == 0
+        && !quantization.using_matrix
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && !context.superres_enabled
+        && context.upscaled_width == context.frame_width
+        && !context.allow_intrabc
+        && !context.skip_mode_enabled
+        && inter_context.skip_mode_references.is_none()
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && segmentation_closed
+        && dimensions_supported
+        && references_match
 }
 
 /// High-depth full-resolution tranche admitted by the generic streamed
