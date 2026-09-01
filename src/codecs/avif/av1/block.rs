@@ -23407,18 +23407,62 @@ fn reconstruct_lossy_luma_16x64(
 )]
 fn reconstruct_lossy_luma_16x32_from_edges(
     predictor: LumaPredictor,
+    luma_angle: Option<i32>,
     filter_intra_mode: Option<usize>,
     top: [u16; 16],
     left: [u16; 32],
     top_left: u16,
+    has_top: bool,
     has_left: bool,
-    coefficients: Lossy16x32TransformCoefficients,
+    enable_intra_edge_filter: bool,
+    coefficients: Option<Lossy16x32TransformCoefficients>,
     transform_kind: Lossy16x16TransformKind,
 ) -> PortableResult<ReconstructedPlane> {
     let prediction: [u16; 512] = if let Some(mode) = filter_intra_mode {
         reconstruct_filter_intra_prediction(mode, 16, 32, top_left, &top, &left)?
             .try_into()
             .map_err(|_| PortableUnavailable)?
+    } else if matches!(
+        predictor,
+        LumaPredictor::Vertical
+            | LumaPredictor::Horizontal
+            | LumaPredictor::Diagonal45
+            | LumaPredictor::DiagonalDownRight
+            | LumaPredictor::Diagonal113
+            | LumaPredictor::Diagonal157
+            | LumaPredictor::Diagonal203
+            | LumaPredictor::Diagonal67
+    ) {
+        // The direct rectangular carrier exposes exactly the coded top and
+        // left edges.  No above-right or below-left samples are available at
+        // this boundary; the checked edge preparer therefore repeats the
+        // final supplied sample and keeps those availability facts explicit.
+        let edges = FullIntraPlaneEdges::prepare(
+            16,
+            32,
+            SampleDepth::EIGHT,
+            &top,
+            &left,
+            Some(top_left),
+            has_top,
+            has_left,
+            false,
+            false,
+            false,
+        )?;
+        let mut prediction = [0_u16; 512];
+        full_intra_prediction_into(
+            &mut prediction,
+            lossless_luma_predictor(predictor),
+            luma_angle,
+            None,
+            16,
+            32,
+            &edges,
+            SampleDepth::EIGHT,
+            enable_intra_edge_filter,
+        )?;
+        prediction
     } else {
         match predictor {
             LumaPredictor::Dc => {
@@ -23516,14 +23560,10 @@ fn reconstruct_lossy_luma_16x32_from_edges(
             LumaPredictor::Paeth => std::array::from_fn(|index| {
                 paeth_predictor(top[index % 16], left[index / 16], top_left)
             }),
-            LumaPredictor::Diagonal45
-            | LumaPredictor::DiagonalDownRight
-            | LumaPredictor::Diagonal113
-            | LumaPredictor::Diagonal157
-            | LumaPredictor::Diagonal203
-            | LumaPredictor::Diagonal67 => return Err(PortableUnavailable),
+            _ => return Err(PortableUnavailable),
         }
     };
+    let coefficients = coefficients.unwrap_or([0_i32; 512]);
     let residual = match transform_kind {
         Lossy16x16TransformKind::DctDct => transform::inverse_dct16x32(&coefficients),
         Lossy16x16TransformKind::AdstDct => transform::inverse_adst_dct16x32(&coefficients),
@@ -30415,20 +30455,33 @@ fn reconstruct_leaf_with_luma_override(
                 .unwrap_or_else(|_| ReconstructedPlane {
                     samples: vec![predictors[0]; 512],
                 })
-            } else if let Some(coefficients) = lossy_luma_16x32_coefficients {
+            } else if lossy_luma_16x32_coefficients.is_some()
+                || (filter_intra_mode.is_none()
+                    && matches!(
+                        luma_predictor,
+                        LumaPredictor::Vertical
+                            | LumaPredictor::Horizontal
+                            | LumaPredictor::Diagonal45
+                            | LumaPredictor::DiagonalDownRight
+                            | LumaPredictor::Diagonal113
+                            | LumaPredictor::Diagonal157
+                            | LumaPredictor::Diagonal203
+                            | LumaPredictor::Diagonal67
+                    ))
+            {
                 reconstruct_lossy_luma_16x32_from_edges(
                     luma_predictor,
-                    None,
+                    luma_angle,
+                    filter_intra_mode,
                     [predictors[0]; 16],
                     [predictors[0]; 32],
                     predictors[0],
                     false,
-                    coefficients,
+                    false,
+                    enable_intra_edge_filter,
+                    lossy_luma_16x32_coefficients,
                     lossy_luma_16x32_transform,
-                )
-                .unwrap_or_else(|_| ReconstructedPlane {
-                    samples: vec![predictors[0]; 512],
-                })
+                )?
             } else {
                 ReconstructedPlane {
                     samples: vec![predictors[0]; 512],
@@ -39411,15 +39464,31 @@ fn reconstruct_following_lossy_420_horizontal_16x32_leaf(
             true,
             split,
         )?
-    } else if let Some(coefficients) = lossy_luma_16x32_coefficients {
+    } else if lossy_luma_16x32_coefficients.is_some()
+        || (filter_intra_mode.is_none()
+            && matches!(
+                luma_predictor,
+                LumaPredictor::Vertical
+                    | LumaPredictor::Horizontal
+                    | LumaPredictor::Diagonal45
+                    | LumaPredictor::DiagonalDownRight
+                    | LumaPredictor::Diagonal113
+                    | LumaPredictor::Diagonal157
+                    | LumaPredictor::Diagonal203
+                    | LumaPredictor::Diagonal67
+            ))
+    {
         reconstruct_lossy_luma_16x32_from_edges(
             luma_predictor,
+            luma_angle,
             filter_intra_mode,
             luma_top,
             luma_left,
             luma_left[0],
+            false,
             true,
-            coefficients,
+            enable_intra_edge_filter,
+            lossy_luma_16x32_coefficients,
             lossy_luma_16x32_transform,
         )?
     } else {
@@ -39492,6 +39561,7 @@ fn reconstruct_following_lossy_420_horizontal_16x32_leaf(
 fn reconstruct_following_lossy_full_horizontal_16x32_leaf(
     syntax: BlockSyntax,
     neighbor: &ClosedLeaf,
+    enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
     let BlockSyntax {
         luma_predictor,
@@ -39537,15 +39607,31 @@ fn reconstruct_following_lossy_full_horizontal_16x32_leaf(
             true,
             split,
         )?
-    } else if let Some(coefficients) = lossy_luma_16x32_coefficients {
+    } else if lossy_luma_16x32_coefficients.is_some()
+        || (filter_intra_mode.is_none()
+            && matches!(
+                luma_predictor,
+                LumaPredictor::Vertical
+                    | LumaPredictor::Horizontal
+                    | LumaPredictor::Diagonal45
+                    | LumaPredictor::DiagonalDownRight
+                    | LumaPredictor::Diagonal113
+                    | LumaPredictor::Diagonal157
+                    | LumaPredictor::Diagonal203
+                    | LumaPredictor::Diagonal67
+            ))
+    {
         reconstruct_lossy_luma_16x32_from_edges(
             luma_predictor,
+            luma_angle,
             filter_intra_mode,
             luma_top,
             luma_left,
             luma_left[0],
+            false,
             true,
-            coefficients,
+            enable_intra_edge_filter,
+            lossy_luma_16x32_coefficients,
             lossy_luma_16x32_transform,
         )?
     } else {
@@ -39763,6 +39849,7 @@ fn reconstruct_following_lossy_full_vertical_16x32_leaf(
     above_left: &ClosedLeaf,
     above_right: &ClosedLeaf,
     left_neighbor: Option<&ClosedLeaf>,
+    enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
     let BlockSyntax {
         luma_predictor,
@@ -39822,15 +39909,31 @@ fn reconstruct_following_lossy_full_vertical_16x32_leaf(
             left_neighbor.is_some(),
             split,
         )?
-    } else if let Some(coefficients) = lossy_luma_16x32_coefficients {
+    } else if lossy_luma_16x32_coefficients.is_some()
+        || (filter_intra_mode.is_none()
+            && matches!(
+                luma_predictor,
+                LumaPredictor::Vertical
+                    | LumaPredictor::Horizontal
+                    | LumaPredictor::Diagonal45
+                    | LumaPredictor::DiagonalDownRight
+                    | LumaPredictor::Diagonal113
+                    | LumaPredictor::Diagonal157
+                    | LumaPredictor::Diagonal203
+                    | LumaPredictor::Diagonal67
+            ))
+    {
         reconstruct_lossy_luma_16x32_from_edges(
             luma_predictor,
+            luma_angle,
             filter_intra_mode,
             luma_top,
             luma_left,
             luma_top[0],
+            true,
             left_neighbor.is_some(),
-            coefficients,
+            enable_intra_edge_filter,
+            lossy_luma_16x32_coefficients,
             lossy_luma_16x32_transform,
         )?
     } else {
@@ -43429,19 +43532,35 @@ fn reconstruct_following_lossy_420_vertical_16x32_leaf(
             left_neighbor.is_some(),
             split,
         )
-    } else {
-        let coefficients = lossy_luma_16x32_coefficients.ok_or(PortableUnavailable)?;
-
+    } else if lossy_luma_16x32_coefficients.is_some()
+        || (filter_intra_mode.is_none()
+            && matches!(
+                luma_predictor,
+                LumaPredictor::Vertical
+                    | LumaPredictor::Horizontal
+                    | LumaPredictor::Diagonal45
+                    | LumaPredictor::DiagonalDownRight
+                    | LumaPredictor::Diagonal113
+                    | LumaPredictor::Diagonal157
+                    | LumaPredictor::Diagonal203
+                    | LumaPredictor::Diagonal67
+            ))
+    {
         reconstruct_lossy_luma_16x32_from_edges(
             luma_predictor,
+            luma_angle,
             filter_intra_mode,
             luma_top,
             luma_left,
             luma_top_left,
+            true,
             left_neighbor.is_some(),
-            coefficients,
+            enable_intra_edge_filter,
+            lossy_luma_16x32_coefficients,
             lossy_luma_16x32_transform,
         )
+    } else {
+        Err(PortableUnavailable)
     }
     .map_err(|_| PortableUnavailable)?;
 
@@ -57624,7 +57743,11 @@ impl Lossy420Decoder {
         } else if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Vertical16x32)
         {
-            reconstruct_following_lossy_full_horizontal_16x32_leaf(syntax, &neighbor)
+            reconstruct_following_lossy_full_horizontal_16x32_leaf(
+                syntax,
+                &neighbor,
+                tools.enable_intra_edge_filter,
+            )
         } else if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Vertical16x64)
         {
@@ -58646,6 +58769,7 @@ impl Lossy420Decoder {
                 &above_left,
                 &above_right,
                 left_neighbor.as_ref(),
+                tools.enable_intra_edge_filter,
             )
             .map(visible);
         }
