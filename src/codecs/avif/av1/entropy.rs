@@ -12409,11 +12409,14 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && dimensions_are_supported
 }
 
-/// Admit the fully closed, eight-bit lossless inter profile.  The block
+/// Admit the fully closed, eight-bit lossless inter profile. The block
 /// decoder already has exact TX4x4 lossless carriers for I420/I422/I444;
 /// this frame gate proves that every syntax feature around those leaves is
 /// likewise neutral, so no lossy or post-filter fallback can publish a
-/// partially reconstructed surface.
+/// partially reconstructed surface. The only super-resolution extension is
+/// the single-tile I420 class below; its prediction samples come from a
+/// retained upscaled reference and its coded result is resized once after
+/// reconstruction.
 fn complete_lossless_inter_color_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12446,34 +12449,56 @@ fn complete_lossless_inter_color_reconstruction_context(
         });
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
-    let dimensions_supported = context.frame_width != 0
-        && context.frame_height != 0
-        && padded_block_width == Some(context.block_width)
-        && padded_block_height == Some(context.block_height)
-        && context.upscaled_width == context.frame_width
-        && context.block_x == 0
-        && context.block_y == 0
-        && matches!(context.level, 0 | 1)
-        && context
-            .tile_origin_b4_x
-            .checked_add(context.block_width)
-            .is_some_and(|end| end <= context.frame_block_width)
-        && context
-            .tile_origin_b4_y
-            .checked_add(context.block_height)
-            .is_some_and(|end| end <= context.frame_block_height)
-        && 32_u32
-            .checked_shr(context.level)
-            .is_some_and(|root_size_b4| {
-                context.tile_origin_b4_x.is_multiple_of(root_size_b4)
-                    && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
-            });
+    let superres_i420 = context.superres_enabled && layout == PixelLayout::I420;
+    let dimensions_supported = if superres_i420 {
+        context.frame_width >= 4
+            && context.frame_height >= 4
+            && padded_block_width == Some(context.block_width)
+            && padded_block_height == Some(context.block_height)
+            && context.single_tile
+            && context.block_x == 0
+            && context.block_y == 0
+            && context.tile_origin_b4_x == 0
+            && context.tile_origin_b4_y == 0
+            && context.block_width == context.frame_block_width
+            && context.block_height == context.frame_block_height
+            && matches!(context.level, 0 | 1)
+    } else {
+        !context.superres_enabled
+            && context.frame_width != 0
+            && context.frame_height != 0
+            && padded_block_width == Some(context.block_width)
+            && padded_block_height == Some(context.block_height)
+            && context.upscaled_width == context.frame_width
+            && context.block_x == 0
+            && context.block_y == 0
+            && matches!(context.level, 0 | 1)
+            && context
+                .tile_origin_b4_x
+                .checked_add(context.block_width)
+                .is_some_and(|end| end <= context.frame_block_width)
+            && context
+                .tile_origin_b4_y
+                .checked_add(context.block_height)
+                .is_some_and(|end| end <= context.frame_block_height)
+            && 32_u32
+                .checked_shr(context.level)
+                .is_some_and(|root_size_b4| {
+                    context.tile_origin_b4_x.is_multiple_of(root_size_b4)
+                        && context.tile_origin_b4_y.is_multiple_of(root_size_b4)
+                })
+    };
     let references_match = inter_context.references.iter().all(|reference| {
+        let geometry_matches = if superres_i420 {
+            reference.surface.upscaled_width == context.upscaled_width
+                && reference.surface.frame_height == context.frame_height
+        } else {
+            reference.surface.coded_width == context.upscaled_width && !reference.scale.scaled
+        };
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
             && reference.surface.layout == layout
-            && reference.surface.coded_width == context.upscaled_width
-            && !reference.scale.scaled
+            && geometry_matches
             && matches!(
                 reference.global_motion.kind,
                 GlobalMotionType::Identity | GlobalMotionType::Translation
@@ -12499,13 +12524,10 @@ fn complete_lossless_inter_color_reconstruction_context(
         && !quantization.using_matrix
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
-        && !context.superres_enabled
-        && context.upscaled_width == context.frame_width
         && !context.allow_intrabc
         && !context.skip_mode_enabled
         && inter_context.skip_mode_references.is_none()
         && context.frame_tools.cdef.is_none()
-        && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
         && context.frame_tools.loop_filter.level_y == [0; 2]
