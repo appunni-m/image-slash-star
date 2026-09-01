@@ -3291,6 +3291,28 @@ fn inter_lossy_only_4x4_grid_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Mode-1 lossy 4:2:0 blocks wider or taller than one 64px transform are
+/// traversed as a causal 64px chunk grid. Keep the first chunked tranche
+/// exact-visible and 8-bit so no clipped-edge or high-depth transform state
+/// can enter the still-bounded compositor.
+fn inter_lossy_wide_chunk_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && layout == PixelLayout::I420
+        && bit_depth == 8
+        && quantization.sample_depth.bits() == 8
+        && transform_mode == 1
+        && matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 fn inter_lossless_grid_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -4335,6 +4357,11 @@ enum InterTransformPlan {
         luma_height: u32,
         layout: PixelLayout,
     },
+    LossyWideChunked {
+        luma_width: u32,
+        luma_height: u32,
+        layout: PixelLayout,
+    },
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
@@ -4381,6 +4408,7 @@ fn decode_inter_transform_size(
     eight_bit: bool,
     lossless_grid_geometry: bool,
     lossy_grid_geometry: bool,
+    lossy_wide_chunk_geometry: bool,
     block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
@@ -4477,6 +4505,17 @@ fn decode_inter_transform_size(
             }
         }
         return Ok(InterTransformPlan::Single(TxSize::Tx4x4));
+    }
+    if lossy_wide_chunk_geometry && transform_mode == 1 {
+        let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
+        if exact_geometry {
+            let (luma_width, luma_height) = block_size.pixel_dimensions();
+            return Ok(InterTransformPlan::LossyWideChunked {
+                luma_width,
+                luma_height,
+                layout,
+            });
+        }
     }
     if transform_mode != 2 {
         return Ok(InterTransformPlan::Single(max_tx));
@@ -4598,6 +4637,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_wide_chunk_geometry = inter_lossy_wide_chunk_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     // The generic lossless grid is depth-parametric and covers the complete
     // 4..=128px block family. Keep the narrower high-depth admission for
     // lossy inter leaves, whose transform/motion compositor is still bounded
@@ -4620,6 +4668,7 @@ fn decode_inter_leaf(
     if !inter_single_transform_geometry_supported(node.block_size, layout)
         && !lossless_grid_geometry
         && !lossy_grid_geometry
+        && !lossy_wide_chunk_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -5190,6 +5239,7 @@ fn decode_inter_leaf(
         context.bit_depth == 8,
         lossless_grid_geometry,
         lossy_grid_geometry,
+        lossy_wide_chunk_geometry,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
@@ -5198,59 +5248,68 @@ fn decode_inter_leaf(
             return Ok(Err(super::block::PortableUnavailable));
         }
     };
-    let (tx_size, transform_split, lossless_transform, lossy_transform_grid) = match transform_plan
-    {
-        InterTransformPlan::Single(tx_size) => (tx_size, false, false, false),
-        InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false),
-        InterTransformPlan::LossyOnly4x4Grid {
-            layout: plan_layout,
-            ..
-        } => {
-            if plan_layout != layout {
-                return Ok(Err(super::block::PortableUnavailable));
+    let (tx_size, transform_split, lossless_transform, lossy_transform_grid, lossy_wide_chunked) =
+        match transform_plan {
+            InterTransformPlan::Single(tx_size) => (tx_size, false, false, false, false),
+            InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false, false),
+            InterTransformPlan::LossyOnly4x4Grid {
+                layout: plan_layout,
+                ..
+            } => {
+                if plan_layout != layout {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (TxSize::Tx4x4, false, false, true, false)
             }
-            (TxSize::Tx4x4, false, false, true)
-        }
-        InterTransformPlan::LosslessB8I420
-        | InterTransformPlan::LosslessB8I422
-        | InterTransformPlan::LosslessB8I444 => (TxSize::Tx8x8, false, true, false),
-        InterTransformPlan::LosslessB16I420
-        | InterTransformPlan::LosslessB16I422
-        | InterTransformPlan::LosslessB16I444 => (TxSize::Tx16x16, false, true, false),
-        InterTransformPlan::LosslessB8x16I420
-        | InterTransformPlan::LosslessB8x16I422
-        | InterTransformPlan::LosslessB8x16I444 => (TxSize::Tx8x16, false, true, false),
-        InterTransformPlan::LosslessB16x8I420
-        | InterTransformPlan::LosslessB16x8I422
-        | InterTransformPlan::LosslessB16x8I444 => (TxSize::Tx16x8, false, true, false),
-        InterTransformPlan::LosslessB4I420
-        | InterTransformPlan::LosslessB4I422
-        | InterTransformPlan::LosslessB4I444 => (TxSize::Tx4x4, false, true, false),
-        InterTransformPlan::LosslessB4x8I420
-        | InterTransformPlan::LosslessB4x8I422
-        | InterTransformPlan::LosslessB4x8I444 => (TxSize::Tx4x8, false, true, false),
-        InterTransformPlan::LosslessB8x4I420
-        | InterTransformPlan::LosslessB8x4I422
-        | InterTransformPlan::LosslessB8x4I444 => (TxSize::Tx8x4, false, true, false),
-        InterTransformPlan::LosslessB4x16I420
-        | InterTransformPlan::LosslessB4x16I422
-        | InterTransformPlan::LosslessB4x16I444 => (TxSize::Tx4x16, false, true, false),
-        InterTransformPlan::LosslessB16x4I420
-        | InterTransformPlan::LosslessB16x4I422
-        | InterTransformPlan::LosslessB16x4I444 => (TxSize::Tx16x4, false, true, false),
-        InterTransformPlan::LosslessGrid {
-            luma_width,
-            luma_height,
-            layout: plan_layout,
-        } => {
-            if plan_layout != layout
-                || (luma_width, luma_height) != node.block_size.pixel_dimensions()
-            {
-                return Ok(Err(super::block::PortableUnavailable));
+            InterTransformPlan::LossyWideChunked {
+                layout: plan_layout,
+                ..
+            } => {
+                if plan_layout != layout {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (TxSize::Tx64x64, false, false, false, true)
             }
-            (node.block_size.maximum_luma_tx(), false, true, false)
-        }
-    };
+            InterTransformPlan::LosslessB8I420
+            | InterTransformPlan::LosslessB8I422
+            | InterTransformPlan::LosslessB8I444 => (TxSize::Tx8x8, false, true, false, false),
+            InterTransformPlan::LosslessB16I420
+            | InterTransformPlan::LosslessB16I422
+            | InterTransformPlan::LosslessB16I444 => (TxSize::Tx16x16, false, true, false, false),
+            InterTransformPlan::LosslessB8x16I420
+            | InterTransformPlan::LosslessB8x16I422
+            | InterTransformPlan::LosslessB8x16I444 => (TxSize::Tx8x16, false, true, false, false),
+            InterTransformPlan::LosslessB16x8I420
+            | InterTransformPlan::LosslessB16x8I422
+            | InterTransformPlan::LosslessB16x8I444 => (TxSize::Tx16x8, false, true, false, false),
+            InterTransformPlan::LosslessB4I420
+            | InterTransformPlan::LosslessB4I422
+            | InterTransformPlan::LosslessB4I444 => (TxSize::Tx4x4, false, true, false, false),
+            InterTransformPlan::LosslessB4x8I420
+            | InterTransformPlan::LosslessB4x8I422
+            | InterTransformPlan::LosslessB4x8I444 => (TxSize::Tx4x8, false, true, false, false),
+            InterTransformPlan::LosslessB8x4I420
+            | InterTransformPlan::LosslessB8x4I422
+            | InterTransformPlan::LosslessB8x4I444 => (TxSize::Tx8x4, false, true, false, false),
+            InterTransformPlan::LosslessB4x16I420
+            | InterTransformPlan::LosslessB4x16I422
+            | InterTransformPlan::LosslessB4x16I444 => (TxSize::Tx4x16, false, true, false, false),
+            InterTransformPlan::LosslessB16x4I420
+            | InterTransformPlan::LosslessB16x4I422
+            | InterTransformPlan::LosslessB16x4I444 => (TxSize::Tx16x4, false, true, false, false),
+            InterTransformPlan::LosslessGrid {
+                luma_width,
+                luma_height,
+                layout: plan_layout,
+            } => {
+                if plan_layout != layout
+                    || (luma_width, luma_height) != node.block_size.pixel_dimensions()
+                {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (node.block_size.maximum_luma_tx(), false, true, false, false)
+            }
+        };
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = match transform_plan {
         InterTransformPlan::LosslessGrid {
@@ -5259,6 +5318,11 @@ fn decode_inter_leaf(
             ..
         } => (luma_width, luma_height),
         InterTransformPlan::LossyOnly4x4Grid {
+            luma_width,
+            luma_height,
+            ..
+        } => (luma_width, luma_height),
+        InterTransformPlan::LossyWideChunked {
             luma_width,
             luma_height,
             ..
@@ -5321,7 +5385,7 @@ fn decode_inter_leaf(
     if let Some(chroma_tx) = chroma_tx {
         let (chroma_tx_width, chroma_tx_height) = chroma_tx.pixel_dimensions();
         let (chroma_context_width, chroma_context_height) =
-            if lossless_transform || lossy_transform_grid {
+            if lossless_transform || lossy_transform_grid || lossy_wide_chunked {
                 let chroma_sampling = block_chroma_sampling
                     .ok_or_else(|| malformed("inter lossless chroma sampling is unavailable"))?;
                 let (chroma_width, chroma_height, _, _) = super::block::generic_plane_geometry(
@@ -5395,7 +5459,7 @@ fn decode_inter_leaf(
     let luma_block_height = usize::try_from(node.block_size.pixel_dimensions().1)
         .map_err(|_| malformed("inter luma block height exceeds usize"))?;
     let (luma_txb_skipped, transform) =
-        if transform_split || lossless_transform || lossy_transform_grid {
+        if transform_split || lossless_transform || lossy_transform_grid || lossy_wide_chunked {
             (true, super::block::Av1TransformType::DctDct)
         } else {
             let txb_skipped = block_decoder
@@ -5513,6 +5577,45 @@ fn decode_inter_leaf(
                 coefficient_contexts,
                 obmc,
                 inter_intra,
+            )
+        }
+    } else if lossy_wide_chunked {
+        if compound {
+            let second = second_state
+                .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
+            block_decoder.decode_inter_compound_translation_lossy_wide_chunked(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                prepared_quantization,
+                tools,
+                [first_state.surface, second.surface],
+                [first_state.scale, second.scale],
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions,
+                compound_blend.ok_or_else(|| malformed("compound blend is missing"))?,
+                filters,
+                block_skipped,
+                coefficient_contexts,
+            )
+        } else {
+            block_decoder.decode_inter_translation_lossy_wide_chunked(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                block_skipped,
+                prepared_quantization,
+                tools,
+                first_state.surface,
+                first_state.scale,
+                context.tile_origin_b4_x.saturating_add(node.x),
+                context.tile_origin_b4_y.saturating_add(node.y),
+                motions[0],
+                filters,
+                coefficient_contexts,
             )
         }
     } else if lossy_transform_grid {

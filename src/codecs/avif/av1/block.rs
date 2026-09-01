@@ -15430,12 +15430,12 @@ fn decode_inter_lossy_terminal(
     let context_width = tx_width / 4;
     let context_height = tx_height / 4;
     let bounded_transform = tx_width <= 32 && tx_height <= 32;
-    // AV1's 32x64 and 64x32 terminals carry a compact 32x32 coefficient
-    // window but reconstruct across the full 64-pixel axis.  The generic
-    // inverse-transform path is already dimension-aware for these exact
-    // DCT-only shapes; keep the admission narrow so the still-unwired
-    // 64x64/non-DCT terminal families cannot fall through this compositor.
-    let wide_dct_transform = matches!(tx_size, TxSize::Tx32x64 | TxSize::Tx64x32)
+    // AV1's 32x64, 64x32, and chunk-local 64x64 terminals carry a compact
+    // coefficient window but reconstruct across a 64-pixel axis.  The
+    // generic inverse-transform path is already dimension-aware for these
+    // exact DCT-only shapes; callers gate the square form to the explicit
+    // 64px chunk compositor so a direct B64x64 terminal cannot fall through.
+    let wide_dct_transform = matches!(tx_size, TxSize::Tx32x64 | TxSize::Tx64x32 | TxSize::Tx64x64)
         && transform == Av1TransformType::DctDct;
     let skipped_large_transform = txb_skipped && tx_width <= 64 && tx_height <= 64;
     (above.len() == context_width
@@ -48500,6 +48500,11 @@ enum InterTransformPlan {
         luma_height: u32,
         sampling: ChromaSampling,
     },
+    LossyWideChunked {
+        luma_width: u32,
+        luma_height: u32,
+        sampling: ChromaSampling,
+    },
     LosslessB8I420,
     LosslessB8I422,
     LosslessB8I444,
@@ -48580,6 +48585,10 @@ fn lossy_only_4x4_grid_block_supported(block_size: BlockSize) -> bool {
             | BlockSize::B64x32
             | BlockSize::B64x64
     )
+}
+
+fn lossy_wide_chunked_block_supported(block_size: BlockSize) -> bool {
+    matches!(block_size, BlockSize::B64x128 | BlockSize::B128x64)
 }
 
 fn inherited_inter_chroma_transform(
@@ -49495,6 +49504,109 @@ impl Lossy420Decoder {
         )
     }
 
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "lossy 64px chunk reconstruction carries block, frame, prediction, and residual state"
+    )]
+    pub(super) fn decode_inter_translation_lossy_wide_chunked(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        block_skipped: bool,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        reference: &FrameSurface,
+        scale: ScaleFactors,
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motion: MotionVector,
+        filters: [InterpolationFilter; 2],
+        coefficient_contexts: InterCoefficientContexts,
+    ) -> PortableResult<FirstLeaf> {
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references: [reference, reference],
+                scales: [scale, scale],
+                motions: [motion, MotionVector::ZERO],
+                block_x_b4,
+                block_y_b4,
+                compound: None,
+                inter_intra: None,
+                obmc: None,
+            },
+            block_skipped,
+            InterTransformPlan::LossyWideChunked {
+                luma_width,
+                luma_height,
+                sampling: ChromaSampling::Subsampled420,
+            },
+            filters,
+            coefficient_contexts,
+            |_, _| Err(PortableUnavailable),
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "compound lossy 64px chunk reconstruction carries block, frame, prediction, and residual state"
+    )]
+    pub(super) fn decode_inter_compound_translation_lossy_wide_chunked(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        references: [&FrameSurface; 2],
+        scales: [ScaleFactors; 2],
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motions: [MotionVector; 2],
+        compound: PreparedCompound,
+        filters: [InterpolationFilter; 2],
+        block_skipped: bool,
+        coefficient_contexts: InterCoefficientContexts,
+    ) -> PortableResult<FirstLeaf> {
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references,
+                scales,
+                motions,
+                block_x_b4,
+                block_y_b4,
+                compound: Some(compound),
+                inter_intra: None,
+                obmc: None,
+            },
+            block_skipped,
+            InterTransformPlan::LossyWideChunked {
+                luma_width,
+                luma_height,
+                sampling: ChromaSampling::Subsampled420,
+            },
+            filters,
+            coefficient_contexts,
+            |_, _| Err(PortableUnavailable),
+        )
+    }
+
     fn lossless_inter_transform_plan(
         &self,
         block_size: BlockSize,
@@ -49750,6 +49862,7 @@ impl Lossy420Decoder {
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
+        let lossy_wide = matches!(transform_plan, InterTransformPlan::LossyWideChunked { .. });
         // The first reachable lossy 64-axis tranche is deliberately narrow:
         // exact 8-bit 4:2:0 B32x64/B64x32 mode-1 (or an unsplit mode-2)
         // terminals.  Their luma transform is forced DCT_DCT by the AV1
@@ -49775,6 +49888,19 @@ impl Lossy420Decoder {
             }
         ) {
             wide_lossy_single.then_some(()).portable()?;
+        }
+        // A lossy TX64X64 is valid only as one terminal of the explicit
+        // B64x128/B128x64 mode-1 chunk grid.  Keep the otherwise similar
+        // direct B64x64 path unavailable until its independent syntax and
+        // context evidence is wired.
+        if matches!(
+            transform_plan,
+            InterTransformPlan::Single {
+                tx_size: TxSize::Tx64x64,
+                ..
+            }
+        ) {
+            return Err(PortableUnavailable);
         }
         let lossless_wide = matches!(
             transform_plan,
@@ -49814,9 +49940,25 @@ impl Lossy420Decoder {
             .then_some(())
             .portable()?;
         }
+        if let InterTransformPlan::LossyWideChunked {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (sampling == ChromaSampling::Subsampled420
+                && sampling == chroma_sampling
+                && tools.sample_depth == SampleDepth::EIGHT
+                && tools.transform_mode == 1
+                && !quantization.segment_lossless
+                && lossy_wide_chunked_block_supported(block_size)
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
         let lossless_grid =
             lossless_b8 || lossless_b16 || lossless_rect || lossless_small || lossless_large;
-        let grid_transform = lossless_grid || lossy_grid;
+        let grid_transform = lossless_grid || lossy_grid || lossy_wide;
         let lossless_i422 = matches!(
             transform_plan,
             InterTransformPlan::LosslessB8I422
@@ -49992,6 +50134,8 @@ impl Lossy420Decoder {
                 lossless_large && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_lossy_grid =
                 lossy_grid && (visible_width, visible_height) == block_size.pixel_dimensions();
+            let exact_lossy_wide =
+                lossy_wide && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_geometry = (split_b8 && exact_b8)
                 || (grid_transform
                     && ((lossless_b8 && exact_b8)
@@ -49999,7 +50143,8 @@ impl Lossy420Decoder {
                         || (lossless_rect && (exact_b8x16 || exact_b16x8))
                         || (lossless_small && exact_small)
                         || exact_large
-                        || exact_lossy_grid));
+                        || exact_lossy_grid
+                        || exact_lossy_wide));
             (exact_geometry
                 && matches!(
                     chroma_sampling,
@@ -50030,6 +50175,9 @@ impl Lossy420Decoder {
             InterTransformPlan::SplitB8 => (TxSize::Tx8x8, false, Av1TransformType::DctDct),
             InterTransformPlan::LossyOnly4x4Grid { .. } => {
                 (TxSize::Tx4x4, true, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LossyWideChunked { .. } => {
+                (TxSize::Tx64x64, true, Av1TransformType::DctDct)
             }
             InterTransformPlan::LosslessB8I420
             | InterTransformPlan::LosslessB8I422
@@ -50152,6 +50300,7 @@ impl Lossy420Decoder {
             chroma_tx.unwrap_or(luma_tx_size),
         ];
         let geometries = [y_geometry, u_geometry, v_geometry];
+        let mut wide_predictions: [Option<Vec<u16>>; 3] = [None, None, None];
         for plane in 0..plane_count {
             let geometry = geometries[plane];
             let tx_size = tx_sizes[plane];
@@ -50352,6 +50501,10 @@ impl Lossy420Decoder {
                     block_size,
                     obmc,
                 )?;
+            }
+            if lossy_wide {
+                *wide_predictions.get_mut(plane).portable()? = Some(prediction);
+                continue;
             }
             if lossy_grid && plane == 0 {
                 let (grid_contexts, grid_transform) = self.decode_inter_lossy_plane_grid(
@@ -50563,6 +50716,31 @@ impl Lossy420Decoder {
                 chroma_bottom_contexts[plane - 1] = [contexts[plane]; LOSSLESS_GRID_EDGE_CAPACITY];
             }
         }
+        if lossy_wide {
+            let [Some(y_prediction), Some(u_prediction), Some(v_prediction)] = wide_predictions
+            else {
+                return Err(PortableUnavailable);
+            };
+            let grid_contexts = self.decode_inter_lossy_wide_chunks(
+                decoder,
+                [&y_prediction, &u_prediction, &v_prediction],
+                &mut rasters,
+                predecoded_skip,
+                quantization,
+                tools,
+                coefficient_contexts,
+            )?;
+            for plane in 0..3 {
+                contexts[plane] = grid_contexts[plane].bottom_right;
+                if plane == 0 {
+                    luma_right_contexts = grid_contexts[plane].right;
+                    luma_bottom_contexts = grid_contexts[plane].bottom;
+                } else {
+                    chroma_right_contexts[plane - 1] = grid_contexts[plane].right;
+                    chroma_bottom_contexts[plane - 1] = grid_contexts[plane].bottom;
+                }
+            }
+        }
         let [y, u, v] = rasters;
         let y = y.into_visible_plane()?;
         let planes = if monochrome {
@@ -50590,12 +50768,13 @@ impl Lossy420Decoder {
         let legacy_chroma_bottom_contexts = std::array::from_fn(|plane| {
             std::array::from_fn(|index| chroma_bottom_contexts[plane][index])
         });
-        let wide_coefficient_contexts = lossless_wide.then_some(CoefficientEdgeContexts32 {
-            luma_right: luma_right_contexts,
-            luma_bottom: luma_bottom_contexts,
-            chroma_right: chroma_right_contexts,
-            chroma_bottom: chroma_bottom_contexts,
-        });
+        let wide_coefficient_contexts =
+            (lossless_wide || lossy_wide).then_some(CoefficientEdgeContexts32 {
+                luma_right: luma_right_contexts,
+                luma_bottom: luma_bottom_contexts,
+                chroma_right: chroma_right_contexts,
+                chroma_bottom: chroma_bottom_contexts,
+            });
         Ok(FirstLeaf {
             width: visible_width,
             height: visible_height,
@@ -51160,6 +51339,217 @@ impl Lossy420Decoder {
             right,
             bottom,
         })
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the bounded 64px lossy chunk compositor keeps all plane predictions, entropy edges, quantization, and rasters explicit"
+    )]
+    fn decode_inter_lossy_wide_chunks(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        predictions: [&[u16]; 3],
+        rasters: &mut [PrivatePlaneRaster; 3],
+        block_skipped: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+    ) -> PortableResult<[LosslessGridContexts; 3]> {
+        let (luma_width, luma_height) = (rasters[0].coded_width, rasters[0].coded_height);
+        (matches!((luma_width, luma_height), (64, 128) | (128, 64))
+            && tools.sample_depth == SampleDepth::EIGHT
+            && tools.transform_mode == 1
+            && !quantization.segment_lossless)
+            .then_some(())
+            .portable()?;
+        let chunk_count_x = luma_width / 64;
+        let chunk_count_y = luma_height / 64;
+        (chunk_count_x <= 2
+            && chunk_count_y <= 2
+            && chunk_count_x.saturating_mul(chunk_count_y) == 2)
+            .then_some(())
+            .portable()?;
+        let geometries = [
+            (luma_width, luma_height, 64_usize, 64_usize, TxSize::Tx64x64),
+            (
+                rasters[1].coded_width,
+                rasters[1].coded_height,
+                32_usize,
+                32_usize,
+                TxSize::Tx32x32,
+            ),
+            (
+                rasters[2].coded_width,
+                rasters[2].coded_height,
+                32_usize,
+                32_usize,
+                TxSize::Tx32x32,
+            ),
+        ];
+        for (plane, (coded_width, coded_height, chunk_width, chunk_height, _)) in
+            geometries.iter().copied().enumerate()
+        {
+            let expected = if plane == 0 {
+                matches!((coded_width, coded_height), (64, 128) | (128, 64))
+            } else {
+                matches!((coded_width, coded_height), (32, 64) | (64, 32))
+            };
+            (expected
+                && predictions[plane].len() == coded_width.checked_mul(coded_height).portable()?
+                && coded_width.is_multiple_of(chunk_width)
+                && coded_height.is_multiple_of(chunk_height)
+                && rasters[plane].active_width == coded_width
+                && rasters[plane].active_height == coded_height)
+                .then_some(())
+                .portable()?;
+        }
+        let mut residual_contexts = [[[0x40_u8; 2]; 2]; 3];
+        for chunk_y in 0..chunk_count_y {
+            for chunk_x in 0..chunk_count_x {
+                for plane in 0..3 {
+                    let (coded_width, coded_height, chunk_width, chunk_height, tx_size) =
+                        geometries[plane];
+                    let context_width = chunk_width / 4;
+                    let context_height = chunk_height / 4;
+                    let mut above = [0x40_u8; 16];
+                    if chunk_y == 0 {
+                        let offset = chunk_x.checked_mul(context_width).portable()?;
+                        let end = offset.checked_add(context_width).portable()?;
+                        above[..context_width].copy_from_slice(
+                            coefficient_contexts.above[plane]
+                                .get(offset..end)
+                                .portable()?,
+                        );
+                    } else {
+                        above[..context_width].fill(residual_contexts[plane][chunk_y - 1][chunk_x]);
+                    }
+                    let mut left = [0x40_u8; 16];
+                    if chunk_x == 0 {
+                        let offset = chunk_y.checked_mul(context_height).portable()?;
+                        let end = offset.checked_add(context_height).portable()?;
+                        left[..context_height].copy_from_slice(
+                            coefficient_contexts.left[plane]
+                                .get(offset..end)
+                                .portable()?,
+                        );
+                    } else {
+                        left[..context_height].fill(residual_contexts[plane][chunk_y][chunk_x - 1]);
+                    }
+                    let above = &above[..context_width];
+                    let left = &left[..context_height];
+                    let txb_skipped = self.decode_inter_txb_skip(
+                        decoder,
+                        plane,
+                        tx_size,
+                        coded_width,
+                        coded_height,
+                        above,
+                        left,
+                        block_skipped,
+                    )?;
+                    let terminal = decode_inter_lossy_terminal(
+                        decoder,
+                        plane,
+                        &mut self.cdfs,
+                        &mut self.large_coeff_arena,
+                        quantization,
+                        tx_size,
+                        coded_width,
+                        coded_height,
+                        above,
+                        left,
+                        txb_skipped,
+                        Av1TransformType::DctDct,
+                    )?;
+                    let coefficients = if terminal.skipped {
+                        None
+                    } else {
+                        Some(
+                            self.large_coeff_arena
+                                .coefficients
+                                .get(..terminal.coefficient_count)
+                                .portable()?,
+                        )
+                    };
+                    let offset_x = chunk_x.checked_mul(chunk_width).portable()?;
+                    let offset_y = chunk_y.checked_mul(chunk_height).portable()?;
+                    let mut chunk_prediction = Vec::new();
+                    chunk_prediction
+                        .try_reserve_exact(chunk_width.checked_mul(chunk_height).portable()?)
+                        .map_err(|_| PortableUnavailable)?;
+                    for row in 0..chunk_height {
+                        let source_y = offset_y.checked_add(row).portable()?;
+                        let start = source_y
+                            .checked_mul(coded_width)
+                            .and_then(|value| value.checked_add(offset_x))
+                            .portable()?;
+                        let end = start.checked_add(chunk_width).portable()?;
+                        chunk_prediction
+                            .extend_from_slice(predictions[plane].get(start..end).portable()?);
+                    }
+                    let ReconstructionScratch { transform, .. } = &mut self.reconstruction_scratch;
+                    let TransformScratch { rows, residual, .. } = transform;
+                    reconstruct_full_unsplit_prediction_in_place(
+                        &mut chunk_prediction,
+                        CoeffBlockRef {
+                            width: chunk_width,
+                            height: chunk_height,
+                            coefficients,
+                            transform: match terminal.transform {
+                                GenericTerminalTransform::Lossy(value) => value,
+                                GenericTerminalTransform::LosslessWht4x4 => {
+                                    return Err(PortableUnavailable);
+                                }
+                            },
+                        },
+                        tools.sample_depth,
+                        rows,
+                        residual,
+                    )?;
+                    rasters[plane].commit_transform(
+                        offset_x,
+                        offset_y,
+                        chunk_width,
+                        chunk_height,
+                        &chunk_prediction,
+                        tools.sample_depth,
+                    )?;
+                    residual_contexts[plane][chunk_y][chunk_x] = terminal.residual_context;
+                }
+            }
+        }
+        let mut contexts = [LosslessGridContexts {
+            bottom_right: 0x40,
+            right: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
+            bottom: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
+        }; 3];
+        for plane in 0..3 {
+            let (_, _, chunk_width, chunk_height, _) = geometries[plane];
+            let context_width = chunk_width / 4;
+            let context_height = chunk_height / 4;
+            let last_column = chunk_count_x.saturating_sub(1);
+            let last_row = chunk_count_y.saturating_sub(1);
+            for chunk_y in 0..chunk_count_y {
+                let start = chunk_y.checked_mul(context_height).portable()?;
+                let end = start.checked_add(context_height).portable()?;
+                contexts[plane]
+                    .right
+                    .get_mut(start..end)
+                    .portable()?
+                    .fill(residual_contexts[plane][chunk_y][last_column]);
+            }
+            for chunk_x in 0..chunk_count_x {
+                let start = chunk_x.checked_mul(context_width).portable()?;
+                let end = start.checked_add(context_width).portable()?;
+                contexts[plane]
+                    .bottom
+                    .get_mut(start..end)
+                    .portable()?
+                    .fill(residual_contexts[plane][last_row][chunk_x]);
+            }
+            contexts[plane].bottom_right = residual_contexts[plane][last_row][last_column];
+        }
+        Ok(contexts)
     }
 
     #[expect(
