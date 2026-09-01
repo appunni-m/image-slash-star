@@ -4205,7 +4205,7 @@ fn decode_inter_transform_type(
 #[derive(Clone, Copy)]
 enum InterTransformPlan {
     Single(TxSize),
-    SplitB8Subsampled,
+    SplitB8,
     LosslessB8I420,
 }
 
@@ -4273,13 +4273,16 @@ fn decode_inter_transform_size(
     let split = decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
     if split {
         if block_size == BlockSize::B8x8
-            && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
+            && matches!(
+                layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
             && visible_width == 8
             && visible_height == 8
             && eight_bit
             && max_tx == TxSize::Tx8x8
         {
-            return Ok(InterTransformPlan::SplitB8Subsampled);
+            return Ok(InterTransformPlan::SplitB8);
         }
         return Err(super::block::PortableUnavailable);
     }
@@ -4925,7 +4928,7 @@ fn decode_inter_leaf(
     };
     let (tx_size, transform_split, lossless_transform) = match transform_plan {
         InterTransformPlan::Single(tx_size) => (tx_size, false, false),
-        InterTransformPlan::SplitB8Subsampled => (TxSize::Tx8x8, true, false),
+        InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false),
         InterTransformPlan::LosslessB8I420 => (TxSize::Tx8x8, false, true),
     };
     let quantization = prepared_quantization.quantization;

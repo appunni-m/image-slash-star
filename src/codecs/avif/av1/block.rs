@@ -48456,7 +48456,7 @@ enum InterTransformPlan {
         txb_skipped: bool,
         transform: Av1TransformType,
     },
-    SplitB8Subsampled,
+    SplitB8,
     LosslessB8I420,
 }
 
@@ -49183,7 +49183,7 @@ impl Lossy420Decoder {
                 obmc,
             },
             false,
-            InterTransformPlan::SplitB8Subsampled,
+            InterTransformPlan::SplitB8,
             filters,
             coefficient_contexts,
             decode_transform_type,
@@ -49233,7 +49233,7 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             false,
-            InterTransformPlan::SplitB8Subsampled,
+            InterTransformPlan::SplitB8,
             filters,
             coefficient_contexts,
             decode_transform_type,
@@ -49433,12 +49433,14 @@ impl Lossy420Decoder {
             visible_width,
             visible_height,
         )?;
-        let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8Subsampled);
+        let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8);
         if split_b8 || lossless_b8 {
             (block_size == BlockSize::B8x8
                 && matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
+                    ChromaSampling::Full
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
                 )
                 && visible_width == 8
                 && visible_height == 8
@@ -49454,9 +49456,7 @@ impl Lossy420Decoder {
                 txb_skipped,
                 transform,
             } => (tx_size, txb_skipped, transform),
-            InterTransformPlan::SplitB8Subsampled => {
-                (TxSize::Tx8x8, false, Av1TransformType::DctDct)
-            }
+            InterTransformPlan::SplitB8 => (TxSize::Tx8x8, false, Av1TransformType::DctDct),
             InterTransformPlan::LosslessB8I420 => (TxSize::Tx8x8, false, Av1TransformType::DctDct),
         };
         let expected_luma = luma_tx_size;
