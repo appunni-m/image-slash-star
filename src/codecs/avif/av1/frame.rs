@@ -1037,7 +1037,6 @@ impl FrameState {
         };
         if surface.layout == PixelLayout::Monochrome {
             if !matches!(surface.depth.bits(), 8 | 10 | 12)
-                || surface.coded_width != surface.upscaled_width
                 || surface.render_width != surface.upscaled_width
                 || surface.render_height != surface.frame_height
             {

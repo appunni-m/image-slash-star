@@ -2645,11 +2645,7 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && (context.superres_enabled || context.upscaled_width == context.frame_width);
-    let film_grain_supported = if context.superres_enabled {
-        !context.frame_tools.film_grain_present
-    } else {
-        no_unsupported_film_grain(context)
-    };
+    let film_grain_supported = no_unsupported_film_grain(context);
     context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && context.monochrome
@@ -13710,7 +13706,9 @@ fn lossless_intra_monochrome_superres_restoration_supported(context: &FirstBlock
 /// Horizontal super-resolution is applied only after the complete coded frame
 /// is assembled. A restoration header is allowed to be present when every
 /// plane type is `NONE`; the bounded single-tile color helper below also
-/// admits one active Wiener/SGR unit per selected plane.
+/// admits one active Wiener/SGR unit per selected plane. Super-resolution
+/// film grain is admitted for I420 only; I422/I444 remain on their existing
+/// display-width restrictions.
 fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool {
     let active_restoration = lossless_intra_color_superres_restoration_supported(context);
     let layout_supported = context.subsampling_x || !context.subsampling_y;
@@ -13726,8 +13724,13 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && resize_geometry_supported;
+    let superres_i420_grain = context.superres_enabled
+        && context.subsampling_x
+        && context.subsampling_y
+        && context.restoration_types == [None; 3]
+        && no_unsupported_film_grain(context);
     let film_grain_supported = if context.superres_enabled {
-        !context.frame_tools.film_grain_present
+        !context.frame_tools.film_grain_present || superres_i420_grain
     } else {
         no_unsupported_film_grain(context)
     };
