@@ -6275,6 +6275,8 @@ fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
         && cdef.first_uv_strength.is_some()
 }
 
+/// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
+/// intra blocks (including palette) and intraBC remain outside this profile.
 fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> bool {
     !context.intra_frame
         && context.bit_depth == 8
@@ -6285,7 +6287,6 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
         && !context.all_lossless
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.allow_screen_content_tools
         && matches!(context.frame_tools.transform_mode, 0..=2)
         && inter_cdef_supported(context)
         && context.restoration_types == [None; 3]
