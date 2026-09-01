@@ -3436,6 +3436,28 @@ fn inter_lossy_i444_direct_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact mode-2 I444 rectangular-root split geometry.  The root owns two
+/// TX32x32 luma children and the same two-cell TX32 chroma grid; keep this
+/// exemption separate from the direct unsplit terminal above.
+fn inter_lossy_i444_rect_split_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && layout == PixelLayout::I444
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && transform_mode == 2
+        && quantization.segment_qindex > 0
+        && matches!(block_size, BlockSize::B32x64 | BlockSize::B64x32)
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 /// Exact mode-2 64-axis rectangular split geometry. These thin blocks retain
 /// one 64-pixel axis at the root and split into two TX32-sized children; keep
 /// this predicate separate from the mode-1 wide-terminal admission so the
@@ -5250,7 +5272,7 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB64x16);
         }
         if block_size == BlockSize::B32x64
-            && layout == PixelLayout::I420
+            && matches!(layout, PixelLayout::I420 | PixelLayout::I444)
             && visible_width == 32
             && visible_height == 64
             && split_b32x64_supported
@@ -5293,7 +5315,7 @@ fn decode_inter_transform_size(
             return Ok(InterTransformPlan::SplitB32x64);
         }
         if block_size == BlockSize::B64x32
-            && layout == PixelLayout::I420
+            && matches!(layout, PixelLayout::I420 | PixelLayout::I444)
             && visible_width == 64
             && visible_height == 32
             && split_b32x64_supported
@@ -5827,6 +5849,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_i444_rect_split_geometry = inter_lossy_i444_rect_split_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let lossy_thin64_split_geometry = inter_lossy_thin64_split_geometry_supported(
         node.block_size,
         layout,
@@ -5845,6 +5876,7 @@ fn decode_inter_leaf(
         let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
         let wide_lossy_geometry = lossy_wide_single_geometry
             || lossy_i444_direct_geometry
+            || lossy_i444_rect_split_geometry
             || lossy_square64_geometry
             || lossy_split64_geometry
             || lossy_wide_chunk_geometry
@@ -5870,6 +5902,7 @@ fn decode_inter_leaf(
         && !lossy_wide_mode2_geometry
         && !lossy_split64_geometry
         && !lossy_i444_direct_geometry
+        && !lossy_i444_rect_split_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -5878,6 +5911,7 @@ fn decode_inter_leaf(
         && !lossy_square64_geometry
         && !lossy_split64_geometry
         && !lossy_i444_direct_geometry
+        && !lossy_i444_rect_split_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -6646,6 +6680,10 @@ fn decode_inter_leaf(
         transform_plan,
         InterTransformPlan::LossyWideI444Direct { .. }
     );
+    let split_rect64_i444_chroma_grid = matches!(
+        transform_plan,
+        InterTransformPlan::SplitB32x64 | InterTransformPlan::SplitB64x32
+    ) && layout == PixelLayout::I444;
     let quantization = prepared_quantization.quantization;
     let (tx_width, tx_height) = match transform_plan {
         InterTransformPlan::LosslessGrid {
@@ -6757,6 +6795,7 @@ fn decode_inter_leaf(
                 || lossy_transform_grid
                 || lossy_wide_chunked
                 || lossy_i444_direct
+                || split_rect64_i444_chroma_grid
                 || split_b64_chroma_grid
             {
                 let chroma_sampling = block_chroma_sampling
