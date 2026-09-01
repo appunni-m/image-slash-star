@@ -12637,8 +12637,8 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
 /// samples, but this tranche keeps the surrounding frame state closed and
 /// single-tile so reference geometry is frame-global and every visited grid
 /// cell has a complete four-pixel extent. The super-resolution extension is
-/// limited to I420/I422/I444, whose coded result is resized once after
-/// reconstruction.
+/// limited to monochrome/I420/I422/I444, whose coded result is resized once
+/// after reconstruction.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -12671,10 +12671,10 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         });
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
-    let superres_color = context.superres_enabled
+    let superres_layout = context.superres_enabled
         && matches!(
             layout,
-            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
     let dimensions_supported = context.frame_width != 0
         && context.frame_height != 0
@@ -12682,7 +12682,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         && context.frame_height.is_multiple_of(4)
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
-        && (superres_color
+        && (superres_layout
             || (!context.superres_enabled && context.upscaled_width == context.frame_width))
         && context.block_x == 0
         && context.block_y == 0
@@ -12693,7 +12693,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         && context.block_height == context.frame_block_height
         && matches!(context.level, 0 | 1);
     let references_match = inter_context.references.iter().all(|reference| {
-        let geometry_matches = if superres_color {
+        let geometry_matches = if superres_layout {
             reference.surface.upscaled_width == context.upscaled_width
                 && reference.surface.frame_height == context.frame_height
         } else {

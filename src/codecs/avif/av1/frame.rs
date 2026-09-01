@@ -2464,18 +2464,28 @@ fn validate_tile_entropy_prefixes(
             if tiling.tile_count() == 1 && ranges.len() == 1 {
                 let restoration_plan = reconstruction.restoration;
                 if sequence.monochrome {
-                    if header.superres_enabled {
-                        return Err(malformed(
-                            "monochrome reconstruction carries an unsupported post-filter",
-                        ));
-                    }
                     let plane = reconstruction.into_monochrome_plane()?;
+                    let plane = if header.superres_enabled {
+                        let depth = SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
+                            malformed("super-resolution sample depth is unsupported")
+                        })?;
+                        resize::upscale_monochrome_plane(
+                            plane,
+                            header.frame_width,
+                            header.upscaled_width,
+                            header.frame_height,
+                            header.superres_denominator,
+                            depth,
+                        )?
+                    } else {
+                        plane
+                    };
                     let plane = if let Some(plan) = restoration_plan {
                         let depth = SampleDepth::new(sequence.bit_depth)
                             .ok_or_else(|| malformed("restoration sample depth is unsupported"))?;
                         restoration::restore_monochrome_plane(
                             plane,
-                            header.frame_width,
+                            header.upscaled_width,
                             header.frame_height,
                             plan,
                             depth,
