@@ -6317,8 +6317,9 @@ fn complete_inter_420_reconstruction_context(context: &FirstBlockContext) -> boo
 /// references, but this profile admits only leaves whose luma and chroma
 /// planes each fit one normative transform; multi-transform I422 leaves remain
 /// transactional until their transform-grid compositor is connected.
-/// Root-scoped delta-Q uses the shared prepared-quantization path; delta-LF
-/// remains closed until its loop-filter metadata path is independently proven.
+/// Root-scoped delta-Q and dynamic delta-LF use the shared prepared-
+/// quantization path; staged inter reference/mode metadata supplies the
+/// per-block filter-level class before publication.
 /// Checked frame deblocking and bounded CDEF are applied after complete tile
 /// assembly; restoration remains closed here. Validated film grain is applied
 /// only to a full assembled display copy after each tile is reconstructed.
@@ -6350,7 +6351,6 @@ fn complete_inter_422_reconstruction_context(
         && !context.skip_mode_enabled
         && !context.allow_intrabc
         && no_unsupported_film_grain(context)
-        && !context.frame_tools.delta_lf_present
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
