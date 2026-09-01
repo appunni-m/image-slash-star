@@ -48515,6 +48515,12 @@ struct LosslessGridContexts {
 }
 
 #[derive(Clone, Copy)]
+enum Tx4ChromaTransformSource {
+    Uniform(Av1TransformType),
+    VerticalPair([Av1TransformType; 2]),
+}
+
+#[derive(Clone, Copy)]
 enum InterTransformPlan {
     Single {
         tx_size: TxSize,
@@ -50292,6 +50298,13 @@ impl Lossy420Decoder {
         let split_b64 = matches!(transform_plan, InterTransformPlan::SplitB64);
         let split_b64_topology =
             matches!(transform_plan, InterTransformPlan::SplitB64Topology { .. });
+        let split_small_i422_chroma_grid = chroma_sampling == ChromaSampling::Subsampled422
+            && matches!(
+                (block_size, &transform_plan),
+                (BlockSize::B8x16, InterTransformPlan::SplitB8x16)
+                    | (BlockSize::B8x32, InterTransformPlan::SplitB8x32)
+                    | (BlockSize::B16x32, InterTransformPlan::SplitB16x32)
+            );
         // The direct lossy chroma-grid tranche is deliberately narrow: exact
         // depth-matched 4:2:2/4:4:4 terminals whose chroma plane can be
         // consumed by the bounded grid compositor, plus the existing 4:2:0
@@ -50558,9 +50571,11 @@ impl Lossy420Decoder {
                 .portable()?;
         }
         if split_b16x32 {
-            (block_size == BlockSize::B16x32
-                && chroma_sampling == ChromaSampling::Subsampled420
-                && tools.sample_depth == quantization.sample_depth
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B16x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
+            ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
                 && quantization.segment_qindex > 0
@@ -50572,6 +50587,7 @@ impl Lossy420Decoder {
             (matches!(
                 (block_size, chroma_sampling),
                 (BlockSize::B8x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B8x16, ChromaSampling::Subsampled422)
                     | (BlockSize::B16x8, ChromaSampling::Subsampled420)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -50585,6 +50601,7 @@ impl Lossy420Decoder {
             (matches!(
                 (block_size, chroma_sampling),
                 (BlockSize::B8x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B8x32, ChromaSampling::Subsampled422)
                     | (BlockSize::B32x8, ChromaSampling::Subsampled420)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -51138,6 +51155,7 @@ impl Lossy420Decoder {
             if !grid_transform
                 && !split_b64_chroma_grid
                 && !split_rect64_i444_chroma_grid
+                && !split_small_i422_chroma_grid
                 && !lossy_direct_chroma_grid
             {
                 (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
@@ -51193,6 +51211,7 @@ impl Lossy420Decoder {
             let (tx_width, tx_height) = if grid_transform
                 || (split_b64_chroma_grid && plane != 0)
                 || (split_rect64_i444_chroma_grid && plane != 0)
+                || (split_small_i422_chroma_grid && plane != 0)
                 || (lossy_direct_chroma_grid && plane != 0)
             {
                 (
@@ -51537,7 +51556,7 @@ impl Lossy420Decoder {
                 continue;
             }
             if split_b8x32 && plane == 0 {
-                let (split_contexts, split_right, split_bottom, split_transform) = self
+                let (split_contexts, split_right, split_bottom, split_transforms) = self
                     .decode_inter_split_luma_b8x32(
                         decoder,
                         &prediction,
@@ -51552,7 +51571,8 @@ impl Lossy420Decoder {
                 luma_bottom_contexts[..2].copy_from_slice(&split_bottom);
                 luma_transform_split = true;
                 luma_split_tx_size = Some(TxSize::Tx8x16);
-                luma_transform = split_transform;
+                luma_transform = split_transforms[0];
+                luma_rect_split_transforms = Some(split_transforms);
                 continue;
             }
             if split_b32x8 && plane == 0 {
@@ -51575,7 +51595,7 @@ impl Lossy420Decoder {
                 continue;
             }
             if split_b8x16 && plane == 0 {
-                let (split_contexts, split_right, split_bottom, split_transform) = self
+                let (split_contexts, split_right, split_bottom, split_transforms) = self
                     .decode_inter_split_luma_b8x16(
                         decoder,
                         &prediction,
@@ -51590,7 +51610,8 @@ impl Lossy420Decoder {
                 luma_bottom_contexts[..2].copy_from_slice(&split_bottom);
                 luma_transform_split = true;
                 luma_split_tx_size = Some(TxSize::Tx8x8);
-                luma_transform = split_transform;
+                luma_transform = split_transforms[0];
+                luma_rect_split_transforms = Some(split_transforms);
                 continue;
             }
             if split_b16x8 && plane == 0 {
@@ -51632,7 +51653,7 @@ impl Lossy420Decoder {
                 continue;
             }
             if split_b16x32 && plane == 0 {
-                let (split_contexts, split_right, split_bottom, split_transform) = self
+                let (split_contexts, split_right, split_bottom, split_transforms) = self
                     .decode_inter_split_luma_b16x32(
                         decoder,
                         &prediction,
@@ -51647,7 +51668,8 @@ impl Lossy420Decoder {
                 luma_bottom_contexts[..4].copy_from_slice(&split_bottom);
                 luma_transform_split = true;
                 luma_split_tx_size = Some(TxSize::Tx16x16);
-                luma_transform = split_transform;
+                luma_transform = split_transforms[0];
+                luma_rect_split_transforms = Some(split_transforms);
                 continue;
             }
             if split_b32 && plane == 0 {
@@ -51783,7 +51805,7 @@ impl Lossy420Decoder {
                         quantization,
                         tools,
                         coefficient_contexts,
-                        luma_transform,
+                        Tx4ChromaTransformSource::Uniform(luma_transform),
                     )?
                 } else {
                     self.decode_inter_chroma_grid(
@@ -51801,6 +51823,24 @@ impl Lossy420Decoder {
                         true,
                     )?
                 };
+                contexts[plane] = grid_contexts.bottom_right;
+                chroma_right_contexts[plane - 1] = grid_contexts.right;
+                chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
+                continue;
+            }
+            if split_small_i422_chroma_grid && plane != 0 {
+                let split_transforms = luma_rect_split_transforms.ok_or(PortableUnavailable)?;
+                let grid_contexts = self.decode_inter_lossy_chroma_tx4_grid(
+                    decoder,
+                    &prediction,
+                    &mut rasters[plane],
+                    plane,
+                    false,
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    Tx4ChromaTransformSource::VerticalPair(split_transforms),
+                )?;
                 contexts[plane] = grid_contexts.bottom_right;
                 chroma_right_contexts[plane - 1] = grid_contexts.right;
                 chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
@@ -52278,7 +52318,7 @@ impl Lossy420Decoder {
             &mut RangeDecoder<'_, '_, '_>,
             TxSize,
         ) -> PortableResult<Av1TransformType>,
-    ) -> PortableResult<([u8; 2], [u8; 8], [u8; 2], Av1TransformType)> {
+    ) -> PortableResult<([u8; 2], [u8; 8], [u8; 2], [Av1TransformType; 2])> {
         (prediction.len() == 256
             && raster.coded_width == 8
             && raster.coded_height == 32
@@ -52294,7 +52334,7 @@ impl Lossy420Decoder {
         let above: [u8; 2] = std::array::from_fn(|index| coefficient_contexts.above[0][index]);
         let left: [u8; 8] = std::array::from_fn(|index| coefficient_contexts.left[0][index]);
         let mut residual_contexts = [0x40_u8; 2];
-        let mut first_transform = Av1TransformType::DctDct;
+        let mut transforms = [Av1TransformType::DctDct; 2];
         for row in 0_usize..2 {
             let above_context = if row == 0 {
                 above
@@ -52319,9 +52359,7 @@ impl Lossy420Decoder {
             } else {
                 decode_transform_type(decoder, TxSize::Tx8x16)?
             };
-            if row == 0 {
-                first_transform = transform;
-            }
+            transforms[row] = transform;
             let terminal = decode_inter_lossy_terminal(
                 decoder,
                 0,
@@ -52384,7 +52422,7 @@ impl Lossy420Decoder {
         right[4..].fill(residual_contexts[1]);
         let mut bottom = [0x40_u8; 2];
         bottom.fill(residual_contexts[1]);
-        Ok((residual_contexts, right, bottom, first_transform))
+        Ok((residual_contexts, right, bottom, transforms))
     }
 
     #[expect(
@@ -52403,7 +52441,7 @@ impl Lossy420Decoder {
             &mut RangeDecoder<'_, '_, '_>,
             TxSize,
         ) -> PortableResult<Av1TransformType>,
-    ) -> PortableResult<([u8; 2], [u8; 4], [u8; 2], Av1TransformType)> {
+    ) -> PortableResult<([u8; 2], [u8; 4], [u8; 2], [Av1TransformType; 2])> {
         (prediction.len() == 128
             && raster.coded_width == 8
             && raster.coded_height == 16
@@ -52419,7 +52457,7 @@ impl Lossy420Decoder {
         let above: [u8; 2] = std::array::from_fn(|index| coefficient_contexts.above[0][index]);
         let left: [u8; 4] = std::array::from_fn(|index| coefficient_contexts.left[0][index]);
         let mut residual_contexts = [0x40_u8; 2];
-        let mut first_transform = Av1TransformType::DctDct;
+        let mut transforms = [Av1TransformType::DctDct; 2];
         for row in 0_usize..2 {
             let above_context = if row == 0 {
                 above
@@ -52444,9 +52482,7 @@ impl Lossy420Decoder {
             } else {
                 decode_transform_type(decoder, TxSize::Tx8x8)?
             };
-            if row == 0 {
-                first_transform = transform;
-            }
+            transforms[row] = transform;
             let terminal = decode_inter_lossy_terminal(
                 decoder,
                 0,
@@ -52509,7 +52545,7 @@ impl Lossy420Decoder {
         right[2..].fill(residual_contexts[1]);
         let mut bottom = [0x40_u8; 2];
         bottom.fill(residual_contexts[1]);
-        Ok((residual_contexts, right, bottom, first_transform))
+        Ok((residual_contexts, right, bottom, transforms))
     }
 
     #[expect(
@@ -53564,7 +53600,7 @@ impl Lossy420Decoder {
             &mut RangeDecoder<'_, '_, '_>,
             TxSize,
         ) -> PortableResult<Av1TransformType>,
-    ) -> PortableResult<([u8; 2], [u8; 8], [u8; 4], Av1TransformType)> {
+    ) -> PortableResult<([u8; 2], [u8; 8], [u8; 4], [Av1TransformType; 2])> {
         (prediction.len() == 512
             && raster.coded_width == 16
             && raster.coded_height == 32
@@ -53580,7 +53616,7 @@ impl Lossy420Decoder {
         let above: [u8; 4] = std::array::from_fn(|index| coefficient_contexts.above[0][index]);
         let left: [u8; 8] = std::array::from_fn(|index| coefficient_contexts.left[0][index]);
         let mut residual_contexts = [0x40_u8; 2];
-        let mut first_transform = Av1TransformType::DctDct;
+        let mut transforms = [Av1TransformType::DctDct; 2];
         for row in 0_usize..2 {
             let above_context = if row == 0 {
                 above
@@ -53605,9 +53641,7 @@ impl Lossy420Decoder {
             } else {
                 decode_transform_type(decoder, TxSize::Tx16x16)?
             };
-            if row == 0 {
-                first_transform = transform;
-            }
+            transforms[row] = transform;
             let terminal = decode_inter_lossy_terminal(
                 decoder,
                 0,
@@ -53670,7 +53704,7 @@ impl Lossy420Decoder {
         right[4..].fill(residual_contexts[1]);
         let mut bottom = [0x40_u8; 4];
         bottom.fill(residual_contexts[1]);
-        Ok((residual_contexts, right, bottom, first_transform))
+        Ok((residual_contexts, right, bottom, transforms))
     }
 
     #[expect(
@@ -54251,7 +54285,7 @@ impl Lossy420Decoder {
         quantization: LossyQuantization,
         tools: BlockTools,
         coefficient_contexts: InterCoefficientContexts,
-        luma_transform: Av1TransformType,
+        transform_source: Tx4ChromaTransformSource,
     ) -> PortableResult<LosslessGridContexts> {
         let coded_width = raster.coded_width;
         let coded_height = raster.coded_height;
@@ -54273,6 +54307,15 @@ impl Lossy420Decoder {
             .portable()?;
         let grid_width = coded_width.checked_div(4).portable()?;
         let grid_height = coded_height.checked_div(4).portable()?;
+        let rows_per_child = match transform_source {
+            Tx4ChromaTransformSource::Uniform(_) => None,
+            Tx4ChromaTransformSource::VerticalPair(_) => {
+                (grid_height > 0 && grid_height.is_multiple_of(2))
+                    .then_some(())
+                    .portable()?;
+                Some(grid_height.checked_div(2).portable()?)
+            }
+        };
         let above = coefficient_contexts.above[plane]
             .get(..grid_width)
             .portable()?;
@@ -54314,7 +54357,16 @@ impl Lossy420Decoder {
                     &above_context,
                     &left_context,
                     txb_skipped,
-                    inherited_inter_chroma_transform(TxSize::Tx4x4, luma_transform),
+                    inherited_inter_chroma_transform(
+                        TxSize::Tx4x4,
+                        match transform_source {
+                            Tx4ChromaTransformSource::Uniform(transform) => transform,
+                            Tx4ChromaTransformSource::VerticalPair(transforms) => {
+                                let rows_per_child = rows_per_child.ok_or(PortableUnavailable)?;
+                                transforms[row / rows_per_child]
+                            }
+                        },
+                    ),
                 )?;
                 let coefficients = if terminal.skipped {
                     None
