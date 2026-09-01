@@ -3420,7 +3420,7 @@ fn inter_lossy_wide_single_geometry_supported(
 /// Exact direct 4:4:4 wide-lossy terminals.  The luma plane owns the wide
 /// transform while each chroma plane is reconstructed as a causal TX32 grid;
 /// keep this admission separate from the 4:2:0 single-terminal path.
-fn inter_lossy_i444_direct_geometry_supported(
+fn inter_lossy_direct_chroma_grid_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
     visible_width: u32,
@@ -3430,18 +3430,19 @@ fn inter_lossy_i444_direct_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
-        && layout == PixelLayout::I444
+        && matches!(layout, PixelLayout::I422 | PixelLayout::I444)
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && matches!(transform_mode, 1 | 2)
         && (transform_mode != 2 || quantization.segment_qindex > 0)
         && matches!(
-            block_size,
-            BlockSize::B16x64
-                | BlockSize::B64x16
-                | BlockSize::B32x64
-                | BlockSize::B64x32
-                | BlockSize::B64x64
+            (layout, block_size),
+            (PixelLayout::I422, BlockSize::B64x64)
+                | (PixelLayout::I444, BlockSize::B16x64)
+                | (PixelLayout::I444, BlockSize::B64x16)
+                | (PixelLayout::I444, BlockSize::B32x64)
+                | (PixelLayout::I444, BlockSize::B64x32)
+                | (PixelLayout::I444, BlockSize::B64x64)
         )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
@@ -4580,7 +4581,7 @@ enum InterTransformPlan {
         luma_height: u32,
         layout: PixelLayout,
     },
-    LossyWideI444Direct {
+    LossyWideDirectChromaGrid {
         luma_width: u32,
         luma_height: u32,
         luma_tx: TxSize,
@@ -4666,7 +4667,7 @@ fn decode_inter_transform_size(
     lossy_grid_geometry: bool,
     lossy_wide_chunk_geometry: bool,
     lossy_wide_mode2_geometry: bool,
-    lossy_i444_direct_geometry: bool,
+    lossy_direct_chroma_grid_geometry: bool,
     block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
@@ -4959,11 +4960,11 @@ fn decode_inter_transform_size(
             return Ok(plan);
         }
     }
-    if lossy_i444_direct_geometry && transform_mode == 1 {
+    if lossy_direct_chroma_grid_geometry && transform_mode == 1 {
         let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
         if exact_geometry {
             let (luma_width, luma_height) = block_size.pixel_dimensions();
-            return Ok(InterTransformPlan::LossyWideI444Direct {
+            return Ok(InterTransformPlan::LossyWideDirectChromaGrid {
                 luma_width,
                 luma_height,
                 luma_tx: max_tx,
@@ -4979,9 +4980,9 @@ fn decode_inter_transform_size(
     // both cases; consuming a bit here would shift every later coefficient
     // symbol.
     if block_skipped || max_tx == TxSize::Tx4x4 {
-        if lossy_i444_direct_geometry && block_skipped {
+        if lossy_direct_chroma_grid_geometry && block_skipped {
             let (luma_width, luma_height) = block_size.pixel_dimensions();
-            return Ok(InterTransformPlan::LossyWideI444Direct {
+            return Ok(InterTransformPlan::LossyWideDirectChromaGrid {
                 luma_width,
                 luma_height,
                 luma_tx: max_tx,
@@ -5632,14 +5633,15 @@ fn decode_inter_transform_size(
         && visible_height == 64
         && split_b64_supported
         && max_tx == TxSize::Tx64x64
+        && !lossy_direct_chroma_grid_geometry
     {
-        // I422/I444 B64 roots own a TX32 chroma grid only when the luma root
-        // split is present; the unsplit TX64 sentence is not admitted here.
+        // I422 B64 roots own a TX32 chroma grid; the unsplit TX64 sentence is
+        // admitted only through the exact direct-grid profile above.
         return Err(super::block::PortableUnavailable);
     }
-    if lossy_i444_direct_geometry {
+    if lossy_direct_chroma_grid_geometry {
         let (luma_width, luma_height) = block_size.pixel_dimensions();
-        return Ok(InterTransformPlan::LossyWideI444Direct {
+        return Ok(InterTransformPlan::LossyWideDirectChromaGrid {
             luma_width,
             luma_height,
             luma_tx: max_tx,
@@ -5853,7 +5855,7 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
-    let lossy_i444_direct_geometry = inter_lossy_i444_direct_geometry_supported(
+    let lossy_direct_chroma_grid_geometry = inter_lossy_direct_chroma_grid_geometry_supported(
         node.block_size,
         layout,
         visible_width,
@@ -5888,7 +5890,7 @@ fn decode_inter_leaf(
         let (block_width, block_height) = node.block_size.pixel_dimensions();
         let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
         let wide_lossy_geometry = lossy_wide_single_geometry
-            || lossy_i444_direct_geometry
+            || lossy_direct_chroma_grid_geometry
             || lossy_i444_rect_split_geometry
             || lossy_square64_geometry
             || lossy_split64_geometry
@@ -5914,7 +5916,7 @@ fn decode_inter_leaf(
         && !lossy_wide_chunk_geometry
         && !lossy_wide_mode2_geometry
         && !lossy_split64_geometry
-        && !lossy_i444_direct_geometry
+        && !lossy_direct_chroma_grid_geometry
         && !lossy_i444_rect_split_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
@@ -5923,7 +5925,7 @@ fn decode_inter_leaf(
         && !lossless_grid_geometry
         && !lossy_square64_geometry
         && !lossy_split64_geometry
-        && !lossy_i444_direct_geometry
+        && !lossy_direct_chroma_grid_geometry
         && !lossy_i444_rect_split_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
@@ -6526,7 +6528,7 @@ fn decode_inter_leaf(
         lossy_grid_geometry,
         lossy_wide_chunk_geometry,
         lossy_wide_mode2_geometry,
-        lossy_i444_direct_geometry,
+        lossy_direct_chroma_grid_geometry,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
@@ -6603,7 +6605,7 @@ fn decode_inter_leaf(
                 }
                 (TxSize::Tx64x64, false, false, false, true)
             }
-            InterTransformPlan::LossyWideI444Direct {
+            InterTransformPlan::LossyWideDirectChromaGrid {
                 layout: plan_layout,
                 luma_tx,
                 ..
@@ -6689,9 +6691,9 @@ fn decode_inter_leaf(
                 (node.block_size.maximum_luma_tx(), false, true, false, false)
             }
         };
-    let lossy_i444_direct = matches!(
+    let lossy_direct_chroma_grid = matches!(
         transform_plan,
-        InterTransformPlan::LossyWideI444Direct { .. }
+        InterTransformPlan::LossyWideDirectChromaGrid { .. }
     );
     let split_rect64_i444_chroma_grid = matches!(
         transform_plan,
@@ -6737,7 +6739,7 @@ fn decode_inter_leaf(
             luma_height,
             ..
         } => (luma_width, luma_height),
-        InterTransformPlan::LossyWideI444Direct {
+        InterTransformPlan::LossyWideDirectChromaGrid {
             luma_width,
             luma_height,
             ..
@@ -6810,7 +6812,7 @@ fn decode_inter_leaf(
             if lossless_transform
                 || lossy_transform_grid
                 || lossy_wide_chunked
-                || lossy_i444_direct
+                || lossy_direct_chroma_grid
                 || split_rect64_i444_chroma_grid
                 || split_b64_chroma_grid
             {
@@ -7097,11 +7099,11 @@ fn decode_inter_leaf(
                 topology,
             )
         }
-    } else if lossy_i444_direct {
+    } else if lossy_direct_chroma_grid {
         if compound {
             let second = second_state
                 .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
-            block_decoder.decode_inter_compound_translation_lossy_i444_direct(
+            block_decoder.decode_inter_compound_translation_lossy_direct_chroma_grid(
                 decoder,
                 node.block_size,
                 visible_width,
@@ -7119,10 +7121,12 @@ fn decode_inter_leaf(
                 luma_txb_skipped,
                 tx_size,
                 transform,
+                block_chroma_sampling
+                    .ok_or_else(|| malformed("inter direct chroma sampling is unavailable"))?,
                 coefficient_contexts,
             )
         } else {
-            block_decoder.decode_inter_translation_lossy_i444_direct(
+            block_decoder.decode_inter_translation_lossy_direct_chroma_grid(
                 decoder,
                 node.block_size,
                 visible_width,
@@ -7139,6 +7143,8 @@ fn decode_inter_leaf(
                 luma_txb_skipped,
                 tx_size,
                 transform,
+                block_chroma_sampling
+                    .ok_or_else(|| malformed("inter direct chroma sampling is unavailable"))?,
                 coefficient_contexts,
                 obmc,
                 inter_intra,

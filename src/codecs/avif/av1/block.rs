@@ -48549,7 +48549,7 @@ enum InterTransformPlan {
         luma_height: u32,
         sampling: ChromaSampling,
     },
-    LossyWideI444Direct {
+    LossyWideDirectChromaGrid {
         luma_width: u32,
         luma_height: u32,
         luma_tx: TxSize,
@@ -49428,9 +49428,9 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
-        reason = "direct I444 wide reconstruction carries block, frame, transform, prediction, and edge state"
+        reason = "direct wide chroma-grid reconstruction carries block, frame, transform, prediction, and edge state"
     )]
-    pub(super) fn decode_inter_translation_lossy_i444_direct(
+    pub(super) fn decode_inter_translation_lossy_direct_chroma_grid(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
         block_size: BlockSize,
@@ -49448,6 +49448,7 @@ impl Lossy420Decoder {
         luma_txb_skipped: bool,
         luma_tx_size: TxSize,
         luma_transform: Av1TransformType,
+        sampling: ChromaSampling,
         coefficient_contexts: InterCoefficientContexts,
         obmc: Option<ObmcContext<'_>>,
         inter_intra: Option<InterIntraPrediction<'_>>,
@@ -49471,13 +49472,13 @@ impl Lossy420Decoder {
                 obmc,
             },
             block_skipped,
-            InterTransformPlan::LossyWideI444Direct {
+            InterTransformPlan::LossyWideDirectChromaGrid {
                 luma_width,
                 luma_height,
                 luma_tx: luma_tx_size,
                 luma_txb_skipped,
                 luma_transform,
-                sampling: ChromaSampling::Full,
+                sampling,
             },
             filters,
             coefficient_contexts,
@@ -49487,9 +49488,9 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
-        reason = "compound direct I444 wide reconstruction carries block, frame, transform, prediction, and edge state"
+        reason = "compound direct wide chroma-grid reconstruction carries block, frame, transform, prediction, and edge state"
     )]
-    pub(super) fn decode_inter_compound_translation_lossy_i444_direct(
+    pub(super) fn decode_inter_compound_translation_lossy_direct_chroma_grid(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
         block_size: BlockSize,
@@ -49508,6 +49509,7 @@ impl Lossy420Decoder {
         luma_txb_skipped: bool,
         luma_tx_size: TxSize,
         luma_transform: Av1TransformType,
+        sampling: ChromaSampling,
         coefficient_contexts: InterCoefficientContexts,
     ) -> PortableResult<FirstLeaf> {
         let (luma_width, luma_height) = block_size.pixel_dimensions();
@@ -49529,13 +49531,13 @@ impl Lossy420Decoder {
                 obmc: None,
             },
             block_skipped,
-            InterTransformPlan::LossyWideI444Direct {
+            InterTransformPlan::LossyWideDirectChromaGrid {
                 luma_width,
                 luma_height,
                 luma_tx: luma_tx_size,
                 luma_txb_skipped,
                 luma_transform,
-                sampling: ChromaSampling::Full,
+                sampling,
             },
             filters,
             coefficient_contexts,
@@ -50243,9 +50245,9 @@ impl Lossy420Decoder {
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
-        let lossy_i444_direct = matches!(
+        let lossy_direct_chroma_grid = matches!(
             transform_plan,
-            InterTransformPlan::LossyWideI444Direct { .. }
+            InterTransformPlan::LossyWideDirectChromaGrid { .. }
         );
         let lossy_wide = matches!(
             transform_plan,
@@ -50389,7 +50391,7 @@ impl Lossy420Decoder {
             .then_some(())
             .portable()?;
         }
-        if let InterTransformPlan::LossyWideI444Direct {
+        if let InterTransformPlan::LossyWideDirectChromaGrid {
             luma_width,
             luma_height,
             luma_tx,
@@ -50398,8 +50400,15 @@ impl Lossy420Decoder {
             sampling,
         } = transform_plan
         {
-            (sampling == ChromaSampling::Full
-                && sampling == chroma_sampling
+            (matches!(
+                (sampling, block_size),
+                (ChromaSampling::Full, BlockSize::B16x64)
+                    | (ChromaSampling::Full, BlockSize::B64x16)
+                    | (ChromaSampling::Full, BlockSize::B32x64)
+                    | (ChromaSampling::Full, BlockSize::B64x32)
+                    | (ChromaSampling::Full, BlockSize::B64x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B64x64)
+            ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.transform_mode, 1 | 2)
@@ -50839,7 +50848,7 @@ impl Lossy420Decoder {
             || split_b64
             || split_b64_topology
             || grid_transform
-            || lossy_i444_direct
+            || lossy_direct_chroma_grid
         {
             let exact_b8 =
                 block_size == BlockSize::B8x8 && visible_width == 8 && visible_height == 8;
@@ -50883,8 +50892,11 @@ impl Lossy420Decoder {
                 lossy_grid && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_lossy_wide =
                 lossy_wide && (visible_width, visible_height) == block_size.pixel_dimensions();
-            let exact_lossy_i444_direct = lossy_i444_direct
-                && chroma_sampling == ChromaSampling::Full
+            let exact_lossy_direct_chroma_grid = lossy_direct_chroma_grid
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Full | ChromaSampling::Subsampled422
+                )
                 && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_geometry = (split_b8 && exact_b8)
                 || (split_b8x16 && exact_b8x16)
@@ -50910,7 +50922,7 @@ impl Lossy420Decoder {
                         || exact_large
                         || exact_lossy_grid
                         || exact_lossy_wide
-                        || exact_lossy_i444_direct));
+                        || exact_lossy_direct_chroma_grid));
             (exact_geometry
                 && matches!(
                     chroma_sampling,
@@ -50995,7 +51007,7 @@ impl Lossy420Decoder {
             InterTransformPlan::LossyWideChunked { .. } => {
                 (TxSize::Tx64x64, true, Av1TransformType::DctDct)
             }
-            InterTransformPlan::LossyWideI444Direct {
+            InterTransformPlan::LossyWideDirectChromaGrid {
                 luma_tx,
                 luma_txb_skipped,
                 luma_transform,
@@ -51098,7 +51110,7 @@ impl Lossy420Decoder {
             if !grid_transform
                 && !split_b64_chroma_grid
                 && !split_rect64_i444_chroma_grid
-                && !lossy_i444_direct
+                && !lossy_direct_chroma_grid
             {
                 (u32::try_from(u_geometry.0).map_err(|_| PortableUnavailable)? == tx_chroma_width
                     && u32::try_from(u_geometry.1).map_err(|_| PortableUnavailable)?
@@ -51153,7 +51165,7 @@ impl Lossy420Decoder {
             let (tx_width, tx_height) = if grid_transform
                 || (split_b64_chroma_grid && plane != 0)
                 || (split_rect64_i444_chroma_grid && plane != 0)
-                || (lossy_i444_direct && plane != 0)
+                || (lossy_direct_chroma_grid && plane != 0)
             {
                 (
                     u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
@@ -51731,7 +51743,7 @@ impl Lossy420Decoder {
                 chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
                 continue;
             }
-            if lossy_i444_direct && plane != 0 {
+            if lossy_direct_chroma_grid && plane != 0 {
                 let chroma_tx = chroma_tx.ok_or(PortableUnavailable)?;
                 let grid_contexts = self.decode_inter_chroma_grid(
                     decoder,
