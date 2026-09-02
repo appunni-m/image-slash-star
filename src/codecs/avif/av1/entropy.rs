@@ -14766,6 +14766,7 @@ fn complete_monochrome_mode2_restoration_reconstruction_context(
         && context.frame_tools.transform_mode == 2
         && context.frame_tools.restoration_present
         && !context.frame_tools.film_grain_present
+        && !context.frame_tools.segmentation.enabled
         && context.frame_width >= 8
         && context.frame_height >= 8
         && context.frame_width.is_multiple_of(8)
