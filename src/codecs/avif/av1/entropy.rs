@@ -3252,15 +3252,14 @@ fn postskip_altq_segmentation_supported(context: &FirstBlockContext) -> bool {
     })
 }
 
-/// Admit one deliberately narrow mixed-segment profile for 8-bit color inter
-/// frames.  A segment-lossless block is legal while the frame is otherwise
-/// lossy, so frame-level deblocking/CDEF syntax remains present; its residual
-/// grammar is selected later from the per-block segment state.  Keep this
-/// separate from the ordinary ALT_Q predicate because the latter is reused by
-/// layouts whose lossless transform paths are not connected to the mode-1/2
-/// parser.  Temporal segment prediction, restoration, film grain,
-/// super-resolution, and multi-tile assembly stay outside this first tranche.
-fn mixed_8bit_color_lossless_segmentation_supported(
+/// Common admission for the bounded mixed-segment profile for 8-bit color
+/// inter frames. A segment-lossless block is legal while the frame is
+/// otherwise lossy, so its residual grammar is selected later from the
+/// per-block segment state. Keep this separate from the ordinary ALT_Q
+/// predicate because the latter is reused by layouts whose lossless transform
+/// paths are not connected to the mode-1/2 parser. Restoration and postfilter
+/// selection are left to the profile wrappers below.
+fn mixed_8bit_color_lossless_segmentation_common(
     context: &FirstBlockContext,
     expected_layout: PixelLayout,
 ) -> bool {
@@ -3287,8 +3286,6 @@ fn mixed_8bit_color_lossless_segmentation_supported(
         || context.tile_origin_b4_y != 0
         || context.block_width != context.frame_block_width
         || context.block_height != context.frame_block_height
-        || context.frame_tools.restoration_present
-        || context.restoration_types != [None; 3]
         || context.frame_tools.film_grain_present
         || !matches!(context.frame_tools.transform_mode, 1 | 2)
         || !context.segmentation_enabled
@@ -3349,6 +3346,98 @@ fn mixed_8bit_color_lossless_segmentation_supported(
         }
     }
     has_lossless && has_lossy
+}
+
+/// Admit the neutral-restoration mixed 8-bit color profile. Keeping the
+/// restoration state outside the common segment proof prevents an active
+/// luma-only plan from being silently consumed by the no-restoration callers.
+fn mixed_8bit_color_lossless_segmentation_supported(
+    context: &FirstBlockContext,
+    expected_layout: PixelLayout,
+) -> bool {
+    mixed_8bit_color_lossless_segmentation_common(context, expected_layout)
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+}
+
+/// Admit one active luma Wiener/SGR restoration unit for the bounded mixed
+/// 8-bit color profile. The mixed block walker already owns the I420/I422/I444
+/// lossless-grid grammar; this predicate adds only the frame-level restoration
+/// state and the conservative single-reference motion boundary.
+fn mixed_8bit_color_lossless_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    expected_layout: PixelLayout,
+) -> bool {
+    if !mixed_8bit_color_lossless_segmentation_common(context, expected_layout)
+        || context.skip_mode_enabled
+        || context.allow_intrabc
+        || !context.frame_tools.restoration_present
+        || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.cdef.is_some()
+        || !inter_context.references.iter().all(|reference| {
+            reference.surface.validate().is_ok()
+                && reference.surface.depth.bits() == context.bit_depth
+                && reference.surface.layout == expected_layout
+                && reference.surface.coded_width == context.frame_width
+                && reference.surface.upscaled_width == context.frame_width
+                && reference.surface.frame_height == context.frame_height
+                && !reference.scale.scaled
+                && matches!(
+                    reference.global_motion.kind,
+                    GlobalMotionType::Identity | GlobalMotionType::Translation
+                )
+        })
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || inter_context.allow_warped_motion
+        || inter_context.motion_mode_switchable
+        || inter_context.use_ref_frame_mvs
+    {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let (luma_supported, chroma_supported) = match (expected_layout, context.level) {
+        (PixelLayout::I420, 0) => ((7..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2)),
+        (PixelLayout::I420, 1) => ((6..=8).contains(&luma_log2), (5..=8).contains(&chroma_log2)),
+        (PixelLayout::I422 | PixelLayout::I444, 0) => {
+            ((7..=8).contains(&luma_log2), (7..=8).contains(&chroma_log2))
+        }
+        (PixelLayout::I422 | PixelLayout::I444, 1) => {
+            ((6..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2))
+        }
+        _ => (false, false),
+    };
+    if !luma_supported || !chroma_supported || chroma_log2 != luma_log2 || context.frame_height > 56
+    {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(luma_log2) else {
+        return false;
+    };
+    let Some(width_with_half) = context.frame_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> luma_log2).max(1) == 1 && (height_with_half >> luma_log2).max(1) == 1
 }
 
 /// High-depth color uses the generic lossless-grid compositor for every
@@ -9071,6 +9160,9 @@ pub(super) fn validate_complete_lossy_420_partition(
     let generic_i420_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_420_reconstruction_context(context, inter_context)
     });
+    let mixed_i420_lossless_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I420)
+    });
     let lossy_i420_active_restoration = generic_i420_inter
         && inter_context.is_some_and(|inter_context| {
             lossy_i420_superres_restoration_supported(context, inter_context)
@@ -9078,12 +9170,18 @@ pub(super) fn validate_complete_lossy_420_partition(
     let generic_i422_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_422_reconstruction_context(context, inter_context)
     });
+    let mixed_i422_lossless_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I422)
+    });
     let lossy_i422_active_restoration = generic_i422_inter
         && inter_context.is_some_and(|inter_context| {
             lossy_i422_superres_restoration_supported(context, inter_context)
         });
     let generic_i444_inter = inter_context.is_some_and(|inter_context| {
         complete_inter_444_reconstruction_context(context, inter_context)
+    });
+    let mixed_i444_lossless_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I444)
     });
     let lossy_i444_active_restoration = generic_i444_inter
         && inter_context.is_some_and(|inter_context| {
@@ -9543,6 +9641,9 @@ pub(super) fn validate_complete_lossy_420_partition(
         || high_depth_color_intra_restoration
         || high_depth_color_inter_nonsuperres_restoration
         || monochrome_lossy_active_restoration
+        || mixed_i420_lossless_restoration
+        || mixed_i422_lossless_restoration
+        || mixed_i444_lossless_restoration
         || lossy_i420_intra_active_restoration
         || lossy_i422_intra_active_restoration
         || lossy_i444_intra_active_restoration
@@ -10736,6 +10837,8 @@ fn complete_inter_420_reconstruction_context(
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
     let active_restoration = lossy_i420_superres_restoration_supported(context, inter_context);
+    let mixed_lossless_restoration =
+        mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I420);
     !context.intra_frame
         && context.bit_depth == 8
         && context.subsampling_x
@@ -10747,14 +10850,17 @@ fn complete_inter_420_reconstruction_context(
         && !context.allow_intrabc
         && matches!(context.frame_tools.transform_mode, 0..=2)
         && inter_cdef_supported(context)
-        && (context.restoration_types == [None; 3] || active_restoration)
+        && (context.restoration_types == [None; 3]
+            || active_restoration
+            || mixed_lossless_restoration)
         && if context.superres_enabled {
             superres_color_film_grain_supported(context, PixelLayout::I420)
         } else {
             no_unsupported_film_grain(context)
         }
         && (postskip_altq_segmentation_supported(context)
-            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I420))
+            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I420)
+            || mixed_lossless_restoration)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
@@ -10943,6 +11049,8 @@ fn complete_inter_422_reconstruction_context(
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
     let active_restoration = lossy_i422_superres_restoration_supported(context, inter_context);
+    let mixed_lossless_restoration =
+        mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I422);
     let dimensions_supported = if context.superres_enabled {
         active_restoration
     } else {
@@ -10968,7 +11076,8 @@ fn complete_inter_422_reconstruction_context(
         && dimensions_supported
         && !context.all_lossless
         && (postskip_altq_segmentation_supported(context)
-            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I422))
+            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I422)
+            || mixed_lossless_restoration)
         && !context.allow_intrabc
         && if context.superres_enabled {
             superres_color_film_grain_supported(context, PixelLayout::I422)
@@ -10979,7 +11088,9 @@ fn complete_inter_422_reconstruction_context(
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
         && inter_cdef_supported(context)
-        && (context.restoration_types == [None; 3] || active_restoration)
+        && (context.restoration_types == [None; 3]
+            || active_restoration
+            || mixed_lossless_restoration)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
@@ -11172,6 +11283,8 @@ fn complete_inter_444_reconstruction_context(
         bounded_i444_film_grain_supported(context)
     };
     let active_restoration = lossy_i444_superres_restoration_supported(context, inter_context);
+    let mixed_lossless_restoration =
+        mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I444);
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
@@ -11192,14 +11305,17 @@ fn complete_inter_444_reconstruction_context(
         && dimensions_supported
         && !context.all_lossless
         && (postskip_altq_segmentation_supported(context)
-            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I444))
+            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I444)
+            || mixed_lossless_restoration)
         && !context.allow_intrabc
         && film_grain_supported
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
         && inter_cdef_supported(context)
-        && (context.restoration_types == [None; 3] || active_restoration)
+        && (context.restoration_types == [None; 3]
+            || active_restoration
+            || mixed_lossless_restoration)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
