@@ -42156,6 +42156,78 @@ fn reconstruct_lossy_full_32x8_chroma_zone1(
     reconstruct_lossy_chroma_32x8_from_prediction(prediction, coefficients)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact horizontal-following R32x8 chroma path carries normalized edges, availability, filtering, and residual state"
+)]
+fn reconstruct_lossy_full_32x8_chroma_horizontal_target(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    left: [u16; 8],
+    bottom_left: Option<[u16; 8]>,
+    coefficients: Option<Lossy32x8TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    match predictor {
+        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (0 < angle && angle < 90).then_some(()).portable()?;
+        }
+        ChromaPredictor::Diagonal203 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (180 < angle && angle < 270).then_some(()).portable()?;
+        }
+        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        _ => return Err(PortableUnavailable),
+    }
+
+    let mut left_edge = [0_u16; 16];
+    left_edge[..8].copy_from_slice(&left);
+    let have_below_left = if let Some(extension) = bottom_left {
+        left_edge[8..].copy_from_slice(&extension);
+        true
+    } else {
+        false
+    };
+    let left_edge = if have_below_left {
+        &left_edge[..]
+    } else {
+        &left_edge[..8]
+    };
+    // A horizontally following leaf has no normative top carrier.  Passing
+    // an empty top with `has_top = false` makes edge preparation synthesize
+    // the unavailable top from the first real left sample, exactly as AV1's
+    // block boundary rules require.  R32x8 forces DCT-DCT for every UV mode;
+    // the ordinary D67 ADST-DCT mapping is not legal when an axis is 32.
+    let edges = FullIntraPlaneEdges::prepare(
+        32,
+        8,
+        SampleDepth::EIGHT,
+        &[],
+        left_edge,
+        None,
+        false,
+        true,
+        false,
+        have_below_left,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 256];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        32,
+        8,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    reconstruct_lossy_chroma_32x8_from_prediction(prediction, coefficients)
+}
+
 fn reconstruct_lossy_full_32x8_cfl(
     luma: &ReconstructedPlane,
     predictor: u16,
@@ -58491,12 +58563,49 @@ impl Lossy420Decoder {
                     }
                 }),
             };
-            reconstruct_following_lossy_full_vertical_32x8_leaf(
+            let mut leaf = reconstruct_following_lossy_full_vertical_32x8_leaf(
                 syntax,
                 &synthetic_above,
                 &synthetic_above,
                 Some(&neighbor),
-            )
+            )?;
+            if matches!(
+                syntax.chroma_predictor,
+                ChromaPredictor::Diagonal45
+                    | ChromaPredictor::Diagonal67
+                    | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::SmoothVertical
+                    | ChromaPredictor::SmoothHorizontal
+            ) {
+                for plane in 1..=2 {
+                    let left = chroma_left_edges_8[plane - 1]
+                        .or_else(|| {
+                            checked_right_edge_at::<8>(
+                                &neighbor.planes[plane],
+                                neighbor_width,
+                                neighbor_height,
+                                0,
+                            )
+                        })
+                        .ok_or(PortableUnavailable)?;
+                    let bottom_left =
+                        if matches!(syntax.chroma_predictor, ChromaPredictor::Diagonal203) {
+                            full_chroma_bottom_left_8[plane - 1]
+                        } else {
+                            None
+                        };
+                    leaf.planes[plane] = reconstruct_lossy_full_32x8_chroma_horizontal_target(
+                        syntax.chroma_predictor,
+                        syntax.chroma_angle,
+                        left,
+                        bottom_left,
+                        syntax.lossy_chroma_32x8_coefficients[plane - 1],
+                        tools.enable_intra_edge_filter,
+                        smooth_chroma_edges,
+                    )?;
+                }
+            }
+            Ok(leaf)
         } else if matches!(self.chroma_sampling, ChromaSampling::Subsampled420)
             && matches!(transform_grid, TransformGrid::Vertical16x32)
         {
