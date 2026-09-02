@@ -51469,6 +51469,7 @@ enum WideChromaTransformSource<'a> {
     Mode2UnsplitDct,
     Mode2Split32(&'a [[Av1TransformType; 2]; 2]),
     Mode2Deep16(&'a [[Av1TransformType; 4]; 4]),
+    Mode2Mixed(&'a [[Av1TransformType; 4]; 4]),
 }
 
 #[derive(Clone, Copy)]
@@ -53554,8 +53555,19 @@ impl Lossy420Decoder {
             ..
         } = transform_plan
         {
-            (sampling == ChromaSampling::Subsampled420
-                && sampling == chroma_sampling
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 2
@@ -58220,6 +58232,7 @@ impl Lossy420Decoder {
                 transform_source,
                 WideChromaTransformSource::Mode2Split32(_)
                     | WideChromaTransformSource::Mode2Deep16(_)
+                    | WideChromaTransformSource::Mode2Mixed(_)
             ) || matches!((grid_width, grid_height), (1, 2) | (2, 2)))
             && region_x.checked_add(region_width).portable()? <= raster.coded_width
             && region_y.checked_add(region_height).portable()? <= raster.coded_height
@@ -58281,6 +58294,19 @@ impl Lossy420Decoder {
                             inherited_inter_chroma_transform(TxSize::Tx32x32, luma_transform)
                         }
                         WideChromaTransformSource::Mode2Deep16(luma_transforms) => {
+                            let source_row = row.checked_mul(2).portable()?;
+                            let source_column = match sampling {
+                                ChromaSampling::Subsampled422 => 0,
+                                ChromaSampling::Full => column.checked_mul(2).portable()?,
+                                _ => return Err(PortableUnavailable),
+                            };
+                            let luma_transform = *luma_transforms
+                                .get(source_row)
+                                .and_then(|row| row.get(source_column))
+                                .portable()?;
+                            inherited_inter_chroma_transform(TxSize::Tx32x32, luma_transform)
+                        }
+                        WideChromaTransformSource::Mode2Mixed(luma_transforms) => {
                             let source_row = row.checked_mul(2).portable()?;
                             let source_column = match sampling {
                                 ChromaSampling::Subsampled422 => 0,
@@ -58421,7 +58447,10 @@ impl Lossy420Decoder {
         ) && matches!(
             sampling,
             ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 | ChromaSampling::Full
-        ) && (!mode2 || sampling == ChromaSampling::Subsampled420 || topology.is_none())
+        ) && (!mode2
+            || sampling == ChromaSampling::Subsampled420
+            || topology.is_none()
+            || (!deep16 && !split32 && topology.is_some()))
             && !(sampling == ChromaSampling::Subsampled422
                 && matches!((luma_width, luma_height), (64, 128)))
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -58492,6 +58521,7 @@ impl Lossy420Decoder {
         let mut luma_deep_transforms = [[Av1TransformType::DctDct; 2]; 2];
         let mut luma_mixed_residuals = [[[[0x40_u8; 16]; 16]; 2]; 2];
         let mut luma_mixed_transforms = [[Av1TransformType::DctDct; 2]; 2];
+        let mut luma_mixed_transform_grids = [[[[Av1TransformType::DctDct; 4]; 4]; 2]; 2];
         let mut luma_split_transform_grids = [[[[Av1TransformType::DctDct; 2]; 2]; 2]; 2];
         let mut luma_deep_transform_grids = [[[[Av1TransformType::DctDct; 4]; 4]; 2]; 2];
         let neutral = LosslessGridContexts {
@@ -58639,6 +58669,9 @@ impl Lossy420Decoder {
                         if !root_split {
                             let (_, transform) = decode_mixed_terminal(TxSize::Tx64x64, 0, 0)?;
                             luma_mixed_transforms[chunk_y][chunk_x] = transform;
+                            for row in 0_usize..4 {
+                                luma_mixed_transform_grids[chunk_y][chunk_x][row].fill(transform);
+                            }
                         } else {
                             for child_row in 0_usize..2 {
                                 for child_column in 0_usize..2 {
@@ -58660,6 +58693,14 @@ impl Lossy420Decoder {
                                             child_cell_x,
                                             child_cell_y,
                                         )?;
+                                        let map_row = child_row.checked_mul(2).portable()?;
+                                        let map_column = child_column.checked_mul(2).portable()?;
+                                        for row in map_row..map_row.checked_add(2).portable()? {
+                                            luma_mixed_transform_grids[chunk_y][chunk_x][row]
+                                                [map_column
+                                                    ..map_column.checked_add(2).portable()?]
+                                                .fill(transform);
+                                        }
                                         if child_row == 0 && child_column == 0 {
                                             luma_mixed_transforms[chunk_y][chunk_x] = transform;
                                         }
@@ -58681,6 +58722,18 @@ impl Lossy420Decoder {
                                                     cell_x,
                                                     cell_y,
                                                 )?;
+                                                let map_row = child_row
+                                                    .checked_mul(2)
+                                                    .and_then(|value| value.checked_add(local_row))
+                                                    .portable()?;
+                                                let map_column = child_column
+                                                    .checked_mul(2)
+                                                    .and_then(|value| {
+                                                        value.checked_add(local_column)
+                                                    })
+                                                    .portable()?;
+                                                luma_mixed_transform_grids[chunk_y][chunk_x]
+                                                    [map_row][map_column] = transform;
                                                 if child_row == 0
                                                     && child_column == 0
                                                     && local_row == 0
@@ -59037,8 +59090,14 @@ impl Lossy420Decoder {
                             WideChromaTransformSource::Mode2Deep16(
                                 &luma_deep_transform_grids[chunk_y][chunk_x],
                             )
-                        } else if !split32 && !deep16 && topology.is_none() {
-                            WideChromaTransformSource::Mode2UnsplitDct
+                        } else if !split32 && !deep16 {
+                            if topology.is_some() {
+                                WideChromaTransformSource::Mode2Mixed(
+                                    &luma_mixed_transform_grids[chunk_y][chunk_x],
+                                )
+                            } else {
+                                WideChromaTransformSource::Mode2UnsplitDct
+                            }
                         } else {
                             return Err(PortableUnavailable);
                         };
