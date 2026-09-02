@@ -6797,8 +6797,10 @@ fn decode_inter_transform_size(
         {
             return Ok(InterTransformPlan::SplitB4x8);
         }
-        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
-            && split_b8_rect_supported
+        if matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I422 | PixelLayout::I444
+        ) && split_b8_rect_supported
             && visible_width == 8
             && visible_height == 4
             && block_size == BlockSize::B8x4
@@ -6841,8 +6843,10 @@ fn decode_inter_transform_size(
             }
             return Ok(InterTransformPlan::SplitB4x16);
         }
-        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
-            && split_b8_rect_supported
+        if matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I422 | PixelLayout::I444
+        ) && split_b8_rect_supported
             && visible_width == 16
             && visible_height == 4
             && block_size == BlockSize::B16x4

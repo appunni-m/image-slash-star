@@ -56510,10 +56510,13 @@ impl Lossy420Decoder {
                 .then_some(())
                 .portable()?;
             if split_b4x8 || split_b8x4 {
-                (matches!(
+                let layout_supported = matches!(
                     chroma_sampling,
                     ChromaSampling::Monochrome | ChromaSampling::Full
-                ) && ((split_b4x8 && exact_b4x8) || (split_b8x4 && exact_b8x4))
+                ) || (split_b8x4
+                    && chroma_sampling == ChromaSampling::Subsampled422);
+                (layout_supported
+                    && ((split_b4x8 && exact_b4x8) || (split_b8x4 && exact_b8x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
@@ -56525,10 +56528,13 @@ impl Lossy420Decoder {
                 .portable()?;
             }
             if split_b4x16 || split_b16x4 {
-                (matches!(
+                let layout_supported = matches!(
                     chroma_sampling,
                     ChromaSampling::Monochrome | ChromaSampling::Full
-                ) && ((split_b4x16 && exact_b4x16) || (split_b16x4 && exact_b16x4))
+                ) || (split_b16x4
+                    && chroma_sampling == ChromaSampling::Subsampled422);
+                (layout_supported
+                    && ((split_b4x16 && exact_b4x16) || (split_b16x4 && exact_b16x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
@@ -56567,10 +56573,13 @@ impl Lossy420Decoder {
                     .portable()?;
             }
             if split_b4x16_deep || split_b16x4_deep {
-                (matches!(
+                let layout_supported = matches!(
                     chroma_sampling,
                     ChromaSampling::Monochrome | ChromaSampling::Full
-                ) && ((split_b4x16_deep && exact_b4x16) || (split_b16x4_deep && exact_b16x4))
+                ) || (split_b16x4_deep
+                    && chroma_sampling == ChromaSampling::Subsampled422);
+                (layout_supported
+                    && ((split_b4x16_deep && exact_b4x16) || (split_b16x4_deep && exact_b16x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
@@ -56589,11 +56598,14 @@ impl Lossy420Decoder {
                 };
                 let any_child_split = child_splits.into_iter().any(|split| split);
                 let all_children_split = child_splits.into_iter().all(|split| split);
-                (matches!(
+                let layout_supported = matches!(
                     chroma_sampling,
                     ChromaSampling::Monochrome | ChromaSampling::Full
-                ) && ((split_b4x16_topology && exact_b4x16)
-                    || (split_b16x4_topology && exact_b16x4))
+                ) || (split_b16x4_topology
+                    && chroma_sampling == ChromaSampling::Subsampled422);
+                (layout_supported
+                    && ((split_b4x16_topology && exact_b4x16)
+                        || (split_b16x4_topology && exact_b16x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
