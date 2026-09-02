@@ -14088,8 +14088,9 @@ fn bounded_i444_inter_reconstruction_geometry(
 /// Bounded lossy I444 inter reconstruction with active Wiener/SGR restoration.
 /// Screen-enabled leaves honor parsed MV precision; frame-level skip mode uses
 /// fixed nearest-nearest/average prediction while ordinary compound syntax
-/// remains available for non-skip leaves. Restoration remains limited to the
-/// geometry-specific one-unit proof and consumes completed samples.
+/// remains available for non-skip leaves. Inter-intra may blend at coded
+/// resolution before residual reconstruction; restoration remains limited to
+/// the geometry-specific one-unit proof and consumes completed samples.
 fn complete_bounded_i444_restoration_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -14152,7 +14153,6 @@ fn complete_bounded_i444_restoration_inter_reconstruction_context(
         })
         && bounded_i444_restoration_units_supported(context, geometry)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
