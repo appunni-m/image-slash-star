@@ -4613,6 +4613,40 @@ fn inter_high_depth_i422_single_geometry_supported(
         && inter_single_transform_geometry_supported(node.block_size, layout)
 }
 
+/// Exact mode-2 split geometry for the narrow 4:2:2 leaves whose luma axis is
+/// four pixels wide. The luma transform partition is decoded for both
+/// horizontal siblings; only the odd-column sibling owns the shared chroma
+/// sentence in the block compositor. Keeping this proof independent of
+/// ownership lets the non-owner sibling reconstruct luma without consuming
+/// or publishing duplicate U/V syntax.
+fn inter_lossy_i422_narrow_split_geometry_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    node: PartitionNode,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    quantization: super::block::LossyQuantization,
+    block_skipped: bool,
+) -> bool {
+    let complete = if context.bit_depth == 8 {
+        complete_inter_422_reconstruction_context(context, inter_context)
+    } else if matches!(context.bit_depth, 10 | 12) {
+        complete_high_depth_inter_reconstruction_context(context, inter_context)
+    } else {
+        false
+    };
+    complete
+        && layout == PixelLayout::I422
+        && matches!(node.block_size, BlockSize::B4x8 | BlockSize::B4x16)
+        && (visible_width, visible_height) == node.block_size.pixel_dimensions()
+        && context.frame_tools.transform_mode == 2
+        && !block_skipped
+        && !quantization.segment_lossless
+        && quantization.segment_qindex > 0
+        && quantization.sample_depth.bits() == context.bit_depth
+}
+
 /// Mode-0 lossy I420 leaves code one TX4X4 residual per luma cell while the
 /// chroma planes retain one maximum-size transform. Keep the first grid
 /// tranche bounded to complete 8..=64px leaves and matched 8/10/12-bit
@@ -6788,8 +6822,10 @@ fn decode_inter_transform_size(
     let category = usize::try_from(category).map_err(|_| super::block::PortableUnavailable)?;
     let split = decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
     if split {
-        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
-            && split_b8_rect_supported
+        if matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I422 | PixelLayout::I444
+        ) && split_b8_rect_supported
             && visible_width == 4
             && visible_height == 8
             && block_size == BlockSize::B4x8
@@ -6808,8 +6844,10 @@ fn decode_inter_transform_size(
         {
             return Ok(InterTransformPlan::SplitB8x4);
         }
-        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
-            && split_b8_rect_supported
+        if matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I422 | PixelLayout::I444
+        ) && split_b8_rect_supported
             && visible_width == 4
             && visible_height == 16
             && block_size == BlockSize::B4x16
@@ -8004,6 +8042,16 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_i422_narrow_split_geometry = inter_lossy_i422_narrow_split_geometry_supported(
+        context,
+        inter_context,
+        node,
+        layout,
+        visible_width,
+        visible_height,
+        prepared_quantization.quantization,
+        block_skipped,
+    );
     let lossy_i444_rect_split_geometry = inter_lossy_i444_rect_split_geometry_supported(
         node.block_size,
         layout,
@@ -8130,6 +8178,7 @@ fn decode_inter_leaf(
         if !wide_lossy_geometry
             && !tiny_high_depth_i444
             && !tiny_high_depth_i422
+            && !lossy_i422_narrow_split_geometry
             && (!(minimum..=maximum).contains(&block_width)
                 || !(minimum..=maximum).contains(&block_height))
         {
@@ -8152,6 +8201,7 @@ fn decode_inter_leaf(
         && !lossy_split64_geometry
         && !lossy_direct_chroma_grid_geometry
         && !lossy_i444_rect_split_geometry
+        && !lossy_i422_narrow_split_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -9133,7 +9183,11 @@ fn decode_inter_leaf(
     // left/above neighbor rather than inheriting a single root value.
     let split_vertical_i422_tx4_chroma_grid = matches!(
         transform_plan,
-        InterTransformPlan::SplitB8x16
+        InterTransformPlan::SplitB4x8
+            | InterTransformPlan::SplitB4x16
+            | InterTransformPlan::SplitB4x16Deep
+            | InterTransformPlan::SplitB4x16Topology { .. }
+            | InterTransformPlan::SplitB8x16
             | InterTransformPlan::SplitB8x16Topology { .. }
             | InterTransformPlan::SplitB8x32
             | InterTransformPlan::SplitB8x32Topology { .. }
