@@ -1452,6 +1452,61 @@ impl FrameCanvas {
         crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
     }
 
+    /// Finish a monochrome canvas after applying luma deblocking followed by
+    /// frame-wide CDEF. The complete coded plane is checked before either
+    /// pass, ensuring that neither filter can observe zero-filled storage
+    /// from an omitted leaf.
+    pub(super) fn finish_monochrome_with_loop_filter_and_cdef(
+        mut self,
+        loop_parameters: Option<filter::Parameters>,
+        blocks: &[filter::Block],
+        cdef_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        let coded_dimensions = self.plane_dimensions(0);
+        let visible_dimensions = (self.visible_width, self.visible_height);
+        let required_dimensions = if loop_parameters.is_some() || cdef_parameters.is_some() {
+            coded_dimensions
+        } else {
+            visible_dimensions
+        };
+        for row in 0..required_dimensions.1 {
+            let start = row
+                .checked_mul(coded_dimensions.0)
+                .ok_or_else(|| malformed("monochrome loop-filter row offset overflows"))?;
+            let end = start
+                .checked_add(required_dimensions.0)
+                .ok_or_else(|| malformed("monochrome loop-filter row end overflows"))?;
+            if self.written[0]
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed(
+                    "monochrome canvas is missing reconstructed samples",
+                ));
+            }
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome canvas sample exceeds bit depth"));
+        }
+        if let Some(parameters) = loop_parameters {
+            filter::apply_luma(&mut self.planes[0], coded_dimensions, blocks, parameters)
+                .ok_or_else(|| malformed("monochrome loop-filter geometry is invalid"))?;
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome loop-filter sample exceeds bit depth"));
+        }
+        self.finish_monochrome_with_cdef(cdef_parameters, cdef_indices, cdef_active, sample_depth)
+    }
+
     /// Finish a monochrome canvas after applying the frame's Y-only CDEF.
     ///
     /// Monochrome AV1 has no UV strength table or UV active map. Keeping this
