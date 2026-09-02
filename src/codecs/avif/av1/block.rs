@@ -55282,7 +55282,11 @@ impl Lossy420Decoder {
                     matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 } else {
                     tools.sample_depth == SampleDepth::EIGHT
-                }) && tools.transform_mode == 0
+                }) && (tools.transform_mode == 0
+                    || (chroma_sampling == ChromaSampling::Subsampled420
+                        && tools.sample_depth == SampleDepth::EIGHT
+                        && matches!(tools.transform_mode, 1 | 2)
+                        && quantization.segment_lossless))
                     && quantization.segment_lossless
                     && quantization.qindex == 0
                     && quantization.segment_qindex == 0

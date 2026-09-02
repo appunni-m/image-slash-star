@@ -3252,6 +3252,93 @@ fn postskip_altq_segmentation_supported(context: &FirstBlockContext) -> bool {
     })
 }
 
+/// Admit one deliberately narrow mixed-segment profile for generic 8-bit
+/// 4:2:0 inter frames.  A segment-lossless block is legal while the frame is
+/// otherwise lossy, so frame-level deblocking/CDEF syntax remains present;
+/// its residual grammar is selected later from the per-block segment state.
+/// Keep this separate from the ordinary ALT_Q predicate because the latter is
+/// reused by layouts whose lossless transform paths are not connected to the
+/// mode-1/2 parser.  Temporal segment prediction, restoration, film grain,
+/// super-resolution, and multi-tile assembly stay outside this first tranche.
+fn mixed_i420_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+    let segmentation = context.frame_tools.segmentation;
+    if context.intra_frame
+        || context.all_lossless
+        || context.bit_depth != 8
+        || context.monochrome
+        || !context.subsampling_x
+        || !context.subsampling_y
+        || context.superres_enabled
+        || context.upscaled_width != context.frame_width
+        || !context.single_tile
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || context.frame_tools.restoration_present
+        || context.restoration_types != [None; 3]
+        || context.frame_tools.film_grain_present
+        || !matches!(context.frame_tools.transform_mode, 1 | 2)
+        || !context.segmentation_enabled
+        || !segmentation.enabled
+        || !segmentation.update_map
+        || segmentation.temporal
+        || segmentation.preskip
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+    {
+        return false;
+    }
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    if quantization.using_matrix {
+        return false;
+    }
+    let Some(last_active) = usize::try_from(segmentation.last_active_id)
+        .ok()
+        .filter(|&index| index < segmentation.segments.len())
+    else {
+        return false;
+    };
+    let active_count = last_active.saturating_add(1);
+    let delta_lossless = quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == 0
+        && quantization.u_ac_delta == 0
+        && quantization.v_dc_delta == 0
+        && quantization.v_ac_delta == 0;
+    let mut has_lossless = false;
+    let mut has_lossy = false;
+    for segment in &segmentation.segments[..active_count] {
+        let expected_qindex = i64::from(quantization.base)
+            .saturating_add(i64::from(segment.delta_q))
+            .clamp(0, 255);
+        if segment.reference >= 0
+            || segment.skip
+            || segment.global_motion
+            || segment.delta_lf != [0; 4]
+            || u32::try_from(expected_qindex).ok() != Some(segment.qindex)
+        {
+            return false;
+        }
+        // `segment.lossless` is parser-derived from this exact frame-level
+        // delta-lossless condition.  Rechecking it here prevents a qindex-0
+        // lossy segment from entering the fixed WHT grammar accidentally.
+        let segment_lossless = segment.qindex == 0 && delta_lossless;
+        if segment.lossless != segment_lossless {
+            return false;
+        }
+        if segment_lossless {
+            has_lossless = true;
+        } else if segment.qindex > 0 {
+            has_lossy = true;
+        } else {
+            return false;
+        }
+    }
+    has_lossless && has_lossy
+}
+
 fn interintra_allowed(block_size: BlockSize) -> bool {
     matches!(
         block_size,
@@ -3747,6 +3834,35 @@ fn inter_lossless_grid_geometry_supported(
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
+/// Segment-lossless residuals in a mixed frame still follow the fixed WHT
+/// grid, even though the frame transform mode is 1 or 2.  Keep this extension
+/// scoped to 8-bit I420; the ordinary helper above remains mode-0-only for
+/// all existing monochrome, 4:2:2, 4:4:4, and high-depth profiles.
+fn inter_mixed_i420_lossless_grid_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    layout == PixelLayout::I420
+        && bit_depth == 8
+        && matches!(transform_mode, 1 | 2)
+        // Reuse the complete geometry/quantization proof while evaluating it
+        // in its mode-0 form; only the frame-mode restriction differs here.
+        && inter_lossless_grid_geometry_supported(
+            block_size,
+            layout,
+            visible_width,
+            visible_height,
+            bit_depth,
+            quantization,
+            0,
+        )
 }
 
 fn inter_lossless_grid_large_block_supported(block_size: BlockSize) -> bool {
@@ -4940,6 +5056,86 @@ fn decode_inter_transform_size(
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
     let max_tx = block_size.maximum_luma_tx();
+    // Segment losslessness overrides the frame transform mode.  In a mixed
+    // frame (mode 1/2), consume no transform-partition or transform-type
+    // symbols and route the block through its fixed TX4x4 WHT grid before the
+    // mode-specific lossy parser gets a chance to read any syntax.
+    if lossless_grid_geometry
+        && matches!(
+            block_size,
+            BlockSize::B4x4
+                | BlockSize::B4x8
+                | BlockSize::B8x4
+                | BlockSize::B4x16
+                | BlockSize::B16x4
+                | BlockSize::B8x8
+                | BlockSize::B16x16
+                | BlockSize::B8x16
+                | BlockSize::B16x8
+                | BlockSize::B8x32
+                | BlockSize::B32x8
+                | BlockSize::B16x32
+                | BlockSize::B32x16
+                | BlockSize::B32x32
+                | BlockSize::B16x64
+                | BlockSize::B64x16
+                | BlockSize::B32x64
+                | BlockSize::B64x32
+                | BlockSize::B64x64
+                | BlockSize::B64x128
+                | BlockSize::B128x64
+                | BlockSize::B128x128
+        )
+        && matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+    {
+        let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
+        if exact_geometry {
+            if !eight_bit
+                || layout == PixelLayout::Monochrome
+                || inter_lossless_grid_block_supported(block_size)
+            {
+                let (luma_width, luma_height) = block_size.pixel_dimensions();
+                return Ok(InterTransformPlan::LosslessGrid {
+                    luma_width,
+                    luma_height,
+                    layout,
+                });
+            }
+            return Ok(match (block_size, layout) {
+                (BlockSize::B4x4, PixelLayout::I420) => InterTransformPlan::LosslessB4I420,
+                (BlockSize::B4x4, PixelLayout::I422) => InterTransformPlan::LosslessB4I422,
+                (BlockSize::B4x4, PixelLayout::I444) => InterTransformPlan::LosslessB4I444,
+                (BlockSize::B4x8, PixelLayout::I420) => InterTransformPlan::LosslessB4x8I420,
+                (BlockSize::B4x8, PixelLayout::I422) => InterTransformPlan::LosslessB4x8I422,
+                (BlockSize::B4x8, PixelLayout::I444) => InterTransformPlan::LosslessB4x8I444,
+                (BlockSize::B8x4, PixelLayout::I420) => InterTransformPlan::LosslessB8x4I420,
+                (BlockSize::B8x4, PixelLayout::I422) => InterTransformPlan::LosslessB8x4I422,
+                (BlockSize::B8x4, PixelLayout::I444) => InterTransformPlan::LosslessB8x4I444,
+                (BlockSize::B4x16, PixelLayout::I420) => InterTransformPlan::LosslessB4x16I420,
+                (BlockSize::B4x16, PixelLayout::I422) => InterTransformPlan::LosslessB4x16I422,
+                (BlockSize::B4x16, PixelLayout::I444) => InterTransformPlan::LosslessB4x16I444,
+                (BlockSize::B16x4, PixelLayout::I420) => InterTransformPlan::LosslessB16x4I420,
+                (BlockSize::B16x4, PixelLayout::I422) => InterTransformPlan::LosslessB16x4I422,
+                (BlockSize::B16x4, PixelLayout::I444) => InterTransformPlan::LosslessB16x4I444,
+                (BlockSize::B8x8, PixelLayout::I420) => InterTransformPlan::LosslessB8I420,
+                (BlockSize::B8x8, PixelLayout::I422) => InterTransformPlan::LosslessB8I422,
+                (BlockSize::B8x8, PixelLayout::I444) => InterTransformPlan::LosslessB8I444,
+                (BlockSize::B16x16, PixelLayout::I420) => InterTransformPlan::LosslessB16I420,
+                (BlockSize::B16x16, PixelLayout::I422) => InterTransformPlan::LosslessB16I422,
+                (BlockSize::B16x16, PixelLayout::I444) => InterTransformPlan::LosslessB16I444,
+                (BlockSize::B8x16, PixelLayout::I420) => InterTransformPlan::LosslessB8x16I420,
+                (BlockSize::B8x16, PixelLayout::I422) => InterTransformPlan::LosslessB8x16I422,
+                (BlockSize::B8x16, PixelLayout::I444) => InterTransformPlan::LosslessB8x16I444,
+                (BlockSize::B16x8, PixelLayout::I420) => InterTransformPlan::LosslessB16x8I420,
+                (BlockSize::B16x8, PixelLayout::I422) => InterTransformPlan::LosslessB16x8I422,
+                (BlockSize::B16x8, PixelLayout::I444) => InterTransformPlan::LosslessB16x8I444,
+                _ => return Err(super::block::PortableUnavailable),
+            });
+        }
+    }
     if transform_mode == 0 {
         // An all-lossless B8x8/B16x16 or rectangular B8x16/B16x8 leaf is a
         // fixed TX4x4 grid; mode 0 carries no transform-partition sentence.
@@ -6413,6 +6609,14 @@ fn decode_inter_leaf(
     )
     .ok_or_else(|| malformed("inter pixel layout is invalid"))?;
     let lossless_grid_geometry = inter_lossless_grid_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    ) || inter_mixed_i420_lossless_grid_geometry_supported(
         node.block_size,
         layout,
         visible_width,
@@ -10179,7 +10383,8 @@ fn complete_inter_420_reconstruction_context(
         } else {
             no_unsupported_film_grain(context)
         }
-        && postskip_altq_segmentation_supported(context)
+        && (postskip_altq_segmentation_supported(context)
+            || mixed_i420_lossless_segmentation_supported(context))
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
