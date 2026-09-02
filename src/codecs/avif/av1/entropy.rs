@@ -4737,7 +4737,9 @@ enum InterTransformPlan {
     SplitB32x8,
     SplitB32x8Deep,
     SplitB16x64,
+    SplitB16x64Deep,
     SplitB64x16,
+    SplitB64x16Deep,
     SplitB32x64,
     SplitB64x32,
     SplitB64Deep,
@@ -5550,11 +5552,13 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx16x64
         {
             // A TX16x64 root split is followed by one TX16x32 split
-            // decision for each row-stacked child. The bounded compositor
-            // admits only two terminal TX16x32 children; any deeper child
-            // tree remains transactional.
+            // decision for each row-stacked child. Preserve both decisions:
+            // two false children are the existing shallow pair, two true
+            // children are the bounded TX16x16 grid, and a mixed tree is
+            // unsupported.
             let child_offsets = [(0_u32, 0_u32), (0, 8)];
-            for (offset_x, offset_y) in child_offsets {
+            let mut child_splits = [false; 2];
+            for (index, (offset_x, offset_y)) in child_offsets.into_iter().enumerate() {
                 let child_x = node
                     .x
                     .checked_add(offset_x)
@@ -5576,12 +5580,14 @@ fn decode_inter_transform_size(
                     .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                     .is_some_and(|(_, tx_height)| tx_height < 3);
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0) {
-                    // A child split changes the causal topology for later
-                    // siblings. Reject immediately instead of consuming
-                    // symbols under the terminal-child assumption.
-                    return Err(super::block::PortableUnavailable);
-                }
+                child_splits[index] =
+                    decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0);
+            }
+            if child_splits == [true; 2] {
+                return Ok(InterTransformPlan::SplitB16x64Deep);
+            }
+            if child_splits.iter().any(|split| *split) {
+                return Err(super::block::PortableUnavailable);
             }
             return Ok(InterTransformPlan::SplitB16x64);
         }
@@ -5596,11 +5602,13 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx64x16
         {
             // A TX64x16 root split is followed by one TX32x16 split
-            // decision for each column-stacked child. The bounded compositor
-            // admits only two terminal TX32x16 children; any deeper child
-            // tree remains transactional.
+            // decision for each column-stacked child. Preserve both
+            // decisions: two false children are the existing shallow pair,
+            // two true children are the bounded TX16x16 grid, and a mixed
+            // tree is unsupported.
             let child_offsets = [(0_u32, 0_u32), (8, 0)];
-            for (offset_x, offset_y) in child_offsets {
+            let mut child_splits = [false; 2];
+            for (index, (offset_x, offset_y)) in child_offsets.into_iter().enumerate() {
                 let child_x = node
                     .x
                     .checked_add(offset_x)
@@ -5622,12 +5630,14 @@ fn decode_inter_transform_size(
                     false
                 };
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0) {
-                    // A child split changes the causal topology for the
-                    // sibling. Reject immediately instead of consuming
-                    // symbols under the terminal-child assumption.
-                    return Err(super::block::PortableUnavailable);
-                }
+                child_splits[index] =
+                    decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0);
+            }
+            if child_splits == [true; 2] {
+                return Ok(InterTransformPlan::SplitB64x16Deep);
+            }
+            if child_splits.iter().any(|split| *split) {
+                return Err(super::block::PortableUnavailable);
             }
             return Ok(InterTransformPlan::SplitB64x16);
         }
@@ -7008,8 +7018,12 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB8x32Deep => (TxSize::Tx8x32, true, false, false, false),
             InterTransformPlan::SplitB32x8 => (TxSize::Tx32x8, true, false, false, false),
             InterTransformPlan::SplitB32x8Deep => (TxSize::Tx32x8, true, false, false, false),
-            InterTransformPlan::SplitB16x64 => (TxSize::Tx16x64, true, false, false, false),
-            InterTransformPlan::SplitB64x16 => (TxSize::Tx64x16, true, false, false, false),
+            InterTransformPlan::SplitB16x64 | InterTransformPlan::SplitB16x64Deep => {
+                (TxSize::Tx16x64, true, false, false, false)
+            }
+            InterTransformPlan::SplitB64x16 | InterTransformPlan::SplitB64x16Deep => {
+                (TxSize::Tx64x16, true, false, false, false)
+            }
             InterTransformPlan::SplitB32x64 => (TxSize::Tx32x64, true, false, false, false),
             InterTransformPlan::SplitB64x32 => (TxSize::Tx64x32, true, false, false, false),
             InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, true, false, false, false),
@@ -7150,7 +7164,9 @@ fn decode_inter_leaf(
     let split_rect64_i444_chroma_grid = matches!(
         transform_plan,
         InterTransformPlan::SplitB16x64
+            | InterTransformPlan::SplitB16x64Deep
             | InterTransformPlan::SplitB64x16
+            | InterTransformPlan::SplitB64x16Deep
             | InterTransformPlan::SplitB32x64
             | InterTransformPlan::SplitB64x32
     ) && layout == PixelLayout::I444;
@@ -7164,6 +7180,7 @@ fn decode_inter_leaf(
             | InterTransformPlan::SplitB8x32
             | InterTransformPlan::SplitB16x32
             | InterTransformPlan::SplitB16x64
+            | InterTransformPlan::SplitB16x64Deep
             | InterTransformPlan::SplitB32x64
     ) && layout == PixelLayout::I422;
     let quantization = prepared_quantization.quantization;
@@ -7435,6 +7452,8 @@ fn decode_inter_leaf(
                         | InterTransformPlan::SplitB16x8Deep
                         | InterTransformPlan::SplitB8x32Deep
                         | InterTransformPlan::SplitB32x8Deep
+                        | InterTransformPlan::SplitB16x64Deep
+                        | InterTransformPlan::SplitB64x16Deep
                 ),
                 b64_topology,
             )
@@ -7463,6 +7482,8 @@ fn decode_inter_leaf(
                         | InterTransformPlan::SplitB16x8Deep
                         | InterTransformPlan::SplitB8x32Deep
                         | InterTransformPlan::SplitB32x8Deep
+                        | InterTransformPlan::SplitB16x64Deep
+                        | InterTransformPlan::SplitB64x16Deep
                 ),
                 b64_topology,
                 obmc,
