@@ -13653,13 +13653,15 @@ fn decode_lossy_luma_4x4_coefficients(
             decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context])
         };
         let mut coefficients = [0_i32; 16];
+        // dav1d 1.5.3 `recon_tmpl.c`: the DC-only sentence still scales
+        // `dq_tbl[0]` by the selected `qm_tbl[0]` for 2-D transforms.
         let (coefficient, token) = dequantize_lossy_luma_4x4_coefficient_with_token(
             decoder,
             token,
             negative,
             0,
             quantization,
-            None,
+            matrix_values,
         )?;
         coefficients[0] = coefficient;
         let context = lossy_coefficient_residual_context(token, token, negative);
