@@ -3315,6 +3315,37 @@ fn inter_lossy_only_4x4_grid_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact mode-0 geometry for wide leaves whose luma residuals are a fixed
+/// TX4x4 grid inside each 64x64 maximum-transform region. Chroma retains its
+/// adjusted maximum transform, so the wide compositor owns the chunk-major
+/// Y/U/V traversal rather than the existing flat small-grid path.
+fn inter_lossy_wide_mode0_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && matches!(
+            (layout, block_size),
+            (
+                PixelLayout::I420,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (PixelLayout::I422, BlockSize::B128x64 | BlockSize::B128x128)
+                | (
+                    PixelLayout::I444,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+        )
+        && bit_depth == 8
+        && quantization.sample_depth.bits() == 8
+        && transform_mode == 0
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 /// Mode-1 lossy 4:2:0 blocks wider or taller than one 64px transform are
 /// traversed as a causal 64px chunk grid. Keep the chunked tranche
 /// exact-visible and depth-matched so no clipped transform state can enter
@@ -4627,6 +4658,11 @@ enum InterTransformPlan {
         luma_height: u32,
         layout: PixelLayout,
     },
+    LossyWideMode0Grid {
+        luma_width: u32,
+        luma_height: u32,
+        layout: PixelLayout,
+    },
     LossyWideChunked {
         luma_width: u32,
         luma_height: u32,
@@ -4716,6 +4752,7 @@ fn decode_inter_transform_size(
     split_b64_supported: bool,
     lossless_grid_geometry: bool,
     lossy_grid_geometry: bool,
+    lossy_wide_mode0_geometry: bool,
     lossy_wide_chunk_geometry: bool,
     lossy_wide_mode2_geometry: bool,
     lossy_direct_chroma_grid_geometry: bool,
@@ -4732,6 +4769,17 @@ fn decode_inter_transform_size(
             if exact_geometry {
                 let (luma_width, luma_height) = block_size.pixel_dimensions();
                 return Ok(InterTransformPlan::LossyOnly4x4Grid {
+                    luma_width,
+                    luma_height,
+                    layout,
+                });
+            }
+        }
+        if lossy_wide_mode0_geometry {
+            let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
+            if exact_geometry {
+                let (luma_width, luma_height) = block_size.pixel_dimensions();
+                return Ok(InterTransformPlan::LossyWideMode0Grid {
                     luma_width,
                     luma_height,
                     layout,
@@ -5891,6 +5939,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_wide_mode0_geometry = inter_lossy_wide_mode0_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let lossy_wide_chunk_geometry = inter_lossy_wide_chunk_geometry_supported(
         node.block_size,
         layout,
@@ -6028,6 +6085,7 @@ fn decode_inter_leaf(
             || lossy_i444_rect_split_geometry
             || lossy_square64_geometry
             || lossy_split64_geometry
+            || lossy_wide_mode0_geometry
             || lossy_wide_chunk_geometry
             || lossy_thin64_split_geometry
             || lossy_wide_mode2_geometry;
@@ -6047,6 +6105,7 @@ fn decode_inter_leaf(
     if !inter_single_transform_geometry_supported(node.block_size, layout)
         && !lossless_grid_geometry
         && !lossy_grid_geometry
+        && !lossy_wide_mode0_geometry
         && !lossy_wide_chunk_geometry
         && !lossy_wide_mode2_geometry
         && !lossy_split64_geometry
@@ -6649,6 +6708,7 @@ fn decode_inter_leaf(
             && prepared_quantization.quantization.segment_qindex > 0,
         lossless_grid_geometry,
         lossy_grid_geometry,
+        lossy_wide_mode0_geometry,
         lossy_wide_chunk_geometry,
         lossy_wide_mode2_geometry,
         lossy_direct_chroma_grid_geometry,
@@ -6718,6 +6778,15 @@ fn decode_inter_leaf(
                     return Ok(Err(super::block::PortableUnavailable));
                 }
                 (TxSize::Tx4x4, false, false, true, false)
+            }
+            InterTransformPlan::LossyWideMode0Grid {
+                layout: plan_layout,
+                ..
+            } => {
+                if plan_layout != layout {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                (TxSize::Tx4x4, false, false, false, true)
             }
             InterTransformPlan::LossyWideChunked {
                 layout: plan_layout,
@@ -6845,6 +6914,11 @@ fn decode_inter_leaf(
             ..
         } => (luma_width, luma_height),
         InterTransformPlan::LossyOnly4x4Grid {
+            luma_width,
+            luma_height,
+            ..
+        } => (luma_width, luma_height),
+        InterTransformPlan::LossyWideMode0Grid {
             luma_width,
             luma_height,
             ..
@@ -7150,6 +7224,10 @@ fn decode_inter_leaf(
             )
         }
     } else if lossy_wide_chunked {
+        let mode0 = matches!(
+            transform_plan,
+            InterTransformPlan::LossyWideMode0Grid { .. }
+        );
         let split32 = matches!(
             transform_plan,
             InterTransformPlan::LossyWideMode2Split32 { .. }
@@ -7207,6 +7285,7 @@ fn decode_inter_leaf(
                 block_skipped,
                 coefficient_contexts,
                 &mut decode_transform_type,
+                mode0,
                 mode2,
                 split32,
                 deep16,
@@ -7231,6 +7310,7 @@ fn decode_inter_leaf(
                 filters,
                 coefficient_contexts,
                 &mut decode_transform_type,
+                mode0,
                 mode2,
                 split32,
                 deep16,
