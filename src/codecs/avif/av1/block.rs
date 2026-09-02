@@ -10105,6 +10105,12 @@ const LOSSY_LUMA_4X4_1D_LEVELS: usize = LOSSY_LUMA_4X4_1D_LEVEL_STRIDE * 6;
 const LOSSY_LUMA_8X4_LEVEL_STRIDE: usize = 4;
 const LOSSY_LUMA_8X4_LEVELS: usize = LOSSY_LUMA_8X4_LEVEL_STRIDE * 10;
 
+// One-dimensional TX8X4 coefficient coding uses the reference decoder's
+// sixteen-byte transposed scratch stride. Ten rows cover the eight columns
+// of the V_DCT layout plus the two guard rows read by the context stencil.
+const LOSSY_LUMA_8X4_1D_LEVEL_STRIDE: usize = 16;
+const LOSSY_LUMA_8X4_1D_LEVELS: usize = LOSSY_LUMA_8X4_1D_LEVEL_STRIDE * 10;
+
 const LOSSY_LUMA_16X4_LEVEL_STRIDE: usize = 4;
 const LOSSY_LUMA_16X4_LEVELS: usize = LOSSY_LUMA_16X4_LEVEL_STRIDE * 18;
 
@@ -12177,8 +12183,10 @@ fn decode_lossy_luma_8x4_coefficients(
 ) -> PortableResult<(Lossy4x8TransformCoefficients, u8)> {
     // R8x4 shares the t_dim.ctx == 1 luma coefficient CDFs with R4x8. The
     // two-dimensional path differs only in its transposed scan, scratch
-    // stride, and rectangular low-context table. The one-dimensional H/V
-    // sentence is admitted separately once its exact CDF evidence is wired.
+    // stride, and rectangular low-context table. One-dimensional syntax is
+    // decoded by the split-only helper below; keep this shared entry point
+    // two-dimensional so the separately audited direct R8x4 path stays
+    // transactional and unsupported.
     (!one_dimensional).then_some(()).portable()?;
     let matrix_values = luma_8x4_matrix(quantization)?;
     if eob_bin == 0 {
@@ -12792,6 +12800,239 @@ fn lossy_luma_16x4_1d_low_context(
     Ok((low_context, high_magnitude))
 }
 
+fn decode_lossy_luma_8x4_1d_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    quantization: LossyQuantization,
+    eob_bin: u32,
+    dc_sign_context: usize,
+    vertical: bool,
+) -> PortableResult<(Lossy4x8TransformCoefficients, u8)> {
+    // TX_CLASS_H and TX_CLASS_V share the one-dimensional coefficient CDFs.
+    // The 8x4 sentence is the 32-coefficient analogue of the 16x4 helper:
+    // only the scan-to-coefficient placement and EOB context bands differ.
+    // Quantization matrices are disabled for both one-dimensional classes.
+    if eob_bin == 0 {
+        let eob_base = decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_base[0], 2);
+        let token = if eob_base == 2 {
+            decode_high_token(decoder, &mut cdfs.lossy_luma_8x8_high_tokens[0])
+        } else {
+            eob_base.saturating_add(1)
+        };
+        let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
+        let mut coefficients = [0_i32; 32];
+        let (coefficient, token) = dequantize_lossy_coefficient_with_token_without_matrix(
+            decoder,
+            token,
+            negative,
+            0,
+            quantization,
+        )?;
+        coefficients[0] = coefficient;
+        return Ok((
+            coefficients,
+            lossy_coefficient_residual_context(token, token, negative),
+        ));
+    }
+
+    let eob = if eob_bin > 1 {
+        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let high_bit = u32::from(
+            decoder.adaptive_bool(
+                cdfs.lossy_luma_8x8_eob_high
+                    .get_mut(eob_bin_index)
+                    .portable()?,
+            ),
+        );
+        (high_bit | 2)
+            .checked_shl(eob_bin.saturating_sub(2))
+            .unwrap_or(0)
+            | decoder.bits(eob_bin.saturating_sub(2))
+    } else {
+        eob_bin
+    };
+    let eob = usize::try_from(eob)
+        .ok()
+        .filter(|&eob| (1..32).contains(&eob))
+        .portable()?;
+    let eob_context = 1_usize
+        .saturating_add(usize::from(eob > 4))
+        .saturating_add(usize::from(eob > 8));
+    let eob_base = decoder.adaptive_symbol(
+        cdfs.lossy_luma_8x8_eob_base
+            .get_mut(eob_context)
+            .portable()?,
+        2,
+    );
+
+    let mut tokens = [0_u32; 32];
+    let mut levels = [0_u8; LOSSY_LUMA_8X4_1D_LEVELS];
+    let mut nonzero_positions = [0_usize; 31];
+    let mut nonzero_count = 0_usize;
+    let coordinate = |position: usize| {
+        if vertical {
+            let x = position & 7;
+            let y = position >> 3;
+            (x, y, x.saturating_mul(4).saturating_add(y))
+        } else {
+            let x = position & 3;
+            let y = position >> 2;
+            (x, y, position)
+        }
+    };
+    let level_index = |x: usize, y: usize| {
+        x.checked_mul(LOSSY_LUMA_8X4_1D_LEVEL_STRIDE)
+            .and_then(|index| index.checked_add(y))
+            .filter(|&index| index < LOSSY_LUMA_8X4_1D_LEVELS)
+            .portable()
+    };
+
+    let (eob_x, eob_y, eob_rc) = coordinate(eob);
+    let eob_token = if eob_base == 2 {
+        let high_context = if eob_y != 0 { 14 } else { 7 };
+        decode_high_token(
+            decoder,
+            cdfs.lossy_luma_8x8_high_tokens
+                .get_mut(high_context)
+                .portable()?,
+        )
+    } else {
+        eob_base.saturating_add(1)
+    };
+    tokens[eob_rc] = eob_token;
+    let eob_level = if eob_base == 2 {
+        eob_token.saturating_add(192)
+    } else {
+        u32::from(lossy_luma_level_token(eob_token)?)
+    };
+    *levels.get_mut(level_index(eob_x, eob_y)?).portable()? =
+        u8::try_from(eob_level).map_err(|_| PortableUnavailable)?;
+    nonzero_positions[nonzero_count] = eob_rc;
+    nonzero_count = nonzero_count.saturating_add(1);
+
+    for scan_index in (1..eob).rev() {
+        let (x, y, rc) = coordinate(scan_index);
+        let (low_context, high_magnitude) = lossy_luma_8x4_1d_low_context(&levels, x, y)?;
+        let base_token = decoder.adaptive_symbol(
+            cdfs.lossy_luma_8x8_base_1d
+                .get_mut(low_context)
+                .portable()?,
+            3,
+        );
+        let token = if base_token == 3 {
+            let high_context = (if y != 0 { 14_usize } else { 7 })
+                .saturating_add(coefficient_high_context(high_magnitude));
+            decode_high_token(
+                decoder,
+                cdfs.lossy_luma_8x8_high_tokens
+                    .get_mut(high_context)
+                    .portable()?,
+            )
+        } else {
+            base_token
+        };
+        tokens[rc] = token;
+        let level = if base_token == 3 {
+            token.saturating_add(192)
+        } else {
+            u32::from(lossy_luma_level_token(base_token)?)
+        };
+        *levels.get_mut(level_index(x, y)?).portable()? =
+            u8::try_from(level).map_err(|_| PortableUnavailable)?;
+        if token != 0 {
+            *nonzero_positions.get_mut(nonzero_count).portable()? = rc;
+            nonzero_count = nonzero_count.saturating_add(1);
+        }
+    }
+
+    let (dc_low_context, dc_magnitude) = lossy_luma_8x4_1d_low_context(&levels, 0, 0)?;
+    let dc_base = decoder.adaptive_symbol(
+        cdfs.lossy_luma_8x8_base_1d
+            .get_mut(dc_low_context)
+            .portable()?,
+        3,
+    );
+    let dc_token = if dc_base == 3 {
+        decode_high_token(
+            decoder,
+            cdfs.lossy_luma_8x8_high_tokens
+                .get_mut(coefficient_high_context(dc_magnitude))
+                .portable()?,
+        )
+    } else {
+        dc_base
+    };
+
+    let mut coefficients = [0_i32; 32];
+    let mut coefficient_magnitude = 0_u32;
+    let mut dc_negative = false;
+    if dc_token != 0 {
+        dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
+        let (coefficient, token) = dequantize_lossy_coefficient_with_token_without_matrix(
+            decoder,
+            dc_token,
+            dc_negative,
+            0,
+            quantization,
+        )?;
+        coefficients[0] = coefficient;
+        coefficient_magnitude = coefficient_magnitude.saturating_add(token);
+    }
+    for &position in nonzero_positions[..nonzero_count].iter().rev() {
+        let negative = decoder.equal();
+        let (coefficient, token) = dequantize_lossy_coefficient_with_token_without_matrix(
+            decoder,
+            tokens[position],
+            negative,
+            position,
+            quantization,
+        )?;
+        coefficients[position] = coefficient;
+        coefficient_magnitude = coefficient_magnitude.saturating_add(token);
+    }
+    Ok((
+        coefficients,
+        lossy_coefficient_residual_context(coefficient_magnitude, dc_token, dc_negative),
+    ))
+}
+
+fn lossy_luma_8x4_1d_low_context(
+    levels: &[u8; LOSSY_LUMA_8X4_1D_LEVELS],
+    x: usize,
+    y: usize,
+) -> PortableResult<(usize, u32)> {
+    let origin = x
+        .checked_mul(LOSSY_LUMA_8X4_1D_LEVEL_STRIDE)
+        .and_then(|index| index.checked_add(y))
+        .filter(|&index| index < LOSSY_LUMA_8X4_1D_LEVELS)
+        .portable()?;
+    let level_at = |row: usize, column: usize| {
+        origin
+            .checked_add(row.checked_mul(LOSSY_LUMA_8X4_1D_LEVEL_STRIDE).portable()?)
+            .and_then(|index| index.checked_add(column))
+            .and_then(|index| levels.get(index).copied())
+            .portable()
+    };
+    let mut high_magnitude = u32::from(level_at(0, 1)?);
+    high_magnitude = high_magnitude
+        .saturating_add(u32::from(level_at(1, 0)?))
+        .saturating_add(u32::from(level_at(0, 2)?));
+    let magnitude = high_magnitude
+        .saturating_add(u32::from(level_at(0, 3)?))
+        .saturating_add(u32::from(level_at(0, 4)?));
+    let offset = 26_usize.saturating_add(if y > 1 { 10 } else { y.saturating_mul(5) });
+    let magnitude = if magnitude > 512 {
+        4
+    } else {
+        (magnitude.saturating_add(64)) >> 7
+    };
+    let low_context = offset
+        .checked_add(usize::try_from(magnitude).map_err(|_| PortableUnavailable)?)
+        .filter(|&context| context < 41)
+        .portable()?;
+    Ok((low_context, high_magnitude))
+}
+
 fn decode_lossy_luma_4x4_1d_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
@@ -13369,26 +13610,43 @@ fn decode_lossy_luma_8x4_split(
         let transform_kind = match transform_type {
             0 => Lossy4x8TransformKind::IdentityIdentity,
             1 => Lossy4x8TransformKind::DctDct,
-            // V_DCT and H_DCT use the one-dimensional R8x4 coefficient
-            // sentence. Reject them before consuming EOB or coefficient
-            // syntax so the unsupported stream cannot be misaligned.
-            2 | 3 => return Err(PortableUnavailable),
+            2 => Lossy4x8TransformKind::IdentityDct,
+            3 => Lossy4x8TransformKind::DctIdentity,
             4 => Lossy4x8TransformKind::AdstAdst,
             5 => Lossy4x8TransformKind::AdstDct,
             6 => Lossy4x8TransformKind::DctAdst,
             _ => return Err(PortableUnavailable),
         };
-        let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_4x8_eob_bin, 5);
+        let one_dimensional = matches!(
+            transform_kind,
+            Lossy4x8TransformKind::IdentityDct | Lossy4x8TransformKind::DctIdentity
+        );
+        let eob_bin = if one_dimensional {
+            decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x4_eob_bin_1d, 5)
+        } else {
+            decoder.adaptive_symbol(&mut cdfs.lossy_luma_4x8_eob_bin, 5)
+        };
         let left_edges = [left_context];
         let dc_sign_context = coefficient_dc_sign_context_for_dimensions(2, 1, &above, &left_edges);
-        let (transform_coefficients, context) = decode_lossy_luma_8x4_coefficients(
-            decoder,
-            cdfs,
-            quantization,
-            eob_bin,
-            false,
-            dc_sign_context,
-        )?;
+        let (transform_coefficients, context) = if one_dimensional {
+            decode_lossy_luma_8x4_1d_coefficients(
+                decoder,
+                cdfs,
+                quantization,
+                eob_bin,
+                dc_sign_context,
+                matches!(transform_kind, Lossy4x8TransformKind::IdentityDct),
+            )?
+        } else {
+            decode_lossy_luma_8x4_coefficients(
+                decoder,
+                cdfs,
+                quantization,
+                eob_bin,
+                false,
+                dc_sign_context,
+            )?
+        };
 
         coefficients[column] = Some(transform_coefficients);
         transforms[column] = transform_kind;
