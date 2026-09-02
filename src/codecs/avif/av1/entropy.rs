@@ -5230,7 +5230,7 @@ fn decode_inter_transform_size(
     let category = usize::try_from(category).map_err(|_| super::block::PortableUnavailable)?;
     let split = decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
     if split {
-        if layout == PixelLayout::Monochrome
+        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
             && split_b8_rect_supported
             && visible_width == 4
             && visible_height == 8
@@ -5239,7 +5239,7 @@ fn decode_inter_transform_size(
         {
             return Ok(InterTransformPlan::SplitB4x8);
         }
-        if layout == PixelLayout::Monochrome
+        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
             && split_b8_rect_supported
             && visible_width == 8
             && visible_height == 4
@@ -5248,7 +5248,7 @@ fn decode_inter_transform_size(
         {
             return Ok(InterTransformPlan::SplitB8x4);
         }
-        if layout == PixelLayout::Monochrome
+        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
             && split_b8_rect_supported
             && visible_width == 4
             && visible_height == 16
@@ -5273,7 +5273,7 @@ fn decode_inter_transform_size(
             }
             return Ok(InterTransformPlan::SplitB4x16);
         }
-        if layout == PixelLayout::Monochrome
+        if matches!(layout, PixelLayout::Monochrome | PixelLayout::I444)
             && split_b8_rect_supported
             && visible_width == 16
             && visible_height == 4

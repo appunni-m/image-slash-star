@@ -2625,10 +2625,14 @@ pub(super) fn filter_transform_dimensions(
     let luma = if split {
         match transform_grid {
             TransformGrid::Square4 => (4, 4),
-            TransformGrid::Vertical4x8
-            | TransformGrid::Vertical4x16
-            | TransformGrid::Horizontal8x4
-            | TransformGrid::Square8 => (4, 4),
+            TransformGrid::Vertical4x8 | TransformGrid::Horizontal8x4 | TransformGrid::Square8 => {
+                (4, 4)
+            }
+            TransformGrid::Vertical4x16 => match (leaf.tx_context_width, leaf.tx_context_height) {
+                (0, 0) => (4, 4),
+                (0, 1) => (4, 8),
+                _ => return None,
+            },
             TransformGrid::Horizontal16x4 => {
                 // R16x4 has two legal split depths. The retained transform
                 // context identifies the terminal TX4x4 or TX8x4 geometry;
@@ -53434,6 +53438,10 @@ impl Lossy420Decoder {
                     | InterTransformPlan::SplitB16x8
                     | InterTransformPlan::SplitB32x8
                     | InterTransformPlan::SplitB32x16
+                    | InterTransformPlan::SplitB4x8
+                    | InterTransformPlan::SplitB8x4
+                    | InterTransformPlan::SplitB4x16
+                    | InterTransformPlan::SplitB16x4
             );
         let split_vertical_i422_tx4_chroma_grid = chroma_sampling == ChromaSampling::Subsampled422
             && matches!(
@@ -54393,8 +54401,10 @@ impl Lossy420Decoder {
                 .then_some(())
                 .portable()?;
             if split_b4x8 || split_b8x4 {
-                (chroma_sampling == ChromaSampling::Monochrome
-                    && ((split_b4x8 && exact_b4x8) || (split_b8x4 && exact_b8x4))
+                (matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Full
+                ) && ((split_b4x8 && exact_b4x8) || (split_b8x4 && exact_b8x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
@@ -54406,8 +54416,10 @@ impl Lossy420Decoder {
                 .portable()?;
             }
             if split_b4x16 || split_b16x4 {
-                (chroma_sampling == ChromaSampling::Monochrome
-                    && ((split_b4x16 && exact_b4x16) || (split_b16x4 && exact_b16x4))
+                (matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Full
+                ) && ((split_b4x16 && exact_b4x16) || (split_b16x4 && exact_b16x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
