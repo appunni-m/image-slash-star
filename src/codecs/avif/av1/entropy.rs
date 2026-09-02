@@ -8052,6 +8052,24 @@ fn decode_inter_leaf(
     if matches!(context.bit_depth, 10 | 12) && !lossless_grid_geometry {
         let (block_width, block_height) = node.block_size.pixel_dimensions();
         let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
+        // Full-resolution I444 has no shared chroma ownership: every plane
+        // uses the same exact leaf extent.  The generic depth-aware inter
+        // compositor can therefore admit the three smallest color block
+        // shapes without the cross-leaf chroma mosaic required by I420/I422.
+        // Keep this as an explicit exception rather than lowering the color
+        // minimum globally; subsampled tiny leaves may not own a chroma
+        // syntax sentence and must remain transactional.
+        let tiny_high_depth_i444 =
+            complete_high_depth_inter_reconstruction_context(context, inter_context)
+                && layout == PixelLayout::I444
+                && matches!(
+                    node.block_size,
+                    BlockSize::B4x4 | BlockSize::B4x8 | BlockSize::B8x4
+                )
+                && (block_width, block_height) == node.block_size.pixel_dimensions()
+                && matches!(context.frame_tools.transform_mode, 1 | 2)
+                && !prepared_quantization.quantization.segment_lossless
+                && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth;
         let wide_lossy_geometry = lossy_wide_single_geometry
             || lossy_direct_chroma_grid_geometry
             || lossy_i444_rect_split_geometry
@@ -8063,6 +8081,7 @@ fn decode_inter_leaf(
             || lossy_thin64_split_geometry
             || lossy_wide_mode2_geometry;
         if !wide_lossy_geometry
+            && !tiny_high_depth_i444
             && (!(minimum..=maximum).contains(&block_width)
                 || !(minimum..=maximum).contains(&block_height))
         {
