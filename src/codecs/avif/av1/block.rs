@@ -55270,6 +55270,22 @@ impl Lossy420Decoder {
             && visible_width != 0
             && visible_height != 0
             && block_size.valid_for_layout(layout);
+        // Segment-lossless residuals in mixed transform-mode frames use the
+        // same fixed TX4x4 WHT grid as mode-0 lossless frames.  Keep this
+        // exception limited to the color layouts/depths whose entropy layer
+        // admits the corresponding mixed profile.
+        let mixed_lossless_transform_mode = matches!(tools.transform_mode, 1 | 2)
+            && quantization.segment_lossless
+            && tools.sample_depth == quantization.sample_depth
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && matches!(
+                chroma_sampling,
+                ChromaSampling::Subsampled420
+                    | ChromaSampling::Subsampled422
+                    | ChromaSampling::Full
+            )
+            && (tools.sample_depth != SampleDepth::EIGHT
+                || chroma_sampling == ChromaSampling::Subsampled420);
         (common_geometry
             && if lossless_grid {
                 matches!(
@@ -55282,11 +55298,7 @@ impl Lossy420Decoder {
                     matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 } else {
                     tools.sample_depth == SampleDepth::EIGHT
-                }) && (tools.transform_mode == 0
-                    || (chroma_sampling == ChromaSampling::Subsampled420
-                        && tools.sample_depth == SampleDepth::EIGHT
-                        && matches!(tools.transform_mode, 1 | 2)
-                        && quantization.segment_lossless))
+                }) && (tools.transform_mode == 0 || mixed_lossless_transform_mode)
                     && quantization.segment_lossless
                     && quantization.qindex == 0
                     && quantization.segment_qindex == 0

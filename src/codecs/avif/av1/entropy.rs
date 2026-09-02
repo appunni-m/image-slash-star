@@ -3339,6 +3339,95 @@ fn mixed_i420_lossless_segmentation_supported(context: &FirstBlockContext) -> bo
     has_lossless && has_lossy
 }
 
+/// High-depth color uses the generic lossless-grid compositor for every
+/// supported plane layout.  This predicate mirrors the bounded 8-bit I420
+/// tranche above while keeping the extension isolated from monochrome and
+/// from the all-lossless mode-0 profiles.
+fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    if context.intra_frame
+        || context.all_lossless
+        || !matches!(context.bit_depth, 10 | 12)
+        || !matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        || context.superres_enabled
+        || context.upscaled_width != context.frame_width
+        || !context.single_tile
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || context.frame_tools.restoration_present
+        || context.restoration_types != [None; 3]
+        || context.frame_tools.film_grain_present
+        || !matches!(context.frame_tools.transform_mode, 1 | 2)
+        || context.frame_tools.reduced_transform_set
+        || !context.segmentation_enabled
+        || !segmentation.enabled
+        || !segmentation.update_map
+        || segmentation.temporal
+        || segmentation.preskip
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+    {
+        return false;
+    }
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    if quantization.using_matrix {
+        return false;
+    }
+    let Some(last_active) = usize::try_from(segmentation.last_active_id)
+        .ok()
+        .filter(|&index| index < segmentation.segments.len())
+    else {
+        return false;
+    };
+    let active_count = last_active.saturating_add(1);
+    let delta_lossless = quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == 0
+        && quantization.u_ac_delta == 0
+        && quantization.v_dc_delta == 0
+        && quantization.v_ac_delta == 0;
+    let mut has_lossless = false;
+    let mut has_lossy = false;
+    for segment in &segmentation.segments[..active_count] {
+        let expected_qindex = i64::from(quantization.base)
+            .saturating_add(i64::from(segment.delta_q))
+            .clamp(0, 255);
+        if segment.reference >= 0
+            || segment.skip
+            || segment.global_motion
+            || segment.delta_lf != [0; 4]
+            || u32::try_from(expected_qindex).ok() != Some(segment.qindex)
+        {
+            return false;
+        }
+        let segment_lossless = segment.qindex == 0 && delta_lossless;
+        if segment.lossless != segment_lossless {
+            return false;
+        }
+        if segment_lossless {
+            has_lossless = true;
+        } else if segment.qindex > 0 {
+            has_lossy = true;
+        } else {
+            return false;
+        }
+    }
+    has_lossless && has_lossy
+}
+
 fn interintra_allowed(block_size: BlockSize) -> bool {
     matches!(
         block_size,
@@ -3854,6 +3943,36 @@ fn inter_mixed_i420_lossless_grid_geometry_supported(
         && matches!(transform_mode, 1 | 2)
         // Reuse the complete geometry/quantization proof while evaluating it
         // in its mode-0 form; only the frame-mode restriction differs here.
+        && inter_lossless_grid_geometry_supported(
+            block_size,
+            layout,
+            visible_width,
+            visible_height,
+            bit_depth,
+            quantization,
+            0,
+        )
+}
+
+/// High-depth mixed-segment blocks share the generic lossless-grid traversal
+/// across all three color layouts.  The frame-level admission remains the
+/// sole owner of the 10/12-bit scope; this helper only proves the exact leaf
+/// geometry and per-segment zero-quantization state needed by the block path.
+fn inter_mixed_high_depth_lossless_grid_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    matches!(layout, PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444)
+        && matches!(bit_depth, 10 | 12)
+        && matches!(transform_mode, 1 | 2)
+        // The ordinary helper is mode-0-only by design; evaluating its
+        // remaining geometry/quantization proof here avoids broadening any
+        // other inter profile.
         && inter_lossless_grid_geometry_supported(
             block_size,
             layout,
@@ -6617,6 +6736,14 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     ) || inter_mixed_i420_lossless_grid_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    ) || inter_mixed_high_depth_lossless_grid_geometry_supported(
         node.block_size,
         layout,
         visible_width,
@@ -11309,7 +11436,8 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.monochrome
         && !context.all_lossless
         && !context.allow_intrabc
-        && postskip_altq_segmentation_supported(context)
+        && (postskip_altq_segmentation_supported(context)
+            || mixed_high_depth_color_lossless_segmentation_supported(context))
         // TX_MODE_ONLY_4X4 is depth-independent; the explicit bounded I420
         // and color grids plus the wide mode-0 plan consume its high-depth
         // raster without weakening unrelated single-terminal geometry.
