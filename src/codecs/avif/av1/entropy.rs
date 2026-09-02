@@ -8478,6 +8478,8 @@ pub(super) fn validate_complete_lossy_420_partition(
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
     let bounded_intra_restoration =
         complete_bounded_restoration_intra_420_reconstruction_context(context);
+    let high_depth_color_intra_restoration =
+        complete_high_depth_color_intra_restoration_reconstruction_context(context);
     let bounded_inter_restoration = inter_context.is_some_and(|inter_context| {
         !inter_context.enable_masked_compound
             && complete_bounded_restoration_inter_420_reconstruction_context(context)
@@ -8784,8 +8786,11 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i422_rect_geometry = bounded_i422_rect_geometry
         .or(bounded_i422_rect_cdef_restoration_geometry)
         .or(bounded_i422_rect_loop_postfilters.map(|profile| profile.geometry));
-    let bounded_subsampled_rect_geometry =
-        bounded_i420_rect_geometry.or(bounded_i422_rect_geometry);
+    let bounded_subsampled_rect_geometry = if high_depth_color_intra_restoration {
+        None
+    } else {
+        bounded_i420_rect_geometry.or(bounded_i422_rect_geometry)
+    };
     let bounded_subsampled_rect = bounded_subsampled_rect_geometry.is_some();
     let bounded_i420_intra_loop = complete_bounded_i420_loop_intra_reconstruction_context(context);
     let bounded_i420_inter_loop = inter_context.is_some_and(|inter_context| {
@@ -8803,7 +8808,9 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i444_intra_cdef = bounded_i444_intra_cdef_geometry.is_some();
     let bounded_i444_intra_loop_geometry = bounded_i444_intra_loop_geometry(context);
     let bounded_i444_intra_loop = bounded_i444_intra_loop_geometry.is_some();
-    let bounded_i444_geometry = if bounded_i444_inter {
+    let bounded_i444_geometry = if high_depth_color_intra_restoration {
+        None
+    } else if bounded_i444_inter {
         bounded_i444_inter_geometry
     } else if bounded_i444_restoration {
         bounded_i444_geometry_for_context(context)
@@ -8882,7 +8889,8 @@ pub(super) fn validate_complete_lossy_420_partition(
             || bounded_i420_inter_loop
             || bounded_i422_inter_loop
     });
-    let intra_reconstruction = complete_lossy_420_reconstruction_context(context)
+    let intra_reconstruction = high_depth_color_intra_restoration
+        || complete_lossy_420_reconstruction_context(context)
         || superres_lossy_i420_intra
         || lossy_i422_intra_active_restoration
         || lossy_i444_intra_active_restoration
@@ -8972,6 +8980,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || monochrome_mode2_restoration
         || monochrome_matrix_restoration
         || monochrome_single_tile_loop_restoration
+        || high_depth_color_intra_restoration
         || monochrome_lossy_active_restoration
         || lossy_i420_intra_active_restoration
         || lossy_i422_intra_active_restoration
@@ -9160,23 +9169,24 @@ pub(super) fn validate_complete_lossy_420_partition(
                 } else {
                     node.block_size
                 };
-                if bounded_i444_inter
-                    || bounded_i444_restoration
-                    || bounded_i444_intra_restoration
-                    || bounded_i422_restoration
-                    || bounded_i420_restoration
-                    || bounded_i420_cdef
-                    || bounded_i422_cdef
-                    || bounded_i420_cdef_restoration
-                    || bounded_i422_cdef_restoration
-                    || bounded_i420_loop_postfilters
-                    || bounded_i422_loop_postfilters
-                    || bounded_i420_rect
-                    || bounded_subsampled_rect
-                    || bounded_i444_intra_cdef
-                    || bounded_i444_intra_loop
-                    || bounded_i420_loop
-                    || bounded_i422_loop
+                if !high_depth_color_intra_restoration
+                    && (bounded_i444_inter
+                        || bounded_i444_restoration
+                        || bounded_i444_intra_restoration
+                        || bounded_i422_restoration
+                        || bounded_i420_restoration
+                        || bounded_i420_cdef
+                        || bounded_i422_cdef
+                        || bounded_i420_cdef_restoration
+                        || bounded_i422_cdef_restoration
+                        || bounded_i420_loop_postfilters
+                        || bounded_i422_loop_postfilters
+                        || bounded_i420_rect
+                        || bounded_subsampled_rect
+                        || bounded_i444_intra_cdef
+                        || bounded_i444_intra_loop
+                        || bounded_i420_loop
+                        || bounded_i422_loop)
                 {
                     if let Some(geometry) = bounded_subsampled_rect_geometry {
                         if !bounded_subsampled_expected_rect_terminal(
@@ -17199,6 +17209,158 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.restoration_types == [None; 3]
         && context.block_x == 0
         && context.block_y == 0
+}
+
+/// Admit active Wiener/SGR restoration for a single-tile high-depth lossy
+/// color intra frame. The streamed reconstruction core already carries the
+/// depth-parametric predictors, transform partitions, matrices, loop-filter
+/// metadata, and CDEF maps; this tranche only supplies the frame-level proof
+/// that lets the existing post-filter restoration stage consume its complete
+/// planes. Keep the profile layout-parametric so I420, I422, and I444 share
+/// identical entropy ordering while their restoration-plane extents remain
+/// explicit and checked.
+fn complete_high_depth_color_intra_restoration_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
+    if !matches!(
+        layout,
+        PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+    ) {
+        return false;
+    }
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    if !context.intra_frame
+        || !matches!(context.bit_depth, 10 | 12)
+        || !context.single_tile
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || context.frame_width < 8
+        || context.frame_width > 128
+        || context.frame_height < 8
+        || context.frame_height > 128
+        || !context.frame_width.is_multiple_of(8)
+        || !context.frame_height.is_multiple_of(8)
+        || padded_block_width != Some(context.block_width)
+        || padded_block_height != Some(context.block_height)
+        || context.upscaled_width != context.frame_width
+        || context.superres_enabled
+        || context.all_lossless
+        || context.segmentation_enabled
+        || context.frame_tools.segmentation.enabled
+        || context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != quantization.base
+        || quantization.base == 0
+        || context.skip_mode_enabled
+        || context.allow_intrabc
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.frame_tools.reduced_transform_set
+        || context.frame_tools.film_grain_present
+        || !matches!(context.frame_tools.transform_mode, 1 | 2)
+        || !complete_high_depth_loop_filter_supported(context)
+        || !complete_high_depth_cdef_supported(context)
+        || !context.frame_tools.restoration_present
+        || !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+
+    let (luma_min_log2, chroma_min_log2) = match context.level {
+        0 => (7, 6),
+        1 => (6, 5),
+        _ => return false,
+    };
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    if !(luma_min_log2..=8).contains(&luma_log2)
+        || !(chroma_min_log2..=8).contains(&chroma_log2)
+        || context.frame_height > 56
+    {
+        return false;
+    }
+    let chroma_active =
+        context.restoration_types[1].is_some() || context.restoration_types[2].is_some();
+    let chroma_log_matches = match layout {
+        PixelLayout::I420 if chroma_active => {
+            chroma_log2 == luma_log2 || chroma_log2.checked_add(1) == Some(luma_log2)
+        }
+        PixelLayout::I420 => chroma_log2 == luma_log2,
+        PixelLayout::I422 | PixelLayout::I444 => chroma_log2 == luma_log2,
+        PixelLayout::Monochrome => false,
+    };
+    if !chroma_log_matches {
+        return false;
+    }
+
+    let Some(chroma_width) = context.frame_width.checked_add(1).map(|width| width / 2) else {
+        return false;
+    };
+    let Some(chroma_height) = context.frame_height.checked_add(1).map(|height| height / 2) else {
+        return false;
+    };
+    let dimensions = match layout {
+        PixelLayout::I420 => [
+            (context.frame_width, context.frame_height),
+            (chroma_width, chroma_height),
+            (chroma_width, chroma_height),
+        ],
+        PixelLayout::I422 => [
+            (context.frame_width, context.frame_height),
+            (chroma_width, context.frame_height),
+            (chroma_width, context.frame_height),
+        ],
+        PixelLayout::I444 => [
+            (context.frame_width, context.frame_height),
+            (context.frame_width, context.frame_height),
+            (context.frame_width, context.frame_height),
+        ],
+        PixelLayout::Monochrome => return false,
+    };
+    for (plane, restoration_type) in context.restoration_types.iter().enumerate() {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let unit_log2 = if plane == 0 { luma_log2 } else { chroma_log2 };
+        let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+            return false;
+        };
+        let (width, height) = dimensions[plane];
+        let Some(width_with_half) = width.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = height.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let units_x = (width_with_half >> unit_log2).max(1);
+        let units_y = (height_with_half >> unit_log2).max(1);
+        if units_x != 1 || units_y != 1 {
+            return false;
+        }
+    }
+    true
 }
 
 /// 4:2:2 intra tranche admitted by the depth-parametric streamed leaf. The
