@@ -55486,9 +55486,7 @@ impl Lossy420Decoder {
                     (sampling, block_size),
                     (ChromaSampling::Subsampled422, BlockSize::B4x8)
                         | (ChromaSampling::Subsampled422, BlockSize::B4x16)
-                ) || (matches!(tools.sample_depth.bits(), 10 | 12)
-                    && tools.transform_mode == 1
-                    && quantization.segment_qindex > 0))
+                ) || tools.transform_mode == 1)
                 && matches!(
                     block_size,
                     BlockSize::B4x8
