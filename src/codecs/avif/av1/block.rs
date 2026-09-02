@@ -51565,6 +51565,16 @@ pub(super) struct B64SplitTopology {
     pub(super) child_splits: [[bool; 2]; 2],
 }
 
+/// Mixed depth-two topology for an exact rectangular inter leaf. The two
+/// entries are ordered along the long axis: top/bottom for B16x32 and
+/// left/right for B32x16. Exactly one entry must be true; a true child owns
+/// four TX8x8 terminals while a false child owns one TX16x16 terminal.
+#[derive(Clone, Copy)]
+pub(super) enum RectSplitTopology {
+    B16x32 { child_splits: [bool; 2] },
+    B32x16 { child_splits: [bool; 2] },
+}
+
 /// Residual contexts published by one bounded lossless transform grid.
 ///
 /// The terminal at the bottom-right supplies the scalar context for the next
@@ -51634,8 +51644,14 @@ enum InterTransformPlan {
     SplitB16Deep,
     SplitB16x32,
     SplitB16x32Deep,
+    SplitB16x32Topology {
+        child_splits: [bool; 2],
+    },
     SplitB32x16,
     SplitB32x16Deep,
+    SplitB32x16Topology {
+        child_splits: [bool; 2],
+    },
     SplitB32,
     SplitB32Deep,
     SplitB64,
@@ -52711,10 +52727,11 @@ impl Lossy420Decoder {
         deep_b64: bool,
         deep_rect: bool,
         b64_topology: Option<B64SplitTopology>,
+        rect_topology: Option<RectSplitTopology>,
         obmc: Option<ObmcContext<'_>>,
         inter_intra: Option<InterIntraPrediction<'_>>,
     ) -> PortableResult<FirstLeaf> {
-        if b64_topology.is_some() && deep_b64 {
+        if (b64_topology.is_some() || rect_topology.is_some()) && deep_b64 {
             return Err(PortableUnavailable);
         }
         let transform_plan = match block_size {
@@ -52745,6 +52762,16 @@ impl Lossy420Decoder {
                 InterTransformPlan::SplitB64Topology {
                     child_splits: topology.child_splits,
                 }
+            }
+            BlockSize::B16x32
+                if let Some(RectSplitTopology::B16x32 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB16x32Topology { child_splits }
+            }
+            BlockSize::B32x16
+                if let Some(RectSplitTopology::B32x16 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB32x16Topology { child_splits }
             }
             BlockSize::B64x64 if deep_b64 => InterTransformPlan::SplitB64Deep,
             BlockSize::B16x16 if deep_rect => InterTransformPlan::SplitB16Deep,
@@ -52810,8 +52837,9 @@ impl Lossy420Decoder {
         deep_b64: bool,
         deep_rect: bool,
         b64_topology: Option<B64SplitTopology>,
+        rect_topology: Option<RectSplitTopology>,
     ) -> PortableResult<FirstLeaf> {
-        if b64_topology.is_some() && deep_b64 {
+        if (b64_topology.is_some() || rect_topology.is_some()) && deep_b64 {
             return Err(PortableUnavailable);
         }
         let transform_plan = match block_size {
@@ -52842,6 +52870,16 @@ impl Lossy420Decoder {
                 InterTransformPlan::SplitB64Topology {
                     child_splits: topology.child_splits,
                 }
+            }
+            BlockSize::B16x32
+                if let Some(RectSplitTopology::B16x32 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB16x32Topology { child_splits }
+            }
+            BlockSize::B32x16
+                if let Some(RectSplitTopology::B32x16 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB32x16Topology { child_splits }
             }
             BlockSize::B64x64 if deep_b64 => InterTransformPlan::SplitB64Deep,
             BlockSize::B16x16 if deep_rect => InterTransformPlan::SplitB16Deep,
@@ -53623,8 +53661,16 @@ impl Lossy420Decoder {
         let split_b16_deep = matches!(transform_plan, InterTransformPlan::SplitB16Deep);
         let split_b16x32 = matches!(transform_plan, InterTransformPlan::SplitB16x32);
         let split_b16x32_deep = matches!(transform_plan, InterTransformPlan::SplitB16x32Deep);
+        let split_b16x32_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB16x32Topology { .. }
+        );
         let split_b32x16 = matches!(transform_plan, InterTransformPlan::SplitB32x16);
         let split_b32x16_deep = matches!(transform_plan, InterTransformPlan::SplitB32x16Deep);
+        let split_b32x16_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB32x16Topology { .. }
+        );
         let split_b32 = matches!(transform_plan, InterTransformPlan::SplitB32);
         let split_b32_deep = matches!(transform_plan, InterTransformPlan::SplitB32Deep);
         let split_b64 = matches!(transform_plan, InterTransformPlan::SplitB64);
@@ -53639,6 +53685,7 @@ impl Lossy420Decoder {
                     | InterTransformPlan::SplitB8x32Deep
                     | InterTransformPlan::SplitB16x32
                     | InterTransformPlan::SplitB16x32Deep
+                    | InterTransformPlan::SplitB16x32Topology { .. }
                     | InterTransformPlan::SplitB16x8
                     | InterTransformPlan::SplitB16x8Deep
                     | InterTransformPlan::SplitB32x8
@@ -53649,6 +53696,7 @@ impl Lossy420Decoder {
                     | InterTransformPlan::SplitB64x32Deep
                     | InterTransformPlan::SplitB32x16
                     | InterTransformPlan::SplitB32x16Deep
+                    | InterTransformPlan::SplitB32x16Topology { .. }
                     | InterTransformPlan::SplitB4x8
                     | InterTransformPlan::SplitB8x4
                     | InterTransformPlan::SplitB4x16
@@ -53663,6 +53711,10 @@ impl Lossy420Decoder {
                     | (BlockSize::B8x32, InterTransformPlan::SplitB8x32)
                     | (BlockSize::B16x32, InterTransformPlan::SplitB16x32)
                     | (BlockSize::B16x32, InterTransformPlan::SplitB16x32Deep)
+                    | (
+                        BlockSize::B16x32,
+                        InterTransformPlan::SplitB16x32Topology { .. }
+                    )
                     | (BlockSize::B16x64, InterTransformPlan::SplitB16x64)
                     | (BlockSize::B16x64, InterTransformPlan::SplitB16x64Deep)
                     | (BlockSize::B32x64, InterTransformPlan::SplitB32x64)
@@ -54143,6 +54195,31 @@ impl Lossy420Decoder {
                 .then_some(())
                 .portable()?;
         }
+        if split_b16x32_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB16x32Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.into_iter().any(|split| split);
+            let all_children_split = child_splits.into_iter().all(|split| split);
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B16x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B16x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B16x32, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && quantization.segment_qindex > 0
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split
+                && prediction_state.inter_intra.is_none()
+                && prediction_state.obmc.is_none())
+            .then_some(())
+            .portable()?;
+        }
         if split_b8x16 || split_b16x8 {
             (matches!(
                 (block_size, chroma_sampling),
@@ -54302,6 +54379,31 @@ impl Lossy420Decoder {
                 && !quantization.segment_lossless)
                 .then_some(())
                 .portable()?;
+        }
+        if split_b32x16_topology {
+            let child_splits = match transform_plan {
+                InterTransformPlan::SplitB32x16Topology { child_splits } => child_splits,
+                _ => return Err(PortableUnavailable),
+            };
+            let any_child_split = child_splits.into_iter().any(|split| split);
+            let all_children_split = child_splits.into_iter().all(|split| split);
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B32x16, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x16, ChromaSampling::Monochrome)
+                    | (BlockSize::B32x16, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && quantization.segment_qindex > 0
+                && !quantization.segment_lossless
+                && any_child_split
+                && !all_children_split
+                && prediction_state.inter_intra.is_none()
+                && prediction_state.obmc.is_none())
+            .then_some(())
+            .portable()?;
         }
         if split_b32 || split_b32_deep {
             (block_size == BlockSize::B32x32
@@ -54546,8 +54648,10 @@ impl Lossy420Decoder {
             || split_b16_deep
             || split_b16x32
             || split_b16x32_deep
+            || split_b16x32_topology
             || split_b32x16
             || split_b32x16_deep
+            || split_b32x16_topology
             || split_b32
             || split_b32_deep
             || split_b64
@@ -54641,8 +54745,10 @@ impl Lossy420Decoder {
                 || (split_b16_deep && exact_b16)
                 || (split_b16x32 && exact_b16x32)
                 || (split_b16x32_deep && exact_b16x32)
+                || (split_b16x32_topology && exact_b16x32)
                 || (split_b32x16 && exact_b32x16)
                 || (split_b32x16_deep && exact_b32x16)
+                || (split_b32x16_topology && exact_b32x16)
                 || (split_b32 && exact_b32)
                 || (split_b32_deep && exact_b32)
                 || (split_b64 && exact_b64)
@@ -54693,8 +54799,10 @@ impl Lossy420Decoder {
                     && !split_b16_deep
                     && !split_b16x32
                     && !split_b16x32_deep
+                    && !split_b16x32_topology
                     && !split_b32x16
                     && !split_b32x16_deep
+                    && !split_b32x16_topology
                     && !split_b32
                     && !split_b32_deep
                     && !split_b64
@@ -54737,8 +54845,10 @@ impl Lossy420Decoder {
                     && !split_b16_deep
                     && !split_b16x32
                     && !split_b16x32_deep
+                    && !split_b16x32_topology
                     && !split_b32x16
                     && !split_b32x16_deep
+                    && !split_b32x16_topology
                     && !split_b32
                     && !split_b32_deep
                     && !split_b64
@@ -54887,10 +54997,14 @@ impl Lossy420Decoder {
             InterTransformPlan::SplitB16 | InterTransformPlan::SplitB16Deep => {
                 (TxSize::Tx16x16, false, Av1TransformType::DctDct)
             }
-            InterTransformPlan::SplitB16x32 | InterTransformPlan::SplitB16x32Deep => {
+            InterTransformPlan::SplitB16x32
+            | InterTransformPlan::SplitB16x32Deep
+            | InterTransformPlan::SplitB16x32Topology { .. } => {
                 (TxSize::Tx16x32, false, Av1TransformType::DctDct)
             }
-            InterTransformPlan::SplitB32x16 | InterTransformPlan::SplitB32x16Deep => {
+            InterTransformPlan::SplitB32x16
+            | InterTransformPlan::SplitB32x16Deep
+            | InterTransformPlan::SplitB32x16Topology { .. } => {
                 (TxSize::Tx32x16, false, Av1TransformType::DctDct)
             }
             InterTransformPlan::SplitB32 | InterTransformPlan::SplitB32Deep => {
@@ -55503,6 +55617,35 @@ impl Lossy420Decoder {
                 luma_split_transforms = Some(split_transforms);
                 continue;
             }
+            if (split_b16x32_topology || split_b32x16_topology) && plane == 0 {
+                let topology = match transform_plan {
+                    InterTransformPlan::SplitB16x32Topology { child_splits } => {
+                        RectSplitTopology::B16x32 { child_splits }
+                    }
+                    InterTransformPlan::SplitB32x16Topology { child_splits } => {
+                        RectSplitTopology::B32x16 { child_splits }
+                    }
+                    _ => return Err(PortableUnavailable),
+                };
+                let (grid_contexts, grid_transforms) = self.decode_inter_split_luma_rect_topology(
+                    decoder,
+                    &prediction,
+                    &mut rasters[0],
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    topology,
+                    &mut decode_transform_type,
+                )?;
+                contexts[0] = grid_contexts.bottom_right;
+                luma_right_contexts = grid_contexts.right;
+                luma_bottom_contexts = grid_contexts.bottom;
+                luma_transform_split = true;
+                luma_split_tx_size = Some(TxSize::Tx8x8);
+                luma_transform = grid_transforms[0][0];
+                luma_deep_tx8_rect_grid_transforms = Some(grid_transforms);
+                continue;
+            }
             if (split_b16x32_deep || split_b32x16_deep) && plane == 0 {
                 let (block_width, block_height) = if split_b16x32_deep {
                     (16, 32)
@@ -55899,7 +56042,7 @@ impl Lossy420Decoder {
                 continue;
             }
             if split_vertical_i422_tx4_chroma_grid && plane != 0 {
-                let transform_source = if split_b16x32_deep {
+                let transform_source = if split_b16x32_deep || split_b16x32_topology {
                     let transforms =
                         luma_deep_tx8_rect_grid_transforms.ok_or(PortableUnavailable)?;
                     Tx4ChromaTransformSource::Grid2x8(std::array::from_fn(|row| {
@@ -56124,7 +56267,12 @@ impl Lossy420Decoder {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if (split_b32x64_deep || split_b64x32_deep) && plane != 0 {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
-                } else if (split_b16x32_deep || split_b32x16_deep) && plane != 0 {
+                } else if (split_b16x32_deep
+                    || split_b32x16_deep
+                    || split_b16x32_topology
+                    || split_b32x16_topology)
+                    && plane != 0
+                {
                     inherited_inter_rect_deep_chroma_transform(
                         chroma_sampling,
                         tx_size,
@@ -57232,6 +57380,340 @@ impl Lossy420Decoder {
                 .get_mut(start..start.checked_add(2).portable()?)
                 .portable()?
                 .fill(context);
+        }
+        Ok((
+            LosslessGridContexts {
+                bottom_right: residual_contexts[last_row][last_column],
+                right,
+                bottom,
+            },
+            transforms,
+        ))
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the mixed rectangular compositor carries topology, prediction, entropy edges, quantization, raster, and callback state explicitly"
+    )]
+    fn decode_inter_split_luma_rect_topology(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        prediction: &[u16],
+        raster: &mut PrivatePlaneRaster,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+        topology: RectSplitTopology,
+        decode_transform_type: &mut impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
+    ) -> PortableResult<(LosslessGridContexts, [[Av1TransformType; 4]; 4])> {
+        let (block_width, block_height, child_splits, along_rows) = match topology {
+            RectSplitTopology::B16x32 { child_splits } => (16_usize, 32_usize, child_splits, true),
+            RectSplitTopology::B32x16 { child_splits } => (32_usize, 16_usize, child_splits, false),
+        };
+        let sample_count = block_width.checked_mul(block_height).portable()?;
+        let grid_width = block_width.checked_div(4).portable()?;
+        let grid_height = block_height.checked_div(4).portable()?;
+        (prediction.len() == sample_count
+            && raster.coded_width == block_width
+            && raster.coded_height == block_height
+            && raster.active_width == block_width
+            && raster.active_height == block_height
+            && (grid_width, grid_height) == if along_rows { (4, 8) } else { (8, 4) }
+            && tools.sample_depth == quantization.sample_depth
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.transform_mode == 2
+            && quantization.segment_qindex > 0
+            && !quantization.segment_lossless
+            && child_splits.iter().any(|&split| split)
+            && child_splits.iter().any(|&split| !split))
+        .then_some(())
+        .portable()?;
+
+        let mut residual_contexts =
+            [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut transforms = [[Av1TransformType::DctDct; 4]; 4];
+
+        for child_index in 0..2 {
+            let child_split = child_splits[child_index];
+            let child_cell_x = if along_rows { 0 } else { child_index * 4 };
+            let child_cell_y = if along_rows { child_index * 4 } else { 0 };
+            if child_split {
+                // A split TX16 child is decoded in TL, TR, BL, BR order,
+                // preserving AV1's child-major entropy traversal.
+                for local_row in 0_usize..2 {
+                    for local_column in 0_usize..2 {
+                        let cell_y = child_cell_y
+                            .checked_add(local_row.checked_mul(2).portable()?)
+                            .portable()?;
+                        let cell_x = child_cell_x
+                            .checked_add(local_column.checked_mul(2).portable()?)
+                            .portable()?;
+                        let mut above_context = [0x40_u8; 2];
+                        if cell_y == 0 {
+                            let end = cell_x.checked_add(2).portable()?;
+                            above_context.copy_from_slice(
+                                coefficient_contexts.above[0].get(cell_x..end).portable()?,
+                            );
+                        } else {
+                            let end = cell_x.checked_add(2).portable()?;
+                            above_context.copy_from_slice(
+                                residual_contexts[cell_y - 1].get(cell_x..end).portable()?,
+                            );
+                        }
+                        let mut left_context = [0x40_u8; 2];
+                        if cell_x == 0 {
+                            let end = cell_y.checked_add(2).portable()?;
+                            left_context.copy_from_slice(
+                                coefficient_contexts.left[0].get(cell_y..end).portable()?,
+                            );
+                        } else {
+                            let end = cell_y.checked_add(2).portable()?;
+                            for (destination, source) in left_context
+                                .iter_mut()
+                                .zip(residual_contexts.get(cell_y..end).portable()?.iter())
+                            {
+                                *destination = source[cell_x - 1];
+                            }
+                        }
+                        let txb_skipped = self.decode_inter_txb_skip(
+                            decoder,
+                            0,
+                            TxSize::Tx8x8,
+                            block_width,
+                            block_height,
+                            &above_context,
+                            &left_context,
+                            false,
+                        )?;
+                        let terminal_transform = if txb_skipped {
+                            Av1TransformType::DctDct
+                        } else {
+                            decode_transform_type(decoder, TxSize::Tx8x8)?
+                        };
+                        let terminal = decode_inter_lossy_terminal(
+                            decoder,
+                            0,
+                            &mut self.cdfs,
+                            &mut self.large_coeff_arena,
+                            quantization,
+                            TxSize::Tx8x8,
+                            block_width,
+                            block_height,
+                            &above_context,
+                            &left_context,
+                            txb_skipped,
+                            terminal_transform,
+                        )?;
+                        let coefficients = if terminal.skipped {
+                            None
+                        } else {
+                            Some(
+                                self.large_coeff_arena
+                                    .coefficients
+                                    .get(..terminal.coefficient_count)
+                                    .portable()?,
+                            )
+                        };
+                        let offset_x = cell_x.checked_mul(4).portable()?;
+                        let offset_y = cell_y.checked_mul(4).portable()?;
+                        let mut child_prediction = [0_u16; 64];
+                        for child_row in 0..8 {
+                            let source_start = offset_y
+                                .checked_add(child_row)
+                                .and_then(|value| value.checked_mul(block_width))
+                                .and_then(|value| value.checked_add(offset_x))
+                                .portable()?;
+                            let source_end = source_start.checked_add(8).portable()?;
+                            let destination = child_row.checked_mul(8).portable()?;
+                            child_prediction
+                                .get_mut(destination..destination.checked_add(8).portable()?)
+                                .portable()?
+                                .copy_from_slice(
+                                    prediction.get(source_start..source_end).portable()?,
+                                );
+                        }
+                        let ReconstructionScratch {
+                            transform: scratch, ..
+                        } = &mut self.reconstruction_scratch;
+                        let TransformScratch { rows, residual, .. } = scratch;
+                        reconstruct_full_unsplit_prediction_in_place(
+                            &mut child_prediction,
+                            CoeffBlockRef {
+                                width: 8,
+                                height: 8,
+                                coefficients,
+                                transform: match terminal.transform {
+                                    GenericTerminalTransform::Lossy(value) => value,
+                                    GenericTerminalTransform::LosslessWht4x4 => {
+                                        return Err(PortableUnavailable);
+                                    }
+                                },
+                            },
+                            tools.sample_depth,
+                            rows,
+                            residual,
+                        )?;
+                        raster.commit_transform(
+                            offset_x,
+                            offset_y,
+                            8,
+                            8,
+                            &child_prediction,
+                            tools.sample_depth,
+                        )?;
+                        for row in cell_y..cell_y.checked_add(2).portable()? {
+                            residual_contexts[row]
+                                .get_mut(cell_x..cell_x.checked_add(2).portable()?)
+                                .portable()?
+                                .fill(terminal.residual_context);
+                            for column in cell_x..cell_x.checked_add(2).portable()? {
+                                transforms[row / 2][column / 2] = terminal_transform;
+                            }
+                        }
+                    }
+                }
+            } else {
+                let mut above_context = [0x40_u8; 4];
+                if child_cell_y == 0 {
+                    let end = child_cell_x.checked_add(4).portable()?;
+                    above_context.copy_from_slice(
+                        coefficient_contexts.above[0]
+                            .get(child_cell_x..end)
+                            .portable()?,
+                    );
+                } else {
+                    let end = child_cell_x.checked_add(4).portable()?;
+                    above_context.copy_from_slice(
+                        residual_contexts[child_cell_y - 1]
+                            .get(child_cell_x..end)
+                            .portable()?,
+                    );
+                }
+                let mut left_context = [0x40_u8; 4];
+                if child_cell_x == 0 {
+                    let end = child_cell_y.checked_add(4).portable()?;
+                    left_context.copy_from_slice(
+                        coefficient_contexts.left[0]
+                            .get(child_cell_y..end)
+                            .portable()?,
+                    );
+                } else {
+                    let end = child_cell_y.checked_add(4).portable()?;
+                    for (destination, source) in left_context
+                        .iter_mut()
+                        .zip(residual_contexts.get(child_cell_y..end).portable()?.iter())
+                    {
+                        *destination = source[child_cell_x - 1];
+                    }
+                }
+                let txb_skipped = self.decode_inter_txb_skip(
+                    decoder,
+                    0,
+                    TxSize::Tx16x16,
+                    block_width,
+                    block_height,
+                    &above_context,
+                    &left_context,
+                    false,
+                )?;
+                let terminal_transform = if txb_skipped {
+                    Av1TransformType::DctDct
+                } else {
+                    decode_transform_type(decoder, TxSize::Tx16x16)?
+                };
+                let terminal = decode_inter_lossy_terminal(
+                    decoder,
+                    0,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    quantization,
+                    TxSize::Tx16x16,
+                    block_width,
+                    block_height,
+                    &above_context,
+                    &left_context,
+                    txb_skipped,
+                    terminal_transform,
+                )?;
+                let coefficients = if terminal.skipped {
+                    None
+                } else {
+                    Some(
+                        self.large_coeff_arena
+                            .coefficients
+                            .get(..terminal.coefficient_count)
+                            .portable()?,
+                    )
+                };
+                let offset_x = child_cell_x.checked_mul(4).portable()?;
+                let offset_y = child_cell_y.checked_mul(4).portable()?;
+                let mut child_prediction = vec![0_u16; 16_usize.checked_mul(16).portable()?];
+                for child_row in 0..16 {
+                    let source_start = offset_y
+                        .checked_add(child_row)
+                        .and_then(|value| value.checked_mul(block_width))
+                        .and_then(|value| value.checked_add(offset_x))
+                        .portable()?;
+                    let source_end = source_start.checked_add(16).portable()?;
+                    let destination = child_row.checked_mul(16).portable()?;
+                    child_prediction
+                        .get_mut(destination..destination.checked_add(16).portable()?)
+                        .portable()?
+                        .copy_from_slice(prediction.get(source_start..source_end).portable()?);
+                }
+                let ReconstructionScratch {
+                    transform: scratch, ..
+                } = &mut self.reconstruction_scratch;
+                let TransformScratch { rows, residual, .. } = scratch;
+                reconstruct_full_unsplit_prediction_in_place(
+                    &mut child_prediction,
+                    CoeffBlockRef {
+                        width: 16,
+                        height: 16,
+                        coefficients,
+                        transform: match terminal.transform {
+                            GenericTerminalTransform::Lossy(value) => value,
+                            GenericTerminalTransform::LosslessWht4x4 => {
+                                return Err(PortableUnavailable);
+                            }
+                        },
+                    },
+                    tools.sample_depth,
+                    rows,
+                    residual,
+                )?;
+                raster.commit_transform(
+                    offset_x,
+                    offset_y,
+                    16,
+                    16,
+                    &child_prediction,
+                    tools.sample_depth,
+                )?;
+                for row in child_cell_y..child_cell_y.checked_add(4).portable()? {
+                    residual_contexts[row]
+                        .get_mut(child_cell_x..child_cell_x.checked_add(4).portable()?)
+                        .portable()?
+                        .fill(terminal.residual_context);
+                    for column in child_cell_x..child_cell_x.checked_add(4).portable()? {
+                        transforms[row / 2][column / 2] = terminal_transform;
+                    }
+                }
+            }
+        }
+
+        let mut right = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut bottom = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let last_column = grid_width.checked_sub(1).portable()?;
+        let last_row = grid_height.checked_sub(1).portable()?;
+        for row in 0..grid_height {
+            right[row] = residual_contexts[row][last_column];
+        }
+        for column in 0..grid_width {
+            bottom[column] = residual_contexts[last_row][column];
         }
         Ok((
             LosslessGridContexts {
