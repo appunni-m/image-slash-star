@@ -3329,7 +3329,10 @@ fn inter_lossy_wide_chunk_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
-        && layout == PixelLayout::I420
+        && matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 1
@@ -7191,6 +7194,8 @@ fn decode_inter_leaf(
                 split32,
                 deep16,
                 topology,
+                block_chroma_sampling
+                    .ok_or_else(|| malformed("inter wide chroma sampling is unavailable"))?,
             )
         } else {
             block_decoder.decode_inter_translation_lossy_wide_chunked(
@@ -7213,6 +7218,8 @@ fn decode_inter_leaf(
                 split32,
                 deep16,
                 topology,
+                block_chroma_sampling
+                    .ok_or_else(|| malformed("inter wide chroma sampling is unavailable"))?,
             )
         }
     } else if lossy_direct_chroma_grid {
