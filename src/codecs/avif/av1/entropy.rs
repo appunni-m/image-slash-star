@@ -1539,6 +1539,7 @@ fn decode_complete_following_leaf(
     palette_coded_height: u32,
     quantization: super::block::LossyQuantization,
     mut tools: super::block::BlockTools,
+    inter_luma_mode: Option<u32>,
 ) -> Av1Result<super::block::PortableResult<super::block::FirstLeaf>> {
     let has_chroma = partition_node_has_chroma(context, node, false);
     let above = match node.y.checked_sub(1) {
@@ -1704,19 +1705,34 @@ fn decode_complete_following_leaf(
         left_chroma_contexts,
     };
     if super::block::uses_streamed_intra(node.block_size) {
-        Ok(block_decoder.decode_large_intra(
-            decoder,
-            node.block_size,
-            width,
-            height,
-            has_chroma,
-            quantization,
-            tools,
-            super::block::LargeIntraSpatial::Following {
-                neighbors,
-                edges: &edges,
-            },
-        ))
+        let spatial = super::block::LargeIntraSpatial::Following {
+            neighbors,
+            edges: &edges,
+        };
+        if let Some(luma_mode) = inter_luma_mode {
+            Ok(block_decoder.decode_large_inter_intra(
+                decoder,
+                node.block_size,
+                width,
+                height,
+                has_chroma,
+                super::block::PreparedInterQuantization { quantization },
+                tools,
+                spatial,
+                luma_mode,
+            ))
+        } else {
+            Ok(block_decoder.decode_large_intra(
+                decoder,
+                node.block_size,
+                width,
+                height,
+                has_chroma,
+                quantization,
+                tools,
+                spatial,
+            ))
+        }
     } else {
         Ok(block_decoder.decode_following_from_edges(
             decoder,
@@ -3229,6 +3245,14 @@ fn interintra_size_group(block_size: BlockSize) -> usize {
         BlockSize::B32x32 => 3,
         _ => 3,
     }
+}
+
+/// AV1's inter-frame intra luma mode CDF is indexed by the smaller coded axis
+/// in 4x4 units. The four size groups cover minimum axes 4, 8, 16, and 32+
+/// pixels (including the 128-pixel block families).
+fn inter_luma_mode_size_group(block_size: BlockSize) -> usize {
+    let (width_b4, height_b4) = block_size.mi_dimensions();
+    usize::try_from(width_b4.min(height_b4).ilog2().min(3)).unwrap_or(3)
 }
 
 /// The shared inter terminal decodes one luma and one chroma transform per
@@ -5778,10 +5802,13 @@ fn b64_topology_tx_cells(
 }
 
 #[derive(Clone)]
-struct DecodedInterLeaf {
-    leaf: super::block::FirstLeaf,
-    metadata: super::tile_state::InterBlockMeta,
-    tx_cells: Option<Vec<TxCellUpdate>>,
+enum DecodedFrameLeaf {
+    Intra(super::block::FirstLeaf),
+    Inter {
+        leaf: super::block::FirstLeaf,
+        metadata: super::tile_state::InterBlockMeta,
+        tx_cells: Option<Vec<TxCellUpdate>>,
+    },
 }
 
 #[expect(
@@ -5804,10 +5831,7 @@ fn decode_inter_leaf(
     skip_mode: bool,
     prepared_quantization: super::block::PreparedInterQuantization,
     tools: super::block::BlockTools,
-) -> Av1Result<super::block::PortableResult<DecodedInterLeaf>> {
-    if selected_segment.reference == 0 {
-        return Ok(Err(super::block::PortableUnavailable));
-    }
+) -> Av1Result<super::block::PortableResult<DecodedFrameLeaf>> {
     if skip_mode
         && (!context.skip_mode_enabled
             || !block_skipped
@@ -5919,6 +5943,59 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let neighbors = inter_neighbors(tile_state, node)?;
+    let intra_context = inter_intra_context(neighbors);
+    let inter_flag = if skip_mode {
+        true
+    } else if selected_segment.reference >= 0 {
+        selected_segment.reference != 0
+    } else if selected_segment.global_motion {
+        true
+    } else {
+        decoder.adaptive_bool(&mut cdfs.inter.intra[intra_context].0)
+    };
+    if !inter_flag {
+        let luma_mode = decoder.adaptive_symbol(
+            &mut cdfs.inter.y_mode[inter_luma_mode_size_group(node.block_size)].0,
+            12,
+        );
+        let leaf = if tile_state.is_empty() {
+            let standalone_tiny_frame = context.frame_width == 4 && context.frame_height == 4;
+            let has_chroma = partition_node_has_chroma(context, node, standalone_tiny_frame);
+            if !super::block::uses_streamed_intra(node.block_size) {
+                return Ok(Err(super::block::PortableUnavailable));
+            }
+            block_decoder.decode_large_inter_intra(
+                decoder,
+                node.block_size,
+                visible_width,
+                visible_height,
+                has_chroma,
+                prepared_quantization,
+                tools,
+                super::block::LargeIntraSpatial::Origin,
+                luma_mode,
+            )
+        } else {
+            let (palette_coded_width, palette_coded_height) = node.block_size.pixel_dimensions();
+            decode_complete_following_leaf(
+                decoder,
+                block_decoder,
+                tile_state,
+                canvas,
+                context,
+                node,
+                visible_width,
+                visible_height,
+                palette_coded_width,
+                palette_coded_height,
+                prepared_quantization.quantization,
+                tools,
+                Some(luma_mode),
+            )?
+        };
+        return Ok(leaf.map(DecodedFrameLeaf::Intra));
+    }
     // The generic lossless grid is depth-parametric and covers the complete
     // 4..=128px block family. Keep the narrower high-depth admission for
     // lossy inter leaves, whose transform/motion compositor is still bounded
@@ -5967,19 +6044,8 @@ fn decode_inter_leaf(
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
-    let neighbors = inter_neighbors(tile_state, node)?;
-    let intra_context = inter_intra_context(neighbors);
-    let inter_flag =
-        if skip_mode || selected_segment.reference > 0 || selected_segment.global_motion {
-            true
-        } else {
-            decoder.adaptive_bool(&mut cdfs.inter.intra[intra_context].0)
-        };
-    if !inter_flag {
-        return Ok(Err(super::block::PortableUnavailable));
-    }
     let (block_width_b4, block_height_b4) = node.block_size.mi_dimensions();
-    let forced_global = selected_segment.global_motion || selected_segment.skip;
+    let forced_global = selected_segment.global_motion;
     let forced_reference = selected_segment.reference > 0 || forced_global;
     let compound_allowed = !skip_mode
         && inter_context.reference_mode_select
@@ -7304,7 +7370,7 @@ fn decode_inter_leaf(
         Ok(leaf) => leaf,
         Err(_) => return Ok(Err(super::block::PortableUnavailable)),
     };
-    Ok(Ok(DecodedInterLeaf {
+    Ok(Ok(DecodedFrameLeaf::Inter {
         leaf,
         metadata: super::tile_state::InterBlockMeta {
             references,
@@ -8341,11 +8407,16 @@ pub(super) fn validate_complete_lossy_420_partition(
                         prepared_quantization,
                         tools,
                     )? {
-                        Ok(inter) => {
-                            inter_metadata = Some(inter.metadata);
-                            inter_tx_cells = inter.tx_cells;
-                            Ok(inter.leaf)
+                        Ok(DecodedFrameLeaf::Inter {
+                            leaf,
+                            metadata,
+                            tx_cells,
+                        }) => {
+                            inter_metadata = Some(metadata);
+                            inter_tx_cells = tx_cells;
+                            Ok(leaf)
                         }
+                        Ok(DecodedFrameLeaf::Intra(leaf)) => Ok(leaf),
                         Err(error) => Err(error),
                     }
                 } else if tile_state.is_empty() {
@@ -8408,6 +8479,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                         coded_mi_height,
                         quantization,
                         tools,
+                        None,
                     )?
                 };
                 let decoded = match decoded {

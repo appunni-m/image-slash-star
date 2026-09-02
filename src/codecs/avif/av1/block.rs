@@ -2370,6 +2370,16 @@ pub(super) struct PreparedInterQuantization {
     pub(super) quantization: LossyQuantization,
 }
 
+enum LargeIntraPrelude {
+    Ordinary {
+        quantization: LossyQuantization,
+    },
+    PreparedInter {
+        quantization: PreparedInterQuantization,
+        luma_mode: u32,
+    },
+}
+
 #[derive(Clone, Copy)]
 struct SyntaxPolicy {
     spatial_luma_context: SpatialLumaContext,
@@ -19216,9 +19226,11 @@ fn decode_luma_intra_header(
     chroma_sampling: ChromaSampling,
     segment_lossless: bool,
     policy: SyntaxPolicy,
+    luma_mode_override: Option<u32>,
 ) -> PortableResult<(u32, LumaPredictor, Option<i32>)> {
-    let luma_mode =
-        decoder.adaptive_symbol(&mut cdfs.luma_mode[policy.spatial_luma_context.index()], 12);
+    let luma_mode = luma_mode_override.unwrap_or_else(|| {
+        decoder.adaptive_symbol(&mut cdfs.luma_mode[policy.spatial_luma_context.index()], 12)
+    });
     let luma_predictor = match luma_mode {
         0 if segment_lossless
             || matches!(
@@ -19409,6 +19421,7 @@ fn decode_intra_header(
     segment_lossless: bool,
     predecoded_skip: Option<bool>,
     segment_delta_q: i32,
+    luma_mode_override: Option<u32>,
 ) -> PortableResult<DecodedIntraHeader> {
     let skip = match predecoded_skip {
         Some(skip) => skip,
@@ -19445,6 +19458,47 @@ fn decode_intra_header(
     )
     .map_err(|_| PortableUnavailable)?;
     lossy_quantization.segment_lossless = segment_lossless;
+    decode_intra_header_tail(
+        decoder,
+        cdfs,
+        palette_map_arena,
+        block_size,
+        chroma_sampling,
+        policy,
+        tools,
+        palette_entropy_dimensions,
+        segment_lossless,
+        skip,
+        CdefMetadata {
+            active: !skip,
+            index: usize::try_from(cdef_index).unwrap_or_default(),
+        },
+        tile_qindex,
+        lossy_quantization,
+        luma_mode_override,
+    )
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the intra syntax tail keeps predictors, palette state, tools, and prepared quantization explicit"
+)]
+fn decode_intra_header_tail(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    palette_map_arena: &mut PaletteMapArena,
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    policy: SyntaxPolicy,
+    tools: BlockTools,
+    palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
+    segment_lossless: bool,
+    skip: bool,
+    cdef: CdefMetadata,
+    tile_qindex: u32,
+    lossy_quantization: LossyQuantization,
+    luma_mode_override: Option<u32>,
+) -> PortableResult<DecodedIntraHeader> {
     let (luma_mode, luma_predictor, luma_angle) = decode_luma_intra_header(
         decoder,
         cdfs,
@@ -19452,6 +19506,7 @@ fn decode_intra_header(
         chroma_sampling,
         segment_lossless,
         policy,
+        luma_mode_override,
     )?;
     let (chroma_predictor, chroma_angle) = decode_chroma_intra_header(
         decoder,
@@ -19523,10 +19578,7 @@ fn decode_intra_header(
         block_size,
         chroma_sampling,
         skip,
-        cdef: CdefMetadata {
-            active: !skip,
-            index: usize::try_from(cdef_index).unwrap_or_default(),
-        },
+        cdef,
         lossless: segment_lossless,
         tile_qindex,
         lossy_quantization,
@@ -19539,6 +19591,43 @@ fn decode_intra_header(
         transform_luma_mode,
         transform_depth,
     })
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the prepared inter-frame intra tail keeps the consumed prelude and shared syntax policy explicit"
+)]
+fn decode_intra_header_after_inter_prelude(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    palette_map_arena: &mut PaletteMapArena,
+    block_size: BlockSize,
+    chroma_sampling: ChromaSampling,
+    policy: SyntaxPolicy,
+    tools: BlockTools,
+    palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
+    prepared_quantization: PreparedInterQuantization,
+    predecoded_skip: bool,
+    cdef: CdefMetadata,
+    luma_mode: u32,
+) -> PortableResult<DecodedIntraHeader> {
+    let quantization = prepared_quantization.quantization;
+    decode_intra_header_tail(
+        decoder,
+        cdfs,
+        palette_map_arena,
+        block_size,
+        chroma_sampling,
+        policy,
+        tools,
+        palette_entropy_dimensions,
+        quantization.segment_lossless,
+        predecoded_skip,
+        cdef,
+        quantization.qindex,
+        quantization,
+        Some(luma_mode),
+    )
 }
 
 #[expect(
@@ -19695,6 +19784,7 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
         segment_lossless,
         predecoded_skip,
         segment_delta_q,
+        None,
     )?;
     let DecodedIntraHeader {
         skip,
@@ -59120,11 +59210,75 @@ impl Lossy420Decoder {
         visible_height: u32,
         has_chroma: bool,
         quantization: LossyQuantization,
+        tools: BlockTools,
+        spatial: LargeIntraSpatial<'_>,
+    ) -> PortableResult<FirstLeaf> {
+        self.decode_large_intra_from_prelude(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            has_chroma,
+            LargeIntraPrelude::Ordinary { quantization },
+            tools,
+            spatial,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "inter-frame intra reuses the streamed block boundary while carrying its normative inter luma mode"
+    )]
+    pub(super) fn decode_large_inter_intra(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        has_chroma: bool,
+        quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        spatial: LargeIntraSpatial<'_>,
+        luma_mode: u32,
+    ) -> PortableResult<FirstLeaf> {
+        self.decode_large_intra_from_prelude(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            has_chroma,
+            LargeIntraPrelude::PreparedInter {
+                quantization,
+                luma_mode,
+            },
+            tools,
+            spatial,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the streamed block boundary retains entropy, coded and visible geometry, chroma ownership, quantization, tools, and spatial state"
+    )]
+    fn decode_large_intra_from_prelude(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        has_chroma: bool,
+        prelude: LargeIntraPrelude,
         mut tools: BlockTools,
         spatial: LargeIntraSpatial<'_>,
     ) -> PortableResult<FirstLeaf> {
+        let sample_depth = match &prelude {
+            LargeIntraPrelude::Ordinary { quantization, .. } => quantization.sample_depth,
+            LargeIntraPrelude::PreparedInter { quantization, .. } => {
+                quantization.quantization.sample_depth
+            }
+        };
         (uses_streamed_intra(block_size)
-            && tools.sample_depth == quantization.sample_depth
+            && tools.sample_depth == sample_depth
             && visible_width != 0
             && visible_height != 0)
             .then_some(())
@@ -59149,8 +59303,15 @@ impl Lossy420Decoder {
             .then_some(())
             .portable()?;
         self.large_coeff_arena.begin_leaf();
-        self.palette_map_arena.begin_leaf()?;
-        let quantization = self.prepare_quantization(quantization);
+        let (quantization, inter_luma_mode) = match prelude {
+            LargeIntraPrelude::Ordinary { quantization } => {
+                (self.prepare_quantization(quantization), None)
+            }
+            LargeIntraPrelude::PreparedInter {
+                quantization,
+                luma_mode,
+            } => (quantization.quantization, Some(luma_mode)),
+        };
 
         let (block_grid_width, block_grid_height) = block_size.mi_dimensions();
         let origin_edges = if matches!(&spatial, LargeIntraSpatial::Origin) {
@@ -59215,54 +59376,80 @@ impl Lossy420Decoder {
         let left_chroma =
             neighbors.map_or([neutral; 2], |neighbors| neighbors.left_chroma_contexts);
         let cdef_index_bits = self.take_cdef_index_bits();
-        let mut header = decode_intra_header(
-            decoder,
-            &mut self.cdfs,
-            &mut self.palette_map_arena,
-            block_size,
-            chroma_sampling,
-            SyntaxPolicy {
-                spatial_luma_context,
-                coefficient_policy: CoefficientPolicy::Lossy420DcOrSkipped {
-                    above_luma_contexts: legacy_coefficient_contexts(&above_luma),
-                    left_luma_contexts: legacy_coefficient_contexts(&left_luma),
-                    above_chroma_contexts: above_chroma
-                        .map(|contexts| legacy_coefficient_contexts(&contexts)),
-                    left_chroma_contexts: left_chroma
-                        .map(|contexts| legacy_coefficient_contexts(&contexts)),
-                },
-                quantization_syntax: QuantizationSyntax::Lossy {
-                    initial_qindex: quantization.qindex,
-                    delta_q_present: quantization.delta_q_present,
-                    resolution_log2: quantization.resolution_log2,
-                    y_dc_delta: quantization.y_dc_delta,
-                    y_ac_delta: quantization.y_ac_delta,
-                    u_dc_delta: quantization.u_dc_delta,
-                    u_ac_delta: quantization.u_ac_delta,
-                    v_dc_delta: quantization.v_dc_delta,
-                    v_ac_delta: quantization.v_ac_delta,
-                    using_matrix: quantization.using_matrix,
-                    matrix_y: quantization.matrix_y,
-                    matrix_u: quantization.matrix_u,
-                    matrix_v: quantization.matrix_v,
-                    reduced_transform_set: quantization.reduced_transform_set,
-                    segment_qindex: quantization.segment_qindex,
-                },
-                allow_horizontal_chroma: has_chroma,
-                allow_diagonal_chroma: has_chroma,
-                allow_diagonal_luma: true,
-                allow_smooth_chroma: has_chroma,
-                allow_smooth_luma: true,
+        let policy = SyntaxPolicy {
+            spatial_luma_context,
+            coefficient_policy: CoefficientPolicy::Lossy420DcOrSkipped {
+                above_luma_contexts: legacy_coefficient_contexts(&above_luma),
+                left_luma_contexts: legacy_coefficient_contexts(&left_luma),
+                above_chroma_contexts: above_chroma
+                    .map(|contexts| legacy_coefficient_contexts(&contexts)),
+                left_chroma_contexts: left_chroma
+                    .map(|contexts| legacy_coefficient_contexts(&contexts)),
             },
-            tools,
-            Some(pending.palette_entropy_dimensions),
-            cdef_index_bits,
-            quantization.segment_lossless,
-            predecoded_skip,
-            self.segment.delta_q,
-        )?;
-        header.cdef = self.remember_cdef(header.cdef, pending);
-        self.current_qindex = Some(header.tile_qindex);
+            quantization_syntax: QuantizationSyntax::Lossy {
+                initial_qindex: quantization.qindex,
+                delta_q_present: inter_luma_mode.is_none() && quantization.delta_q_present,
+                resolution_log2: quantization.resolution_log2,
+                y_dc_delta: quantization.y_dc_delta,
+                y_ac_delta: quantization.y_ac_delta,
+                u_dc_delta: quantization.u_dc_delta,
+                u_ac_delta: quantization.u_ac_delta,
+                v_dc_delta: quantization.v_dc_delta,
+                v_ac_delta: quantization.v_ac_delta,
+                using_matrix: quantization.using_matrix,
+                matrix_y: quantization.matrix_y,
+                matrix_u: quantization.matrix_u,
+                matrix_v: quantization.matrix_v,
+                reduced_transform_set: quantization.reduced_transform_set,
+                segment_qindex: quantization.segment_qindex,
+            },
+            allow_horizontal_chroma: has_chroma,
+            allow_diagonal_chroma: has_chroma,
+            allow_diagonal_luma: true,
+            allow_smooth_chroma: has_chroma,
+            allow_smooth_luma: true,
+        };
+        let mut header = if let Some(luma_mode) = inter_luma_mode {
+            let skip = predecoded_skip.portable()?;
+            let cdef = CdefMetadata {
+                active: !skip,
+                index: self.last_cdef_index,
+            };
+            decode_intra_header_after_inter_prelude(
+                decoder,
+                &mut self.cdfs,
+                &mut self.palette_map_arena,
+                block_size,
+                chroma_sampling,
+                policy,
+                tools,
+                Some(pending.palette_entropy_dimensions),
+                PreparedInterQuantization { quantization },
+                skip,
+                cdef,
+                luma_mode,
+            )?
+        } else {
+            decode_intra_header(
+                decoder,
+                &mut self.cdfs,
+                &mut self.palette_map_arena,
+                block_size,
+                chroma_sampling,
+                policy,
+                tools,
+                Some(pending.palette_entropy_dimensions),
+                cdef_index_bits,
+                quantization.segment_lossless,
+                predecoded_skip,
+                self.segment.delta_q,
+                None,
+            )?
+        };
+        if inter_luma_mode.is_none() {
+            header.cdef = self.remember_cdef(header.cdef, pending);
+            self.current_qindex = Some(header.tile_qindex);
+        }
         (header.block_size == block_size && header.chroma_sampling == chroma_sampling)
             .then_some(())
             .portable()?;
