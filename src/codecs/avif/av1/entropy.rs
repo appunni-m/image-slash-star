@@ -4722,6 +4722,8 @@ fn decode_inter_transform_type(
 enum InterTransformPlan {
     Single(TxSize),
     SplitB8,
+    SplitB4x8,
+    SplitB8x4,
     SplitB8x16,
     SplitB16x8,
     SplitB8x32,
@@ -5226,6 +5228,24 @@ fn decode_inter_transform_size(
     let category = usize::try_from(category).map_err(|_| super::block::PortableUnavailable)?;
     let split = decoder.adaptive_bool(&mut cdfs.common.transform_partition[category][context].0);
     if split {
+        if layout == PixelLayout::Monochrome
+            && split_b8_rect_supported
+            && visible_width == 4
+            && visible_height == 8
+            && block_size == BlockSize::B4x8
+            && max_tx == TxSize::Tx4x8
+        {
+            return Ok(InterTransformPlan::SplitB4x8);
+        }
+        if layout == PixelLayout::Monochrome
+            && split_b8_rect_supported
+            && visible_width == 8
+            && visible_height == 4
+            && block_size == BlockSize::B8x4
+            && max_tx == TxSize::Tx8x4
+        {
+            return Ok(InterTransformPlan::SplitB8x4);
+        }
         if block_size == BlockSize::B8x8
             && matches!(
                 layout,
@@ -6877,6 +6897,8 @@ fn decode_inter_leaf(
         match transform_plan {
             InterTransformPlan::Single(tx_size) => (tx_size, false, false, false, false),
             InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false, false),
+            InterTransformPlan::SplitB4x8 => (TxSize::Tx4x8, true, false, false, false),
+            InterTransformPlan::SplitB8x4 => (TxSize::Tx8x4, true, false, false, false),
             InterTransformPlan::SplitB8x16 => (TxSize::Tx8x16, true, false, false, false),
             InterTransformPlan::SplitB16x8 => (TxSize::Tx16x8, true, false, false, false),
             InterTransformPlan::SplitB8x32 => (TxSize::Tx8x32, true, false, false, false),
