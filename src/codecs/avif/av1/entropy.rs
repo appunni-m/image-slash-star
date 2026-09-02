@@ -15424,6 +15424,8 @@ fn lossless_i444_superres_restoration_supported(
 /// unit, decoded before the coded plane is resized and restored at frame
 /// resolution. Film grain, when present, is synthesized only on the owned
 /// display plane after resize and restoration; retained references stay clean.
+/// Coded-resolution inter-intra is admitted only for that super-resolution
+/// compositor; full-resolution lossless inter keeps its existing closed gate.
 fn complete_lossless_inter_monochrome_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -15459,6 +15461,8 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
     } else {
         !context.frame_tools.film_grain_present
     };
+    let interintra_supported =
+        !inter_context.enable_interintra_compound || context.superres_enabled;
     let resize_geometry_supported = if context.superres_enabled {
         context.frame_width >= 4 && context.frame_height >= 4
     } else {
@@ -15534,7 +15538,7 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
         && !context.skip_mode_enabled
         && inter_context.skip_mode_references.is_none()
         && !inter_context.allow_warped_motion
-        && !inter_context.enable_interintra_compound
+        && interintra_supported
         && context.frame_tools.cdef.is_none()
         && restoration_supported
         && film_grain_supported
