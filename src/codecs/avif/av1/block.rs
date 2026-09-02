@@ -41535,10 +41535,10 @@ fn reconstruct_lossy_full_16x8_chroma(
             coefficients,
             transform,
         )),
-        // The existing rectangular chroma predictor covers zone 2 and zone
-        // 3. Zone 1 has no dedicated 16x8 helper yet; retaining its top edge
-        // is a bounded, correctly sized fallback until that predictor is
-        // integrated with the same edge filter used by the scalar decoder.
+        // Compatibility callers do not carry the northwest sample or the
+        // complete filter-policy ownership needed by the exact Zone-1 path;
+        // retain their historical top-edge extension until they can be
+        // routed through positioned `FullIntraPlaneEdges`.
         ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
             let _ = angle;
             Ok(reconstruct_lossy_chroma_16x8_from_prediction(
@@ -41987,6 +41987,63 @@ fn reconstruct_lossy_full_8x16_chroma_with_edges(
         ),
         ChromaPredictor::Cfl { .. } => Err(PortableUnavailable),
     }
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact vertical R8x16 target carries positioned edges, availability, and filter policy"
+)]
+fn reconstruct_lossy_full_8x16_chroma_normalized_target(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    top: [u16; 8],
+    left: [u16; 16],
+    top_left: Option<u16>,
+    has_left: bool,
+    coefficients: Option<Lossy8x16TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    matches!(
+        predictor,
+        ChromaPredictor::Diagonal45
+            | ChromaPredictor::Diagonal67
+            | ChromaPredictor::Smooth
+            | ChromaPredictor::SmoothVertical
+            | ChromaPredictor::SmoothHorizontal
+    )
+    .then_some(())
+    .portable()?;
+    let edges = FullIntraPlaneEdges::prepare(
+        8,
+        16,
+        SampleDepth::EIGHT,
+        &top,
+        &left,
+        top_left,
+        true,
+        has_left,
+        false,
+        false,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 128];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        8,
+        16,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    Ok(reconstruct_lossy_luma_8x16_from_prediction(
+        prediction,
+        coefficients,
+        chroma_transform_kind(predictor),
+    ))
 }
 
 fn reconstruct_lossy_full_8x4_chroma(
@@ -59282,18 +59339,53 @@ impl Lossy420Decoder {
                     } else {
                         top[0]
                     };
-                    leaf.planes[plane] = reconstruct_lossy_full_8x16_chroma_with_edges(
-                        syntax.chroma_predictor,
-                        syntax.chroma_angle,
-                        top,
-                        left,
-                        neighbors.left_full_chroma_bottom_8[plane - 1],
-                        top_left,
-                        has_left,
-                        syntax.lossy_chroma_8x16_coefficients[plane - 1],
-                        tools.enable_intra_edge_filter,
-                        smooth_chroma_edges,
-                    )?;
+                    leaf.planes[plane] = match syntax.chroma_predictor {
+                        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
+                            neighbors
+                                .above_chroma_extension
+                                .is_none()
+                                .then_some(())
+                                .portable()?;
+                            reconstruct_lossy_full_8x16_chroma_normalized_target(
+                                syntax.chroma_predictor,
+                                syntax.chroma_angle,
+                                top,
+                                left,
+                                has_left.then_some(top_left),
+                                has_left,
+                                syntax.lossy_chroma_8x16_coefficients[plane - 1],
+                                tools.enable_intra_edge_filter,
+                                smooth_chroma_edges,
+                            )?
+                        }
+                        ChromaPredictor::Smooth
+                        | ChromaPredictor::SmoothVertical
+                        | ChromaPredictor::SmoothHorizontal => {
+                            reconstruct_lossy_full_8x16_chroma_normalized_target(
+                                syntax.chroma_predictor,
+                                syntax.chroma_angle,
+                                top,
+                                left,
+                                has_left.then_some(top_left),
+                                has_left,
+                                syntax.lossy_chroma_8x16_coefficients[plane - 1],
+                                tools.enable_intra_edge_filter,
+                                smooth_chroma_edges,
+                            )?
+                        }
+                        _ => reconstruct_lossy_full_8x16_chroma_with_edges(
+                            syntax.chroma_predictor,
+                            syntax.chroma_angle,
+                            top,
+                            left,
+                            neighbors.left_full_chroma_bottom_8[plane - 1],
+                            top_left,
+                            has_left,
+                            syntax.lossy_chroma_8x16_coefficients[plane - 1],
+                            tools.enable_intra_edge_filter,
+                            smooth_chroma_edges,
+                        )?,
+                    };
                 }
                 return Ok(visible(leaf));
             }
