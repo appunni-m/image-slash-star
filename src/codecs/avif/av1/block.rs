@@ -51468,6 +51468,7 @@ enum WideChromaTransformSource<'a> {
     Mode1Dct,
     Mode2UnsplitDct,
     Mode2Split32(&'a [[Av1TransformType; 2]; 2]),
+    Mode2Deep16(&'a [[Av1TransformType; 4]; 4]),
 }
 
 #[derive(Clone, Copy)]
@@ -53520,8 +53521,19 @@ impl Lossy420Decoder {
             sampling,
         } = transform_plan
         {
-            (sampling == ChromaSampling::Subsampled420
-                && sampling == chroma_sampling
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 2
@@ -58204,8 +58216,11 @@ impl Lossy420Decoder {
             && tools.transform_mode == if mode2 { 2 } else { 1 }
             && (!mode2 || quantization.segment_qindex > 0)
             && !quantization.segment_lossless
-            && (!matches!(transform_source, WideChromaTransformSource::Mode2Split32(_))
-                || matches!(grid_width, 1 | 2) && matches!(grid_height, 2))
+            && (!matches!(
+                transform_source,
+                WideChromaTransformSource::Mode2Split32(_)
+                    | WideChromaTransformSource::Mode2Deep16(_)
+            ) || matches!((grid_width, grid_height), (1, 2) | (2, 2)))
             && region_x.checked_add(region_width).portable()? <= raster.coded_width
             && region_y.checked_add(region_height).portable()? <= raster.coded_height
             && prediction.len()
@@ -58263,6 +58278,19 @@ impl Lossy420Decoder {
                                 ChromaSampling::Full => luma_transforms[row][column],
                                 _ => return Err(PortableUnavailable),
                             };
+                            inherited_inter_chroma_transform(TxSize::Tx32x32, luma_transform)
+                        }
+                        WideChromaTransformSource::Mode2Deep16(luma_transforms) => {
+                            let source_row = row.checked_mul(2).portable()?;
+                            let source_column = match sampling {
+                                ChromaSampling::Subsampled422 => 0,
+                                ChromaSampling::Full => column.checked_mul(2).portable()?,
+                                _ => return Err(PortableUnavailable),
+                            };
+                            let luma_transform = *luma_transforms
+                                .get(source_row)
+                                .and_then(|row| row.get(source_column))
+                                .portable()?;
                             inherited_inter_chroma_transform(TxSize::Tx32x32, luma_transform)
                         }
                     }
@@ -58393,9 +58421,7 @@ impl Lossy420Decoder {
         ) && matches!(
             sampling,
             ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 | ChromaSampling::Full
-        ) && (!mode2
-            || sampling == ChromaSampling::Subsampled420
-            || (!deep16 && topology.is_none()))
+        ) && (!mode2 || sampling == ChromaSampling::Subsampled420 || topology.is_none())
             && !(sampling == ChromaSampling::Subsampled422
                 && matches!((luma_width, luma_height), (64, 128)))
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -58467,6 +58493,7 @@ impl Lossy420Decoder {
         let mut luma_mixed_residuals = [[[[0x40_u8; 16]; 16]; 2]; 2];
         let mut luma_mixed_transforms = [[Av1TransformType::DctDct; 2]; 2];
         let mut luma_split_transform_grids = [[[[Av1TransformType::DctDct; 2]; 2]; 2]; 2];
+        let mut luma_deep_transform_grids = [[[[Av1TransformType::DctDct; 4]; 4]; 2]; 2];
         let neutral = LosslessGridContexts {
             bottom_right: 0x40,
             right: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
@@ -58913,6 +58940,8 @@ impl Lossy420Decoder {
                                         } else {
                                             decode_transform_type(decoder, TxSize::Tx16x16)?
                                         };
+                                        luma_deep_transform_grids[chunk_y][chunk_x][row][column] =
+                                            transform;
                                         if row == 0 && column == 0 {
                                             luma_deep_transforms[chunk_y][chunk_x] = transform;
                                         }
@@ -59003,6 +59032,10 @@ impl Lossy420Decoder {
                         } else if split32 && !deep16 && topology.is_none() {
                             WideChromaTransformSource::Mode2Split32(
                                 &luma_split_transform_grids[chunk_y][chunk_x],
+                            )
+                        } else if deep16 && topology.is_none() {
+                            WideChromaTransformSource::Mode2Deep16(
+                                &luma_deep_transform_grids[chunk_y][chunk_x],
                             )
                         } else if !split32 && !deep16 && topology.is_none() {
                             WideChromaTransformSource::Mode2UnsplitDct
