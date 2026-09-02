@@ -55036,6 +55036,9 @@ impl Lossy420Decoder {
             transform_plan,
             InterTransformPlan::LossyColorMode0Grid { .. }
         );
+        let lossy_i422_narrow_mode0 = lossy_color_mode0_grid
+            && chroma_sampling == ChromaSampling::Subsampled422
+            && matches!(block_size, BlockSize::B4x8 | BlockSize::B4x16);
         let lossy_direct_chroma_grid = matches!(
             transform_plan,
             InterTransformPlan::LossyWideDirectChromaGrid { .. }
@@ -55337,8 +55340,10 @@ impl Lossy420Decoder {
                     (sampling, block_size),
                     (
                         ChromaSampling::Subsampled422,
-                        BlockSize::B8x4
+                        BlockSize::B4x8
+                            | BlockSize::B8x4
                             | BlockSize::B8x8
+                            | BlockSize::B4x16
                             | BlockSize::B16x4
                             | BlockSize::B16x8
                             | BlockSize::B16x16
@@ -56934,6 +56939,12 @@ impl Lossy420Decoder {
             usize::try_from(tx_luma_height).map_err(|_| PortableUnavailable)?;
         let chroma_tx = if monochrome || !has_chroma {
             None
+        } else if lossy_i422_narrow_mode0 {
+            Some(match block_size {
+                BlockSize::B4x8 => TxSize::Tx4x8,
+                BlockSize::B4x16 => TxSize::Tx4x16,
+                _ => return Err(PortableUnavailable),
+            })
         } else {
             Some(block_size.maximum_chroma_tx(layout).portable()?)
         };
@@ -57286,6 +57297,25 @@ impl Lossy420Decoder {
                 luma_split_tx_size = Some(TxSize::Tx4x4);
                 color_mode0_luma_transforms = grid_transforms;
                 luma_transform = grid_transforms[0][0];
+                continue;
+            }
+            if lossy_i422_narrow_mode0 && plane != 0 {
+                let chroma_tx = chroma_tx.ok_or(PortableUnavailable)?;
+                let grid_contexts = self.decode_inter_lossy_chroma_terminal(
+                    decoder,
+                    &mut prediction,
+                    &mut rasters[plane],
+                    plane,
+                    predecoded_skip,
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    chroma_tx,
+                    luma_transform,
+                )?;
+                contexts[plane] = grid_contexts.bottom_right;
+                chroma_right_contexts[plane - 1] = grid_contexts.right;
+                chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
                 continue;
             }
             if lossy_color_mode0_grid && plane != 0 {
@@ -62651,6 +62681,127 @@ impl Lossy420Decoder {
             },
             transforms,
         ))
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the narrow I422 chroma terminal carries plane geometry, entropy edges, quantization, prediction, and transform state explicitly"
+    )]
+    fn decode_inter_lossy_chroma_terminal(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        prediction: &mut [u16],
+        raster: &mut PrivatePlaneRaster,
+        plane: usize,
+        block_skipped: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+        tx_size: TxSize,
+        luma_transform: Av1TransformType,
+    ) -> PortableResult<LosslessGridContexts> {
+        let coded_width = raster.coded_width;
+        let coded_height = raster.coded_height;
+        (prediction.len() == coded_width.checked_mul(coded_height).portable()?
+            && matches!(
+                (tx_size, coded_width, coded_height),
+                (TxSize::Tx4x8, 4, 8) | (TxSize::Tx4x16, 4, 16)
+            )
+            && raster.active_width == coded_width
+            && raster.active_height == coded_height
+            && matches!(plane, 1 | 2)
+            && self.chroma_sampling == ChromaSampling::Subsampled422
+            && tools.sample_depth == quantization.sample_depth
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.transform_mode == 0
+            && !quantization.segment_lossless)
+            .then_some(())
+            .portable()?;
+
+        let (context_width, context_height) = tx_size.context_dimensions();
+        let context_width = usize::from(context_width);
+        let context_height = usize::from(context_height);
+        let above = coefficient_contexts.above[plane]
+            .get(..context_width)
+            .portable()?;
+        let left = coefficient_contexts.left[plane]
+            .get(..context_height)
+            .portable()?;
+        let txb_skipped = self.decode_inter_txb_skip(
+            decoder,
+            plane,
+            tx_size,
+            coded_width,
+            coded_height,
+            above,
+            left,
+            block_skipped,
+        )?;
+        let transform = if txb_skipped {
+            Av1TransformType::DctDct
+        } else {
+            inherited_inter_chroma_transform(tx_size, luma_transform)
+        };
+        let terminal = decode_inter_lossy_terminal(
+            decoder,
+            plane,
+            &mut self.cdfs,
+            &mut self.large_coeff_arena,
+            quantization,
+            tx_size,
+            coded_width,
+            coded_height,
+            above,
+            left,
+            txb_skipped,
+            transform,
+        )?;
+        let coefficients = if terminal.skipped {
+            None
+        } else {
+            Some(
+                self.large_coeff_arena
+                    .coefficients
+                    .get(..terminal.coefficient_count)
+                    .portable()?,
+            )
+        };
+        let ReconstructionScratch { transform, .. } = &mut self.reconstruction_scratch;
+        let TransformScratch { rows, residual, .. } = transform;
+        reconstruct_full_unsplit_prediction_in_place(
+            prediction,
+            CoeffBlockRef {
+                width: coded_width,
+                height: coded_height,
+                coefficients,
+                transform: match terminal.transform {
+                    GenericTerminalTransform::Lossy(value) => value,
+                    GenericTerminalTransform::LosslessWht4x4 => {
+                        return Err(PortableUnavailable);
+                    }
+                },
+            },
+            tools.sample_depth,
+            rows,
+            residual,
+        )?;
+        raster.commit_transform(
+            0,
+            0,
+            coded_width,
+            coded_height,
+            prediction,
+            tools.sample_depth,
+        )?;
+        let mut right = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut bottom = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        right[..context_height].fill(terminal.residual_context);
+        bottom[..context_width].fill(terminal.residual_context);
+        Ok(LosslessGridContexts {
+            bottom_right: terminal.residual_context,
+            right,
+            bottom,
+        })
     }
 
     #[expect(

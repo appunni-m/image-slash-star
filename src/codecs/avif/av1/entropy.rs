@@ -4710,8 +4710,10 @@ fn inter_lossy_color_mode0_grid_geometry_supported(
             (layout, block_size),
             (
                 PixelLayout::I422,
-                BlockSize::B8x4
+                BlockSize::B4x8
+                    | BlockSize::B8x4
                     | BlockSize::B8x8
+                    | BlockSize::B4x16
                     | BlockSize::B16x4
                     | BlockSize::B16x8
                     | BlockSize::B16x16
