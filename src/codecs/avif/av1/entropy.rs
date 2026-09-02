@@ -10,11 +10,11 @@ use super::bit_reader::SegmentedData;
 use super::geometry::{BlockSize, IntraEdgeFlags, PixelLayout, TxSize};
 use super::mc::distance_weight;
 use super::motion::{
-    CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter, MotionMode,
-    MotionVector, ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget,
-    ReferencePair, RetainedTemporalSample, ScaleFactors, SpatialMotionSource, SpatialRefBlock,
-    TemporalMotionField, find_reference_mvs, global_motion_vector, prepare_global_warp,
-    relative_distance,
+    CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter,
+    IntrabcLegalityInput, IntrabcSource, MotionMode, MotionVector, ProjectedTemporalField,
+    ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget, ReferencePair, RetainedTemporalSample,
+    ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField, find_reference_mvs,
+    global_motion_vector, prepare_global_warp, relative_distance, relocate_intrabc_source,
 };
 use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
@@ -8487,6 +8487,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let streamed_lossless_monochrome = complete_streamed_lossless_monochrome_context(context);
     let lossless_intra_monochrome_active_restoration = streamed_lossless_monochrome
         && lossless_intra_monochrome_superres_restoration_supported(context);
+    let bounded_monochrome_intrabc = complete_bounded_monochrome_intrabc_context(context);
     let streamed_lossless_reconstruction = streamed_lossless_color || streamed_lossless_monochrome;
     let generic_high_depth_i444_inter = (generic_high_depth_inter
         || generic_high_depth_lossless_inter)
@@ -8769,7 +8770,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i420_intra_loop
         || bounded_i422_intra_loop
         || bounded_i444_intra_cdef
-        || bounded_i444_intra_loop;
+        || bounded_i444_intra_loop
+        || bounded_monochrome_intrabc;
     let segmentation = context.frame_tools.segmentation;
     let intra_segment_features_supported = !segmentation.enabled
         || segmentation
@@ -9219,6 +9221,11 @@ pub(super) fn validate_complete_lossy_420_partition(
                     node.x,
                     node.y,
                 );
+                let use_intrabc = if context.intra_frame && context.allow_intrabc {
+                    decoder.adaptive_bool(&mut tile_cdfs.intrabc.0)
+                } else {
+                    false
+                };
                 // The value is consulted only in the `!streamed_large`
                 // branch, where construction above proved `Some`. Keeping a
                 // concrete copy avoids a panic-only unwrap in codec code.
@@ -9226,6 +9233,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                     transform_grid.unwrap_or(super::block::TransformGrid::Square4);
                 let mut inter_metadata = None;
                 let mut inter_tx_cells = None;
+                let mut intra_bc_motion_vector = None;
                 let decoded = if !context.intra_frame {
                     let Some(inter_context) = inter_context else {
                         unsupported = true;
@@ -9279,6 +9287,124 @@ pub(super) fn validate_complete_lossy_420_partition(
                         Ok(DecodedFrameLeaf::Intra(leaf)) => Ok(leaf),
                         Err(error) => Err(error),
                     }
+                } else if use_intrabc {
+                    if !bounded_monochrome_intrabc
+                        || syntax_block_size != BlockSize::B8x8
+                        || node.width != 2
+                        || node.height != 2
+                        || node.coded_width != 2
+                        || node.coded_height != 2
+                        || width != 8
+                        || height != 8
+                    {
+                        unsupported = true;
+                        return Ok(PartitionVisitControl::Stop);
+                    }
+                    let absolute_x_b4 = context
+                        .tile_origin_b4_x
+                        .checked_add(node.x)
+                        .ok_or_else(|| malformed("intraBC absolute x coordinate overflows"))?;
+                    let absolute_y_b4 = context
+                        .tile_origin_b4_y
+                        .checked_add(node.y)
+                        .ok_or_else(|| malformed("intraBC absolute y coordinate overflows"))?;
+                    let request = ReferenceMvRequest {
+                        target: ReferenceMvTarget::IntraBc,
+                        block_size: BlockSize::B8x8,
+                        local_x_b4: node.x,
+                        local_y_b4: node.y,
+                        absolute_x_b4,
+                        absolute_y_b4,
+                        tile_left_b4: 0,
+                        tile_top_b4: 0,
+                        tile_right_b4: context.block_width,
+                        tile_bottom_b4: context.block_height,
+                        frame_width_b4: context.block_width,
+                        frame_height_b4: context.block_height,
+                        top_has_right: node.intra_edges.top_has_right(PixelLayout::Monochrome),
+                        global_motion: [GlobalMotion::identity(); 7],
+                        force_integer_mv: true,
+                        high_precision_mv: false,
+                        sign_bias: [false; 7],
+                        current_order_hint: 0,
+                        order_hint_bits: 0,
+                        reference_order_hints: [0; 7],
+                        use_ref_frame_mvs: false,
+                        temporal: None,
+                    };
+                    let stack = find_reference_mvs(&tile_state, request)?;
+                    let row_in_superblock = node
+                        .y
+                        .checked_sub(root_y)
+                        .ok_or_else(|| malformed("intraBC block precedes its superblock"))?;
+                    let mut motion_vector = stack
+                        .slot(0)
+                        .map(|candidate| candidate.vectors[0])
+                        .filter(|vector| *vector != MotionVector::ZERO)
+                        .or_else(|| {
+                            stack
+                                .slot(1)
+                                .map(|candidate| candidate.vectors[0])
+                                .filter(|vector| *vector != MotionVector::ZERO)
+                        })
+                        .unwrap_or({
+                            if row_in_superblock < 16 {
+                                MotionVector { y: 0, x: -2560 }
+                            } else {
+                                MotionVector { y: -512, x: 0 }
+                            }
+                        });
+                    decode_mv_residual(
+                        decoder,
+                        &mut tile_cdfs.motion_vectors,
+                        &mut motion_vector,
+                        true,
+                        false,
+                    )?;
+                    if i32::from(motion_vector.x).abs() >= (1 << 14)
+                        || i32::from(motion_vector.y).abs() >= (1 << 14)
+                        || motion_vector.x % 8 != 0
+                        || motion_vector.y % 8 != 0
+                    {
+                        return Err(malformed("intraBC motion vector is out of range"));
+                    }
+                    let source = relocate_intrabc_source(
+                        IntrabcLegalityInput {
+                            block_x_b4: node.x,
+                            block_y_b4: node.y,
+                            block_width_b4: 2,
+                            block_height_b4: 2,
+                            tile_left_b4: 0,
+                            tile_top_b4: 0,
+                            tile_right_b4: context.block_width,
+                            tile_bottom_b4: context.block_height,
+                            has_chroma: false,
+                            subsampling_x: false,
+                            subsampling_y: false,
+                            sb128: false,
+                        },
+                        motion_vector,
+                    )?;
+                    validate_bounded_intrabc_wavefront(context, node, source)?;
+                    let source_x = u32::try_from(source.left)
+                        .map_err(|_| malformed("intraBC source x is negative"))?;
+                    let source_y = u32::try_from(source.top)
+                        .map_err(|_| malformed("intraBC source y is negative"))?;
+                    let mut prediction = [0_u16; 64];
+                    canvas.stage_written_rect(0, source_x, source_y, 8, 8, &mut prediction)?;
+                    let above_contexts = tile_state.luma_contexts_above::<16>(node.x, node.y, 2)?;
+                    let left_contexts = tile_state.luma_contexts_left::<16>(node.x, node.y, 2)?;
+                    intra_bc_motion_vector = Some(source.motion_vector);
+                    block_decoder.decode_intrabc_monochrome(
+                        decoder,
+                        BlockSize::B8x8,
+                        quantization,
+                        tools,
+                        block_skipped,
+                        above_contexts,
+                        left_contexts,
+                        prediction,
+                    )
                 } else if tile_state.is_empty() {
                     let standalone_tiny_frame =
                         context.frame_width == 4 && context.frame_height == 4;
@@ -9454,14 +9580,21 @@ pub(super) fn validate_complete_lossy_420_partition(
                         id: segment_id,
                     });
                 }
-                let commit_metadata =
+                let commit_metadata = if let Some(motion_vector) = intra_bc_motion_vector {
+                    BlockCommitMetadata {
+                        coding: BlockCoding::IntraBc { motion_vector },
+                        skip_mode: false,
+                        tx_cells: None,
+                    }
+                } else {
                     inter_metadata.map_or_else(BlockCommitMetadata::intra, |metadata| {
                         BlockCommitMetadata {
                             coding: BlockCoding::Inter(metadata),
                             skip_mode,
                             tx_cells: inter_tx_cells.as_deref(),
                         }
-                    });
+                    })
+                };
                 tile_state.commit_with_metadata(
                     node,
                     has_chroma,
@@ -14873,6 +15006,156 @@ fn complete_streamed_lossless_monochrome_context(context: &FirstBlockContext) ->
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
         && dimensions_are_supported
+}
+
+/// Admit the first bounded IntraBC profile: an 8-bit monochrome, lossless,
+/// single-tile frame using 64x64 superblocks. The block walker still accepts
+/// ordinary monochrome intra leaves in this profile; an IntraBC leaf itself
+/// is narrowed to an exact visible B8x8 terminal before any of its entropy or
+/// canvas state is consumed.
+fn complete_bounded_monochrome_intrabc_context(context: &FirstBlockContext) -> bool {
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == 0
+                && segment.lossless
+        });
+    let dimensions_supported = context.frame_width >= 8
+        && context.frame_height >= 8
+        && context.frame_width <= 256
+        && context.frame_height <= 256
+        && context.frame_width.is_multiple_of(8)
+        && context.frame_height.is_multiple_of(8)
+        && context.frame_width.div_ceil(8).checked_mul(2) == Some(context.block_width)
+        && context.frame_height.div_ceil(8).checked_mul(2) == Some(context.block_height)
+        && context.frame_block_width == context.block_width
+        && context.frame_block_height == context.block_height
+        && context.upscaled_width == context.frame_width;
+
+    context.intra_frame
+        && context.monochrome
+        && context.allow_intrabc
+        && context.allow_screen_content_tools
+        && context.single_tile
+        && context.level == 1
+        && context.bit_depth == 8
+        && !context.superres_enabled
+        && !context.subsampling_x
+        && !context.subsampling_y
+        && context.all_lossless
+        && context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == 0
+        && quantization.base == 0
+        && quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == 0
+        && quantization.u_ac_delta == 0
+        && quantization.v_dc_delta == 0
+        && quantization.v_ac_delta == 0
+        && !quantization.different_uv_delta
+        && !quantization.using_matrix
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && context.frame_tools.transform_mode == 0
+        && !context.frame_tools.reduced_transform_set
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.restoration_present
+        && !context.frame_tools.film_grain_present
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.tile_origin_b4_x == 0
+        && context.tile_origin_b4_y == 0
+        && segmentation_closed
+        && dimensions_supported
+}
+
+/// Enforce the delayed-wavefront dependency used by the bounded 64x64
+/// IntraBC profile. The source rectangle has already gone through the
+/// normative tile-border/current-superblock relocation; these checks apply to
+/// that final rectangle and use signed checked arithmetic throughout.
+fn validate_bounded_intrabc_wavefront(
+    context: &FirstBlockContext,
+    node: PartitionNode,
+    source: IntrabcSource,
+) -> Av1Result<()> {
+    if source.left < 0
+        || source.top < 0
+        || source.right <= source.left
+        || source.bottom <= source.top
+        || source.right > i64::from(context.frame_width)
+        || source.bottom > i64::from(context.frame_height)
+    {
+        return Err(malformed("intraBC source rectangle exceeds the frame"));
+    }
+    let destination_x = i64::from(node.x)
+        .checked_mul(4)
+        .ok_or_else(|| malformed("intraBC destination x overflows"))?;
+    let destination_y = i64::from(node.y)
+        .checked_mul(4)
+        .ok_or_else(|| malformed("intraBC destination y overflows"))?;
+    let active_row = destination_y
+        .checked_div(64)
+        .ok_or_else(|| malformed("intraBC active row conversion fails"))?;
+    let active_col = destination_x
+        .checked_div(64)
+        .ok_or_else(|| malformed("intraBC active column conversion fails"))?;
+    let sb64_cols = i64::from(context.frame_width)
+        .checked_add(63)
+        .ok_or_else(|| malformed("intraBC superblock columns overflow"))?
+        .checked_div(64)
+        .filter(|&columns| columns != 0)
+        .ok_or_else(|| malformed("intraBC superblock columns are empty"))?;
+    let active_linear = active_row
+        .checked_mul(sb64_cols)
+        .and_then(|value| value.checked_add(active_col))
+        .ok_or_else(|| malformed("intraBC active superblock index overflows"))?;
+    let source_row = (source.bottom - 1)
+        .checked_div(64)
+        .ok_or_else(|| malformed("intraBC source row conversion fails"))?;
+    let source_col = (source.right - 1)
+        .checked_div(64)
+        .ok_or_else(|| malformed("intraBC source column conversion fails"))?;
+    let source_linear = source_row
+        .checked_mul(sb64_cols)
+        .and_then(|value| value.checked_add(source_col))
+        .ok_or_else(|| malformed("intraBC source superblock index overflows"))?;
+    let delayed_limit = active_linear
+        .checked_sub(4)
+        .ok_or_else(|| malformed("intraBC source has no delayed wavefront"))?;
+    if source_linear >= delayed_limit || source_row > active_row {
+        return Err(malformed(
+            "intraBC source violates delayed wavefront causality",
+        ));
+    }
+    let row_delta = active_row
+        .checked_sub(source_row)
+        .ok_or_else(|| malformed("intraBC source row is after destination"))?;
+    let column_limit = active_col
+        .checked_sub(4)
+        .and_then(|value| value.checked_add(5_i64.checked_mul(row_delta)?))
+        .ok_or_else(|| malformed("intraBC source column causality overflows"))?;
+    if source_col >= column_limit {
+        return Err(malformed(
+            "intraBC source violates delayed column causality",
+        ));
+    }
+    Ok(())
 }
 
 /// Admit active Wiener/SGR restoration for one all-lossless intra color

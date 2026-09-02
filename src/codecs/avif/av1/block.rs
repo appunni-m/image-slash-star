@@ -52414,6 +52414,133 @@ impl Lossy420Decoder {
         Ok(skip)
     }
 
+    /// Decode and reconstruct one bounded monochrome IntraBC leaf.
+    ///
+    /// IntraBC carries its prediction outside the ordinary intra header: the
+    /// entropy layer has already consumed the mode-level skip sentence and
+    /// staged the current-frame source rectangle.  This terminal therefore
+    /// owns only the lossless TX4 coefficient grid and publishes the same
+    /// edge-context metadata as a normal monochrome leaf.  Keeping the
+    /// predictor as caller-owned stack storage makes source/destination
+    /// overlap transactional and prevents reconstruction from observing a
+    /// partially written canvas.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "IntraBC keeps the checked predictor, edge state, and entropy inputs explicit"
+    )]
+    pub(super) fn decode_intrabc_monochrome(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        block_skipped: bool,
+        above_contexts: [u8; 16],
+        left_contexts: [u8; 16],
+        prediction: [u16; 64],
+    ) -> PortableResult<FirstLeaf> {
+        (block_size == BlockSize::B8x8
+            && quantization.sample_depth == SampleDepth::EIGHT
+            && quantization.qindex == 0
+            && quantization.segment_qindex == 0
+            && quantization.segment_lossless
+            && tools.sample_depth == SampleDepth::EIGHT)
+            .then_some(())
+            .portable()?;
+        let geometry = self.pending_block_geometry.take().portable()?;
+        let predecoded_skip = self.pending_skip.take().portable()?;
+        (geometry.block_size == block_size && predecoded_skip == block_skipped)
+            .then_some(())
+            .portable()?;
+        self.last_cdef_active = false;
+        self.last_cdef_index = 0;
+
+        let mut coefficients = [[0_i32; 16]; 64];
+        let mut coefficient_above = above_contexts;
+        for (row, &left_edge) in left_contexts.iter().take(2).enumerate() {
+            let mut coefficient_left = left_edge;
+            for (column, above_slot) in coefficient_above.iter_mut().take(2).enumerate() {
+                let index = row * 2 + column;
+                let above_context = [*above_slot];
+                let left_context = [coefficient_left];
+                let terminal = decode_generic_lossless_terminal(
+                    decoder,
+                    0,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    quantization,
+                    TxSize::Tx4x4,
+                    8,
+                    8,
+                    &above_context,
+                    &left_context,
+                    block_skipped,
+                )?;
+                if !terminal.skipped {
+                    (terminal.coefficient_count == 16)
+                        .then_some(())
+                        .portable()?;
+                    coefficients[index]
+                        .copy_from_slice(self.large_coeff_arena.coefficients.get(..16).portable()?);
+                }
+                coefficient_left = terminal.residual_context;
+                *above_slot = terminal.residual_context;
+            }
+        }
+        let luma = if block_skipped {
+            ReconstructedPlane {
+                samples: prediction.to_vec(),
+            }
+        } else {
+            reconstruct_lossless_wht_prediction(
+                prediction.to_vec(),
+                &coefficients,
+                2,
+                2,
+                tools.sample_depth,
+            )?
+        };
+
+        // Re-play the 2x2 TX4 grid's residual contexts so the next leaf sees
+        // the exact coded right/bottom edges.  A skipped IntraBC block has no
+        // coefficient syntax and therefore publishes neutral contexts.
+        let residual_contexts: [u8; 4] = std::array::from_fn(|index| {
+            if block_skipped {
+                0x40
+            } else {
+                coefficient_residual_context(&coefficients[index])
+            }
+        });
+        let mut right = [0x40_u8; 16];
+        right[..2].copy_from_slice(&[residual_contexts[1], residual_contexts[3]]);
+        let mut bottom = [0x40_u8; 16];
+        bottom[..2].copy_from_slice(&[residual_contexts[2], residual_contexts[3]]);
+        let empty = ReconstructedPlane {
+            samples: Vec::new(),
+        };
+        Ok(FirstLeaf {
+            width: 8,
+            height: 8,
+            block_skipped,
+            planes: [luma, empty.clone(), empty],
+            luma_predictor: LumaPredictor::Dc,
+            chroma_predictor: None,
+            luma_context: residual_contexts[3],
+            chroma_contexts: [0x40; 2],
+            chroma_right_contexts: [[0x40; 16]; 2],
+            chroma_bottom_contexts: [[0x40; 16]; 2],
+            tx_context_width: 0,
+            tx_context_height: 0,
+            luma_transform_split: true,
+            luma_right_contexts: right,
+            luma_bottom_contexts: bottom,
+            wide_coefficient_contexts: None,
+            palette_cache: PaletteCacheState::default(),
+            #[cfg(coverage)]
+            entropy_operations: Vec::new(),
+        })
+    }
+
     /// Decode one inter transform block's coefficient-skip sentence.
     ///
     /// A mode-level skipped block has no transform-block skip symbol.  For a
