@@ -42031,6 +42031,72 @@ fn reconstruct_lossy_full_8x32_chroma_zone1(
     Ok(reconstruct_lossy_predicted_plane(&prediction, &residual))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact R8x32 smooth/Zone-3 path carries positioned edges, availability, and filter policy"
+)]
+fn reconstruct_lossy_full_8x32_chroma_smooth_zone3(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    top: [u16; 8],
+    left: [u16; 32],
+    bottom_left: Option<[u16; 8]>,
+    top_left: Option<u16>,
+    has_left: bool,
+    coefficients: Option<Lossy8x32TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    match predictor {
+        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Diagonal203 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (180 < angle && angle < 270).then_some(()).portable()?;
+        }
+        _ => return Err(PortableUnavailable),
+    }
+    let mut left_edge = [0_u16; 40];
+    left_edge[..32].copy_from_slice(&left);
+    let have_below_left = if let Some(extension) = bottom_left {
+        left_edge[32..].copy_from_slice(&extension);
+        true
+    } else {
+        false
+    };
+    let left_edge = if have_below_left {
+        &left_edge[..]
+    } else {
+        &left_edge[..32]
+    };
+    let edges = FullIntraPlaneEdges::prepare(
+        8,
+        32,
+        SampleDepth::EIGHT,
+        &top,
+        left_edge,
+        top_left,
+        true,
+        has_left,
+        false,
+        have_below_left,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 256];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        8,
+        32,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    let residual = transform::inverse_dct8x32(&coefficients.unwrap_or([0_i32; 256]));
+    Ok(reconstruct_lossy_predicted_plane(&prediction, &residual))
+}
+
 fn reconstruct_lossy_full_8x32_cfl(
     luma: &ReconstructedPlane,
     predictor: u16,
@@ -59074,6 +59140,13 @@ impl Lossy420Decoder {
                 syntax.chroma_predictor,
                 ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
             );
+            let exact_chroma_edges = chroma_zone1
+                || matches!(
+                    syntax.chroma_predictor,
+                    ChromaPredictor::Diagonal203
+                        | ChromaPredictor::SmoothVertical
+                        | ChromaPredictor::SmoothHorizontal
+                );
             if chroma_zone1 {
                 neighbors
                     .above_chroma_extension
@@ -59086,10 +59159,18 @@ impl Lossy420Decoder {
                 &self.palette_map_arena,
                 &above_left,
             )?;
+            let left_chroma_mode = neighbors
+                .left_chroma
+                .or(neighbors.left_luma_top)
+                .or(neighbors.left)
+                .and_then(|neighbor| neighbor.chroma_predictor);
+            let smooth_chroma_edges =
+                is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
+                    || is_smooth_chroma_predictor(left_chroma_mode);
             let [luma, chroma_u, chroma_v] = &mut leaf.planes;
             for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
                 let plane = plane_index.saturating_add(1);
-                let top = if chroma_zone1 {
+                let top = if exact_chroma_edges {
                     positioned_top_edge::<8>(
                         plane,
                         neighbors.above_left,
@@ -59101,7 +59182,7 @@ impl Lossy420Decoder {
                 } else {
                     bottom_edge_8x32(&above_left.planes[plane])
                 };
-                let (left, has_left, top_left) = if chroma_zone1 {
+                let (left, has_left, top_left) = if exact_chroma_edges {
                     let left = neighbors
                         .left_chroma
                         .and_then(|neighbor| {
@@ -59161,14 +59242,33 @@ impl Lossy420Decoder {
                             has_left,
                             syntax.lossy_chroma_8x32_coefficients[plane - 1],
                             tools.enable_intra_edge_filter,
-                            is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
-                                || is_smooth_chroma_predictor(
-                                    neighbors
-                                        .left_chroma
-                                        .or(neighbors.left_luma_top)
-                                        .or(neighbors.left)
-                                        .and_then(|neighbor| neighbor.chroma_predictor),
-                                ),
+                            smooth_chroma_edges,
+                        )?
+                    }
+                    ChromaPredictor::Diagonal203
+                    | ChromaPredictor::SmoothVertical
+                    | ChromaPredictor::SmoothHorizontal => {
+                        let bottom_left =
+                            if matches!(syntax.chroma_predictor, ChromaPredictor::Diagonal203) {
+                                let bottom_left = neighbors.left_full_chroma_bottom_8[plane - 1];
+                                if !has_left && bottom_left.is_some() {
+                                    return Err(PortableUnavailable);
+                                }
+                                bottom_left
+                            } else {
+                                None
+                            };
+                        reconstruct_lossy_full_8x32_chroma_smooth_zone3(
+                            syntax.chroma_predictor,
+                            syntax.chroma_angle,
+                            top,
+                            left,
+                            bottom_left,
+                            has_left.then_some(top_left),
+                            has_left,
+                            syntax.lossy_chroma_8x32_coefficients[plane - 1],
+                            tools.enable_intra_edge_filter,
+                            smooth_chroma_edges,
                         )?
                     }
                     _ => reconstruct_lossy_full_8x32_chroma(
