@@ -1062,14 +1062,11 @@ impl FrameState {
             )
             || surface.render_width != surface.upscaled_width
             || surface.render_height != surface.frame_height
-            || (surface.layout == PixelLayout::I422
-                && surface.coded_width != surface.upscaled_width)
             || (surface.layout == PixelLayout::I444
-                && (surface.coded_width != surface.upscaled_width
-                    || !entropy::bounded_i444_film_grain_dimensions(
-                        surface.upscaled_width,
-                        surface.frame_height,
-                    )))
+                && !entropy::bounded_i444_film_grain_dimensions(
+                    surface.upscaled_width,
+                    surface.frame_height,
+                ))
             || surface.planes.iter().any(Option::is_none)
             || matches!(grain.matrix_coefficients, 0 | 3)
         {

@@ -2645,6 +2645,32 @@ fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
             && (context.monochrome || context.subsampling_x))
 }
 
+/// Validate film-grain admission for a color super-resolution display path.
+/// Grain synthesis consumes the owned post-resize leaf, so coded and display
+/// widths may differ. I420 and I422 use the checked depth-parametric grain
+/// kernel directly; I444 retains the bounded display-dimension whitelist used
+/// by its full-resolution grain path.
+fn superres_color_film_grain_supported(context: &FirstBlockContext, layout: PixelLayout) -> bool {
+    let layout_matches = match layout {
+        PixelLayout::I420 => context.subsampling_x && context.subsampling_y,
+        PixelLayout::I422 => context.subsampling_x && !context.subsampling_y,
+        PixelLayout::I444 => !context.subsampling_x && !context.subsampling_y,
+        PixelLayout::Monochrome => false,
+    };
+    context.superres_enabled
+        && !context.monochrome
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && layout_matches
+        && (!context.frame_tools.film_grain_present
+            || match layout {
+                PixelLayout::I420 | PixelLayout::I422 => true,
+                PixelLayout::I444 => {
+                    bounded_i444_film_grain_dimensions(context.upscaled_width, context.frame_height)
+                }
+                PixelLayout::Monochrome => false,
+            })
+}
+
 fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bool {
     let padded_block_width = context
         .frame_width
@@ -9790,7 +9816,11 @@ fn complete_inter_420_reconstruction_context(
         && matches!(context.frame_tools.transform_mode, 0..=2)
         && inter_cdef_supported(context)
         && (context.restoration_types == [None; 3] || active_restoration)
-        && no_unsupported_film_grain(context)
+        && if context.superres_enabled {
+            superres_color_film_grain_supported(context, PixelLayout::I420)
+        } else {
+            no_unsupported_film_grain(context)
+        }
         && postskip_altq_segmentation_supported(context)
         && context.block_x == 0
         && context.block_y == 0
@@ -9854,7 +9884,7 @@ fn lossy_i420_superres_restoration_supported(
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I420)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -10000,7 +10030,11 @@ fn complete_inter_422_reconstruction_context(
         && !context.all_lossless
         && postskip_altq_segmentation_supported(context)
         && !context.allow_intrabc
-        && no_unsupported_film_grain(context)
+        && if context.superres_enabled {
+            superres_color_film_grain_supported(context, PixelLayout::I422)
+        } else {
+            no_unsupported_film_grain(context)
+        }
         && context.frame_tools.quantization.is_some()
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && complete_high_depth_loop_filter_supported(context)
@@ -10069,7 +10103,7 @@ fn lossy_i422_superres_restoration_supported(
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I422)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -10159,12 +10193,14 @@ fn lossy_i422_superres_restoration_supported(
 /// together. Checked dimension-scaled retained references use the same
 /// full-resolution MC path as unscaled references. Compound, inter-intra, and
 /// OBMC syntax remain enabled; frame-level postfilters and film grain stay
-/// Checked frame deblocking and bounded frame CDEF are applied after complete
+/// constrained by their profile gates. Checked frame deblocking and bounded
+/// frame CDEF are applied after complete
 /// tile assembly; active restoration is limited to the separate one-unit
 /// super-resolution profile below. Horizontal super-resolution
 /// resizes the complete coded I444 frame through the shared frame compositor;
-/// film grain remains disabled for that display-width transition. Tile-local
-/// reconstructions are assembled into one complete frame. Root-scoped delta-Q
+/// display-only film grain is synthesized after that resize when the upscaled
+/// dimensions satisfy its bounded whitelist. Tile-local reconstructions are
+/// assembled into one complete frame. Root-scoped delta-Q
 /// and dynamic delta-LF use the shared prepared-quantization path; staged inter
 /// reference/mode metadata supplies the per-block filter-level class.
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
@@ -10188,7 +10224,7 @@ fn complete_inter_444_reconstruction_context(
         context.upscaled_width == context.frame_width
     };
     let film_grain_supported = if context.superres_enabled {
-        !context.frame_tools.film_grain_present
+        superres_color_film_grain_supported(context, PixelLayout::I444)
     } else {
         bounded_i444_film_grain_supported(context)
     };
@@ -10281,7 +10317,7 @@ fn lossy_i444_superres_restoration_supported(
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I444)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -10399,7 +10435,7 @@ fn complete_superres_lossy_420_reconstruction_context(context: &FirstBlockContex
         && (!high_depth || !context.frame_tools.reduced_transform_set)
         && (!high_depth || complete_high_depth_loop_filter_supported(context))
         && (context.restoration_types == [None; 3] || active_restoration)
-        && no_unsupported_film_grain(context)
+        && superres_color_film_grain_supported(context, PixelLayout::I420)
         && cdef_supported
         && context.block_x == 0
         && context.block_y == 0
@@ -10458,7 +10494,7 @@ fn lossy_i420_intra_superres_restoration_supported(context: &FirstBlockContext) 
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I420)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -10539,7 +10575,8 @@ fn lossy_i420_intra_superres_restoration_supported(context: &FirstBlockContext) 
 /// Narrow lossy I444 intra profile with AV1 horizontal super-resolution.
 /// Reconstruction, transform contexts, intra edges, and coded-frame filters
 /// all remain in the coded coordinate system; the frame compositor resizes
-/// the completed three-plane surface exactly once after tile assembly. I444's
+/// the completed three-plane surface exactly once after tile assembly, then
+/// display-only film grain may be synthesized on the upscaled leaf. I444's
 /// full-resolution chroma uses the same dimensions and interpolation phases
 /// as luma, so this profile adds no new entropy or plane-state carrier.
 fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
@@ -10565,7 +10602,7 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.frame_tools.film_grain_present
+        && superres_color_film_grain_supported(context, PixelLayout::I444)
         && quantization.base != 0
         && context.frame_tools.segment_qindex == quantization.base
         && !context.frame_tools.segment_lossless
@@ -10608,10 +10645,11 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// motion-mode sentence selected by their causal matching-reference mask;
 /// Translation and OBMC are materialized for the generic high-depth layouts,
 /// as are Average/Distance and masked Difference/Wedge compound predictors.
-/// Horizontal super-resolution is admitted for I420, I422, and I444; the
-/// I422/I444 superres frames exclude film grain because display materialization
-/// requires a same-width grain surface. Their current-frame output still uses
-/// the coded-coordinate MC path followed by the depth-aware resize compositor.
+/// Horizontal super-resolution is admitted for I420, I422, and I444; their
+/// display-only film grain is synthesized on the depth-aware upscaled leaf
+/// after resize/restoration (I444 retains its bounded display-dimension
+/// whitelist). Their current-frame output still uses the coded-coordinate MC
+/// path followed by the depth-aware resize compositor.
 /// Dimension-scaled retained references are valid for all three layouts,
 /// including non-superres current frames, because the checked frame-wide scale
 /// factors and layout-specific MC kernels operate before the current frame is
@@ -10653,8 +10691,16 @@ fn complete_high_depth_inter_reconstruction_context(
     } else {
         context.upscaled_width == context.frame_width
     };
-    let film_grain_supported = if context.superres_enabled && (i422 || i444) {
-        !context.frame_tools.film_grain_present
+    let film_grain_supported = if context.superres_enabled {
+        if i420 {
+            superres_color_film_grain_supported(context, PixelLayout::I420)
+        } else if i422 {
+            superres_color_film_grain_supported(context, PixelLayout::I422)
+        } else if i444 {
+            superres_color_film_grain_supported(context, PixelLayout::I444)
+        } else {
+            false
+        }
     } else if i444 {
         bounded_i444_film_grain_supported(context)
     } else {
@@ -10750,7 +10796,7 @@ fn high_depth_lossy_i444_superres_restoration_supported(
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I444)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -10885,7 +10931,7 @@ fn high_depth_lossy_i422_superres_restoration_supported(
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I422)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -11027,7 +11073,7 @@ fn high_depth_lossy_i420_superres_restoration_supported(
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I420)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -16194,7 +16240,11 @@ fn complete_422_intra_reconstruction_context(context: &FirstBlockContext) -> boo
         && !context.frame_tools.segmentation.enabled
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && no_unsupported_film_grain(context)
+        && if context.superres_enabled {
+            superres_color_film_grain_supported(context, PixelLayout::I422)
+        } else {
+            no_unsupported_film_grain(context)
+        }
         && !context.frame_tools.segment_lossless
         && context.frame_tools.segment_qindex == quantization.base
         && quantization.base != 0
@@ -16258,7 +16308,7 @@ fn lossy_i422_intra_superres_restoration_supported(context: &FirstBlockContext) 
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I422)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -16374,7 +16424,7 @@ fn lossy_i444_intra_superres_restoration_supported(context: &FirstBlockContext) 
         || context.frame_tools.reduced_transform_set
         || context.frame_tools.transform_mode != 1
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I444)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
