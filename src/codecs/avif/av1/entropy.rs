@@ -5977,13 +5977,12 @@ fn decode_inter_transform_size(
         {
             // A TX64 root split is followed by one TX32 split decision for
             // each child. The all-false sentence retains the existing
-            // four-terminal TX32 compositor. I420's all-true sentence uses
-            // the existing depth-two compositor; I422/I444 retain every
-            // child bit so their mixed luma tree can share the fixed chroma
-            // TX32 grid.
+            // four-terminal TX32 compositor. The all-true sentence uses the
+            // depth-two TX16 compositor for every supported layout; mixed
+            // luma trees retain every child bit so their fixed chroma TX32
+            // grid can inherit the corresponding quadrant transform.
             let child_offsets = [(0_u32, 0_u32), (8, 0), (0, 8), (8, 8)];
             let mut child_splits = [[false; 2]; 2];
-            let mut first_split = None;
             for (child_index, (offset_x, offset_y)) in child_offsets.into_iter().enumerate() {
                 let row = child_index / 2;
                 let column = child_index % 2;
@@ -6014,14 +6013,11 @@ fn decode_inter_transform_size(
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
                 let split =
                     decoder.adaptive_bool(&mut cdfs.common.transform_partition[1][context].0);
-                if first_split.is_none() {
-                    first_split = Some(split);
-                }
                 child_splits[row][column] = split;
             }
             let all_children_split = child_splits.iter().flatten().all(|&split| split);
             let any_child_split = child_splits.iter().flatten().any(|&split| split);
-            if first_split == Some(true) && all_children_split && layout == PixelLayout::I420 {
+            if all_children_split {
                 return Ok(InterTransformPlan::SplitB64Deep);
             }
             if !any_child_split {

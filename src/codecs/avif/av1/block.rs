@@ -2730,8 +2730,13 @@ pub(super) fn filter_transform_dimensions(
                     _ => return None,
                 }
             }
-            // S64x64 depth one terminates in four TX32x32 children.
-            TransformGrid::Square64 => (32, 32),
+            // S64x64 depth one terminates in four TX32x32 children, while
+            // the admitted depth-two tree publishes TX16x16 terminals.
+            TransformGrid::Square64 => match (leaf.tx_context_width, leaf.tx_context_height) {
+                (3, 3) => (32, 32),
+                (2, 2) => (16, 16),
+                _ => return None,
+            },
         }
     } else {
         (grid_width.saturating_mul(4), grid_height.saturating_mul(4))
@@ -2784,6 +2789,11 @@ pub(super) fn filter_transform_dimensions(
                 (32, 32)
             }
         }
+        // Every color Square64 terminal uses one 32x32 chroma transform
+        // footprint per 32-pixel plane quadrant. I422 therefore has a 1x2
+        // grid and I444 a 2x2 grid; projecting the luma block dimensions
+        // would incorrectly report 32x64 or 64x64.
+        TransformGrid::Square64 => (32, 32),
         _ => (
             if subsampling_x {
                 grid_width.div_ceil(2)
@@ -54249,7 +54259,13 @@ impl Lossy420Decoder {
         }
         if split_b64_deep {
             (block_size == BlockSize::B64x64
-                && chroma_sampling == ChromaSampling::Subsampled420
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -54342,7 +54358,7 @@ impl Lossy420Decoder {
                 && quantization.segment_qindex > 0
                 && !quantization.segment_lossless
                 && any_child_split
-                && (chroma_sampling != ChromaSampling::Subsampled420 || !all_children_split))
+                && !all_children_split)
                 .then_some(())
                 .portable()?;
         }
@@ -54986,7 +55002,7 @@ impl Lossy420Decoder {
         } else {
             Some(block_size.maximum_chroma_tx(layout).portable()?)
         };
-        let split_b64_chroma_grid = (split_b64 || split_b64_topology)
+        let split_b64_chroma_grid = (split_b64 || split_b64_deep || split_b64_topology)
             && !matches!(chroma_sampling, ChromaSampling::Subsampled420);
         let split_rect64_i444_chroma_grid = (split_b16x64
             || split_b16x64_deep
@@ -55468,8 +55484,8 @@ impl Lossy420Decoder {
                 continue;
             }
             if split_b64_deep && plane == 0 {
-                let (split_contexts, split_right, split_bottom, split_transform) = self
-                    .decode_inter_split_luma_b64_deep(
+                let (split_contexts, split_right, split_bottom, split_transforms, split_transform) =
+                    self.decode_inter_split_luma_b64_deep(
                         decoder,
                         &prediction,
                         &mut rasters[0],
@@ -55484,6 +55500,7 @@ impl Lossy420Decoder {
                 luma_transform_split = true;
                 luma_split_tx_size = Some(TxSize::Tx16x16);
                 luma_transform = split_transform;
+                luma_split_transforms = Some(split_transforms);
                 continue;
             }
             if (split_b16x32_deep || split_b32x16_deep) && plane == 0 {
@@ -55802,7 +55819,7 @@ impl Lossy420Decoder {
                     coefficient_contexts,
                     TxSize::Tx32x32,
                     Some(luma_transforms),
-                    split_b64_topology,
+                    split_b64_topology || split_b64_deep,
                     false,
                 )?;
                 contexts[plane] = grid_contexts.bottom_right;
@@ -58316,7 +58333,13 @@ impl Lossy420Decoder {
             &mut RangeDecoder<'_, '_, '_>,
             TxSize,
         ) -> PortableResult<Av1TransformType>,
-    ) -> PortableResult<([[u8; 4]; 4], [u8; 16], [u8; 16], Av1TransformType)> {
+    ) -> PortableResult<(
+        [[u8; 4]; 4],
+        [u8; 16],
+        [u8; 16],
+        [[Av1TransformType; 2]; 2],
+        Av1TransformType,
+    )> {
         (prediction.len() == 4096
             && raster.coded_width == 64
             && raster.coded_height == 64
@@ -58332,6 +58355,12 @@ impl Lossy420Decoder {
         let above: [u8; 16] = std::array::from_fn(|index| coefficient_contexts.above[0][index]);
         let left: [u8; 16] = std::array::from_fn(|index| coefficient_contexts.left[0][index]);
         let mut residual_contexts = [[0x40_u8; 4]; 4];
+        // Chroma TX32 terminals inherit the transform at the spatial
+        // top-left TX16 terminal of their corresponding 32x32 luma quadrant.
+        // Retain only that compact 2x2 source matrix after the luma grid is
+        // reconstructed; all sixteen terminal transforms are not needed by
+        // later planes.
+        let mut coarse_transforms = [[Av1TransformType::DctDct; 2]; 2];
         let mut first_transform = Av1TransformType::DctDct;
         for child_row in 0_usize..2 {
             for child_column in 0_usize..2 {
@@ -58372,8 +58401,11 @@ impl Lossy420Decoder {
                         } else {
                             decode_transform_type(decoder, TxSize::Tx16x16)?
                         };
-                        if row == 0 && column == 0 {
-                            first_transform = transform;
+                        if local_row == 0 && local_column == 0 {
+                            coarse_transforms[child_row][child_column] = transform;
+                            if row == 0 && column == 0 {
+                                first_transform = transform;
+                            }
                         }
                         let terminal = decode_inter_lossy_terminal(
                             decoder,
@@ -58458,7 +58490,13 @@ impl Lossy420Decoder {
             let start = column.checked_mul(4).portable()?;
             bottom[start..start + 4].fill(residual_contexts[3][column]);
         }
-        Ok((residual_contexts, right, bottom, first_transform))
+        Ok((
+            residual_contexts,
+            right,
+            bottom,
+            coarse_transforms,
+            first_transform,
+        ))
     }
 
     #[expect(
