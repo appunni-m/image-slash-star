@@ -988,6 +988,8 @@ impl Lossy420Decoder {
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
             && (quantization.segment_qindex > 0
+                || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB16)
+                    && block_width == 16)
                 || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB32)
                     && block_width == 32))
             && !quantization.segment_lossless
@@ -52727,6 +52729,7 @@ enum WideChromaTransformSource<'a> {
 #[derive(Clone, Copy)]
 enum InterSplitQindexPolicy {
     PositiveOnly,
+    Mode2SplitB16,
     Mode2SplitB32,
     Mode2SplitB64,
 }
@@ -55753,7 +55756,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
-                && quantization.segment_qindex > 0
                 && !quantization.segment_lossless)
                 .then_some(())
                 .portable()?;
@@ -55776,7 +55778,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
-                && quantization.segment_qindex > 0
                 && !quantization.segment_lossless
                 && any_child_split
                 && !all_children_split)
@@ -57714,7 +57715,9 @@ impl Lossy420Decoder {
                         tools,
                         coefficient_contexts,
                         topology,
-                        if split_b32_topology {
+                        if split_b16_topology {
+                            InterSplitQindexPolicy::Mode2SplitB16
+                        } else if split_b32_topology {
                             InterSplitQindexPolicy::Mode2SplitB32
                         } else {
                             InterSplitQindexPolicy::PositiveOnly
@@ -57826,6 +57829,7 @@ impl Lossy420Decoder {
                     &mut decode_transform_type,
                     16,
                     16,
+                    InterSplitQindexPolicy::Mode2SplitB16,
                 )?;
                 contexts[0] = grid_contexts.bottom_right;
                 luma_right_contexts = grid_contexts.right;
@@ -57957,6 +57961,7 @@ impl Lossy420Decoder {
                     &mut decode_transform_type,
                     block_width,
                     block_height,
+                    InterSplitQindexPolicy::PositiveOnly,
                 )?;
                 contexts[0] = grid_contexts.bottom_right;
                 luma_right_contexts = grid_contexts.right;
@@ -59201,6 +59206,7 @@ impl Lossy420Decoder {
         ) -> PortableResult<Av1TransformType>,
         block_width: usize,
         block_height: usize,
+        qindex_policy: InterSplitQindexPolicy,
     ) -> PortableResult<(LosslessGridContexts, [[Av1TransformType; 4]; 4])> {
         let sample_count = block_width.checked_mul(block_height).portable()?;
         let grid_width = block_width / 4;
@@ -59223,7 +59229,9 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
+            && (quantization.segment_qindex > 0
+                || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB16)
+                    && (block_width, block_height) == (16, 16)))
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -62268,7 +62276,6 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
