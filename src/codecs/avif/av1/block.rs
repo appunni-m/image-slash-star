@@ -41185,6 +41185,79 @@ fn reconstruct_lossy_full_4x16_chroma_normalized_target(
     ))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact horizontal-following R4x16 chroma path carries normalized edges, continuation, filtering, and residual state"
+)]
+fn reconstruct_lossy_full_4x16_chroma_horizontal_target(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    left: [u16; 16],
+    bottom_left: Option<[u16; 4]>,
+    coefficients: Option<Lossy4x16TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    match predictor {
+        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (0 < angle && angle < 90).then_some(()).portable()?;
+        }
+        ChromaPredictor::Diagonal203 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (180 < angle && angle < 270).then_some(()).portable()?;
+        }
+        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        _ => return Err(PortableUnavailable),
+    }
+    let mut left_edge = [0_u16; 20];
+    left_edge[..16].copy_from_slice(&left);
+    let have_below_left = if let Some(extension) = bottom_left {
+        left_edge[16..].copy_from_slice(&extension);
+        true
+    } else {
+        false
+    };
+    let left_edge = if have_below_left {
+        &left_edge[..]
+    } else {
+        &left_edge[..16]
+    };
+    // A horizontally following leaf has no normative top carrier. Leaving
+    // the top slice empty with `has_top = false` derives the unavailable top
+    // edge and corner from the first real left sample.
+    let edges = FullIntraPlaneEdges::prepare(
+        4,
+        16,
+        SampleDepth::EIGHT,
+        &[],
+        left_edge,
+        None,
+        false,
+        true,
+        false,
+        have_below_left,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 64];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        4,
+        16,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    Ok(reconstruct_lossy_luma_4x16_from_prediction(
+        prediction,
+        coefficients,
+        chroma_rect_transform_kind(predictor),
+    ))
+}
+
 fn chroma_transform_16x16_kind(
     predictor: ChromaPredictor,
 ) -> PortableResult<Lossy16x16TransformKind> {
@@ -59106,6 +59179,48 @@ impl Lossy420Decoder {
         } else if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Vertical4x16)
         {
+            let target = matches!(
+                syntax.chroma_predictor,
+                ChromaPredictor::Diagonal45
+                    | ChromaPredictor::Diagonal67
+                    | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::SmoothVertical
+                    | ChromaPredictor::SmoothHorizontal
+            );
+            let target_edges = if target {
+                let neighbor_width_usize =
+                    usize::try_from(neighbor_width).map_err(|_| PortableUnavailable)?;
+                let neighbor_height_usize =
+                    usize::try_from(neighbor_height).map_err(|_| PortableUnavailable)?;
+                let expected_len = neighbor_width_usize
+                    .checked_mul(neighbor_height_usize)
+                    .ok_or(PortableUnavailable)?;
+                let mut edges: [(Option<[u16; 16]>, Option<[u16; 4]>); 2] = [(None, None); 2];
+                for plane in 1..=2 {
+                    (neighbor.planes[plane].samples.len() == expected_len)
+                        .then_some(())
+                        .portable()?;
+                    let edge = checked_right_edge_at::<16>(
+                        &neighbor.planes[plane],
+                        neighbor_width,
+                        neighbor_height,
+                        0,
+                    )
+                    .ok_or(PortableUnavailable)?;
+                    let continuation =
+                        if matches!(syntax.chroma_predictor, ChromaPredictor::Diagonal203) {
+                            full_chroma_bottom_left_8[plane - 1].map(|extension| {
+                                [extension[0], extension[1], extension[2], extension[3]]
+                            })
+                        } else {
+                            None
+                        };
+                    edges[plane - 1] = (Some(edge), continuation);
+                }
+                Some(edges)
+            } else {
+                None
+            };
             let base_syntax = BlockSyntax {
                 chroma_predictor: ChromaPredictor::Dc,
                 ..syntax
@@ -59115,30 +59230,44 @@ impl Lossy420Decoder {
                 &neighbor,
                 Some(&neighbor),
             )?;
-            let [luma, chroma_u, chroma_v] = &mut leaf.planes;
-            for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
-                let plane = plane_index.saturating_add(1);
-                let top = bottom_edge_4_for_4x8(&neighbor.planes[plane]);
-                let left = chroma_left_edges_16[plane - 1]
-                    .unwrap_or_else(|| right_edge_16(&neighbor.planes[plane]));
-                *chroma = match syntax.chroma_predictor {
-                    ChromaPredictor::Cfl { alpha_u, alpha_v } => {
-                        let alpha = if plane == 1 { alpha_u } else { alpha_v };
-                        reconstruct_lossy_full_4x16_cfl(
-                            luma,
-                            rectangular_dc_predictor(&top, &left),
-                            alpha,
-                            syntax.lossy_chroma_4x16_coefficients[plane - 1],
-                        )?
-                    }
-                    _ => reconstruct_lossy_full_4x16_chroma(
+            if let Some(edges) = target_edges {
+                for plane in 1..=2 {
+                    leaf.planes[plane] = reconstruct_lossy_full_4x16_chroma_horizontal_target(
                         syntax.chroma_predictor,
                         syntax.chroma_angle,
-                        top,
-                        left,
+                        edges[plane - 1].0.ok_or(PortableUnavailable)?,
+                        edges[plane - 1].1,
                         syntax.lossy_chroma_4x16_coefficients[plane - 1],
-                    )?,
-                };
+                        tools.enable_intra_edge_filter,
+                        smooth_chroma_edges,
+                    )?;
+                }
+            } else {
+                let [luma, chroma_u, chroma_v] = &mut leaf.planes;
+                for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
+                    let plane = plane_index.saturating_add(1);
+                    let top = bottom_edge_4_for_4x8(&neighbor.planes[plane]);
+                    let left = chroma_left_edges_16[plane - 1]
+                        .unwrap_or_else(|| right_edge_16(&neighbor.planes[plane]));
+                    *chroma = match syntax.chroma_predictor {
+                        ChromaPredictor::Cfl { alpha_u, alpha_v } => {
+                            let alpha = if plane == 1 { alpha_u } else { alpha_v };
+                            reconstruct_lossy_full_4x16_cfl(
+                                luma,
+                                rectangular_dc_predictor(&top, &left),
+                                alpha,
+                                syntax.lossy_chroma_4x16_coefficients[plane - 1],
+                            )?
+                        }
+                        _ => reconstruct_lossy_full_4x16_chroma(
+                            syntax.chroma_predictor,
+                            syntax.chroma_angle,
+                            top,
+                            left,
+                            syntax.lossy_chroma_4x16_coefficients[plane - 1],
+                        )?,
+                    };
+                }
             }
             Ok(leaf)
         } else if matches!(self.chroma_sampling, ChromaSampling::Full)
