@@ -8426,6 +8426,8 @@ impl Lossy420Reconstruction {
         Option<super::cdef::FrameParameters>,
         Vec<Option<usize>>,
         Vec<bool>,
+        Option<super::filter::Parameters>,
+        Vec<super::filter::Block>,
     )> {
         let Lossy420Reconstruction {
             leaf,
@@ -8433,6 +8435,8 @@ impl Lossy420Reconstruction {
             cdef_indices,
             cdef_active,
             cdef_parameters,
+            filter_blocks,
+            loop_parameters,
             restoration,
             ..
         } = self;
@@ -8445,7 +8449,14 @@ impl Lossy420Reconstruction {
             return Err(malformed("monochrome tile carries a post-filter plan"));
         }
         let [plane, _, _] = leaf.planes;
-        Ok((plane, cdef_parameters, cdef_indices, cdef_active))
+        Ok((
+            plane,
+            cdef_parameters,
+            cdef_indices,
+            cdef_active,
+            loop_parameters,
+            filter_blocks,
+        ))
     }
 }
 
@@ -8482,6 +8493,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_monochrome_matrix_restoration_reconstruction_context(context);
     let monochrome_multitile_cdef =
         complete_monochrome_multitile_cdef_reconstruction_context(context);
+    let monochrome_multitile_loop_filter =
+        complete_monochrome_multitile_loop_filter_reconstruction_context(context);
     let monochrome_lossy_active_restoration = if context.intra_frame {
         lossy_monochrome_intra_superres_restoration_supported(context)
     } else {
@@ -8823,6 +8836,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             || (!context.intra_frame
                 && monochrome_multitile_cdef
                 && complete_monochrome_references(context, inter_context))
+            || (!context.intra_frame
+                && monochrome_multitile_loop_filter
+                && complete_monochrome_references(context, inter_context))
             || bounded_inter_restoration
             || bounded_i444_restoration
             || bounded_i422_inter_restoration
@@ -8857,6 +8873,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (context.intra_frame && monochrome_mode2_restoration)
         || (context.intra_frame && monochrome_matrix_restoration)
         || (context.intra_frame && monochrome_multitile_cdef)
+        || (context.intra_frame && monochrome_multitile_loop_filter)
         || bounded_intra_restoration
         || bounded_i444_intra_restoration
         || bounded_i422_intra_restoration
@@ -14890,6 +14907,54 @@ fn complete_monochrome_multitile_cdef_reconstruction_context(context: &FirstBloc
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
         && !context.frame_tools.film_grain_present
+}
+
+/// Admit luma-only deblocking for independently decoded monochrome tiles.
+/// This predicate repeats the non-filter guards from the common monochrome
+/// base because that base intentionally requires zero loop-filter levels for
+/// its direct-finish callers. Tile-local filter metadata is retained and
+/// translated during frame assembly; CDEF and restoration remain excluded so
+/// their global ordering cannot be combined accidentally in this tranche.
+fn complete_monochrome_multitile_loop_filter_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let dimensions_are_supported = context.frame_width >= 4
+        && context.frame_height >= 4
+        && context.frame_width <= 128
+        && context.frame_height <= 128
+        && context.frame_width.is_multiple_of(4)
+        && context.frame_height.is_multiple_of(4)
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.upscaled_width == context.frame_width;
+    context.monochrome
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && !context.single_tile
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.frame_tools.segment_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && context.frame_tools.quantization.is_some()
+        && context.frame_tools.loop_filter.level_y != [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.loop_filter.sharpness <= 7
+        && context.frame_tools.cdef.is_none()
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && dimensions_are_supported
 }
 
 fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockContext) -> bool {

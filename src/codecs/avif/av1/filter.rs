@@ -65,32 +65,9 @@ pub(crate) fn apply(
         return None;
     }
 
-    let luma_mask = build_masks(dimensions[0], blocks, false, false, false)?;
+    apply_luma(&mut planes[0], dimensions[0], blocks, parameters)?;
     let chroma_mask = build_masks(dimensions[1], blocks, true, subsampling_x, subsampling_y)?;
-    let threshold_lut: [(i32, i32, i32); 64] = std::array::from_fn(|level| {
-        thresholds(
-            u32::try_from(level).unwrap_or_default(),
-            parameters.sharpness,
-        )
-    });
-    apply_vertical(
-        &mut planes[0],
-        dimensions[0],
-        &luma_mask,
-        &threshold_lut,
-        0,
-        false,
-        parameters.bit_depth,
-    )?;
-    apply_horizontal(
-        &mut planes[0],
-        dimensions[0],
-        &luma_mask,
-        &threshold_lut,
-        1,
-        false,
-        parameters.bit_depth,
-    )?;
+    let threshold_lut = threshold_lut(parameters.sharpness);
     apply_vertical(
         &mut planes[1],
         dimensions[1],
@@ -128,6 +105,48 @@ pub(crate) fn apply(
         parameters.bit_depth,
     )?;
     Some(())
+}
+
+/// Apply only AV1's luma deblocking pass to one checked plane. Monochrome
+/// frames have no normative U/V carriers, so exposing this boundary avoids
+/// manufacturing dummy chroma storage merely to reuse the scalar masks and
+/// vertical-then-horizontal filter order.
+pub(crate) fn apply_luma(
+    plane: &mut [u16],
+    dimensions: (usize, usize),
+    blocks: &[Block],
+    parameters: Parameters,
+) -> Option<()> {
+    if !(8..=16).contains(&parameters.bit_depth)
+        || plane.len() != dimensions.0.checked_mul(dimensions.1)?
+    {
+        return None;
+    }
+    let luma_mask = build_masks(dimensions, blocks, false, false, false)?;
+    let threshold_lut = threshold_lut(parameters.sharpness);
+    apply_vertical(
+        plane,
+        dimensions,
+        &luma_mask,
+        &threshold_lut,
+        0,
+        false,
+        parameters.bit_depth,
+    )?;
+    apply_horizontal(
+        plane,
+        dimensions,
+        &luma_mask,
+        &threshold_lut,
+        1,
+        false,
+        parameters.bit_depth,
+    )?;
+    Some(())
+}
+
+fn threshold_lut(sharpness: u32) -> [(i32, i32, i32); 64] {
+    std::array::from_fn(|level| thresholds(u32::try_from(level).unwrap_or_default(), sharpness))
 }
 
 struct Masks {

@@ -266,6 +266,28 @@ impl MonochromeFrameCanvas {
             sample_depth,
         )
     }
+
+    /// Run the shared checked deblocking kernel over an assembled monochrome
+    /// plane. The vertical pass precedes the horizontal pass exactly as in the
+    /// three-plane path, while the luma-only filter boundary avoids allocating
+    /// unowned chroma carriers.
+    pub(super) fn finish_monochrome_with_loop_filter(
+        mut self,
+        parameters: Option<filter::Parameters>,
+        blocks: &[filter::Block],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        if let Some(parameters) = parameters {
+            filter::apply_luma(
+                &mut self.samples,
+                (self.width, self.height),
+                blocks,
+                parameters,
+            )
+            .ok_or_else(|| malformed("monochrome loop-filter geometry is invalid"))?;
+        }
+        self.finish(sample_depth)
+    }
 }
 
 /// Checked source and destination extents for one reconstructed cell.
