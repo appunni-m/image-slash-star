@@ -41887,7 +41887,14 @@ fn reconstruct_lossy_full_16x32_chroma_zone3_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::Smooth
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
+        ChromaPredictor::Paeth
+        | ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
@@ -41942,7 +41949,14 @@ fn reconstruct_lossy_full_16x32_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::Smooth
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
+        ChromaPredictor::Paeth
+        | ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
@@ -59812,6 +59826,10 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
                     | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
@@ -61846,6 +61864,10 @@ impl Lossy420Decoder {
             let chroma_zone3_or_smooth = matches!(
                 syntax.chroma_predictor,
                 ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
                     | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
