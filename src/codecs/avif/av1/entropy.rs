@@ -3632,10 +3632,10 @@ fn mixed_high_depth_color_lossless_restoration_supported(
 
 /// Common structural admission for the first mixed-segment horizontal
 /// super-resolution tranche. Blocks are reconstructed at the coded width and
-/// resized only after the complete tile has been assembled; the profile keeps
-/// frame filters and restoration neutral so that ordering cannot depend on a
-/// partially resized tile. Layout and reference details are checked by the
-/// thin wrappers below.
+/// resized only after the complete tile has been assembled. Frame filters stay
+/// neutral so ordering cannot depend on a partially resized tile; restoration
+/// selection is handled by the neutral and active wrappers below. Layout and
+/// reference details are checked by thin wrappers.
 fn mixed_segment_superres_common(context: &FirstBlockContext) -> bool {
     let Some(layout) = PixelLayout::from_sequence(
         context.monochrome,
@@ -3668,8 +3668,6 @@ fn mixed_segment_superres_common(context: &FirstBlockContext) -> bool {
         || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
         || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
         || context.frame_tools.film_grain_present
-        || context.frame_tools.restoration_present
-        || context.restoration_types != [None; 3]
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -3770,12 +3768,21 @@ fn mixed_segment_superres_references_supported(
         && !inter_context.use_ref_frame_mvs
 }
 
+/// Select the neutral-restoration mixed super-resolution profile. Keeping the
+/// restoration header outside the structural proof prevents an active luma
+/// plan from being silently consumed as a no-op.
+fn mixed_segment_superres_neutral(context: &FirstBlockContext) -> bool {
+    mixed_segment_superres_common(context)
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+}
+
 /// Admit the mixed-segment monochrome horizontal super-resolution profile.
 fn mixed_monochrome_lossless_superres_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    mixed_segment_superres_common(context)
+    mixed_segment_superres_neutral(context)
         && mixed_segment_superres_references_supported(
             context,
             inter_context,
@@ -3788,7 +3795,7 @@ fn mixed_i420_lossless_superres_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    mixed_segment_superres_common(context)
+    mixed_segment_superres_neutral(context)
         && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I420)
 }
 
@@ -3797,7 +3804,7 @@ fn mixed_i422_lossless_superres_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    mixed_segment_superres_common(context)
+    mixed_segment_superres_neutral(context)
         && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I422)
 }
 
@@ -3806,7 +3813,102 @@ fn mixed_i444_lossless_superres_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    mixed_segment_superres_common(context)
+    mixed_segment_superres_neutral(context)
+        && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I444)
+}
+
+/// Add the single post-resize luma restoration unit used by the active mixed
+/// super-resolution profile. Chroma types remain `None`, so their restoration
+/// payload and unit counts are intentionally not consumed or validated.
+fn mixed_segment_superres_restoration_supported(
+    context: &FirstBlockContext,
+    expected_layout: PixelLayout,
+) -> bool {
+    if !mixed_segment_superres_common(context)
+        || PixelLayout::from_sequence(
+            context.monochrome,
+            context.subsampling_x,
+            context.subsampling_y,
+        ) != Some(expected_layout)
+        || !context.frame_tools.restoration_present
+        || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+    {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let luma_supported = match context.level {
+        0 => (7..=8).contains(&luma_log2),
+        1 => (6..=8).contains(&luma_log2),
+        _ => false,
+    };
+    if !luma_supported || context.frame_height > 56 {
+        return false;
+    }
+    match expected_layout {
+        PixelLayout::Monochrome => {}
+        PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444 if chroma_log2 == luma_log2 => {}
+        _ => return false,
+    }
+    let Some(unit_size) = 1_u32.checked_shl(luma_log2) else {
+        return false;
+    };
+    let Some(width_with_half) = context.upscaled_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> luma_log2).max(1) == 1 && (height_with_half >> luma_log2).max(1) == 1
+}
+
+/// Admit luma-only Wiener/SGR restoration for mixed monochrome superres.
+fn mixed_monochrome_lossless_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_supported(context, PixelLayout::Monochrome)
+        && mixed_segment_superres_references_supported(
+            context,
+            inter_context,
+            PixelLayout::Monochrome,
+        )
+}
+
+/// Admit luma-only Wiener/SGR restoration for mixed I420 superres.
+fn mixed_i420_lossless_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_supported(context, PixelLayout::I420)
+        && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I420)
+}
+
+/// Admit luma-only Wiener/SGR restoration for mixed I422 superres.
+fn mixed_i422_lossless_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_supported(context, PixelLayout::I422)
+        && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I422)
+}
+
+/// Admit luma-only Wiener/SGR restoration for mixed I444 superres.
+fn mixed_i444_lossless_superres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_supported(context, PixelLayout::I444)
         && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I444)
 }
 
@@ -9474,6 +9576,18 @@ pub(super) fn validate_complete_lossy_420_partition(
     let mixed_high_depth_lossless_restoration = inter_context.is_some_and(|inter_context| {
         mixed_high_depth_color_lossless_restoration_supported(context, inter_context)
     });
+    let mixed_monochrome_superres_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_monochrome_lossless_superres_restoration_supported(context, inter_context)
+    });
+    let mixed_i420_superres_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_i420_lossless_superres_restoration_supported(context, inter_context)
+    });
+    let mixed_i422_superres_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_i422_lossless_superres_restoration_supported(context, inter_context)
+    });
+    let mixed_i444_superres_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_i444_lossless_superres_restoration_supported(context, inter_context)
+    });
     let high_depth_lossy_i444_active_restoration = generic_high_depth_inter
         && inter_context.is_some_and(|inter_context| {
             high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
@@ -9938,6 +10052,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         || high_depth_lossy_i422_active_restoration
         || high_depth_lossy_i420_active_restoration
         || mixed_high_depth_lossless_restoration
+        || mixed_monochrome_superres_restoration
+        || mixed_i420_superres_restoration
+        || mixed_i422_superres_restoration
+        || mixed_i444_superres_restoration
         || high_depth_lossless_i444_active_restoration
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
@@ -11125,6 +11243,8 @@ fn complete_inter_420_reconstruction_context(
     let mixed_lossless_restoration =
         mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I420);
     let mixed_lossless_superres = mixed_i420_lossless_superres_supported(context, inter_context);
+    let mixed_lossless_superres_restoration =
+        mixed_i420_lossless_superres_restoration_supported(context, inter_context);
     !context.intra_frame
         && context.bit_depth == 8
         && context.subsampling_x
@@ -11138,7 +11258,8 @@ fn complete_inter_420_reconstruction_context(
         && inter_cdef_supported(context)
         && (context.restoration_types == [None; 3]
             || active_restoration
-            || mixed_lossless_restoration)
+            || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration)
         && if context.superres_enabled {
             superres_color_film_grain_supported(context, PixelLayout::I420)
         } else {
@@ -11339,8 +11460,10 @@ fn complete_inter_422_reconstruction_context(
     let mixed_lossless_restoration =
         mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I422);
     let mixed_lossless_superres = mixed_i422_lossless_superres_supported(context, inter_context);
+    let mixed_lossless_superres_restoration =
+        mixed_i422_lossless_superres_restoration_supported(context, inter_context);
     let dimensions_supported = if context.superres_enabled {
-        active_restoration || mixed_lossless_superres
+        active_restoration || mixed_lossless_superres || mixed_lossless_superres_restoration
     } else {
         context.upscaled_width == context.frame_width
     };
@@ -11379,7 +11502,8 @@ fn complete_inter_422_reconstruction_context(
         && inter_cdef_supported(context)
         && (context.restoration_types == [None; 3]
             || active_restoration
-            || mixed_lossless_restoration)
+            || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
@@ -11575,6 +11699,8 @@ fn complete_inter_444_reconstruction_context(
     let mixed_lossless_restoration =
         mixed_8bit_color_lossless_restoration_supported(context, inter_context, PixelLayout::I444);
     let mixed_lossless_superres = mixed_i444_lossless_superres_supported(context, inter_context);
+    let mixed_lossless_superres_restoration =
+        mixed_i444_lossless_superres_restoration_supported(context, inter_context);
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
@@ -11606,7 +11732,8 @@ fn complete_inter_444_reconstruction_context(
         && inter_cdef_supported(context)
         && (context.restoration_types == [None; 3]
             || active_restoration
-            || mixed_lossless_restoration)
+            || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration)
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
@@ -12033,6 +12160,10 @@ fn complete_high_depth_inter_reconstruction_context(
     let mixed_lossless_superres = mixed_i420_lossless_superres_supported(context, inter_context)
         || mixed_i422_lossless_superres_supported(context, inter_context)
         || mixed_i444_lossless_superres_supported(context, inter_context);
+    let mixed_lossless_superres_restoration =
+        mixed_i420_lossless_superres_restoration_supported(context, inter_context)
+            || mixed_i422_lossless_superres_restoration_supported(context, inter_context)
+            || mixed_i444_lossless_superres_restoration_supported(context, inter_context);
     let active_restoration =
         high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
             || high_depth_lossy_i422_superres_restoration_supported(context, inter_context)
@@ -12041,7 +12172,8 @@ fn complete_high_depth_inter_reconstruction_context(
                 context,
                 inter_context,
             )
-            || mixed_lossless_restoration;
+            || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration;
     let i420 = context.subsampling_x && context.subsampling_y;
     let i422 = context.subsampling_x && !context.subsampling_y;
     let i444 = !context.subsampling_x && !context.subsampling_y;
@@ -12097,7 +12229,8 @@ fn complete_high_depth_inter_reconstruction_context(
         && (postskip_altq_segmentation_supported(context)
             || mixed_high_depth_color_lossless_segmentation_supported(context)
             || mixed_lossless_restoration
-            || mixed_lossless_superres)
+            || mixed_lossless_superres
+            || mixed_lossless_superres_restoration)
         // TX_MODE_ONLY_4X4 is depth-independent; the explicit bounded I420
         // and color grids plus the wide mode-0 plan consume its high-depth
         // raster without weakening unrelated single-terminal geometry.
@@ -16258,11 +16391,14 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
+    let mixed_lossless_superres_restoration =
+        mixed_monochrome_lossless_superres_restoration_supported(context, inter_context);
     (!context.intra_frame
         && complete_monochrome_lossy_common(context)
         && complete_monochrome_references(context, inter_context))
         || lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
         || mixed_monochrome_lossless_superres_supported(context, inter_context)
+        || mixed_lossless_superres_restoration
 }
 
 /// Complete monochrome inter admission for the bounded mixed-segment
