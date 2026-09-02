@@ -9798,8 +9798,11 @@ fn complete_inter_420_reconstruction_context(
 }
 
 /// Admit active Wiener/SGR restoration for one 8-bit I420 lossy
-/// super-resolution frame. Chroma uses the parser's optional one-step unit
-/// decrement and the post-resize ceil-halved plane extents.
+/// super-resolution frame. Inter-intra is reconstructed at coded resolution by
+/// the shared plane compositor before super-resolution and restoration;
+/// regular compound and advanced-motion exclusions remain. Chroma uses the
+/// parser's optional one-step unit decrement and the post-resize ceil-halved
+/// plane extents.
 fn lossy_i420_superres_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -9862,7 +9865,6 @@ fn lossy_i420_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || inter_context.motion_mode_switchable
@@ -10011,8 +10013,11 @@ fn complete_inter_422_reconstruction_context(
 }
 
 /// Admit active Wiener/SGR restoration for one 8-bit I422 lossy
-/// super-resolution frame. Chroma remains full-height and shares the luma
-/// unit exponent; only its post-resize width is ceil-halved.
+/// super-resolution frame. Inter-intra is reconstructed at coded resolution by
+/// the shared plane compositor before super-resolution and restoration;
+/// regular compound and advanced-motion exclusions remain. Chroma remains
+/// full-height and shares the luma unit exponent; only its post-resize width is
+/// ceil-halved.
 fn lossy_i422_superres_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -10075,7 +10080,6 @@ fn lossy_i422_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || inter_context.motion_mode_switchable
@@ -10220,9 +10224,12 @@ fn complete_inter_444_reconstruction_context(
 }
 
 /// Admit active Wiener/SGR restoration for one 8-bit I444 lossy
-/// super-resolution frame. This profile keeps the surrounding frame state
-/// closed and proves one post-resize restoration unit for every active plane;
-/// the generic I444 walker still owns block syntax and ordinary per-block skip.
+/// super-resolution frame. Inter-intra is reconstructed at coded resolution by
+/// the shared plane compositor before super-resolution and restoration;
+/// regular compound and advanced-motion exclusions remain. This profile keeps
+/// the surrounding frame state closed and proves one post-resize restoration
+/// unit for every active plane; the generic I444 walker still owns block syntax
+/// and ordinary per-block skip.
 fn lossy_i444_superres_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -10285,7 +10292,6 @@ fn lossy_i444_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || inter_context.motion_mode_switchable
@@ -10686,11 +10692,13 @@ fn complete_high_depth_inter_reconstruction_context(
 }
 
 /// Admit active Wiener/SGR restoration for one high-depth lossy I444
-/// super-resolution frame. The generic high-depth inter path already owns
-/// depth-aware prediction and transforms; this exception keeps restoration
-/// on a single full-frame tile with one checked post-resize unit per active
-/// plane until broader high-depth filter combinations have independent
-/// parity evidence.
+/// super-resolution frame. Inter-intra is reconstructed at coded resolution by
+/// the shared plane compositor before super-resolution and restoration;
+/// regular compound and advanced-motion exclusions remain. The generic
+/// high-depth inter path already owns depth-aware prediction and transforms;
+/// this exception keeps restoration on a single full-frame tile with one
+/// checked post-resize unit per active plane until broader high-depth filter
+/// combinations have independent parity evidence.
 fn high_depth_lossy_i444_superres_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -10753,7 +10761,6 @@ fn high_depth_lossy_i444_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || inter_context.motion_mode_switchable
@@ -10822,9 +10829,11 @@ fn high_depth_lossy_i444_superres_restoration_supported(
 }
 
 /// Admit active Wiener/SGR restoration for one high-depth lossy I422
-/// super-resolution frame. I422 keeps full chroma height after resize, so the
-/// checked unit proof uses a ceil-halved width while sharing the luma
-/// restoration exponent across all active planes.
+/// super-resolution frame. Inter-intra is reconstructed at coded resolution by
+/// the shared plane compositor before super-resolution and restoration;
+/// regular compound and advanced-motion exclusions remain. I422 keeps full
+/// chroma height after resize, so the checked unit proof uses a ceil-halved
+/// width while sharing the luma restoration exponent across all active planes.
 fn high_depth_lossy_i422_superres_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -10887,7 +10896,6 @@ fn high_depth_lossy_i422_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || inter_context.motion_mode_switchable
@@ -10963,9 +10971,11 @@ fn high_depth_lossy_i422_superres_restoration_supported(
 }
 
 /// Admit active Wiener/SGR restoration for one high-depth lossy I420
-/// super-resolution frame. Chroma is half-resolution in both axes and may
-/// use AV1's one-step chroma restoration-unit decrement when either chroma
-/// plane is active.
+/// super-resolution frame. Inter-intra is reconstructed at coded resolution by
+/// the shared plane compositor before super-resolution and restoration;
+/// regular compound and advanced-motion exclusions remain. Chroma is
+/// half-resolution in both axes and may use AV1's one-step chroma
+/// restoration-unit decrement when either chroma plane is active.
 fn high_depth_lossy_i420_superres_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -11028,7 +11038,6 @@ fn high_depth_lossy_i420_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || inter_context.motion_mode_switchable
