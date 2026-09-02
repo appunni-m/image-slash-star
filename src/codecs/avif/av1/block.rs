@@ -52935,6 +52935,7 @@ impl Lossy420Decoder {
         deep16: bool,
         topology: Option<WideMode2Topology>,
         sampling: ChromaSampling,
+        obmc: Option<ObmcContext<'_>>,
     ) -> PortableResult<FirstLeaf> {
         let (luma_width, luma_height) = block_size.pixel_dimensions();
         let transform_plan = if mode0 {
@@ -52990,7 +52991,7 @@ impl Lossy420Decoder {
                 block_y_b4,
                 compound: None,
                 inter_intra: None,
-                obmc: None,
+                obmc,
             },
             block_skipped,
             transform_plan,
@@ -53619,6 +53620,9 @@ impl Lossy420Decoder {
                 ) | (
                     ChromaSampling::Full,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 )
             ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -53711,6 +53715,9 @@ impl Lossy420Decoder {
                 ) | (
                     ChromaSampling::Full,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 )
             ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -53742,6 +53749,9 @@ impl Lossy420Decoder {
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 ) | (
                     ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 )
             ) && sampling == chroma_sampling
@@ -53775,6 +53785,9 @@ impl Lossy420Decoder {
                 ) | (
                     ChromaSampling::Full,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 )
             ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -53807,6 +53820,9 @@ impl Lossy420Decoder {
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 ) | (
                     ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Monochrome,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 )
             ) && sampling == chroma_sampling
@@ -55411,13 +55427,20 @@ impl Lossy420Decoder {
             }
         }
         if lossy_wide {
-            let [Some(y_prediction), Some(u_prediction), Some(v_prediction)] = wide_predictions
-            else {
-                return Err(PortableUnavailable);
+            let y_prediction = wide_predictions[0].as_deref().ok_or(PortableUnavailable)?;
+            let u_prediction = if monochrome {
+                &[][..]
+            } else {
+                wide_predictions[1].as_deref().ok_or(PortableUnavailable)?
+            };
+            let v_prediction = if monochrome {
+                &[][..]
+            } else {
+                wide_predictions[2].as_deref().ok_or(PortableUnavailable)?
             };
             let grid_contexts = self.decode_inter_lossy_wide_chunks(
                 decoder,
-                [&y_prediction, &u_prediction, &v_prediction],
+                [y_prediction, u_prediction, v_prediction],
                 &mut rasters,
                 predecoded_skip,
                 quantization,
@@ -59542,12 +59565,20 @@ impl Lossy420Decoder {
     ) -> PortableResult<[LosslessGridContexts; 3]> {
         let (luma_width, luma_height) = (rasters[0].coded_width, rasters[0].coded_height);
         let sampling = self.chroma_sampling;
+        let plane_count = if sampling == ChromaSampling::Monochrome {
+            1
+        } else {
+            3
+        };
         (matches!(
             (luma_width, luma_height),
             (64, 128) | (128, 64) | (128, 128)
         ) && matches!(
             sampling,
-            ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 | ChromaSampling::Full
+            ChromaSampling::Monochrome
+                | ChromaSampling::Subsampled420
+                | ChromaSampling::Subsampled422
+                | ChromaSampling::Full
         ) && (!mode2
             || sampling == ChromaSampling::Subsampled420
             || topology.is_none()
@@ -59567,6 +59598,8 @@ impl Lossy420Decoder {
             && (!mode0 || (!mode2 && !split32 && !deep16 && topology.is_none()))
             && !(split32 && deep16)
             && topology.is_none_or(|_| mode2 && !split32 && !deep16)
+            && (sampling != ChromaSampling::Monochrome
+                || (predictions[1].is_empty() && predictions[2].is_empty()))
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -59586,27 +59619,35 @@ impl Lossy420Decoder {
             ChromaSampling::Subsampled422 if i422_tx4_wide => (32_usize, 64_usize, TxSize::Tx4x4),
             ChromaSampling::Subsampled422 => (32_usize, 64_usize, TxSize::Tx32x32),
             ChromaSampling::Full => (64_usize, 64_usize, TxSize::Tx32x32),
-            ChromaSampling::Monochrome => return Err(PortableUnavailable),
+            ChromaSampling::Monochrome => (4_usize, 4_usize, TxSize::Tx4x4),
         };
-        let geometries = [
-            (luma_width, luma_height, 64_usize, 64_usize, TxSize::Tx64x64),
-            (
-                rasters[1].coded_width,
-                rasters[1].coded_height,
-                chroma_chunk_width,
-                chroma_chunk_height,
-                chroma_tx,
-            ),
-            (
-                rasters[2].coded_width,
-                rasters[2].coded_height,
-                chroma_chunk_width,
-                chroma_chunk_height,
-                chroma_tx,
-            ),
-        ];
+        let geometries = if sampling == ChromaSampling::Monochrome {
+            [
+                (luma_width, luma_height, 64_usize, 64_usize, TxSize::Tx64x64),
+                (4, 4, 4, 4, TxSize::Tx4x4),
+                (4, 4, 4, 4, TxSize::Tx4x4),
+            ]
+        } else {
+            [
+                (luma_width, luma_height, 64_usize, 64_usize, TxSize::Tx64x64),
+                (
+                    rasters[1].coded_width,
+                    rasters[1].coded_height,
+                    chroma_chunk_width,
+                    chroma_chunk_height,
+                    chroma_tx,
+                ),
+                (
+                    rasters[2].coded_width,
+                    rasters[2].coded_height,
+                    chroma_chunk_width,
+                    chroma_chunk_height,
+                    chroma_tx,
+                ),
+            ]
+        };
         for (plane, (coded_width, coded_height, chunk_width, chunk_height, _)) in
-            geometries.iter().copied().enumerate()
+            geometries.iter().copied().enumerate().take(plane_count)
         {
             let expected = chunk_width
                 .checked_mul(chunk_count_x)
@@ -59645,12 +59686,13 @@ impl Lossy420Decoder {
         // contexts carried between neighboring 64-pixel regions. The luma
         // split/deep/mixed paths keep their own topology-specific carriers
         // above; this bounded 2x2 store is only for the I422/I444 region
-        // compositor below.
+        // compositor below. Monochrome deliberately leaves the chroma
+        // carriers neutral because its bitstream has NumPlanes == 1.
         let mut chroma_region_contexts = [[[neutral; 2]; 2]; 3];
         let mut luma_mode0_region_contexts = [[neutral; 2]; 2];
         for chunk_y in 0..chunk_count_y {
             for chunk_x in 0..chunk_count_x {
-                for plane in 0..3 {
+                for plane in 0..plane_count {
                     let (coded_width, coded_height, chunk_width, chunk_height, tx_size) =
                         geometries[plane];
                     let offset_x = chunk_x.checked_mul(chunk_width).portable()?;
@@ -60480,7 +60522,7 @@ impl Lossy420Decoder {
             right: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
             bottom: [0x40; LOSSLESS_GRID_EDGE_CAPACITY],
         }; 3];
-        for plane in 0..3 {
+        for plane in 0..plane_count {
             let (_, _, chunk_width, chunk_height, _) = geometries[plane];
             let context_width = chunk_width / 4;
             let context_height = chunk_height / 4;

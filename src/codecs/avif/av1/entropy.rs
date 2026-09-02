@@ -3441,6 +3441,9 @@ fn inter_lossy_wide_chunk_geometry_supported(
             ) | (
                 PixelLayout::I444,
                 BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (
+                PixelLayout::Monochrome,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
             )
         )
         && matches!(bit_depth, 8 | 10 | 12)
@@ -3476,6 +3479,9 @@ fn inter_lossy_wide_mode2_geometry_supported(
                 BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
             ) | (
                 PixelLayout::I444,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (
+                PixelLayout::Monochrome,
                 BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
             )
         )
@@ -7360,6 +7366,13 @@ fn decode_inter_leaf(
             )
         }
     } else if lossy_wide_chunked {
+        let wide_sampling =
+            block_chroma_sampling.unwrap_or(super::block::ChromaSampling::Monochrome);
+        let wide_obmc = if wide_sampling == super::block::ChromaSampling::Monochrome {
+            obmc
+        } else {
+            None
+        };
         let mode0 = matches!(
             transform_plan,
             InterTransformPlan::LossyWideMode0Grid { .. }
@@ -7426,8 +7439,7 @@ fn decode_inter_leaf(
                 split32,
                 deep16,
                 topology,
-                block_chroma_sampling
-                    .ok_or_else(|| malformed("inter wide chroma sampling is unavailable"))?,
+                wide_sampling,
             )
         } else {
             block_decoder.decode_inter_translation_lossy_wide_chunked(
@@ -7451,8 +7463,8 @@ fn decode_inter_leaf(
                 split32,
                 deep16,
                 topology,
-                block_chroma_sampling
-                    .ok_or_else(|| malformed("inter wide chroma sampling is unavailable"))?,
+                wide_sampling,
+                wide_obmc,
             )
         }
     } else if lossy_color_mode0_grid {
