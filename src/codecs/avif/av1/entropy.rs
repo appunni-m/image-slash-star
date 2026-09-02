@@ -14354,9 +14354,9 @@ fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockCo
 /// Luma-only inter admission. Block-level parsing consumes the normal
 /// reference/MV and motion-variation sentences and materializes compound
 /// Average/Distance/Difference/Wedge and OBMC on plane zero. Inter-intra is
-/// kept outside this complete profile until a luma-only compositor exists;
-/// LOCALWARP, affine global motion, and unsupported transform branches remain
-/// transactional at the leaf boundary.
+/// handled by the shared one-plane compositor for its AV1 size-eligible
+/// single-transform blocks; LOCALWARP, affine global motion, and unsupported
+/// transform branches remain transactional at the leaf boundary.
 fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -14467,6 +14467,10 @@ fn lossy_monochrome_intra_superres_restoration_supported(context: &FirstBlockCon
     context.intra_frame && lossy_monochrome_superres_restoration_common(context)
 }
 
+/// Admit the luma-only inter super-resolution/restoration profile. Inter-intra
+/// compound is supported for the AV1 size-eligible single-transform blocks by
+/// the coded-resolution one-plane compositor; mixed transform topologies and
+/// all other motion variations remain transactional in the block decoder.
 fn lossy_monochrome_inter_superres_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -14476,7 +14480,6 @@ fn lossy_monochrome_inter_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || inter_context.motion_mode_switchable
