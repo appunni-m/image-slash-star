@@ -2691,7 +2691,11 @@ pub(super) fn filter_transform_dimensions(
                 (2, 2) => (16, 16),
                 _ => return None,
             },
-            TransformGrid::Vertical32x64 => (32, 32),
+            TransformGrid::Vertical32x64 => match (leaf.tx_context_width, leaf.tx_context_height) {
+                (3, 3) => (32, 32),
+                (2, 2) => (16, 16),
+                _ => return None,
+            },
             // R64x16 may terminate at two TX32x16 children or the
             // depth-two TX16x16 grid. The retained context identifies the
             // exact terminal extent.
@@ -2702,7 +2706,13 @@ pub(super) fn filter_transform_dimensions(
                     _ => return None,
                 }
             }
-            TransformGrid::Horizontal64x32 => (32, 32),
+            TransformGrid::Horizontal64x32 => {
+                match (leaf.tx_context_width, leaf.tx_context_height) {
+                    (3, 3) => (32, 32),
+                    (2, 2) => (16, 16),
+                    _ => return None,
+                }
+            }
             // S64x64 depth one terminates in four TX32x32 children.
             TransformGrid::Square64 => (32, 32),
         }
@@ -2730,6 +2740,22 @@ pub(super) fn filter_transform_dimensions(
                 (32, if subsampling_y { 8 } else { 16 })
             } else {
                 (32, 16)
+            }
+        }
+        TransformGrid::Vertical32x64 => {
+            if subsampling_x && subsampling_y {
+                (16, 32)
+            } else if subsampling_x {
+                (4, 4)
+            } else {
+                (32, 32)
+            }
+        }
+        TransformGrid::Horizontal64x32 => {
+            if subsampling_x && subsampling_y {
+                (32, 16)
+            } else {
+                (32, 32)
             }
         }
         _ => (
@@ -51533,6 +51559,7 @@ enum Tx4ChromaTransformSource {
     Uniform(Av1TransformType),
     VerticalPair([Av1TransformType; 2]),
     VerticalQuad([Av1TransformType; 4]),
+    Grid2x4([[Av1TransformType; 2]; 4]),
 }
 
 #[derive(Clone, Copy)]
@@ -51562,7 +51589,9 @@ enum InterTransformPlan {
     SplitB64x16,
     SplitB64x16Deep,
     SplitB32x64,
+    SplitB32x64Deep,
     SplitB64x32,
+    SplitB64x32Deep,
     SplitB64Deep,
     SplitB16,
     SplitB16x32,
@@ -52640,7 +52669,9 @@ impl Lossy420Decoder {
             BlockSize::B16x64 => InterTransformPlan::SplitB16x64,
             BlockSize::B64x16 if deep_rect => InterTransformPlan::SplitB64x16Deep,
             BlockSize::B64x16 => InterTransformPlan::SplitB64x16,
+            BlockSize::B32x64 if deep_rect => InterTransformPlan::SplitB32x64Deep,
             BlockSize::B32x64 => InterTransformPlan::SplitB32x64,
+            BlockSize::B64x32 if deep_rect => InterTransformPlan::SplitB64x32Deep,
             BlockSize::B64x32 => InterTransformPlan::SplitB64x32,
             BlockSize::B64x64 if let Some(topology) = b64_topology => {
                 InterTransformPlan::SplitB64Topology {
@@ -52731,7 +52762,9 @@ impl Lossy420Decoder {
             BlockSize::B16x64 => InterTransformPlan::SplitB16x64,
             BlockSize::B64x16 if deep_rect => InterTransformPlan::SplitB64x16Deep,
             BlockSize::B64x16 => InterTransformPlan::SplitB64x16,
+            BlockSize::B32x64 if deep_rect => InterTransformPlan::SplitB32x64Deep,
             BlockSize::B32x64 => InterTransformPlan::SplitB32x64,
+            BlockSize::B64x32 if deep_rect => InterTransformPlan::SplitB64x32Deep,
             BlockSize::B64x32 => InterTransformPlan::SplitB64x32,
             BlockSize::B64x64 if let Some(topology) = b64_topology => {
                 InterTransformPlan::SplitB64Topology {
@@ -53506,7 +53539,9 @@ impl Lossy420Decoder {
         let split_b64x16 = matches!(transform_plan, InterTransformPlan::SplitB64x16);
         let split_b64x16_deep = matches!(transform_plan, InterTransformPlan::SplitB64x16Deep);
         let split_b32x64 = matches!(transform_plan, InterTransformPlan::SplitB32x64);
+        let split_b32x64_deep = matches!(transform_plan, InterTransformPlan::SplitB32x64Deep);
         let split_b64x32 = matches!(transform_plan, InterTransformPlan::SplitB64x32);
+        let split_b64x32_deep = matches!(transform_plan, InterTransformPlan::SplitB64x32Deep);
         let split_b64_deep = matches!(transform_plan, InterTransformPlan::SplitB64Deep);
         let split_b16 = matches!(transform_plan, InterTransformPlan::SplitB16);
         let split_b16x32 = matches!(transform_plan, InterTransformPlan::SplitB16x32);
@@ -53529,6 +53564,8 @@ impl Lossy420Decoder {
                     | InterTransformPlan::SplitB32x8Deep
                     | InterTransformPlan::SplitB16x64Deep
                     | InterTransformPlan::SplitB64x16Deep
+                    | InterTransformPlan::SplitB32x64Deep
+                    | InterTransformPlan::SplitB64x32Deep
                     | InterTransformPlan::SplitB32x16
                     | InterTransformPlan::SplitB4x8
                     | InterTransformPlan::SplitB8x4
@@ -53546,6 +53583,7 @@ impl Lossy420Decoder {
                     | (BlockSize::B16x64, InterTransformPlan::SplitB16x64)
                     | (BlockSize::B16x64, InterTransformPlan::SplitB16x64Deep)
                     | (BlockSize::B32x64, InterTransformPlan::SplitB32x64)
+                    | (BlockSize::B32x64, InterTransformPlan::SplitB32x64Deep)
             );
         // The direct lossy chroma-grid tranche is deliberately narrow: exact
         // depth-matched 4:2:2/4:4:4 terminals whose chroma plane can be
@@ -54102,6 +54140,25 @@ impl Lossy420Decoder {
                 .then_some(())
                 .portable()?;
         }
+        if split_b32x64_deep || split_b64x32_deep {
+            (matches!(
+                (block_size, chroma_sampling),
+                (BlockSize::B32x64, ChromaSampling::Subsampled420)
+                    | (BlockSize::B64x32, ChromaSampling::Subsampled420)
+                    | (BlockSize::B32x64, ChromaSampling::Subsampled422)
+                    | (BlockSize::B64x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x64, ChromaSampling::Monochrome)
+                    | (BlockSize::B64x32, ChromaSampling::Monochrome)
+                    | (BlockSize::B32x64, ChromaSampling::Full)
+                    | (BlockSize::B64x32, ChromaSampling::Full)
+            ) && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && quantization.segment_qindex > 0
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
         if split_b64_deep {
             (block_size == BlockSize::B64x64
                 && chroma_sampling == ChromaSampling::Subsampled420
@@ -54362,7 +54419,9 @@ impl Lossy420Decoder {
             || split_b64x16
             || split_b64x16_deep
             || split_b32x64
+            || split_b32x64_deep
             || split_b64x32
+            || split_b64x32_deep
             || split_b64_deep
             || split_b16
             || split_b16x32
@@ -54451,7 +54510,9 @@ impl Lossy420Decoder {
                 || (split_b64x16 && exact_b64x16)
                 || (split_b64x16_deep && exact_b64x16)
                 || (split_b32x64 && exact_b32x64)
+                || (split_b32x64_deep && exact_b32x64)
                 || (split_b64x32 && exact_b64x32)
+                || (split_b64x32_deep && exact_b64x32)
                 || (split_b64_deep && exact_b64)
                 || (split_b16 && exact_b16)
                 || (split_b16x32 && exact_b16x32)
@@ -54497,7 +54558,9 @@ impl Lossy420Decoder {
                     && !split_b64x16
                     && !split_b64x16_deep
                     && !split_b32x64
+                    && !split_b32x64_deep
                     && !split_b64x32
+                    && !split_b64x32_deep
                     && !split_b64_deep
                     && !split_b16
                     && !split_b16x32
@@ -54535,7 +54598,9 @@ impl Lossy420Decoder {
                     && !split_b64x16
                     && !split_b64x16_deep
                     && !split_b32x64
+                    && !split_b32x64_deep
                     && !split_b64x32
+                    && !split_b64x32_deep
                     && !split_b64_deep
                     && !split_b16
                     && !split_b16x32
@@ -54676,7 +54741,13 @@ impl Lossy420Decoder {
                 (TxSize::Tx64x16, false, Av1TransformType::DctDct)
             }
             InterTransformPlan::SplitB32x64 => (TxSize::Tx32x64, false, Av1TransformType::DctDct),
+            InterTransformPlan::SplitB32x64Deep => {
+                (TxSize::Tx32x64, false, Av1TransformType::DctDct)
+            }
             InterTransformPlan::SplitB64x32 => (TxSize::Tx64x32, false, Av1TransformType::DctDct),
+            InterTransformPlan::SplitB64x32Deep => {
+                (TxSize::Tx64x32, false, Av1TransformType::DctDct)
+            }
             InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, false, Av1TransformType::DctDct),
             InterTransformPlan::SplitB16 => (TxSize::Tx16x16, false, Av1TransformType::DctDct),
             InterTransformPlan::SplitB16x32 => (TxSize::Tx16x32, false, Av1TransformType::DctDct),
@@ -54795,7 +54866,9 @@ impl Lossy420Decoder {
             || split_b64x16
             || split_b64x16_deep
             || split_b32x64
-            || split_b64x32)
+            || split_b32x64_deep
+            || split_b64x32
+            || split_b64x32_deep)
             && chroma_sampling == ChromaSampling::Full;
         if let Some(chroma_tx) = chroma_tx {
             let (tx_chroma_width, tx_chroma_height) = chroma_tx.pixel_dimensions();
@@ -54848,7 +54921,7 @@ impl Lossy420Decoder {
         let mut luma_split_tx_size = None;
         let mut luma_split_transforms = None;
         let mut luma_rect_split_transforms = None;
-        let mut luma_deep_rect_split_transforms = None;
+        let mut luma_deep_rect_grid_transforms = None;
         let mut color_mode0_luma_transforms = [[Av1TransformType::DctDct; 16]; 16];
         let tx_sizes = [
             luma_tx_size,
@@ -55189,11 +55262,17 @@ impl Lossy420Decoder {
                 luma_rect_split_transforms = Some(split_transforms);
                 continue;
             }
-            if (split_b16x64_deep || split_b64x16_deep) && plane == 0 {
+            if (split_b16x64_deep || split_b64x16_deep || split_b32x64_deep || split_b64x32_deep)
+                && plane == 0
+            {
                 let (block_width, block_height) = if split_b16x64_deep {
                     (16, 64)
-                } else {
+                } else if split_b64x16_deep {
                     (64, 16)
+                } else if split_b32x64_deep {
+                    (32, 64)
+                } else {
+                    (64, 32)
                 };
                 let (grid_contexts, split_transforms) = self.decode_inter_split_luma_tx16_grid(
                     decoder,
@@ -55211,9 +55290,13 @@ impl Lossy420Decoder {
                 luma_bottom_contexts = grid_contexts.bottom;
                 luma_transform_split = true;
                 luma_split_tx_size = Some(TxSize::Tx16x16);
-                luma_transform = split_transforms[0];
-                luma_rect_split_transforms = Some([split_transforms[0], split_transforms[2]]);
-                luma_deep_rect_split_transforms = Some(split_transforms);
+                luma_transform = split_transforms[0][0];
+                luma_rect_split_transforms = Some(if block_height > block_width {
+                    [split_transforms[0][0], split_transforms[2][0]]
+                } else {
+                    [split_transforms[0][0], split_transforms[0][2]]
+                });
+                luma_deep_rect_grid_transforms = Some(split_transforms);
                 continue;
             }
             if split_b32x64 && plane == 0 {
@@ -55550,7 +55633,11 @@ impl Lossy420Decoder {
                         std::array::from_fn(|column| {
                             if row == 0 && column == 0 {
                                 luma_transforms[0]
-                            } else if split_b16x64 || split_b16x64_deep || split_b32x64 {
+                            } else if split_b16x64
+                                || split_b16x64_deep
+                                || split_b32x64
+                                || split_b32x64_deep
+                            {
                                 luma_transforms[row.min(1)]
                             } else {
                                 luma_transforms[column.min(1)]
@@ -55602,9 +55689,15 @@ impl Lossy420Decoder {
             }
             if split_vertical_i422_tx4_chroma_grid && plane != 0 {
                 let transform_source = if split_b16x64_deep {
-                    Tx4ChromaTransformSource::VerticalQuad(
-                        luma_deep_rect_split_transforms.ok_or(PortableUnavailable)?,
-                    )
+                    let transforms = luma_deep_rect_grid_transforms.ok_or(PortableUnavailable)?;
+                    Tx4ChromaTransformSource::VerticalQuad(std::array::from_fn(|row| {
+                        transforms[row][0]
+                    }))
+                } else if split_b32x64_deep {
+                    let transforms = luma_deep_rect_grid_transforms.ok_or(PortableUnavailable)?;
+                    Tx4ChromaTransformSource::Grid2x4(std::array::from_fn(|row| {
+                        [transforms[row][0], transforms[row][1]]
+                    }))
                 } else {
                     Tx4ChromaTransformSource::VerticalPair(
                         luma_rect_split_transforms.ok_or(PortableUnavailable)?,
@@ -55811,6 +55904,8 @@ impl Lossy420Decoder {
                 } else if split_b64_topology && plane != 0 {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if split_b64_deep && plane != 0 {
+                    inherited_inter_chroma_transform(tx_size, luma_transform)
+                } else if (split_b32x64_deep || split_b64x32_deep) && plane != 0 {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if split_b32 && plane != 0 {
                     inherited_inter_b32_chroma_transform(chroma_sampling, tx_size, luma_transform)?
@@ -57273,15 +57368,18 @@ impl Lossy420Decoder {
         ) -> PortableResult<Av1TransformType>,
         block_width: usize,
         block_height: usize,
-    ) -> PortableResult<(LosslessGridContexts, [Av1TransformType; 4])> {
+    ) -> PortableResult<(LosslessGridContexts, [[Av1TransformType; 4]; 4])> {
         let sample_count = block_width.checked_mul(block_height).portable()?;
         let grid_width = block_width / 16;
         let grid_height = block_height / 16;
         (prediction.len() == sample_count
-            && matches!((block_width, block_height), (16, 64) | (64, 16))
+            && matches!(
+                (block_width, block_height),
+                (16, 64) | (64, 16) | (32, 64) | (64, 32)
+            )
             && block_width.is_multiple_of(16)
             && block_height.is_multiple_of(16)
-            && matches!((grid_width, grid_height), (1, 4) | (4, 1))
+            && matches!((grid_width, grid_height), (1, 4) | (4, 1) | (2, 4) | (4, 2))
             && raster.coded_width == block_width
             && raster.coded_height == block_height
             && raster.active_width == block_width
@@ -57295,13 +57393,33 @@ impl Lossy420Decoder {
             .portable()?;
         let mut residual_contexts =
             [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; LOSSLESS_GRID_EDGE_CAPACITY];
-        let mut transforms = [Av1TransformType::DctDct; 4];
-        let traversal = if block_width == 16 {
-            [(0_usize, 0_usize), (1, 0), (2, 0), (3, 0)]
-        } else {
-            [(0_usize, 0_usize), (0, 1), (0, 2), (0, 3)]
+        let mut transforms = [[Av1TransformType::DctDct; 4]; 4];
+        let traversal: &[(usize, usize)] = match (grid_width, grid_height) {
+            (1, 4) => &[(0, 0), (1, 0), (2, 0), (3, 0)],
+            (4, 1) => &[(0, 0), (0, 1), (0, 2), (0, 3)],
+            (2, 4) => &[
+                (0, 0),
+                (0, 1),
+                (1, 0),
+                (1, 1),
+                (2, 0),
+                (2, 1),
+                (3, 0),
+                (3, 1),
+            ],
+            (4, 2) => &[
+                (0, 0),
+                (0, 1),
+                (1, 0),
+                (1, 1),
+                (0, 2),
+                (0, 3),
+                (1, 2),
+                (1, 3),
+            ],
+            _ => return Err(PortableUnavailable),
         };
-        for (row, column) in traversal {
+        for &(row, column) in traversal {
             let above_context: [u8; 4] = if row == 0 {
                 let start = column.checked_mul(4).portable()?;
                 let end = start.checked_add(4).portable()?;
@@ -57335,8 +57453,7 @@ impl Lossy420Decoder {
             } else {
                 decode_transform_type(decoder, TxSize::Tx16x16)?
             };
-            let transform_index = if block_width == 16 { row } else { column };
-            transforms[transform_index] = transform;
+            transforms[row][column] = transform;
             let terminal = decode_inter_lossy_terminal(
                 decoder,
                 0,
@@ -59084,6 +59201,12 @@ impl Lossy420Decoder {
                     .portable()?;
                 Some(grid_height.checked_div(4).portable()?)
             }
+            Tx4ChromaTransformSource::Grid2x4(_) => {
+                (grid_width == 4 && grid_height == 16)
+                    .then_some(())
+                    .portable()?;
+                None
+            }
         };
         let above = coefficient_contexts.above[plane]
             .get(..grid_width)
@@ -59137,6 +59260,9 @@ impl Lossy420Decoder {
                             Tx4ChromaTransformSource::VerticalQuad(transforms) => {
                                 let rows_per_child = rows_per_child.ok_or(PortableUnavailable)?;
                                 transforms[row / rows_per_child]
+                            }
+                            Tx4ChromaTransformSource::Grid2x4(transforms) => {
+                                transforms[row / 4][column / 2]
                             }
                         },
                     ),
