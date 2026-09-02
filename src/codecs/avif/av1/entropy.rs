@@ -14591,7 +14591,7 @@ fn lossless_intra_monochrome_superres_restoration_supported(context: &FirstBlock
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !no_unsupported_film_grain(context)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -15422,7 +15422,8 @@ fn lossless_i444_superres_restoration_supported(
 /// and accepts a neutral all-`NONE` restoration header. A single-tile
 /// super-resolution variant additionally admits one active luma Wiener/SGR
 /// unit, decoded before the coded plane is resized and restored at frame
-/// resolution.
+/// resolution. Film grain, when present, is synthesized only on the owned
+/// display plane after resize and restoration; retained references stay clean.
 fn complete_lossless_inter_monochrome_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -15453,6 +15454,11 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
     let active_restoration = lossless_monochrome_superres_restoration_supported(context);
     let restoration_supported =
         (neutral_restoration && context.restoration_types == [None; 3]) || active_restoration;
+    let film_grain_supported = if context.superres_enabled {
+        no_unsupported_film_grain(context)
+    } else {
+        !context.frame_tools.film_grain_present
+    };
     let resize_geometry_supported = if context.superres_enabled {
         context.frame_width >= 4 && context.frame_height >= 4
     } else {
@@ -15531,7 +15537,7 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
         && !inter_context.enable_interintra_compound
         && context.frame_tools.cdef.is_none()
         && restoration_supported
-        && !context.frame_tools.film_grain_present
+        && film_grain_supported
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
@@ -15595,8 +15601,8 @@ fn lossless_monochrome_superres_restoration_supported(context: &FirstBlockContex
 /// intact. Under super-resolution, a present restoration header is accepted
 /// only when every plane is `NONE`, except for the bounded single-tile 8-bit
 /// and high-depth I444/I422/I420/monochrome active-restoration slices below.
-/// Color film grain, when present, is likewise synthesized only after resize
-/// and restoration on the owned display copy.
+/// Film grain, when present, is likewise synthesized only after resize and
+/// restoration on the owned display copy.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -15646,12 +15652,13 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
-    let film_grain_supported = if superres_layout
-        && matches!(
-            layout,
-            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-        ) {
-        superres_color_film_grain_supported(context, layout)
+    let film_grain_supported = if superres_layout {
+        match layout {
+            PixelLayout::Monochrome => no_unsupported_film_grain(context),
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444 => {
+                superres_color_film_grain_supported(context, layout)
+            }
+        }
     } else {
         !context.frame_tools.film_grain_present
     };
@@ -16097,7 +16104,7 @@ fn high_depth_lossless_monochrome_superres_restoration_supported(
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !no_unsupported_film_grain(context)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
