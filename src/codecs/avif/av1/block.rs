@@ -40728,10 +40728,10 @@ fn validate_leaf_plane_storage(leaf: &FirstLeaf, plane: usize) -> PortableResult
 /// chroma owner taking precedence over the luma owner. The returned source
 /// identifies the owner and offset for the row-zero sample, which is needed
 /// to derive the exact top-left corner and smooth-edge policy.
-fn checked_full_chroma_left_edge_8(
+fn checked_full_chroma_left_edge<const N: usize>(
     neighbors: &VerticalNeighbors<'_>,
     plane: usize,
-) -> PortableResult<(Option<[u16; 8]>, Option<(bool, u32)>)> {
+) -> PortableResult<(Option<[u16; N]>, Option<(bool, u32)>)> {
     let sample_from = |owner: &FirstLeaf, row_offset: u32, row: u32| {
         let row_offset = row_offset.checked_add(row).ok_or(PortableUnavailable)?;
         let width = usize::try_from(owner.width).map_err(|_| PortableUnavailable)?;
@@ -40750,10 +40750,10 @@ fn checked_full_chroma_left_edge_8(
     };
 
     let owners_present = neighbors.left_chroma.is_some() || neighbors.left.is_some();
-    let mut edge = [0_u16; 8];
+    let mut edge = [0_u16; N];
     let mut complete = true;
     let mut row_zero_owner = None;
-    for row in 0..8_usize {
+    for row in 0..N {
         let row = u32::try_from(row).map_err(|_| PortableUnavailable)?;
         let mut selected = None;
         if let Some(owner) = neighbors.left_chroma {
@@ -61165,7 +61165,7 @@ impl Lossy420Decoder {
                         None
                     };
                     let (left, row_zero_owner) =
-                        checked_full_chroma_left_edge_8(&neighbors, plane)?;
+                        checked_full_chroma_left_edge::<8>(&neighbors, plane)?;
                     let has_left = left.is_some();
                     let left = left.unwrap_or([top[0]; 8]);
                     let top_left = if has_left {
@@ -62075,6 +62075,171 @@ impl Lossy420Decoder {
         if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Horizontal16x4)
         {
+            let target = matches!(
+                syntax.chroma_predictor,
+                ChromaPredictor::Diagonal45
+                    | ChromaPredictor::Diagonal67
+                    | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::SmoothVertical
+                    | ChromaPredictor::SmoothHorizontal
+            );
+            if target {
+                for plane in 0..=2 {
+                    validate_leaf_plane_storage(neighbors.above_left, plane)?;
+                    validate_leaf_plane_storage(neighbors.above_right, plane)?;
+                }
+                let mut target_edges: [Option<(
+                    [u16; 16],
+                    Option<[u16; 4]>,
+                    [u16; 4],
+                    Option<[u16; 4]>,
+                    Option<u16>,
+                    bool,
+                )>; 2] = [None, None];
+                let mut smooth_left_modes = [None; 2];
+                for plane in 1..=2 {
+                    let top = positioned_top_edge::<16>(
+                        plane,
+                        neighbors.above_left,
+                        neighbors.above_left_x_offset,
+                        neighbors.above_right,
+                        neighbors.above_right_x_offset,
+                    )
+                    .ok_or(PortableUnavailable)?;
+                    let top_extension = if matches!(
+                        syntax.chroma_predictor,
+                        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
+                    ) {
+                        if let Some(extension) = neighbors.above_chroma_extension {
+                            validate_leaf_plane_storage(extension, plane)?;
+                            let end = neighbors
+                                .above_chroma_extension_x_offset
+                                .checked_add(4)
+                                .ok_or(PortableUnavailable)?;
+                            (end <= extension.width).then_some(()).portable()?;
+                            let mut edge = [0_u16; 4];
+                            for (index, sample) in edge.iter_mut().enumerate() {
+                                let offset = neighbors
+                                    .above_chroma_extension_x_offset
+                                    .checked_add(
+                                        u32::try_from(index).map_err(|_| PortableUnavailable)?,
+                                    )
+                                    .ok_or(PortableUnavailable)?;
+                                *sample = checked_bottom_sample_at(
+                                    &extension.planes[plane],
+                                    extension.width,
+                                    offset,
+                                )
+                                .ok_or(PortableUnavailable)?;
+                            }
+                            Some(edge)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+                    let (left, row_zero_owner) =
+                        checked_full_chroma_left_edge::<4>(&neighbors, plane)?;
+                    let has_left = left.is_some();
+                    let left = left.unwrap_or([top[0]; 4]);
+                    let top_left = if has_left {
+                        Some(checked_full_chroma_top_left(
+                            &neighbors,
+                            plane,
+                            row_zero_owner.ok_or(PortableUnavailable)?,
+                        )?)
+                    } else {
+                        None
+                    };
+                    let bottom_left =
+                        if matches!(syntax.chroma_predictor, ChromaPredictor::Diagonal203) {
+                            let full = neighbors.left_full_chroma_bottom_8[plane - 1];
+                            let continuation =
+                                if let Some(short) = neighbors.left_chroma_bottom[plane - 1] {
+                                    if let Some(full) = full {
+                                        if !full[..4].iter().copied().eq(short.iter().copied()) {
+                                            return Err(PortableUnavailable);
+                                        }
+                                        Some([full[0], full[1], full[2], full[3]])
+                                    } else {
+                                        Some(short)
+                                    }
+                                } else {
+                                    full.map(|full| [full[0], full[1], full[2], full[3]])
+                                };
+                            if continuation.is_some() && !has_left {
+                                return Err(PortableUnavailable);
+                            }
+                            continuation
+                        } else {
+                            None
+                        };
+                    let row_zero_smooth = if row_zero_owner.is_some_and(|(is_chroma, _)| is_chroma)
+                    {
+                        neighbors.left_chroma
+                    } else {
+                        neighbors.left_luma_top.or(neighbors.left)
+                    }
+                    .and_then(|neighbor| neighbor.chroma_predictor);
+                    smooth_left_modes[plane - 1] = row_zero_smooth;
+                    target_edges[plane - 1] =
+                        Some((top, top_extension, left, bottom_left, top_left, has_left));
+                }
+                let smooth_chroma_edges =
+                    is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
+                        || is_smooth_chroma_predictor(smooth_left_modes[0])
+                        || is_smooth_chroma_predictor(smooth_left_modes[1]);
+                let base_syntax = BlockSyntax {
+                    chroma_predictor: ChromaPredictor::Dc,
+                    ..syntax
+                };
+                let mut leaf = reconstruct_following_lossy_full_vertical_16x4_leaf(
+                    base_syntax,
+                    &above_left,
+                    &above_right,
+                    left_neighbor.as_ref(),
+                    neighbors.left.map(|neighbor| neighbor.width),
+                    neighbors.left.map(|neighbor| neighbor.height),
+                    neighbors.left_y_offset,
+                )?;
+                let reconstruct_target =
+                    |edges: (
+                        [u16; 16],
+                        Option<[u16; 4]>,
+                        [u16; 4],
+                        Option<[u16; 4]>,
+                        Option<u16>,
+                        bool,
+                    ),
+                     coefficients: Option<Lossy16x4TransformCoefficients>| {
+                        let (top, top_extension, left, bottom_left, top_left, has_left) = edges;
+                        reconstruct_lossy_full_16x4_chroma_normalized_target(
+                            syntax.chroma_predictor,
+                            syntax.chroma_angle,
+                            top,
+                            top_extension,
+                            left,
+                            bottom_left,
+                            top_left,
+                            has_left,
+                            coefficients,
+                            tools.enable_intra_edge_filter,
+                            smooth_chroma_edges,
+                        )
+                    };
+                let chroma_u = reconstruct_target(
+                    target_edges[0].ok_or(PortableUnavailable)?,
+                    syntax.lossy_chroma_16x4_coefficients[0],
+                )?;
+                let chroma_v = reconstruct_target(
+                    target_edges[1].ok_or(PortableUnavailable)?,
+                    syntax.lossy_chroma_16x4_coefficients[1],
+                )?;
+                leaf.planes[1] = chroma_u;
+                leaf.planes[2] = chroma_v;
+                return Ok(visible(leaf));
+            }
             let mut leaf = reconstruct_following_lossy_full_vertical_16x4_leaf(
                 syntax,
                 &above_left,
