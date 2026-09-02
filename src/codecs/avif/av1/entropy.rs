@@ -15865,21 +15865,16 @@ fn monochrome_transform_geometry(
     if node.coded_width != nominal_width || node.coded_height != nominal_height {
         return None;
     }
-    let transform_grid = super::block::TransformGrid::from_block_size(node.block_size).ok()?;
-    // Wide 64-axis color grids use a decoder-owned dynamic carrier; the
-    // monochrome path still keeps those grids out until its own arena-backed
-    // reconstruction slice is implemented. The adapter rejects the wider
-    // 128-pixel families.
     if matches!(
-        transform_grid,
-        super::block::TransformGrid::Square64
-            | super::block::TransformGrid::Vertical16x64
-            | super::block::TransformGrid::Vertical32x64
-            | super::block::TransformGrid::Horizontal64x16
-            | super::block::TransformGrid::Horizontal64x32
+        node.block_size,
+        BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
     ) {
         return None;
     }
+    let transform_grid = super::block::TransformGrid::from_block_size(node.block_size).ok()?;
+    // The explicit block-size boundary above keeps the 128-pixel families
+    // outside the monochrome arena. The five admitted wide grids have at most
+    // sixteen TX4 segments on either edge and at most 256 nominal carriers.
     let (grid_width, grid_height, _) = transform_grid.properties();
     if (grid_width, grid_height) != (nominal_width as usize, nominal_height as usize) {
         return None;

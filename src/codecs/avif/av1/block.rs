@@ -590,12 +590,12 @@ struct LargeCoefficientArena {
     scratch: LargeCoefficientScratch,
 }
 
-/// A leaf-local arena for the TX4x4 carriers of a lossless large I444 block.
-/// The payload is deliberately kept outside `BlockSyntax`: lossy syntax
-/// remains compact and `Copy`, while the complete lossless-I444 walker
-/// consumes each span before decoding the next leaf.  The 256-carrier backing
-/// store covers the 128-carrier 32x64/64x32 grids and the 256-carrier 64x64
-/// grid without exposing a heap-bearing syntax field.
+/// A leaf-local arena for the TX4x4 carriers of a lossless large full-resolution
+/// or monochrome block. The payload is deliberately kept outside
+/// `BlockSyntax`: lossy syntax remains compact and `Copy`, while the complete
+/// walkers consume each span before decoding the next leaf. The 256-carrier
+/// backing store covers the 128-carrier 32x64/64x32 grids and the 256-carrier
+/// 64x64 grid without exposing a heap-bearing syntax field.
 #[derive(Default)]
 struct LosslessSquare64CoefficientArena {
     generation: u32,
@@ -2788,6 +2788,7 @@ pub(super) struct MonochromeLeaf {
     origin_y: u32,
     width: u32,
     height: u32,
+    block_skipped: bool,
     plane: ReconstructedPlane,
     predictor: LumaPredictor,
     right_contexts: [u8; 16],
@@ -2815,6 +2816,7 @@ pub(super) struct MonochromeBlockGeometry {
 pub(super) struct MonochromeLosslessDecoder {
     cdfs: BlockCdfs,
     palette_map_arena: PaletteMapArena,
+    lossless_square64_arena: LosslessSquare64CoefficientArena,
 }
 
 /// A reconstructed 4:4:4 lossless leaf retained with its coded geometry.
@@ -2885,6 +2887,10 @@ impl MonochromeLeaf {
         self.height
     }
 
+    pub(super) const fn block_skipped(&self) -> bool {
+        self.block_skipped
+    }
+
     pub(super) fn plane(&self) -> &ReconstructedPlane {
         &self.plane
     }
@@ -2894,7 +2900,7 @@ impl MonochromeLeaf {
         FirstLeaf {
             width: self.width,
             height: self.height,
-            block_skipped: false,
+            block_skipped: self.block_skipped,
             planes: [plane.clone(), plane.clone(), plane],
             luma_predictor: self.predictor,
             chroma_predictor: None,
@@ -9259,7 +9265,11 @@ fn decode_contextual_following_coefficients(
     Ok(coefficients)
 }
 
-fn decode_monochrome_contextual_coefficients(
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the checked monochrome coefficient kernel keeps nominal and active grids explicit"
+)]
+fn decode_monochrome_contextual_coefficients_into(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
     transform_grid_width: usize,
@@ -9268,7 +9278,8 @@ fn decode_monochrome_contextual_coefficients(
     active_grid_height: usize,
     mut above_contexts: [u8; 16],
     left_contexts: [u8; 16],
-) -> PortableResult<PlaneCoefficients> {
+    coefficients: &mut [TransformCoefficients],
+) -> PortableResult<()> {
     if !(1..=16).contains(&transform_grid_width)
         || !(1..=16).contains(&transform_grid_height)
         || !(1..=16).contains(&active_grid_width)
@@ -9278,16 +9289,19 @@ fn decode_monochrome_contextual_coefficients(
     {
         return Err(PortableUnavailable);
     }
-    let mut coefficients = [[0_i32; 16]; 64];
     let transform_count = transform_grid_width
         .checked_mul(transform_grid_height)
         .portable()?;
     let active_count = active_grid_width
         .checked_mul(active_grid_height)
         .portable()?;
-    (transform_count <= coefficients.len() && active_count <= coefficients.len())
+    (transform_count <= coefficients.len() && active_count <= transform_count)
         .then_some(())
         .portable()?;
+    coefficients
+        .get_mut(..transform_count)
+        .portable()?
+        .fill([0_i32; 16]);
     for row in 0..active_grid_height {
         let mut left_context = *left_contexts.get(row).ok_or(PortableUnavailable)?;
         for column in 0..active_grid_width {
@@ -9295,7 +9309,7 @@ fn decode_monochrome_contextual_coefficients(
                 .checked_mul(transform_grid_width)
                 .and_then(|offset| offset.checked_add(column))
                 .portable()?;
-            let coefficients = coefficients
+            let coefficient = coefficients
                 .get_mut(transform_index)
                 .ok_or(PortableUnavailable)?;
             let above_context = *above_contexts.get(column).ok_or(PortableUnavailable)?;
@@ -9317,13 +9331,71 @@ fn decode_monochrome_contextual_coefficients(
                 let transform_result =
                     decode_nonzero_lossless_transform_general(decoder, 0, sign_context, true, cdfs);
                 let transform = transform_result?;
-                *coefficients = transform;
+                *coefficient = transform;
                 coefficient_residual_context(&transform)
             };
             above_contexts[column] = residual_context;
             left_context = residual_context;
         }
     }
+    Ok(())
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the ordinary monochrome coefficient wrapper forwards the exact clipped grid"
+)]
+fn decode_monochrome_contextual_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    transform_grid_width: usize,
+    transform_grid_height: usize,
+    active_grid_width: usize,
+    active_grid_height: usize,
+    above_contexts: [u8; 16],
+    left_contexts: [u8; 16],
+) -> PortableResult<PlaneCoefficients> {
+    let mut coefficients = [[0_i32; 16]; 64];
+    decode_monochrome_contextual_coefficients_into(
+        decoder,
+        cdfs,
+        transform_grid_width,
+        transform_grid_height,
+        active_grid_width,
+        active_grid_height,
+        above_contexts,
+        left_contexts,
+        &mut coefficients,
+    )?;
+    Ok(coefficients)
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the large monochrome coefficient wrapper forwards the exact clipped grid"
+)]
+fn decode_monochrome_contextual_coefficients_large(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    transform_grid_width: usize,
+    transform_grid_height: usize,
+    active_grid_width: usize,
+    active_grid_height: usize,
+    above_contexts: [u8; 16],
+    left_contexts: [u8; 16],
+) -> PortableResult<LosslessSquare64TransformCoefficients> {
+    let mut coefficients = [[0_i32; 16]; LosslessSquare64CoefficientArena::TRANSFORM_COUNT];
+    decode_monochrome_contextual_coefficients_into(
+        decoder,
+        cdfs,
+        transform_grid_width,
+        transform_grid_height,
+        active_grid_width,
+        active_grid_height,
+        above_contexts,
+        left_contexts,
+        &mut coefficients,
+    )?;
     Ok(coefficients)
 }
 
@@ -19011,6 +19083,39 @@ fn decode_syntax_with_palette_entropy_lossless_square64(
     .map(|(syntax, _, _)| syntax)
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the lossless monochrome boundary keeps entropy, clipping, and arena state explicit"
+)]
+fn decode_syntax_with_palette_entropy_lossless_monochrome(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    palette_map_arena: &mut PaletteMapArena,
+    transform_grid: TransformGrid,
+    policy: SyntaxPolicy,
+    tools: BlockTools,
+    palette_entropy_dimensions: Option<PaletteEntropyDimensions>,
+    lossless_square64_arena: &mut LosslessSquare64CoefficientArena,
+) -> PortableResult<BlockSyntax> {
+    decode_syntax_with_cdef_with_lossless_square64_arena(
+        decoder,
+        cdfs,
+        palette_map_arena,
+        transform_grid,
+        ChromaSampling::Monochrome,
+        policy,
+        tools,
+        palette_entropy_dimensions,
+        0,
+        None,
+        None,
+        0,
+        true,
+        Some(lossless_square64_arena),
+    )
+    .map(|(syntax, _, _)| syntax)
+}
+
 #[derive(Clone, Copy)]
 struct DecodedIntraHeader {
     block_size: BlockSize,
@@ -19519,6 +19624,24 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
             ChromaSampling::Full,
         )
     );
+    let lossless_monochrome_large = matches!(
+        (
+            quantization_syntax,
+            coefficient_policy,
+            transform_grid,
+            chroma_sampling,
+        ),
+        (
+            QuantizationSyntax::Lossless,
+            CoefficientPolicy::MonochromeContextual { .. },
+            TransformGrid::Vertical16x64
+                | TransformGrid::Vertical32x64
+                | TransformGrid::Horizontal64x16
+                | TransformGrid::Horizontal64x32
+                | TransformGrid::Square64,
+            ChromaSampling::Monochrome,
+        )
+    );
     // The current pure-Rust 4:2:2 path is deliberately limited to the
     // reference-proven Square16 terminal. Reject other geometries before
     // reading even the block skip symbol; their transform/CDF tables are not
@@ -19534,6 +19657,29 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
         && !lossless_full_large
     {
         return Err(PortableUnavailable);
+    }
+    if lossless_monochrome_large && lossless_square64_arena.is_none() {
+        return Err(PortableUnavailable);
+    }
+    if lossless_monochrome_large {
+        let CoefficientPolicy::MonochromeContextual {
+            active_grid_width,
+            active_grid_height,
+            ..
+        } = coefficient_policy
+        else {
+            return Err(PortableUnavailable);
+        };
+        let (grid_width, grid_height, _) = transform_grid.properties();
+        let transform_count = grid_width.checked_mul(grid_height).portable()?;
+        if !(1..=16).contains(&active_grid_width)
+            || !(1..=16).contains(&active_grid_height)
+            || active_grid_width > grid_width
+            || active_grid_height > grid_height
+            || transform_count > LosslessSquare64CoefficientArena::TRANSFORM_COUNT
+        {
+            return Err(PortableUnavailable);
+        }
     }
     let (transform_grid_width, transform_grid_height, _) = transform_grid.properties();
     let header = decode_intra_header(
@@ -19672,18 +19818,16 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
             && matches!(chroma_sampling, ChromaSampling::Subsampled420)
             && plane_grid_width == 1
             && plane_grid_height == 1;
-        if matches!(
-            (quantization_syntax, chroma_sampling, transform_grid,),
-            (
-                QuantizationSyntax::Lossless,
-                ChromaSampling::Full,
+        if (lossless_full_large || lossless_monochrome_large)
+            && matches!(
+                transform_grid,
                 TransformGrid::Vertical32x64
                     | TransformGrid::Vertical16x64
                     | TransformGrid::Horizontal64x16
                     | TransformGrid::Horizontal64x32
                     | TransformGrid::Square64,
             )
-        ) {
+        {
             let coefficients = match coefficient_policy {
                 CoefficientPolicy::ColorFrameTopLeft => {
                     decode_contextual_top_left_color_coefficients_large(
@@ -19717,6 +19861,21 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
                     left_contexts[plane],
                     plane_grid_width,
                     plane_grid_height,
+                )?,
+                CoefficientPolicy::MonochromeContextual {
+                    above_contexts,
+                    left_contexts,
+                    active_grid_width,
+                    active_grid_height,
+                } if plane == 0 => decode_monochrome_contextual_coefficients_large(
+                    decoder,
+                    cdfs,
+                    plane_grid_width,
+                    plane_grid_height,
+                    active_grid_width,
+                    active_grid_height,
+                    above_contexts,
+                    left_contexts,
                 )?,
                 _ => return Err(PortableUnavailable),
             };
@@ -48692,6 +48851,7 @@ impl MonochromeLosslessDecoder {
         Self {
             cdfs: BlockCdfs::defaults([20_360, 0]),
             palette_map_arena: PaletteMapArena::new(),
+            lossless_square64_arena: LosslessSquare64CoefficientArena::new(),
         }
     }
 
@@ -48732,6 +48892,8 @@ impl MonochromeLosslessDecoder {
             left,
             left_below,
         } = neighbors;
+        tools.skip_context = usize::from(above.is_some_and(MonochromeLeaf::block_skipped))
+            .saturating_add(usize::from(left.is_some_and(MonochromeLeaf::block_skipped)));
         let spatial_left = left.or_else(|| left_below.iter().flatten().next().copied());
         tools.palette_context = PaletteNeighborContext::from_cache_states(
             geometry.origin_y / 4,
@@ -48812,12 +48974,12 @@ impl MonochromeLosslessDecoder {
             left_below,
         } = context;
         self.palette_map_arena.begin_leaf()?;
-        let syntax_result = decode_syntax_with_palette_entropy(
+        self.lossless_square64_arena.begin_leaf()?;
+        let syntax_result = decode_syntax_with_palette_entropy_lossless_monochrome(
             decoder,
             &mut self.cdfs,
             &mut self.palette_map_arena,
             geometry.transform_grid,
-            ChromaSampling::Monochrome,
             SyntaxPolicy {
                 spatial_luma_context,
                 coefficient_policy: CoefficientPolicy::MonochromeContextual {
@@ -48841,6 +49003,7 @@ impl MonochromeLosslessDecoder {
                 geometry.width,
                 geometry.height,
             )?),
+            &mut self.lossless_square64_arena,
         );
         let syntax = match syntax_result {
             Ok(syntax) => syntax,
@@ -48861,6 +49024,7 @@ impl MonochromeLosslessDecoder {
             },
             tools.sample_depth,
             &self.palette_map_arena,
+            &self.lossless_square64_arena,
             tools.enable_intra_edge_filter,
         )
     }
@@ -49974,6 +50138,7 @@ fn finish_monochrome_leaf(
     origin_y: u32,
     width: u32,
     height: u32,
+    block_skipped: bool,
     coded_width: usize,
     grid_width: usize,
     grid_height: usize,
@@ -49981,7 +50146,7 @@ fn finish_monochrome_leaf(
     active_grid_height: usize,
     coded_plane: ReconstructedPlane,
     predictor: LumaPredictor,
-    coefficients: &PlaneCoefficients,
+    coefficients: &[TransformCoefficients],
     palette_cache: PaletteCacheState,
 ) -> PortableResult<MonochromeLeaf> {
     let visible_width = usize::try_from(width).map_err(|_| PortableUnavailable)?;
@@ -49989,6 +50154,7 @@ fn finish_monochrome_leaf(
     let coded_height = grid_height.checked_mul(4).portable()?;
     let active_width = active_grid_width.checked_mul(4).portable()?;
     let active_height = active_grid_height.checked_mul(4).portable()?;
+    let nominal_transform_count = grid_width.checked_mul(grid_height).portable()?;
     (visible_width != 0
         && visible_width == active_width
         && visible_width <= coded_width
@@ -49997,6 +50163,7 @@ fn finish_monochrome_leaf(
         && visible_height <= coded_height
         && active_grid_width <= grid_width
         && active_grid_height <= grid_height
+        && coefficients.len() == nominal_transform_count
         && coded_plane.samples.len() == coded_width.checked_mul(coded_height).portable()?)
     .then_some(())
     .portable()?;
@@ -50045,6 +50212,7 @@ fn finish_monochrome_leaf(
         origin_y,
         width,
         height,
+        block_skipped,
         plane: ReconstructedPlane { samples: visible },
         predictor,
         right_contexts,
@@ -50059,6 +50227,7 @@ fn reconstruct_monochrome_leaf(
     neighbors: MonochromeNeighbors<'_>,
     sample_depth: SampleDepth,
     palette_map_arena: &PaletteMapArena,
+    lossless_square64_arena: &LosslessSquare64CoefficientArena,
     enable_intra_edge_filter: bool,
 ) -> PortableResult<MonochromeLeaf> {
     let MonochromeBlockGeometry {
@@ -50085,6 +50254,7 @@ fn reconstruct_monochrome_leaf(
         )
     });
     let BlockSyntax {
+        block_skipped,
         luma_predictor,
         luma_angle,
         filter_intra_mode,
@@ -50093,6 +50263,7 @@ fn reconstruct_monochrome_leaf(
         transform_grid,
         chroma_sampling: ChromaSampling::Monochrome,
         reconstruction: ReconstructionPolicy::LosslessWht4x4,
+        lossless_square64_coefficients,
         ..
     } = syntax
     else {
@@ -50107,17 +50278,59 @@ fn reconstruct_monochrome_leaf(
     let active_transform_count = active_grid_width
         .checked_mul(active_grid_height)
         .portable()?;
-    (nominal_transform_count <= 64
-        && active_transform_count != 0
+    let large_grid = matches!(
+        transform_grid,
+        TransformGrid::Vertical16x64
+            | TransformGrid::Vertical32x64
+            | TransformGrid::Horizontal64x16
+            | TransformGrid::Horizontal64x32
+            | TransformGrid::Square64
+    );
+    (if large_grid {
+        nominal_transform_count <= LosslessSquare64CoefficientArena::TRANSFORM_COUNT
+    } else {
+        nominal_transform_count <= 64
+    } && active_transform_count != 0
         && active_transform_count <= nominal_transform_count
         && active_grid_width <= grid_width
         && active_grid_height <= grid_height)
         .then_some(())
         .portable()?;
+    let zero_large = [[0_i32; 16]; LosslessSquare64CoefficientArena::TRANSFORM_COUNT];
+    let coefficient_slice: &[TransformCoefficients] = if large_grid {
+        lossless_square64_coefficients[1..]
+            .iter()
+            .all(Option::is_none)
+            .then_some(())
+            .portable()?;
+        if block_skipped {
+            lossless_square64_coefficients[0]
+                .is_none()
+                .then_some(())
+                .portable()?;
+            zero_large.get(..nominal_transform_count).portable()?
+        } else {
+            let span = lossless_square64_coefficients[0].portable()?;
+            let coefficients = lossless_square64_arena.coefficients(span)?;
+            (coefficients.len() == nominal_transform_count)
+                .then_some(())
+                .portable()?;
+            coefficients
+        }
+    } else {
+        lossless_square64_coefficients
+            .iter()
+            .all(Option::is_none)
+            .then_some(())
+            .portable()?;
+        coefficients[0].get(..nominal_transform_count).portable()?
+    };
     let coded_width = grid_width.saturating_mul(4);
     let coded_height = grid_height.saturating_mul(4);
-    let coded_width_u32 = u32::try_from(coded_width).map_err(|_| PortableUnavailable)?;
-    let coded_height_u32 = u32::try_from(coded_height).map_err(|_| PortableUnavailable)?;
+    let active_width_pixels = active_grid_width.checked_mul(4).portable()?;
+    let active_height_pixels = active_grid_height.checked_mul(4).portable()?;
+    let active_width_u32 = u32::try_from(active_width_pixels).map_err(|_| PortableUnavailable)?;
+    let active_height_u32 = u32::try_from(active_height_pixels).map_err(|_| PortableUnavailable)?;
     let has_top = above.is_some() || above_right.iter().any(Option::is_some);
     let has_left = left.is_some() || left_below.iter().any(Option::is_some);
     let sample_top = |x: u32, y: u32| {
@@ -50127,7 +50340,7 @@ fn reconstruct_monochrome_leaf(
             x,
             y,
             origin_x,
-            coded_width_u32,
+            active_width_u32,
             intra_edges,
         )
     };
@@ -50138,7 +50351,7 @@ fn reconstruct_monochrome_leaf(
             x,
             y,
             origin_y,
-            coded_height_u32,
+            active_height_u32,
             intra_edges,
         )
     };
@@ -50161,7 +50374,7 @@ fn reconstruct_monochrome_leaf(
         )?;
         let coded_plane = reconstruct_lossless_wht_prediction(
             prediction,
-            &coefficients[0],
+            coefficient_slice,
             grid_width,
             grid_height,
             sample_depth,
@@ -50171,6 +50384,7 @@ fn reconstruct_monochrome_leaf(
             origin_y,
             width,
             height,
+            block_skipped,
             coded_width,
             grid_width,
             grid_height,
@@ -50178,7 +50392,7 @@ fn reconstruct_monochrome_leaf(
             active_grid_height,
             coded_plane,
             luma_predictor,
-            &coefficients[0],
+            coefficient_slice,
             palette_cache,
         );
     }
@@ -50303,7 +50517,9 @@ fn reconstruct_monochrome_leaf(
         let dy = *DR_INTRA_DERIVATIVE
             .get(dy_index)
             .ok_or(PortableUnavailable)?;
-        let max_base_y = coded_width.saturating_add(coded_height).saturating_sub(1);
+        let max_base_y = active_width_pixels
+            .saturating_add(active_height_pixels)
+            .saturating_sub(1);
         let left_x = origin_x.checked_sub(1);
         let edge_len = max_base_y.saturating_add(1);
         let mut edge = Vec::new();
@@ -50342,7 +50558,9 @@ fn reconstruct_monochrome_leaf(
             .get(angle_index)
             .filter(|&&value| value > 0)
             .ok_or(PortableUnavailable)?;
-        let max_base_x = coded_width.saturating_add(coded_height).saturating_sub(1);
+        let max_base_x = active_width_pixels
+            .saturating_add(active_height_pixels)
+            .saturating_sub(1);
         let top_y = origin_y.checked_sub(1);
         let left_x = origin_x.checked_sub(1);
         let mut last = if above.is_none() {
@@ -50372,438 +50590,449 @@ fn reconstruct_monochrome_leaf(
     } else {
         None
     };
-    for (transform_index, coefficient) in coefficients[0]
-        .into_iter()
-        .enumerate()
-        .take(grid_width.saturating_mul(grid_height))
-    {
-        let column = transform_index.rem_euclid(grid_width);
-        let row = transform_index.div_euclid(grid_width);
-        let mut top = [fallback_top; 4];
-        let mut left_edge = [fallback_left; 4];
-        if row > 0 {
-            let source_start = row
-                .saturating_mul(4)
-                .saturating_sub(1)
-                .saturating_mul(coded_width)
-                .saturating_add(column.saturating_mul(4));
-            top.copy_from_slice(&samples[source_start..source_start.saturating_add(4)]);
-        } else if above.is_some() || above_right.iter().any(Option::is_some) {
-            let top_y = origin_y.checked_sub(1).ok_or(PortableUnavailable)?;
-            for (offset, value) in top.iter_mut().enumerate() {
-                let x = origin_x
-                    .checked_add(
-                        u32::try_from(column.saturating_mul(4).saturating_add(offset))
-                            .map_err(|_| PortableUnavailable)?,
-                    )
-                    .ok_or(PortableUnavailable)?;
-                *value = sample_top(x, top_y).ok_or(PortableUnavailable)?;
+    for row in 0..active_grid_height {
+        for column in 0..active_grid_width {
+            let transform_index = row
+                .checked_mul(grid_width)
+                .and_then(|offset| offset.checked_add(column))
+                .portable()?;
+            let coefficient = *coefficient_slice.get(transform_index).portable()?;
+            let mut top = [fallback_top; 4];
+            let mut left_edge = [fallback_left; 4];
+            if row > 0 {
+                let source_start = row
+                    .saturating_mul(4)
+                    .saturating_sub(1)
+                    .saturating_mul(coded_width)
+                    .saturating_add(column.saturating_mul(4));
+                top.copy_from_slice(&samples[source_start..source_start.saturating_add(4)]);
+            } else if above.is_some() || above_right.iter().any(Option::is_some) {
+                let top_y = origin_y.checked_sub(1).ok_or(PortableUnavailable)?;
+                for (offset, value) in top.iter_mut().enumerate() {
+                    let x = origin_x
+                        .checked_add(
+                            u32::try_from(column.saturating_mul(4).saturating_add(offset))
+                                .map_err(|_| PortableUnavailable)?,
+                        )
+                        .ok_or(PortableUnavailable)?;
+                    *value = sample_top(x, top_y).ok_or(PortableUnavailable)?;
+                }
             }
-        }
-        if column > 0 {
-            for (offset, value) in left_edge.iter_mut().enumerate() {
+            if column > 0 {
+                for (offset, value) in left_edge.iter_mut().enumerate() {
+                    let index = row
+                        .saturating_mul(4)
+                        .saturating_add(offset)
+                        .saturating_mul(coded_width)
+                        .saturating_add(column.saturating_mul(4).saturating_sub(1));
+                    *value = samples[index];
+                }
+            } else if has_left {
+                let left_x = origin_x.checked_sub(1).ok_or(PortableUnavailable)?;
+                let mut last = left_below
+                    .iter()
+                    .flatten()
+                    .next()
+                    .copied()
+                    .or(left)
+                    .and_then(|leaf| {
+                        leaf.origin_y
+                            .checked_add(leaf.height.saturating_sub(1))
+                            .and_then(|y| monochrome_sample_at(leaf, left_x, y))
+                    })
+                    .unwrap_or(fallback_left);
+                for (offset, value) in left_edge.iter_mut().enumerate() {
+                    let y = origin_y
+                        .checked_add(
+                            u32::try_from(row.saturating_mul(4).saturating_add(offset))
+                                .map_err(|_| PortableUnavailable)?,
+                        )
+                        .ok_or(PortableUnavailable)?;
+                    if let Some(sample) = sample_left(left_x, y) {
+                        last = sample;
+                    }
+                    *value = last;
+                }
+            }
+            // AV1 extends a missing edge from the edge that is available. This
+            // matters for transform blocks inside an origin leaf: when the frame
+            // has no external top edge but the transform has a reconstructed left
+            // edge, the top edge is the left edge's first sample. The symmetric
+            // rule applies to the first transform column below a reconstructed
+            // top edge. Filling both edges with the frame midpoint changes DC
+            // prediction for every skipped transform in a lossless block.
+            if row == 0 && above.is_none() && (column > 0 || has_left) {
+                top.fill(left_edge[0]);
+            }
+            if column == 0 && left.is_none() && !has_left && (row > 0 || has_top) {
+                left_edge.fill(top[0]);
+            }
+            let top_available = row > 0 || has_top;
+            let left_available = column > 0 || has_left;
+            let transform_predictor = resolve_lossless_predictor(
+                lossless_luma_predictor(luma_predictor),
+                luma_angle,
+                top_available,
+                left_available,
+            );
+            let prediction_top_left = if row > 0 && column > 0 {
                 let index = row
                     .saturating_mul(4)
-                    .saturating_add(offset)
+                    .saturating_sub(1)
                     .saturating_mul(coded_width)
                     .saturating_add(column.saturating_mul(4).saturating_sub(1));
-                *value = samples[index];
-            }
-        } else if has_left {
-            let left_x = origin_x.checked_sub(1).ok_or(PortableUnavailable)?;
-            let mut last = left_below
-                .iter()
-                .flatten()
-                .next()
-                .copied()
-                .or(left)
-                .and_then(|leaf| {
-                    leaf.origin_y
-                        .checked_add(leaf.height.saturating_sub(1))
-                        .and_then(|y| monochrome_sample_at(leaf, left_x, y))
-                })
-                .unwrap_or(fallback_left);
-            for (offset, value) in left_edge.iter_mut().enumerate() {
-                let y = origin_y
-                    .checked_add(
-                        u32::try_from(row.saturating_mul(4).saturating_add(offset))
-                            .map_err(|_| PortableUnavailable)?,
-                    )
-                    .ok_or(PortableUnavailable)?;
-                if let Some(sample) = sample_left(left_x, y) {
-                    last = sample;
+                *samples.get(index).ok_or(PortableUnavailable)?
+            } else if row > 0 {
+                if has_left && origin_x > 0 {
+                    let x = origin_x.saturating_sub(1);
+                    let y = origin_y
+                        .checked_add(
+                            u32::try_from(row.saturating_mul(4).saturating_sub(1))
+                                .map_err(|_| PortableUnavailable)?,
+                        )
+                        .ok_or(PortableUnavailable)?;
+                    sample_left(x, y).unwrap_or(top[0])
+                } else {
+                    top[0]
                 }
-                *value = last;
-            }
-        }
-        // AV1 extends a missing edge from the edge that is available. This
-        // matters for transform blocks inside an origin leaf: when the frame
-        // has no external top edge but the transform has a reconstructed left
-        // edge, the top edge is the left edge's first sample. The symmetric
-        // rule applies to the first transform column below a reconstructed
-        // top edge. Filling both edges with the frame midpoint changes DC
-        // prediction for every skipped transform in a lossless block.
-        if row == 0 && above.is_none() && (column > 0 || has_left) {
-            top.fill(left_edge[0]);
-        }
-        if column == 0 && left.is_none() && !has_left && (row > 0 || has_top) {
-            left_edge.fill(top[0]);
-        }
-        let top_available = row > 0 || has_top;
-        let left_available = column > 0 || has_left;
-        let transform_predictor = resolve_lossless_predictor(
-            lossless_luma_predictor(luma_predictor),
-            luma_angle,
-            top_available,
-            left_available,
-        );
-        let prediction_top_left = if row > 0 && column > 0 {
-            let index = row
-                .saturating_mul(4)
-                .saturating_sub(1)
-                .saturating_mul(coded_width)
-                .saturating_add(column.saturating_mul(4).saturating_sub(1));
-            *samples.get(index).ok_or(PortableUnavailable)?
-        } else if row > 0 {
-            if has_left && origin_x > 0 {
-                let x = origin_x.saturating_sub(1);
-                let y = origin_y
-                    .checked_add(
-                        u32::try_from(row.saturating_mul(4).saturating_sub(1))
-                            .map_err(|_| PortableUnavailable)?,
-                    )
-                    .ok_or(PortableUnavailable)?;
-                sample_left(x, y).unwrap_or(top[0])
-            } else {
-                top[0]
-            }
-        } else if column > 0 {
-            if (above.is_some() || above_right.iter().any(Option::is_some)) && origin_y > 0 {
-                let x = origin_x
-                    .checked_add(
-                        u32::try_from(column.saturating_mul(4).saturating_sub(1))
-                            .map_err(|_| PortableUnavailable)?,
-                    )
-                    .ok_or(PortableUnavailable)?;
-                let y = origin_y.saturating_sub(1);
-                sample_top(x, y).unwrap_or(left_edge[0])
-            } else {
+            } else if column > 0 {
+                if (above.is_some() || above_right.iter().any(Option::is_some)) && origin_y > 0 {
+                    let x = origin_x
+                        .checked_add(
+                            u32::try_from(column.saturating_mul(4).saturating_sub(1))
+                                .map_err(|_| PortableUnavailable)?,
+                        )
+                        .ok_or(PortableUnavailable)?;
+                    let y = origin_y.saturating_sub(1);
+                    sample_top(x, y).unwrap_or(left_edge[0])
+                } else {
+                    left_edge[0]
+                }
+            } else if has_top {
+                if has_left {
+                    let x = origin_x.checked_sub(1).ok_or(PortableUnavailable)?;
+                    let y = origin_y.checked_sub(1).ok_or(PortableUnavailable)?;
+                    [above_left, above, left]
+                        .into_iter()
+                        .flatten()
+                        .find_map(|leaf| monochrome_sample_at(leaf, x, y))
+                        .or_else(|| {
+                            left_below
+                                .iter()
+                                .flatten()
+                                .find_map(|leaf| monochrome_sample_at(leaf, x, y))
+                        })
+                        .unwrap_or(top[0])
+                } else {
+                    top[0]
+                }
+            } else if has_left {
                 left_edge[0]
-            }
-        } else if has_top {
-            if has_left {
-                let x = origin_x.checked_sub(1).ok_or(PortableUnavailable)?;
-                let y = origin_y.checked_sub(1).ok_or(PortableUnavailable)?;
-                [above_left, above, left]
-                    .into_iter()
-                    .flatten()
-                    .find_map(|leaf| monochrome_sample_at(leaf, x, y))
-                    .or_else(|| {
-                        left_below
-                            .iter()
-                            .flatten()
-                            .find_map(|leaf| monochrome_sample_at(leaf, x, y))
-                    })
-                    .unwrap_or(top[0])
             } else {
-                top[0]
-            }
-        } else if has_left {
-            left_edge[0]
-        } else {
-            midpoint
-        };
-
-        let predictor = match luma_predictor {
-            LumaPredictor::Dc => dc_predictor(top, left_edge),
-            LumaPredictor::Vertical => top[0],
-            LumaPredictor::Horizontal => left_edge[0],
-            LumaPredictor::Diagonal45 => midpoint,
-            LumaPredictor::DiagonalDownRight => midpoint,
-            LumaPredictor::Diagonal113 => midpoint,
-            LumaPredictor::Diagonal157 => midpoint,
-            LumaPredictor::Diagonal67 => midpoint,
-            LumaPredictor::Diagonal203 => midpoint,
-            LumaPredictor::Paeth => midpoint,
-            LumaPredictor::Smooth => midpoint,
-            LumaPredictor::SmoothVertical => midpoint,
-            LumaPredictor::SmoothHorizontal => midpoint,
-        };
-        let residual = inverse_wht_4x4(coefficient);
-        for (offset, value) in residual.into_iter().enumerate() {
-            let local_row = offset / 4;
-            let local_column = offset % 4;
-            let prediction = match transform_predictor {
-                LosslessPredictor::Vertical => top[local_column],
-                LosslessPredictor::Horizontal => left_edge[local_row],
-                LosslessPredictor::Dc => {
-                    if let Some(filter_prediction) = filter_intra_prediction.as_ref() {
-                        let index = row
-                            .saturating_mul(4)
-                            .saturating_add(local_row)
-                            .saturating_mul(coded_width)
-                            .saturating_add(column.saturating_mul(4))
-                            .saturating_add(local_column);
-                        *filter_prediction.get(index).ok_or(PortableUnavailable)?
-                    } else {
-                        predictor
-                    }
-                }
-                LosslessPredictor::Diagonal45 | LosslessPredictor::Diagonal67 => {
-                    let (_, _, dx) = diagonal_z1_edges.as_ref().ok_or(PortableUnavailable)?;
-                    let angle = luma_angle.ok_or(PortableUnavailable)?;
-                    let mut edge = [top_default; 8];
-                    if row > 0 {
-                        let start = row
-                            .saturating_mul(4)
-                            .saturating_sub(1)
-                            .saturating_mul(coded_width)
-                            .saturating_add(column.saturating_mul(4));
-                        let count =
-                            8_usize.min(coded_width.saturating_sub(column.saturating_mul(4)));
-                        let available = samples
-                            .get(start..start.saturating_add(count))
-                            .ok_or(PortableUnavailable)?;
-                        for (index, sample) in available.iter().copied().enumerate() {
-                            edge[index] = sample;
-                        }
-                        if let Some(&last) = available.last() {
-                            edge[available.len()..].fill(last);
-                        }
-                    } else if let Some(top_y) = origin_y.checked_sub(1) {
-                        let mut last = top[0];
-                        for (index, value) in edge.iter_mut().enumerate() {
-                            let x = origin_x
-                                .checked_add(
-                                    u32::try_from(column.saturating_mul(4).saturating_add(index))
-                                        .map_err(|_| PortableUnavailable)?,
-                                )
-                                .ok_or(PortableUnavailable)?;
-                            if let Some(sample) = sample_top(x, top_y) {
-                                last = sample;
-                            }
-                            *value = last;
-                        }
-                    } else {
-                        edge.fill(top[0]);
-                    }
-                    let filtered_edge = if enable_intra_edge_filter && !z1_upsample {
-                        let strength = intra_edge_filter_strength(
-                            8,
-                            90_i32.saturating_sub(angle),
-                            smooth_edges,
-                        );
-                        if strength == 0 {
-                            edge
-                        } else {
-                            filter_intra_top_edge_8_with_max(
-                                edge,
-                                prediction_top_left,
-                                strength,
-                                maximum,
-                            )
-                        }
-                    } else {
-                        edge
-                    };
-                    let upsampled_edge = upsample_intra_top_edge_with_max(
-                        filtered_edge,
-                        prediction_top_left,
-                        maximum,
-                    );
-                    let (edge, max_base_x, dx) = if z1_upsample {
-                        (&upsampled_edge[..], 14, (*dx).saturating_mul(2))
-                    } else {
-                        (&filtered_edge[..], 7, *dx)
-                    };
-                    diagonal_z1_predictor_sample_with_max(
-                        edge,
-                        max_base_x,
-                        dx,
-                        if z1_upsample { 2 } else { 1 },
-                        local_column,
-                        local_row,
-                        maximum,
-                    )?
-                }
-                LosslessPredictor::DiagonalDownRight
-                | LosslessPredictor::Diagonal113
-                | LosslessPredictor::Diagonal157 => {
-                    let diagonal_prediction = lossless_diagonal_z2_prediction_4x4(
-                        top,
-                        left_edge,
-                        prediction_top_left,
-                        luma_angle.ok_or(PortableUnavailable)?,
-                        enable_intra_edge_filter,
-                        smooth_edges,
-                        maximum,
-                    )?;
-                    diagonal_prediction
-                        .get(offset)
-                        .copied()
-                        .ok_or(PortableUnavailable)?
-                }
-                LosslessPredictor::Diagonal203 => {
-                    let (_, _, dy) = diagonal_z3_edges.as_ref().ok_or(PortableUnavailable)?;
-                    let angle = luma_angle.ok_or(PortableUnavailable)?;
-                    let mut edge = [left_default; 8];
-                    if column > 0 {
-                        let start = row
-                            .saturating_mul(4)
-                            .saturating_mul(coded_width)
-                            .saturating_add(column.saturating_mul(4).saturating_sub(1));
-                        let available_height =
-                            4_usize.min(coded_height.saturating_sub(row.saturating_mul(4)));
-                        for (offset, sample) in edge.iter_mut().take(available_height).enumerate() {
-                            *sample = *samples
-                                .get(start.saturating_add(offset.saturating_mul(coded_width)))
-                                .ok_or(PortableUnavailable)?;
-                        }
-                        let last = edge
-                            .get(available_height.saturating_sub(1))
-                            .copied()
-                            .unwrap_or(left_default);
-                        edge[available_height..].fill(last);
-                    } else {
-                        let mut last = left_edge[3];
-                        for (index, value) in edge.iter_mut().enumerate() {
-                            let y = origin_y
-                                .checked_add(
-                                    u32::try_from(row.saturating_mul(4).saturating_add(index))
-                                        .map_err(|_| PortableUnavailable)?,
-                                )
-                                .ok_or(PortableUnavailable)?;
-                            if let Some(sample) =
-                                sample_left(origin_x.checked_sub(1).ok_or(PortableUnavailable)?, y)
-                            {
-                                last = sample;
-                            }
-                            *value = last;
-                        }
-                    }
-                    let filtered_edge = if enable_intra_edge_filter && !z3_upsample {
-                        let strength =
-                            intra_edge_filter_strength(8, angle.saturating_sub(180), smooth_edges);
-                        if strength == 0 {
-                            edge
-                        } else {
-                            filter_z2_left_edge_with_max(
-                                edge,
-                                prediction_top_left,
-                                strength,
-                                maximum,
-                            )
-                        }
-                    } else {
-                        edge
-                    };
-                    let upsampled_edge = upsample_intra_left_edge_with_max(
-                        filtered_edge,
-                        prediction_top_left,
-                        maximum,
-                    );
-                    let (edge, max_base_y, dy) = if z3_upsample {
-                        (&upsampled_edge[..], 14, (*dy).saturating_mul(2))
-                    } else {
-                        (&filtered_edge[..], 7, *dy)
-                    };
-                    diagonal_z3_predictor_sample_with_max(
-                        edge,
-                        max_base_y,
-                        dy,
-                        if z3_upsample { 2 } else { 1 },
-                        local_column,
-                        local_row,
-                        maximum,
-                    )?
-                }
-                LosslessPredictor::SmoothVertical => {
-                    let vertical_weight = i32::from(
-                        *smooth_weight_table(4)?
-                            .get(local_row)
-                            .ok_or(PortableUnavailable)?,
-                    );
-                    let bottom = *left_edge.last().ok_or(PortableUnavailable)?;
-                    let value = vertical_weight
-                        .saturating_mul(i32::from(top[local_column]))
-                        .saturating_add(
-                            256_i32
-                                .saturating_sub(vertical_weight)
-                                .saturating_mul(i32::from(bottom)),
-                        )
-                        .saturating_add(128)
-                        >> 8;
-                    u16::try_from(value.clamp(0, i32::from(maximum)))
-                        .map_err(|_| PortableUnavailable)?
-                }
-                LosslessPredictor::Paeth => {
-                    paeth_predictor(top[local_column], left_edge[local_row], prediction_top_left)
-                }
-                LosslessPredictor::Smooth => {
-                    let vertical_weights = smooth_weight_table(4)?;
-                    let horizontal_weights = smooth_weight_table(4)?;
-                    let right = *top.last().ok_or(PortableUnavailable)?;
-                    let bottom = *left_edge.last().ok_or(PortableUnavailable)?;
-                    let vertical_weight =
-                        i32::from(*vertical_weights.get(local_row).ok_or(PortableUnavailable)?);
-                    let horizontal_weight = i32::from(
-                        *horizontal_weights
-                            .get(local_column)
-                            .ok_or(PortableUnavailable)?,
-                    );
-                    let value = vertical_weight
-                        .saturating_mul(i32::from(top[local_column]))
-                        .saturating_add(
-                            256_i32
-                                .saturating_sub(vertical_weight)
-                                .saturating_mul(i32::from(bottom)),
-                        )
-                        .saturating_add(
-                            horizontal_weight.saturating_mul(i32::from(left_edge[local_row])),
-                        )
-                        .saturating_add(
-                            256_i32
-                                .saturating_sub(horizontal_weight)
-                                .saturating_mul(i32::from(right)),
-                        )
-                        .saturating_add(256)
-                        >> 9;
-                    u16::try_from(value.clamp(0, i32::from(maximum)))
-                        .map_err(|_| PortableUnavailable)?
-                }
-                LosslessPredictor::SmoothHorizontal => {
-                    let horizontal_weight = i32::from(
-                        *smooth_weight_table(4)?
-                            .get(local_column)
-                            .ok_or(PortableUnavailable)?,
-                    );
-                    let right = *top.last().ok_or(PortableUnavailable)?;
-                    let value = horizontal_weight
-                        .saturating_mul(i32::from(left_edge[local_row]))
-                        .saturating_add(
-                            256_i32
-                                .saturating_sub(horizontal_weight)
-                                .saturating_mul(i32::from(right)),
-                        )
-                        .saturating_add(128)
-                        >> 8;
-                    u16::try_from(value.clamp(0, i32::from(maximum)))
-                        .map_err(|_| PortableUnavailable)?
-                }
+                midpoint
             };
-            let reconstructed = u16::try_from(
-                i32::from(prediction)
-                    .saturating_add(value)
-                    .clamp(0, i32::from(maximum)),
-            )
-            .map_err(|_| PortableUnavailable)?;
-            let output_index = row
-                .saturating_mul(4)
-                .saturating_add(local_row)
-                .saturating_mul(coded_width)
-                .saturating_add(column.saturating_mul(4))
-                .saturating_add(local_column);
-            samples[output_index] = reconstructed;
+
+            let predictor = match luma_predictor {
+                LumaPredictor::Dc => dc_predictor(top, left_edge),
+                LumaPredictor::Vertical => top[0],
+                LumaPredictor::Horizontal => left_edge[0],
+                LumaPredictor::Diagonal45 => midpoint,
+                LumaPredictor::DiagonalDownRight => midpoint,
+                LumaPredictor::Diagonal113 => midpoint,
+                LumaPredictor::Diagonal157 => midpoint,
+                LumaPredictor::Diagonal67 => midpoint,
+                LumaPredictor::Diagonal203 => midpoint,
+                LumaPredictor::Paeth => midpoint,
+                LumaPredictor::Smooth => midpoint,
+                LumaPredictor::SmoothVertical => midpoint,
+                LumaPredictor::SmoothHorizontal => midpoint,
+            };
+            let residual = inverse_wht_4x4(coefficient);
+            for (offset, value) in residual.into_iter().enumerate() {
+                let local_row = offset / 4;
+                let local_column = offset % 4;
+                let prediction = match transform_predictor {
+                    LosslessPredictor::Vertical => top[local_column],
+                    LosslessPredictor::Horizontal => left_edge[local_row],
+                    LosslessPredictor::Dc => {
+                        if let Some(filter_prediction) = filter_intra_prediction.as_ref() {
+                            let index = row
+                                .saturating_mul(4)
+                                .saturating_add(local_row)
+                                .saturating_mul(coded_width)
+                                .saturating_add(column.saturating_mul(4))
+                                .saturating_add(local_column);
+                            *filter_prediction.get(index).ok_or(PortableUnavailable)?
+                        } else {
+                            predictor
+                        }
+                    }
+                    LosslessPredictor::Diagonal45 | LosslessPredictor::Diagonal67 => {
+                        let (_, _, dx) = diagonal_z1_edges.as_ref().ok_or(PortableUnavailable)?;
+                        let angle = luma_angle.ok_or(PortableUnavailable)?;
+                        let mut edge = [top_default; 8];
+                        if row > 0 {
+                            let start = row
+                                .saturating_mul(4)
+                                .saturating_sub(1)
+                                .saturating_mul(coded_width)
+                                .saturating_add(column.saturating_mul(4));
+                            let count = 8_usize
+                                .min(active_width_pixels.saturating_sub(column.saturating_mul(4)));
+                            let available = samples
+                                .get(start..start.saturating_add(count))
+                                .ok_or(PortableUnavailable)?;
+                            for (index, sample) in available.iter().copied().enumerate() {
+                                edge[index] = sample;
+                            }
+                            if let Some(&last) = available.last() {
+                                edge[available.len()..].fill(last);
+                            }
+                        } else if let Some(top_y) = origin_y.checked_sub(1) {
+                            let mut last = top[0];
+                            for (index, value) in edge.iter_mut().enumerate() {
+                                let x = origin_x
+                                    .checked_add(
+                                        u32::try_from(
+                                            column.saturating_mul(4).saturating_add(index),
+                                        )
+                                        .map_err(|_| PortableUnavailable)?,
+                                    )
+                                    .ok_or(PortableUnavailable)?;
+                                if let Some(sample) = sample_top(x, top_y) {
+                                    last = sample;
+                                }
+                                *value = last;
+                            }
+                        } else {
+                            edge.fill(top[0]);
+                        }
+                        let filtered_edge = if enable_intra_edge_filter && !z1_upsample {
+                            let strength = intra_edge_filter_strength(
+                                8,
+                                90_i32.saturating_sub(angle),
+                                smooth_edges,
+                            );
+                            if strength == 0 {
+                                edge
+                            } else {
+                                filter_intra_top_edge_8_with_max(
+                                    edge,
+                                    prediction_top_left,
+                                    strength,
+                                    maximum,
+                                )
+                            }
+                        } else {
+                            edge
+                        };
+                        let upsampled_edge = upsample_intra_top_edge_with_max(
+                            filtered_edge,
+                            prediction_top_left,
+                            maximum,
+                        );
+                        let (edge, max_base_x, dx) = if z1_upsample {
+                            (&upsampled_edge[..], 14, (*dx).saturating_mul(2))
+                        } else {
+                            (&filtered_edge[..], 7, *dx)
+                        };
+                        diagonal_z1_predictor_sample_with_max(
+                            edge,
+                            max_base_x,
+                            dx,
+                            if z1_upsample { 2 } else { 1 },
+                            local_column,
+                            local_row,
+                            maximum,
+                        )?
+                    }
+                    LosslessPredictor::DiagonalDownRight
+                    | LosslessPredictor::Diagonal113
+                    | LosslessPredictor::Diagonal157 => {
+                        let diagonal_prediction = lossless_diagonal_z2_prediction_4x4(
+                            top,
+                            left_edge,
+                            prediction_top_left,
+                            luma_angle.ok_or(PortableUnavailable)?,
+                            enable_intra_edge_filter,
+                            smooth_edges,
+                            maximum,
+                        )?;
+                        diagonal_prediction
+                            .get(offset)
+                            .copied()
+                            .ok_or(PortableUnavailable)?
+                    }
+                    LosslessPredictor::Diagonal203 => {
+                        let (_, _, dy) = diagonal_z3_edges.as_ref().ok_or(PortableUnavailable)?;
+                        let angle = luma_angle.ok_or(PortableUnavailable)?;
+                        let mut edge = [left_default; 8];
+                        if column > 0 {
+                            let start = row
+                                .saturating_mul(4)
+                                .saturating_mul(coded_width)
+                                .saturating_add(column.saturating_mul(4).saturating_sub(1));
+                            let available_height = 4_usize
+                                .min(active_height_pixels.saturating_sub(row.saturating_mul(4)));
+                            for (offset, sample) in
+                                edge.iter_mut().take(available_height).enumerate()
+                            {
+                                *sample = *samples
+                                    .get(start.saturating_add(offset.saturating_mul(coded_width)))
+                                    .ok_or(PortableUnavailable)?;
+                            }
+                            let last = edge
+                                .get(available_height.saturating_sub(1))
+                                .copied()
+                                .unwrap_or(left_default);
+                            edge[available_height..].fill(last);
+                        } else {
+                            let mut last = left_edge[3];
+                            for (index, value) in edge.iter_mut().enumerate() {
+                                let y = origin_y
+                                    .checked_add(
+                                        u32::try_from(row.saturating_mul(4).saturating_add(index))
+                                            .map_err(|_| PortableUnavailable)?,
+                                    )
+                                    .ok_or(PortableUnavailable)?;
+                                if let Some(sample) = sample_left(
+                                    origin_x.checked_sub(1).ok_or(PortableUnavailable)?,
+                                    y,
+                                ) {
+                                    last = sample;
+                                }
+                                *value = last;
+                            }
+                        }
+                        let filtered_edge = if enable_intra_edge_filter && !z3_upsample {
+                            let strength = intra_edge_filter_strength(
+                                8,
+                                angle.saturating_sub(180),
+                                smooth_edges,
+                            );
+                            if strength == 0 {
+                                edge
+                            } else {
+                                filter_z2_left_edge_with_max(
+                                    edge,
+                                    prediction_top_left,
+                                    strength,
+                                    maximum,
+                                )
+                            }
+                        } else {
+                            edge
+                        };
+                        let upsampled_edge = upsample_intra_left_edge_with_max(
+                            filtered_edge,
+                            prediction_top_left,
+                            maximum,
+                        );
+                        let (edge, max_base_y, dy) = if z3_upsample {
+                            (&upsampled_edge[..], 14, (*dy).saturating_mul(2))
+                        } else {
+                            (&filtered_edge[..], 7, *dy)
+                        };
+                        diagonal_z3_predictor_sample_with_max(
+                            edge,
+                            max_base_y,
+                            dy,
+                            if z3_upsample { 2 } else { 1 },
+                            local_column,
+                            local_row,
+                            maximum,
+                        )?
+                    }
+                    LosslessPredictor::SmoothVertical => {
+                        let vertical_weight = i32::from(
+                            *smooth_weight_table(4)?
+                                .get(local_row)
+                                .ok_or(PortableUnavailable)?,
+                        );
+                        let bottom = *left_edge.last().ok_or(PortableUnavailable)?;
+                        let value = vertical_weight
+                            .saturating_mul(i32::from(top[local_column]))
+                            .saturating_add(
+                                256_i32
+                                    .saturating_sub(vertical_weight)
+                                    .saturating_mul(i32::from(bottom)),
+                            )
+                            .saturating_add(128)
+                            >> 8;
+                        u16::try_from(value.clamp(0, i32::from(maximum)))
+                            .map_err(|_| PortableUnavailable)?
+                    }
+                    LosslessPredictor::Paeth => paeth_predictor(
+                        top[local_column],
+                        left_edge[local_row],
+                        prediction_top_left,
+                    ),
+                    LosslessPredictor::Smooth => {
+                        let vertical_weights = smooth_weight_table(4)?;
+                        let horizontal_weights = smooth_weight_table(4)?;
+                        let right = *top.last().ok_or(PortableUnavailable)?;
+                        let bottom = *left_edge.last().ok_or(PortableUnavailable)?;
+                        let vertical_weight =
+                            i32::from(*vertical_weights.get(local_row).ok_or(PortableUnavailable)?);
+                        let horizontal_weight = i32::from(
+                            *horizontal_weights
+                                .get(local_column)
+                                .ok_or(PortableUnavailable)?,
+                        );
+                        let value = vertical_weight
+                            .saturating_mul(i32::from(top[local_column]))
+                            .saturating_add(
+                                256_i32
+                                    .saturating_sub(vertical_weight)
+                                    .saturating_mul(i32::from(bottom)),
+                            )
+                            .saturating_add(
+                                horizontal_weight.saturating_mul(i32::from(left_edge[local_row])),
+                            )
+                            .saturating_add(
+                                256_i32
+                                    .saturating_sub(horizontal_weight)
+                                    .saturating_mul(i32::from(right)),
+                            )
+                            .saturating_add(256)
+                            >> 9;
+                        u16::try_from(value.clamp(0, i32::from(maximum)))
+                            .map_err(|_| PortableUnavailable)?
+                    }
+                    LosslessPredictor::SmoothHorizontal => {
+                        let horizontal_weight = i32::from(
+                            *smooth_weight_table(4)?
+                                .get(local_column)
+                                .ok_or(PortableUnavailable)?,
+                        );
+                        let right = *top.last().ok_or(PortableUnavailable)?;
+                        let value = horizontal_weight
+                            .saturating_mul(i32::from(left_edge[local_row]))
+                            .saturating_add(
+                                256_i32
+                                    .saturating_sub(horizontal_weight)
+                                    .saturating_mul(i32::from(right)),
+                            )
+                            .saturating_add(128)
+                            >> 8;
+                        u16::try_from(value.clamp(0, i32::from(maximum)))
+                            .map_err(|_| PortableUnavailable)?
+                    }
+                };
+                let reconstructed = u16::try_from(
+                    i32::from(prediction)
+                        .saturating_add(value)
+                        .clamp(0, i32::from(maximum)),
+                )
+                .map_err(|_| PortableUnavailable)?;
+                let output_index = row
+                    .saturating_mul(4)
+                    .saturating_add(local_row)
+                    .saturating_mul(coded_width)
+                    .saturating_add(column.saturating_mul(4))
+                    .saturating_add(local_column);
+                samples[output_index] = reconstructed;
+            }
         }
     }
     finish_monochrome_leaf(
@@ -50811,6 +51040,7 @@ fn reconstruct_monochrome_leaf(
         origin_y,
         width,
         height,
+        block_skipped,
         coded_width,
         grid_width,
         grid_height,
@@ -50818,7 +51048,7 @@ fn reconstruct_monochrome_leaf(
         active_grid_height,
         ReconstructedPlane { samples },
         luma_predictor,
-        &coefficients[0],
+        coefficient_slice,
         palette_cache,
     )
 }
