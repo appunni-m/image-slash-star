@@ -55497,7 +55497,14 @@ impl Lossy420Decoder {
                             sampling,
                             ChromaSampling::Subsampled422 | ChromaSampling::Full
                         )
-                        && matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
+                        && matches!(
+                            block_size,
+                            BlockSize::B16x64
+                                | BlockSize::B64x16
+                                | BlockSize::B32x64
+                                | BlockSize::B64x32
+                                | BlockSize::B64x64
+                        )
                         && (luma_width, luma_height) == block_size.pixel_dimensions()))
                 && !quantization.segment_lossless
                 && (!matches!(
