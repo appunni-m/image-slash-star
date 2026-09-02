@@ -11183,9 +11183,8 @@ fn decode_lossy_luma_8x16_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        // AV1/dav1d index the EOB-high CDF by the raw EOB bin; subtract two
-        // only for the group shift and trailing literal bits below.
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_bin_index =
+            usize::try_from(eob_bin.saturating_sub(2)).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_16x16_eob_high
