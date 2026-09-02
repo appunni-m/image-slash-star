@@ -41418,6 +41418,58 @@ fn reconstruct_lossy_full_16x32_chroma_zone1(
     Ok(reconstruct_lossy_predicted_plane(&prediction, &residual))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact R16x32 Zone-3/smooth chroma path carries normalized edges, availability, filtering, and residual state"
+)]
+fn reconstruct_lossy_full_16x32_chroma_zone3_target(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    top: [u16; 16],
+    left: [u16; 32],
+    top_left: Option<u16>,
+    has_left: bool,
+    coefficients: Option<Lossy16x32TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    match predictor {
+        ChromaPredictor::Diagonal203 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (180 < angle && angle < 270).then_some(()).portable()?;
+        }
+        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        _ => return Err(PortableUnavailable),
+    }
+    let edges = FullIntraPlaneEdges::prepare(
+        16,
+        32,
+        SampleDepth::EIGHT,
+        &top,
+        &left,
+        top_left,
+        true,
+        has_left,
+        false,
+        false,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 512];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        16,
+        32,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    let residual = transform::inverse_dct16x32(&coefficients.unwrap_or([0_i32; 512]));
+    Ok(reconstruct_lossy_predicted_plane(&prediction, &residual))
+}
+
 /// Reconstruct a 16×16 full-resolution chroma transform with CFL.
 ///
 /// I444 CFL has one luma sample for every chroma sample. The luma plane is
@@ -59862,6 +59914,20 @@ impl Lossy420Decoder {
                 syntax.chroma_predictor,
                 ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
             );
+            let chroma_zone3_or_smooth = matches!(
+                syntax.chroma_predictor,
+                ChromaPredictor::Diagonal203
+                    | ChromaPredictor::SmoothVertical
+                    | ChromaPredictor::SmoothHorizontal
+            );
+            let left_chroma_mode = neighbors
+                .left_chroma
+                .or(neighbors.left_luma_top)
+                .or(neighbors.left)
+                .and_then(|neighbor| neighbor.chroma_predictor);
+            let smooth_chroma_edges =
+                is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
+                    || is_smooth_chroma_predictor(left_chroma_mode);
             let mut leaf = reconstruct_following_lossy_full_vertical_16x32_leaf(
                 syntax,
                 &above_left,
@@ -59871,14 +59937,6 @@ impl Lossy420Decoder {
                 tools.enable_intra_edge_filter,
             )?;
             if chroma_zone1 {
-                let left_chroma_mode = neighbors
-                    .left_chroma
-                    .or(neighbors.left_luma_top)
-                    .or(neighbors.left)
-                    .and_then(|neighbor| neighbor.chroma_predictor);
-                let smooth_chroma_edges =
-                    is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
-                        || is_smooth_chroma_predictor(left_chroma_mode);
                 for plane in 1..=2 {
                     let top = positioned_top_edge::<16>(
                         plane,
@@ -59963,6 +60021,73 @@ impl Lossy420Decoder {
                         top_extension,
                         left.unwrap_or([top[0]; 32]),
                         has_left.then_some(top_left),
+                        has_left,
+                        syntax.lossy_chroma_16x32_coefficients[plane - 1],
+                        tools.enable_intra_edge_filter,
+                        smooth_chroma_edges,
+                    )?;
+                }
+            }
+            if chroma_zone3_or_smooth {
+                for plane in 1..=2 {
+                    let top = positioned_top_edge::<16>(
+                        plane,
+                        neighbors.above_left,
+                        neighbors.above_left_x_offset,
+                        neighbors.above_right,
+                        neighbors.above_right_x_offset,
+                    )
+                    .ok_or(PortableUnavailable)?;
+                    let left = neighbors
+                        .left_chroma
+                        .and_then(|neighbor| {
+                            checked_right_edge_at::<32>(
+                                &neighbor.planes[plane],
+                                neighbor.width,
+                                neighbor.height,
+                                neighbors.left_chroma_y_offset,
+                            )
+                        })
+                        .or_else(|| {
+                            neighbors.left.and_then(|neighbor| {
+                                checked_right_edge_at::<32>(
+                                    &neighbor.planes[plane],
+                                    neighbor.width,
+                                    neighbor.height,
+                                    neighbors.left_y_offset,
+                                )
+                            })
+                        });
+                    let has_left_owner =
+                        neighbors.left_chroma.is_some() || neighbors.left.is_some();
+                    if has_left_owner && left.is_none() {
+                        return Err(PortableUnavailable);
+                    }
+                    if matches!(syntax.chroma_predictor, ChromaPredictor::Diagonal203)
+                        && (neighbors.left_chroma_bottom[plane - 1].is_some()
+                            || neighbors.left_full_chroma_bottom_8[plane - 1].is_some())
+                    {
+                        // The current neighbor contract exposes only four- and
+                        // eight-sample continuations; neither proves the full
+                        // sixteen samples required by R16x32 Zone 3.
+                        return Err(PortableUnavailable);
+                    }
+                    let has_left = left.is_some();
+                    let left = left.unwrap_or([top[0]; 32]);
+                    let top_left = if has_left {
+                        Some(
+                            full_resolution_chroma_top_left(&neighbors, plane)
+                                .ok_or(PortableUnavailable)?,
+                        )
+                    } else {
+                        None
+                    };
+                    leaf.planes[plane] = reconstruct_lossy_full_16x32_chroma_zone3_target(
+                        syntax.chroma_predictor,
+                        syntax.chroma_angle,
+                        top,
+                        left,
+                        top_left,
                         has_left,
                         syntax.lossy_chroma_16x32_coefficients[plane - 1],
                         tools.enable_intra_edge_filter,
