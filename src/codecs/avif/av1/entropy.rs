@@ -5002,7 +5002,7 @@ fn inter_lossy_wide_mode2_geometry_supported(
 /// A square 64px lossy leaf is either a single TX64X64 terminal or an exact
 /// mode-2 TX64→TX32/TX16 split admitted by `decode_inter_transform_size`.
 /// Monochrome uses the single-terminal predicate only for mode 1; its mode-2
-/// path remains behind the qindex-qualified split64 predicate. Keep both
+/// path remains behind the exact split64 predicate. Keep both
 /// paths separate from the 128px chunk compositor so an unsupported deeper
 /// tree cannot accidentally consume the single-terminal sentence.
 fn inter_lossy_square64_geometry_supported(
@@ -5026,8 +5026,8 @@ fn inter_lossy_square64_geometry_supported(
 
 /// Exact mode-2 B64x64 split geometry. Unlike the existing one-terminal I420
 /// square-64 predicate, this profile owns a TX32x32 chroma grid for I422 and
-/// I444; monochrome uses the same preflight so a root-unsplit/skipped leaf can
-/// still pass through the mode-2 single-terminal validation.
+/// I444; monochrome uses the same preflight so every exact B64 root can use
+/// the normative split sentence, including qindex-zero roots.
 fn inter_lossy_split64_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -5045,7 +5045,6 @@ fn inter_lossy_split64_geometry_supported(
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 2
-        && quantization.segment_qindex > 0
         && block_size == BlockSize::B64x64
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
@@ -5055,7 +5054,7 @@ fn inter_lossy_split64_geometry_supported(
 /// predicate is also the high-depth exemption from the generic small-axis
 /// admission gate below. Monochrome uses the same single-terminal compositor
 /// for both reachable lossy transform modes; the square-64 predicate keeps
-/// its mode-1 admission separate from the mode-2 split64 qindex gate.
+/// its mode-1 admission separate from the mode-2 split64 capability.
 fn inter_lossy_wide_single_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -9117,9 +9116,7 @@ fn decode_inter_leaf(
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && prepared_quantization.quantization.segment_qindex > 0,
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && prepared_quantization.quantization.segment_qindex > 0,
+        lossy_split64_geometry,
         lossless_grid_geometry,
         lossy_grid_geometry,
         lossy_color_mode0_geometry,

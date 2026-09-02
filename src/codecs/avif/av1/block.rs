@@ -52722,6 +52722,12 @@ enum WideChromaTransformSource<'a> {
 }
 
 #[derive(Clone, Copy)]
+enum InterGridQindexPolicy {
+    PositiveOnly,
+    Mode2SplitB64,
+}
+
+#[derive(Clone, Copy)]
 enum Tx4ChromaTransformSource {
     Uniform(Av1TransformType),
     VerticalPair([Av1TransformType; 2]),
@@ -55990,7 +55996,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
-                && quantization.segment_qindex > 0
                 && !quantization.segment_lossless)
                 .then_some(())
                 .portable()?;
@@ -56103,7 +56108,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
-                && quantization.segment_qindex > 0
                 && !quantization.segment_lossless)
                 .then_some(())
                 .portable()?;
@@ -56126,7 +56130,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
-                && quantization.segment_qindex > 0
                 && !quantization.segment_lossless
                 && any_child_split
                 && !all_children_split)
@@ -58119,6 +58122,7 @@ impl Lossy420Decoder {
                     Some(luma_transforms),
                     split_b64_topology || split_b64_deep,
                     false,
+                    InterGridQindexPolicy::Mode2SplitB64,
                 )?;
                 contexts[plane] = grid_contexts.bottom_right;
                 chroma_right_contexts[plane - 1] = grid_contexts.right;
@@ -58155,6 +58159,7 @@ impl Lossy420Decoder {
                     })),
                     true,
                     false,
+                    InterGridQindexPolicy::PositiveOnly,
                 )?;
                 contexts[plane] = grid_contexts.bottom_right;
                 chroma_right_contexts[plane - 1] = grid_contexts.right;
@@ -58186,6 +58191,7 @@ impl Lossy420Decoder {
                     Some(projected),
                     true,
                     false,
+                    InterGridQindexPolicy::PositiveOnly,
                 )?;
                 contexts[plane] = grid_contexts.bottom_right;
                 chroma_right_contexts[plane - 1] = grid_contexts.right;
@@ -58220,6 +58226,7 @@ impl Lossy420Decoder {
                         None,
                         false,
                         true,
+                        InterGridQindexPolicy::PositiveOnly,
                     )?
                 };
                 contexts[plane] = grid_contexts.bottom_right;
@@ -61698,7 +61705,6 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -62545,7 +62551,6 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -62687,7 +62692,6 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -63135,6 +63139,7 @@ impl Lossy420Decoder {
         luma_transforms: Option<[[Av1TransformType; 2]; 2]>,
         topology: bool,
         uniform_dct: bool,
+        qindex_policy: InterGridQindexPolicy,
     ) -> PortableResult<LosslessGridContexts> {
         let coded_width = raster.coded_width;
         let coded_height = raster.coded_height;
@@ -63160,7 +63165,10 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && matches!(tools.transform_mode, 1 | 2)
-            && (uniform_dct || (tools.transform_mode == 2 && quantization.segment_qindex > 0))
+            && (uniform_dct
+                || quantization.segment_qindex > 0
+                || (tools.transform_mode == 2
+                    && matches!(qindex_policy, InterGridQindexPolicy::Mode2SplitB64)))
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
