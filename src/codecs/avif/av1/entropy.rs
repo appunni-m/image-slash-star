@@ -4987,7 +4987,11 @@ fn inter_lossy_wide_mode2_geometry_supported(
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 2
-        && quantization.segment_qindex > 0
+        // The root parser must stay qindex-independent so it can consume the
+        // normative partition sentence and classify unsplit versus split
+        // topology.  Block validation below admits qindex zero only for the
+        // resulting unsplit plan; split/deep/mixed plans retain their own
+        // positive-q guards.
         && matches!(
             block_size,
             BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128

@@ -55597,7 +55597,9 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 2
                 && !quantization.segment_lossless
-                && quantization.segment_qindex > 0
+                // A qindex-zero root is valid only after the parser has
+                // classified this exact plan as all-roots-unsplit. Split,
+                // deep, and mixed plans retain their positive-q validators.
                 && matches!(
                     block_size,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
@@ -64413,7 +64415,9 @@ impl Lossy420Decoder {
                 } else {
                     1
                 }
-            && (!mode2 || quantization.segment_qindex > 0)
+            && (!mode2
+                || quantization.segment_qindex > 0
+                || matches!(transform_source, WideChromaTransformSource::Mode2UnsplitDct))
             && !quantization.segment_lossless
             && (!matches!(
                 transform_source,
@@ -64679,7 +64683,9 @@ impl Lossy420Decoder {
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.sample_depth == quantization.sample_depth
             && tools.transform_mode == mode
-            && (mode != 2 || quantization.segment_qindex > 0)
+            && (mode != 2
+                || quantization.segment_qindex > 0
+                || matches!(transform_source, WideChromaTransformSource::Mode2UnsplitDct))
             && !quantization.segment_lossless
             && external_above.len() == 8
             && external_left.len() == 16)
