@@ -4587,6 +4587,32 @@ fn inter_single_transform_geometry_supported(block_size: BlockSize, layout: Pixe
     chroma_tx.pixel_dimensions() == (chroma_width, chroma_height)
 }
 
+/// Exact high-depth 4:2:2 direct terminals whose luma and chroma maximum
+/// transforms cover their complete coded planes.  The four-pixel-height
+/// shapes are the only subsampled color leaves that satisfy the generic
+/// single-terminal geometry; narrower 4-pixel-width shapes need a
+/// cross-leaf chroma grid and must remain transactional.
+fn inter_high_depth_i422_single_geometry_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    node: PartitionNode,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    quantization: super::block::LossyQuantization,
+) -> bool {
+    matches!(context.bit_depth, 10 | 12)
+        && complete_high_depth_inter_reconstruction_context(context, inter_context)
+        && layout == PixelLayout::I422
+        && matches!(node.block_size, BlockSize::B8x4 | BlockSize::B16x4)
+        && (visible_width, visible_height) == node.block_size.pixel_dimensions()
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && !quantization.segment_lossless
+        && quantization.sample_depth.bits() == context.bit_depth
+        && partition_node_has_chroma(context, node, false)
+        && inter_single_transform_geometry_supported(node.block_size, layout)
+}
+
 /// Mode-0 lossy I420 leaves code one TX4X4 residual per luma cell while the
 /// chroma planes retain one maximum-size transform. Keep the first grid
 /// tranche bounded to complete 8..=64px leaves and matched 8/10/12-bit
@@ -8074,6 +8100,19 @@ fn decode_inter_leaf(
                 && matches!(context.frame_tools.transform_mode, 1 | 2)
                 && !prepared_quantization.quantization.segment_lossless
                 && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth;
+        // 4:2:2 has one exact direct-terminal exception at each horizontal
+        // four-pixel-height block size.  Keep the ownership and transform
+        // geometry proof inside the helper so the generic color minimum is
+        // not relaxed for B4x* leaves that require a chroma grid.
+        let tiny_high_depth_i422 = inter_high_depth_i422_single_geometry_supported(
+            context,
+            inter_context,
+            node,
+            layout,
+            visible_width,
+            visible_height,
+            prepared_quantization.quantization,
+        );
         let wide_lossy_geometry = lossy_wide_single_geometry
             || lossy_direct_chroma_grid_geometry
             || lossy_i444_rect_split_geometry
@@ -8086,6 +8125,7 @@ fn decode_inter_leaf(
             || lossy_wide_mode2_geometry;
         if !wide_lossy_geometry
             && !tiny_high_depth_i444
+            && !tiny_high_depth_i422
             && (!(minimum..=maximum).contains(&block_width)
                 || !(minimum..=maximum).contains(&block_height))
         {
