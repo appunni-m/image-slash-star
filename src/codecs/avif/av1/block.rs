@@ -51509,6 +51509,11 @@ enum InterTransformPlan {
         luma_height: u32,
         sampling: ChromaSampling,
     },
+    LossyColorMode0Grid {
+        luma_width: u32,
+        luma_height: u32,
+        sampling: ChromaSampling,
+    },
     LossyWideMode0Grid {
         luma_width: u32,
         luma_height: u32,
@@ -52787,6 +52792,121 @@ impl Lossy420Decoder {
 
     #[expect(
         clippy::too_many_arguments,
+        reason = "lossy color mode-0 grid reconstruction carries block, frame, prediction, and transform callback state"
+    )]
+    pub(super) fn decode_inter_translation_lossy_color_mode0_grid(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        block_skipped: bool,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        reference: &FrameSurface,
+        scale: ScaleFactors,
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motion: MotionVector,
+        filters: [InterpolationFilter; 2],
+        coefficient_contexts: InterCoefficientContexts,
+        sampling: ChromaSampling,
+        decode_transform_type: impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
+        obmc: Option<ObmcContext<'_>>,
+        inter_intra: Option<InterIntraPrediction<'_>>,
+    ) -> PortableResult<FirstLeaf> {
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references: [reference, reference],
+                scales: [scale, scale],
+                motions: [motion, MotionVector::ZERO],
+                block_x_b4,
+                block_y_b4,
+                compound: None,
+                inter_intra,
+                obmc,
+            },
+            block_skipped,
+            InterTransformPlan::LossyColorMode0Grid {
+                luma_width,
+                luma_height,
+                sampling,
+            },
+            filters,
+            coefficient_contexts,
+            decode_transform_type,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "compound lossy color mode-0 grid reconstruction carries block, frame, prediction, and transform callback state"
+    )]
+    pub(super) fn decode_inter_compound_translation_lossy_color_mode0_grid(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        block_size: BlockSize,
+        visible_width: u32,
+        visible_height: u32,
+        prepared_quantization: PreparedInterQuantization,
+        tools: BlockTools,
+        references: [&FrameSurface; 2],
+        scales: [ScaleFactors; 2],
+        block_x_b4: u32,
+        block_y_b4: u32,
+        motions: [MotionVector; 2],
+        compound: PreparedCompound,
+        filters: [InterpolationFilter; 2],
+        coefficient_contexts: InterCoefficientContexts,
+        block_skipped: bool,
+        sampling: ChromaSampling,
+        decode_transform_type: impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
+    ) -> PortableResult<FirstLeaf> {
+        let (luma_width, luma_height) = block_size.pixel_dimensions();
+        self.decode_inter_translation_impl(
+            decoder,
+            block_size,
+            visible_width,
+            visible_height,
+            prepared_quantization,
+            tools,
+            InterPrediction {
+                references,
+                scales,
+                motions,
+                block_x_b4,
+                block_y_b4,
+                compound: Some(compound),
+                inter_intra: None,
+                obmc: None,
+            },
+            block_skipped,
+            InterTransformPlan::LossyColorMode0Grid {
+                luma_width,
+                luma_height,
+                sampling,
+            },
+            filters,
+            coefficient_contexts,
+            decode_transform_type,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
         reason = "lossy 64px chunk reconstruction carries block, frame, prediction, and residual state"
     )]
     pub(super) fn decode_inter_translation_lossy_wide_chunked(
@@ -53231,6 +53351,10 @@ impl Lossy420Decoder {
         );
         let lossless_large = matches!(transform_plan, InterTransformPlan::LosslessGrid { .. });
         let lossy_grid = matches!(transform_plan, InterTransformPlan::LossyOnly4x4Grid { .. });
+        let lossy_color_mode0_grid = matches!(
+            transform_plan,
+            InterTransformPlan::LossyColorMode0Grid { .. }
+        );
         let lossy_direct_chroma_grid = matches!(
             transform_plan,
             InterTransformPlan::LossyWideDirectChromaGrid { .. }
@@ -53381,6 +53505,67 @@ impl Lossy420Decoder {
                 && tools.transform_mode == 0
                 && !quantization.segment_lossless
                 && lossy_only_4x4_grid_block_supported(block_size)
+                && (luma_width, luma_height) == block_size.pixel_dimensions())
+            .then_some(())
+            .portable()?;
+        }
+        if let InterTransformPlan::LossyColorMode0Grid {
+            luma_width,
+            luma_height,
+            sampling,
+        } = transform_plan
+        {
+            (matches!(
+                sampling,
+                ChromaSampling::Subsampled422 | ChromaSampling::Full
+            ) && sampling == chroma_sampling
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
+                && tools.transform_mode == 0
+                && !quantization.segment_lossless
+                && matches!(
+                    (sampling, block_size),
+                    (
+                        ChromaSampling::Subsampled422,
+                        BlockSize::B8x4
+                            | BlockSize::B8x8
+                            | BlockSize::B16x4
+                            | BlockSize::B16x8
+                            | BlockSize::B16x16
+                            | BlockSize::B32x8
+                            | BlockSize::B32x16
+                            | BlockSize::B32x32
+                            | BlockSize::B64x16
+                            | BlockSize::B64x32
+                            | BlockSize::B8x16
+                            | BlockSize::B8x32
+                            | BlockSize::B16x32
+                            | BlockSize::B16x64
+                            | BlockSize::B32x64
+                            | BlockSize::B64x64
+                    ) | (
+                        ChromaSampling::Full,
+                        BlockSize::B4x4
+                            | BlockSize::B4x8
+                            | BlockSize::B8x4
+                            | BlockSize::B4x16
+                            | BlockSize::B16x4
+                            | BlockSize::B8x8
+                            | BlockSize::B8x16
+                            | BlockSize::B16x8
+                            | BlockSize::B16x16
+                            | BlockSize::B8x32
+                            | BlockSize::B32x8
+                            | BlockSize::B16x32
+                            | BlockSize::B32x16
+                            | BlockSize::B32x32
+                            | BlockSize::B16x64
+                            | BlockSize::B64x16
+                            | BlockSize::B32x64
+                            | BlockSize::B64x32
+                            | BlockSize::B64x64
+                    )
+                )
                 && (luma_width, luma_height) == block_size.pixel_dimensions())
             .then_some(())
             .portable()?;
@@ -53811,7 +53996,7 @@ impl Lossy420Decoder {
         }
         let lossless_grid =
             lossless_b8 || lossless_b16 || lossless_rect || lossless_small || lossless_large;
-        let grid_transform = lossless_grid || lossy_grid || lossy_wide;
+        let grid_transform = lossless_grid || lossy_grid || lossy_color_mode0_grid || lossy_wide;
         let lossless_i422 = matches!(
             transform_plan,
             InterTransformPlan::LosslessB8I422
@@ -54025,6 +54210,8 @@ impl Lossy420Decoder {
                 lossless_large && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_lossy_grid =
                 lossy_grid && (visible_width, visible_height) == block_size.pixel_dimensions();
+            let exact_lossy_color_mode0 = lossy_color_mode0_grid
+                && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_lossy_wide =
                 lossy_wide && (visible_width, visible_height) == block_size.pixel_dimensions();
             let exact_lossy_direct_chroma_grid = lossy_direct_chroma_grid
@@ -54056,6 +54243,7 @@ impl Lossy420Decoder {
                         || (lossless_small && exact_small)
                         || exact_large
                         || exact_lossy_grid
+                        || exact_lossy_color_mode0
                         || exact_lossy_wide
                         || exact_lossy_direct_chroma_grid));
             (exact_geometry
@@ -54137,6 +54325,9 @@ impl Lossy420Decoder {
                 (TxSize::Tx64x64, false, Av1TransformType::DctDct)
             }
             InterTransformPlan::LossyOnly4x4Grid { .. } => {
+                (TxSize::Tx4x4, true, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::LossyColorMode0Grid { .. } => {
                 (TxSize::Tx4x4, true, Av1TransformType::DctDct)
             }
             InterTransformPlan::LossyWideMode0Grid { .. } => {
@@ -54291,6 +54482,7 @@ impl Lossy420Decoder {
         let mut luma_split_tx_size = None;
         let mut luma_split_transforms = None;
         let mut luma_rect_split_transforms = None;
+        let mut color_mode0_luma_transforms = [[Av1TransformType::DctDct; 16]; 16];
         let tx_sizes = [
             luma_tx_size,
             chroma_tx.unwrap_or(luma_tx_size),
@@ -54524,6 +54716,47 @@ impl Lossy420Decoder {
                 luma_bottom_contexts = grid_contexts.bottom;
                 luma_transform_split = true;
                 luma_transform = grid_transform;
+                continue;
+            }
+            if lossy_color_mode0_grid && plane == 0 {
+                let (grid_contexts, grid_transforms) = self
+                    .decode_inter_lossy_color_mode0_luma_grid(
+                        decoder,
+                        &prediction,
+                        &mut rasters[plane],
+                        predecoded_skip,
+                        quantization,
+                        tools,
+                        coefficient_contexts,
+                        &mut decode_transform_type,
+                    )?;
+                contexts[plane] = grid_contexts.bottom_right;
+                luma_right_contexts = grid_contexts.right;
+                luma_bottom_contexts = grid_contexts.bottom;
+                luma_transform_split = true;
+                luma_split_tx_size = Some(TxSize::Tx4x4);
+                color_mode0_luma_transforms = grid_transforms;
+                luma_transform = grid_transforms[0][0];
+                continue;
+            }
+            if lossy_color_mode0_grid && plane != 0 {
+                let chroma_tx = chroma_tx.ok_or(PortableUnavailable)?;
+                let grid_contexts = self.decode_inter_lossy_color_mode0_chroma_grid(
+                    decoder,
+                    &prediction,
+                    &mut rasters[plane],
+                    plane,
+                    chroma_sampling,
+                    predecoded_skip,
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    chroma_tx,
+                    &color_mode0_luma_transforms,
+                )?;
+                contexts[plane] = grid_contexts.bottom_right;
+                chroma_right_contexts[plane - 1] = grid_contexts.right;
+                chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
                 continue;
             }
             if lossless_b16 || lossless_rect || lossless_small || lossless_large {
@@ -57678,6 +57911,374 @@ impl Lossy420Decoder {
                 };
                 let offset_x = column.checked_mul(cell_width).portable()?;
                 let offset_y = row.checked_mul(cell_height).portable()?;
+                let mut child_prediction = Vec::new();
+                child_prediction
+                    .try_reserve_exact(cell_width.checked_mul(cell_height).portable()?)
+                    .map_err(|_| PortableUnavailable)?;
+                for child_row in 0..cell_height {
+                    let start = offset_y
+                        .checked_add(child_row)
+                        .and_then(|value| value.checked_mul(coded_width))
+                        .and_then(|value| value.checked_add(offset_x))
+                        .portable()?;
+                    let end = start.checked_add(cell_width).portable()?;
+                    child_prediction.extend_from_slice(prediction.get(start..end).portable()?);
+                }
+                let ReconstructionScratch { transform, .. } = &mut self.reconstruction_scratch;
+                let TransformScratch { rows, residual, .. } = transform;
+                reconstruct_full_unsplit_prediction_in_place(
+                    &mut child_prediction,
+                    CoeffBlockRef {
+                        width: cell_width,
+                        height: cell_height,
+                        coefficients,
+                        transform: match terminal.transform {
+                            GenericTerminalTransform::Lossy(value) => value,
+                            GenericTerminalTransform::LosslessWht4x4 => {
+                                return Err(PortableUnavailable);
+                            }
+                        },
+                    },
+                    tools.sample_depth,
+                    rows,
+                    residual,
+                )?;
+                raster.commit_transform(
+                    offset_x,
+                    offset_y,
+                    cell_width,
+                    cell_height,
+                    &child_prediction,
+                    tools.sample_depth,
+                )?;
+                residual_contexts[row][column] = terminal.residual_context;
+            }
+        }
+        let last_column = grid_width.saturating_sub(1);
+        let last_row = grid_height.saturating_sub(1);
+        let mut right = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut bottom = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        for row in 0..grid_height {
+            let start = row.checked_mul(cell_context_height).portable()?;
+            let end = start.checked_add(cell_context_height).portable()?;
+            right
+                .get_mut(start..end)
+                .portable()?
+                .fill(residual_contexts[row][last_column]);
+        }
+        for column in 0..grid_width {
+            let start = column.checked_mul(cell_context_width).portable()?;
+            let end = start.checked_add(cell_context_width).portable()?;
+            bottom
+                .get_mut(start..end)
+                .portable()?
+                .fill(residual_contexts[last_row][column]);
+        }
+        Ok(LosslessGridContexts {
+            bottom_right: residual_contexts[last_row][last_column],
+            right,
+            bottom,
+        })
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the bounded mode-0 color luma compositor keeps plane geometry, entropy edges, quantization, prediction, and transform callback explicit"
+    )]
+    fn decode_inter_lossy_color_mode0_luma_grid(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        prediction: &[u16],
+        raster: &mut PrivatePlaneRaster,
+        block_skipped: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+        decode_transform_type: &mut impl FnMut(
+            &mut RangeDecoder<'_, '_, '_>,
+            TxSize,
+        ) -> PortableResult<Av1TransformType>,
+    ) -> PortableResult<(LosslessGridContexts, [[Av1TransformType; 16]; 16])> {
+        let coded_width = raster.coded_width;
+        let coded_height = raster.coded_height;
+        (prediction.len() == coded_width.checked_mul(coded_height).portable()?
+            && coded_width.is_multiple_of(4)
+            && coded_height.is_multiple_of(4)
+            && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_width / 4))
+            && (1..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_height / 4))
+            && raster.active_width == coded_width
+            && raster.active_height == coded_height
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.sample_depth == quantization.sample_depth
+            && tools.transform_mode == 0
+            && !quantization.segment_lossless)
+            .then_some(())
+            .portable()?;
+        let grid_width = coded_width / 4;
+        let grid_height = coded_height / 4;
+        let mut residual_contexts =
+            [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut transforms = [[Av1TransformType::DctDct; 16]; 16];
+        for row in 0..grid_height {
+            for column in 0..grid_width {
+                let above_context = if row == 0 {
+                    [coefficient_contexts.above[0]
+                        .get(column)
+                        .copied()
+                        .portable()?]
+                } else {
+                    [residual_contexts[row - 1][column]]
+                };
+                let left_context = if column == 0 {
+                    [coefficient_contexts.left[0].get(row).copied().portable()?]
+                } else {
+                    [residual_contexts[row][column - 1]]
+                };
+                let txb_skipped = self.decode_inter_txb_skip(
+                    decoder,
+                    0,
+                    TxSize::Tx4x4,
+                    coded_width,
+                    coded_height,
+                    &above_context,
+                    &left_context,
+                    block_skipped,
+                )?;
+                let transform = if txb_skipped {
+                    Av1TransformType::DctDct
+                } else {
+                    decode_transform_type(decoder, TxSize::Tx4x4)?
+                };
+                transforms[row][column] = transform;
+                let terminal = decode_inter_lossy_terminal(
+                    decoder,
+                    0,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    quantization,
+                    TxSize::Tx4x4,
+                    coded_width,
+                    coded_height,
+                    &above_context,
+                    &left_context,
+                    txb_skipped,
+                    transform,
+                )?;
+                let coefficients = if terminal.skipped {
+                    None
+                } else {
+                    Some(
+                        self.large_coeff_arena
+                            .coefficients
+                            .get(..terminal.coefficient_count)
+                            .portable()?,
+                    )
+                };
+                let offset_x = column.checked_mul(4).portable()?;
+                let offset_y = row.checked_mul(4).portable()?;
+                let mut child_prediction = [0_u16; 16];
+                for child_row in 0..4 {
+                    let source_start = offset_y
+                        .checked_add(child_row)
+                        .and_then(|value| value.checked_mul(coded_width))
+                        .and_then(|value| value.checked_add(offset_x))
+                        .portable()?;
+                    let source = prediction
+                        .get(source_start..source_start.checked_add(4).portable()?)
+                        .portable()?;
+                    let destination = child_row.checked_mul(4).portable()?;
+                    child_prediction
+                        .get_mut(destination..destination.checked_add(4).portable()?)
+                        .portable()?
+                        .copy_from_slice(source);
+                }
+                let ReconstructionScratch { transform, .. } = &mut self.reconstruction_scratch;
+                let TransformScratch { rows, residual, .. } = transform;
+                reconstruct_full_unsplit_prediction_in_place(
+                    &mut child_prediction,
+                    CoeffBlockRef {
+                        width: 4,
+                        height: 4,
+                        coefficients,
+                        transform: match terminal.transform {
+                            GenericTerminalTransform::Lossy(value) => value,
+                            GenericTerminalTransform::LosslessWht4x4 => {
+                                return Err(PortableUnavailable);
+                            }
+                        },
+                    },
+                    tools.sample_depth,
+                    rows,
+                    residual,
+                )?;
+                raster.commit_transform(
+                    offset_x,
+                    offset_y,
+                    4,
+                    4,
+                    &child_prediction,
+                    tools.sample_depth,
+                )?;
+                residual_contexts[row][column] = terminal.residual_context;
+            }
+        }
+        let last_column = grid_width.saturating_sub(1);
+        let last_row = grid_height.saturating_sub(1);
+        let mut right = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        let mut bottom = [0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY];
+        for row in 0..grid_height {
+            right[row] = residual_contexts[row][last_column];
+        }
+        for column in 0..grid_width {
+            bottom[column] = residual_contexts[last_row][column];
+        }
+        Ok((
+            LosslessGridContexts {
+                bottom_right: residual_contexts[last_row][last_column],
+                right,
+                bottom,
+            },
+            transforms,
+        ))
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the bounded mode-0 color chroma compositor keeps plane geometry, entropy edges, luma inheritance, quantization, prediction, and raster explicit"
+    )]
+    fn decode_inter_lossy_color_mode0_chroma_grid(
+        &mut self,
+        decoder: &mut RangeDecoder<'_, '_, '_>,
+        prediction: &[u16],
+        raster: &mut PrivatePlaneRaster,
+        plane: usize,
+        sampling: ChromaSampling,
+        block_skipped: bool,
+        quantization: LossyQuantization,
+        tools: BlockTools,
+        coefficient_contexts: InterCoefficientContexts,
+        cell_tx: TxSize,
+        luma_transforms: &[[Av1TransformType; 16]; 16],
+    ) -> PortableResult<LosslessGridContexts> {
+        let coded_width = raster.coded_width;
+        let coded_height = raster.coded_height;
+        let (cell_width, cell_height) = cell_tx.pixel_dimensions();
+        let cell_width = usize::try_from(cell_width).map_err(|_| PortableUnavailable)?;
+        let cell_height = usize::try_from(cell_height).map_err(|_| PortableUnavailable)?;
+        (prediction.len() == coded_width.checked_mul(coded_height).portable()?
+            && coded_width.is_multiple_of(cell_width)
+            && coded_height.is_multiple_of(cell_height)
+            && coded_width / cell_width <= LOSSLESS_GRID_EDGE_CAPACITY
+            && coded_height / cell_height <= LOSSLESS_GRID_EDGE_CAPACITY
+            && coded_width.is_multiple_of(4)
+            && coded_height.is_multiple_of(4)
+            && raster.active_width == coded_width
+            && raster.active_height == coded_height
+            && matches!(plane, 1 | 2)
+            && matches!(
+                sampling,
+                ChromaSampling::Subsampled422 | ChromaSampling::Full
+            )
+            && sampling == self.chroma_sampling
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.sample_depth == quantization.sample_depth
+            && tools.transform_mode == 0
+            && !quantization.segment_lossless)
+            .then_some(())
+            .portable()?;
+        let grid_width = coded_width / cell_width;
+        let grid_height = coded_height / cell_height;
+        let cell_context_width = cell_width.checked_div(4).portable()?;
+        let cell_context_height = cell_height.checked_div(4).portable()?;
+        let context_width = grid_width.checked_mul(cell_context_width).portable()?;
+        let context_height = grid_height.checked_mul(cell_context_height).portable()?;
+        let above = coefficient_contexts.above[plane]
+            .get(..context_width)
+            .portable()?;
+        let left = coefficient_contexts.left[plane]
+            .get(..context_height)
+            .portable()?;
+        let mut residual_contexts =
+            [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; LOSSLESS_GRID_EDGE_CAPACITY];
+        for row in 0..grid_height {
+            for column in 0..grid_width {
+                let mut above_context = [0x40_u8; 8];
+                let above_context = if row == 0 {
+                    let start = column.checked_mul(cell_context_width).portable()?;
+                    let end = start.checked_add(cell_context_width).portable()?;
+                    above_context[..cell_context_width]
+                        .copy_from_slice(above.get(start..end).portable()?);
+                    &above_context[..cell_context_width]
+                } else {
+                    above_context[..cell_context_width].fill(residual_contexts[row - 1][column]);
+                    &above_context[..cell_context_width]
+                };
+                let mut left_context = [0x40_u8; 8];
+                let left_context = if column == 0 {
+                    let start = row.checked_mul(cell_context_height).portable()?;
+                    let end = start.checked_add(cell_context_height).portable()?;
+                    left_context[..cell_context_height]
+                        .copy_from_slice(left.get(start..end).portable()?);
+                    &left_context[..cell_context_height]
+                } else {
+                    left_context[..cell_context_height].fill(residual_contexts[row][column - 1]);
+                    &left_context[..cell_context_height]
+                };
+                let txb_skipped = self.decode_inter_txb_skip(
+                    decoder,
+                    plane,
+                    cell_tx,
+                    coded_width,
+                    coded_height,
+                    above_context,
+                    left_context,
+                    block_skipped,
+                )?;
+                let offset_x = column.checked_mul(cell_width).portable()?;
+                let offset_y = row.checked_mul(cell_height).portable()?;
+                let luma_row = offset_y.checked_div(4).portable()?;
+                let luma_column = match sampling {
+                    ChromaSampling::Subsampled422 => offset_x
+                        .checked_mul(2)
+                        .and_then(|value| value.checked_div(4))
+                        .portable()?,
+                    ChromaSampling::Full => offset_x.checked_div(4).portable()?,
+                    _ => return Err(PortableUnavailable),
+                };
+                let source = luma_transforms
+                    .get(luma_row)
+                    .and_then(|row| row.get(luma_column))
+                    .copied()
+                    .portable()?;
+                let transform = if txb_skipped {
+                    Av1TransformType::DctDct
+                } else {
+                    inherited_inter_chroma_transform(cell_tx, source)
+                };
+                let terminal = decode_inter_lossy_terminal(
+                    decoder,
+                    plane,
+                    &mut self.cdfs,
+                    &mut self.large_coeff_arena,
+                    quantization,
+                    cell_tx,
+                    coded_width,
+                    coded_height,
+                    above_context,
+                    left_context,
+                    txb_skipped,
+                    transform,
+                )?;
+                let coefficients = if terminal.skipped {
+                    None
+                } else {
+                    Some(
+                        self.large_coeff_arena
+                            .coefficients
+                            .get(..terminal.coefficient_count)
+                            .portable()?,
+                    )
+                };
                 let mut child_prediction = Vec::new();
                 child_prediction
                     .try_reserve_exact(cell_width.checked_mul(cell_height).portable()?)
