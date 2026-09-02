@@ -8583,6 +8583,10 @@ pub(super) fn validate_complete_lossy_420_partition(
         && inter_context.is_some_and(|inter_context| {
             high_depth_lossless_monochrome_superres_restoration_supported(context, inter_context)
         });
+    let high_depth_lossless_inter_nonsuperres_active_restoration = generic_high_depth_lossless_inter
+        && inter_context.is_some_and(|inter_context| {
+            high_depth_lossless_inter_nonsuperres_restoration_supported(context, inter_context)
+        });
     let lossless_color_inter = inter_context.is_some_and(|inter_context| {
         complete_lossless_inter_color_reconstruction_context(context, inter_context)
     });
@@ -8606,9 +8610,14 @@ pub(super) fn validate_complete_lossy_420_partition(
     let streamed_lossless_color = complete_streamed_lossless_color_context(context);
     let lossless_intra_color_active_restoration =
         streamed_lossless_color && lossless_intra_color_superres_restoration_supported(context);
+    let high_depth_lossless_intra_nonsuperres_active_restoration = streamed_lossless_color
+        && high_depth_lossless_intra_nonsuperres_restoration_supported(context);
     let streamed_lossless_monochrome = complete_streamed_lossless_monochrome_context(context);
     let lossless_intra_monochrome_active_restoration = streamed_lossless_monochrome
         && lossless_intra_monochrome_superres_restoration_supported(context);
+    let high_depth_lossless_intra_monochrome_nonsuperres_active_restoration =
+        streamed_lossless_monochrome
+            && high_depth_lossless_intra_nonsuperres_restoration_supported(context);
     let bounded_monochrome_intrabc = complete_bounded_monochrome_intrabc_context(context);
     let streamed_lossless_reconstruction = streamed_lossless_color || streamed_lossless_monochrome;
     let generic_high_depth_i444_inter = (generic_high_depth_inter
@@ -9005,12 +9014,15 @@ pub(super) fn validate_complete_lossy_420_partition(
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
         || high_depth_lossless_monochrome_active_restoration
+        || high_depth_lossless_inter_nonsuperres_active_restoration
         || lossless_i420_active_restoration
         || lossless_i422_active_restoration
         || lossless_i444_active_restoration
         || lossless_monochrome_active_restoration
         || lossless_intra_color_active_restoration
         || lossless_intra_monochrome_active_restoration
+        || high_depth_lossless_intra_nonsuperres_active_restoration
+        || high_depth_lossless_intra_monochrome_nonsuperres_active_restoration
     {
         let Some(plan) =
             decode_bounded_restoration_plan(&mut decoder, context, &mut tile_cdfs.restoration)
@@ -15510,6 +15522,228 @@ fn lossless_intra_monochrome_superres_restoration_supported(context: &FirstBlock
     (width_with_half >> unit_log2).max(1) == 1 && (height_with_half >> unit_log2).max(1) == 1
 }
 
+/// Shared admission for one-unit active restoration on a non-super-resolution
+/// high-depth lossless frame. The streamed TX4x4/WHT walker already owns the
+/// complete coded raster for these layouts; this predicate proves only the
+/// surrounding frame state and the checked one-unit geometry consumed after
+/// reconstruction. Keeping the layout and unit rules here avoids making the
+/// intra and inter wrappers disagree about chroma rounding or restoration
+/// exponent boundaries.
+fn high_depth_lossless_nonsuperres_restoration_common(
+    context: &FirstBlockContext,
+    layout: PixelLayout,
+) -> bool {
+    if !matches!(
+        layout,
+        PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+    ) {
+        return false;
+    }
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    let segmentation = context.frame_tools.segmentation;
+    let segmentation_closed = !context.segmentation_enabled
+        && !segmentation.enabled
+        && !segmentation.update_map
+        && !segmentation.temporal
+        && !segmentation.preskip
+        && segmentation.last_active_id == 0
+        && segmentation.segments.iter().all(|segment| {
+            segment.delta_q == 0
+                && segment.delta_lf == [0; 4]
+                && segment.reference < 0
+                && !segment.skip
+                && !segment.global_motion
+                && segment.qindex == 0
+                && segment.lossless
+        });
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    if !matches!(context.bit_depth, 10 | 12)
+        || !context.all_lossless
+        || !context.frame_tools.segment_lossless
+        || context.frame_tools.segment_qindex != 0
+        || context.frame_tools.transform_mode != 0
+        || context.superres_enabled
+        || context.upscaled_width != context.frame_width
+        || !context.single_tile
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || padded_block_width != Some(context.block_width)
+        || padded_block_height != Some(context.block_height)
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || !matches!(context.level, 0 | 1)
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || context.allow_intrabc
+        || context.skip_mode_enabled
+        || !context.frame_tools.restoration_present
+        || quantization.base != 0
+        || quantization.y_dc_delta != 0
+        || quantization.u_dc_delta != 0
+        || quantization.u_ac_delta != 0
+        || quantization.v_dc_delta != 0
+        || quantization.v_ac_delta != 0
+        || quantization.using_matrix
+        || !segmentation_closed
+        || (layout == PixelLayout::Monochrome
+            && (context.restoration_types[1].is_some() || context.restoration_types[2].is_some()))
+    {
+        return false;
+    }
+    if !context.restoration_types.iter().any(Option::is_some)
+        || !context.restoration_types.iter().all(|restoration_type| {
+            restoration_type.is_none_or(|kind| {
+                matches!(
+                    kind,
+                    RestorationType::Wiener | RestorationType::SgrProjection
+                )
+            })
+        })
+    {
+        return false;
+    }
+
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let (luma_log2_supported, chroma_log2_supported) = match (layout, context.level) {
+        (PixelLayout::Monochrome, 0) => ((7..=8).contains(&luma_log2), true),
+        (PixelLayout::Monochrome, 1) => ((6..=8).contains(&luma_log2), true),
+        (PixelLayout::I420, 0) => ((7..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2)),
+        (PixelLayout::I420, 1) => ((6..=8).contains(&luma_log2), (5..=8).contains(&chroma_log2)),
+        (PixelLayout::I422 | PixelLayout::I444, 0) => {
+            ((7..=8).contains(&luma_log2), (7..=8).contains(&chroma_log2))
+        }
+        (PixelLayout::I422 | PixelLayout::I444, 1) => {
+            ((6..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2))
+        }
+        _ => (false, false),
+    };
+    if !luma_log2_supported || !chroma_log2_supported || context.frame_height > 56 {
+        return false;
+    }
+    let chroma_active =
+        context.restoration_types[1].is_some() || context.restoration_types[2].is_some();
+    let chroma_log_matches = match layout {
+        PixelLayout::Monochrome => true,
+        PixelLayout::I420 if chroma_active => {
+            chroma_log2 == luma_log2 || chroma_log2.checked_add(1) == Some(luma_log2)
+        }
+        PixelLayout::I420 => chroma_log2 == luma_log2,
+        PixelLayout::I422 | PixelLayout::I444 => chroma_log2 == luma_log2,
+    };
+    if !chroma_log_matches {
+        return false;
+    }
+
+    let Some(chroma_width) = context.frame_width.checked_add(1).map(|width| width / 2) else {
+        return false;
+    };
+    let Some(chroma_height) = context.frame_height.checked_add(1).map(|height| height / 2) else {
+        return false;
+    };
+    let dimensions = match layout {
+        PixelLayout::Monochrome => [(context.frame_width, context.frame_height), (0, 0), (0, 0)],
+        PixelLayout::I420 => [
+            (context.frame_width, context.frame_height),
+            (chroma_width, chroma_height),
+            (chroma_width, chroma_height),
+        ],
+        PixelLayout::I422 => [
+            (context.frame_width, context.frame_height),
+            (chroma_width, context.frame_height),
+            (chroma_width, context.frame_height),
+        ],
+        PixelLayout::I444 => [
+            (context.frame_width, context.frame_height),
+            (context.frame_width, context.frame_height),
+            (context.frame_width, context.frame_height),
+        ],
+    };
+    for (plane, restoration_type) in context.restoration_types.iter().enumerate() {
+        if restoration_type.is_none() {
+            continue;
+        }
+        let unit_log2 = if plane == 0 { luma_log2 } else { chroma_log2 };
+        let Some(unit_size) = 1_u32.checked_shl(unit_log2) else {
+            return false;
+        };
+        let Some(width_with_half) = dimensions[plane].0.checked_add(unit_size / 2) else {
+            return false;
+        };
+        let Some(height_with_half) = dimensions[plane].1.checked_add(unit_size / 2) else {
+            return false;
+        };
+        if (width_with_half >> unit_log2).max(1) != 1 || (height_with_half >> unit_log2).max(1) != 1
+        {
+            return false;
+        }
+    }
+    true
+}
+
+fn high_depth_lossless_intra_nonsuperres_restoration_supported(
+    context: &FirstBlockContext,
+) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
+    context.intra_frame && high_depth_lossless_nonsuperres_restoration_common(context, layout)
+}
+
+fn high_depth_lossless_inter_nonsuperres_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
+    if context.intra_frame
+        || !high_depth_lossless_nonsuperres_restoration_common(context, layout)
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.allow_warped_motion
+    {
+        return false;
+    }
+    inter_context.references.iter().all(|reference| {
+        reference.surface.validate().is_ok()
+            && reference.surface.depth.bits() == context.bit_depth
+            && reference.surface.layout == layout
+            && reference.surface.coded_width == context.frame_width
+            && reference.surface.upscaled_width == context.frame_width
+            && reference.surface.frame_height == context.frame_height
+            && !reference.scale.scaled
+            && matches!(
+                reference.global_motion.kind,
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
+            )
+    })
+}
+
 /// Color all-lossless frames share the canonical streamed coefficient state
 /// with lossy intra. Keeping this gate beside the lossy admission makes the
 /// tile walker, context publication, and private reconstruction raster common
@@ -15528,7 +15762,8 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
     ) else {
         return false;
     };
-    let active_restoration = lossless_intra_color_superres_restoration_supported(context);
+    let active_restoration = lossless_intra_color_superres_restoration_supported(context)
+        || high_depth_lossless_intra_nonsuperres_restoration_supported(context);
     let layout_supported = context.subsampling_x || !context.subsampling_y;
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
@@ -15576,7 +15811,8 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// legacy monochrome validator remains the fallback when this closed profile
 /// is not met.
 fn complete_streamed_lossless_monochrome_context(context: &FirstBlockContext) -> bool {
-    let active_restoration = lossless_intra_monochrome_superres_restoration_supported(context);
+    let active_restoration = lossless_intra_monochrome_superres_restoration_supported(context)
+        || high_depth_lossless_intra_nonsuperres_restoration_supported(context);
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let resize_geometry_supported = if context.superres_enabled {
@@ -16646,7 +16882,8 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             || high_depth_lossless_monochrome_superres_restoration_supported(
                 context,
                 inter_context,
-            );
+            )
+            || high_depth_lossless_inter_nonsuperres_restoration_supported(context, inter_context);
     let restoration_supported = (neutral_restoration && context.restoration_types == [None; 3])
         || active_high_depth_restoration;
     let superres_layout = context.superres_enabled
