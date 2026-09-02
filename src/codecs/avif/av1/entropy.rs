@@ -3278,9 +3278,10 @@ fn inter_single_transform_geometry_supported(block_size: BlockSize, layout: Pixe
 }
 
 /// Mode-0 lossy I420 leaves code one TX4X4 residual per luma cell while the
-/// chroma planes retain one maximum-size transform.  Keep the first grid
-/// tranche bounded to complete 8..=64px leaves: 4px axes need cross-leaf
-/// chroma ownership, and 128px axes use AV1's 64px chunk-major traversal.
+/// chroma planes retain one maximum-size transform. Keep the first grid
+/// tranche bounded to complete 8..=64px leaves and matched 8/10/12-bit
+/// samples: 4px axes need cross-leaf chroma ownership, and 128px axes use
+/// AV1's 64px chunk-major traversal.
 fn inter_lossy_only_4x4_grid_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3292,8 +3293,8 @@ fn inter_lossy_only_4x4_grid_geometry_supported(
 ) -> bool {
     !quantization.segment_lossless
         && layout == PixelLayout::I420
-        && bit_depth == 8
-        && quantization.sample_depth.bits() == 8
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 0
         && matches!(
             block_size,
@@ -4947,10 +4948,11 @@ fn decode_inter_transform_size(
             }
         }
         // The generic high-depth frame profile may carry TX_MODE_ONLY_4X4,
-        // but only the explicit wide mode-0 compositor above owns the
-        // 64-pixel chunk traversal. Do not let an unsupported small/non-wide
-        // high-depth lossy leaf fall through to a fabricated single TX4
-        // terminal; lossless grids remain admitted by their dedicated plan.
+        // but only the explicit wide, color, and bounded I420 mode-0
+        // compositors own their fixed-grid traversal. Do not let an
+        // unsupported small/non-wide high-depth lossy leaf fall through to a
+        // fabricated single TX4 terminal; lossless grids remain admitted by
+        // their dedicated plan.
         if !eight_bit && !lossless_grid_geometry {
             return Err(super::block::PortableUnavailable);
         }

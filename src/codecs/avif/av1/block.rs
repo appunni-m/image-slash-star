@@ -53501,7 +53501,8 @@ impl Lossy420Decoder {
         {
             (sampling == ChromaSampling::Subsampled420
                 && sampling == chroma_sampling
-                && tools.sample_depth == SampleDepth::EIGHT
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 0
                 && !quantization.segment_lossless
                 && lossy_only_4x4_grid_block_supported(block_size)
@@ -58479,7 +58480,8 @@ impl Lossy420Decoder {
             && (2..=LOSSLESS_GRID_EDGE_CAPACITY).contains(&(coded_height / 4))
             && raster.active_width == coded_width
             && raster.active_height == coded_height
-            && tools.sample_depth == SampleDepth::EIGHT
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.sample_depth == quantization.sample_depth
             && tools.transform_mode == 0
             && !quantization.segment_lossless)
             .then_some(())
