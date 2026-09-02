@@ -4764,8 +4764,14 @@ enum InterTransformPlan {
     },
     SplitB64x16,
     SplitB64x16Deep,
+    SplitB32x64Topology {
+        child_splits: [bool; 2],
+    },
     SplitB32x64,
     SplitB32x64Deep,
+    SplitB64x32Topology {
+        child_splits: [bool; 2],
+    },
     SplitB64x32,
     SplitB64x32Deep,
     SplitB64Deep,
@@ -5707,8 +5713,8 @@ fn decode_inter_transform_size(
             // A TX32x64 root split is followed by one TX32x32 split
             // decision for each row-stacked child. Preserve both decisions:
             // two false children are the existing shallow pair, two true
-            // children are the bounded TX16x16 grid, and a mixed tree is
-            // unsupported. Child zero changes child one's above-small
+            // children are the bounded TX16x16 grid, and a mixed tree keeps
+            // its exact child topology. Child zero changes child one's above-small
             // context because the child transforms are causally adjacent.
             let child_offsets = [(0_u32, 0_u32), (0, 8)];
             let mut child_splits = [false; 2];
@@ -5741,7 +5747,7 @@ fn decode_inter_transform_size(
                 return Ok(InterTransformPlan::SplitB32x64Deep);
             }
             if child_splits.iter().any(|split| *split) {
-                return Err(super::block::PortableUnavailable);
+                return Ok(InterTransformPlan::SplitB32x64Topology { child_splits });
             }
             return Ok(InterTransformPlan::SplitB32x64);
         }
@@ -5759,7 +5765,7 @@ fn decode_inter_transform_size(
             // decision for each column-stacked child. Preserve both
             // decisions: two false children are the existing shallow pair,
             // two true children are the bounded TX16x16 grid, and a mixed
-            // tree is unsupported. Child zero changes child one's left-small
+            // tree keeps its exact child topology. Child zero changes child one's left-small
             // context because the child transforms are causally adjacent.
             let child_offsets = [(0_u32, 0_u32), (8, 0)];
             let mut child_splits = [false; 2];
@@ -5792,7 +5798,7 @@ fn decode_inter_transform_size(
                 return Ok(InterTransformPlan::SplitB64x32Deep);
             }
             if child_splits.iter().any(|split| *split) {
-                return Err(super::block::PortableUnavailable);
+                return Ok(InterTransformPlan::SplitB64x32Topology { child_splits });
             }
             return Ok(InterTransformPlan::SplitB64x32);
         }
@@ -6217,6 +6223,8 @@ fn rect_topology_tx_cells(
         super::block::RectSplitTopology::B32x8 { .. } => (8, 2, false, 4, (1, 1), (2, 1)),
         super::block::RectSplitTopology::B16x64 { .. } => (4, 16, true, 8, (2, 2), (2, 3)),
         super::block::RectSplitTopology::B64x16 { .. } => (16, 4, false, 8, (2, 2), (3, 2)),
+        super::block::RectSplitTopology::B32x64 { .. } => (8, 16, true, 8, (2, 2), (3, 3)),
+        super::block::RectSplitTopology::B64x32 { .. } => (16, 8, false, 8, (2, 2), (3, 3)),
         super::block::RectSplitTopology::B16x32 { .. } => (4, 8, true, 4, (1, 1), (2, 2)),
         super::block::RectSplitTopology::B32x16 { .. } => (8, 4, false, 4, (1, 1), (2, 2)),
     };
@@ -6232,6 +6240,8 @@ fn rect_topology_tx_cells(
         | super::block::RectSplitTopology::B32x8 { child_splits }
         | super::block::RectSplitTopology::B16x64 { child_splits }
         | super::block::RectSplitTopology::B64x16 { child_splits }
+        | super::block::RectSplitTopology::B32x64 { child_splits }
+        | super::block::RectSplitTopology::B64x32 { child_splits }
         | super::block::RectSplitTopology::B16x32 { child_splits }
         | super::block::RectSplitTopology::B32x16 { child_splits } => child_splits,
     };
@@ -7227,6 +7237,12 @@ fn decode_inter_leaf(
         InterTransformPlan::SplitB64x16Topology { child_splits } => {
             Some(super::block::RectSplitTopology::B64x16 { child_splits })
         }
+        InterTransformPlan::SplitB32x64Topology { child_splits } => {
+            Some(super::block::RectSplitTopology::B32x64 { child_splits })
+        }
+        InterTransformPlan::SplitB64x32Topology { child_splits } => {
+            Some(super::block::RectSplitTopology::B64x32 { child_splits })
+        }
         InterTransformPlan::SplitB16x32Topology { child_splits } => {
             Some(super::block::RectSplitTopology::B16x32 { child_splits })
         }
@@ -7314,8 +7330,14 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB64x16 | InterTransformPlan::SplitB64x16Deep => {
                 (TxSize::Tx64x16, true, false, false, false)
             }
+            InterTransformPlan::SplitB32x64Topology { .. } => {
+                (TxSize::Tx32x64, true, false, false, false)
+            }
             InterTransformPlan::SplitB32x64 | InterTransformPlan::SplitB32x64Deep => {
                 (TxSize::Tx32x64, true, false, false, false)
+            }
+            InterTransformPlan::SplitB64x32Topology { .. } => {
+                (TxSize::Tx64x32, true, false, false, false)
             }
             InterTransformPlan::SplitB64x32 | InterTransformPlan::SplitB64x32Deep => {
                 (TxSize::Tx64x32, true, false, false, false)
@@ -7497,6 +7519,7 @@ fn decode_inter_leaf(
             | InterTransformPlan::SplitB16x64Topology { .. }
             | InterTransformPlan::SplitB16x64
             | InterTransformPlan::SplitB16x64Deep
+            | InterTransformPlan::SplitB32x64Topology { .. }
             | InterTransformPlan::SplitB32x64
             | InterTransformPlan::SplitB32x64Deep
     ) && layout == PixelLayout::I422;

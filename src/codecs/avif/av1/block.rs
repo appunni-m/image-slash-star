@@ -51854,6 +51854,8 @@ pub(super) enum RectSplitTopology {
     B32x8 { child_splits: [bool; 2] },
     B16x64 { child_splits: [bool; 2] },
     B64x16 { child_splits: [bool; 2] },
+    B32x64 { child_splits: [bool; 2] },
+    B64x32 { child_splits: [bool; 2] },
     B16x32 { child_splits: [bool; 2] },
     B32x16 { child_splits: [bool; 2] },
 }
@@ -51942,8 +51944,14 @@ enum InterTransformPlan {
     },
     SplitB64x16,
     SplitB64x16Deep,
+    SplitB32x64Topology {
+        child_splits: [bool; 2],
+    },
     SplitB32x64,
     SplitB32x64Deep,
+    SplitB64x32Topology {
+        child_splits: [bool; 2],
+    },
     SplitB64x32,
     SplitB64x32Deep,
     SplitB64Deep,
@@ -53104,6 +53112,16 @@ impl Lossy420Decoder {
             {
                 InterTransformPlan::SplitB64x16Topology { child_splits }
             }
+            BlockSize::B32x64
+                if let Some(RectSplitTopology::B32x64 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB32x64Topology { child_splits }
+            }
+            BlockSize::B64x32
+                if let Some(RectSplitTopology::B64x32 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB64x32Topology { child_splits }
+            }
             BlockSize::B32x8 if deep_rect => InterTransformPlan::SplitB32x8Deep,
             BlockSize::B32x8 => InterTransformPlan::SplitB32x8,
             BlockSize::B16x64 if deep_rect => InterTransformPlan::SplitB16x64Deep,
@@ -53263,6 +53281,16 @@ impl Lossy420Decoder {
                 if let Some(RectSplitTopology::B64x16 { child_splits }) = rect_topology =>
             {
                 InterTransformPlan::SplitB64x16Topology { child_splits }
+            }
+            BlockSize::B32x64
+                if let Some(RectSplitTopology::B32x64 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB32x64Topology { child_splits }
+            }
+            BlockSize::B64x32
+                if let Some(RectSplitTopology::B64x32 { child_splits }) = rect_topology =>
+            {
+                InterTransformPlan::SplitB64x32Topology { child_splits }
             }
             BlockSize::B32x8 if deep_rect => InterTransformPlan::SplitB32x8Deep,
             BlockSize::B32x8 => InterTransformPlan::SplitB32x8,
@@ -54102,8 +54130,16 @@ impl Lossy420Decoder {
         );
         let split_b64x16 = matches!(transform_plan, InterTransformPlan::SplitB64x16);
         let split_b64x16_deep = matches!(transform_plan, InterTransformPlan::SplitB64x16Deep);
+        let split_b32x64_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB32x64Topology { .. }
+        );
         let split_b32x64 = matches!(transform_plan, InterTransformPlan::SplitB32x64);
         let split_b32x64_deep = matches!(transform_plan, InterTransformPlan::SplitB32x64Deep);
+        let split_b64x32_topology = matches!(
+            transform_plan,
+            InterTransformPlan::SplitB64x32Topology { .. }
+        );
         let split_b64x32 = matches!(transform_plan, InterTransformPlan::SplitB64x32);
         let split_b64x32_deep = matches!(transform_plan, InterTransformPlan::SplitB64x32Deep);
         let split_b64_deep = matches!(transform_plan, InterTransformPlan::SplitB64Deep);
@@ -54189,6 +54225,10 @@ impl Lossy420Decoder {
                     )
                     | (BlockSize::B16x64, InterTransformPlan::SplitB16x64)
                     | (BlockSize::B16x64, InterTransformPlan::SplitB16x64Deep)
+                    | (
+                        BlockSize::B32x64,
+                        InterTransformPlan::SplitB32x64Topology { .. }
+                    )
                     | (BlockSize::B32x64, InterTransformPlan::SplitB32x64)
                     | (BlockSize::B32x64, InterTransformPlan::SplitB32x64Deep)
             );
@@ -55205,8 +55245,10 @@ impl Lossy420Decoder {
             || split_b64x16_topology
             || split_b64x16
             || split_b64x16_deep
+            || split_b32x64_topology
             || split_b32x64
             || split_b32x64_deep
+            || split_b64x32_topology
             || split_b64x32
             || split_b64x32_deep
             || split_b64_deep
@@ -55312,8 +55354,10 @@ impl Lossy420Decoder {
                 || (split_b64x16_topology && exact_b64x16)
                 || (split_b64x16 && exact_b64x16)
                 || (split_b64x16_deep && exact_b64x16)
+                || (split_b32x64_topology && exact_b32x64)
                 || (split_b32x64 && exact_b32x64)
                 || (split_b32x64_deep && exact_b32x64)
+                || (split_b64x32_topology && exact_b64x32)
                 || (split_b64x32 && exact_b64x32)
                 || (split_b64x32_deep && exact_b64x32)
                 || (split_b64_deep && exact_b64)
@@ -55376,8 +55420,10 @@ impl Lossy420Decoder {
                     && !split_b64x16_topology
                     && !split_b64x16
                     && !split_b64x16_deep
+                    && !split_b32x64_topology
                     && !split_b32x64
                     && !split_b32x64_deep
+                    && !split_b64x32_topology
                     && !split_b64x32
                     && !split_b64x32_deep
                     && !split_b64_deep
@@ -55432,8 +55478,10 @@ impl Lossy420Decoder {
                     && !split_b64x16_topology
                     && !split_b64x16
                     && !split_b64x16_deep
+                    && !split_b32x64_topology
                     && !split_b32x64
                     && !split_b32x64_deep
+                    && !split_b64x32_topology
                     && !split_b64x32
                     && !split_b64x32_deep
                     && !split_b64_deep
@@ -55630,6 +55678,32 @@ impl Lossy420Decoder {
                     .then_some(())
                     .portable()?;
             }
+            if split_b32x64_topology || split_b64x32_topology {
+                let child_splits = match transform_plan {
+                    InterTransformPlan::SplitB32x64Topology { child_splits }
+                    | InterTransformPlan::SplitB64x32Topology { child_splits } => child_splits,
+                    _ => return Err(PortableUnavailable),
+                };
+                let any_child_split = child_splits.into_iter().any(|split| split);
+                let all_children_split = child_splits.into_iter().all(|split| split);
+                (matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                ) && ((split_b32x64_topology && exact_b32x64)
+                    || (split_b64x32_topology && exact_b64x32))
+                    && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                    && tools.sample_depth == quantization.sample_depth
+                    && tools.transform_mode == 2
+                    && quantization.segment_qindex > 0
+                    && !quantization.segment_lossless
+                    && any_child_split
+                    && !all_children_split)
+                    .then_some(())
+                    .portable()?;
+            }
         }
         let (luma_tx_size, luma_txb_skipped, mut luma_transform) = match transform_plan {
             InterTransformPlan::Single {
@@ -55684,12 +55758,18 @@ impl Lossy420Decoder {
             InterTransformPlan::SplitB64x16Deep => {
                 (TxSize::Tx64x16, false, Av1TransformType::DctDct)
             }
+            InterTransformPlan::SplitB32x64Topology { .. } => {
+                (TxSize::Tx32x64, false, Av1TransformType::DctDct)
+            }
             InterTransformPlan::SplitB32x64 => (TxSize::Tx32x64, false, Av1TransformType::DctDct),
             InterTransformPlan::SplitB32x64Deep => {
                 (TxSize::Tx32x64, false, Av1TransformType::DctDct)
             }
             InterTransformPlan::SplitB64x32 => (TxSize::Tx64x32, false, Av1TransformType::DctDct),
             InterTransformPlan::SplitB64x32Deep => {
+                (TxSize::Tx64x32, false, Av1TransformType::DctDct)
+            }
+            InterTransformPlan::SplitB64x32Topology { .. } => {
                 (TxSize::Tx64x32, false, Av1TransformType::DctDct)
             }
             InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, false, Av1TransformType::DctDct),
@@ -55831,7 +55911,9 @@ impl Lossy420Decoder {
             || split_b64x32_deep)
             && chroma_sampling == ChromaSampling::Full;
         let split_rect64_i444_topology_chroma_grid = (split_b16x64_topology
-            || split_b64x16_topology)
+            || split_b64x16_topology
+            || split_b32x64_topology
+            || split_b64x32_topology)
             && chroma_sampling == ChromaSampling::Full;
         if let Some(chroma_tx) = chroma_tx {
             let (tx_chroma_width, tx_chroma_height) = chroma_tx.pixel_dimensions();
@@ -56228,13 +56310,24 @@ impl Lossy420Decoder {
                 luma_rect_split_transforms = Some(split_transforms);
                 continue;
             }
-            if (split_b16x64_topology || split_b64x16_topology) && plane == 0 {
+            if (split_b16x64_topology
+                || split_b64x16_topology
+                || split_b32x64_topology
+                || split_b64x32_topology)
+                && plane == 0
+            {
                 let topology = match transform_plan {
                     InterTransformPlan::SplitB16x64Topology { child_splits } => {
                         RectSplitTopology::B16x64 { child_splits }
                     }
                     InterTransformPlan::SplitB64x16Topology { child_splits } => {
                         RectSplitTopology::B64x16 { child_splits }
+                    }
+                    InterTransformPlan::SplitB32x64Topology { child_splits } => {
+                        RectSplitTopology::B32x64 { child_splits }
+                    }
+                    InterTransformPlan::SplitB64x32Topology { child_splits } => {
+                        RectSplitTopology::B64x32 { child_splits }
                     }
                     _ => return Err(PortableUnavailable),
                 };
@@ -56255,11 +56348,12 @@ impl Lossy420Decoder {
                 luma_transform_split = true;
                 luma_split_tx_size = Some(TxSize::Tx16x16);
                 luma_transform = grid_transforms[0][0];
-                luma_rect_split_transforms = Some(if split_b16x64_topology {
-                    [grid_transforms[0][0], grid_transforms[2][0]]
-                } else {
-                    [grid_transforms[0][0], grid_transforms[0][2]]
-                });
+                luma_rect_split_transforms =
+                    Some(if split_b16x64_topology || split_b32x64_topology {
+                        [grid_transforms[0][0], grid_transforms[2][0]]
+                    } else {
+                        [grid_transforms[0][0], grid_transforms[0][2]]
+                    });
                 luma_deep_rect_grid_transforms = Some(grid_transforms);
                 continue;
             }
@@ -56858,7 +56952,7 @@ impl Lossy420Decoder {
                 let chroma_tx = chroma_tx.ok_or(PortableUnavailable)?;
                 let projected = std::array::from_fn(|row| {
                     std::array::from_fn(|column| {
-                        if split_b16x64_topology {
+                        if split_b16x64_topology || split_b32x64_topology {
                             luma_transforms[row.min(1) * 2][0]
                         } else {
                             luma_transforms[0][column.min(1) * 2]
@@ -56941,6 +57035,11 @@ impl Lossy420Decoder {
                     let transforms = luma_deep_rect_grid_transforms.ok_or(PortableUnavailable)?;
                     Tx4ChromaTransformSource::VerticalQuad(std::array::from_fn(|row| {
                         transforms[row][0]
+                    }))
+                } else if split_b32x64_topology {
+                    let transforms = luma_deep_rect_grid_transforms.ok_or(PortableUnavailable)?;
+                    Tx4ChromaTransformSource::Grid2x4(std::array::from_fn(|row| {
+                        [transforms[row][0], transforms[row][1]]
                     }))
                 } else if split_b32x64_deep {
                     let transforms = luma_deep_rect_grid_transforms.ok_or(PortableUnavailable)?;
@@ -57154,7 +57253,12 @@ impl Lossy420Decoder {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if split_b64_deep && plane != 0 {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
-                } else if (split_b32x64_deep || split_b64x32_deep) && plane != 0 {
+                } else if (split_b32x64_deep
+                    || split_b64x32_deep
+                    || split_b32x64_topology
+                    || split_b64x32_topology)
+                    && plane != 0
+                {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
                 } else if (split_b16x32_deep
                     || split_b32x16_deep
@@ -58603,7 +58707,9 @@ impl Lossy420Decoder {
             | RectSplitTopology::B8x16 { .. }
             | RectSplitTopology::B16x8 { .. }
             | RectSplitTopology::B16x64 { .. }
-            | RectSplitTopology::B64x16 { .. } => {
+            | RectSplitTopology::B64x16 { .. }
+            | RectSplitTopology::B32x64 { .. }
+            | RectSplitTopology::B64x32 { .. } => {
                 return Err(PortableUnavailable);
             }
         };
@@ -58995,6 +59101,12 @@ impl Lossy420Decoder {
             RectSplitTopology::B64x16 { child_splits } => {
                 (64_usize, 16_usize, child_splits, false, TxSize::Tx32x16)
             }
+            RectSplitTopology::B32x64 { child_splits } => {
+                (32_usize, 64_usize, child_splits, true, TxSize::Tx32x32)
+            }
+            RectSplitTopology::B64x32 { child_splits } => {
+                (64_usize, 32_usize, child_splits, false, TxSize::Tx32x32)
+            }
             RectSplitTopology::B4x16 { .. }
             | RectSplitTopology::B16x4 { .. }
             | RectSplitTopology::B8x16 { .. }
@@ -59034,7 +59146,10 @@ impl Lossy420Decoder {
                     child_cell_height,
                     child_tx_size,
                 ),
-                (16, 64, 16, 32, 4, 8, TxSize::Tx16x32) | (64, 16, 32, 16, 8, 4, TxSize::Tx32x16)
+                (16, 64, 16, 32, 4, 8, TxSize::Tx16x32)
+                    | (64, 16, 32, 16, 8, 4, TxSize::Tx32x16)
+                    | (32, 64, 32, 32, 8, 8, TxSize::Tx32x32)
+                    | (64, 32, 32, 32, 8, 8, TxSize::Tx32x32)
             )
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
