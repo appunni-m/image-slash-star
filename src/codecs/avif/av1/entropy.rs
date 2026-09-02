@@ -4725,7 +4725,9 @@ enum InterTransformPlan {
     SplitB4x8,
     SplitB8x4,
     SplitB4x16,
+    SplitB4x16Deep,
     SplitB16x4,
+    SplitB16x4Deep,
     SplitB8x16,
     SplitB8x16Deep,
     SplitB16x8,
@@ -5257,7 +5259,8 @@ fn decode_inter_transform_size(
             && block_size == BlockSize::B4x16
             && max_tx == TxSize::Tx4x16
         {
-            for offset_y in [0_u32, 2] {
+            let mut child_splits = [false; 2];
+            for (index, offset_y) in [0_u32, 2].into_iter().enumerate() {
                 let child_x = node.x;
                 let child_y = node
                     .y
@@ -5269,9 +5272,14 @@ fn decode_inter_transform_size(
                     .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                     .is_some_and(|(_, tx_height)| tx_height < 1);
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
-                    return Err(super::block::PortableUnavailable);
-                }
+                child_splits[index] =
+                    decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
+            }
+            if child_splits == [true; 2] {
+                return Ok(InterTransformPlan::SplitB4x16Deep);
+            }
+            if child_splits.iter().any(|split| *split) {
+                return Err(super::block::PortableUnavailable);
             }
             return Ok(InterTransformPlan::SplitB4x16);
         }
@@ -5282,7 +5290,8 @@ fn decode_inter_transform_size(
             && block_size == BlockSize::B16x4
             && max_tx == TxSize::Tx16x4
         {
-            for offset_x in [0_u32, 2] {
+            let mut child_splits = [false; 2];
+            for (index, offset_x) in [0_u32, 2].into_iter().enumerate() {
                 let child_x = node
                     .x
                     .checked_add(offset_x)
@@ -5294,9 +5303,14 @@ fn decode_inter_transform_size(
                     .is_some_and(|(tx_width, _)| tx_width < 1);
                 let left_small = false;
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
-                    return Err(super::block::PortableUnavailable);
-                }
+                child_splits[index] =
+                    decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
+            }
+            if child_splits == [true; 2] {
+                return Ok(InterTransformPlan::SplitB16x4Deep);
+            }
+            if child_splits.iter().any(|split| *split) {
+                return Err(super::block::PortableUnavailable);
             }
             return Ok(InterTransformPlan::SplitB16x4);
         }
@@ -6967,7 +6981,9 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB4x8 => (TxSize::Tx4x8, true, false, false, false),
             InterTransformPlan::SplitB8x4 => (TxSize::Tx8x4, true, false, false, false),
             InterTransformPlan::SplitB4x16 => (TxSize::Tx4x16, true, false, false, false),
+            InterTransformPlan::SplitB4x16Deep => (TxSize::Tx4x16, true, false, false, false),
             InterTransformPlan::SplitB16x4 => (TxSize::Tx16x4, true, false, false, false),
+            InterTransformPlan::SplitB16x4Deep => (TxSize::Tx16x4, true, false, false, false),
             InterTransformPlan::SplitB8x16 => (TxSize::Tx8x16, true, false, false, false),
             InterTransformPlan::SplitB8x16Deep => (TxSize::Tx8x16, true, false, false, false),
             InterTransformPlan::SplitB16x8 => (TxSize::Tx16x8, true, false, false, false),
@@ -7395,7 +7411,10 @@ fn decode_inter_leaf(
                 matches!(transform_plan, InterTransformPlan::SplitB64Deep),
                 matches!(
                     transform_plan,
-                    InterTransformPlan::SplitB8x16Deep | InterTransformPlan::SplitB16x8Deep
+                    InterTransformPlan::SplitB4x16Deep
+                        | InterTransformPlan::SplitB16x4Deep
+                        | InterTransformPlan::SplitB8x16Deep
+                        | InterTransformPlan::SplitB16x8Deep
                 ),
                 b64_topology,
             )
@@ -7418,7 +7437,10 @@ fn decode_inter_leaf(
                 matches!(transform_plan, InterTransformPlan::SplitB64Deep),
                 matches!(
                     transform_plan,
-                    InterTransformPlan::SplitB8x16Deep | InterTransformPlan::SplitB16x8Deep
+                    InterTransformPlan::SplitB4x16Deep
+                        | InterTransformPlan::SplitB16x4Deep
+                        | InterTransformPlan::SplitB8x16Deep
+                        | InterTransformPlan::SplitB16x8Deep
                 ),
                 b64_topology,
                 obmc,
