@@ -41446,6 +41446,80 @@ fn reconstruct_lossy_full_4x8_chroma(
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact Vertical4x8 chroma path carries normalized edges, availability, filtering, and residual state"
+)]
+fn reconstruct_lossy_full_4x8_chroma_normalized_target(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    top: [u16; 4],
+    left: [u16; 8],
+    bottom_left: Option<[u16; 4]>,
+    top_left: Option<u16>,
+    has_left: bool,
+    coefficients: Option<Lossy4x8TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    match predictor {
+        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (0 < angle && angle < 90).then_some(()).portable()?;
+        }
+        ChromaPredictor::Diagonal203 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (180 < angle && angle < 270).then_some(()).portable()?;
+        }
+        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        _ => return Err(PortableUnavailable),
+    }
+
+    let mut left_edge = [0_u16; 12];
+    left_edge[..8].copy_from_slice(&left);
+    let have_below_left = if let Some(extension) = bottom_left {
+        left_edge[8..].copy_from_slice(&extension);
+        true
+    } else {
+        false
+    };
+    let left_edge = if have_below_left {
+        &left_edge[..]
+    } else {
+        &left_edge[..8]
+    };
+    let edges = FullIntraPlaneEdges::prepare(
+        4,
+        8,
+        SampleDepth::EIGHT,
+        &top,
+        left_edge,
+        top_left,
+        true,
+        has_left,
+        false,
+        have_below_left,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 32];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        4,
+        8,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    Ok(reconstruct_lossy_luma_4x8_from_prediction(
+        prediction,
+        coefficients,
+        chroma_rect_transform_kind(predictor),
+    ))
+}
+
 /// Reconstruct a 4×8 full-resolution chroma transform with CFL.
 ///
 /// Full-sampling CFL has one luma sample for each chroma sample, so the
@@ -58866,12 +58940,12 @@ impl Lossy420Decoder {
             let [luma_for_chroma, chroma_u, chroma_v] = &mut leaf.planes;
             for (plane_index, chroma) in [chroma_u, chroma_v].into_iter().enumerate() {
                 let plane = plane_index.saturating_add(1);
-                let top = bottom_edge_4_for_4x8(&above_left.planes[plane]);
-                let left = left_neighbor.as_ref().map_or([top[0]; 8], |neighbor| {
-                    right_edge_for_4x8(&neighbor.planes[plane])
-                });
                 *chroma = match syntax.chroma_predictor {
                     ChromaPredictor::Cfl { alpha_u, alpha_v } => {
+                        let top = bottom_edge_4_for_4x8(&above_left.planes[plane]);
+                        let left = left_neighbor.as_ref().map_or([top[0]; 8], |neighbor| {
+                            right_edge_for_4x8(&neighbor.planes[plane])
+                        });
                         let alpha = if plane == 1 { alpha_u } else { alpha_v };
                         reconstruct_lossy_full_4x8_cfl(
                             luma_for_chroma,
@@ -58880,17 +58954,99 @@ impl Lossy420Decoder {
                             syntax.lossy_chroma_8x4_coefficients[plane - 1],
                         )?
                     }
-                    _ => reconstruct_lossy_full_4x8_chroma(
-                        syntax.chroma_predictor,
-                        syntax.chroma_angle,
-                        top,
-                        left,
-                        left_neighbor.as_ref().map_or(top[0], |neighbor| {
-                            right_edge_for_4x8(&neighbor.planes[plane])[7]
-                        }),
-                        left_neighbor.is_some(),
-                        syntax.lossy_chroma_8x4_coefficients[plane - 1],
-                    )?,
+                    ChromaPredictor::Diagonal45
+                    | ChromaPredictor::Diagonal67
+                    | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::SmoothVertical
+                    | ChromaPredictor::SmoothHorizontal => {
+                        let top = positioned_top_edge::<4>(
+                            plane,
+                            neighbors.above_left,
+                            neighbors.above_left_x_offset,
+                            neighbors.above_right,
+                            neighbors.above_right_x_offset,
+                        )
+                        .ok_or(PortableUnavailable)?;
+                        let left_chroma = neighbors.left_chroma.and_then(|neighbor| {
+                            checked_right_edge_at::<8>(
+                                &neighbor.planes[plane],
+                                neighbor.width,
+                                neighbor.height,
+                                neighbors.left_chroma_y_offset,
+                            )
+                        });
+                        let left_fallback = neighbors.left.and_then(|neighbor| {
+                            checked_right_edge_at::<8>(
+                                &neighbor.planes[plane],
+                                neighbor.width,
+                                neighbor.height,
+                                neighbors.left_y_offset,
+                            )
+                        });
+                        let selected_left = left_chroma.or(left_fallback);
+                        let left_owner_present =
+                            neighbors.left_chroma.is_some() || neighbors.left.is_some();
+                        if left_owner_present && selected_left.is_none() {
+                            return Err(PortableUnavailable);
+                        }
+                        let has_left = selected_left.is_some();
+                        let left = selected_left.unwrap_or([top[0]; 8]);
+                        let top_left = if has_left {
+                            Some(
+                                full_resolution_chroma_top_left(&neighbors, plane)
+                                    .ok_or(PortableUnavailable)?,
+                            )
+                        } else {
+                            None
+                        };
+                        let bottom_left =
+                            if matches!(syntax.chroma_predictor, ChromaPredictor::Diagonal203) {
+                                let continuation = neighbors.left_chroma_bottom[plane - 1];
+                                if continuation.is_some() && !has_left {
+                                    return Err(PortableUnavailable);
+                                }
+                                continuation
+                            } else {
+                                None
+                            };
+                        let left_chroma_mode = neighbors
+                            .left_chroma
+                            .or(neighbors.left_luma_top)
+                            .or(neighbors.left)
+                            .and_then(|neighbor| neighbor.chroma_predictor);
+                        let smooth_chroma_edges =
+                            is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
+                                || is_smooth_chroma_predictor(left_chroma_mode);
+                        reconstruct_lossy_full_4x8_chroma_normalized_target(
+                            syntax.chroma_predictor,
+                            syntax.chroma_angle,
+                            top,
+                            left,
+                            bottom_left,
+                            top_left,
+                            has_left,
+                            syntax.lossy_chroma_8x4_coefficients[plane - 1],
+                            tools.enable_intra_edge_filter,
+                            smooth_chroma_edges,
+                        )?
+                    }
+                    _ => {
+                        let top = bottom_edge_4_for_4x8(&above_left.planes[plane]);
+                        let left = left_neighbor.as_ref().map_or([top[0]; 8], |neighbor| {
+                            right_edge_for_4x8(&neighbor.planes[plane])
+                        });
+                        reconstruct_lossy_full_4x8_chroma(
+                            syntax.chroma_predictor,
+                            syntax.chroma_angle,
+                            top,
+                            left,
+                            left_neighbor.as_ref().map_or(top[0], |neighbor| {
+                                right_edge_for_4x8(&neighbor.planes[plane])[7]
+                            }),
+                            left_neighbor.is_some(),
+                            syntax.lossy_chroma_8x4_coefficients[plane - 1],
+                        )?
+                    }
                 };
             }
             return Ok(visible(leaf));
