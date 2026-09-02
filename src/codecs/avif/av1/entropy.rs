@@ -11177,8 +11177,9 @@ fn high_depth_lossy_i420_superres_restoration_supported(
 /// keep restoration on that same exact geometry and leave loop/CDEF inactive
 /// until their I422 boundary metadata has independent parity evidence.
 /// Screen-enabled I422 intra leaves may use depth-aware Y16x16/U/V8x16 palette
-/// prediction; inter leaves use parsed force-integer MV precision. IntraBC and
-/// intra/palette blocks within inter frames remain outside the profile;
+/// prediction; inter leaves use parsed force-integer MV precision and may
+/// blend coded-resolution inter-intra before residual reconstruction. IntraBC
+/// and intra/palette blocks within inter frames remain outside the profile;
 /// restoration consumes completed samples.
 fn bounded_i422_restoration_common(
     context: &FirstBlockContext,
@@ -11264,7 +11265,6 @@ fn complete_bounded_i422_restoration_inter_reconstruction_context(
         && bounded_i422_restoration_common(context, quantization)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
