@@ -12800,6 +12800,205 @@ fn lossy_luma_16x4_1d_low_context(
     Ok((low_context, high_magnitude))
 }
 
+fn decode_lossy_luma_4x16_1d_coefficients(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut BlockCdfs,
+    quantization: LossyQuantization,
+    eob_bin: u32,
+    dc_sign_context: usize,
+    vertical: bool,
+) -> PortableResult<(Lossy4x16TransformCoefficients, u8)> {
+    // RTX_4X16 uses the same 64-coefficient one-dimensional CDF sentence as
+    // RTX_16X4. The reference decoder keeps both classes on a sixteen-byte
+    // level stride; the wider 16x18 scratch also supplies the guard rows
+    // required by the H-class view.
+    if eob_bin == 0 {
+        let eob_base = decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_base[0], 2);
+        let token = if eob_base == 2 {
+            decode_high_token(decoder, &mut cdfs.lossy_luma_8x8_high_tokens[0])
+        } else {
+            eob_base.saturating_add(1)
+        };
+        let negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
+        let mut coefficients = [0_i32; 64];
+        let (coefficient, token) = dequantize_lossy_coefficient_with_token_without_matrix(
+            decoder,
+            token,
+            negative,
+            0,
+            quantization,
+        )?;
+        coefficients[0] = coefficient;
+        return Ok((
+            coefficients,
+            lossy_coefficient_residual_context(token, token, negative),
+        ));
+    }
+
+    let eob = if eob_bin > 1 {
+        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let high_bit = u32::from(
+            decoder.adaptive_bool(
+                cdfs.lossy_luma_8x8_eob_high
+                    .get_mut(eob_bin_index)
+                    .portable()?,
+            ),
+        );
+        (high_bit | 2)
+            .checked_shl(eob_bin.saturating_sub(2))
+            .unwrap_or(0)
+            | decoder.bits(eob_bin.saturating_sub(2))
+    } else {
+        eob_bin
+    };
+    let eob = usize::try_from(eob)
+        .ok()
+        .filter(|&eob| (1..64).contains(&eob))
+        .portable()?;
+    let eob_context = 1_usize
+        .saturating_add(usize::from(eob > 8))
+        .saturating_add(usize::from(eob > 16));
+    let eob_base = decoder.adaptive_symbol(
+        cdfs.lossy_luma_8x8_eob_base
+            .get_mut(eob_context)
+            .portable()?,
+        2,
+    );
+
+    let mut tokens = [0_u32; 64];
+    let mut levels = [0_u8; LOSSY_LUMA_16X4_1D_LEVELS];
+    let mut nonzero_positions = [0_usize; 63];
+    let mut nonzero_count = 0_usize;
+    let coordinate = |position: usize| {
+        if vertical {
+            // TX_CLASS_V: slw = 0, slh = 2. The source stores the vertical
+            // one-dimensional sentence column-major as y + 16*x.
+            let x = position & 3;
+            let y = position >> 2;
+            (x, y, x.saturating_mul(16).saturating_add(y))
+        } else {
+            // TX_CLASS_H: the source transposes the rectangle before coding,
+            // so x spans sixteen positions while rc remains the scan index.
+            let x = position & 15;
+            let y = position >> 4;
+            (x, y, position)
+        }
+    };
+    let level_index = |x: usize, y: usize| {
+        x.checked_mul(LOSSY_LUMA_16X4_1D_LEVEL_STRIDE)
+            .and_then(|index| index.checked_add(y))
+            .filter(|&index| index < LOSSY_LUMA_16X4_1D_LEVELS)
+            .portable()
+    };
+
+    let (eob_x, eob_y, eob_rc) = coordinate(eob);
+    let eob_token = if eob_base == 2 {
+        let high_context = if eob_y != 0 { 14 } else { 7 };
+        decode_high_token(
+            decoder,
+            cdfs.lossy_luma_8x8_high_tokens
+                .get_mut(high_context)
+                .portable()?,
+        )
+    } else {
+        eob_base.saturating_add(1)
+    };
+    tokens[eob_rc] = eob_token;
+    let eob_level = if eob_base == 2 {
+        eob_token.saturating_add(192)
+    } else {
+        u32::from(lossy_luma_level_token(eob_token)?)
+    };
+    *levels.get_mut(level_index(eob_x, eob_y)?).portable()? =
+        u8::try_from(eob_level).map_err(|_| PortableUnavailable)?;
+    nonzero_positions[nonzero_count] = eob_rc;
+    nonzero_count = nonzero_count.saturating_add(1);
+
+    for scan_index in (1..eob).rev() {
+        let (x, y, rc) = coordinate(scan_index);
+        let (low_context, high_magnitude) = lossy_luma_16x4_1d_low_context(&levels, x, y)?;
+        let base_token = decoder.adaptive_symbol(
+            cdfs.lossy_luma_8x8_base_1d
+                .get_mut(low_context)
+                .portable()?,
+            3,
+        );
+        let token = if base_token == 3 {
+            let high_context = (if y != 0 { 14_usize } else { 7 })
+                .saturating_add(coefficient_high_context(high_magnitude));
+            decode_high_token(
+                decoder,
+                cdfs.lossy_luma_8x8_high_tokens
+                    .get_mut(high_context)
+                    .portable()?,
+            )
+        } else {
+            base_token
+        };
+        tokens[rc] = token;
+        let level = if base_token == 3 {
+            token.saturating_add(192)
+        } else {
+            u32::from(lossy_luma_level_token(base_token)?)
+        };
+        *levels.get_mut(level_index(x, y)?).portable()? =
+            u8::try_from(level).map_err(|_| PortableUnavailable)?;
+        if token != 0 {
+            *nonzero_positions.get_mut(nonzero_count).portable()? = rc;
+            nonzero_count = nonzero_count.saturating_add(1);
+        }
+    }
+
+    let (dc_low_context, dc_magnitude) = lossy_luma_16x4_1d_low_context(&levels, 0, 0)?;
+    let dc_base = decoder.adaptive_symbol(
+        cdfs.lossy_luma_8x8_base_1d
+            .get_mut(dc_low_context)
+            .portable()?,
+        3,
+    );
+    let dc_token = if dc_base == 3 {
+        decode_high_token(
+            decoder,
+            cdfs.lossy_luma_8x8_high_tokens
+                .get_mut(coefficient_high_context(dc_magnitude))
+                .portable()?,
+        )
+    } else {
+        dc_base
+    };
+    let mut coefficients = [0_i32; 64];
+    let mut coefficient_magnitude = 0_u32;
+    let mut dc_negative = false;
+    if dc_token != 0 {
+        dc_negative = decoder.adaptive_bool(&mut cdfs.dc_sign[0][dc_sign_context]);
+        let (coefficient, token) = dequantize_lossy_coefficient_with_token_without_matrix(
+            decoder,
+            dc_token,
+            dc_negative,
+            0,
+            quantization,
+        )?;
+        coefficients[0] = coefficient;
+        coefficient_magnitude = coefficient_magnitude.saturating_add(token);
+    }
+    for &position in nonzero_positions[..nonzero_count].iter().rev() {
+        let negative = decoder.equal();
+        let (coefficient, token) = dequantize_lossy_coefficient_with_token_without_matrix(
+            decoder,
+            tokens[position],
+            negative,
+            position,
+            quantization,
+        )?;
+        coefficients[position] = coefficient;
+        coefficient_magnitude = coefficient_magnitude.saturating_add(token);
+    }
+    Ok((
+        coefficients,
+        lossy_coefficient_residual_context(coefficient_magnitude, dc_token, dc_negative),
+    ))
+}
+
 fn decode_lossy_luma_8x4_1d_coefficients(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     cdfs: &mut BlockCdfs,
@@ -18295,16 +18494,42 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
             6 => Lossy4x8TransformKind::DctAdst,
             _ => return Err(PortableUnavailable),
         };
-        let coefficients = decode_lossy_luma_4x16_coefficients(
-            decoder,
-            cdfs,
-            quantization,
-            coefficient_dc_sign_context_for_grid(
-                TransformGrid::Vertical4x16,
-                &above_luma_contexts,
-                &left_luma_contexts,
-            ),
-        )?;
+        let one_dimensional = matches!(transform_type, 2 | 3);
+        let dc_sign_context = coefficient_dc_sign_context_for_grid(
+            TransformGrid::Vertical4x16,
+            &above_luma_contexts,
+            &left_luma_contexts,
+        );
+        if one_dimensional {
+            let eob_bin = decoder.adaptive_symbol(&mut cdfs.lossy_luma_8x8_eob_bin_1d, 6);
+            let (coefficients, residual_context) = decode_lossy_luma_4x16_1d_coefficients(
+                decoder,
+                cdfs,
+                quantization,
+                eob_bin,
+                dc_sign_context,
+                transform_type == 2,
+            )?;
+            cdfs.last_lossy_luma_residual_context = Some(residual_context);
+            return Ok((
+                [[0_i32; 16]; 64],
+                Some(coefficients),
+                None,
+                None,
+                None,
+                Some(transform_kind),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+        let coefficients =
+            decode_lossy_luma_4x16_coefficients(decoder, cdfs, quantization, dc_sign_context)?;
         return Ok((
             [[0_i32; 16]; 64],
             Some(coefficients),
