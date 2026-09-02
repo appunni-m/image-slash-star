@@ -4679,6 +4679,33 @@ fn inter_high_depth_subsampled_b4x4_mode2_geometry_supported(
         && inter_single_transform_geometry_supported(node.block_size, layout)
 }
 
+/// Exact high-depth mode-1 I422 B4x4 terminals.  Mode 1 has no transform
+/// partition; each luma block is one TX4x4 terminal, while the odd absolute
+/// MI-column owner carries one aligned TX4x4 U/V terminal.  Keep the visible
+/// frame wide enough for that paired owner so the standalone 4x4 color
+/// special case cannot disagree with the ordinary compositor parity rule.
+fn inter_high_depth_i422_b4x4_mode1_geometry_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    node: PartitionNode,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    quantization: super::block::LossyQuantization,
+) -> bool {
+    matches!(context.bit_depth, 10 | 12)
+        && complete_high_depth_inter_reconstruction_context(context, inter_context)
+        && layout == PixelLayout::I422
+        && node.block_size == BlockSize::B4x4
+        && (visible_width, visible_height) == (4, 4)
+        && context.frame_width >= 8
+        && context.frame_width.is_multiple_of(8)
+        && context.frame_tools.transform_mode == 1
+        && !quantization.segment_lossless
+        && quantization.sample_depth.bits() == context.bit_depth
+        && inter_single_transform_geometry_supported(node.block_size, layout)
+}
+
 /// Exact mode-2 split geometry for the narrow 4:2:2 leaves whose luma axis is
 /// four pixels wide. The luma transform partition is decoded for both
 /// horizontal siblings; only the odd-column sibling owns the shared chroma
@@ -8346,6 +8373,15 @@ fn decode_inter_leaf(
                 visible_height,
                 prepared_quantization.quantization,
             );
+        let tiny_high_depth_i422_b4x4_mode1 = inter_high_depth_i422_b4x4_mode1_geometry_supported(
+            context,
+            inter_context,
+            node,
+            layout,
+            visible_width,
+            visible_height,
+            prepared_quantization.quantization,
+        );
         let wide_lossy_geometry = lossy_wide_single_geometry
             || lossy_direct_chroma_grid_geometry
             || lossy_i444_rect_split_geometry
@@ -8361,6 +8397,7 @@ fn decode_inter_leaf(
             && !tiny_high_depth_i422
             && !tiny_high_depth_i420
             && !tiny_high_depth_subsampled_b4x4_mode2
+            && !tiny_high_depth_i422_b4x4_mode1
             && !lossy_i422_narrow_split_geometry
             && !lossy_i420_narrow_split_geometry
             && (!(minimum..=maximum).contains(&block_width)
