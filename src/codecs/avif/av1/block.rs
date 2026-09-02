@@ -53404,7 +53404,8 @@ impl Lossy420Decoder {
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 )
             ) && sampling == chroma_sampling
-                && tools.sample_depth == SampleDepth::EIGHT
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 0
                 && !quantization.segment_lossless
                 && (luma_width, luma_height) == block_size.pixel_dimensions())
@@ -58268,7 +58269,8 @@ impl Lossy420Decoder {
         (prediction.len() == coded_width.checked_mul(coded_height).portable()?
             && raster.active_width == coded_width
             && raster.active_height == coded_height
-            && tools.sample_depth == SampleDepth::EIGHT
+            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+            && tools.sample_depth == quantization.sample_depth
             && tools.transform_mode == 0
             && !quantization.segment_lossless
             && external_above.len() == 16
@@ -58460,7 +58462,7 @@ impl Lossy420Decoder {
             && external_above.len() == grid_width.checked_mul(8).portable()?
             && external_left.len() == grid_height.checked_mul(8).portable()?
             && tools.sample_depth == quantization.sample_depth
-            && (!mode0 || tools.sample_depth == SampleDepth::EIGHT)
+            && (!mode0 || matches!(tools.sample_depth.bits(), 8 | 10 | 12))
             && (mode0 || matches!(tools.sample_depth.bits(), 8 | 10 | 12))
             && tools.transform_mode
                 == if mode0 {
@@ -58717,7 +58719,7 @@ impl Lossy420Decoder {
             || (!deep16 && !split32 && topology.is_some()))
             && !(sampling == ChromaSampling::Subsampled422
                 && matches!((luma_width, luma_height), (64, 128)))
-            && (!mode0 || tools.sample_depth == SampleDepth::EIGHT)
+            && (!mode0 || matches!(tools.sample_depth.bits(), 8 | 10 | 12))
             && (mode0 || matches!(tools.sample_depth.bits(), 8 | 10 | 12))
             && tools.sample_depth == quantization.sample_depth
             && tools.transform_mode

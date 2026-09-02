@@ -3318,7 +3318,9 @@ fn inter_lossy_only_4x4_grid_geometry_supported(
 /// Exact mode-0 geometry for wide leaves whose luma residuals are a fixed
 /// TX4x4 grid inside each 64x64 maximum-transform region. Chroma retains its
 /// adjusted maximum transform, so the wide compositor owns the chunk-major
-/// Y/U/V traversal rather than the existing flat small-grid path.
+/// Y/U/V traversal rather than the existing flat small-grid path. The
+/// transform syntax and checked u16 reconstruction are depth-parametric for
+/// the AV1 8/10/12-bit sample classes.
 fn inter_lossy_wide_mode0_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3340,8 +3342,8 @@ fn inter_lossy_wide_mode0_geometry_supported(
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
                 )
         )
-        && bit_depth == 8
-        && quantization.sample_depth.bits() == 8
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 0
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
@@ -4861,6 +4863,14 @@ fn decode_inter_transform_size(
                     _ => return Err(super::block::PortableUnavailable),
                 });
             }
+        }
+        // The generic high-depth frame profile may carry TX_MODE_ONLY_4X4,
+        // but only the explicit wide mode-0 compositor above owns the
+        // 64-pixel chunk traversal. Do not let an unsupported small/non-wide
+        // high-depth lossy leaf fall through to a fabricated single TX4
+        // terminal; lossless grids remain admitted by their dedicated plan.
+        if !eight_bit && !lossless_grid_geometry {
+            return Err(super::block::PortableUnavailable);
         }
         return Ok(InterTransformPlan::Single(TxSize::Tx4x4));
     }
@@ -9847,17 +9857,20 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// Exact high-depth 4:2:0/4:2:2/4:4:4 inter tranche admitted by the
 /// depth-parametric motion-compensation core. Single-reference inter-intra is
 /// materialized for all three layouts; bounded 8-bit I422/I444 remains on its
-/// separate closed predicates.
+/// separate closed predicates. TX_MODE_ONLY_4X4 is admitted only for the
+/// explicit 64-pixel wide mode-0 compositor.
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms,
-/// plus exact B8x8/B16x16/B32x32 mode-2 splits in the supported
-/// 4:2:0/4:2:2/4:4:4 layouts and the exact B64x64 mode-2 split whose
+/// plus exact 64-pixel mode-0 chunk roots and B8x8/B16x16/B32x32 mode-2
+/// splits in the supported 4:2:0/4:2:2/4:4:4 layouts and the exact B64x64
+/// mode-2 split whose
 /// TX4x4/TX8x8/TX16x16/TX32x32 luma terminals plus TX32x32 chroma grid are
 /// reconstructed by the bounded child compositors below.
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on
-/// transform modes 1/2 with fixed nearest-nearest average prediction.
+/// transform modes 1/2 with fixed nearest-nearest average prediction; mode 0
+/// wide chunks retain their per-terminal skip syntax.
 /// Update-map post-skip segmentation is admitted only for ALT_Q-only segments.
 /// TX_MODE_SELECT is admitted for an unsplit root and the exact B8x8 2x2
 /// TX4x4, B16x16 2x2 TX8x8, B32x32 2x2 TX16x16, or B64x64 2x2 TX32x32 split;
@@ -9939,7 +9952,9 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.all_lossless
         && !context.allow_intrabc
         && postskip_altq_segmentation_supported(context)
-        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        // TX_MODE_ONLY_4X4 is depth-independent, but only the explicit wide
+        // mode-0 plan below can currently consume high-depth 64px chunks.
+        && matches!(context.frame_tools.transform_mode, 0..=2)
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
         && complete_high_depth_loop_filter_supported(context)
