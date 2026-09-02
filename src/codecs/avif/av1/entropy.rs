@@ -4724,6 +4724,8 @@ enum InterTransformPlan {
     SplitB8,
     SplitB4x8,
     SplitB8x4,
+    SplitB4x16,
+    SplitB16x4,
     SplitB8x16,
     SplitB16x8,
     SplitB8x32,
@@ -5245,6 +5247,56 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx8x4
         {
             return Ok(InterTransformPlan::SplitB8x4);
+        }
+        if layout == PixelLayout::Monochrome
+            && split_b8_rect_supported
+            && visible_width == 4
+            && visible_height == 16
+            && block_size == BlockSize::B4x16
+            && max_tx == TxSize::Tx4x16
+        {
+            for offset_y in [0_u32, 2] {
+                let child_x = node.x;
+                let child_y = node
+                    .y
+                    .checked_add(offset_y)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let above_small = false;
+                let left_small = child_x
+                    .checked_sub(1)
+                    .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                    .is_some_and(|(_, tx_height)| tx_height < 1);
+                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
+                    return Err(super::block::PortableUnavailable);
+                }
+            }
+            return Ok(InterTransformPlan::SplitB4x16);
+        }
+        if layout == PixelLayout::Monochrome
+            && split_b8_rect_supported
+            && visible_width == 16
+            && visible_height == 4
+            && block_size == BlockSize::B16x4
+            && max_tx == TxSize::Tx16x4
+        {
+            for offset_x in [0_u32, 2] {
+                let child_x = node
+                    .x
+                    .checked_add(offset_x)
+                    .ok_or(super::block::PortableUnavailable)?;
+                let child_y = node.y;
+                let above_small = child_y
+                    .checked_sub(1)
+                    .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                    .is_some_and(|(tx_width, _)| tx_width < 1);
+                let left_small = false;
+                let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
+                    return Err(super::block::PortableUnavailable);
+                }
+            }
+            return Ok(InterTransformPlan::SplitB16x4);
         }
         if block_size == BlockSize::B8x8
             && matches!(
@@ -6899,6 +6951,8 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false, false),
             InterTransformPlan::SplitB4x8 => (TxSize::Tx4x8, true, false, false, false),
             InterTransformPlan::SplitB8x4 => (TxSize::Tx8x4, true, false, false, false),
+            InterTransformPlan::SplitB4x16 => (TxSize::Tx4x16, true, false, false, false),
+            InterTransformPlan::SplitB16x4 => (TxSize::Tx16x4, true, false, false, false),
             InterTransformPlan::SplitB8x16 => (TxSize::Tx8x16, true, false, false, false),
             InterTransformPlan::SplitB16x8 => (TxSize::Tx16x8, true, false, false, false),
             InterTransformPlan::SplitB8x32 => (TxSize::Tx8x32, true, false, false, false),
