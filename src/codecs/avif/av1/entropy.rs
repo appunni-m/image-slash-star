@@ -3782,6 +3782,12 @@ enum MixedSuperresPostfilter {
     LoopAndCdef,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MixedSuperresFilmGrainRequirement {
+    Absent,
+    Present,
+}
+
 /// Select the bounded coded-frame filter profile for mixed-segment
 /// horizontal super-resolution. The complete coded surface is filtered before
 /// it is resized, so this proof deliberately reuses the wide structural
@@ -4007,23 +4013,44 @@ fn mixed_i444_lossless_superres_film_grain_supported(
         && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I444)
 }
 
-/// Add the single post-resize luma restoration unit used by the active mixed
+/// Validate the single post-resize luma restoration unit used by a mixed
 /// super-resolution profile. Chroma types remain `None`, so their restoration
-/// payload and unit counts are intentionally not consumed or validated.
-fn mixed_segment_superres_restoration_supported(
+/// payload and unit counts are intentionally not consumed or validated. The
+/// explicit grain requirement keeps the active-restoration and combined
+/// restoration-plus-grain profiles disjoint.
+fn mixed_segment_superres_restoration_profile(
     context: &FirstBlockContext,
     expected_layout: PixelLayout,
+    grain_requirement: MixedSuperresFilmGrainRequirement,
 ) -> bool {
-    if !mixed_segment_superres_common(context)
+    if !mixed_segment_superres_structure_common(context)
         || PixelLayout::from_sequence(
             context.monochrome,
             context.subsampling_x,
             context.subsampling_y,
         ) != Some(expected_layout)
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.cdef.is_some()
         || !context.frame_tools.restoration_present
         || context.restoration_types[1].is_some()
         || context.restoration_types[2].is_some()
     {
+        return false;
+    }
+    let film_grain_supported = match grain_requirement {
+        MixedSuperresFilmGrainRequirement::Absent => !context.frame_tools.film_grain_present,
+        MixedSuperresFilmGrainRequirement::Present
+            if expected_layout == PixelLayout::Monochrome =>
+        {
+            no_unsupported_film_grain(context)
+        }
+        MixedSuperresFilmGrainRequirement::Present => {
+            superres_color_film_grain_supported(context, expected_layout)
+        }
+    };
+    if !film_grain_supported {
         return false;
     }
     let Some(restoration_type) = context.restoration_types[0] else {
@@ -4060,6 +4087,32 @@ fn mixed_segment_superres_restoration_supported(
         return false;
     };
     (width_with_half >> luma_log2).max(1) == 1 && (height_with_half >> luma_log2).max(1) == 1
+}
+
+/// Admit luma-only Wiener/SGR restoration for mixed superres with no display
+/// grain. This wrapper preserves the previously committed profile exactly.
+fn mixed_segment_superres_restoration_supported(
+    context: &FirstBlockContext,
+    expected_layout: PixelLayout,
+) -> bool {
+    mixed_segment_superres_restoration_profile(
+        context,
+        expected_layout,
+        MixedSuperresFilmGrainRequirement::Absent,
+    )
+}
+
+/// Admit luma-only Wiener/SGR restoration for mixed superres with display-only
+/// film grain synthesized after resize.
+fn mixed_segment_superres_restoration_film_grain_supported(
+    context: &FirstBlockContext,
+    expected_layout: PixelLayout,
+) -> bool {
+    mixed_segment_superres_restoration_profile(
+        context,
+        expected_layout,
+        MixedSuperresFilmGrainRequirement::Present,
+    )
 }
 
 /// Admit luma-only Wiener/SGR restoration for mixed monochrome superres.
@@ -4099,6 +4152,50 @@ fn mixed_i444_lossless_superres_restoration_supported(
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
     mixed_segment_superres_restoration_supported(context, PixelLayout::I444)
+        && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I444)
+}
+
+/// Admit luma-only Wiener/SGR restoration plus display-only film grain for
+/// mixed monochrome superres.
+fn mixed_monochrome_lossless_superres_restoration_film_grain_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_film_grain_supported(context, PixelLayout::Monochrome)
+        && mixed_segment_superres_references_supported(
+            context,
+            inter_context,
+            PixelLayout::Monochrome,
+        )
+}
+
+/// Admit luma-only Wiener/SGR restoration plus display-only film grain for
+/// mixed I420 superres.
+fn mixed_i420_lossless_superres_restoration_film_grain_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_film_grain_supported(context, PixelLayout::I420)
+        && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I420)
+}
+
+/// Admit luma-only Wiener/SGR restoration plus display-only film grain for
+/// mixed I422 superres.
+fn mixed_i422_lossless_superres_restoration_film_grain_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_film_grain_supported(context, PixelLayout::I422)
+        && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I422)
+}
+
+/// Admit luma-only Wiener/SGR restoration plus display-only film grain for
+/// mixed I444 superres.
+fn mixed_i444_lossless_superres_restoration_film_grain_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_segment_superres_restoration_film_grain_supported(context, PixelLayout::I444)
         && mixed_segment_superres_references_supported(context, inter_context, PixelLayout::I444)
 }
 
@@ -9772,14 +9869,30 @@ pub(super) fn validate_complete_lossy_420_partition(
     let mixed_monochrome_superres_restoration = inter_context.is_some_and(|inter_context| {
         mixed_monochrome_lossless_superres_restoration_supported(context, inter_context)
     });
+    let mixed_monochrome_superres_restoration_film_grain =
+        inter_context.is_some_and(|inter_context| {
+            mixed_monochrome_lossless_superres_restoration_film_grain_supported(
+                context,
+                inter_context,
+            )
+        });
     let mixed_i420_superres_restoration = inter_context.is_some_and(|inter_context| {
         mixed_i420_lossless_superres_restoration_supported(context, inter_context)
+    });
+    let mixed_i420_superres_restoration_film_grain = inter_context.is_some_and(|inter_context| {
+        mixed_i420_lossless_superres_restoration_film_grain_supported(context, inter_context)
     });
     let mixed_i422_superres_restoration = inter_context.is_some_and(|inter_context| {
         mixed_i422_lossless_superres_restoration_supported(context, inter_context)
     });
+    let mixed_i422_superres_restoration_film_grain = inter_context.is_some_and(|inter_context| {
+        mixed_i422_lossless_superres_restoration_film_grain_supported(context, inter_context)
+    });
     let mixed_i444_superres_restoration = inter_context.is_some_and(|inter_context| {
         mixed_i444_lossless_superres_restoration_supported(context, inter_context)
+    });
+    let mixed_i444_superres_restoration_film_grain = inter_context.is_some_and(|inter_context| {
+        mixed_i444_lossless_superres_restoration_film_grain_supported(context, inter_context)
     });
     let high_depth_lossy_i444_active_restoration = generic_high_depth_inter
         && inter_context.is_some_and(|inter_context| {
@@ -10246,9 +10359,13 @@ pub(super) fn validate_complete_lossy_420_partition(
         || high_depth_lossy_i420_active_restoration
         || mixed_high_depth_lossless_restoration
         || mixed_monochrome_superres_restoration
+        || mixed_monochrome_superres_restoration_film_grain
         || mixed_i420_superres_restoration
+        || mixed_i420_superres_restoration_film_grain
         || mixed_i422_superres_restoration
+        || mixed_i422_superres_restoration_film_grain
         || mixed_i444_superres_restoration
+        || mixed_i444_superres_restoration_film_grain
         || high_depth_lossless_i444_active_restoration
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
@@ -11447,6 +11564,8 @@ fn complete_inter_420_reconstruction_context(
         mixed_i420_lossless_superres_postfilter_supported(context, inter_context);
     let mixed_lossless_superres_restoration =
         mixed_i420_lossless_superres_restoration_supported(context, inter_context);
+    let mixed_lossless_superres_restoration_film_grain =
+        mixed_i420_lossless_superres_restoration_film_grain_supported(context, inter_context);
     !context.intra_frame
         && context.bit_depth == 8
         && context.subsampling_x
@@ -11461,6 +11580,7 @@ fn complete_inter_420_reconstruction_context(
         && (context.restoration_types == [None; 3]
             || active_restoration
             || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_restoration)
         && if context.superres_enabled {
             superres_color_film_grain_supported(context, PixelLayout::I420)
@@ -11472,6 +11592,7 @@ fn complete_inter_420_reconstruction_context(
             || mixed_lossless_restoration
             || mixed_lossless_superres
             || mixed_lossless_superres_film_grain
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_postfilter.is_some())
         && context.block_x == 0
         && context.block_y == 0
@@ -11670,11 +11791,14 @@ fn complete_inter_422_reconstruction_context(
         mixed_i422_lossless_superres_postfilter_supported(context, inter_context);
     let mixed_lossless_superres_restoration =
         mixed_i422_lossless_superres_restoration_supported(context, inter_context);
+    let mixed_lossless_superres_restoration_film_grain =
+        mixed_i422_lossless_superres_restoration_film_grain_supported(context, inter_context);
     let dimensions_supported = if context.superres_enabled {
         active_restoration
             || mixed_lossless_superres
             || mixed_lossless_superres_film_grain
             || mixed_lossless_superres_postfilter.is_some()
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_restoration
     } else {
         context.upscaled_width == context.frame_width
@@ -11702,6 +11826,8 @@ fn complete_inter_422_reconstruction_context(
             || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I422)
             || mixed_lossless_restoration
             || mixed_lossless_superres
+            || mixed_lossless_superres_film_grain
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_postfilter.is_some())
         && !context.allow_intrabc
         && if context.superres_enabled {
@@ -11716,6 +11842,7 @@ fn complete_inter_422_reconstruction_context(
         && (context.restoration_types == [None; 3]
             || active_restoration
             || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_restoration)
         && context.block_x == 0
         && context.block_y == 0
@@ -11918,6 +12045,8 @@ fn complete_inter_444_reconstruction_context(
         mixed_i444_lossless_superres_postfilter_supported(context, inter_context);
     let mixed_lossless_superres_restoration =
         mixed_i444_lossless_superres_restoration_supported(context, inter_context);
+    let mixed_lossless_superres_restoration_film_grain =
+        mixed_i444_lossless_superres_restoration_film_grain_supported(context, inter_context);
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8
@@ -11942,6 +12071,7 @@ fn complete_inter_444_reconstruction_context(
             || mixed_lossless_restoration
             || mixed_lossless_superres
             || mixed_lossless_superres_film_grain
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_postfilter.is_some())
         && !context.allow_intrabc
         && film_grain_supported
@@ -11952,6 +12082,7 @@ fn complete_inter_444_reconstruction_context(
         && (context.restoration_types == [None; 3]
             || active_restoration
             || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_restoration)
         && context.block_x == 0
         && context.block_y == 0
@@ -12391,6 +12522,16 @@ fn complete_high_depth_inter_reconstruction_context(
         mixed_i420_lossless_superres_restoration_supported(context, inter_context)
             || mixed_i422_lossless_superres_restoration_supported(context, inter_context)
             || mixed_i444_lossless_superres_restoration_supported(context, inter_context);
+    let mixed_lossless_superres_restoration_film_grain =
+        mixed_i420_lossless_superres_restoration_film_grain_supported(context, inter_context)
+            || mixed_i422_lossless_superres_restoration_film_grain_supported(
+                context,
+                inter_context,
+            )
+            || mixed_i444_lossless_superres_restoration_film_grain_supported(
+                context,
+                inter_context,
+            );
     let active_restoration =
         high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
             || high_depth_lossy_i422_superres_restoration_supported(context, inter_context)
@@ -12400,6 +12541,7 @@ fn complete_high_depth_inter_reconstruction_context(
                 inter_context,
             )
             || mixed_lossless_restoration
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_restoration;
     let i420 = context.subsampling_x && context.subsampling_y;
     let i422 = context.subsampling_x && !context.subsampling_y;
@@ -12459,6 +12601,7 @@ fn complete_high_depth_inter_reconstruction_context(
             || mixed_lossless_superres
             || mixed_lossless_superres_film_grain
             || mixed_lossless_superres_postfilter
+            || mixed_lossless_superres_restoration_film_grain
             || mixed_lossless_superres_restoration)
         // TX_MODE_ONLY_4X4 is depth-independent; the explicit bounded I420
         // and color grids plus the wide mode-0 plan consume its high-depth
@@ -16620,6 +16763,8 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
+    let mixed_lossless_superres_restoration_film_grain =
+        mixed_monochrome_lossless_superres_restoration_film_grain_supported(context, inter_context);
     let mixed_lossless_superres_film_grain =
         mixed_monochrome_lossless_superres_film_grain_supported(context, inter_context);
     let mixed_lossless_superres_postfilter =
@@ -16633,6 +16778,7 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
         || mixed_monochrome_lossless_superres_supported(context, inter_context)
         || mixed_lossless_superres_film_grain
         || mixed_lossless_superres_postfilter.is_some()
+        || mixed_lossless_superres_restoration_film_grain
         || mixed_lossless_superres_restoration
 }
 
