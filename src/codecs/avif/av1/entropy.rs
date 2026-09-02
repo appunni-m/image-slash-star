@@ -4738,13 +4738,14 @@ fn inter_lossy_i422_narrow_mode2_geometry_supported(
         && quantization.sample_depth.bits() == context.bit_depth
 }
 
-/// Exact mode-2 split geometry for the narrow 4:2:0 leaves whose subsampled
-/// axis is four pixels wide or high. The luma transform partition is decoded
-/// for both siblings; only the subsampled-axis owner emits the shared maximum
-/// chroma terminals in the block compositor. Keep the depth-specific frame
-/// proof here so the generic high-depth color minimum is not lowered for
-/// unrelated I420 leaves.
-fn inter_lossy_i420_narrow_split_geometry_supported(
+/// Exact mode-2 geometry for the narrow 4:2:0 leaves whose subsampled axis is
+/// four pixels wide or high. The luma transform partition is decoded for both
+/// siblings; only the subsampled-axis owner emits the single maximum chroma
+/// terminal in the block compositor. Keep the depth-specific frame proof here
+/// so the generic high-depth color minimum is not lowered for unrelated I420
+/// leaves. A non-lossless segment remains valid at qindex zero: the quantizer
+/// deltas, rather than qindex alone, determine losslessness.
+fn inter_lossy_i420_narrow_mode2_geometry_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
     node: PartitionNode,
@@ -4752,7 +4753,6 @@ fn inter_lossy_i420_narrow_split_geometry_supported(
     visible_width: u32,
     visible_height: u32,
     quantization: super::block::LossyQuantization,
-    block_skipped: bool,
 ) -> bool {
     let complete = if context.bit_depth == 8 {
         complete_inter_420_reconstruction_context(context, inter_context)
@@ -4769,9 +4769,7 @@ fn inter_lossy_i420_narrow_split_geometry_supported(
         )
         && (visible_width, visible_height) == node.block_size.pixel_dimensions()
         && context.frame_tools.transform_mode == 2
-        && !block_skipped
         && !quantization.segment_lossless
-        && quantization.segment_qindex > 0
         && quantization.sample_depth.bits() == context.bit_depth
         && inter_single_transform_geometry_supported(node.block_size, layout)
 }
@@ -6525,6 +6523,7 @@ fn decode_inter_transform_size(
     lossy_wide_mode2_geometry: bool,
     lossy_direct_chroma_grid_geometry: bool,
     i422_narrow_mode2_geometry: bool,
+    i420_narrow_mode2_geometry: bool,
     block_skipped: bool,
     transform_mode: u32,
 ) -> super::block::PortableResult<InterTransformPlan> {
@@ -6986,7 +6985,9 @@ fn decode_inter_transform_size(
         if matches!(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-        ) && (split_b8_rect_supported || i422_narrow_mode2_geometry)
+        ) && (split_b8_rect_supported
+            || i422_narrow_mode2_geometry
+            || i420_narrow_mode2_geometry)
             && visible_width == 4
             && visible_height == 8
             && block_size == BlockSize::B4x8
@@ -6997,7 +6998,9 @@ fn decode_inter_transform_size(
         if matches!(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-        ) && (split_b8_rect_supported || i422_narrow_mode2_geometry)
+        ) && (split_b8_rect_supported
+            || i422_narrow_mode2_geometry
+            || i420_narrow_mode2_geometry)
             && visible_width == 8
             && visible_height == 4
             && block_size == BlockSize::B8x4
@@ -7008,7 +7011,9 @@ fn decode_inter_transform_size(
         if matches!(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-        ) && (split_b8_rect_supported || i422_narrow_mode2_geometry)
+        ) && (split_b8_rect_supported
+            || i422_narrow_mode2_geometry
+            || i420_narrow_mode2_geometry)
             && visible_width == 4
             && visible_height == 16
             && block_size == BlockSize::B4x16
@@ -7045,7 +7050,9 @@ fn decode_inter_transform_size(
         if matches!(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-        ) && (split_b8_rect_supported || i422_narrow_mode2_geometry)
+        ) && (split_b8_rect_supported
+            || i422_narrow_mode2_geometry
+            || i420_narrow_mode2_geometry)
             && visible_width == 16
             && visible_height == 4
             && block_size == BlockSize::B16x4
@@ -8230,7 +8237,7 @@ fn decode_inter_leaf(
         visible_height,
         prepared_quantization.quantization,
     );
-    let lossy_i420_narrow_split_geometry = inter_lossy_i420_narrow_split_geometry_supported(
+    let lossy_i420_narrow_mode2_geometry = inter_lossy_i420_narrow_mode2_geometry_supported(
         context,
         inter_context,
         node,
@@ -8238,7 +8245,6 @@ fn decode_inter_leaf(
         visible_width,
         visible_height,
         prepared_quantization.quantization,
-        block_skipped,
     );
     let lossy_i444_rect_split_geometry = inter_lossy_i444_rect_split_geometry_supported(
         node.block_size,
@@ -8403,7 +8409,7 @@ fn decode_inter_leaf(
             && !tiny_high_depth_subsampled_b4x4_mode2
             && !tiny_high_depth_i422_b4x4_mode1
             && !lossy_i422_narrow_mode2_geometry
-            && !lossy_i420_narrow_split_geometry
+            && !lossy_i420_narrow_mode2_geometry
             && (!(minimum..=maximum).contains(&block_width)
                 || !(minimum..=maximum).contains(&block_height))
         {
@@ -8421,7 +8427,7 @@ fn decode_inter_leaf(
         && !lossy_direct_chroma_grid_geometry
         && !lossy_i444_rect_split_geometry
         && !lossy_i422_narrow_mode2_geometry
-        && !lossy_i420_narrow_split_geometry
+        && !lossy_i420_narrow_mode2_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -9081,6 +9087,7 @@ fn decode_inter_leaf(
         lossy_wide_mode2_geometry,
         lossy_direct_chroma_grid_geometry,
         lossy_i422_narrow_mode2_geometry,
+        lossy_i420_narrow_mode2_geometry,
         block_skipped,
         context.frame_tools.transform_mode,
     ) {
