@@ -8528,10 +8528,12 @@ fn decode_inter_leaf(
     };
     // The local affine model is derived once in luma coordinates and the
     // common warp kernel applies the same checked payload to every validated
-    // plane. Subsampled planes below 8x8 intentionally fall back to ordinary
-    // center-MV prediction inside `mc`; the block-level LOCALWARP metadata and
+    // plane. This is a reconstruction capability only: it must not decide
+    // whether the normative ternary motion-mode symbol is present below.
+    // Subsampled planes below 8x8 intentionally fall back to ordinary center-
+    // MV prediction inside `mc`; the block-level LOCALWARP metadata and
     // interpolation-filter suppression remain unchanged.
-    let local_warp_profile = matches!(
+    let local_warp_supported = matches!(
         layout,
         PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
     ) && matches!(context.bit_depth, 8 | 10 | 12)
@@ -8583,8 +8585,12 @@ fn decode_inter_leaf(
         } else {
             None
         };
-        let allow_warp = local_samples.is_some();
-        let symbol = if allow_warp {
+        // Exact local samples, rather than the bounded implementation profile,
+        // determine whether AV1's ternary motion-mode alphabet is available.
+        // An unsupported symbol 2 is rejected transactionally after it has
+        // been consumed, while symbols 0 and 1 retain ordinary behavior.
+        let local_warp_syntax_available = local_samples.is_some();
+        let symbol = if local_warp_syntax_available {
             decoder.adaptive_symbol(&mut cdfs.inter.motion_mode_for(node.block_size).0, 2)
         } else {
             decoder.adaptive_symbol(&mut cdfs.inter.obmc_for(node.block_size).0, 1)
@@ -8592,8 +8598,8 @@ fn decode_inter_leaf(
         match symbol {
             0 => (MotionMode::Translation, None),
             1 => (MotionMode::Obmc, None),
-            2 if allow_warp => {
-                if !local_warp_profile {
+            2 if local_warp_syntax_available => {
+                if !local_warp_supported {
                     return Ok(Err(super::block::PortableUnavailable));
                 }
                 let local_warp = prepare_local_warp(
