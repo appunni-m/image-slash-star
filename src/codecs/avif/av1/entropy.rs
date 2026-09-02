@@ -4746,11 +4746,13 @@ enum InterTransformPlan {
     SplitB64x32Deep,
     SplitB64Deep,
     SplitB16,
+    SplitB16Deep,
     SplitB16x32,
     SplitB16x32Deep,
     SplitB32x16,
     SplitB32x16Deep,
     SplitB32,
+    SplitB32Deep,
     SplitB64,
     SplitB64Topology {
         child_splits: [[bool; 2]; 2],
@@ -5758,41 +5760,49 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx16x16
         {
             // A TX16 root split is followed by one TX8 split decision for
-            // each child. The bounded compositor admits only four terminal
-            // TX8 children; any deeper child tree remains transactional.
-            let child_offsets = [(0_u32, 0_u32), (2, 0), (0, 2), (2, 2)];
-            for (offset_x, offset_y) in child_offsets {
-                let child_x = node
-                    .x
-                    .checked_add(offset_x)
-                    .ok_or(super::block::PortableUnavailable)?;
-                let child_y = node
-                    .y
-                    .checked_add(offset_y)
-                    .ok_or(super::block::PortableUnavailable)?;
-                let above_small = if offset_y == 0 {
-                    child_y
-                        .checked_sub(1)
-                        .and_then(|y| tile_state.transform_contexts_at(child_x, y))
-                        .is_some_and(|(tx_width, _)| tx_width < 1)
-                } else {
-                    false
-                };
-                let left_small = if offset_x == 0 {
-                    child_x
-                        .checked_sub(1)
-                        .and_then(|x| tile_state.transform_contexts_at(x, child_y))
-                        .is_some_and(|(_, tx_height)| tx_height < 1)
-                } else {
-                    false
-                };
-                let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0) {
-                    // A child split changes the causal topology for later
-                    // siblings. Reject immediately instead of consuming
-                    // symbols under the terminal-child assumption.
-                    return Err(super::block::PortableUnavailable);
+            // each child. Consume all four decisions using the causal
+            // context topology, then classify the bounded tree: all false is
+            // the existing shallow pair, all true is the four-child TX4x4
+            // grid, and mixed trees remain transactional.
+            let mut child_splits = [[false; 2]; 2];
+            for row in 0..2 {
+                for column in 0..2 {
+                    let offset_x = (column as u32) * 2;
+                    let offset_y = (row as u32) * 2;
+                    let child_x = node
+                        .x
+                        .checked_add(offset_x)
+                        .ok_or(super::block::PortableUnavailable)?;
+                    let child_y = node
+                        .y
+                        .checked_add(offset_y)
+                        .ok_or(super::block::PortableUnavailable)?;
+                    let above_small = if row == 0 {
+                        child_y
+                            .checked_sub(1)
+                            .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                            .is_some_and(|(tx_width, _)| tx_width < 1)
+                    } else {
+                        child_splits[0][column]
+                    };
+                    let left_small = if column == 0 {
+                        child_x
+                            .checked_sub(1)
+                            .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                            .is_some_and(|(_, tx_height)| tx_height < 1)
+                    } else {
+                        child_splits[row][0]
+                    };
+                    let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                    child_splits[row][column] =
+                        decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
                 }
+            }
+            if child_splits == [[true; 2]; 2] {
+                return Ok(InterTransformPlan::SplitB16Deep);
+            }
+            if child_splits.iter().flatten().any(|split| *split) {
+                return Err(super::block::PortableUnavailable);
             }
             return Ok(InterTransformPlan::SplitB16);
         }
@@ -5807,41 +5817,49 @@ fn decode_inter_transform_size(
             && max_tx == TxSize::Tx32x32
         {
             // A TX32 root split is followed by one TX16 split decision for
-            // each child. The bounded compositor admits only four terminal
-            // TX16 children; any deeper child tree remains transactional.
-            let child_offsets = [(0_u32, 0_u32), (4, 0), (0, 4), (4, 4)];
-            for (offset_x, offset_y) in child_offsets {
-                let child_x = node
-                    .x
-                    .checked_add(offset_x)
-                    .ok_or(super::block::PortableUnavailable)?;
-                let child_y = node
-                    .y
-                    .checked_add(offset_y)
-                    .ok_or(super::block::PortableUnavailable)?;
-                let above_small = if offset_y == 0 {
-                    child_y
-                        .checked_sub(1)
-                        .and_then(|y| tile_state.transform_contexts_at(child_x, y))
-                        .is_some_and(|(tx_width, _)| tx_width < 2)
-                } else {
-                    false
-                };
-                let left_small = if offset_x == 0 {
-                    child_x
-                        .checked_sub(1)
-                        .and_then(|x| tile_state.transform_contexts_at(x, child_y))
-                        .is_some_and(|(_, tx_height)| tx_height < 2)
-                } else {
-                    false
-                };
-                let context = usize::from(above_small).saturating_add(usize::from(left_small));
-                if decoder.adaptive_bool(&mut cdfs.common.transform_partition[3][context].0) {
-                    // A child split changes the causal topology for later
-                    // siblings. Reject immediately instead of consuming
-                    // symbols under the terminal-child assumption.
-                    return Err(super::block::PortableUnavailable);
+            // each child. Consume all four decisions using the causal
+            // context topology, then classify the bounded tree: all false is
+            // the existing shallow pair, all true is the four-child TX8x8
+            // grid, and mixed trees remain transactional.
+            let mut child_splits = [[false; 2]; 2];
+            for row in 0..2 {
+                for column in 0..2 {
+                    let offset_x = (column as u32) * 4;
+                    let offset_y = (row as u32) * 4;
+                    let child_x = node
+                        .x
+                        .checked_add(offset_x)
+                        .ok_or(super::block::PortableUnavailable)?;
+                    let child_y = node
+                        .y
+                        .checked_add(offset_y)
+                        .ok_or(super::block::PortableUnavailable)?;
+                    let above_small = if row == 0 {
+                        child_y
+                            .checked_sub(1)
+                            .and_then(|y| tile_state.transform_contexts_at(child_x, y))
+                            .is_some_and(|(tx_width, _)| tx_width < 2)
+                    } else {
+                        child_splits[0][column]
+                    };
+                    let left_small = if column == 0 {
+                        child_x
+                            .checked_sub(1)
+                            .and_then(|x| tile_state.transform_contexts_at(x, child_y))
+                            .is_some_and(|(_, tx_height)| tx_height < 2)
+                    } else {
+                        child_splits[row][0]
+                    };
+                    let context = usize::from(above_small).saturating_add(usize::from(left_small));
+                    child_splits[row][column] =
+                        decoder.adaptive_bool(&mut cdfs.common.transform_partition[3][context].0);
                 }
+            }
+            if child_splits == [[true; 2]; 2] {
+                return Ok(InterTransformPlan::SplitB32Deep);
+            }
+            if child_splits.iter().flatten().any(|split| *split) {
+                return Err(super::block::PortableUnavailable);
             }
             return Ok(InterTransformPlan::SplitB32);
         }
@@ -7055,14 +7073,18 @@ fn decode_inter_leaf(
                 (TxSize::Tx64x32, true, false, false, false)
             }
             InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, true, false, false, false),
-            InterTransformPlan::SplitB16 => (TxSize::Tx16x16, true, false, false, false),
+            InterTransformPlan::SplitB16 | InterTransformPlan::SplitB16Deep => {
+                (TxSize::Tx16x16, true, false, false, false)
+            }
             InterTransformPlan::SplitB16x32 | InterTransformPlan::SplitB16x32Deep => {
                 (TxSize::Tx16x32, true, false, false, false)
             }
             InterTransformPlan::SplitB32x16 | InterTransformPlan::SplitB32x16Deep => {
                 (TxSize::Tx32x16, true, false, false, false)
             }
-            InterTransformPlan::SplitB32 => (TxSize::Tx32x32, true, false, false, false),
+            InterTransformPlan::SplitB32 | InterTransformPlan::SplitB32Deep => {
+                (TxSize::Tx32x32, true, false, false, false)
+            }
             InterTransformPlan::SplitB64 => (TxSize::Tx64x64, true, false, false, false),
             InterTransformPlan::SplitB64Topology { .. } => {
                 (TxSize::Tx64x64, true, false, false, false)
@@ -7490,8 +7512,10 @@ fn decode_inter_leaf(
                         | InterTransformPlan::SplitB32x8Deep
                         | InterTransformPlan::SplitB16x64Deep
                         | InterTransformPlan::SplitB64x16Deep
+                        | InterTransformPlan::SplitB16Deep
                         | InterTransformPlan::SplitB16x32Deep
                         | InterTransformPlan::SplitB32x16Deep
+                        | InterTransformPlan::SplitB32Deep
                         | InterTransformPlan::SplitB32x64Deep
                         | InterTransformPlan::SplitB64x32Deep
                 ),
@@ -7524,8 +7548,10 @@ fn decode_inter_leaf(
                         | InterTransformPlan::SplitB32x8Deep
                         | InterTransformPlan::SplitB16x64Deep
                         | InterTransformPlan::SplitB64x16Deep
+                        | InterTransformPlan::SplitB16Deep
                         | InterTransformPlan::SplitB16x32Deep
                         | InterTransformPlan::SplitB32x16Deep
+                        | InterTransformPlan::SplitB32Deep
                         | InterTransformPlan::SplitB32x64Deep
                         | InterTransformPlan::SplitB64x32Deep
                 ),

@@ -2643,7 +2643,11 @@ pub(super) fn filter_transform_dimensions(
                     _ => return None,
                 }
             }
-            TransformGrid::Square16 => (8, 8),
+            TransformGrid::Square16 => match (leaf.tx_context_width, leaf.tx_context_height) {
+                (1, 1) => (8, 8),
+                (0, 0) => (4, 4),
+                _ => return None,
+            },
             TransformGrid::Vertical8x16 => {
                 if leaf.tx_context_width == 0 && leaf.tx_context_height == 0 {
                     (4, 4)
@@ -2689,8 +2693,13 @@ pub(super) fn filter_transform_dimensions(
                 (1, 1) => (8, 8),
                 _ => return None,
             },
-            // Square32 depth one terminates in four TX16x16 children.
-            TransformGrid::Square32 => (16, 16),
+            // Square32 depth one terminates in four TX16x16 children, while
+            // the admitted depth-two path uses a TX8x8 grid.
+            TransformGrid::Square32 => match (leaf.tx_context_width, leaf.tx_context_height) {
+                (2, 2) => (16, 16),
+                (1, 1) => (8, 8),
+                _ => return None,
+            },
             // R16x64 may terminate at two TX16x32 children or the
             // depth-two TX16x16 grid. The retained context identifies the
             // exact terminal extent.
@@ -51612,11 +51621,13 @@ enum InterTransformPlan {
     SplitB64x32Deep,
     SplitB64Deep,
     SplitB16,
+    SplitB16Deep,
     SplitB16x32,
     SplitB16x32Deep,
     SplitB32x16,
     SplitB32x16Deep,
     SplitB32,
+    SplitB32Deep,
     SplitB64,
     SplitB64Topology {
         child_splits: [[bool; 2]; 2],
@@ -52726,11 +52737,13 @@ impl Lossy420Decoder {
                 }
             }
             BlockSize::B64x64 if deep_b64 => InterTransformPlan::SplitB64Deep,
+            BlockSize::B16x16 if deep_rect => InterTransformPlan::SplitB16Deep,
             BlockSize::B16x16 => InterTransformPlan::SplitB16,
             BlockSize::B16x32 if deep_rect => InterTransformPlan::SplitB16x32Deep,
             BlockSize::B16x32 => InterTransformPlan::SplitB16x32,
             BlockSize::B32x16 if deep_rect => InterTransformPlan::SplitB32x16Deep,
             BlockSize::B32x16 => InterTransformPlan::SplitB32x16,
+            BlockSize::B32x32 if deep_rect => InterTransformPlan::SplitB32Deep,
             BlockSize::B32x32 => InterTransformPlan::SplitB32,
             BlockSize::B64x64 => InterTransformPlan::SplitB64,
             _ => return Err(PortableUnavailable),
@@ -52821,11 +52834,13 @@ impl Lossy420Decoder {
                 }
             }
             BlockSize::B64x64 if deep_b64 => InterTransformPlan::SplitB64Deep,
+            BlockSize::B16x16 if deep_rect => InterTransformPlan::SplitB16Deep,
             BlockSize::B16x16 => InterTransformPlan::SplitB16,
             BlockSize::B16x32 if deep_rect => InterTransformPlan::SplitB16x32Deep,
             BlockSize::B16x32 => InterTransformPlan::SplitB16x32,
             BlockSize::B32x16 if deep_rect => InterTransformPlan::SplitB32x16Deep,
             BlockSize::B32x16 => InterTransformPlan::SplitB32x16,
+            BlockSize::B32x32 if deep_rect => InterTransformPlan::SplitB32Deep,
             BlockSize::B32x32 => InterTransformPlan::SplitB32,
             BlockSize::B64x64 => InterTransformPlan::SplitB64,
             _ => return Err(PortableUnavailable),
@@ -53595,11 +53610,13 @@ impl Lossy420Decoder {
         let split_b64x32_deep = matches!(transform_plan, InterTransformPlan::SplitB64x32Deep);
         let split_b64_deep = matches!(transform_plan, InterTransformPlan::SplitB64Deep);
         let split_b16 = matches!(transform_plan, InterTransformPlan::SplitB16);
+        let split_b16_deep = matches!(transform_plan, InterTransformPlan::SplitB16Deep);
         let split_b16x32 = matches!(transform_plan, InterTransformPlan::SplitB16x32);
         let split_b16x32_deep = matches!(transform_plan, InterTransformPlan::SplitB16x32Deep);
         let split_b32x16 = matches!(transform_plan, InterTransformPlan::SplitB32x16);
         let split_b32x16_deep = matches!(transform_plan, InterTransformPlan::SplitB32x16Deep);
         let split_b32 = matches!(transform_plan, InterTransformPlan::SplitB32);
+        let split_b32_deep = matches!(transform_plan, InterTransformPlan::SplitB32Deep);
         let split_b64 = matches!(transform_plan, InterTransformPlan::SplitB64);
         let split_b64_topology =
             matches!(transform_plan, InterTransformPlan::SplitB64Topology { .. });
@@ -54069,7 +54086,7 @@ impl Lossy420Decoder {
                 .then_some(())
                 .portable()?;
         }
-        if split_b16 {
+        if split_b16 || split_b16_deep {
             (block_size == BlockSize::B16x16
                 && matches!(
                     chroma_sampling,
@@ -54270,7 +54287,7 @@ impl Lossy420Decoder {
                 .then_some(())
                 .portable()?;
         }
-        if split_b32 {
+        if split_b32 || split_b32_deep {
             (block_size == BlockSize::B32x32
                 && matches!(
                     chroma_sampling,
@@ -54510,11 +54527,13 @@ impl Lossy420Decoder {
             || split_b64x32_deep
             || split_b64_deep
             || split_b16
+            || split_b16_deep
             || split_b16x32
             || split_b16x32_deep
             || split_b32x16
             || split_b32x16_deep
             || split_b32
+            || split_b32_deep
             || split_b64
             || split_b64_topology
             || grid_transform
@@ -54603,11 +54622,13 @@ impl Lossy420Decoder {
                 || (split_b64x32_deep && exact_b64x32)
                 || (split_b64_deep && exact_b64)
                 || (split_b16 && exact_b16)
+                || (split_b16_deep && exact_b16)
                 || (split_b16x32 && exact_b16x32)
                 || (split_b16x32_deep && exact_b16x32)
                 || (split_b32x16 && exact_b32x16)
                 || (split_b32x16_deep && exact_b32x16)
                 || (split_b32 && exact_b32)
+                || (split_b32_deep && exact_b32)
                 || (split_b64 && exact_b64)
                 || (split_b64_topology && exact_b64)
                 || (grid_transform
@@ -54653,11 +54674,13 @@ impl Lossy420Decoder {
                     && !split_b64x32_deep
                     && !split_b64_deep
                     && !split_b16
+                    && !split_b16_deep
                     && !split_b16x32
                     && !split_b16x32_deep
                     && !split_b32x16
                     && !split_b32x16_deep
                     && !split_b32
+                    && !split_b32_deep
                     && !split_b64
                     && !split_b64_topology)
                     || (matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -54695,11 +54718,13 @@ impl Lossy420Decoder {
                     && !split_b64x32_deep
                     && !split_b64_deep
                     && !split_b16
+                    && !split_b16_deep
                     && !split_b16x32
                     && !split_b16x32_deep
                     && !split_b32x16
                     && !split_b32x16_deep
                     && !split_b32
+                    && !split_b32_deep
                     && !split_b64
                     && !split_b64_topology)
                     || !predecoded_skip))
@@ -54843,14 +54868,18 @@ impl Lossy420Decoder {
                 (TxSize::Tx64x32, false, Av1TransformType::DctDct)
             }
             InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, false, Av1TransformType::DctDct),
-            InterTransformPlan::SplitB16 => (TxSize::Tx16x16, false, Av1TransformType::DctDct),
+            InterTransformPlan::SplitB16 | InterTransformPlan::SplitB16Deep => {
+                (TxSize::Tx16x16, false, Av1TransformType::DctDct)
+            }
             InterTransformPlan::SplitB16x32 | InterTransformPlan::SplitB16x32Deep => {
                 (TxSize::Tx16x32, false, Av1TransformType::DctDct)
             }
             InterTransformPlan::SplitB32x16 | InterTransformPlan::SplitB32x16Deep => {
                 (TxSize::Tx32x16, false, Av1TransformType::DctDct)
             }
-            InterTransformPlan::SplitB32 => (TxSize::Tx32x32, false, Av1TransformType::DctDct),
+            InterTransformPlan::SplitB32 | InterTransformPlan::SplitB32Deep => {
+                (TxSize::Tx32x32, false, Av1TransformType::DctDct)
+            }
             InterTransformPlan::SplitB64 => (TxSize::Tx64x64, false, Av1TransformType::DctDct),
             InterTransformPlan::SplitB64Topology { .. } => {
                 (TxSize::Tx64x64, false, Av1TransformType::DctDct)
@@ -55483,6 +55512,46 @@ impl Lossy420Decoder {
                 luma_deep_tx8_rect_grid_transforms = Some(grid_transforms);
                 continue;
             }
+            if split_b32_deep && plane == 0 {
+                let (grid_contexts, grid_transforms) = self.decode_inter_split_luma_tx8_grid(
+                    decoder,
+                    &prediction,
+                    &mut rasters[0],
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    &mut decode_transform_type,
+                    32,
+                    32,
+                )?;
+                contexts[0] = grid_contexts.bottom_right;
+                luma_right_contexts = grid_contexts.right;
+                luma_bottom_contexts = grid_contexts.bottom;
+                luma_transform_split = true;
+                luma_split_tx_size = Some(TxSize::Tx8x8);
+                luma_transform = grid_transforms[0][0];
+                continue;
+            }
+            if split_b16_deep && plane == 0 {
+                let (grid_contexts, grid_transform) = self.decode_inter_split_luma_tx4_grid(
+                    decoder,
+                    &prediction,
+                    &mut rasters[0],
+                    quantization,
+                    tools,
+                    coefficient_contexts,
+                    &mut decode_transform_type,
+                    16,
+                    16,
+                )?;
+                contexts[0] = grid_contexts.bottom_right;
+                luma_right_contexts = grid_contexts.right;
+                luma_bottom_contexts = grid_contexts.bottom;
+                luma_transform_split = true;
+                luma_split_tx_size = Some(TxSize::Tx4x4);
+                luma_transform = grid_transform;
+                continue;
+            }
             if split_b8x32 && plane == 0 {
                 let (split_contexts, split_right, split_bottom, split_transforms) = self
                     .decode_inter_split_luma_b8x32(
@@ -55652,7 +55721,7 @@ impl Lossy420Decoder {
                 luma_rect_split_transforms = Some(split_transforms);
                 continue;
             }
-            if split_b32 && plane == 0 {
+            if (split_b32 || split_b32_deep) && plane == 0 {
                 let (split_contexts, split_right, split_bottom, split_transform) = self
                     .decode_inter_split_luma_b32(
                         decoder,
@@ -55850,7 +55919,7 @@ impl Lossy420Decoder {
                 chroma_bottom_contexts[plane - 1] = grid_contexts.bottom;
                 continue;
             }
-            if split_b16 && plane == 0 {
+            if (split_b16 || split_b16_deep) && plane == 0 {
                 let (split_contexts, split_right, split_bottom, split_transform) = self
                     .decode_inter_split_luma_b16(
                         decoder,
@@ -56044,9 +56113,9 @@ impl Lossy420Decoder {
                         tx_size,
                         luma_transform,
                     )?
-                } else if split_b32 && plane != 0 {
+                } else if (split_b32 || split_b32_deep) && plane != 0 {
                     inherited_inter_b32_chroma_transform(chroma_sampling, tx_size, luma_transform)?
-                } else if split_b16 && plane != 0 {
+                } else if (split_b16 || split_b16_deep) && plane != 0 {
                     inherited_inter_b16_chroma_transform(chroma_sampling, tx_size, luma_transform)?
                 } else if lossy_grid {
                     inherited_inter_chroma_transform(tx_size, luma_transform)
@@ -56731,11 +56800,14 @@ impl Lossy420Decoder {
         (prediction.len() == sample_count
             && matches!(
                 (block_width, block_height),
-                (4, 16) | (16, 4) | (8, 16) | (16, 8)
+                (4, 16) | (16, 4) | (8, 16) | (16, 8) | (16, 16)
             )
             && block_width.is_multiple_of(4)
             && block_height.is_multiple_of(4)
-            && matches!((grid_width, grid_height), (1, 4) | (4, 1) | (2, 4) | (4, 2))
+            && matches!(
+                (grid_width, grid_height),
+                (1, 4) | (4, 1) | (2, 4) | (4, 2) | (4, 4)
+            )
             && raster.coded_width == block_width
             && raster.coded_height == block_height
             && raster.active_width == block_width
@@ -56750,31 +56822,11 @@ impl Lossy420Decoder {
         let mut residual_contexts =
             [[0x40_u8; LOSSLESS_GRID_EDGE_CAPACITY]; LOSSLESS_GRID_EDGE_CAPACITY];
         let mut first_transform = Av1TransformType::DctDct;
-        let traversal = if block_width == 4 {
-            [
-                (0_usize, 0_usize),
-                (1, 0),
-                (2, 0),
-                (3, 0),
+        let traversal: &[(usize, usize)] = match (grid_width, grid_height) {
+            (1, 4) => &[(0, 0), (1, 0), (2, 0), (3, 0)],
+            (4, 1) => &[(0, 0), (0, 1), (0, 2), (0, 3)],
+            (2, 4) => &[
                 (0, 0),
-                (0, 0),
-                (0, 0),
-                (0, 0),
-            ]
-        } else if block_height == 4 {
-            [
-                (0_usize, 0_usize),
-                (0, 1),
-                (0, 2),
-                (0, 3),
-                (0, 0),
-                (0, 0),
-                (0, 0),
-                (0, 0),
-            ]
-        } else if block_width == 8 {
-            [
-                (0_usize, 0_usize),
                 (0, 1),
                 (1, 0),
                 (1, 1),
@@ -56782,10 +56834,9 @@ impl Lossy420Decoder {
                 (2, 1),
                 (3, 0),
                 (3, 1),
-            ]
-        } else {
-            [
-                (0_usize, 0_usize),
+            ],
+            (4, 2) => &[
+                (0, 0),
                 (0, 1),
                 (1, 0),
                 (1, 1),
@@ -56793,9 +56844,28 @@ impl Lossy420Decoder {
                 (0, 3),
                 (1, 2),
                 (1, 3),
-            ]
+            ],
+            (4, 4) => &[
+                (0, 0),
+                (0, 1),
+                (1, 0),
+                (1, 1),
+                (0, 2),
+                (0, 3),
+                (1, 2),
+                (1, 3),
+                (2, 0),
+                (2, 1),
+                (3, 0),
+                (3, 1),
+                (2, 2),
+                (2, 3),
+                (3, 2),
+                (3, 3),
+            ],
+            _ => return Err(PortableUnavailable),
         };
-        for (row, column) in traversal.into_iter().take(grid_width * grid_height) {
+        for &(row, column) in traversal {
             let above_context = if row == 0 {
                 [coefficient_contexts.above[0]
                     .get(column)
@@ -56943,11 +57013,14 @@ impl Lossy420Decoder {
         (prediction.len() == sample_count
             && matches!(
                 (block_width, block_height),
-                (8, 32) | (32, 8) | (16, 32) | (32, 16)
+                (8, 32) | (32, 8) | (16, 32) | (32, 16) | (32, 32)
             )
             && block_width.is_multiple_of(8)
             && block_height.is_multiple_of(8)
-            && matches!((grid_width, grid_height), (1, 4) | (4, 1) | (2, 4) | (4, 2))
+            && matches!(
+                (grid_width, grid_height),
+                (1, 4) | (4, 1) | (2, 4) | (4, 2) | (4, 4)
+            )
             && raster.coded_width == block_width
             && raster.coded_height == block_height
             && raster.active_width == block_width
@@ -56984,6 +57057,24 @@ impl Lossy420Decoder {
                 (0, 3),
                 (1, 2),
                 (1, 3),
+            ],
+            (4, 4) => &[
+                (0, 0),
+                (0, 1),
+                (1, 0),
+                (1, 1),
+                (0, 2),
+                (0, 3),
+                (1, 2),
+                (1, 3),
+                (2, 0),
+                (2, 1),
+                (3, 0),
+                (3, 1),
+                (2, 2),
+                (2, 3),
+                (3, 2),
+                (3, 3),
             ],
             _ => return Err(PortableUnavailable),
         };
