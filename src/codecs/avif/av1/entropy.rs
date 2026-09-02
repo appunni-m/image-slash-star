@@ -4747,6 +4747,9 @@ enum InterTransformPlan {
     SplitB64Deep,
     SplitB16,
     SplitB16Deep,
+    SplitB16Topology {
+        child_splits: [[bool; 2]; 2],
+    },
     SplitB16x32,
     SplitB16x32Deep,
     SplitB16x32Topology {
@@ -4759,6 +4762,9 @@ enum InterTransformPlan {
     },
     SplitB32,
     SplitB32Deep,
+    SplitB32Topology {
+        child_splits: [[bool; 2]; 2],
+    },
     SplitB64,
     SplitB64Topology {
         child_splits: [[bool; 2]; 2],
@@ -5768,8 +5774,8 @@ fn decode_inter_transform_size(
             // A TX16 root split is followed by one TX8 split decision for
             // each child. Consume all four decisions using the causal
             // context topology, then classify the bounded tree: all false is
-            // the existing shallow pair, all true is the four-child TX4x4
-            // grid, and mixed trees remain transactional.
+            // the existing shallow four-TX8 path, all true is the
+            // sixteen-TX4 grid, and mixed trees retain their exact topology.
             let mut child_splits = [[false; 2]; 2];
             for row in 0..2 {
                 for column in 0..2 {
@@ -5808,7 +5814,7 @@ fn decode_inter_transform_size(
                 return Ok(InterTransformPlan::SplitB16Deep);
             }
             if child_splits.iter().flatten().any(|split| *split) {
-                return Err(super::block::PortableUnavailable);
+                return Ok(InterTransformPlan::SplitB16Topology { child_splits });
             }
             return Ok(InterTransformPlan::SplitB16);
         }
@@ -5825,8 +5831,8 @@ fn decode_inter_transform_size(
             // A TX32 root split is followed by one TX16 split decision for
             // each child. Consume all four decisions using the causal
             // context topology, then classify the bounded tree: all false is
-            // the existing shallow pair, all true is the four-child TX8x8
-            // grid, and mixed trees remain transactional.
+            // the existing shallow four-TX16 path, all true is the
+            // sixteen-TX8 grid, and mixed trees retain their exact topology.
             let mut child_splits = [[false; 2]; 2];
             for row in 0..2 {
                 for column in 0..2 {
@@ -5865,7 +5871,7 @@ fn decode_inter_transform_size(
                 return Ok(InterTransformPlan::SplitB32Deep);
             }
             if child_splits.iter().flatten().any(|split| *split) {
-                return Err(super::block::PortableUnavailable);
+                return Ok(InterTransformPlan::SplitB32Topology { child_splits });
             }
             return Ok(InterTransformPlan::SplitB32);
         }
@@ -6186,6 +6192,58 @@ fn rect_topology_tx_cells(
                 .copied()
                 .ok_or(super::block::PortableUnavailable)?;
             let (width_log2, height_log2) = if split { (1, 1) } else { (2, 2) };
+            cells.push(TxCellUpdate {
+                width_log2,
+                height_log2,
+            });
+        }
+    }
+    (cells.len() == count)
+        .then_some(())
+        .ok_or(super::block::PortableUnavailable)?;
+    Ok(cells)
+}
+
+fn square_topology_tx_cells(
+    node: PartitionNode,
+    topology: super::block::SquareSplitTopology,
+) -> super::block::PortableResult<Vec<TxCellUpdate>> {
+    let width = usize::try_from(node.width).map_err(|_| super::block::PortableUnavailable)?;
+    let height = usize::try_from(node.height).map_err(|_| super::block::PortableUnavailable)?;
+    let (expected, child_cell_span) = match topology {
+        super::block::SquareSplitTopology::B16 { .. } => (4, 2),
+        super::block::SquareSplitTopology::B32 { .. } => (8, 4),
+    };
+    (width == expected && height == expected)
+        .then_some(())
+        .ok_or(super::block::PortableUnavailable)?;
+    let child_splits = match topology {
+        super::block::SquareSplitTopology::B16 { child_splits }
+        | super::block::SquareSplitTopology::B32 { child_splits } => child_splits,
+    };
+    let count = width
+        .checked_mul(height)
+        .ok_or(super::block::PortableUnavailable)?;
+    let mut cells = Vec::new();
+    cells
+        .try_reserve_exact(count)
+        .map_err(|_| super::block::PortableUnavailable)?;
+    for row in 0..height {
+        for column in 0..width {
+            let child_row = row / child_cell_span;
+            let child_column = column / child_cell_span;
+            let child_split = child_splits
+                .get(child_row)
+                .and_then(|children| children.get(child_column))
+                .copied()
+                .ok_or(super::block::PortableUnavailable)?;
+            let (width_log2, height_log2) = match (child_split, child_cell_span) {
+                (true, 2) => (0, 0),
+                (false, 2) => (1, 1),
+                (true, 4) => (1, 1),
+                (false, 4) => (2, 2),
+                _ => return Err(super::block::PortableUnavailable),
+            };
             cells.push(TxCellUpdate {
                 width_log2,
                 height_log2,
@@ -7087,20 +7145,35 @@ fn decode_inter_leaf(
         }
         _ => None,
     };
-    let tx_cells = match (mode2_topology, b64_topology, rect_topology) {
-        (Some(topology), None, None) => match wide_mode2_tx_cells(node, topology) {
+    let square_topology = match transform_plan {
+        InterTransformPlan::SplitB16Topology { child_splits } => {
+            Some(super::block::SquareSplitTopology::B16 { child_splits })
+        }
+        InterTransformPlan::SplitB32Topology { child_splits } => {
+            Some(super::block::SquareSplitTopology::B32 { child_splits })
+        }
+        _ => None,
+    };
+    let tx_cells = match (mode2_topology, b64_topology, square_topology, rect_topology) {
+        (Some(topology), None, None, None) => match wide_mode2_tx_cells(node, topology) {
             Ok(cells) => Some(cells),
             Err(_) => return Ok(Err(super::block::PortableUnavailable)),
         },
-        (None, Some(topology), None) => match b64_topology_tx_cells(node, topology.child_splits) {
+        (None, Some(topology), None, None) => {
+            match b64_topology_tx_cells(node, topology.child_splits) {
+                Ok(cells) => Some(cells),
+                Err(_) => return Ok(Err(super::block::PortableUnavailable)),
+            }
+        }
+        (None, None, Some(topology), None) => match square_topology_tx_cells(node, topology) {
             Ok(cells) => Some(cells),
             Err(_) => return Ok(Err(super::block::PortableUnavailable)),
         },
-        (None, None, Some(topology)) => match rect_topology_tx_cells(node, topology) {
+        (None, None, None, Some(topology)) => match rect_topology_tx_cells(node, topology) {
             Ok(cells) => Some(cells),
             Err(_) => return Ok(Err(super::block::PortableUnavailable)),
         },
-        (None, None, None) => None,
+        (None, None, None, None) => None,
         _ => return Ok(Err(super::block::PortableUnavailable)),
     };
     let (tx_size, transform_split, lossless_transform, lossy_transform_grid, lossy_wide_chunked) =
@@ -7134,7 +7207,9 @@ fn decode_inter_leaf(
                 (TxSize::Tx64x32, true, false, false, false)
             }
             InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, true, false, false, false),
-            InterTransformPlan::SplitB16 | InterTransformPlan::SplitB16Deep => {
+            InterTransformPlan::SplitB16
+            | InterTransformPlan::SplitB16Deep
+            | InterTransformPlan::SplitB16Topology { .. } => {
                 (TxSize::Tx16x16, true, false, false, false)
             }
             InterTransformPlan::SplitB16x32
@@ -7147,7 +7222,9 @@ fn decode_inter_leaf(
             | InterTransformPlan::SplitB32x16Topology { .. } => {
                 (TxSize::Tx32x16, true, false, false, false)
             }
-            InterTransformPlan::SplitB32 | InterTransformPlan::SplitB32Deep => {
+            InterTransformPlan::SplitB32
+            | InterTransformPlan::SplitB32Deep
+            | InterTransformPlan::SplitB32Topology { .. } => {
                 (TxSize::Tx32x32, true, false, false, false)
             }
             InterTransformPlan::SplitB64 => (TxSize::Tx64x64, true, false, false, false),
@@ -7585,6 +7662,7 @@ fn decode_inter_leaf(
                         | InterTransformPlan::SplitB64x32Deep
                 ),
                 b64_topology,
+                square_topology,
                 rect_topology,
             )
         } else {
@@ -7622,6 +7700,7 @@ fn decode_inter_leaf(
                         | InterTransformPlan::SplitB64x32Deep
                 ),
                 b64_topology,
+                square_topology,
                 rect_topology,
                 obmc,
                 inter_intra,
