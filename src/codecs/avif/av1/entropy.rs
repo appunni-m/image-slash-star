@@ -8443,6 +8443,8 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
     let monochrome_cdef_mode2 = complete_monochrome_cdef_mode2_reconstruction_context(context);
     let monochrome_matrix_cdef = complete_monochrome_matrix_cdef_reconstruction_context(context);
+    let monochrome_mode2_restoration =
+        complete_monochrome_mode2_restoration_reconstruction_context(context);
     let monochrome_lossy_active_restoration = if context.intra_frame {
         lossy_monochrome_intra_superres_restoration_supported(context)
     } else {
@@ -8775,6 +8777,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             || (!context.intra_frame
                 && monochrome_matrix_cdef
                 && complete_monochrome_references(context, inter_context))
+            || (!context.intra_frame
+                && monochrome_mode2_restoration
+                && complete_monochrome_references(context, inter_context))
             || bounded_inter_restoration
             || bounded_i444_restoration
             || bounded_i422_inter_restoration
@@ -8806,6 +8811,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (context.intra_frame && monochrome_postfilter)
         || (context.intra_frame && monochrome_cdef_mode2)
         || (context.intra_frame && monochrome_matrix_cdef)
+        || (context.intra_frame && monochrome_mode2_restoration)
         || bounded_intra_restoration
         || bounded_i444_intra_restoration
         || bounded_i422_intra_restoration
@@ -8877,6 +8883,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_rect_cdef_restoration
         || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
+        || monochrome_mode2_restoration
         || monochrome_lossy_active_restoration
         || lossy_i420_intra_active_restoration
         || lossy_i422_intra_active_restoration
@@ -9691,7 +9698,11 @@ pub(super) fn validate_complete_lossy_420_partition(
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
     let (planes, monochrome) = if context.monochrome {
-        let plane = if monochrome_postfilter || monochrome_cdef_mode2 || monochrome_matrix_cdef {
+        let plane = if monochrome_postfilter
+            || monochrome_cdef_mode2
+            || monochrome_matrix_cdef
+            || (monochrome_mode2_restoration && context.frame_tools.cdef.is_some())
+        {
             let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
                 .ok_or_else(|| malformed("monochrome CDEF sample depth is unsupported"))?;
             canvas.finish_monochrome_with_cdef(
@@ -14740,6 +14751,39 @@ fn complete_monochrome_matrix_cdef_reconstruction_context(context: &FirstBlockCo
         && context.frame_tools.cdef.is_some()
         && complete_monochrome_cdef_supported(context)
         && context.restoration_types == [None; 3]
+}
+
+/// Admit mode-2 monochrome restoration as a distinct frame-level profile.
+/// The generic mode-2 walker already owns the transform-partition and matrix
+/// grammar; this predicate only enables the existing checked Wiener/SGR
+/// plan after luma reconstruction. Keep matrices and film grain out of the
+/// restoration path until their combined ordering has independent evidence.
+fn complete_monochrome_mode2_restoration_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
+    complete_monochrome_lossy_base(context)
+        && context.single_tile
+        && context.frame_tools.transform_mode == 2
+        && context.frame_tools.restoration_present
+        && !context.frame_tools.film_grain_present
+        && context.frame_width >= 8
+        && context.frame_height >= 8
+        && context.frame_width.is_multiple_of(8)
+        && context.frame_height.is_multiple_of(8)
+        && context
+            .frame_tools
+            .quantization
+            .is_some_and(|quantization| !quantization.using_matrix)
+        && complete_monochrome_cdef_supported(context)
+        && context.restoration_types[0].is_some_and(|restoration| {
+            matches!(
+                restoration,
+                RestorationType::Wiener | RestorationType::SgrProjection
+            )
+        })
+        && context.restoration_types[1].is_none()
+        && context.restoration_types[2].is_none()
+        && complete_monochrome_restoration_supported(context)
 }
 
 fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockContext) -> bool {
