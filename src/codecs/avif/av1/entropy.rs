@@ -15050,11 +15050,13 @@ fn complete_streamed_lossless_monochrome_context(context: &FirstBlockContext) ->
         && dimensions_are_supported
 }
 
-/// Admit the first bounded IntraBC profile: an 8-bit monochrome, lossless,
-/// single-tile frame using 64x64 superblocks. The block walker still accepts
-/// ordinary monochrome intra leaves in this profile; an IntraBC leaf itself
-/// is narrowed to an exact visible B8x8 terminal before any of its entropy or
-/// canvas state is consumed.
+/// Admit the first bounded IntraBC profile: an 8/10/12-bit monochrome,
+/// lossless, single-tile frame using 64x64 superblocks. The block walker still
+/// accepts ordinary monochrome intra leaves in this profile; an IntraBC leaf
+/// itself is narrowed to an exact visible B8x8 terminal before any of its
+/// entropy or canvas state is consumed. Color and subsampled current-canvas
+/// prediction remain outside this profile because their DV phases need the
+/// separate normative chroma bilinear path.
 fn complete_bounded_monochrome_intrabc_context(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
@@ -15093,7 +15095,7 @@ fn complete_bounded_monochrome_intrabc_context(context: &FirstBlockContext) -> b
         && context.allow_screen_content_tools
         && context.single_tile
         && context.level == 1
-        && context.bit_depth == 8
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
         && !context.subsampling_x
         && !context.subsampling_y

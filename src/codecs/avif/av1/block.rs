@@ -52446,11 +52446,11 @@ impl Lossy420Decoder {
         prediction: [u16; 64],
     ) -> PortableResult<FirstLeaf> {
         (block_size == BlockSize::B8x8
-            && quantization.sample_depth == SampleDepth::EIGHT
+            && matches!(quantization.sample_depth.bits(), 8 | 10 | 12)
             && quantization.qindex == 0
             && quantization.segment_qindex == 0
             && quantization.segment_lossless
-            && tools.sample_depth == SampleDepth::EIGHT)
+            && tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
         let geometry = self.pending_block_geometry.take().portable()?;
