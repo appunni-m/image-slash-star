@@ -8480,6 +8480,15 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_bounded_restoration_intra_420_reconstruction_context(context);
     let high_depth_color_intra_restoration =
         complete_high_depth_color_intra_restoration_reconstruction_context(context);
+    let high_depth_color_inter_nonsuperres_restoration =
+        inter_context.is_some_and(|inter_context| {
+            complete_high_depth_color_inter_restoration_reconstruction_context(
+                context,
+                inter_context,
+            )
+        });
+    let high_depth_color_nonsuperres_restoration =
+        high_depth_color_intra_restoration || high_depth_color_inter_nonsuperres_restoration;
     let bounded_inter_restoration = inter_context.is_some_and(|inter_context| {
         !inter_context.enable_masked_compound
             && complete_bounded_restoration_inter_420_reconstruction_context(context)
@@ -8786,7 +8795,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i422_rect_geometry = bounded_i422_rect_geometry
         .or(bounded_i422_rect_cdef_restoration_geometry)
         .or(bounded_i422_rect_loop_postfilters.map(|profile| profile.geometry));
-    let bounded_subsampled_rect_geometry = if high_depth_color_intra_restoration {
+    let bounded_subsampled_rect_geometry = if high_depth_color_nonsuperres_restoration {
         None
     } else {
         bounded_i420_rect_geometry.or(bounded_i422_rect_geometry)
@@ -8808,7 +8817,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let bounded_i444_intra_cdef = bounded_i444_intra_cdef_geometry.is_some();
     let bounded_i444_intra_loop_geometry = bounded_i444_intra_loop_geometry(context);
     let bounded_i444_intra_loop = bounded_i444_intra_loop_geometry.is_some();
-    let bounded_i444_geometry = if high_depth_color_intra_restoration {
+    let bounded_i444_geometry = if high_depth_color_nonsuperres_restoration {
         None
     } else if bounded_i444_inter {
         bounded_i444_inter_geometry
@@ -8981,6 +8990,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || monochrome_matrix_restoration
         || monochrome_single_tile_loop_restoration
         || high_depth_color_intra_restoration
+        || high_depth_color_inter_nonsuperres_restoration
         || monochrome_lossy_active_restoration
         || lossy_i420_intra_active_restoration
         || lossy_i422_intra_active_restoration
@@ -9169,7 +9179,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 } else {
                     node.block_size
                 };
-                if !high_depth_color_intra_restoration
+                if !high_depth_color_nonsuperres_restoration
                     && (bounded_i444_inter
                         || bounded_i444_restoration
                         || bounded_i444_intra_restoration
@@ -10970,8 +10980,9 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 
 /// Exact high-depth 4:2:0/4:2:2/4:4:4 inter tranche admitted by the
 /// depth-parametric motion-compensation core. Single-reference inter-intra is
-/// materialized for all three layouts; bounded depth-matched I422/I444 remains on its
-/// separate closed predicates. TX_MODE_ONLY_4X4 is admitted only through the
+/// materialized for all three layouts; bounded depth-matched I422/I444 remains
+/// on its separate closed predicates when the generic profile does not apply.
+/// TX_MODE_ONLY_4X4 is admitted only through the
 /// explicit bounded I420/color grids and 64-pixel wide mode-0 compositor.
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms,
@@ -11014,10 +11025,12 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// back to center-MV prediction when affine preparation is unavailable. Every
 /// retained reference is validated up front so a later reference choice cannot
 /// narrow the path back to eight-bit geometry. An
-/// all-NONE restoration header is a semantic no-op:
-/// it carries no tile restoration units or postfilter plan, while active
-/// restoration types remain outside this generic class. I444 film grain is
-/// display-only and uses the shared bounded dimension whitelist.
+/// all-NONE restoration header is a semantic no-op: it carries no tile
+/// restoration units or postfilter plan. Active Wiener/SGR restoration is
+/// admitted for the bounded single-tile non-superres profile and the existing
+/// superres profiles; other restoration types remain outside this generic
+/// class. I444 film grain is display-only and uses the shared bounded
+/// dimension whitelist.
 fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -11025,7 +11038,11 @@ fn complete_high_depth_inter_reconstruction_context(
     let active_restoration =
         high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
             || high_depth_lossy_i422_superres_restoration_supported(context, inter_context)
-            || high_depth_lossy_i420_superres_restoration_supported(context, inter_context);
+            || high_depth_lossy_i420_superres_restoration_supported(context, inter_context)
+            || complete_high_depth_color_inter_restoration_reconstruction_context(
+                context,
+                inter_context,
+            );
     let i420 = context.subsampling_x && context.subsampling_y;
     let i422 = context.subsampling_x && !context.subsampling_y;
     let i444 = !context.subsampling_x && !context.subsampling_y;
@@ -17211,17 +17228,15 @@ fn complete_high_depth_420_reconstruction_context(context: &FirstBlockContext) -
         && context.block_y == 0
 }
 
-/// Admit active Wiener/SGR restoration for a single-tile high-depth lossy
-/// color intra frame. The streamed reconstruction core already carries the
-/// depth-parametric predictors, transform partitions, matrices, loop-filter
-/// metadata, and CDEF maps; this tranche only supplies the frame-level proof
-/// that lets the existing post-filter restoration stage consume its complete
-/// planes. Keep the profile layout-parametric so I420, I422, and I444 share
-/// identical entropy ordering while their restoration-plane extents remain
+/// Common proof for active Wiener/SGR restoration on a single-tile high-depth
+/// lossy color frame without super-resolution. The streamed reconstruction
+/// core already carries depth-parametric predictors, transform partitions,
+/// matrices, loop-filter metadata, and CDEF maps; this helper supplies only
+/// the frame-level geometry/tool/unit proof needed before the existing
+/// post-filter restoration stage consumes complete planes. I420, I422, and
+/// I444 share the entropy ordering while their restoration-plane extents stay
 /// explicit and checked.
-fn complete_high_depth_color_intra_restoration_reconstruction_context(
-    context: &FirstBlockContext,
-) -> bool {
+fn high_depth_lossy_color_nonsuperres_restoration_common(context: &FirstBlockContext) -> bool {
     let Some(quantization) = context.frame_tools.quantization else {
         return false;
     };
@@ -17240,8 +17255,7 @@ fn complete_high_depth_color_intra_restoration_reconstruction_context(
     }
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
-    if !context.intra_frame
-        || !matches!(context.bit_depth, 10 | 12)
+    if !matches!(context.bit_depth, 10 | 12)
         || !context.single_tile
         || context.tile_origin_b4_x != 0
         || context.tile_origin_b4_y != 0
@@ -17361,6 +17375,32 @@ fn complete_high_depth_color_intra_restoration_reconstruction_context(
         }
     }
     true
+}
+
+fn complete_high_depth_color_intra_restoration_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
+    context.intra_frame && high_depth_lossy_color_nonsuperres_restoration_common(context)
+}
+
+fn complete_high_depth_color_inter_restoration_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
+    !context.intra_frame
+        && high_depth_lossy_color_nonsuperres_restoration_common(context)
+        && inter_context.references.iter().all(|reference| {
+            reference.surface.validate().is_ok()
+                && reference.surface.depth.bits() == context.bit_depth
+                && reference.surface.layout == layout
+        })
 }
 
 /// 4:2:2 intra tranche admitted by the depth-parametric streamed leaf. The
