@@ -15149,7 +15149,6 @@ fn lossless_i420_superres_restoration_supported(
         || context.skip_mode_enabled
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || !context.frame_tools.restoration_present
@@ -15264,7 +15263,6 @@ fn lossless_i422_superres_restoration_supported(
         || context.skip_mode_enabled
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || !context.frame_tools.restoration_present
@@ -15362,7 +15360,6 @@ fn lossless_i444_superres_restoration_supported(
         || context.skip_mode_enabled
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || !context.frame_tools.restoration_present
