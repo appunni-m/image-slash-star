@@ -4726,8 +4726,14 @@ enum InterTransformPlan {
     SplitB8x4,
     SplitB4x16,
     SplitB4x16Deep,
+    SplitB4x16Topology {
+        child_splits: [bool; 2],
+    },
     SplitB16x4,
     SplitB16x4Deep,
+    SplitB16x4Topology {
+        child_splits: [bool; 2],
+    },
     SplitB8x16,
     SplitB8x16Deep,
     SplitB8x16Topology {
@@ -5294,7 +5300,11 @@ fn decode_inter_transform_size(
                     .y
                     .checked_add(offset_y)
                     .ok_or(super::block::PortableUnavailable)?;
-                let above_small = false;
+                let above_small = if offset_y == 0 {
+                    false
+                } else {
+                    child_splits[0]
+                };
                 let left_small = child_x
                     .checked_sub(1)
                     .and_then(|x| tile_state.transform_contexts_at(x, child_y))
@@ -5307,7 +5317,7 @@ fn decode_inter_transform_size(
                 return Ok(InterTransformPlan::SplitB4x16Deep);
             }
             if child_splits.iter().any(|split| *split) {
-                return Err(super::block::PortableUnavailable);
+                return Ok(InterTransformPlan::SplitB4x16Topology { child_splits });
             }
             return Ok(InterTransformPlan::SplitB4x16);
         }
@@ -5329,7 +5339,11 @@ fn decode_inter_transform_size(
                     .checked_sub(1)
                     .and_then(|y| tile_state.transform_contexts_at(child_x, y))
                     .is_some_and(|(tx_width, _)| tx_width < 1);
-                let left_small = false;
+                let left_small = if offset_x == 0 {
+                    false
+                } else {
+                    child_splits[0]
+                };
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
                 child_splits[index] =
                     decoder.adaptive_bool(&mut cdfs.common.transform_partition[5][context].0);
@@ -5338,7 +5352,7 @@ fn decode_inter_transform_size(
                 return Ok(InterTransformPlan::SplitB16x4Deep);
             }
             if child_splits.iter().any(|split| *split) {
-                return Err(super::block::PortableUnavailable);
+                return Ok(InterTransformPlan::SplitB16x4Topology { child_splits });
             }
             return Ok(InterTransformPlan::SplitB16x4);
         }
@@ -6174,17 +6188,28 @@ fn rect_topology_tx_cells(
 ) -> super::block::PortableResult<Vec<TxCellUpdate>> {
     let width = usize::try_from(node.width).map_err(|_| super::block::PortableUnavailable)?;
     let height = usize::try_from(node.height).map_err(|_| super::block::PortableUnavailable)?;
-    let (expected_width, expected_height, along_rows, child_cell_span) = match topology {
-        super::block::RectSplitTopology::B8x16 { .. } => (2, 4, true, 2),
-        super::block::RectSplitTopology::B16x8 { .. } => (4, 2, false, 2),
-        super::block::RectSplitTopology::B16x32 { .. } => (4, 8, true, 4),
-        super::block::RectSplitTopology::B32x16 { .. } => (8, 4, false, 4),
+    let (
+        expected_width,
+        expected_height,
+        along_rows,
+        child_cell_span,
+        split_dimensions,
+        unsplit_dimensions,
+    ) = match topology {
+        super::block::RectSplitTopology::B4x16 { .. } => (1, 4, true, 2, (0, 0), (0, 1)),
+        super::block::RectSplitTopology::B16x4 { .. } => (4, 1, false, 2, (0, 0), (1, 0)),
+        super::block::RectSplitTopology::B8x16 { .. } => (2, 4, true, 2, (0, 0), (1, 1)),
+        super::block::RectSplitTopology::B16x8 { .. } => (4, 2, false, 2, (0, 0), (1, 1)),
+        super::block::RectSplitTopology::B16x32 { .. } => (4, 8, true, 4, (1, 1), (2, 2)),
+        super::block::RectSplitTopology::B32x16 { .. } => (8, 4, false, 4, (1, 1), (2, 2)),
     };
     (width == expected_width && height == expected_height)
         .then_some(())
         .ok_or(super::block::PortableUnavailable)?;
     let child_splits = match topology {
-        super::block::RectSplitTopology::B8x16 { child_splits }
+        super::block::RectSplitTopology::B4x16 { child_splits }
+        | super::block::RectSplitTopology::B16x4 { child_splits }
+        | super::block::RectSplitTopology::B8x16 { child_splits }
         | super::block::RectSplitTopology::B16x8 { child_splits }
         | super::block::RectSplitTopology::B16x32 { child_splits }
         | super::block::RectSplitTopology::B32x16 { child_splits } => child_splits,
@@ -6207,12 +6232,10 @@ fn rect_topology_tx_cells(
                 .get(child)
                 .copied()
                 .ok_or(super::block::PortableUnavailable)?;
-            let (width_log2, height_log2) = if child_cell_span == 2 {
-                if split { (0, 0) } else { (1, 1) }
-            } else if split {
-                (1, 1)
+            let (width_log2, height_log2) = if split {
+                split_dimensions
             } else {
-                (2, 2)
+                unsplit_dimensions
             };
             cells.push(TxCellUpdate {
                 width_log2,
@@ -7159,6 +7182,12 @@ fn decode_inter_leaf(
         _ => None,
     };
     let rect_topology = match transform_plan {
+        InterTransformPlan::SplitB4x16Topology { child_splits } => {
+            Some(super::block::RectSplitTopology::B4x16 { child_splits })
+        }
+        InterTransformPlan::SplitB16x4Topology { child_splits } => {
+            Some(super::block::RectSplitTopology::B16x4 { child_splits })
+        }
         InterTransformPlan::SplitB8x16Topology { child_splits } => {
             Some(super::block::RectSplitTopology::B8x16 { child_splits })
         }
@@ -7212,8 +7241,14 @@ fn decode_inter_leaf(
             InterTransformPlan::SplitB8x4 => (TxSize::Tx8x4, true, false, false, false),
             InterTransformPlan::SplitB4x16 => (TxSize::Tx4x16, true, false, false, false),
             InterTransformPlan::SplitB4x16Deep => (TxSize::Tx4x16, true, false, false, false),
+            InterTransformPlan::SplitB4x16Topology { .. } => {
+                (TxSize::Tx4x16, true, false, false, false)
+            }
             InterTransformPlan::SplitB16x4 => (TxSize::Tx16x4, true, false, false, false),
             InterTransformPlan::SplitB16x4Deep => (TxSize::Tx16x4, true, false, false, false),
+            InterTransformPlan::SplitB16x4Topology { .. } => {
+                (TxSize::Tx16x4, true, false, false, false)
+            }
             InterTransformPlan::SplitB8x16 => (TxSize::Tx8x16, true, false, false, false),
             InterTransformPlan::SplitB8x16Deep => (TxSize::Tx8x16, true, false, false, false),
             InterTransformPlan::SplitB8x16Topology { .. } => {
