@@ -3440,6 +3440,102 @@ fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockCo
     has_lossless && has_lossy
 }
 
+/// Admit the bounded mixed-segment profile for monochrome inter frames. The
+/// luma-only path already has a depth-parametric `LosslessGrid` compositor, so
+/// this predicate only opens its residual grammar while keeping the ordinary
+/// monochrome filter and multi-tile profiles closed. Frame-level filters are
+/// intentionally neutral in this first tranche; a later profile can compose
+/// them once mixed segment metadata has independent parity evidence.
+fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+    let segmentation = context.frame_tools.segmentation;
+    if context.intra_frame
+        || !context.monochrome
+        || !matches!(context.bit_depth, 8 | 10 | 12)
+        || context.all_lossless
+        || context.superres_enabled
+        || context.upscaled_width != context.frame_width
+        || !context.single_tile
+        || context.tile_origin_b4_x != 0
+        || context.tile_origin_b4_y != 0
+        || context.block_x != 0
+        || context.block_y != 0
+        || context.block_width != context.frame_block_width
+        || context.block_height != context.frame_block_height
+        || context.frame_width < 4
+        || context.frame_height < 4
+        || context.frame_width > 128
+        || context.frame_height > 128
+        || !context.frame_width.is_multiple_of(4)
+        || !context.frame_height.is_multiple_of(4)
+        || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
+        || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
+        || context.frame_tools.restoration_present
+        || context.restoration_types != [None; 3]
+        || context.frame_tools.film_grain_present
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.cdef.is_some()
+        || context.frame_tools.delta_q_present
+        || context.frame_tools.delta_lf_present
+        || !matches!(context.frame_tools.transform_mode, 1 | 2)
+        || !context.segmentation_enabled
+        || !segmentation.enabled
+        || !segmentation.update_map
+        || segmentation.temporal
+        || segmentation.preskip
+        || context.skip_mode_enabled
+        || context.allow_intrabc
+    {
+        return false;
+    }
+    let Some(quantization) = context.frame_tools.quantization else {
+        return false;
+    };
+    if quantization.using_matrix {
+        return false;
+    }
+    let Some(last_active) = usize::try_from(segmentation.last_active_id)
+        .ok()
+        .filter(|&index| index < segmentation.segments.len())
+    else {
+        return false;
+    };
+    let active_count = last_active.saturating_add(1);
+    let delta_lossless = quantization.y_dc_delta == 0
+        && quantization.u_dc_delta == 0
+        && quantization.u_ac_delta == 0
+        && quantization.v_dc_delta == 0
+        && quantization.v_ac_delta == 0;
+    let mut has_lossless = false;
+    let mut has_lossy = false;
+    for segment in &segmentation.segments[..active_count] {
+        let expected_qindex = i64::from(quantization.base)
+            .saturating_add(i64::from(segment.delta_q))
+            .clamp(0, 255);
+        if segment.reference >= 0
+            || segment.skip
+            || segment.global_motion
+            || segment.delta_lf != [0; 4]
+            || u32::try_from(expected_qindex).ok() != Some(segment.qindex)
+        {
+            return false;
+        }
+        let segment_lossless = segment.qindex == 0 && delta_lossless;
+        if segment.lossless != segment_lossless {
+            return false;
+        }
+        if segment_lossless {
+            has_lossless = true;
+        } else if segment.qindex > 0 {
+            has_lossy = true;
+        } else {
+            return false;
+        }
+    }
+    has_lossless && has_lossy
+}
+
 fn interintra_allowed(block_size: BlockSize) -> bool {
     matches!(
         block_size,
@@ -3985,6 +4081,33 @@ fn inter_mixed_high_depth_lossless_grid_geometry_supported(
         // The ordinary helper is mode-0-only by design; evaluating its
         // remaining geometry/quantization proof here avoids broadening any
         // other inter profile.
+        && inter_lossless_grid_geometry_supported(
+            block_size,
+            layout,
+            visible_width,
+            visible_height,
+            bit_depth,
+            quantization,
+            0,
+        )
+}
+
+/// Monochrome mixed-segment blocks share the depth-parametric lossless grid
+/// across all admitted sample depths. The frame-level predicate owns the
+/// single-tile and neutral-filter bounds; this helper only adds the mode-1/2
+/// residual grammar to the exact-visible mode-0 geometry proof.
+fn inter_mixed_monochrome_lossless_grid_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    layout == PixelLayout::Monochrome
+        && matches!(bit_depth, 8 | 10 | 12)
+        && matches!(transform_mode, 1 | 2)
         && inter_lossless_grid_geometry_supported(
             block_size,
             layout,
@@ -6763,6 +6886,14 @@ fn decode_inter_leaf(
         context.bit_depth,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
+    ) || inter_mixed_monochrome_lossless_grid_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
     );
     let lossy_grid_geometry = inter_lossy_only_4x4_grid_geometry_supported(
         node.block_size,
@@ -8864,6 +8995,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
         })
     };
+    let monochrome_mixed_lossless_inter = inter_context.is_some_and(|inter_context| {
+        complete_monochrome_mixed_lossless_inter_reconstruction_context(context, inter_context)
+    });
     let superres_lossy_i420_intra = complete_superres_lossy_420_reconstruction_context(context);
     let lossy_i420_intra_active_restoration =
         superres_lossy_i420_intra && lossy_i420_intra_superres_restoration_supported(context);
@@ -9190,6 +9324,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             || generic_i444_inter
             || generic_high_depth_inter
             || generic_high_depth_lossless_inter
+            || monochrome_mixed_lossless_inter
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
             || (!context.intra_frame
@@ -15616,6 +15751,18 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
         && complete_monochrome_lossy_common(context)
         && complete_monochrome_references(context, inter_context))
         || lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
+}
+
+/// Complete monochrome inter admission for the bounded mixed-segment
+/// lossless profile. The segment predicate owns frame-level geometry and
+/// neutral-filter checks; references retain the ordinary monochrome
+/// layout/depth validator used by the lossy path.
+fn complete_monochrome_mixed_lossless_inter_reconstruction_context(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    mixed_monochrome_lossless_segmentation_supported(context)
+        && complete_monochrome_references(context, inter_context)
 }
 
 /// Common frame-level proof for the lossy monochrome super-resolution
