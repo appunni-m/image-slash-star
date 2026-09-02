@@ -5121,6 +5121,16 @@ fn inter_lossy_direct_chroma_grid_geometry_supported(
                         | BlockSize::B32x64
                         | BlockSize::B64x32
                         | BlockSize::B64x64
+                ))
+            // Small I422 roots also have a complete TX4x4 chroma-grid
+            // compositor.  Keep this qindex-zero exception restricted to
+            // the exact direct-grid geometries; all split/deep plans remain
+            // positive-q only.
+            || (quantization.segment_qindex == 0
+                && layout == PixelLayout::I422
+                && matches!(
+                    block_size,
+                    BlockSize::B8x16 | BlockSize::B8x32 | BlockSize::B16x32
                 )))
         && matches!(
             (layout, block_size),

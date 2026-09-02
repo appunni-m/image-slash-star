@@ -55499,6 +55499,14 @@ impl Lossy420Decoder {
                         && (luma_width, luma_height) == block_size.pixel_dimensions())
                     || (tools.transform_mode == 2
                         && quantization.segment_qindex == 0
+                        && sampling == ChromaSampling::Subsampled422
+                        && matches!(
+                            block_size,
+                            BlockSize::B8x16 | BlockSize::B8x32 | BlockSize::B16x32
+                        )
+                        && (luma_width, luma_height) == block_size.pixel_dimensions())
+                    || (tools.transform_mode == 2
+                        && quantization.segment_qindex == 0
                         && matches!(
                             sampling,
                             ChromaSampling::Subsampled422 | ChromaSampling::Full
@@ -62917,11 +62925,14 @@ impl Lossy420Decoder {
     ) -> PortableResult<LosslessGridContexts> {
         let coded_width = raster.coded_width;
         let coded_height = raster.coded_height;
-        let i422_narrow_mode2_q0 = self.chroma_sampling == ChromaSampling::Subsampled422
+        let i422_direct_mode2_q0 = self.chroma_sampling == ChromaSampling::Subsampled422
             && tools.transform_mode == 2
             && quantization.segment_qindex == 0
             && !quantization.segment_lossless
-            && matches!((coded_width, coded_height), (4, 8) | (4, 16));
+            && matches!(
+                (coded_width, coded_height),
+                (4, 8) | (4, 16) | (4, 32) | (8, 32)
+            );
         (prediction.len() == coded_width.checked_mul(coded_height).portable()?
             && matches!(
                 (coded_width, coded_height),
@@ -62936,7 +62947,7 @@ impl Lossy420Decoder {
             && matches!(tools.transform_mode, 1 | 2)
             && (tools.transform_mode == 1
                 || quantization.segment_qindex > 0
-                || i422_narrow_mode2_q0)
+                || i422_direct_mode2_q0)
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
