@@ -11476,7 +11476,8 @@ fn bounded_i420_restoration_units_supported_for_dimensions(
 /// restoration remain inactive, keeping the filter order and metadata maps
 /// within the already checked single-tile path.
 /// Screen-enabled high-depth I420 intra leaves may use Y16x16/U/V8x8 palette
-/// prediction; inter leaves use parsed force-integer MV precision. CDEF is
+/// prediction; inter leaves use parsed force-integer MV precision and may
+/// blend coded-resolution inter-intra before residual reconstruction. CDEF is
 /// derived from completed samples, while intraBC and intra/palette blocks
 /// within inter frames remain outside this profile.
 fn bounded_i420_cdef_common(
@@ -11553,7 +11554,6 @@ fn complete_bounded_i420_cdef_inter_reconstruction_context(
         && bounded_i420_cdef_common(context, quantization)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
@@ -11563,7 +11563,8 @@ fn complete_bounded_i420_cdef_inter_reconstruction_context(
 /// luma plane remains 16x16 while horizontally subsampled chroma is 8x16;
 /// the checked CDEF raster already owns that independent plane geometry.
 /// Screen-enabled I422 intra leaves may use depth-aware Y16x16/U/V8x16 palette
-/// prediction; inter leaves use parsed force-integer MV precision. CDEF
+/// prediction; inter leaves use parsed force-integer MV precision and may
+/// blend coded-resolution inter-intra before residual reconstruction. CDEF
 /// consumes completed samples with the existing horizontal-subsampling
 /// direction remap; intraBC and intra/palette blocks within inter frames remain
 /// outside this profile.
@@ -11642,7 +11643,6 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
         && bounded_i422_cdef_common(context, quantization)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
