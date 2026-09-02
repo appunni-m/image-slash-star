@@ -8501,6 +8501,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_monochrome_single_tile_loop_filter_reconstruction_context(context);
     let monochrome_single_tile_loop_cdef =
         complete_monochrome_single_tile_loop_cdef_reconstruction_context(context);
+    let monochrome_single_tile_loop_restoration =
+        complete_monochrome_single_tile_loop_restoration_reconstruction_context(context);
     let monochrome_lossy_active_restoration = if context.intra_frame {
         lossy_monochrome_intra_superres_restoration_supported(context)
     } else {
@@ -8854,6 +8856,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             || (!context.intra_frame
                 && monochrome_single_tile_loop_cdef
                 && complete_monochrome_references(context, inter_context))
+            || (!context.intra_frame
+                && monochrome_single_tile_loop_restoration
+                && complete_monochrome_references(context, inter_context))
             || bounded_inter_restoration
             || bounded_i444_restoration
             || bounded_i422_inter_restoration
@@ -8892,6 +8897,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (context.intra_frame && monochrome_multitile_loop_cdef)
         || (context.intra_frame && monochrome_single_tile_loop_filter)
         || (context.intra_frame && monochrome_single_tile_loop_cdef)
+        || (context.intra_frame && monochrome_single_tile_loop_restoration)
         || bounded_intra_restoration
         || bounded_i444_intra_restoration
         || bounded_i422_intra_restoration
@@ -8965,6 +8971,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (monochrome_postfilter && context.restoration_types[0].is_some())
         || monochrome_mode2_restoration
         || monochrome_matrix_restoration
+        || monochrome_single_tile_loop_restoration
         || monochrome_lossy_active_restoration
         || lossy_i420_intra_active_restoration
         || lossy_i422_intra_active_restoration
@@ -9793,6 +9800,21 @@ pub(super) fn validate_complete_lossy_420_partition(
                 &cdef_active,
                 depth,
             )?
+        } else if context.single_tile && monochrome_single_tile_loop_restoration {
+            let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("monochrome loop-filter sample depth is unsupported"))?;
+            if cdef_frame_parameters.is_some() {
+                canvas.finish_monochrome_with_loop_filter_and_cdef(
+                    loop_parameters,
+                    &filter_blocks,
+                    cdef_frame_parameters,
+                    &cdef_indices,
+                    &cdef_active,
+                    depth,
+                )?
+            } else {
+                canvas.finish_monochrome_with_loop_filter(loop_parameters, &filter_blocks, depth)?
+            }
         } else if context.single_tile
             && (monochrome_postfilter
                 || monochrome_cdef_mode2
@@ -15010,6 +15032,62 @@ fn complete_monochrome_single_tile_loop_cdef_reconstruction_context(
         && complete_monochrome_cdef_supported(context)
         && !context.frame_tools.restoration_present
         && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && dimensions_are_supported
+}
+
+/// Admit luma deblocking together with the existing bounded monochrome
+/// Wiener/SGR restoration plan. CDEF is optional here; when present the
+/// raster finish composes it between deblocking and restoration, while the
+/// restoration plan remains transactional and is applied by `frame.rs`.
+fn complete_monochrome_single_tile_loop_restoration_reconstruction_context(
+    context: &FirstBlockContext,
+) -> bool {
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let dimensions_are_supported = context.frame_width >= 8
+        && context.frame_height >= 8
+        && context.frame_width <= 128
+        && context.frame_height <= 128
+        && context.frame_width.is_multiple_of(8)
+        && context.frame_height.is_multiple_of(8)
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && context.upscaled_width == context.frame_width;
+    context.monochrome
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && context.single_tile
+        && context.tile_origin_b4_x == 0
+        && context.tile_origin_b4_y == 0
+        && !context.superres_enabled
+        && !context.all_lossless
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && !context.frame_tools.segment_lossless
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && context.frame_tools.quantization.is_some()
+        && context.frame_tools.loop_filter.level_y != [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.loop_filter.sharpness <= 7
+        && complete_monochrome_cdef_supported(context)
+        && context.frame_tools.restoration_present
+        && context.restoration_types[0].is_some_and(|restoration| {
+            matches!(
+                restoration,
+                RestorationType::Wiener | RestorationType::SgrProjection
+            )
+        })
+        && context.restoration_types[1].is_none()
+        && context.restoration_types[2].is_none()
+        && complete_monochrome_restoration_supported(context)
         && !context.frame_tools.film_grain_present
         && context.block_x == 0
         && context.block_y == 0
