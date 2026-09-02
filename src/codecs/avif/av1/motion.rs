@@ -320,12 +320,171 @@ impl GlobalMotion {
     }
 }
 
+/// Prepared affine parameters used by AV1's 8x8 warped-motion predictor.
+///
+/// `matrix` remains in the frame-header Q16 luma-coordinate domain.  `abcd`
+/// is the four Q6 shear coefficients consumed by the separable 193-phase
+/// warped filter.  Keeping both forms avoids re-deriving the source origin for
+/// each plane tile while retaining the exact header matrix for coordinate
+/// projection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct PreparedGlobalWarp {
+    pub(super) matrix: [i32; 6],
+    pub(super) abcd: [i16; 4],
+}
+
+// Pinned dav1d 1.5.3 `src/warpmv.c`/libaom 3.13.2 divisor reciprocal table.
+// The table is data-only and covered by the existing BSD-2-Clause and patent
+// notices retained in NOTICE.md, PATENTS, and third_party/.
+const GLOBAL_MOTION_DIV_LUT: [u16; 257] = [
+    16384, 16320, 16257, 16194, 16132, 16070, 16009, 15948, 15888, 15828, 15768, 15709, 15650,
+    15592, 15534, 15477, 15420, 15364, 15308, 15252, 15197, 15142, 15087, 15033, 14980, 14926,
+    14873, 14821, 14769, 14717, 14665, 14614, 14564, 14513, 14463, 14413, 14364, 14315, 14266,
+    14218, 14170, 14122, 14075, 14028, 13981, 13935, 13888, 13843, 13797, 13752, 13707, 13662,
+    13618, 13574, 13530, 13487, 13443, 13400, 13358, 13315, 13273, 13231, 13190, 13148, 13107,
+    13066, 13026, 12985, 12945, 12906, 12866, 12827, 12788, 12749, 12710, 12672, 12633, 12596,
+    12558, 12520, 12483, 12446, 12409, 12373, 12336, 12300, 12264, 12228, 12193, 12157, 12122,
+    12087, 12053, 12018, 11984, 11950, 11916, 11882, 11848, 11815, 11782, 11749, 11716, 11683,
+    11651, 11619, 11586, 11555, 11523, 11491, 11460, 11429, 11398, 11367, 11336, 11305, 11275,
+    11245, 11215, 11185, 11155, 11125, 11096, 11067, 11038, 11009, 10980, 10951, 10923, 10894,
+    10866, 10838, 10810, 10782, 10755, 10727, 10700, 10673, 10645, 10618, 10592, 10565, 10538,
+    10512, 10486, 10460, 10434, 10408, 10382, 10356, 10331, 10305, 10280, 10255, 10230, 10205,
+    10180, 10156, 10131, 10107, 10082, 10058, 10034, 10010, 9986, 9963, 9939, 9916, 9892, 9869,
+    9846, 9823, 9800, 9777, 9754, 9732, 9709, 9687, 9664, 9642, 9620, 9598, 9576, 9554, 9533, 9511,
+    9489, 9468, 9447, 9425, 9404, 9383, 9362, 9341, 9321, 9300, 9279, 9259, 9239, 9218, 9198, 9178,
+    9158, 9138, 9118, 9098, 9079, 9059, 9039, 9020, 9001, 8981, 8962, 8943, 8924, 8905, 8886, 8867,
+    8849, 8830, 8812, 8793, 8775, 8756, 8738, 8720, 8702, 8684, 8666, 8648, 8630, 8613, 8595, 8577,
+    8560, 8542, 8525, 8508, 8490, 8473, 8456, 8439, 8422, 8405, 8389, 8372, 8355, 8339, 8322, 8306,
+    8289, 8273, 8257, 8240, 8224, 8208, 8192,
+];
+
+fn global_motion_clip_wmp(value: i64) -> Av1Result<i32> {
+    let value = value.clamp(i64::from(i16::MIN), i64::from(i16::MAX));
+    let magnitude = value
+        .unsigned_abs()
+        .checked_add(32)
+        .ok_or_else(|| malformed("global-motion shear rounding overflows"))?
+        >> 6;
+    let magnitude = i32::try_from(magnitude)
+        .map_err(|_| malformed("global-motion shear magnitude exceeds i32"))?
+        .checked_mul(64)
+        .ok_or_else(|| malformed("global-motion shear scale overflows"))?;
+    Ok(if value < 0 { -magnitude } else { magnitude })
+}
+
+fn global_motion_divisor(value: i32) -> Av1Result<(u32, i32)> {
+    let value = value.unsigned_abs();
+    if value == 0 {
+        return Err(malformed("global-motion divisor is zero"));
+    }
+    let shift = 31_u32.saturating_sub(value.leading_zeros());
+    let base = 1_u32
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("global-motion divisor shift overflows"))?;
+    let error = value
+        .checked_sub(base)
+        .ok_or_else(|| malformed("global-motion divisor normalization underflows"))?;
+    let index = if shift > 8 {
+        error
+            .checked_add(
+                1_u32
+                    .checked_shl(shift - 9)
+                    .ok_or_else(|| malformed("global-motion divisor rounding shift overflows"))?,
+            )
+            .ok_or_else(|| malformed("global-motion divisor index overflows"))?
+            >> (shift - 8)
+    } else {
+        error
+            .checked_shl(8 - shift)
+            .ok_or_else(|| malformed("global-motion divisor index shift overflows"))?
+    };
+    let reciprocal = i32::from(
+        *GLOBAL_MOTION_DIV_LUT
+            .get(
+                usize::try_from(index)
+                    .map_err(|_| malformed("global-motion divisor index exceeds usize"))?,
+            )
+            .ok_or_else(|| malformed("global-motion divisor index exceeds LUT"))?,
+    );
+    let shift = shift
+        .checked_add(14)
+        .ok_or_else(|| malformed("global-motion divisor shift overflows"))?;
+    Ok((shift, reciprocal))
+}
+
+/// Prepare a frame-header ROTZOOM/AFFINE matrix for warped sampling.
+///
+/// `None` is a normative ordinary-MC fallback for identity/translation or an
+/// invalid shear (including a non-positive diagonal).  Arithmetic and matrix
+/// representation failures remain hard errors so a malformed frame cannot
+/// publish a partial predictor.
+pub(super) fn prepare_global_warp(global: GlobalMotion) -> Av1Result<Option<PreparedGlobalWarp>> {
+    if !matches!(
+        global.kind,
+        GlobalMotionType::RotZoom | GlobalMotionType::Affine
+    ) {
+        return Ok(None);
+    }
+    if global.kind == GlobalMotionType::RotZoom {
+        let neg = global.matrix[3]
+            .checked_neg()
+            .ok_or_else(|| malformed("rotzoom global-motion matrix overflows"))?;
+        if global.matrix[5] != global.matrix[2] || global.matrix[4] != neg {
+            return Err(malformed("rotzoom global-motion matrix is inconsistent"));
+        }
+    }
+    if global.matrix[2] <= 0 {
+        return Ok(None);
+    }
+    let alpha = global_motion_clip_wmp(i64::from(global.matrix[2]) - (1_i64 << 16))?;
+    let beta = global_motion_clip_wmp(i64::from(global.matrix[3]))?;
+    let (shift, reciprocal) = global_motion_divisor(global.matrix[2])?;
+    let reciprocal = i64::from(reciprocal);
+    let v1 = i64::from(global.matrix[4])
+        .checked_mul(1_i64 << 16)
+        .and_then(|value| value.checked_mul(reciprocal))
+        .ok_or_else(|| malformed("global-motion gamma product overflows"))?;
+    let gamma_value = signed_rounded_shift(v1, shift)?;
+    let gamma = global_motion_clip_wmp(gamma_value)?;
+    let v2 = i64::from(global.matrix[3])
+        .checked_mul(i64::from(global.matrix[4]))
+        .and_then(|value| value.checked_mul(reciprocal))
+        .ok_or_else(|| malformed("global-motion delta product overflows"))?;
+    let delta_value = i64::from(global.matrix[5])
+        .checked_sub(signed_rounded_shift(v2, shift)?)
+        .and_then(|value| value.checked_sub(1_i64 << 16))
+        .ok_or_else(|| malformed("global-motion delta product overflows"))?;
+    let delta = global_motion_clip_wmp(delta_value)?;
+    let alpha = i16::try_from(alpha).map_err(|_| malformed("global-motion alpha exceeds i16"))?;
+    let beta = i16::try_from(beta).map_err(|_| malformed("global-motion beta exceeds i16"))?;
+    let gamma = i16::try_from(gamma).map_err(|_| malformed("global-motion gamma exceeds i16"))?;
+    let delta = i16::try_from(delta).map_err(|_| malformed("global-motion delta exceeds i16"))?;
+    if 4_i32
+        .checked_mul(i32::from(alpha).abs())
+        .and_then(|value| value.checked_add(7_i32.checked_mul(i32::from(beta).abs())?))
+        .is_none_or(|value| value >= 1 << 16)
+        || 4_i32
+            .checked_mul(i32::from(gamma).abs())
+            .and_then(|value| value.checked_add(4_i32.checked_mul(i32::from(delta).abs())?))
+            .is_none_or(|value| value >= 1 << 16)
+    {
+        return Ok(None);
+    }
+    Ok(Some(PreparedGlobalWarp {
+        matrix: global.matrix,
+        abcd: [alpha, beta, gamma, delta],
+    }))
+}
+
 fn signed_rounded_shift(value: i64, shift: u32) -> Av1Result<i64> {
     if shift == 0 {
         return Ok(value);
     }
+    let rounding_shift = shift
+        .checked_sub(1)
+        .ok_or_else(|| malformed("global-motion rounding shift underflows"))?;
     let rounding = 1_i64
-        .checked_shl(shift.saturating_sub(1))
+        .checked_shl(rounding_shift)
         .ok_or_else(|| malformed("global-motion rounding shift overflows"))?;
     let magnitude = value
         .unsigned_abs()

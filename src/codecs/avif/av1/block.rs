@@ -16,7 +16,7 @@ use super::large_cdfs::{
     LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
 };
 use super::mc::{MotionScratch, PredictionRequest, blend_obmc_left, blend_obmc_top};
-use super::motion::{InterpolationFilter, MotionVector, ScaleFactors};
+use super::motion::{InterpolationFilter, MotionVector, PreparedGlobalWarp, ScaleFactors};
 use super::quantization;
 use super::sample_depth::SampleDepth;
 use super::surface::FrameSurface;
@@ -52238,6 +52238,7 @@ pub(super) struct Lossy420Decoder {
     palette_map_arena: PaletteMapArena,
     reconstruction_scratch: ReconstructionScratch,
     motion_scratch: Option<MotionScratch>,
+    pending_global_warps: [Option<PreparedGlobalWarp>; 2],
     chroma_sampling: ChromaSampling,
     qcat_one_square_only: bool,
     cdef_index_bits: u32,
@@ -52262,6 +52263,7 @@ impl Lossy420Decoder {
             palette_map_arena: PaletteMapArena::new(),
             reconstruction_scratch: ReconstructionScratch::new(),
             motion_scratch: None,
+            pending_global_warps: [None, None],
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: false,
             cdef_index_bits: 0,
@@ -52286,6 +52288,7 @@ impl Lossy420Decoder {
             palette_map_arena: PaletteMapArena::new(),
             reconstruction_scratch: ReconstructionScratch::new(),
             motion_scratch: None,
+            pending_global_warps: [None, None],
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -52317,6 +52320,7 @@ impl Lossy420Decoder {
             palette_map_arena: PaletteMapArena::new(),
             reconstruction_scratch: ReconstructionScratch::new(),
             motion_scratch: None,
+            pending_global_warps: [None, None],
             chroma_sampling,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -52634,6 +52638,13 @@ impl Lossy420Decoder {
         self.motion_scratch.as_mut().portable()
     }
 
+    /// Arm the affine predictors for the next inter leaf. The entropy layer
+    /// computes this array only for selected Global/GlobalGlobal references;
+    /// every ordinary inter and OBMC path explicitly receives `[None; 2]`.
+    pub(super) fn set_global_warps(&mut self, warps: [Option<PreparedGlobalWarp>; 2]) {
+        self.pending_global_warps = warps;
+    }
+
     fn apply_obmc_prediction(
         &mut self,
         prediction: &mut [u16],
@@ -52700,6 +52711,7 @@ impl Lossy420Decoder {
                     subsampling_x: subsampling_x == 2,
                     subsampling_y: subsampling_y == 2,
                     motion: neighbor.motion,
+                    warp: None,
                     filters: neighbor.filters,
                 };
                 let reference = neighbor
@@ -52760,6 +52772,7 @@ impl Lossy420Decoder {
                 subsampling_x: subsampling_x == 2,
                 subsampling_y: subsampling_y == 2,
                 motion: neighbor.motion,
+                warp: None,
                 filters: neighbor.filters,
             };
             let reference = neighbor
@@ -56005,6 +56018,7 @@ impl Lossy420Decoder {
                 subsampling_x: plane_subsampling.0 == 2,
                 subsampling_y: plane_subsampling.1 == 2,
                 motion: prediction_state.motions[0],
+                warp: self.pending_global_warps[0],
                 filters,
             };
             let prediction_len = tx_width.checked_mul(tx_height).portable()?;
@@ -56034,10 +56048,12 @@ impl Lossy420Decoder {
                     .plane(plane)
                     .map_err(|_| PortableUnavailable)?
                     .portable()?;
+                let second_warp = self.pending_global_warps[1];
                 {
                     let scratch = self.ensure_motion_scratch()?;
                     let second_request = PredictionRequest {
                         motion: prediction_state.motions[1],
+                        warp: second_warp,
                         ..request
                     };
                     if prediction_state.scales[1].scaled {

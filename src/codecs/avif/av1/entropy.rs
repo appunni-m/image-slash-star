@@ -13,7 +13,8 @@ use super::motion::{
     CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter, MotionMode,
     MotionVector, ProjectedTemporalField, ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget,
     ReferencePair, RetainedTemporalSample, ScaleFactors, SpatialMotionSource, SpatialRefBlock,
-    TemporalMotionField, find_reference_mvs, global_motion_vector, relative_distance,
+    TemporalMotionField, find_reference_mvs, global_motion_vector, prepare_global_warp,
+    relative_distance,
 };
 use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
@@ -6778,15 +6779,6 @@ fn decode_inter_leaf(
                 inter_context.force_integer_mv,
                 inter_context.high_precision_mv,
             )?;
-            if !matches!(
-                first_state.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
-            ) || !matches!(
-                second_state.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
-            ) {
-                return Ok(Err(super::block::PortableUnavailable));
-            }
         } else {
             motions[0] = if mode.uses_new_mv(0) {
                 let predictor = if matches!(mode, InterMode::NewNearest) {
@@ -6967,14 +6959,6 @@ fn decode_inter_leaf(
                 inter_context.high_precision_mv,
             )?;
         }
-        if matches!(mode, InterMode::Global)
-            && !matches!(
-                reference_state.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
-            )
-        {
-            return Ok(Err(super::block::PortableUnavailable));
-        }
         (
             ReferencePair::single(reference),
             [motion, MotionVector::ZERO],
@@ -7009,6 +6993,25 @@ fn decode_inter_leaf(
     let second_state = references
         .second
         .map(|reference| inter_context.reference(reference));
+    let global_warps = [
+        if global[0] && !inter_context.force_integer_mv && !first_state.scale.scaled {
+            prepare_global_warp(first_state.global_motion)?
+        } else {
+            None
+        },
+        if global[1]
+            && !inter_context.force_integer_mv
+            && second_state.is_some_and(|second| !second.scale.scaled)
+        {
+            second_state
+                .map(|second| prepare_global_warp(second.global_motion))
+                .transpose()?
+                .flatten()
+        } else {
+            None
+        },
+    ];
+    block_decoder.set_global_warps(global_warps);
     let interintra = if compound {
         None
     } else {
@@ -9944,7 +9947,10 @@ fn lossy_i420_superres_restoration_supported(
             && reference.surface.frame_height == context.frame_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     if !references_match {
@@ -10018,7 +10024,10 @@ fn complete_inter_422_reconstruction_context(
             && reference.surface.layout == PixelLayout::I422
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -10153,7 +10162,10 @@ fn lossy_i422_superres_restoration_supported(
             && reference.surface.frame_height == context.frame_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     if !references_match {
@@ -10235,7 +10247,10 @@ fn complete_inter_444_reconstruction_context(
             && reference.surface.layout == PixelLayout::I444
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -10367,7 +10382,10 @@ fn lossy_i444_superres_restoration_supported(
             && reference.surface.frame_height == context.frame_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     if !references_match {
@@ -10653,9 +10671,11 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// Dimension-scaled retained references are valid for all three layouts,
 /// including non-superres current frames, because the checked frame-wide scale
 /// factors and layout-specific MC kernels operate before the current frame is
-/// published. LOCALWARP and affine GlobalGlobal selections remain transactional
-/// unsupported outcomes. Every retained reference is validated up front so a
-/// later reference choice cannot narrow the path back to eight-bit geometry. An
+/// published. Frame-global ROTZOOM/AFFINE references use the checked 8x8 warp
+/// predictor when eligible and fall back to the center-MV path for scaled,
+/// integer-forced, small-plane, or invalid-shear cases; LOCALWARP remains
+/// transactional. Every retained reference is validated up front so a later
+/// reference choice cannot narrow the path back to eight-bit geometry. An
 /// all-NONE restoration header is a semantic no-op:
 /// it carries no tile restoration units or postfilter plan, while active
 /// restoration types remain outside this generic class. I444 film grain is
@@ -10846,7 +10866,10 @@ fn high_depth_lossy_i444_superres_restoration_supported(
             && reference.surface.frame_height == context.frame_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     if !references_match {
@@ -10981,7 +11004,10 @@ fn high_depth_lossy_i422_superres_restoration_supported(
             && reference.surface.frame_height == context.frame_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     if !references_match {
@@ -11133,7 +11159,10 @@ fn high_depth_lossy_i420_superres_restoration_supported(
             && reference.surface.frame_height == context.frame_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     if !references_match {
@@ -11257,7 +11286,10 @@ fn complete_bounded_i422_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -11398,7 +11430,10 @@ fn complete_bounded_i420_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -11546,7 +11581,10 @@ fn complete_bounded_i420_cdef_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -11635,7 +11673,10 @@ fn complete_bounded_i422_cdef_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -11725,7 +11766,10 @@ fn complete_bounded_i422_rect_cdef_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -11829,7 +11873,10 @@ fn complete_bounded_i422_rect_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -11918,7 +11965,10 @@ fn complete_bounded_i420_rect_loop_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12012,7 +12062,10 @@ fn complete_bounded_i420_rect_cdef_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12116,7 +12169,10 @@ fn complete_bounded_i420_rect_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12228,7 +12284,10 @@ fn complete_bounded_i420_cdef_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -12271,7 +12330,10 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -12389,7 +12451,10 @@ fn complete_bounded_i420_rect_cdef_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12453,7 +12518,10 @@ fn complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12602,7 +12670,10 @@ fn complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12656,7 +12727,10 @@ fn complete_bounded_i422_rect_loop_postfilters_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12808,7 +12882,10 @@ fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12855,7 +12932,10 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -12952,7 +13032,10 @@ fn complete_bounded_i420_loop_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -12993,7 +13076,10 @@ fn complete_bounded_i422_loop_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -13488,7 +13574,10 @@ fn complete_bounded_i422_rect_loop_inter_reconstruction_context(
             && !reference.scale.scaled
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     (!context.intra_frame
@@ -14053,7 +14142,10 @@ fn bounded_i444_inter_reconstruction_geometry(
             && reference.surface.frame_height == reference_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
             && !reference.scale.scaled
     });
@@ -14117,7 +14209,10 @@ fn complete_bounded_i444_restoration_inter_reconstruction_context(
             && reference.surface.frame_height == reference_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
             && !reference.scale.scaled
     });
@@ -14416,8 +14511,9 @@ fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockCo
 /// reference/MV and motion-variation sentences and materializes compound
 /// Average/Distance/Difference/Wedge and OBMC on plane zero. Inter-intra is
 /// handled by the shared one-plane compositor for its AV1 size-eligible
-/// single-transform blocks; LOCALWARP, affine global motion, and unsupported
-/// transform branches remain transactional at the leaf boundary.
+/// single-transform blocks; frame-global ROTZOOM/AFFINE uses the checked
+/// per-plane warp predictor with ordinary-MC fallback, while LOCALWARP and
+/// unsupported transform branches remain transactional at the leaf boundary.
 fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -14556,7 +14652,10 @@ fn lossy_monochrome_inter_superres_restoration_supported(
             && reference.surface.frame_height == context.frame_height
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     })
 }
@@ -15077,7 +15176,10 @@ fn complete_lossless_inter_color_reconstruction_context(
             && geometry_matches
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -15516,7 +15618,10 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
             && geometry_matches
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame
@@ -15730,7 +15835,10 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             && geometry_matches
             && matches!(
                 reference.global_motion.kind,
-                GlobalMotionType::Identity | GlobalMotionType::Translation
+                GlobalMotionType::Identity
+                    | GlobalMotionType::Translation
+                    | GlobalMotionType::RotZoom
+                    | GlobalMotionType::Affine
             )
     });
     !context.intra_frame

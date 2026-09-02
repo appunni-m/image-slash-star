@@ -18,7 +18,7 @@
 use bytemuck::cast;
 use wide::{i16x8, i32x8, u16x8};
 
-use super::motion::{InterpolationFilter, MotionVector, ScaleFactors};
+use super::motion::{InterpolationFilter, MotionVector, PreparedGlobalWarp, ScaleFactors};
 use super::sample_depth::SampleDepth;
 use super::surface::PlaneView;
 use super::{Av1Result, malformed};
@@ -101,7 +101,15 @@ impl MotionScratch {
             .predictor
             .get_mut(..length)
             .ok_or_else(|| malformed("motion predictor exceeds scratch"))?;
-        put_unscaled_kernel(reference, request, geometry, output)?;
+        if let Some(warp) = request
+            .warp
+            .filter(|_| geometry.width >= 8 && geometry.height >= 8)
+        {
+            let warp_scratch = &mut self.warp;
+            put_warped_kernel(reference, request, geometry, warp, warp_scratch, output)?;
+        } else {
+            put_unscaled_kernel(reference, request, geometry, output)?;
+        }
         Ok(output)
     }
 
@@ -118,7 +126,15 @@ impl MotionScratch {
             .get_mut(index)
             .and_then(|values| values.get_mut(..length))
             .ok_or_else(|| malformed("compound predictor exceeds scratch"))?;
-        prep_unscaled_kernel(reference, request, geometry, output)?;
+        if let Some(warp) = request
+            .warp
+            .filter(|_| geometry.width >= 8 && geometry.height >= 8)
+        {
+            let warp_scratch = &mut self.warp;
+            prep_warped_kernel(reference, request, geometry, warp, warp_scratch, output)?;
+        } else {
+            prep_unscaled_kernel(reference, request, geometry, output)?;
+        }
         Ok(output)
     }
 
@@ -824,6 +840,10 @@ pub(super) struct PredictionRequest {
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
     pub(super) motion: MotionVector,
+    /// Optional prepared frame-global affine motion. Scaled references and
+    /// sub-eight planes intentionally leave this set but fall back in the
+    /// kernel to ordinary center-MV interpolation.
+    pub(super) warp: Option<PreparedGlobalWarp>,
     /// Horizontal then vertical filter.
     pub(super) filters: [InterpolationFilter; 2],
 }
@@ -998,6 +1018,205 @@ const SCALED_BILINEAR: [[i8; 8]; 15] = [
     [0, 0, 0, 4, 60, 0, 0, 0],
 ];
 
+// AV1 warped-motion 193-phase filter table, translated from the pinned
+// dav1d 1.5.3/libaom 3.13.2 reference data. The applicable BSD-2-Clause and
+// patent notices remain in NOTICE.md, PATENTS, and third_party/.
+const GLOBAL_MOTION_WARP_FILTER: [[i8; 8]; 193] = [
+    [0, 0, 127, 1, 0, 0, 0, 0],
+    [0, -1, 127, 2, 0, 0, 0, 0],
+    [1, -3, 127, 4, -1, 0, 0, 0],
+    [1, -4, 126, 6, -2, 1, 0, 0],
+    [1, -5, 126, 8, -3, 1, 0, 0],
+    [1, -6, 125, 11, -4, 1, 0, 0],
+    [1, -7, 124, 13, -4, 1, 0, 0],
+    [2, -8, 123, 15, -5, 1, 0, 0],
+    [2, -9, 122, 18, -6, 1, 0, 0],
+    [2, -10, 121, 20, -6, 1, 0, 0],
+    [2, -11, 120, 22, -7, 2, 0, 0],
+    [2, -12, 119, 25, -8, 2, 0, 0],
+    [3, -13, 117, 27, -8, 2, 0, 0],
+    [3, -13, 116, 29, -9, 2, 0, 0],
+    [3, -14, 114, 32, -10, 3, 0, 0],
+    [3, -15, 113, 35, -10, 2, 0, 0],
+    [3, -15, 111, 37, -11, 3, 0, 0],
+    [3, -16, 109, 40, -11, 3, 0, 0],
+    [3, -16, 108, 42, -12, 3, 0, 0],
+    [4, -17, 106, 45, -13, 3, 0, 0],
+    [4, -17, 104, 47, -13, 3, 0, 0],
+    [4, -17, 102, 50, -14, 3, 0, 0],
+    [4, -17, 100, 52, -14, 3, 0, 0],
+    [4, -18, 98, 55, -15, 4, 0, 0],
+    [4, -18, 96, 58, -15, 3, 0, 0],
+    [4, -18, 94, 60, -16, 4, 0, 0],
+    [4, -18, 91, 63, -16, 4, 0, 0],
+    [4, -18, 89, 65, -16, 4, 0, 0],
+    [4, -18, 87, 68, -17, 4, 0, 0],
+    [4, -18, 85, 70, -17, 4, 0, 0],
+    [4, -18, 82, 73, -17, 4, 0, 0],
+    [4, -18, 80, 75, -17, 4, 0, 0],
+    [4, -18, 78, 78, -18, 4, 0, 0],
+    [4, -17, 75, 80, -18, 4, 0, 0],
+    [4, -17, 73, 82, -18, 4, 0, 0],
+    [4, -17, 70, 85, -18, 4, 0, 0],
+    [4, -17, 68, 87, -18, 4, 0, 0],
+    [4, -16, 65, 89, -18, 4, 0, 0],
+    [4, -16, 63, 91, -18, 4, 0, 0],
+    [4, -16, 60, 94, -18, 4, 0, 0],
+    [3, -15, 58, 96, -18, 4, 0, 0],
+    [4, -15, 55, 98, -18, 4, 0, 0],
+    [3, -14, 52, 100, -17, 4, 0, 0],
+    [3, -14, 50, 102, -17, 4, 0, 0],
+    [3, -13, 47, 104, -17, 4, 0, 0],
+    [3, -13, 45, 106, -17, 4, 0, 0],
+    [3, -12, 42, 108, -16, 3, 0, 0],
+    [3, -11, 40, 109, -16, 3, 0, 0],
+    [3, -11, 37, 111, -15, 3, 0, 0],
+    [2, -10, 35, 113, -15, 3, 0, 0],
+    [3, -10, 32, 114, -14, 3, 0, 0],
+    [2, -9, 29, 116, -13, 3, 0, 0],
+    [2, -8, 27, 117, -13, 3, 0, 0],
+    [2, -8, 25, 119, -12, 2, 0, 0],
+    [2, -7, 22, 120, -11, 2, 0, 0],
+    [1, -6, 20, 121, -10, 2, 0, 0],
+    [1, -6, 18, 122, -9, 2, 0, 0],
+    [1, -5, 15, 123, -8, 2, 0, 0],
+    [1, -4, 13, 124, -7, 1, 0, 0],
+    [1, -4, 11, 125, -6, 1, 0, 0],
+    [1, -3, 8, 126, -5, 1, 0, 0],
+    [1, -2, 6, 126, -4, 1, 0, 0],
+    [0, -1, 4, 127, -3, 1, 0, 0],
+    [0, 0, 2, 127, -1, 0, 0, 0],
+    [0, 0, 0, 127, 1, 0, 0, 0],
+    [0, 0, -1, 127, 2, 0, 0, 0],
+    [0, 1, -3, 127, 4, -2, 1, 0],
+    [0, 1, -5, 127, 6, -2, 1, 0],
+    [0, 2, -6, 126, 8, -3, 1, 0],
+    [-1, 2, -7, 126, 11, -4, 2, -1],
+    [-1, 3, -8, 125, 13, -5, 2, -1],
+    [-1, 3, -10, 124, 16, -6, 3, -1],
+    [-1, 4, -11, 123, 18, -7, 3, -1],
+    [-1, 4, -12, 122, 20, -7, 3, -1],
+    [-1, 4, -13, 121, 23, -8, 3, -1],
+    [-2, 5, -14, 120, 25, -9, 4, -1],
+    [-1, 5, -15, 119, 27, -10, 4, -1],
+    [-1, 5, -16, 118, 30, -11, 4, -1],
+    [-2, 6, -17, 116, 33, -12, 5, -1],
+    [-2, 6, -17, 114, 35, -12, 5, -1],
+    [-2, 6, -18, 113, 38, -13, 5, -1],
+    [-2, 7, -19, 111, 41, -14, 6, -2],
+    [-2, 7, -19, 110, 43, -15, 6, -2],
+    [-2, 7, -20, 108, 46, -15, 6, -2],
+    [-2, 7, -20, 106, 49, -16, 6, -2],
+    [-2, 7, -21, 104, 51, -16, 7, -2],
+    [-2, 7, -21, 102, 54, -17, 7, -2],
+    [-2, 8, -21, 100, 56, -18, 7, -2],
+    [-2, 8, -22, 98, 59, -18, 7, -2],
+    [-2, 8, -22, 96, 62, -19, 7, -2],
+    [-2, 8, -22, 94, 64, -19, 7, -2],
+    [-2, 8, -22, 91, 67, -20, 8, -2],
+    [-2, 8, -22, 89, 69, -20, 8, -2],
+    [-2, 8, -22, 87, 72, -21, 8, -2],
+    [-2, 8, -21, 84, 74, -21, 8, -2],
+    [-2, 8, -22, 82, 77, -21, 8, -2],
+    [-2, 8, -21, 79, 79, -21, 8, -2],
+    [-2, 8, -21, 77, 82, -22, 8, -2],
+    [-2, 8, -21, 74, 84, -21, 8, -2],
+    [-2, 8, -21, 72, 87, -22, 8, -2],
+    [-2, 8, -20, 69, 89, -22, 8, -2],
+    [-2, 8, -20, 67, 91, -22, 8, -2],
+    [-2, 7, -19, 64, 94, -22, 8, -2],
+    [-2, 7, -19, 62, 96, -22, 8, -2],
+    [-2, 7, -18, 59, 98, -22, 8, -2],
+    [-2, 7, -18, 56, 100, -21, 8, -2],
+    [-2, 7, -17, 54, 102, -21, 7, -2],
+    [-2, 7, -16, 51, 104, -21, 7, -2],
+    [-2, 6, -16, 49, 106, -20, 7, -2],
+    [-2, 6, -15, 46, 108, -20, 7, -2],
+    [-2, 6, -15, 43, 110, -19, 7, -2],
+    [-2, 6, -14, 41, 111, -19, 7, -2],
+    [-1, 5, -13, 38, 113, -18, 6, -2],
+    [-1, 5, -12, 35, 114, -17, 6, -2],
+    [-1, 5, -12, 33, 116, -17, 6, -2],
+    [-1, 4, -11, 30, 118, -16, 5, -1],
+    [-1, 4, -10, 27, 119, -15, 5, -1],
+    [-1, 4, -9, 25, 120, -14, 5, -2],
+    [-1, 3, -8, 23, 121, -13, 4, -1],
+    [-1, 3, -7, 20, 122, -12, 4, -1],
+    [-1, 3, -7, 18, 123, -11, 4, -1],
+    [-1, 3, -6, 16, 124, -10, 3, -1],
+    [-1, 2, -5, 13, 125, -8, 3, -1],
+    [-1, 2, -4, 11, 126, -7, 2, -1],
+    [0, 1, -3, 8, 126, -6, 2, 0],
+    [0, 1, -2, 6, 127, -5, 1, 0],
+    [0, 1, -2, 4, 127, -3, 1, 0],
+    [0, 0, 0, 2, 127, -1, 0, 0],
+    [0, 0, 0, 1, 127, 0, 0, 0],
+    [0, 0, 0, -1, 127, 2, 0, 0],
+    [0, 0, 1, -3, 127, 4, -1, 0],
+    [0, 0, 1, -4, 126, 6, -2, 1],
+    [0, 0, 1, -5, 126, 8, -3, 1],
+    [0, 0, 1, -6, 125, 11, -4, 1],
+    [0, 0, 1, -7, 124, 13, -4, 1],
+    [0, 0, 2, -8, 123, 15, -5, 1],
+    [0, 0, 2, -9, 122, 18, -6, 1],
+    [0, 0, 2, -10, 121, 20, -6, 1],
+    [0, 0, 2, -11, 120, 22, -7, 2],
+    [0, 0, 2, -12, 119, 25, -8, 2],
+    [0, 0, 3, -13, 117, 27, -8, 2],
+    [0, 0, 3, -13, 116, 29, -9, 2],
+    [0, 0, 3, -14, 114, 32, -10, 3],
+    [0, 0, 3, -15, 113, 35, -10, 2],
+    [0, 0, 3, -15, 111, 37, -11, 3],
+    [0, 0, 3, -16, 109, 40, -11, 3],
+    [0, 0, 3, -16, 108, 42, -12, 3],
+    [0, 0, 4, -17, 106, 45, -13, 3],
+    [0, 0, 4, -17, 104, 47, -13, 3],
+    [0, 0, 4, -17, 102, 50, -14, 3],
+    [0, 0, 4, -17, 100, 52, -14, 3],
+    [0, 0, 4, -18, 98, 55, -15, 4],
+    [0, 0, 4, -18, 96, 58, -15, 3],
+    [0, 0, 4, -18, 94, 60, -16, 4],
+    [0, 0, 4, -18, 91, 63, -16, 4],
+    [0, 0, 4, -18, 89, 65, -16, 4],
+    [0, 0, 4, -18, 87, 68, -17, 4],
+    [0, 0, 4, -18, 85, 70, -17, 4],
+    [0, 0, 4, -18, 82, 73, -17, 4],
+    [0, 0, 4, -18, 80, 75, -17, 4],
+    [0, 0, 4, -18, 78, 78, -18, 4],
+    [0, 0, 4, -17, 75, 80, -18, 4],
+    [0, 0, 4, -17, 73, 82, -18, 4],
+    [0, 0, 4, -17, 70, 85, -18, 4],
+    [0, 0, 4, -17, 68, 87, -18, 4],
+    [0, 0, 4, -16, 65, 89, -18, 4],
+    [0, 0, 4, -16, 63, 91, -18, 4],
+    [0, 0, 4, -16, 60, 94, -18, 4],
+    [0, 0, 3, -15, 58, 96, -18, 4],
+    [0, 0, 4, -15, 55, 98, -18, 4],
+    [0, 0, 3, -14, 52, 100, -17, 4],
+    [0, 0, 3, -14, 50, 102, -17, 4],
+    [0, 0, 3, -13, 47, 104, -17, 4],
+    [0, 0, 3, -13, 45, 106, -17, 4],
+    [0, 0, 3, -12, 42, 108, -16, 3],
+    [0, 0, 3, -11, 40, 109, -16, 3],
+    [0, 0, 3, -11, 37, 111, -15, 3],
+    [0, 0, 2, -10, 35, 113, -15, 3],
+    [0, 0, 3, -10, 32, 114, -14, 3],
+    [0, 0, 2, -9, 29, 116, -13, 3],
+    [0, 0, 2, -8, 27, 117, -13, 3],
+    [0, 0, 2, -8, 25, 119, -12, 2],
+    [0, 0, 2, -7, 22, 120, -11, 2],
+    [0, 0, 1, -6, 20, 121, -10, 2],
+    [0, 0, 1, -6, 18, 122, -9, 2],
+    [0, 0, 1, -5, 15, 123, -8, 2],
+    [0, 0, 1, -4, 13, 124, -7, 1],
+    [0, 0, 1, -4, 11, 125, -6, 1],
+    [0, 0, 1, -3, 8, 126, -5, 1],
+    [0, 0, 1, -2, 6, 126, -4, 1],
+    [0, 0, 0, -1, 4, 127, -3, 1],
+    [0, 0, 0, 0, 2, 127, -1, 0],
+    [0, 0, 0, 0, 2, 127, -1, 0],
+];
+
 fn filter_coefficients(
     filter: InterpolationFilter,
     reduced: bool,
@@ -1068,6 +1287,328 @@ fn horizontal_intermediate(
         || i32::from(reference.replicated(x, y)) << u32::try_from(bits).unwrap_or(0),
         |filter| rounded_shift(sample_filter(reference, x, y, true, filter), 6 - bits),
     )
+}
+
+fn warp_filter(phase: i64) -> Av1Result<&'static [i8; 8]> {
+    let phase = usize::try_from(phase).map_err(|_| malformed("warped-motion phase is negative"))?;
+    GLOBAL_MOTION_WARP_FILTER
+        .get(phase)
+        .ok_or_else(|| malformed("warped-motion phase exceeds filter table"))
+}
+
+fn warp_phase(value: i32) -> Av1Result<i64> {
+    let rounded = i64::from(value)
+        .checked_add(512)
+        .ok_or_else(|| malformed("warped-motion phase rounding overflows"))?
+        >> 10;
+    let phase = rounded
+        .checked_add(64)
+        .ok_or_else(|| malformed("warped-motion phase offset overflows"))?;
+    (0..=192)
+        .contains(&phase)
+        .then_some(phase)
+        .ok_or_else(|| malformed("warped-motion phase exceeds normative range"))
+}
+
+fn warp_round(value: i32, shift: u32) -> Av1Result<i32> {
+    if shift == 0 {
+        return Ok(value);
+    }
+    let rounding = 1_i32
+        .checked_shl(shift - 1)
+        .ok_or_else(|| malformed("warped-motion rounding shift overflows"))?;
+    value
+        .checked_add(rounding)
+        .map(|value| value >> shift)
+        .ok_or_else(|| malformed("warped-motion rounding overflows"))
+}
+
+fn warp_matrix_position(
+    request: PredictionRequest,
+    warp: PreparedGlobalWarp,
+    tile_x: usize,
+    tile_y: usize,
+) -> Av1Result<(i32, i32, i32, i32)> {
+    let subsampling_x = u32::from(request.subsampling_x);
+    let subsampling_y = u32::from(request.subsampling_y);
+    let tile_center_x = tile_x
+        .checked_add(4)
+        .ok_or_else(|| malformed("warped-motion tile x overflows"))?;
+    let tile_center_y = tile_y
+        .checked_add(4)
+        .ok_or_else(|| malformed("warped-motion tile y overflows"))?;
+    let tile_center_x = i64::try_from(tile_center_x)
+        .map_err(|_| malformed("warped-motion tile x exceeds i64"))?
+        .checked_shl(subsampling_x)
+        .ok_or_else(|| malformed("warped-motion luma x shift overflows"))?;
+    let tile_center_y = i64::try_from(tile_center_y)
+        .map_err(|_| malformed("warped-motion tile y exceeds i64"))?
+        .checked_shl(subsampling_y)
+        .ok_or_else(|| malformed("warped-motion luma y shift overflows"))?;
+    let block_x = i64::from(request.block_x_b4)
+        .checked_mul(4)
+        .and_then(|value| value.checked_add(tile_center_x))
+        .ok_or_else(|| malformed("warped-motion luma x origin overflows"))?;
+    let block_y = i64::from(request.block_y_b4)
+        .checked_mul(4)
+        .and_then(|value| value.checked_add(tile_center_y))
+        .ok_or_else(|| malformed("warped-motion luma y origin overflows"))?;
+    let matrix = warp.matrix;
+    let projected_x = i64::from(matrix[2])
+        .checked_mul(block_x)
+        .and_then(|value| value.checked_add(i64::from(matrix[3]).checked_mul(block_y)?))
+        .and_then(|value| value.checked_add(i64::from(matrix[0])))
+        .ok_or_else(|| malformed("warped-motion horizontal matrix product overflows"))?;
+    let projected_y = i64::from(matrix[4])
+        .checked_mul(block_x)
+        .and_then(|value| value.checked_add(i64::from(matrix[5]).checked_mul(block_y)?))
+        .and_then(|value| value.checked_add(i64::from(matrix[1])))
+        .ok_or_else(|| malformed("warped-motion vertical matrix product overflows"))?;
+    let projected_x = projected_x >> subsampling_x;
+    let projected_y = projected_y >> subsampling_y;
+    let dx = (projected_x >> 16)
+        .checked_sub(4)
+        .ok_or_else(|| malformed("warped-motion source x underflows"))?;
+    let dy = (projected_y >> 16)
+        .checked_sub(4)
+        .ok_or_else(|| malformed("warped-motion source y underflows"))?;
+    let dx = i32::try_from(dx).map_err(|_| malformed("warped-motion source x exceeds i32"))?;
+    let dy = i32::try_from(dy).map_err(|_| malformed("warped-motion source y exceeds i32"))?;
+    let alpha = i32::from(warp.abcd[0])
+        .checked_mul(4)
+        .ok_or_else(|| malformed("warped-motion horizontal shear overflows"))?;
+    let beta = i32::from(warp.abcd[1])
+        .checked_mul(7)
+        .ok_or_else(|| malformed("warped-motion horizontal shear overflows"))?;
+    let mx = i32::try_from(projected_x & 0xffff)
+        .map_err(|_| malformed("warped-motion horizontal phase exceeds i32"))?
+        .checked_sub(alpha)
+        .and_then(|value| value.checked_sub(beta))
+        .ok_or_else(|| malformed("warped-motion horizontal phase overflows"))?
+        & !63;
+    let gamma = i32::from(warp.abcd[2])
+        .checked_mul(4)
+        .ok_or_else(|| malformed("warped-motion vertical shear overflows"))?;
+    let delta = i32::from(warp.abcd[3])
+        .checked_mul(4)
+        .ok_or_else(|| malformed("warped-motion vertical shear overflows"))?;
+    let my = i32::try_from(projected_y & 0xffff)
+        .map_err(|_| malformed("warped-motion vertical phase exceeds i32"))?
+        .checked_sub(gamma)
+        .and_then(|value| value.checked_sub(delta))
+        .ok_or_else(|| malformed("warped-motion vertical phase overflows"))?
+        & !63;
+    Ok((dx, dy, mx, my))
+}
+
+fn warp_horizontal(
+    reference: PlaneView<'_>,
+    dx: i32,
+    dy: i32,
+    mx: i32,
+    abcd: [i16; 4],
+    bits: i32,
+    scratch: &mut [i16],
+) -> Av1Result<()> {
+    const WIDTH: usize = 8;
+    const HEIGHT: usize = 15;
+    let scratch = scratch
+        .get_mut(..WIDTH * HEIGHT)
+        .ok_or_else(|| malformed("warped-motion intermediate scratch is too short"))?;
+    for y in 0..HEIGHT {
+        let y_offset = i32::try_from(y)
+            .map_err(|_| malformed("warped-motion intermediate row exceeds i32"))?;
+        let row_phase = mx
+            .checked_add(
+                y_offset
+                    .checked_mul(i32::from(abcd[1]))
+                    .ok_or_else(|| malformed("warped-motion horizontal row phase overflows"))?,
+            )
+            .ok_or_else(|| malformed("warped-motion horizontal row phase overflows"))?;
+        for x in 0..WIDTH {
+            let x_offset = i32::try_from(x)
+                .map_err(|_| malformed("warped-motion intermediate column exceeds i32"))?;
+            let phase = warp_phase(
+                row_phase
+                    .checked_add(
+                        x_offset
+                            .checked_mul(i32::from(abcd[0]))
+                            .ok_or_else(|| malformed("warped-motion horizontal phase overflows"))?,
+                    )
+                    .ok_or_else(|| malformed("warped-motion horizontal phase overflows"))?,
+            )?;
+            let coefficients = warp_filter(phase)?;
+            let mut sum = 0_i32;
+            for (tap, &coefficient) in coefficients.iter().enumerate() {
+                let tap =
+                    i64::try_from(tap).map_err(|_| malformed("warped-motion tap exceeds i64"))?;
+                let source_x = i64::from(dx)
+                    .checked_add(
+                        i64::try_from(x).map_err(|_| malformed("warped-motion x exceeds i64"))?,
+                    )
+                    .and_then(|value| value.checked_add(tap - 3))
+                    .ok_or_else(|| malformed("warped-motion horizontal source overflows"))?;
+                let source_y = i64::from(dy)
+                    .checked_add(
+                        i64::try_from(y).map_err(|_| malformed("warped-motion y exceeds i64"))?,
+                    )
+                    .and_then(|value| value.checked_add(-3))
+                    .ok_or_else(|| malformed("warped-motion vertical source overflows"))?;
+                let sample = i32::from(reference.replicated(source_x, source_y));
+                let product = sample
+                    .checked_mul(i32::from(coefficient))
+                    .ok_or_else(|| malformed("warped-motion horizontal tap overflows"))?;
+                sum = sum
+                    .checked_add(product)
+                    .ok_or_else(|| malformed("warped-motion horizontal sum overflows"))?;
+            }
+            let shift = u32::try_from(
+                7_i32
+                    .checked_sub(bits)
+                    .ok_or_else(|| malformed("warped-motion horizontal shift is invalid"))?,
+            )
+            .map_err(|_| malformed("warped-motion horizontal shift is invalid"))?;
+            let value = warp_round(sum, shift)?;
+            scratch[y * WIDTH + x] = i16::try_from(value)
+                .map_err(|_| malformed("warped-motion horizontal intermediate exceeds i16"))?;
+        }
+    }
+    Ok(())
+}
+
+fn warp_vertical(
+    scratch: &[i16],
+    my: i32,
+    abcd: [i16; 4],
+    bits: i32,
+    x: usize,
+    y: usize,
+    preparation: bool,
+    bias: i32,
+) -> Av1Result<i32> {
+    const WIDTH: usize = 8;
+    let row_phase = my
+        .checked_add(
+            i32::try_from(y)
+                .map_err(|_| malformed("warped-motion vertical row exceeds i32"))?
+                .checked_mul(i32::from(abcd[3]))
+                .ok_or_else(|| malformed("warped-motion vertical row phase overflows"))?,
+        )
+        .ok_or_else(|| malformed("warped-motion vertical row phase overflows"))?;
+    let phase = warp_phase(
+        row_phase
+            .checked_add(
+                i32::try_from(x)
+                    .map_err(|_| malformed("warped-motion vertical column exceeds i32"))?
+                    .checked_mul(i32::from(abcd[2]))
+                    .ok_or_else(|| malformed("warped-motion vertical phase overflows"))?,
+            )
+            .ok_or_else(|| malformed("warped-motion vertical phase overflows"))?,
+    )?;
+    let coefficients = warp_filter(phase)?;
+    let mut sum = 0_i32;
+    for (tap, &coefficient) in coefficients.iter().enumerate() {
+        let row = y
+            .checked_add(tap)
+            .ok_or_else(|| malformed("warped-motion vertical tap row overflows"))?;
+        let sample = i32::from(
+            *scratch
+                .get(
+                    row.checked_mul(WIDTH)
+                        .and_then(|row| row.checked_add(x))
+                        .ok_or_else(|| malformed("warped-motion vertical tap index overflows"))?,
+                )
+                .ok_or_else(|| malformed("warped-motion vertical tap exceeds scratch"))?,
+        );
+        let product = sample
+            .checked_mul(i32::from(coefficient))
+            .ok_or_else(|| malformed("warped-motion vertical tap overflows"))?;
+        sum = sum
+            .checked_add(product)
+            .ok_or_else(|| malformed("warped-motion vertical sum overflows"))?;
+    }
+    let value = warp_round(
+        sum,
+        if preparation {
+            7
+        } else {
+            u32::try_from(
+                7_i32
+                    .checked_add(bits)
+                    .ok_or_else(|| malformed("warped-motion vertical shift is invalid"))?,
+            )
+            .map_err(|_| malformed("warped-motion vertical shift is invalid"))?
+        },
+    )?;
+    value
+        .checked_sub(if preparation { bias } else { 0 })
+        .ok_or_else(|| malformed("warped-motion preparation bias overflows"))
+}
+
+fn put_warped_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    warp: PreparedGlobalWarp,
+    warp_scratch: &mut [i16],
+    output: &mut [u16],
+) -> Av1Result<()> {
+    let bits = intermediate_bits(reference.depth());
+    let maximum = i32::from(reference.depth().maximum());
+    for tile_y in (0..geometry.height).step_by(8) {
+        for tile_x in (0..geometry.width).step_by(8) {
+            let tile_width = geometry.width.saturating_sub(tile_x).min(8);
+            let tile_height = geometry.height.saturating_sub(tile_y).min(8);
+            let (dx, dy, mx, my) = warp_matrix_position(request, warp, tile_x, tile_y)?;
+            warp_horizontal(reference, dx, dy, mx, warp.abcd, bits, warp_scratch)?;
+            for y in 0..tile_height {
+                for x in 0..tile_width {
+                    let value = warp_vertical(warp_scratch, my, warp.abcd, bits, x, y, false, 0)?;
+                    let index = tile_y
+                        .checked_add(y)
+                        .and_then(|row| row.checked_mul(geometry.width))
+                        .and_then(|row| row.checked_add(tile_x.checked_add(x)?))
+                        .ok_or_else(|| malformed("warped-motion output index overflows"))?;
+                    output[index] = u16::try_from(value.clamp(0, maximum))
+                        .map_err(|_| malformed("warped-motion sample exceeds u16"))?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn prep_warped_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    warp: PreparedGlobalWarp,
+    warp_scratch: &mut [i16],
+    output: &mut [i16],
+) -> Av1Result<()> {
+    let bits = intermediate_bits(reference.depth());
+    let bias = preparation_bias(reference.depth());
+    for tile_y in (0..geometry.height).step_by(8) {
+        for tile_x in (0..geometry.width).step_by(8) {
+            let tile_width = geometry.width.saturating_sub(tile_x).min(8);
+            let tile_height = geometry.height.saturating_sub(tile_y).min(8);
+            let (dx, dy, mx, my) = warp_matrix_position(request, warp, tile_x, tile_y)?;
+            warp_horizontal(reference, dx, dy, mx, warp.abcd, bits, warp_scratch)?;
+            for y in 0..tile_height {
+                for x in 0..tile_width {
+                    let value = warp_vertical(warp_scratch, my, warp.abcd, bits, x, y, true, bias)?;
+                    let index = tile_y
+                        .checked_add(y)
+                        .and_then(|row| row.checked_mul(geometry.width))
+                        .and_then(|row| row.checked_add(tile_x.checked_add(x)?))
+                        .ok_or_else(|| malformed("warped-motion compound index overflows"))?;
+                    output[index] = i16::try_from(value)
+                        .map_err(|_| malformed("warped-motion compound sample exceeds i16"))?;
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn put_unscaled_kernel(
