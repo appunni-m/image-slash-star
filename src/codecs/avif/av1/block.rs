@@ -41590,6 +41590,59 @@ fn reconstruct_lossy_full_16x8_chroma(
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact R16x8 Zone-1 path carries positioned edges, availability, and filter policy"
+)]
+fn reconstruct_lossy_full_16x8_chroma_zone1(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    top: [u16; 16],
+    left: [u16; 8],
+    top_left: Option<u16>,
+    has_left: bool,
+    coefficients: Option<Lossy16x8TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    matches!(
+        predictor,
+        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
+    )
+    .then_some(())
+    .portable()?;
+    let edges = FullIntraPlaneEdges::prepare(
+        16,
+        8,
+        SampleDepth::EIGHT,
+        &top,
+        &left,
+        top_left,
+        true,
+        has_left,
+        false,
+        false,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 128];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        16,
+        8,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    Ok(reconstruct_lossy_chroma_16x8_from_prediction(
+        prediction,
+        coefficients,
+        chroma_rect_transform_kind(predictor),
+    ))
+}
+
 fn reconstruct_lossy_full_16x4_chroma(
     predictor: ChromaPredictor,
     angle: Option<i32>,
@@ -58702,6 +58755,11 @@ impl Lossy420Decoder {
                     },
                 );
                 let has_left = neighbors.left_chroma.is_some() || left_neighbor.is_some();
+                let top_left = if has_left {
+                    full_resolution_chroma_top_left(&neighbors, plane).ok_or(PortableUnavailable)?
+                } else {
+                    top[0]
+                };
                 leaf.planes[plane] = match syntax.chroma_predictor {
                     ChromaPredictor::Cfl { alpha_u, alpha_v } => {
                         let alpha = if plane == 1 { alpha_u } else { alpha_v };
@@ -58714,6 +58772,30 @@ impl Lossy420Decoder {
                             },
                             alpha,
                             syntax.lossy_chroma_16x8_coefficients[plane - 1],
+                        )?
+                    }
+                    ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
+                        neighbors
+                            .above_chroma_extension
+                            .is_none()
+                            .then_some(())
+                            .portable()?;
+                        let left_chroma_mode = neighbors
+                            .left_chroma
+                            .or(neighbors.left_luma_top)
+                            .or(neighbors.left)
+                            .and_then(|neighbor| neighbor.chroma_predictor);
+                        reconstruct_lossy_full_16x8_chroma_zone1(
+                            syntax.chroma_predictor,
+                            syntax.chroma_angle,
+                            top,
+                            left,
+                            has_left.then_some(top_left),
+                            has_left,
+                            syntax.lossy_chroma_16x8_coefficients[plane - 1],
+                            tools.enable_intra_edge_filter,
+                            is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
+                                || is_smooth_chroma_predictor(left_chroma_mode),
                         )?
                     }
                     _ => reconstruct_lossy_full_16x8_chroma(
