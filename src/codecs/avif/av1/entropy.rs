@@ -5024,6 +5024,30 @@ fn inter_lossy_square64_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact mode-2 B32x32 split geometry. The root partition sentence is valid
+/// at every lossy qindex; the block and worker validators keep this admission
+/// scoped to the three B32 split topologies.
+fn inter_lossy_split32_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && transform_mode == 2
+        && block_size == BlockSize::B32x32
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 /// Exact mode-2 B64x64 split geometry. Unlike the existing one-terminal I420
 /// square-64 predicate, this profile owns a TX32x32 chroma grid for I422 and
 /// I444; monochrome uses the same preflight so every exact B64 root can use
@@ -8233,6 +8257,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_split32_geometry = inter_lossy_split32_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let lossy_split64_geometry = inter_lossy_split64_geometry_supported(
         node.block_size,
         layout,
@@ -9113,9 +9146,7 @@ fn decode_inter_leaf(
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && prepared_quantization.quantization.segment_qindex > 0,
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && prepared_quantization.quantization.segment_qindex > 0,
+        lossy_split32_geometry,
         lossy_split64_geometry,
         lossless_grid_geometry,
         lossy_grid_geometry,
