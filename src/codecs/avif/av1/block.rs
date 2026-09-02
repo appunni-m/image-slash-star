@@ -55490,6 +55490,14 @@ impl Lossy420Decoder {
                     || quantization.segment_qindex > 0
                     || (sampling == ChromaSampling::Subsampled422
                         && matches!(block_size, BlockSize::B4x8 | BlockSize::B4x16)
+                        && (luma_width, luma_height) == block_size.pixel_dimensions())
+                    || (tools.transform_mode == 2
+                        && quantization.segment_qindex == 0
+                        && matches!(
+                            sampling,
+                            ChromaSampling::Subsampled422 | ChromaSampling::Full
+                        )
+                        && matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
                         && (luma_width, luma_height) == block_size.pixel_dimensions()))
                 && !quantization.segment_lossless
                 && (!matches!(

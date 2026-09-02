@@ -5100,7 +5100,14 @@ fn inter_lossy_direct_chroma_grid_geometry_supported(
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && matches!(transform_mode, 1 | 2)
-        && (transform_mode != 2 || quantization.segment_qindex > 0)
+        && (transform_mode != 2
+            || quantization.segment_qindex > 0
+            // A qindex-zero I422/I444 thin-64 root may remain unsplit and
+            // use the existing direct chroma-grid compositor.  Split plans
+            // retain their independent positive-q admission below.
+            || (quantization.segment_qindex == 0
+                && matches!(layout, PixelLayout::I422 | PixelLayout::I444)
+                && matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)))
         && matches!(
             (layout, block_size),
             (PixelLayout::I422, BlockSize::B8x16)
