@@ -3330,8 +3330,15 @@ fn inter_lossy_wide_chunk_geometry_supported(
 ) -> bool {
     !quantization.segment_lossless
         && matches!(
-            layout,
-            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            (layout, block_size),
+            (
+                PixelLayout::I420,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (PixelLayout::I422, BlockSize::B128x64 | BlockSize::B128x128)
+                | (
+                    PixelLayout::I444,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
         )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
@@ -3356,7 +3363,17 @@ fn inter_lossy_wide_mode2_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
-        && layout == PixelLayout::I420
+        && matches!(
+            (layout, block_size),
+            (
+                PixelLayout::I420,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (PixelLayout::I422, BlockSize::B128x64 | BlockSize::B128x128)
+                | (
+                    PixelLayout::I444,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+        )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 2

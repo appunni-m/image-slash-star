@@ -2719,29 +2719,15 @@ pub(super) fn filter_transform_dimensions_for_block(
     } else {
         PixelLayout::from_sequence(false, subsampling_x, subsampling_y)?
     };
-    // Mode-1 wide inter leaves decode each non-4:2:0 chroma region as a
-    // fixed TX32x32 grid. The generic block table intentionally keeps the
-    // normative I422 B64x128 maximum at TX4x4 for other syntax families, so
-    // use the retained wide carrier to publish the streamed compositor's
-    // actual loop-filter extent here.
-    let chroma = if leaf.wide_coefficient_contexts.is_some()
-        && matches!(layout, PixelLayout::I422 | PixelLayout::I444)
-        && matches!(
-            block_size,
-            BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-        ) {
-        (32, 32)
-    } else {
-        block_size
-            .maximum_chroma_tx(layout)
-            .map_or((4, 4), |tx_size| {
-                let (width, height) = tx_size.pixel_dimensions();
-                (
-                    usize::try_from(width).unwrap_or(4),
-                    usize::try_from(height).unwrap_or(4),
-                )
-            })
-    };
+    let chroma = block_size
+        .maximum_chroma_tx(layout)
+        .map_or((4, 4), |tx_size| {
+            let (width, height) = tx_size.pixel_dimensions();
+            (
+                usize::try_from(width).unwrap_or(4),
+                usize::try_from(height).unwrap_or(4),
+            )
+        });
     // Inter transform splits and mode-0 TX4X4 grids publish one luma
     // transform context per four-pixel cell while each chroma plane remains
     // one normative terminal. Derive the luma filter extent from the retained
@@ -53372,10 +53358,17 @@ impl Lossy420Decoder {
         } = transform_plan
         {
             (matches!(
-                sampling,
-                ChromaSampling::Subsampled420
-                    | ChromaSampling::Subsampled422
-                    | ChromaSampling::Full
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
             ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.sample_depth == quantization.sample_depth
@@ -53456,8 +53449,19 @@ impl Lossy420Decoder {
             sampling,
         } = transform_plan
         {
-            (sampling == ChromaSampling::Subsampled420
-                && sampling == chroma_sampling
+            (matches!(
+                (sampling, block_size),
+                (
+                    ChromaSampling::Subsampled420,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Subsampled422,
+                    BlockSize::B128x64 | BlockSize::B128x128
+                ) | (
+                    ChromaSampling::Full,
+                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+                )
+            ) && sampling == chroma_sampling
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 2
@@ -58135,7 +58139,7 @@ impl Lossy420Decoder {
         Ok(terminal)
     }
 
-    /// Decode one 64x64 luma-aligned chroma region of a mode-1 wide block.
+    /// Decode one 64x64 luma-aligned chroma region of a wide block.
     ///
     /// I422 maps a luma region to a 32x64 chroma rectangle (two TX32x32
     /// terminals vertically); I444 maps it to a 64x64 rectangle (a 2x2
@@ -58162,6 +58166,7 @@ impl Lossy420Decoder {
         region_height: usize,
         external_above: &[u8],
         external_left: &[u8],
+        mode2_unsplit: bool,
     ) -> PortableResult<LosslessGridContexts> {
         let sampling = self.chroma_sampling;
         let grid_width = region_width.checked_div(32).portable()?;
@@ -58177,7 +58182,8 @@ impl Lossy420Decoder {
             && external_left.len() == grid_height.checked_mul(8).portable()?
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
-            && tools.transform_mode == 1
+            && tools.transform_mode == if mode2_unsplit { 2 } else { 1 }
+            && (!mode2_unsplit || quantization.segment_qindex > 0)
             && !quantization.segment_lossless
             && region_x.checked_add(region_width).portable()? <= raster.coded_width
             && region_y.checked_add(region_height).portable()? <= raster.coded_height
@@ -58350,7 +58356,9 @@ impl Lossy420Decoder {
         ) && matches!(
             sampling,
             ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422 | ChromaSampling::Full
-        ) && (!mode2 || sampling == ChromaSampling::Subsampled420)
+        ) && (!mode2
+            || sampling == ChromaSampling::Subsampled420
+            || (!split32 && !deep16 && topology.is_none()))
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.sample_depth == quantization.sample_depth
             && tools.transform_mode == if mode2 { 2 } else { 1 }
@@ -58998,6 +59006,7 @@ impl Lossy420Decoder {
                             chunk_height,
                             &external_above[..context_width],
                             &external_left[..context_height],
+                            mode2,
                         )?;
                         chroma_region_contexts[plane][chunk_y][chunk_x] = region_context;
                         residual_contexts[plane][chunk_y][chunk_x] = region_context.bottom_right;
