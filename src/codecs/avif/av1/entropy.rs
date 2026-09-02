@@ -8054,8 +8054,8 @@ fn decode_inter_leaf(
         let (minimum, maximum) = if context.monochrome { (4, 64) } else { (8, 32) };
         // Full-resolution I444 has no shared chroma ownership: every plane
         // uses the same exact leaf extent.  The generic depth-aware inter
-        // compositor can therefore admit the three smallest color block
-        // shapes without the cross-leaf chroma mosaic required by I420/I422.
+        // compositor can therefore admit the complete exact I444 small-block
+        // family without the cross-leaf chroma mosaic required by I420/I422.
         // Keep this as an explicit exception rather than lowering the color
         // minimum globally; subsampled tiny leaves may not own a chroma
         // syntax sentence and must remain transactional.
@@ -8064,9 +8064,13 @@ fn decode_inter_leaf(
                 && layout == PixelLayout::I444
                 && matches!(
                     node.block_size,
-                    BlockSize::B4x4 | BlockSize::B4x8 | BlockSize::B8x4
+                    BlockSize::B4x4
+                        | BlockSize::B4x8
+                        | BlockSize::B8x4
+                        | BlockSize::B4x16
+                        | BlockSize::B16x4
                 )
-                && (block_width, block_height) == node.block_size.pixel_dimensions()
+                && (visible_width, visible_height) == node.block_size.pixel_dimensions()
                 && matches!(context.frame_tools.transform_mode, 1 | 2)
                 && !prepared_quantization.quantization.segment_lossless
                 && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth;
