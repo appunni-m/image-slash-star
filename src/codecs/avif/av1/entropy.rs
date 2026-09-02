@@ -15556,8 +15556,10 @@ fn loop_filter_parameters(context: &FirstBlockContext) -> Option<super::filter::
         })
 }
 
-/// Reconstruct the first complete color-frame class: an 8-bit, lossless,
-/// single-tile 64×64 4:4:4 intra frame made from 8×8 terminal blocks.
+/// Reconstruct the first complete color-frame class: a lossless, single-tile
+/// 4:4:4 intra frame made from bounded terminal grids through the 64-pixel
+/// axes. The complete walker retains exact adaptive state for the admitted
+/// large 32x64, 64x32, and 64x64 leaves as well as the smaller grids.
 ///
 /// The partition walker and the block decoder share one range decoder and one
 /// adaptive CDF state. Every block is placed into a checked canvas before the
@@ -15605,7 +15607,21 @@ pub(super) fn validate_complete_lossless_444_partition(
                 (8, 2) => (32, 8, super::block::TransformGrid::Horizontal32x8),
                 (2, 8) => (8, 32, super::block::TransformGrid::Vertical8x32),
                 (8, 8) => (32, 32, super::block::TransformGrid::Square32),
+                (8, 16)
+                    if node.block_size == BlockSize::B32x64
+                        && node.width == node.coded_width
+                        && node.height == node.coded_height =>
+                {
+                    (32, 64, super::block::TransformGrid::Vertical32x64)
+                }
                 (4, 16) => (16, 64, super::block::TransformGrid::Vertical16x64),
+                (16, 8)
+                    if node.block_size == BlockSize::B64x32
+                        && node.width == node.coded_width
+                        && node.height == node.coded_height =>
+                {
+                    (64, 32, super::block::TransformGrid::Horizontal64x32)
+                }
                 (16, 4) => (64, 16, super::block::TransformGrid::Horizontal64x16),
                 (16, 16) => (64, 64, super::block::TransformGrid::Square64),
                 _ => {
@@ -15850,10 +15866,18 @@ fn monochrome_transform_geometry(
         return None;
     }
     let transform_grid = super::block::TransformGrid::from_block_size(node.block_size).ok()?;
-    // S64x64 needs 256 lossless WHT carriers; the monochrome decoder keeps
-    // that larger dynamic carrier as a separate future slice. The adapter
-    // already rejects the wider B32x64/B64x32 and 128-pixel families.
-    if matches!(transform_grid, super::block::TransformGrid::Square64) {
+    // Wide 64-axis color grids use a decoder-owned dynamic carrier; the
+    // monochrome path still keeps those grids out until its own arena-backed
+    // reconstruction slice is implemented. The adapter rejects the wider
+    // 128-pixel families.
+    if matches!(
+        transform_grid,
+        super::block::TransformGrid::Square64
+            | super::block::TransformGrid::Vertical16x64
+            | super::block::TransformGrid::Vertical32x64
+            | super::block::TransformGrid::Horizontal64x16
+            | super::block::TransformGrid::Horizontal64x32
+    ) {
         return None;
     }
     let (grid_width, grid_height, _) = transform_grid.properties();

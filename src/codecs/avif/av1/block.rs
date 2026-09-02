@@ -590,10 +590,12 @@ struct LargeCoefficientArena {
     scratch: LargeCoefficientScratch,
 }
 
-/// A leaf-local arena for the 256 TX4x4 carriers of a lossless Square64
-/// block.  The payload is deliberately kept outside `BlockSyntax`: lossy
-/// syntax remains compact and `Copy`, while the complete lossless-I444 walker
-/// consumes each span before decoding the next leaf.
+/// A leaf-local arena for the TX4x4 carriers of a lossless large I444 block.
+/// The payload is deliberately kept outside `BlockSyntax`: lossy syntax
+/// remains compact and `Copy`, while the complete lossless-I444 walker
+/// consumes each span before decoding the next leaf.  The 256-carrier backing
+/// store covers the 128-carrier 32x64/64x32 grids and the 256-carrier 64x64
+/// grid without exposing a heap-bearing syntax field.
 #[derive(Default)]
 struct LosslessSquare64CoefficientArena {
     generation: u32,
@@ -696,19 +698,22 @@ impl LosslessSquare64CoefficientArena {
 
     fn store(
         &mut self,
-        coefficients: LosslessSquare64TransformCoefficients,
+        coefficients: &[TransformCoefficients],
     ) -> PortableResult<LosslessSquare64CoefficientSpan> {
+        (!coefficients.is_empty() && coefficients.len() <= Self::MAX_COEFFICIENTS)
+            .then_some(())
+            .portable()?;
         let offset = u16::try_from(self.coefficients.len()).map_err(|_| PortableUnavailable)?;
         let end = self
             .coefficients
             .len()
-            .checked_add(Self::TRANSFORM_COUNT)
+            .checked_add(coefficients.len())
             .ok_or(PortableUnavailable)?;
         (end <= Self::MAX_COEFFICIENTS).then_some(()).portable()?;
-        self.coefficients.extend_from_slice(&coefficients);
+        self.coefficients.extend_from_slice(coefficients);
         Ok(LosslessSquare64CoefficientSpan {
             offset,
-            len: u16::try_from(Self::TRANSFORM_COUNT).map_err(|_| PortableUnavailable)?,
+            len: u16::try_from(coefficients.len()).map_err(|_| PortableUnavailable)?,
             generation: self.generation,
         })
     }
@@ -717,7 +722,9 @@ impl LosslessSquare64CoefficientArena {
         &self,
         span: LosslessSquare64CoefficientSpan,
     ) -> PortableResult<&[TransformCoefficients]> {
-        (span.generation == self.generation && usize::from(span.len) == Self::TRANSFORM_COUNT)
+        (span.generation == self.generation
+            && usize::from(span.len) <= Self::MAX_COEFFICIENTS
+            && span.len != 0)
             .then_some(())
             .portable()?;
         let start = usize::from(span.offset);
@@ -1336,7 +1343,9 @@ impl BlockSyntax {
             TransformGrid::Vertical8x16 => self.lossy_luma_rect_transform.into(),
             TransformGrid::Vertical16x32 => self.lossy_luma_16x32_transform.into(),
             TransformGrid::Vertical16x64
+            | TransformGrid::Vertical32x64
             | TransformGrid::Horizontal32x16
+            | TransformGrid::Horizontal64x32
             | TransformGrid::Horizontal64x16
             | TransformGrid::Horizontal32x8
             | TransformGrid::Vertical8x32
@@ -1419,6 +1428,9 @@ impl BlockSyntax {
                     .lossy_luma_64x64_coefficients
                     .as_ref()
                     .map(AsRef::as_ref),
+                TransformGrid::Vertical32x64 | TransformGrid::Horizontal64x32 => {
+                    return Err(PortableUnavailable);
+                }
             };
             coefficients
                 .is_none_or(|values| values.len() == compact_count)
@@ -1976,8 +1988,10 @@ pub(super) enum TransformGrid {
     Horizontal16x4,
     Horizontal16x8,
     Vertical16x32,
+    Vertical32x64,
     Vertical16x64,
     Horizontal32x16,
+    Horizontal64x32,
     Horizontal64x16,
     Vertical8x16,
     Horizontal32x8,
@@ -1987,10 +2001,10 @@ pub(super) enum TransformGrid {
 }
 
 impl TransformGrid {
-    /// Compatibility adapter for the 17 block families represented by the
-    /// existing carrier-specific decoder. The five larger AV1 block sizes
-    /// remain semantic `BlockSize` values and require explicit transform
-    /// tiling rather than pretending the block itself is one transform grid.
+    /// Compatibility adapter for the lossless block families represented by the
+    /// existing carrier-specific decoder. The three 128-pixel AV1 block sizes
+    /// remain semantic `BlockSize` values and require explicit transform tiling
+    /// rather than pretending the block itself is one transform grid.
     pub(super) const fn from_block_size(block_size: BlockSize) -> PortableResult<Self> {
         match block_size {
             BlockSize::B4x4 => Ok(Self::Square4),
@@ -2001,7 +2015,9 @@ impl TransformGrid {
             BlockSize::B16x8 => Ok(Self::Horizontal16x8),
             BlockSize::B16x16 => Ok(Self::Square16),
             BlockSize::B16x32 => Ok(Self::Vertical16x32),
+            BlockSize::B32x64 => Ok(Self::Vertical32x64),
             BlockSize::B32x16 => Ok(Self::Horizontal32x16),
+            BlockSize::B64x32 => Ok(Self::Horizontal64x32),
             BlockSize::B32x32 => Ok(Self::Square32),
             BlockSize::B64x64 => Ok(Self::Square64),
             BlockSize::B4x16 => Ok(Self::Vertical4x16),
@@ -2010,11 +2026,9 @@ impl TransformGrid {
             BlockSize::B32x8 => Ok(Self::Horizontal32x8),
             BlockSize::B16x64 => Ok(Self::Vertical16x64),
             BlockSize::B64x16 => Ok(Self::Horizontal64x16),
-            BlockSize::B32x64
-            | BlockSize::B64x32
-            | BlockSize::B64x128
-            | BlockSize::B128x64
-            | BlockSize::B128x128 => Err(PortableUnavailable),
+            BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128 => {
+                Err(PortableUnavailable)
+            }
         }
     }
 
@@ -2028,7 +2042,9 @@ impl TransformGrid {
             Self::Horizontal16x8 => BlockSize::B16x8,
             Self::Square16 => BlockSize::B16x16,
             Self::Vertical16x32 => BlockSize::B16x32,
+            Self::Vertical32x64 => BlockSize::B32x64,
             Self::Horizontal32x16 => BlockSize::B32x16,
+            Self::Horizontal64x32 => BlockSize::B64x32,
             Self::Square32 => BlockSize::B32x32,
             Self::Square64 => BlockSize::B64x64,
             Self::Vertical4x16 => BlockSize::B4x16,
@@ -2070,8 +2086,10 @@ impl TransformGrid {
             Self::Horizontal16x4 => (4, 1, [22_400, 0]),
             Self::Horizontal16x8 => (4, 2, [23_374, 0]),
             Self::Vertical16x32 => (4, 8, [18_467, 0]),
+            Self::Vertical32x64 => (8, 16, [16_384, 0]),
             Self::Vertical16x64 => (4, 16, [16_384, 0]),
             Self::Horizontal32x16 => (8, 4, [20_012, 0]),
+            Self::Horizontal64x32 => (16, 8, [16_384, 0]),
             // ✅ VERIFIED: dav1d 1.1.0 `use_filter_intra` for BLOCK_64X16
             // (index five); this decoder stores the complement.
             Self::Horizontal64x16 => (16, 4, [16_384, 0]),
@@ -2637,8 +2655,10 @@ pub(super) fn filter_transform_dimensions(
             TransformGrid::Square32 => (16, 16),
             // R16x64 depth two terminates in TX16x16 children.
             TransformGrid::Vertical16x64 => (16, 16),
+            TransformGrid::Vertical32x64 => (32, 32),
             // R64x16 depth one terminates in two R32x16 children.
             TransformGrid::Horizontal64x16 => (32, 16),
+            TransformGrid::Horizontal64x32 => (32, 32),
             // S64x64 depth one terminates in four TX32x32 children.
             TransformGrid::Square64 => (32, 32),
         }
@@ -2809,6 +2829,7 @@ pub(super) struct Lossless444Leaf {
     origin_y: u32,
     width: u32,
     height: u32,
+    block_skipped: bool,
     closed: ClosedLeaf,
     right_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
     bottom_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
@@ -8856,38 +8877,42 @@ fn decode_contextual_following_color_coefficients(
     Ok(coefficients)
 }
 
-fn decode_contextual_top_left_color_coefficients_square64(
+fn decode_contextual_top_left_color_coefficients_large(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
+    transform_grid_width: usize,
+    transform_grid_height: usize,
 ) -> PortableResult<LosslessSquare64TransformCoefficients> {
     let mut coefficients = [[0_i32; 16]; LosslessSquare64CoefficientArena::TRANSFORM_COUNT];
     decode_color_frame_coefficients_into(
         decoder,
         plane,
         cdfs,
-        16,
-        16,
+        transform_grid_width,
+        transform_grid_height,
         ColorFrameCoefficientContext::TopLeft,
         &mut coefficients,
     )?;
     Ok(coefficients)
 }
 
-fn decode_contextual_following_color_coefficients_square64(
+fn decode_contextual_following_color_coefficients_large(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
     neighbor_contexts: [u8; LOSSLESS444_NEIGHBOR_CAPACITY],
     orientation: SplitOrientation,
+    transform_grid_width: usize,
+    transform_grid_height: usize,
 ) -> PortableResult<LosslessSquare64TransformCoefficients> {
     let mut coefficients = [[0_i32; 16]; LosslessSquare64CoefficientArena::TRANSFORM_COUNT];
     decode_color_frame_coefficients_into(
         decoder,
         plane,
         cdfs,
-        16,
-        16,
+        transform_grid_width,
+        transform_grid_height,
         ColorFrameCoefficientContext::Following {
             neighbor_contexts,
             orientation,
@@ -8897,20 +8922,22 @@ fn decode_contextual_following_color_coefficients_square64(
     Ok(coefficients)
 }
 
-fn decode_contextual_boundary_color_coefficients_square64(
+fn decode_contextual_boundary_color_coefficients_large(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
     above_contexts: [u8; LOSSLESS444_NEIGHBOR_CAPACITY],
     left_contexts: [u8; LOSSLESS444_NEIGHBOR_CAPACITY],
+    transform_grid_width: usize,
+    transform_grid_height: usize,
 ) -> PortableResult<LosslessSquare64TransformCoefficients> {
     let mut coefficients = [[0_i32; 16]; LosslessSquare64CoefficientArena::TRANSFORM_COUNT];
     decode_color_frame_coefficients_into(
         decoder,
         plane,
         cdfs,
-        16,
-        16,
+        transform_grid_width,
+        transform_grid_height,
         ColorFrameCoefficientContext::Boundary {
             above_contexts,
             left_contexts,
@@ -9003,30 +9030,51 @@ fn coefficient_edge_contexts_wide(
     Ok(edge_contexts)
 }
 
-fn lossless_square64_edge_contexts(
+fn lossless_large_edge_contexts(
     syntax: &BlockSyntax,
     arena: &LosslessSquare64CoefficientArena,
     orientation: SplitOrientation,
 ) -> PortableResult<[[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3]> {
-    matches!(syntax.transform_grid, TransformGrid::Square64)
-        .then_some(())
-        .portable()?;
+    matches!(
+        syntax.transform_grid,
+        TransformGrid::Vertical16x64
+            | TransformGrid::Vertical32x64
+            | TransformGrid::Horizontal64x16
+            | TransformGrid::Horizontal64x32
+            | TransformGrid::Square64
+    )
+    .then_some(())
+    .portable()?;
+    let (grid_width, grid_height, _) = syntax.transform_grid.properties();
+    let transform_count = grid_width.checked_mul(grid_height).portable()?;
     let zero = [[0_i32; 16]; LosslessSquare64CoefficientArena::TRANSFORM_COUNT];
     let mut edge_contexts = [[0x40_u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3];
     for (plane, edge_context) in edge_contexts.iter_mut().enumerate() {
         let coefficients: &[TransformCoefficients] =
             match syntax.lossless_square64_coefficients[plane] {
                 Some(span) => arena.coefficients(span)?,
-                None => &zero,
+                None => zero.get(..transform_count).portable()?,
             };
-        for (edge_index, context) in edge_context.iter_mut().enumerate().take(16) {
+        (coefficients.len() == transform_count)
+            .then_some(())
+            .portable()?;
+        let edge_count = match orientation {
+            SplitOrientation::Horizontal => grid_height,
+            SplitOrientation::Vertical => grid_width,
+        };
+        for (edge_index, context) in edge_context.iter_mut().enumerate().take(edge_count) {
             let transform_index = match orientation {
                 SplitOrientation::Horizontal => edge_index
-                    .checked_mul(16)
-                    .and_then(|index| index.checked_add(15))
+                    .checked_mul(grid_width)
+                    .and_then(|index| index.checked_add(grid_width.saturating_sub(1)))
                     .ok_or(PortableUnavailable)?,
                 SplitOrientation::Vertical => edge_index
-                    .checked_add(15_usize.checked_mul(16).ok_or(PortableUnavailable)?)
+                    .checked_add(
+                        grid_height
+                            .saturating_sub(1)
+                            .checked_mul(grid_width)
+                            .ok_or(PortableUnavailable)?,
+                    )
                     .ok_or(PortableUnavailable)?,
             };
             *context = coefficient_residual_context(coefficients.get(transform_index).portable()?);
@@ -16548,7 +16596,9 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Vertical8x16
         | TransformGrid::Horizontal32x16
         | TransformGrid::Vertical16x32
+        | TransformGrid::Vertical32x64
         | TransformGrid::Vertical16x64
+        | TransformGrid::Horizontal64x32
         | TransformGrid::Horizontal64x16
         | TransformGrid::Square32
         | TransformGrid::Square64 => 7,
@@ -16566,9 +16616,11 @@ fn lossy_420_chroma_skip_cdf(
         | TransformGrid::Vertical8x16
         | TransformGrid::Horizontal32x8
         | TransformGrid::Vertical8x32 => 1,
-        TransformGrid::Vertical16x32 | TransformGrid::Horizontal32x16 | TransformGrid::Square32 => {
-            2
-        }
+        TransformGrid::Vertical16x32
+        | TransformGrid::Horizontal32x16
+        | TransformGrid::Vertical32x64
+        | TransformGrid::Horizontal64x32
+        | TransformGrid::Square32 => 2,
         // R16x64 maps to one RTX8x32 chroma transform. Its maximum axis is
         // 32 pixels, so dav1d's `t_dim.ctx` selects row two.
         TransformGrid::Vertical16x64 => 2,
@@ -16665,7 +16717,9 @@ fn lossy_full_chroma_skip_cdf(
         TransformGrid::Vertical8x32 => 2,
         TransformGrid::Vertical16x32
         | TransformGrid::Horizontal32x16
+        | TransformGrid::Vertical32x64
         | TransformGrid::Vertical16x64
+        | TransformGrid::Horizontal64x32
         | TransformGrid::Horizontal64x16
         | TransformGrid::Square32 => 3,
         TransformGrid::Square64 => 3,
@@ -19457,7 +19511,11 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
             CoefficientPolicy::ColorFrameTopLeft
                 | CoefficientPolicy::ColorFrameSquareContextual { .. }
                 | CoefficientPolicy::ColorFrameBoundaryContextual { .. },
-            TransformGrid::Vertical16x64 | TransformGrid::Horizontal64x16 | TransformGrid::Square64,
+            TransformGrid::Vertical16x64
+                | TransformGrid::Vertical32x64
+                | TransformGrid::Horizontal64x16
+                | TransformGrid::Horizontal64x32
+                | TransformGrid::Square64,
             ChromaSampling::Full,
         )
     );
@@ -19619,37 +19677,53 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
             (
                 QuantizationSyntax::Lossless,
                 ChromaSampling::Full,
-                TransformGrid::Square64,
+                TransformGrid::Vertical32x64
+                    | TransformGrid::Vertical16x64
+                    | TransformGrid::Horizontal64x16
+                    | TransformGrid::Horizontal64x32
+                    | TransformGrid::Square64,
             )
         ) {
             let coefficients = match coefficient_policy {
                 CoefficientPolicy::ColorFrameTopLeft => {
-                    decode_contextual_top_left_color_coefficients_square64(decoder, plane, cdfs)?
+                    decode_contextual_top_left_color_coefficients_large(
+                        decoder,
+                        plane,
+                        cdfs,
+                        plane_grid_width,
+                        plane_grid_height,
+                    )?
                 }
                 CoefficientPolicy::ColorFrameSquareContextual {
                     neighbor_contexts,
                     orientation,
-                } => decode_contextual_following_color_coefficients_square64(
+                } => decode_contextual_following_color_coefficients_large(
                     decoder,
                     plane,
                     cdfs,
                     neighbor_contexts[plane],
                     orientation,
+                    plane_grid_width,
+                    plane_grid_height,
                 )?,
                 CoefficientPolicy::ColorFrameBoundaryContextual {
                     above_contexts,
                     left_contexts,
-                } => decode_contextual_boundary_color_coefficients_square64(
+                } => decode_contextual_boundary_color_coefficients_large(
                     decoder,
                     plane,
                     cdfs,
                     above_contexts[plane],
                     left_contexts[plane],
+                    plane_grid_width,
+                    plane_grid_height,
                 )?,
                 _ => return Err(PortableUnavailable),
             };
             let arena = lossless_square64_arena.as_deref_mut().portable()?;
-            lossless_square64_coefficients[plane] = Some(arena.store(coefficients)?);
+            let transform_count = plane_grid_width.checked_mul(plane_grid_height).portable()?;
+            lossless_square64_coefficients[plane] =
+                Some(arena.store(coefficients.get(..transform_count).portable()?)?);
             return Ok([[0_i32; 16]; 64]);
         }
         match coefficient_policy {
@@ -34402,41 +34476,66 @@ fn reconstruct_lossless444_leaf(
     } else {
         None
     };
-    if matches!(transform_grid, TransformGrid::Square64) && !block_skipped {
+    let lossless_large_grid = matches!(
+        transform_grid,
+        TransformGrid::Vertical16x64
+            | TransformGrid::Vertical32x64
+            | TransformGrid::Horizontal64x16
+            | TransformGrid::Horizontal64x32
+            | TransformGrid::Square64
+    );
+    if lossless_large_grid && !block_skipped {
         lossless_square64_coefficients
             .iter()
             .all(Option::is_some)
             .then_some(())
             .portable()?;
     }
+    let (grid_width, grid_height, _) = transform_grid.properties();
+    let transform_count = grid_width.checked_mul(grid_height).portable()?;
     let zero_square64 = [[0_i32; 16]; LosslessSquare64CoefficientArena::TRANSFORM_COUNT];
-    let luma_coefficients: &[TransformCoefficients] =
-        if matches!(transform_grid, TransformGrid::Square64) {
-            match lossless_square64_coefficients[0] {
-                Some(span) => lossless_square64_arena.coefficients(span)?,
-                None => &zero_square64,
+    let luma_coefficients: &[TransformCoefficients] = if lossless_large_grid {
+        match lossless_square64_coefficients[0] {
+            Some(span) => {
+                let coefficients = lossless_square64_arena.coefficients(span)?;
+                (coefficients.len() == transform_count)
+                    .then_some(())
+                    .portable()?;
+                coefficients
             }
-        } else {
-            &coefficients[0]
-        };
-    let u_coefficients: &[TransformCoefficients] =
-        if matches!(transform_grid, TransformGrid::Square64) {
-            match lossless_square64_coefficients[1] {
-                Some(span) => lossless_square64_arena.coefficients(span)?,
-                None => &zero_square64,
+            None => zero_square64.get(..transform_count).portable()?,
+        }
+    } else {
+        &coefficients[0]
+    };
+    let u_coefficients: &[TransformCoefficients] = if lossless_large_grid {
+        match lossless_square64_coefficients[1] {
+            Some(span) => {
+                let coefficients = lossless_square64_arena.coefficients(span)?;
+                (coefficients.len() == transform_count)
+                    .then_some(())
+                    .portable()?;
+                coefficients
             }
-        } else {
-            &coefficients[1]
-        };
-    let v_coefficients: &[TransformCoefficients] =
-        if matches!(transform_grid, TransformGrid::Square64) {
-            match lossless_square64_coefficients[2] {
-                Some(span) => lossless_square64_arena.coefficients(span)?,
-                None => &zero_square64,
+            None => zero_square64.get(..transform_count).portable()?,
+        }
+    } else {
+        &coefficients[1]
+    };
+    let v_coefficients: &[TransformCoefficients] = if lossless_large_grid {
+        match lossless_square64_coefficients[2] {
+            Some(span) => {
+                let coefficients = lossless_square64_arena.coefficients(span)?;
+                (coefficients.len() == transform_count)
+                    .then_some(())
+                    .portable()?;
+                coefficients
             }
-        } else {
-            &coefficients[2]
-        };
+            None => zero_square64.get(..transform_count).portable()?,
+        }
+    } else {
+        &coefficients[2]
+    };
     let luma = reconstruct_lossless_plane(
         geometry,
         sample_depth,
@@ -48235,6 +48334,7 @@ pub(super) fn decode_first_lossless_444_leaf(
 impl Lossless444Leaf {
     fn new(
         geometry: Lossless444BlockGeometry,
+        block_skipped: bool,
         right_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
         bottom_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
         palette_cache: PaletteCacheState,
@@ -48267,6 +48367,7 @@ impl Lossless444Leaf {
             origin_y: geometry.origin_y,
             width: geometry.width,
             height: geometry.height,
+            block_skipped,
             closed,
             right_contexts,
             bottom_contexts,
@@ -48288,6 +48389,10 @@ impl Lossless444Leaf {
 
     pub(super) const fn height(&self) -> u32 {
         self.height
+    }
+
+    pub(super) const fn block_skipped(&self) -> bool {
+        self.block_skipped
     }
 
     pub(super) fn planes(&self) -> &[ReconstructedPlane; 3] {
@@ -48341,8 +48446,15 @@ impl Lossless444Decoder {
                 return Err(error);
             }
         };
-        let right_contexts = if matches!(syntax.transform_grid, TransformGrid::Square64) {
-            lossless_square64_edge_contexts(
+        let right_contexts = if matches!(
+            syntax.transform_grid,
+            TransformGrid::Vertical16x64
+                | TransformGrid::Vertical32x64
+                | TransformGrid::Horizontal64x16
+                | TransformGrid::Horizontal64x32
+                | TransformGrid::Square64
+        ) {
+            lossless_large_edge_contexts(
                 &syntax,
                 &self.lossless_square64_arena,
                 SplitOrientation::Horizontal,
@@ -48355,8 +48467,15 @@ impl Lossless444Decoder {
                 ChromaSampling::Full,
             )?
         };
-        let bottom_contexts = if matches!(syntax.transform_grid, TransformGrid::Square64) {
-            lossless_square64_edge_contexts(
+        let bottom_contexts = if matches!(
+            syntax.transform_grid,
+            TransformGrid::Vertical16x64
+                | TransformGrid::Vertical32x64
+                | TransformGrid::Horizontal64x16
+                | TransformGrid::Horizontal64x32
+                | TransformGrid::Square64
+        ) {
+            lossless_large_edge_contexts(
                 &syntax,
                 &self.lossless_square64_arena,
                 SplitOrientation::Vertical,
@@ -48369,6 +48488,8 @@ impl Lossless444Decoder {
                 ChromaSampling::Full,
             )?
         };
+        let block_skipped = syntax.block_skipped;
+        let palette_cache = syntax.palette.cache_state();
         let closed = reconstruct_lossless444_leaf(
             syntax,
             geometry,
@@ -48384,9 +48505,10 @@ impl Lossless444Decoder {
         )?;
         Lossless444Leaf::new(
             geometry,
+            block_skipped,
             right_contexts,
             bottom_contexts,
-            syntax.palette.cache_state(),
+            palette_cache,
             closed,
         )
     }
@@ -48458,6 +48580,10 @@ impl Lossless444Decoder {
             above_leaf.map(|leaf| leaf.palette_cache),
             left_leaf.map(|leaf| leaf.palette_cache),
         );
+        tools.skip_context = usize::from(above_leaf.is_some_and(Lossless444Leaf::block_skipped))
+            .saturating_add(usize::from(
+                left_leaf.is_some_and(Lossless444Leaf::block_skipped),
+            ));
         self.lossless_square64_arena.begin_leaf()?;
         self.palette_map_arena.begin_leaf()?;
         let syntax = match decode_syntax_with_palette_entropy_lossless_square64(
@@ -48488,8 +48614,15 @@ impl Lossless444Decoder {
                 return Err(error);
             }
         };
-        let right_contexts = if matches!(syntax.transform_grid, TransformGrid::Square64) {
-            lossless_square64_edge_contexts(
+        let right_contexts = if matches!(
+            syntax.transform_grid,
+            TransformGrid::Vertical16x64
+                | TransformGrid::Vertical32x64
+                | TransformGrid::Horizontal64x16
+                | TransformGrid::Horizontal64x32
+                | TransformGrid::Square64
+        ) {
+            lossless_large_edge_contexts(
                 &syntax,
                 &self.lossless_square64_arena,
                 SplitOrientation::Horizontal,
@@ -48502,8 +48635,15 @@ impl Lossless444Decoder {
                 ChromaSampling::Full,
             )?
         };
-        let bottom_contexts = if matches!(syntax.transform_grid, TransformGrid::Square64) {
-            lossless_square64_edge_contexts(
+        let bottom_contexts = if matches!(
+            syntax.transform_grid,
+            TransformGrid::Vertical16x64
+                | TransformGrid::Vertical32x64
+                | TransformGrid::Horizontal64x16
+                | TransformGrid::Horizontal64x32
+                | TransformGrid::Square64
+        ) {
+            lossless_large_edge_contexts(
                 &syntax,
                 &self.lossless_square64_arena,
                 SplitOrientation::Vertical,
@@ -48516,6 +48656,8 @@ impl Lossless444Decoder {
                 ChromaSampling::Full,
             )?
         };
+        let block_skipped = syntax.block_skipped;
+        let palette_cache = syntax.palette.cache_state();
         let closed = match reconstruct_lossless444_leaf(
             syntax,
             geometry,
@@ -48536,9 +48678,10 @@ impl Lossless444Decoder {
         };
         Lossless444Leaf::new(
             geometry,
+            block_skipped,
             right_contexts,
             bottom_contexts,
-            syntax.palette.cache_state(),
+            palette_cache,
             closed,
         )
     }
