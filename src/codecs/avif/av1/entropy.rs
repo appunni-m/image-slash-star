@@ -15606,9 +15606,10 @@ fn lossless_monochrome_superres_restoration_supported(context: &FirstBlockContex
 /// only when every plane is `NONE`, except for the bounded single-tile 8-bit
 /// and high-depth I444/I422/I420/monochrome active-restoration slices below.
 /// Film grain, when present, is likewise synthesized only after resize and
-/// restoration on the owned display copy. Neutral high-depth monochrome
-/// super-resolution also admits coded-resolution inter-intra; color,
-/// full-resolution, and active-restoration branches remain closed.
+/// restoration on the owned display copy. High-depth monochrome
+/// super-resolution admits coded-resolution inter-intra for neutral or the
+/// bounded active luma-restoration branch; color and full-resolution branches
+/// remain closed.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -15659,9 +15660,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
     let interintra_supported = !inter_context.enable_interintra_compound
-        || (superres_layout
-            && layout == PixelLayout::Monochrome
-            && context.restoration_types == [None; 3]);
+        || (superres_layout && layout == PixelLayout::Monochrome);
     let film_grain_supported = if superres_layout {
         match layout {
             PixelLayout::Monochrome => no_unsupported_film_grain(context),
@@ -16125,7 +16124,6 @@ fn high_depth_lossless_monochrome_superres_restoration_supported(
         || inter_context.skip_mode_references.is_some()
         || inter_context.reference_mode_select
         || inter_context.allow_warped_motion
-        || inter_context.enable_interintra_compound
         || inter_context.enable_masked_compound
         || inter_context.enable_jnt_comp
         || !context.frame_tools.restoration_present
