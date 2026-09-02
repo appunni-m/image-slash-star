@@ -5073,7 +5073,13 @@ fn inter_lossy_wide_single_geometry_supported(
         )
         && (!matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
             || transform_mode == 1
-            || quantization.segment_qindex > 0)
+            || quantization.segment_qindex > 0
+            // A qindex-zero, non-lossless I420 root may legally remain
+            // unsplit.  The transform parser still rejects the resulting
+            // split/deep/topology plans through their positive-q gates.
+            || (layout == PixelLayout::I420
+                && transform_mode == 2
+                && quantization.segment_qindex == 0))
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 

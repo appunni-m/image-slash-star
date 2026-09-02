@@ -55275,7 +55275,13 @@ impl Lossy420Decoder {
             && matches!(tools.transform_mode, 1 | 2)
             && (!matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
                 || tools.transform_mode == 1
-                || quantization.segment_qindex > 0)
+                || quantization.segment_qindex > 0
+                // qindex zero is valid for a non-lossless I420 root that
+                // remains a single maximum-transform terminal.  Split
+                // plans retain their independent positive-q validation.
+                || (chroma_sampling == ChromaSampling::Subsampled420
+                    && tools.transform_mode == 2
+                    && quantization.segment_qindex == 0))
             && !quantization.segment_lossless;
         if matches!(
             transform_plan,
