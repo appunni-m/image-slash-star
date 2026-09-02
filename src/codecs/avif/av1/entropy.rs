@@ -1519,8 +1519,14 @@ fn partition_node_has_chroma(
     if standalone_tiny_frame {
         return true;
     }
-    let owns_horizontal = !context.subsampling_x || node.coded_width > 1 || node.x % 2 != 0;
-    let owns_vertical = !context.subsampling_y || node.coded_height > 1 || node.y % 2 != 0;
+    // AV1's HasChroma rule is indexed by frame-absolute MI coordinates. The
+    // tile walker stores `node` in tile-local units; XOR preserves the low-bit
+    // parity of the checked tile-origin-plus-node sum without permitting an
+    // overflowing coordinate to become the ownership authority.
+    let absolute_x_odd = (context.tile_origin_b4_x ^ node.x) & 1 != 0;
+    let absolute_y_odd = (context.tile_origin_b4_y ^ node.y) & 1 != 0;
+    let owns_horizontal = !context.subsampling_x || node.coded_width > 1 || absolute_x_odd;
+    let owns_vertical = !context.subsampling_y || node.coded_height > 1 || absolute_y_odd;
     owns_horizontal && owns_vertical
 }
 
@@ -7961,6 +7967,7 @@ fn decode_inter_leaf(
         context.subsampling_y,
     )
     .ok_or_else(|| malformed("inter pixel layout is invalid"))?;
+    let has_chroma = partition_node_has_chroma(context, node, false);
     let lossless_grid_geometry = inter_lossless_grid_geometry_supported(
         node.block_size,
         layout,
@@ -8226,12 +8233,6 @@ fn decode_inter_leaf(
         {
             return Ok(Err(super::block::PortableUnavailable));
         }
-    }
-    if lossless_grid_geometry
-        && matches!(layout, PixelLayout::I420 | PixelLayout::I422)
-        && !partition_node_has_chroma(context, node, false)
-    {
-        return Ok(Err(super::block::PortableUnavailable));
     }
     if !inter_single_transform_geometry_supported(node.block_size, layout)
         && !lossless_grid_geometry
@@ -9338,7 +9339,9 @@ fn decode_inter_leaf(
             .ok_or_else(|| malformed("inter chroma sampling is invalid"))?,
         )
     };
-    let chroma_tx = if let Some(chroma_sampling) = block_chroma_sampling {
+    let chroma_tx = if has_chroma {
+        let chroma_sampling = block_chroma_sampling
+            .ok_or_else(|| malformed("inter chroma sampling is unavailable"))?;
         let chroma_layout = match chroma_sampling {
             super::block::ChromaSampling::Full => PixelLayout::I444,
             super::block::ChromaSampling::Subsampled420 => PixelLayout::I420,

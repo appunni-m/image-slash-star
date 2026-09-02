@@ -54980,14 +54980,21 @@ impl Lossy420Decoder {
     ) -> PortableResult<FirstLeaf> {
         let chroma_sampling = self.chroma_sampling;
         let monochrome = matches!(chroma_sampling, ChromaSampling::Monochrome);
-        // A four-pixel-wide I422 leaf shares one chroma column with its
-        // horizontal sibling. The odd luma-MI column owns that shared
-        // sentence; the even sibling still reconstructs and publishes luma.
-        // All wider leaves retain the ordinary per-leaf chroma ownership.
+        let (block_width_b4, block_height_b4) = block_size.mi_dimensions();
+        // AV1's HasChroma rule suppresses the chroma sentence on the even
+        // member of a one-MI axis for each subsampled direction. Coordinates
+        // reaching this shared compositor are frame-absolute MI positions.
+        // Keep the ownership decision identical for I420, I422, and every
+        // transform wrapper so non-owners consume and publish luma only.
         let has_chroma = !monochrome
-            && (chroma_sampling != ChromaSampling::Subsampled422
-                || !matches!(block_size, BlockSize::B4x8 | BlockSize::B4x16)
-                || prediction_state.block_x_b4 % 2 != 0);
+            && (!matches!(
+                chroma_sampling,
+                ChromaSampling::Subsampled420 | ChromaSampling::Subsampled422
+            ) || block_width_b4 > 1
+                || prediction_state.block_x_b4 & 1 != 0)
+            && (!matches!(chroma_sampling, ChromaSampling::Subsampled420)
+                || block_height_b4 > 1
+                || prediction_state.block_y_b4 & 1 != 0);
         let quantization = prepared_quantization.quantization;
         let references = prediction_state.references;
         let layout = chroma_sampling.pixel_layout();
@@ -57074,21 +57081,25 @@ impl Lossy420Decoder {
             } else {
                 self.pending_global_warps[0]
             };
-            let chroma_block_x_b4 = if plane != 0
-                && has_chroma
-                && chroma_sampling == ChromaSampling::Subsampled422
-                && matches!(block_size, BlockSize::B4x8 | BlockSize::B4x16)
-            {
-                // Narrow I422 owners reconstruct the shared chroma column at
-                // the pair-aligned origin, not at the odd luma sibling's
-                // half-column phase.
-                prediction_state.block_x_b4 / 2
-            } else {
-                prediction_state.block_x_b4
-            };
+            let chroma_block_x_b4 =
+                if plane != 0 && has_chroma && plane_subsampling.0 == 2 && block_width_b4 == 1 {
+                    // A one-MI subsampled axis shares its chroma carrier with the
+                    // adjacent luma leaf. Keep the request in luma-MI units and
+                    // clear the phase bit; `PredictionRequest::geometry` applies
+                    // the subsampling scale exactly once.
+                    prediction_state.block_x_b4 & !1
+                } else {
+                    prediction_state.block_x_b4
+                };
+            let chroma_block_y_b4 =
+                if plane != 0 && has_chroma && plane_subsampling.1 == 2 && block_height_b4 == 1 {
+                    prediction_state.block_y_b4 & !1
+                } else {
+                    prediction_state.block_y_b4
+                };
             let request = PredictionRequest {
                 block_x_b4: chroma_block_x_b4,
-                block_y_b4: prediction_state.block_y_b4,
+                block_y_b4: chroma_block_y_b4,
                 width: u32::try_from(geometry.0).map_err(|_| PortableUnavailable)?,
                 height: u32::try_from(geometry.1).map_err(|_| PortableUnavailable)?,
                 subsampling_x: plane_subsampling.0 == 2,

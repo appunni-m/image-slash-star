@@ -1069,11 +1069,12 @@ impl FrameCanvas {
     /// Place one AV1 4:2:0 partition leaf using the codec's coded chroma
     /// geometry.
     ///
-    /// A 4×4 luma leaf at an odd luma-unit coordinate owns a full 4×4
-    /// chroma transform. Its chroma origin is aligned to the even 4×4
-    /// chroma grid, and a luma leaf at an even/even coordinate owns no
-    /// chroma samples at all. The generic cell placement API cannot express
-    /// that ownership rule, so the lossy AV1 walker uses this checked path.
+    /// A subsampled one-MI axis is shared by adjacent luma leaves: only the
+    /// odd member owns the corresponding chroma carrier, and its origin is
+    /// aligned to the even 4×4 chroma grid. I420 applies the rule on both
+    /// axes; I422 applies it horizontally. The generic cell placement API
+    /// cannot express that ownership rule, so the AV1 walker uses this
+    /// checked path.
     pub(in crate::codecs::avif) fn place_av1_partition_leaf(
         &mut self,
         x_units: u32,
