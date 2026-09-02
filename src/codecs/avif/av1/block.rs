@@ -40557,7 +40557,9 @@ fn reconstruct_lossy_full_square4_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 8];
@@ -40630,7 +40632,9 @@ fn reconstruct_lossy_full_square8_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 16];
@@ -41393,7 +41397,9 @@ fn reconstruct_lossy_full_4x16_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
 
@@ -41478,7 +41484,9 @@ fn reconstruct_lossy_full_4x16_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 20];
@@ -41619,7 +41627,9 @@ fn reconstruct_lossy_full_square16_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     reconstruct_lossy_full_16x16_chroma(
@@ -41820,7 +41830,9 @@ fn reconstruct_lossy_full_16x32_chroma_zone3_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let edges = FullIntraPlaneEdges::prepare(
@@ -41873,7 +41885,9 @@ fn reconstruct_lossy_full_16x32_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     // A horizontally following leaf has no normative top carrier. Leaving
@@ -42051,7 +42065,9 @@ fn reconstruct_lossy_full_4x8_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
 
@@ -42334,7 +42350,9 @@ fn reconstruct_lossy_full_16x8_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
 
@@ -42419,7 +42437,9 @@ fn reconstruct_lossy_full_16x8_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 16];
@@ -42566,7 +42586,9 @@ fn reconstruct_lossy_full_16x4_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
 
@@ -42651,7 +42673,9 @@ fn reconstruct_lossy_full_16x4_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 8];
@@ -42851,7 +42875,9 @@ fn reconstruct_lossy_full_32x8_chroma_zone3_smooth_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     if bottom_left.is_some() && !has_left {
@@ -42921,7 +42947,9 @@ fn reconstruct_lossy_full_32x8_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
 
@@ -43115,7 +43143,9 @@ fn reconstruct_lossy_full_8x32_chroma_smooth_zone3(
     smooth_edges: bool,
 ) -> PortableResult<ReconstructedPlane> {
     match predictor {
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         ChromaPredictor::Diagonal203 => {
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
@@ -43186,7 +43216,9 @@ fn reconstruct_lossy_full_8x32_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 40];
@@ -43486,7 +43518,9 @@ fn reconstruct_lossy_full_8x16_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 24];
@@ -43637,7 +43671,9 @@ fn reconstruct_lossy_full_8x4_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::SmoothVertical | ChromaPredictor::SmoothHorizontal => {}
+        ChromaPredictor::Smooth
+        | ChromaPredictor::SmoothVertical
+        | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
 
@@ -59435,6 +59471,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -59527,6 +59564,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -59592,6 +59630,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -59656,6 +59695,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -59723,6 +59763,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -59850,6 +59891,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -59944,6 +59986,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -60029,6 +60072,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -60145,6 +60189,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -60205,6 +60250,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -60284,6 +60330,7 @@ impl Lossy420Decoder {
                     ChromaPredictor::Diagonal45
                         | ChromaPredictor::Diagonal67
                         | ChromaPredictor::Diagonal203
+                        | ChromaPredictor::Smooth
                         | ChromaPredictor::SmoothVertical
                         | ChromaPredictor::SmoothHorizontal
                 );
@@ -60912,6 +60959,7 @@ impl Lossy420Decoder {
                     ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal => {
                         let top = positioned_top_edge::<4>(
@@ -61120,6 +61168,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -61387,6 +61436,7 @@ impl Lossy420Decoder {
                 || matches!(
                     syntax.chroma_predictor,
                     ChromaPredictor::Diagonal203
+                        | ChromaPredictor::Smooth
                         | ChromaPredictor::SmoothVertical
                         | ChromaPredictor::SmoothHorizontal
                 );
@@ -61489,6 +61539,7 @@ impl Lossy420Decoder {
                         )?
                     }
                     ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal => {
                         let bottom_left =
@@ -61545,6 +61596,7 @@ impl Lossy420Decoder {
             let chroma_zone3_or_smooth = matches!(
                 syntax.chroma_predictor,
                 ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -61828,6 +61880,7 @@ impl Lossy420Decoder {
                     ChromaPredictor::Diagonal45
                         | ChromaPredictor::Diagonal67
                         | ChromaPredictor::Diagonal203
+                        | ChromaPredictor::Smooth
                         | ChromaPredictor::SmoothVertical
                         | ChromaPredictor::SmoothHorizontal
                 );
@@ -62004,6 +62057,7 @@ impl Lossy420Decoder {
                                 )
                             }
                             ChromaPredictor::Diagonal203
+                            | ChromaPredictor::Smooth
                             | ChromaPredictor::SmoothVertical
                             | ChromaPredictor::SmoothHorizontal => {
                                 reconstruct_lossy_full_32x8_chroma_zone3_smooth_target(
@@ -62095,6 +62149,7 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
             );
@@ -62500,6 +62555,7 @@ impl Lossy420Decoder {
                         ChromaPredictor::Diagonal45
                         | ChromaPredictor::Diagonal67
                         | ChromaPredictor::Diagonal203
+                        | ChromaPredictor::Smooth
                         | ChromaPredictor::SmoothVertical
                         | ChromaPredictor::SmoothHorizontal => {
                             let top = positioned_top_edge::<4>(
