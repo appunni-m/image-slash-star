@@ -55480,13 +55480,17 @@ impl Lossy420Decoder {
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.transform_mode, 1 | 2)
-                && (tools.transform_mode != 2 || quantization.segment_qindex > 0)
+                && (tools.transform_mode != 2
+                    || quantization.segment_qindex > 0
+                    || (sampling == ChromaSampling::Subsampled422
+                        && matches!(block_size, BlockSize::B4x8 | BlockSize::B4x16)
+                        && (luma_width, luma_height) == block_size.pixel_dimensions()))
                 && !quantization.segment_lossless
                 && (!matches!(
                     (sampling, block_size),
                     (ChromaSampling::Subsampled422, BlockSize::B4x8)
                         | (ChromaSampling::Subsampled422, BlockSize::B4x16)
-                ) || tools.transform_mode == 1)
+                ) || matches!(tools.transform_mode, 1 | 2))
                 && matches!(
                     block_size,
                     BlockSize::B4x8
@@ -56331,6 +56335,16 @@ impl Lossy420Decoder {
                 block_size == BlockSize::B4x16 && visible_width == 4 && visible_height == 16;
             let exact_b16x4 =
                 block_size == BlockSize::B16x4 && visible_width == 16 && visible_height == 4;
+            let i422_b4x8_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
+                && exact_b4x8
+                && tools.transform_mode == 2
+                && quantization.segment_qindex == 0
+                && !quantization.segment_lossless;
+            let i422_b4x16_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
+                && exact_b4x16
+                && tools.transform_mode == 2
+                && quantization.segment_qindex == 0
+                && !quantization.segment_lossless;
             let exact_b8x16 =
                 block_size == BlockSize::B8x16 && visible_width == 8 && visible_height == 16;
             let exact_b16x8 =
@@ -56568,7 +56582,7 @@ impl Lossy420Decoder {
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
-                    && quantization.segment_qindex > 0
+                    && (quantization.segment_qindex > 0 || i422_b4x8_mode2_q0)
                     && !quantization.segment_lossless
                     && prediction_state.inter_intra.is_none()
                     && prediction_state.obmc.is_none())
@@ -56589,7 +56603,7 @@ impl Lossy420Decoder {
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
-                    && quantization.segment_qindex > 0
+                    && (quantization.segment_qindex > 0 || i422_b4x16_mode2_q0)
                     && !quantization.segment_lossless
                     && prediction_state.inter_intra.is_none()
                     && prediction_state.obmc.is_none())
@@ -56637,7 +56651,7 @@ impl Lossy420Decoder {
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
-                    && quantization.segment_qindex > 0
+                    && (quantization.segment_qindex > 0 || i422_b4x16_mode2_q0)
                     && !quantization.segment_lossless
                     && prediction_state.inter_intra.is_none()
                     && prediction_state.obmc.is_none())
@@ -56666,7 +56680,7 @@ impl Lossy420Decoder {
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
-                    && quantization.segment_qindex > 0
+                    && (quantization.segment_qindex > 0 || i422_b4x16_mode2_q0)
                     && !quantization.segment_lossless
                     && any_child_split
                     && !all_children_split
@@ -62859,6 +62873,11 @@ impl Lossy420Decoder {
     ) -> PortableResult<LosslessGridContexts> {
         let coded_width = raster.coded_width;
         let coded_height = raster.coded_height;
+        let i422_narrow_mode2_q0 = self.chroma_sampling == ChromaSampling::Subsampled422
+            && tools.transform_mode == 2
+            && quantization.segment_qindex == 0
+            && !quantization.segment_lossless
+            && matches!((coded_width, coded_height), (4, 8) | (4, 16));
         (prediction.len() == coded_width.checked_mul(coded_height).portable()?
             && matches!(
                 (coded_width, coded_height),
@@ -62871,7 +62890,9 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && matches!(tools.transform_mode, 1 | 2)
-            && (tools.transform_mode == 1 || quantization.segment_qindex > 0)
+            && (tools.transform_mode == 1
+                || quantization.segment_qindex > 0
+                || i422_narrow_mode2_q0)
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
