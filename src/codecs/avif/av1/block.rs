@@ -23303,38 +23303,6 @@ fn reconstruct_lossy_luma_16x16_split_from_prediction(
     ReconstructedPlane { samples }
 }
 
-fn reconstruct_lossy_luma_16x16_smooth_horizontal(
-    left: [u16; 16],
-    right: u16,
-    coefficients: Option<Lossy16x16TransformCoefficients>,
-    transform_kind: Lossy16x16TransformKind,
-) -> ReconstructedPlane {
-    const SMOOTH_WEIGHTS_16: [i32; 16] = [
-        255, 225, 196, 170, 145, 123, 102, 84, 68, 54, 43, 33, 26, 20, 17, 16,
-    ];
-    let right = i32::from(right);
-    let prediction = std::array::from_fn(|index| {
-        let x = index % 16;
-        let value = SMOOTH_WEIGHTS_16[x]
-            .saturating_mul(i32::from(left[index / 16]))
-            .saturating_add(
-                256_i32
-                    .saturating_sub(SMOOTH_WEIGHTS_16[x])
-                    .saturating_mul(right),
-            )
-            .saturating_add(128)
-            >> 8;
-        #[expect(
-            clippy::cast_sign_loss,
-            reason = "the smooth predictor is explicitly clamped to eight-bit range"
-        )]
-        {
-            value.clamp(0, 255) as u16
-        }
-    });
-    reconstruct_lossy_luma_16x16_from_prediction(prediction, coefficients, transform_kind)
-}
-
 fn reconstruct_lossy_luma_32x32(
     predictor: u16,
     coefficients: Option<Lossy32x32TransformCoefficients>,
@@ -30283,30 +30251,45 @@ fn reconstruct_leaf_with_luma_override(
             [luma, chroma_u, chroma_v]
         }
         ReconstructionPolicy::Lossy420Dct16x16 => {
-            let luma = luma_override.unwrap_or_else(|| {
-                if let Some(split) = lossy_luma_8x8_split {
-                    reconstruct_lossy_luma_16x16_split(
-                        luma_predictor,
-                        luma_angle,
-                        filter_intra_mode,
-                        [predictors[0]; 16],
-                        [predictors[0]; 16],
-                        predictors[0],
-                        false,
-                        false,
-                        split,
-                    )
-                    .unwrap_or_else(|_| ReconstructedPlane {
-                        samples: vec![predictors[0]; 256],
-                    })
-                } else {
-                    reconstruct_lossy_luma_16x16(
-                        predictors[0],
-                        lossy_luma_16x16_coefficients,
-                        lossy_luma_16x16_transform,
-                    )
-                }
-            });
+            let luma = if let Some(luma_override) = luma_override {
+                luma_override
+            } else if let Some(split) = lossy_luma_8x8_split {
+                reconstruct_lossy_luma_16x16_split(
+                    luma_predictor,
+                    luma_angle,
+                    filter_intra_mode,
+                    [predictors[0]; 16],
+                    [predictors[0]; 16],
+                    predictors[0],
+                    false,
+                    false,
+                    split,
+                )
+                .unwrap_or_else(|_| ReconstructedPlane {
+                    samples: vec![predictors[0]; 256],
+                })
+            } else if matches!(chroma_sampling, ChromaSampling::Full) {
+                reconstruct_lossy_full_16x16_luma(
+                    luma_predictor,
+                    luma_angle,
+                    filter_intra_mode,
+                    &[],
+                    &[],
+                    None,
+                    false,
+                    false,
+                    enable_intra_edge_filter,
+                    false,
+                    lossy_luma_16x16_coefficients,
+                    lossy_luma_16x16_transform,
+                )?
+            } else {
+                reconstruct_lossy_luma_16x16(
+                    predictors[0],
+                    lossy_luma_16x16_coefficients,
+                    lossy_luma_16x16_transform,
+                )
+            };
             if matches!(chroma_sampling, ChromaSampling::Full) {
                 let luma_for_chroma = luma.clone();
                 let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
@@ -35220,6 +35203,11 @@ fn reconstruct_following_lossy_420_16x16_leaf(
     // top edge by repeating the block's first left sample. This is distinct
     // from the 128 midpoint used when both edges are absent.
     let luma_top = [luma_left[0]; 16];
+    let smooth_luma_edges = if top_neighbor_is_distinct {
+        top_neighbor.is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
+    } else {
+        is_smooth_luma_predictor(neighbor.luma_predictor)
+    };
     let luma = if palette.y.is_present() {
         let prediction =
             palette_prediction_exact::<256>(palette.y, palette.y_view(palette_map_arena)?)
@@ -35247,27 +35235,20 @@ fn reconstruct_following_lossy_420_16x16_leaf(
             split,
         )?
     } else {
-        match luma_predictor {
-            LumaPredictor::Dc => reconstruct_lossy_luma_16x16(
-                one_sided_dc_predictor_16(luma_left),
-                lossy_luma_16x16_coefficients,
-                lossy_luma_16x16_transform,
-            ),
-            LumaPredictor::Smooth | LumaPredictor::SmoothHorizontal => {
-                reconstruct_lossy_luma_16x16_smooth_horizontal(
-                    luma_left,
-                    luma_left[0],
-                    lossy_luma_16x16_coefficients,
-                    lossy_luma_16x16_transform,
-                )
-            }
-            LumaPredictor::Horizontal => reconstruct_lossy_luma_16x16_from_prediction(
-                std::array::from_fn(|index| luma_left[index / 16]),
-                lossy_luma_16x16_coefficients,
-                lossy_luma_16x16_transform,
-            ),
-            _ => return Err(PortableUnavailable),
-        }
+        reconstruct_lossy_full_16x16_luma(
+            luma_predictor,
+            luma_angle,
+            filter_intra_mode,
+            &luma_top,
+            &luma_left,
+            None,
+            false,
+            true,
+            enable_intra_edge_filter,
+            smooth_luma_edges,
+            lossy_luma_16x16_coefficients,
+            lossy_luma_16x16_transform,
+        )?
     };
     let luma_for_chroma = luma.clone();
 
@@ -41184,6 +41165,60 @@ fn reconstruct_lossy_full_16x16_chroma(
     ))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "full-resolution 16x16 luma carries normalized edges, filter-intra, availability, and transform state"
+)]
+fn reconstruct_lossy_full_16x16_luma(
+    predictor: LumaPredictor,
+    angle: Option<i32>,
+    filter_intra_mode: Option<usize>,
+    top: &[u16],
+    left: &[u16],
+    top_left: Option<u16>,
+    has_top: bool,
+    has_left: bool,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+    coefficients: Option<Lossy16x16TransformCoefficients>,
+    transform_kind: Lossy16x16TransformKind,
+) -> PortableResult<ReconstructedPlane> {
+    let edges = if !has_top && !has_left {
+        FullIntraPlaneEdges::origin(16, 16, SampleDepth::EIGHT)?
+    } else {
+        FullIntraPlaneEdges::prepare(
+            16,
+            16,
+            SampleDepth::EIGHT,
+            top,
+            left,
+            top_left,
+            has_top,
+            has_left,
+            false,
+            false,
+            smooth_edges,
+        )?
+    };
+    let mut prediction = [0_u16; 256];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_luma_predictor(predictor),
+        angle,
+        filter_intra_mode,
+        16,
+        16,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    Ok(reconstruct_lossy_luma_16x16_from_prediction(
+        prediction,
+        coefficients,
+        transform_kind,
+    ))
+}
+
 fn reconstruct_lossy_full_16x32_chroma(
     predictor: ChromaPredictor,
     angle: Option<i32>,
@@ -43628,11 +43663,13 @@ fn reconstruct_following_lossy_420_vertical_16x16_leaf(
     above_right: &ClosedLeaf,
     left_neighbor: Option<&ClosedLeaf>,
     left_luma_edge_16: Option<[u16; 16]>,
+    luma_top_left: Option<u16>,
     left_chroma_edges_16: [Option<[u16; 16]>; 2],
     left_chroma_edges_8: [Option<[u16; 8]>; 2],
     chroma_top_left: [Option<u16>; 2],
     above_right_is_above_left: bool,
     enable_intra_edge_filter: bool,
+    smooth_luma_edges: bool,
     smooth_chroma_edges: bool,
 ) -> PortableResult<ClosedLeaf> {
     let BlockSyntax {
@@ -43801,37 +43838,28 @@ fn reconstruct_following_lossy_420_vertical_16x16_leaf(
     }
 
     if matches!(chroma_sampling, ChromaSampling::Full) {
-        let luma_top_left = above_left.planes[0].samples.last().copied().unwrap_or(128);
-        let luma_prediction = if let Some(mode) = filter_intra_mode {
-            reconstruct_filter_intra_prediction(mode, 16, 16, luma_top_left, &luma_top, &luma_left)?
-                .try_into()
-                .map_err(|_| PortableUnavailable)?
-        } else {
-            std::array::from_fn(|index| {
-                let x = index % 16;
-                let y = index / 16;
-                match luma_predictor {
-                    LumaPredictor::Dc => {
-                        if left_neighbor.is_some() {
-                            dc_predictor_16(luma_top, luma_left)
-                        } else {
-                            one_sided_dc_predictor_16(luma_top)
-                        }
-                    }
-                    LumaPredictor::Vertical => luma_top[x],
-                    LumaPredictor::Horizontal => luma_left[y],
-                    LumaPredictor::Paeth => {
-                        paeth_predictor(luma_top[x], luma_left[y], luma_top_left)
-                    }
-                    _ => luma_top[x],
-                }
-            })
-        };
-        let luma = reconstruct_lossy_luma_16x16_from_prediction(
-            luma_prediction,
+        let has_luma_left = left_luma_edge_16.is_some();
+        let full_luma_left = left_luma_edge_16.unwrap_or([luma_top[0]; 16]);
+        if left_neighbor.is_some() && !has_luma_left {
+            // A positioned left owner without a complete 16-sample carrier
+            // cannot authorize the normalized Square16 edge. Do not sample
+            // it speculatively or turn a partial edge into a full one.
+            return Err(PortableUnavailable);
+        }
+        let luma = reconstruct_lossy_full_16x16_luma(
+            luma_predictor,
+            luma_angle,
+            filter_intra_mode,
+            &luma_top,
+            &full_luma_left,
+            if has_luma_left { luma_top_left } else { None },
+            true,
+            has_luma_left,
+            enable_intra_edge_filter,
+            smooth_luma_edges,
             lossy_luma_16x16_coefficients,
             lossy_luma_16x16_transform,
-        );
+        )?;
         let luma_for_chroma = luma.clone();
         let chroma = |plane: usize| -> PortableResult<ReconstructedPlane> {
             let top = if above_right_is_above_left {
@@ -58793,6 +58821,7 @@ impl Lossy420Decoder {
             return leaf.map(visible);
         }
         if matches!(transform_grid, TransformGrid::Square16) {
+            let luma_top_left = left_top_left_sample;
             let chroma_top_left =
                 std::array::from_fn(|plane| full_resolution_chroma_top_left(&neighbors, plane + 1));
             let left_chroma_mode = neighbors
@@ -58803,6 +58832,11 @@ impl Lossy420Decoder {
             let smooth_chroma_edges =
                 is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
                     || is_smooth_chroma_predictor(left_chroma_mode);
+            let smooth_luma_edges = is_smooth_luma_predictor(neighbors.above_left.luma_predictor)
+                || neighbors
+                    .left_luma_top
+                    .or(neighbors.left)
+                    .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor));
             let leaf = reconstruct_following_lossy_420_vertical_16x16_leaf(
                 syntax,
                 &self.palette_map_arena,
@@ -58810,11 +58844,13 @@ impl Lossy420Decoder {
                 &above_right,
                 left_neighbor.as_ref(),
                 left_luma_edge_16,
+                luma_top_left,
                 neighbors.left_chroma_edges_16,
                 left_chroma_edges_8,
                 chroma_top_left,
                 above_right_is_above_left,
                 tools.enable_intra_edge_filter,
+                smooth_luma_edges,
                 smooth_chroma_edges,
             );
             return leaf.map(visible);
