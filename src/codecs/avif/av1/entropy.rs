@@ -14026,8 +14026,10 @@ fn bounded_i444_intra_loop_geometry(
 /// Bounded lossy I444 inter reconstruction. Screen-enabled leaves use the
 /// shared palette/MV paths; frame-level skip mode uses fixed
 /// nearest-nearest/average prediction while ordinary compound syntax remains
-/// available for non-skip leaves. Postfilters consume completed
-/// full-resolution samples while existing reference restrictions remain intact.
+/// available for non-skip leaves. Eligible single-reference leaves may blend
+/// coded-resolution inter-intra before residual reconstruction. Postfilters
+/// consume completed full-resolution samples while existing reference
+/// restrictions remain intact.
 fn bounded_i444_inter_reconstruction_geometry(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -14078,7 +14080,6 @@ fn bounded_i444_inter_reconstruction_geometry(
         && bounded_i444_cdef_supported(context)
         && context.restoration_types == [None; 3]
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
