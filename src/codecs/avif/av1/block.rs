@@ -17777,34 +17777,32 @@ fn lossy_422_chroma_skip_cdf(
     left_contexts: [u8; 16],
 ) -> PortableResult<CoefficientSkipCdf> {
     // ✅ VERIFIED: dav1d 1.5.3 `get_skip_ctx` with ss_hor=1 and ss_ver=0.
-    // This slice admits only the exact Square16 terminal: its projected
-    // chroma footprint is 2x4 transform units (8x16 pixels), its dav1d
-    // transform context is 2, and its one-transform predicate is false.
-    // Other 4:2:2 geometries must remain typed unsupported until their
-    // complete block-dimension and transform tables are implemented.
-    let (luma_width, luma_height, _) = transform_grid.properties();
-    let chroma_width = luma_width.div_ceil(2);
-    let chroma_height = luma_height;
-    if !matches!(transform_grid, TransformGrid::Square16) || (chroma_width, chroma_height) != (2, 4)
-    {
-        return Err(PortableUnavailable);
-    }
-    let transform_context = 2;
-    // `dav1d_block_dimensions[BS_16X16][2..4]` is [2, 2] and
-    // `dav1d_txfm_dimensions[RTX_8X16]` is [1, 2]. Applying
-    // `get_skip_ctx`'s 4:2:2 shifts [ss_hor=1, ss_ver=0] therefore proves
-    // that this is the single-transform context.
-    let block_width_log2 = 2_usize;
-    let block_height_log2 = 2_usize;
-    let transform_width_log2 = 1_usize;
-    let transform_height_log2 = 2_usize;
+    // The tuple carries the exact coded block dimensions and `TxfmInfo`
+    // dimensions used by the reference table.  The first pair is the
+    // chroma footprint in 4x4 units; the remaining pairs are the source
+    // block/transform log2 dimensions used by `get_skip_ctx`.
+    let (
+        chroma_width,
+        chroma_height,
+        transform_context,
+        block_width_log2,
+        block_height_log2,
+        transform_width_log2,
+        transform_height_log2,
+    ): (usize, usize, usize, usize, usize, usize, usize) = match transform_grid {
+        // BS_16X4 -> RTX_8X4, t_dim.ctx = 1.
+        TransformGrid::Horizontal16x4 => (2, 1, 1, 2, 0, 1, 0),
+        // BS_16X8 -> TX_8X8, t_dim.ctx = 1.
+        TransformGrid::Horizontal16x8 => (2, 2, 1, 2, 1, 1, 1),
+        // BS_16X16 -> RTX_8X16, t_dim.ctx = 2.
+        TransformGrid::Square16 => (2, 4, 2, 2, 2, 1, 2),
+        _ => return Err(PortableUnavailable),
+    };
     let not_one_block = usize::from(
         block_width_log2.saturating_sub(1) > transform_width_log2
             || block_height_log2 > transform_height_log2,
     );
-    if not_one_block != 0 {
-        return Err(PortableUnavailable);
-    }
+    (not_one_block == 0).then_some(()).portable()?;
     let above_non_neutral = above_contexts[..chroma_width.min(8)]
         .iter()
         .any(|&context| context != 0x40);
@@ -20865,12 +20863,17 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
             ChromaSampling::Monochrome,
         )
     );
-    // The current pure-Rust 4:2:2 path is deliberately limited to the
-    // reference-proven Square16 terminal. Reject other geometries before
-    // reading even the block skip symbol; their transform/CDF tables are not
-    // implemented yet and must not be decoded with an accidental context.
+    // The pure-Rust 4:2:2 path admits only the three terminals whose
+    // block/transform and chroma carriers are source-backed: R16x4 -> R8x4,
+    // R16x8 -> S8x8, and S16x16 -> R8x16. Reject every other geometry before
+    // reading even the block skip symbol; a compatible-looking plane extent
+    // is not enough to select a valid AV1 CDF sentence.
     if matches!(chroma_sampling, ChromaSampling::Subsampled422)
-        && !matches!(transform_grid, TransformGrid::Square16)
+        && !match transform_grid {
+            TransformGrid::Square16 => true,
+            TransformGrid::Horizontal16x4 | TransformGrid::Horizontal16x8 => !segment_lossless,
+            _ => false,
+        }
     {
         return Err(PortableUnavailable);
     }
@@ -20935,6 +20938,21 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
         tile_qindex,
         ..
     } = header;
+
+    // TX_MODE_SELECT split trees use separate luma terminals and are not the
+    // single-transform I422 rectangular plans admitted above. The check is
+    // intentionally after the header: transform depth is signalled there,
+    // while the geometry gate above still rejects every unsupported grid
+    // before its block-skip CDF can be touched.
+    if matches!(chroma_sampling, ChromaSampling::Subsampled422)
+        && matches!(
+            transform_grid,
+            TransformGrid::Horizontal16x4 | TransformGrid::Horizontal16x8
+        )
+        && transform_depth != 0
+    {
+        return Err(PortableUnavailable);
+    }
 
     if !lossless_full_large
         && matches!(chroma_sampling, ChromaSampling::Full)
@@ -21557,6 +21575,42 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
                                 )?);
                         }
                         lossy_chroma_residual_contexts[plane.saturating_sub(1)] = cdfs
+                            .last_lossy_chroma_residual_context
+                            .take()
+                            .unwrap_or(0x40);
+                    }
+                    return Ok([[0_i32; 16]; 64]);
+                }
+                if plane != 0
+                    && matches!(chroma_sampling, ChromaSampling::Subsampled422)
+                    && matches!(transform_grid, TransformGrid::Horizontal16x8)
+                {
+                    // BS_16X8 in I422 maps to one TX_8X8 chroma terminal.
+                    // It is distinct from the I420 R8x4 carrier even though
+                    // both share the same luma block name in legacy callers.
+                    let skipped = decode_contextual_skip(
+                        decoder,
+                        1,
+                        lossy_chroma_skip_cdf_for_sampling(
+                            chroma_sampling,
+                            transform_grid,
+                            above_chroma_edge_contexts,
+                            left_chroma_edge_contexts,
+                        )?,
+                        cdfs,
+                    );
+                    if !skipped {
+                        let chroma_index = plane.checked_sub(1).portable()?;
+                        lossy_chroma_8x8_coefficients[chroma_index] =
+                            Some(decode_lossy_chroma_8x8_coefficients(
+                                decoder,
+                                plane,
+                                cdfs,
+                                lossy_quantization,
+                                above_chroma_edge_contexts,
+                                left_chroma_edge_contexts,
+                            )?);
+                        lossy_chroma_residual_contexts[chroma_index] = cdfs
                             .last_lossy_chroma_residual_context
                             .take()
                             .unwrap_or(0x40);
@@ -32417,6 +32471,26 @@ fn reconstruct_leaf_with_luma_override(
                 lossy_luma_16x8_coefficients,
                 lossy_luma_16x8_transform,
             );
+            if matches!(chroma_sampling, ChromaSampling::Subsampled422) {
+                // I422 keeps the luma height while subsampling only the
+                // horizontal axis: BS_16X8 therefore owns an 8x8 chroma
+                // terminal, not the 8x4 carrier used by I420.
+                let chroma_transform = chroma_transform_kind(chroma_predictor);
+                let chroma_u = reconstruct_lossy_chroma_8x8(
+                    predictors[1],
+                    lossy_chroma_8x8_coefficients[0],
+                    chroma_transform,
+                );
+                let chroma_v = reconstruct_lossy_chroma_8x8(
+                    predictors[2],
+                    lossy_chroma_8x8_coefficients[1],
+                    chroma_transform,
+                );
+                return Ok(ClosedLeaf {
+                    luma_predictor,
+                    planes: [luma, chroma_u, chroma_v],
+                });
+            }
             let chroma_transform = chroma_rect_transform_kind(chroma_predictor);
             let chroma_u = reconstruct_lossy_luma_8x4(
                 predictors[1],
