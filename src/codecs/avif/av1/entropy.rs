@@ -8442,6 +8442,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_monochrome_lossy_intra_reconstruction_context(context);
     let monochrome_postfilter = complete_monochrome_postfilter_reconstruction_context(context);
     let monochrome_cdef_mode2 = complete_monochrome_cdef_mode2_reconstruction_context(context);
+    let monochrome_matrix_cdef = complete_monochrome_matrix_cdef_reconstruction_context(context);
     let monochrome_lossy_active_restoration = if context.intra_frame {
         lossy_monochrome_intra_superres_restoration_supported(context)
     } else {
@@ -8771,6 +8772,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             || (!context.intra_frame
                 && monochrome_cdef_mode2
                 && complete_monochrome_references(context, inter_context))
+            || (!context.intra_frame
+                && monochrome_matrix_cdef
+                && complete_monochrome_references(context, inter_context))
             || bounded_inter_restoration
             || bounded_i444_restoration
             || bounded_i422_inter_restoration
@@ -8801,6 +8805,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || monochrome_intra_reconstruction
         || (context.intra_frame && monochrome_postfilter)
         || (context.intra_frame && monochrome_cdef_mode2)
+        || (context.intra_frame && monochrome_matrix_cdef)
         || bounded_intra_restoration
         || bounded_i444_intra_restoration
         || bounded_i422_intra_restoration
@@ -9686,7 +9691,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
     let (planes, monochrome) = if context.monochrome {
-        let plane = if monochrome_postfilter || monochrome_cdef_mode2 {
+        let plane = if monochrome_postfilter || monochrome_cdef_mode2 || monochrome_matrix_cdef {
             let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
                 .ok_or_else(|| malformed("monochrome CDEF sample depth is unsupported"))?;
             canvas.finish_monochrome_with_cdef(
@@ -14709,6 +14714,29 @@ fn complete_monochrome_cdef_mode2_reconstruction_context(context: &FirstBlockCon
             .frame_tools
             .quantization
             .is_some_and(|quantization| !quantization.using_matrix)
+        && context.frame_tools.cdef.is_some()
+        && complete_monochrome_cdef_supported(context)
+        && context.restoration_types == [None; 3]
+}
+
+/// Admit matrix-enabled monochrome CDEF without entering the restoration
+/// profile. Quantization matrices are consumed by the generic luma
+/// coefficient path; CDEF only observes the completed depth-matched plane.
+/// Keep this separate from `complete_monochrome_postfilter_reconstruction_context`
+/// so a matrix cannot accidentally widen active restoration, and retain the
+/// mode-2 no-restoration boundary used by the non-matrix CDEF tranche.
+fn complete_monochrome_matrix_cdef_reconstruction_context(context: &FirstBlockContext) -> bool {
+    complete_monochrome_lossy_base(context)
+        && context.single_tile
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
+        && context.frame_width >= 8
+        && context.frame_height >= 8
+        && context.frame_width.is_multiple_of(8)
+        && context.frame_height.is_multiple_of(8)
+        && context
+            .frame_tools
+            .quantization
+            .is_some_and(|quantization| quantization.using_matrix)
         && context.frame_tools.cdef.is_some()
         && complete_monochrome_cdef_supported(context)
         && context.restoration_types == [None; 3]
