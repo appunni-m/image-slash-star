@@ -42614,6 +42614,12 @@ fn reconstruct_lossy_full_16x4_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
         ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
@@ -42622,9 +42628,16 @@ fn reconstruct_lossy_full_16x4_chroma_normalized_target(
 
     let mut top_edge = [0_u16; 20];
     top_edge[..16].copy_from_slice(&top);
-    let have_above_right = if let Some(extension) = top_extension {
-        top_edge[16..].copy_from_slice(&extension);
-        true
+    let have_above_right = if matches!(
+        predictor,
+        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
+    ) {
+        if let Some(extension) = top_extension {
+            top_edge[16..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -42636,9 +42649,13 @@ fn reconstruct_lossy_full_16x4_chroma_normalized_target(
 
     let mut left_edge = [0_u16; 8];
     left_edge[..4].copy_from_slice(&left);
-    let have_below_left = if let Some(extension) = bottom_left {
-        left_edge[4..].copy_from_slice(&extension);
-        true
+    let have_below_left = if matches!(predictor, ChromaPredictor::Diagonal203) {
+        if let Some(extension) = bottom_left {
+            left_edge[4..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -42701,16 +42718,27 @@ fn reconstruct_lossy_full_16x4_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::Smooth
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
+        ChromaPredictor::Paeth
+        | ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 8];
     left_edge[..4].copy_from_slice(&left);
-    let have_below_left = if let Some(extension) = bottom_left {
-        left_edge[4..].copy_from_slice(&extension);
-        true
+    let have_below_left = if matches!(predictor, ChromaPredictor::Diagonal203) {
+        if let Some(extension) = bottom_left {
+            left_edge[4..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -59613,6 +59641,10 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
                     | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
@@ -62206,6 +62238,10 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
                     | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
