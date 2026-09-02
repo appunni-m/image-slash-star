@@ -18561,14 +18561,40 @@ fn decode_lossy_420_dc_or_skipped_coefficients(
         } else {
             decoder.adaptive_symbol(&mut cdfs.lossy_luma_4x8_eob_bin, 5)
         };
-        let (coefficients, _) = decode_lossy_luma_8x4_coefficients(
-            decoder,
-            cdfs,
-            quantization,
-            eob_bin,
-            one_dimensional,
-            0,
-        )?;
+        if one_dimensional {
+            let dc_sign_context = coefficient_dc_sign_context_for_grid(
+                TransformGrid::Horizontal8x4,
+                &above_luma_contexts,
+                &left_luma_contexts,
+            );
+            let (coefficients, residual_context) = decode_lossy_luma_8x4_1d_coefficients(
+                decoder,
+                cdfs,
+                quantization,
+                eob_bin,
+                dc_sign_context,
+                matches!(transform_type, 2),
+            )?;
+            cdfs.last_lossy_luma_residual_context = Some(residual_context);
+            return Ok((
+                [[0_i32; 16]; 64],
+                None,
+                None,
+                Some(LossyTransformKind::DctDct),
+                Some(coefficients),
+                Some(transform_kind),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ));
+        }
+        let (coefficients, _) =
+            decode_lossy_luma_8x4_coefficients(decoder, cdfs, quantization, eob_bin, false, 0)?;
         return Ok((
             [[0_i32; 16]; 64],
             None,
