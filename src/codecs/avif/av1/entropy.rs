@@ -10027,9 +10027,9 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 
 /// Exact high-depth 4:2:0/4:2:2/4:4:4 inter tranche admitted by the
 /// depth-parametric motion-compensation core. Single-reference inter-intra is
-/// materialized for all three layouts; bounded 8-bit I422/I444 remains on its
-/// separate closed predicates. TX_MODE_ONLY_4X4 is admitted only for the
-/// explicit 64-pixel wide mode-0 compositor.
+/// materialized for all three layouts; bounded depth-matched I422/I444 remains on its
+/// separate closed predicates. TX_MODE_ONLY_4X4 is admitted only through the
+/// explicit bounded I420/color grids and 64-pixel wide mode-0 compositor.
 /// The block engine retains samples in `u16`, but
 /// its inter path is intentionally limited to whole 8..=32-pixel transforms,
 /// plus exact 64-pixel mode-0 chunk roots and B8x8/B16x16/B32x32 mode-2
@@ -10123,8 +10123,9 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.all_lossless
         && !context.allow_intrabc
         && postskip_altq_segmentation_supported(context)
-        // TX_MODE_ONLY_4X4 is depth-independent, but only the explicit wide
-        // mode-0 plan below can currently consume high-depth 64px chunks.
+        // TX_MODE_ONLY_4X4 is depth-independent; the explicit bounded I420
+        // and color grids plus the wide mode-0 plan consume its high-depth
+        // raster without weakening unrelated single-terminal geometry.
         && matches!(context.frame_tools.transform_mode, 0..=2)
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
