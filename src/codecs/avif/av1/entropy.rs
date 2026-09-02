@@ -7558,10 +7558,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     let streamed_lossless_color = complete_streamed_lossless_color_context(context);
     let lossless_intra_color_active_restoration =
         streamed_lossless_color && lossless_intra_color_superres_restoration_supported(context);
-    let lossless_intra_monochrome_active_restoration =
-        lossless_intra_monochrome_superres_restoration_supported(context);
-    let streamed_lossless_reconstruction =
-        streamed_lossless_color || lossless_intra_monochrome_active_restoration;
+    let streamed_lossless_monochrome = complete_streamed_lossless_monochrome_context(context);
+    let lossless_intra_monochrome_active_restoration = streamed_lossless_monochrome
+        && lossless_intra_monochrome_superres_restoration_supported(context);
+    let streamed_lossless_reconstruction = streamed_lossless_color || streamed_lossless_monochrome;
     let generic_high_depth_i444_inter = (generic_high_depth_inter
         || generic_high_depth_lossless_inter)
         && !context.monochrome
@@ -13745,6 +13745,50 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && film_grain_supported
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+        && (context.restoration_types == [None; 3] || active_restoration)
+        && context.block_x == 0
+        && context.block_y == 0
+        && matches!(context.level, 0 | 1)
+        && dimensions_are_supported
+}
+
+/// Monochrome all-lossless frames use the same streamed TX4 walker as color
+/// frames. Keeping this admission beside the color profile lets the generic
+/// decoder cover the complete AV1 block-size family, including the 128-pixel
+/// terminals whose edge state cannot fit the legacy monochrome arena. The
+/// legacy monochrome validator remains the fallback when this closed profile
+/// is not met.
+fn complete_streamed_lossless_monochrome_context(context: &FirstBlockContext) -> bool {
+    let active_restoration = lossless_intra_monochrome_superres_restoration_supported(context);
+    let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
+    let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
+    let resize_geometry_supported = if context.superres_enabled {
+        context.frame_width >= 4 && context.frame_height >= 4
+    } else {
+        context.upscaled_width == context.frame_width
+    };
+    let dimensions_are_supported = context.frame_width >= 4
+        && context.frame_height >= 4
+        && padded_block_width == Some(context.block_width)
+        && padded_block_height == Some(context.block_height)
+        && resize_geometry_supported;
+
+    context.intra_frame
+        && context.monochrome
+        && matches!(context.bit_depth, 8 | 10 | 12)
+        && context.all_lossless
+        && context.frame_tools.segment_lossless
+        && context.frame_tools.segment_qindex == 0
+        && context.frame_tools.transform_mode == 0
+        && !context.skip_mode_enabled
+        && !context.allow_intrabc
+        && !context.frame_tools.delta_q_present
+        && !context.frame_tools.delta_lf_present
+        && no_unsupported_film_grain(context)
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
