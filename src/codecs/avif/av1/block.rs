@@ -56562,7 +56562,9 @@ impl Lossy420Decoder {
                     ChromaSampling::Monochrome | ChromaSampling::Full
                 ) || (split_b4x8
                     && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b8x4 && chroma_sampling == ChromaSampling::Subsampled422);
+                    || (split_b8x4 && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x8 || split_b8x4)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
                 (layout_supported
                     && ((split_b4x8 && exact_b4x8) || (split_b8x4 && exact_b8x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
