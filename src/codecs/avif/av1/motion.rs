@@ -333,6 +333,14 @@ pub(super) struct PreparedGlobalWarp {
     pub(super) abcd: [i16; 4],
 }
 
+/// Prepared affine payload derived from causal block neighbours.  Keeping a
+/// distinct carrier prevents a frame-header Global warp from being reused as
+/// a block-local model when pending prediction state is advanced.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct PreparedLocalWarp {
+    pub(super) affine: PreparedGlobalWarp,
+}
+
 // Pinned dav1d 1.5.3 `src/warpmv.c`/libaom 3.13.2 divisor reciprocal table.
 // The table is data-only and covered by the existing BSD-2-Clause and patent
 // notices retained in NOTICE.md, PATENTS, and third_party/.
@@ -474,6 +482,558 @@ pub(super) fn prepare_global_warp(global: GlobalMotion) -> Av1Result<Option<Prep
         matrix: global.matrix,
         abcd: [alpha, beta, gamma, delta],
     }))
+}
+
+/// The causal point samples used to derive one block's LOCALWARP affine
+/// model.  The samples are retained after the motion-mode alphabet is chosen
+/// so syntax admission and least-squares estimation observe the same edge
+/// state.  Coordinates are in the warped-motion Q3 sample domain.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct LocalWarpSamples {
+    points: [[[i32; 2]; 2]; 8],
+    count: usize,
+}
+
+impl LocalWarpSamples {
+    fn new() -> Self {
+        Self {
+            points: [[[0; 2]; 2]; 8],
+            count: 0,
+        }
+    }
+
+    fn push(
+        &mut self,
+        block: SpatialRefBlock,
+        dx_b4: i32,
+        dy_b4: i32,
+        sx: i32,
+        sy: i32,
+    ) -> Av1Result<()> {
+        if self.count >= self.points.len() {
+            return Ok(());
+        }
+        let (width_b4, height_b4) = block.block_size.mi_dimensions();
+        let width_b4 = i32::try_from(width_b4)
+            .map_err(|_| malformed("local-warp neighbour width exceeds i32"))?;
+        let height_b4 = i32::try_from(height_b4)
+            .map_err(|_| malformed("local-warp neighbour height exceeds i32"))?;
+        if width_b4 <= 0 || height_b4 <= 0 {
+            return Err(malformed("local-warp neighbour has empty geometry"));
+        }
+        let point_x = 2_i32
+            .checked_mul(dx_b4)
+            .and_then(|value| value.checked_add(sx.checked_mul(width_b4)?))
+            .and_then(|value| value.checked_mul(16))
+            .and_then(|value| value.checked_sub(8))
+            .ok_or_else(|| malformed("local-warp source x overflows"))?;
+        let point_y = 2_i32
+            .checked_mul(dy_b4)
+            .and_then(|value| value.checked_add(sy.checked_mul(height_b4)?))
+            .and_then(|value| value.checked_mul(16))
+            .and_then(|value| value.checked_sub(8))
+            .ok_or_else(|| malformed("local-warp source y overflows"))?;
+        let destination_x = point_x
+            .checked_add(i32::from(block.vectors[0].x))
+            .ok_or_else(|| malformed("local-warp destination x overflows"))?;
+        let destination_y = point_y
+            .checked_add(i32::from(block.vectors[0].y))
+            .ok_or_else(|| malformed("local-warp destination y overflows"))?;
+        self.points[self.count] = [[point_x, point_y], [destination_x, destination_y]];
+        self.count = self.count.saturating_add(1);
+        Ok(())
+    }
+
+    fn is_empty(self) -> bool {
+        self.count == 0
+    }
+}
+
+fn local_warp_matches(block: SpatialRefBlock, reference: ReferenceFrame) -> bool {
+    !block.intra_bc
+        && block.references
+            == [
+                i8::try_from(reference.index().saturating_add(1)).unwrap_or(i8::MAX),
+                -1,
+            ]
+}
+
+/// Collect the exact causal LOCALWARP samples from a tile-local motion grid.
+/// This is the safe scalar equivalent of dav1d's `find_matching_ref`: owners
+/// are advanced by their coded extent, spanning-owner corner suppression is
+/// preserved, and no covered 4x4 cell is counted twice.
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::too_many_arguments,
+    reason = "tile geometry and owner extents are checked before the bounded edge scan"
+)]
+pub(super) fn collect_local_warp_samples<S: SpatialMotionSource>(
+    source: &S,
+    block_x_b4: u32,
+    block_y_b4: u32,
+    block_width_b4: u32,
+    block_height_b4: u32,
+    visible_width_b4: u32,
+    visible_height_b4: u32,
+    tile_left_b4: u32,
+    tile_right_b4: u32,
+    tile_top_b4: u32,
+    tile_bottom_b4: u32,
+    top_has_right: bool,
+    reference: ReferenceFrame,
+) -> Av1Result<Option<LocalWarpSamples>> {
+    if block_width_b4 == 0
+        || block_height_b4 == 0
+        || visible_width_b4 == 0
+        || visible_height_b4 == 0
+        || visible_width_b4 > block_width_b4
+        || visible_height_b4 > block_height_b4
+        || tile_left_b4 >= tile_right_b4
+        || tile_top_b4 >= tile_bottom_b4
+        || block_x_b4 < tile_left_b4
+        || block_y_b4 < tile_top_b4
+        || block_x_b4 >= tile_right_b4
+        || block_y_b4 >= tile_bottom_b4
+    {
+        return Err(malformed("local-warp block geometry is invalid"));
+    }
+    let block_end_x = block_x_b4
+        .checked_add(block_width_b4)
+        .ok_or_else(|| malformed("local-warp block right edge overflows"))?;
+    let block_end_y = block_y_b4
+        .checked_add(block_height_b4)
+        .ok_or_else(|| malformed("local-warp block bottom edge overflows"))?;
+    let visible_end_x = block_x_b4
+        .checked_add(visible_width_b4)
+        .ok_or_else(|| malformed("local-warp visible right edge overflows"))?;
+    let visible_end_y = block_y_b4
+        .checked_add(visible_height_b4)
+        .ok_or_else(|| malformed("local-warp visible bottom edge overflows"))?;
+    if block_end_x > tile_right_b4
+        || block_end_y > tile_bottom_b4
+        || visible_end_x > tile_right_b4
+        || visible_end_y > tile_bottom_b4
+    {
+        return Err(malformed("local-warp block exceeds tile geometry"));
+    }
+
+    let have_top = block_y_b4 > tile_top_b4;
+    let have_left = block_x_b4 > tile_left_b4;
+    let mut have_topleft = have_top && have_left;
+    let mut have_topright = block_width_b4.max(block_height_b4) < 32
+        && have_top
+        && top_has_right
+        && block_end_x < tile_right_b4;
+    let mut samples = LocalWarpSamples::new();
+
+    if have_top {
+        let top_y = block_y_b4
+            .checked_sub(1)
+            .ok_or_else(|| malformed("local-warp top row underflows"))?;
+        let mut x = block_x_b4;
+        while x < visible_end_x {
+            let Some(block) = source.spatial_block(x, top_y)? else {
+                break;
+            };
+            let (owner_width, _) = block.block_size.mi_dimensions();
+            if owner_width == 0 {
+                return Err(malformed("local-warp top owner has empty width"));
+            }
+            if local_warp_matches(block, reference) {
+                let dx = i32::try_from(x - block_x_b4)
+                    .map_err(|_| malformed("local-warp top offset exceeds i32"))?;
+                samples.push(block, dx, 0, 1, -1)?;
+                if samples.count >= 8 {
+                    return Ok(Some(samples));
+                }
+            }
+            if owner_width >= block_width_b4 {
+                let offset = if owner_width.is_power_of_two() {
+                    block_x_b4 & (owner_width - 1)
+                } else {
+                    block_x_b4 % owner_width
+                };
+                if offset != 0 {
+                    have_topleft = false;
+                }
+                let remaining = owner_width
+                    .checked_sub(offset)
+                    .ok_or_else(|| malformed("local-warp top owner alignment underflows"))?;
+                if remaining > block_width_b4 {
+                    have_topright = false;
+                }
+                break;
+            }
+            x = x
+                .checked_add(owner_width)
+                .ok_or_else(|| malformed("local-warp top scan overflows"))?;
+        }
+    }
+
+    if have_left {
+        let left_x = block_x_b4
+            .checked_sub(1)
+            .ok_or_else(|| malformed("local-warp left column underflows"))?;
+        let mut y = block_y_b4;
+        while y < visible_end_y {
+            let Some(block) = source.spatial_block(left_x, y)? else {
+                break;
+            };
+            let (_, owner_height) = block.block_size.mi_dimensions();
+            if owner_height == 0 {
+                return Err(malformed("local-warp left owner has empty height"));
+            }
+            if local_warp_matches(block, reference) {
+                let dy = i32::try_from(y - block_y_b4)
+                    .map_err(|_| malformed("local-warp left offset exceeds i32"))?;
+                samples.push(block, 0, dy, -1, 1)?;
+                if samples.count >= 8 {
+                    return Ok(Some(samples));
+                }
+            }
+            if owner_height >= block_height_b4 {
+                let offset = if owner_height.is_power_of_two() {
+                    block_y_b4 & (owner_height - 1)
+                } else {
+                    block_y_b4 % owner_height
+                };
+                if offset != 0 {
+                    have_topleft = false;
+                }
+                break;
+            }
+            y = y
+                .checked_add(owner_height)
+                .ok_or_else(|| malformed("local-warp left scan overflows"))?;
+        }
+    }
+
+    if have_topleft {
+        let top_left_x = block_x_b4
+            .checked_sub(1)
+            .ok_or_else(|| malformed("local-warp top-left x underflows"))?;
+        let top_left_y = block_y_b4
+            .checked_sub(1)
+            .ok_or_else(|| malformed("local-warp top-left y underflows"))?;
+        if let Some(block) = source.spatial_block(top_left_x, top_left_y)?
+            && local_warp_matches(block, reference)
+        {
+            samples.push(block, 0, 0, -1, -1)?;
+        }
+    }
+    if have_topright {
+        let top_right_y = block_y_b4
+            .checked_sub(1)
+            .ok_or_else(|| malformed("local-warp top-right y underflows"))?;
+        if let Some(block) = source.spatial_block(block_end_x, top_right_y)?
+            && local_warp_matches(block, reference)
+        {
+            samples.push(
+                block,
+                i32::try_from(block_width_b4)
+                    .map_err(|_| malformed("local-warp block width exceeds i32"))?,
+                0,
+                1,
+                -1,
+            )?;
+        }
+    }
+    Ok((!samples.is_empty()).then_some(samples))
+}
+
+fn local_warp_clip(value: i64, minimum: i64, maximum: i64) -> Av1Result<i32> {
+    let value = value.clamp(minimum, maximum);
+    i32::try_from(value).map_err(|_| malformed("local-warp affine coefficient exceeds i32"))
+}
+
+fn local_warp_mult_shift(
+    value: i64,
+    reciprocal: i64,
+    shift: u32,
+    diagonal: bool,
+) -> Av1Result<i32> {
+    let product = value
+        .checked_mul(reciprocal)
+        .ok_or_else(|| malformed("local-warp affine product overflows"))?;
+    let rounded = signed_rounded_shift(product, shift)?;
+    if diagonal {
+        local_warp_clip(rounded, 0xe001, 0x11fff)
+    } else {
+        local_warp_clip(rounded, -0x1fff, 0x1fff)
+    }
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "the reciprocal index and shifts are bounded by the 257-entry AV1 LUT"
+)]
+fn local_warp_divisor(value: u64) -> Av1Result<(u32, i64)> {
+    if value == 0 {
+        return Err(malformed("local-warp affine determinant is zero"));
+    }
+    let shift = 63_u32
+        .checked_sub(value.leading_zeros())
+        .ok_or_else(|| malformed("local-warp determinant shift underflows"))?;
+    let base = 1_u64
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("local-warp determinant shift overflows"))?;
+    let error = value
+        .checked_sub(base)
+        .ok_or_else(|| malformed("local-warp determinant normalization underflows"))?;
+    let index = if shift > 8 {
+        error
+            .checked_add(
+                1_u64
+                    .checked_shl(shift - 9)
+                    .ok_or_else(|| malformed("local-warp determinant rounding overflows"))?,
+            )
+            .ok_or_else(|| malformed("local-warp determinant index overflows"))?
+            >> (shift - 8)
+    } else {
+        error
+            .checked_shl(8 - shift)
+            .ok_or_else(|| malformed("local-warp determinant index shift overflows"))?
+    };
+    let reciprocal = i64::from(
+        *GLOBAL_MOTION_DIV_LUT
+            .get(
+                usize::try_from(index)
+                    .map_err(|_| malformed("local-warp determinant index exceeds usize"))?,
+            )
+            .ok_or_else(|| malformed("local-warp determinant index exceeds LUT"))?,
+    );
+    Ok((
+        shift
+            .checked_add(14)
+            .ok_or_else(|| malformed("local-warp determinant shift overflows"))?,
+        reciprocal,
+    ))
+}
+
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "matrix coefficients and block centres are clipped/checked before translation"
+)]
+fn local_warp_set_translation(
+    matrix: &mut [i32; 6],
+    motion: MotionVector,
+    block_x_b4: i32,
+    block_y_b4: i32,
+    block_width_b4: i32,
+    block_height_b4: i32,
+) -> Av1Result<()> {
+    let rsuy = block_height_b4
+        .checked_mul(2)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| malformed("local-warp vertical centre overflows"))?;
+    let rsux = block_width_b4
+        .checked_mul(2)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| malformed("local-warp horizontal centre overflows"))?;
+    let isuy = block_y_b4
+        .checked_mul(4)
+        .and_then(|value| value.checked_add(rsuy))
+        .ok_or_else(|| malformed("local-warp vertical origin overflows"))?;
+    let isux = block_x_b4
+        .checked_mul(4)
+        .and_then(|value| value.checked_add(rsux))
+        .ok_or_else(|| malformed("local-warp horizontal origin overflows"))?;
+    let horizontal = i64::from(isux)
+        .checked_mul(i64::from(matrix[2] - (1 << 16)))
+        .and_then(|value| value.checked_add(i64::from(isuy).checked_mul(i64::from(matrix[3]))?))
+        .ok_or_else(|| malformed("local-warp horizontal translation overflows"))?;
+    let vertical = i64::from(isux)
+        .checked_mul(i64::from(matrix[4]))
+        .and_then(|value| {
+            value.checked_add(i64::from(isuy).checked_mul(i64::from(matrix[5] - (1 << 16)))?)
+        })
+        .ok_or_else(|| malformed("local-warp vertical translation overflows"))?;
+    let horizontal = i64::from(motion.x)
+        .checked_mul(0x2000)
+        .and_then(|value| value.checked_sub(horizontal))
+        .ok_or_else(|| malformed("local-warp horizontal translation overflows"))?;
+    let vertical = i64::from(motion.y)
+        .checked_mul(0x2000)
+        .and_then(|value| value.checked_sub(vertical))
+        .ok_or_else(|| malformed("local-warp vertical translation overflows"))?;
+    matrix[0] = local_warp_clip(horizontal, -0x800000, 0x7fffff)?;
+    matrix[1] = local_warp_clip(vertical, -0x800000, 0x7fffff)?;
+    Ok(())
+}
+
+/// Solve the AV1 local affine least-squares model and prepare its shear
+/// coefficients.  A failed determinant, inner-point fit, or shear check is a
+/// legal ordinary-MC fallback and therefore returns `Ok(None)`.
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "the least-squares terms are bounded by AV1 sample geometry and all external products are checked"
+)]
+pub(super) fn prepare_local_warp(
+    samples: LocalWarpSamples,
+    block_x_b4: u32,
+    block_y_b4: u32,
+    block_width_b4: u32,
+    block_height_b4: u32,
+    motion: MotionVector,
+) -> Av1Result<Option<PreparedLocalWarp>> {
+    if samples.is_empty() || samples.count > 8 || block_width_b4 == 0 || block_height_b4 == 0 {
+        return Ok(None);
+    }
+    let block_x =
+        i32::try_from(block_x_b4).map_err(|_| malformed("local-warp block x exceeds i32"))?;
+    let block_y =
+        i32::try_from(block_y_b4).map_err(|_| malformed("local-warp block y exceeds i32"))?;
+    let block_width = i32::try_from(block_width_b4)
+        .map_err(|_| malformed("local-warp block width exceeds i32"))?;
+    let block_height = i32::try_from(block_height_b4)
+        .map_err(|_| malformed("local-warp block height exceeds i32"))?;
+    let rsuy = block_height
+        .checked_mul(2)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| malformed("local-warp vertical centre overflows"))?;
+    let rsux = block_width
+        .checked_mul(2)
+        .and_then(|value| value.checked_sub(1))
+        .ok_or_else(|| malformed("local-warp horizontal centre overflows"))?;
+    let suy = rsuy
+        .checked_mul(8)
+        .ok_or_else(|| malformed("local-warp source y centre overflows"))?;
+    let sux = rsux
+        .checked_mul(8)
+        .ok_or_else(|| malformed("local-warp source x centre overflows"))?;
+    let duy = suy
+        .checked_add(i32::from(motion.y))
+        .ok_or_else(|| malformed("local-warp destination y centre overflows"))?;
+    let dux = sux
+        .checked_add(i32::from(motion.x))
+        .ok_or_else(|| malformed("local-warp destination x centre overflows"))?;
+    let mut a = [[0_i64; 2]; 2];
+    let mut bx = [0_i64; 2];
+    let mut by = [0_i64; 2];
+    for point in samples.points.iter().take(samples.count) {
+        let dx = i64::from(point[1][0])
+            .checked_sub(i64::from(dux))
+            .ok_or_else(|| malformed("local-warp destination x delta overflows"))?;
+        let dy = i64::from(point[1][1])
+            .checked_sub(i64::from(duy))
+            .ok_or_else(|| malformed("local-warp destination y delta overflows"))?;
+        let sx = i64::from(point[0][0])
+            .checked_sub(i64::from(sux))
+            .ok_or_else(|| malformed("local-warp source x delta overflows"))?;
+        let sy = i64::from(point[0][1])
+            .checked_sub(i64::from(suy))
+            .ok_or_else(|| malformed("local-warp source y delta overflows"))?;
+        let x_diff = sx
+            .checked_sub(dx)
+            .ok_or_else(|| malformed("local-warp x difference overflows"))?;
+        let y_diff = sy
+            .checked_sub(dy)
+            .ok_or_else(|| malformed("local-warp y difference overflows"))?;
+        if x_diff.unsigned_abs() >= 256 || y_diff.unsigned_abs() >= 256 {
+            continue;
+        }
+        let sx2 = sx
+            .checked_mul(sx)
+            .ok_or_else(|| malformed("local-warp x square overflows"))?;
+        let sy2 = sy
+            .checked_mul(sy)
+            .ok_or_else(|| malformed("local-warp y square overflows"))?;
+        let sxy = sx
+            .checked_mul(sy)
+            .ok_or_else(|| malformed("local-warp cross product overflows"))?;
+        a[0][0] = a[0][0]
+            .checked_add((sx2 >> 2) + sx * 2 + 8)
+            .ok_or_else(|| malformed("local-warp affine matrix overflows"))?;
+        a[0][1] = a[0][1]
+            .checked_add((sxy >> 2) + sx + sy + 4)
+            .ok_or_else(|| malformed("local-warp affine matrix overflows"))?;
+        a[1][1] = a[1][1]
+            .checked_add((sy2 >> 2) + sy * 2 + 8)
+            .ok_or_else(|| malformed("local-warp affine matrix overflows"))?;
+        bx[0] = bx[0]
+            .checked_add(((sx * dx) >> 2) + sx + dx + 8)
+            .ok_or_else(|| malformed("local-warp horizontal fit overflows"))?;
+        bx[1] = bx[1]
+            .checked_add(((sy * dx) >> 2) + sy + dx + 4)
+            .ok_or_else(|| malformed("local-warp horizontal fit overflows"))?;
+        by[0] = by[0]
+            .checked_add(((sx * dy) >> 2) + sx + dy + 4)
+            .ok_or_else(|| malformed("local-warp vertical fit overflows"))?;
+        by[1] = by[1]
+            .checked_add(((sy * dy) >> 2) + sy + dy + 8)
+            .ok_or_else(|| malformed("local-warp vertical fit overflows"))?;
+    }
+    let determinant = a[0][0]
+        .checked_mul(a[1][1])
+        .and_then(|value| value.checked_sub(a[0][1].checked_mul(a[0][1])?))
+        .ok_or_else(|| malformed("local-warp affine determinant overflows"))?;
+    if determinant == 0 {
+        return Ok(None);
+    }
+    let (mut shift, reciprocal) = local_warp_divisor(determinant.unsigned_abs())?;
+    let mut reciprocal = if determinant < 0 {
+        -reciprocal
+    } else {
+        reciprocal
+    };
+    if shift < 16 {
+        reciprocal = reciprocal
+            .checked_shl(16 - shift)
+            .ok_or_else(|| malformed("local-warp affine reciprocal overflows"))?;
+        shift = 0;
+    } else {
+        shift -= 16;
+    }
+    let mut matrix = GlobalMotion::identity().matrix;
+    matrix[2] = local_warp_mult_shift(
+        a[1][1]
+            .checked_mul(bx[0])
+            .and_then(|value| value.checked_sub(a[0][1].checked_mul(bx[1])?))
+            .ok_or_else(|| malformed("local-warp horizontal diagonal fit overflows"))?,
+        reciprocal,
+        shift,
+        true,
+    )?;
+    matrix[3] = local_warp_mult_shift(
+        a[0][0]
+            .checked_mul(bx[1])
+            .and_then(|value| value.checked_sub(a[0][1].checked_mul(bx[0])?))
+            .ok_or_else(|| malformed("local-warp horizontal shear fit overflows"))?,
+        reciprocal,
+        shift,
+        false,
+    )?;
+    matrix[4] = local_warp_mult_shift(
+        a[1][1]
+            .checked_mul(by[0])
+            .and_then(|value| value.checked_sub(a[0][1].checked_mul(by[1])?))
+            .ok_or_else(|| malformed("local-warp vertical shear fit overflows"))?,
+        reciprocal,
+        shift,
+        false,
+    )?;
+    matrix[5] = local_warp_mult_shift(
+        a[0][0]
+            .checked_mul(by[1])
+            .and_then(|value| value.checked_sub(a[0][1].checked_mul(by[0])?))
+            .ok_or_else(|| malformed("local-warp vertical diagonal fit overflows"))?,
+        reciprocal,
+        shift,
+        true,
+    )?;
+    local_warp_set_translation(
+        &mut matrix,
+        motion,
+        block_x,
+        block_y,
+        block_width,
+        block_height,
+    )?;
+    prepare_global_warp(GlobalMotion {
+        kind: GlobalMotionType::Affine,
+        matrix,
+    })
+    .map(|warp| warp.map(|affine| PreparedLocalWarp { affine }))
 }
 
 fn signed_rounded_shift(value: i64, shift: u32) -> Av1Result<i64> {

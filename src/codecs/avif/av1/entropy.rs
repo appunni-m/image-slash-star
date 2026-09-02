@@ -13,8 +13,9 @@ use super::motion::{
     CompoundType, GlobalMotion, GlobalMotionType, InterMode, InterpolationFilter,
     IntrabcLegalityInput, IntrabcSource, MotionMode, MotionVector, ProjectedTemporalField,
     ReferenceFrame, ReferenceMvRequest, ReferenceMvTarget, ReferencePair, RetainedTemporalSample,
-    ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField, find_reference_mvs,
-    global_motion_vector, prepare_global_warp, relative_distance, relocate_intrabc_source,
+    ScaleFactors, SpatialMotionSource, SpatialRefBlock, TemporalMotionField,
+    collect_local_warp_samples, find_reference_mvs, global_motion_vector, prepare_global_warp,
+    prepare_local_warp, relative_distance, relocate_intrabc_source,
 };
 use super::restoration::{Plan as RestorationPlan, Unit as RestorationUnit};
 use super::surface::FrameSurface;
@@ -7011,7 +7012,6 @@ fn decode_inter_leaf(
             None
         },
     ];
-    block_decoder.set_global_warps(global_warps);
     let interintra = if compound {
         None
     } else {
@@ -7054,8 +7054,16 @@ fn decode_inter_leaf(
         }),
         None => None,
     };
-    let motion_mode = if compound {
-        MotionMode::Translation
+    let local_warp_profile = context.monochrome
+        && context.bit_depth == 8
+        && !context.superres_enabled
+        && (visible_width, visible_height) == node.block_size.pixel_dimensions()
+        && matches!(
+            node.block_size,
+            BlockSize::B8x8 | BlockSize::B8x16 | BlockSize::B16x8 | BlockSize::B16x16
+        );
+    let (motion_mode, local_warp) = if compound {
+        (MotionMode::Translation, None)
     } else if interintra.is_none()
         && !skip_mode
         && !matches!(mode, InterMode::Global)
@@ -7069,7 +7077,7 @@ fn decode_inter_leaf(
             context.subsampling_y,
         )
         .ok_or_else(|| malformed("motion-mode pixel layout is invalid"))?;
-        let allow_warp = if inter_context.allow_warped_motion
+        let matching_warp = if inter_context.allow_warped_motion
             && !inter_context.force_integer_mv
             && !first_state.scale.scaled
         {
@@ -7077,20 +7085,54 @@ fn decode_inter_leaf(
         } else {
             false
         };
+        let local_samples = if matching_warp {
+            collect_local_warp_samples(
+                tile_state,
+                node.x,
+                node.y,
+                block_width_b4,
+                block_height_b4,
+                visible_width.div_ceil(4),
+                visible_height.div_ceil(4),
+                0,
+                context.block_width,
+                0,
+                context.block_height,
+                node.intra_edges.top_has_right(layout),
+                references.first,
+            )?
+        } else {
+            None
+        };
+        let allow_warp = local_samples.is_some();
         let symbol = if allow_warp {
             decoder.adaptive_symbol(&mut cdfs.inter.motion_mode_for(node.block_size).0, 2)
         } else {
             decoder.adaptive_symbol(&mut cdfs.inter.obmc_for(node.block_size).0, 1)
         };
         match symbol {
-            0 => MotionMode::Translation,
-            1 => MotionMode::Obmc,
-            2 if allow_warp => return Ok(Err(super::block::PortableUnavailable)),
+            0 => (MotionMode::Translation, None),
+            1 => (MotionMode::Obmc, None),
+            2 if allow_warp => {
+                if !local_warp_profile {
+                    return Ok(Err(super::block::PortableUnavailable));
+                }
+                let local_warp = prepare_local_warp(
+                    local_samples.ok_or_else(|| malformed("LOCALWARP samples are unavailable"))?,
+                    context.tile_origin_b4_x.saturating_add(node.x),
+                    context.tile_origin_b4_y.saturating_add(node.y),
+                    block_width_b4,
+                    block_height_b4,
+                    motions[0],
+                )?;
+                (MotionMode::LocalWarp, local_warp)
+            }
             _ => return Err(malformed("OBMC motion-mode symbol is invalid")),
         }
     } else {
-        MotionMode::Translation
+        (MotionMode::Translation, None)
     };
+    block_decoder.set_prediction_warps(global_warps, local_warp);
     let minimum_dimension_is_four = block_width_b4.min(block_height_b4) == 1;
     let interpolation_needed = match mode {
         InterMode::Global => {

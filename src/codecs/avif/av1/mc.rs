@@ -840,7 +840,8 @@ pub(super) struct PredictionRequest {
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
     pub(super) motion: MotionVector,
-    /// Optional prepared frame-global affine motion. Scaled references and
+    /// Optional prepared affine motion. This carries either a frame-global
+    /// model or a causal block-local LOCALWARP model; scaled references and
     /// sub-eight planes intentionally leave this set but fall back in the
     /// kernel to ordinary center-MV interpolation.
     pub(super) warp: Option<PreparedGlobalWarp>,

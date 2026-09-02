@@ -16,7 +16,9 @@ use super::large_cdfs::{
     LargeCoefficientCdfDefaults, QCAT1_LARGE_COEFFICIENT_CDFS, QCAT3_LARGE_COEFFICIENT_CDFS,
 };
 use super::mc::{MotionScratch, PredictionRequest, blend_obmc_left, blend_obmc_top};
-use super::motion::{InterpolationFilter, MotionVector, PreparedGlobalWarp, ScaleFactors};
+use super::motion::{
+    InterpolationFilter, MotionVector, PreparedGlobalWarp, PreparedLocalWarp, ScaleFactors,
+};
 use super::quantization;
 use super::sample_depth::SampleDepth;
 use super::surface::FrameSurface;
@@ -52239,6 +52241,7 @@ pub(super) struct Lossy420Decoder {
     reconstruction_scratch: ReconstructionScratch,
     motion_scratch: Option<MotionScratch>,
     pending_global_warps: [Option<PreparedGlobalWarp>; 2],
+    pending_local_warp: Option<PreparedLocalWarp>,
     chroma_sampling: ChromaSampling,
     qcat_one_square_only: bool,
     cdef_index_bits: u32,
@@ -52264,6 +52267,7 @@ impl Lossy420Decoder {
             reconstruction_scratch: ReconstructionScratch::new(),
             motion_scratch: None,
             pending_global_warps: [None, None],
+            pending_local_warp: None,
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: false,
             cdef_index_bits: 0,
@@ -52289,6 +52293,7 @@ impl Lossy420Decoder {
             reconstruction_scratch: ReconstructionScratch::new(),
             motion_scratch: None,
             pending_global_warps: [None, None],
+            pending_local_warp: None,
             chroma_sampling: ChromaSampling::Subsampled420,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -52321,6 +52326,7 @@ impl Lossy420Decoder {
             reconstruction_scratch: ReconstructionScratch::new(),
             motion_scratch: None,
             pending_global_warps: [None, None],
+            pending_local_warp: None,
             chroma_sampling,
             qcat_one_square_only: qindex > 20 && qindex <= 60,
             cdef_index_bits: 0,
@@ -52765,11 +52771,16 @@ impl Lossy420Decoder {
         self.motion_scratch.as_mut().portable()
     }
 
-    /// Arm the affine predictors for the next inter leaf. The entropy layer
-    /// computes this array only for selected Global/GlobalGlobal references;
-    /// every ordinary inter and OBMC path explicitly receives `[None; 2]`.
-    pub(super) fn set_global_warps(&mut self, warps: [Option<PreparedGlobalWarp>; 2]) {
-        self.pending_global_warps = warps;
+    /// Arm the affine predictors for the next inter leaf. Global and local
+    /// choices are replaced together so a failed/unsupported leaf cannot
+    /// leave a local warp armed for the following block.
+    pub(super) fn set_prediction_warps(
+        &mut self,
+        global: [Option<PreparedGlobalWarp>; 2],
+        local: Option<PreparedLocalWarp>,
+    ) {
+        self.pending_global_warps = global;
+        self.pending_local_warp = local;
     }
 
     fn apply_obmc_prediction(
@@ -56137,6 +56148,13 @@ impl Lossy420Decoder {
             let tx_width = usize::try_from(tx_width).map_err(|_| PortableUnavailable)?;
             let tx_height = usize::try_from(tx_height).map_err(|_| PortableUnavailable)?;
             let plane_subsampling = chroma_sampling.plane_subsampling(plane);
+            let first_warp = if prediction_state.compound.is_none() {
+                self.pending_local_warp
+                    .map(|warp| warp.affine)
+                    .or(self.pending_global_warps[0])
+            } else {
+                self.pending_global_warps[0]
+            };
             let request = PredictionRequest {
                 block_x_b4: prediction_state.block_x_b4,
                 block_y_b4: prediction_state.block_y_b4,
@@ -56145,7 +56163,7 @@ impl Lossy420Decoder {
                 subsampling_x: plane_subsampling.0 == 2,
                 subsampling_y: plane_subsampling.1 == 2,
                 motion: prediction_state.motions[0],
-                warp: self.pending_global_warps[0],
+                warp: first_warp,
                 filters,
             };
             let prediction_len = tx_width.checked_mul(tx_height).portable()?;
