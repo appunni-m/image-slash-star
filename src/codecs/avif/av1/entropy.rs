@@ -11654,8 +11654,10 @@ fn bounded_i422_rect_cdef_common(
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
     // Screen-enabled I422 intra leaves may use depth-aware palette prediction;
-    // inter leaves use parsed force-integer MV precision. CDEF consumes
-    // completed samples, while intraBC remains closed in this profile.
+    // eligible single-reference inter leaves may blend coded-resolution
+    // inter-intra prediction before residuals, while other inter leaves use
+    // parsed force-integer MV precision. CDEF consumes completed samples,
+    // while intraBC remains closed in this profile.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && !context.subsampling_y
@@ -11731,7 +11733,6 @@ fn complete_bounded_i422_rect_cdef_inter_reconstruction_context(
         && bounded_i422_rect_cdef_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -11744,9 +11745,11 @@ fn bounded_i422_rect_restoration_common(
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
     // Screen-enabled I422 intra leaves may use depth-aware palette prediction;
-    // inter leaves use parsed force-integer MV precision. Restoration consumes
-    // completed samples for only the geometries admitted by its unit proof;
-    // intraBC remains closed in this profile.
+    // eligible single-reference inter leaves may blend coded-resolution
+    // inter-intra prediction before residuals, while other inter leaves use
+    // parsed force-integer MV precision. Restoration consumes completed
+    // samples for only the geometries admitted by its unit proof; intraBC
+    // remains closed in this profile.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && !context.subsampling_y
@@ -11834,7 +11837,6 @@ fn complete_bounded_i422_rect_restoration_inter_reconstruction_context(
         && bounded_i422_rect_restoration_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
