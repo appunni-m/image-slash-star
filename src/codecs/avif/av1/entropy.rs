@@ -11847,8 +11847,10 @@ fn complete_bounded_i422_rect_restoration_inter_reconstruction_context(
 /// tranche. Each admitted geometry is tiled by complete B16x16 terminals with
 /// orientation-specific luma edge metadata; CDEF and restoration remain
 /// inactive. Screen-enabled intra leaves may use depth-aware I420 palette
-/// prediction, while inter leaves use parsed force-integer MV precision;
-/// intraBC remains closed in this profile.
+/// prediction, while eligible single-reference inter leaves may blend
+/// coded-resolution inter-intra prediction before residuals and other inter
+/// leaves use parsed force-integer MV precision; intraBC remains closed in
+/// this profile.
 fn bounded_i420_rect_loop_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -11924,7 +11926,6 @@ fn complete_bounded_i420_rect_loop_inter_reconstruction_context(
         && bounded_i420_rect_loop_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -11934,9 +11935,11 @@ fn complete_bounded_i420_rect_loop_inter_reconstruction_context(
 /// Common frame-level proof for the bounded high-depth I420 rectangular CDEF
 /// tranche. The complete-B16 terminal geometry is shared with the loop path
 /// while both luma edge levels and chroma levels stay disabled. Screen-enabled
-/// intra leaves may use depth-aware I420 palette prediction, while inter leaves
-/// use parsed force-integer MV precision; CDEF consumes completed samples and
-/// intraBC remains closed in this profile.
+/// intra leaves may use depth-aware I420 palette prediction, while eligible
+/// single-reference inter leaves may blend coded-resolution inter-intra
+/// prediction before residuals and other inter leaves use parsed force-integer
+/// MV precision; CDEF consumes completed samples and intraBC remains closed in
+/// this profile.
 fn bounded_i420_rect_cdef_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -12017,7 +12020,6 @@ fn complete_bounded_i420_rect_cdef_inter_reconstruction_context(
         && bounded_i420_rect_cdef_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12030,9 +12032,11 @@ fn bounded_i420_rect_restoration_common(
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
     // Screen-enabled intra leaves may use depth-aware I420 palette prediction;
-    // inter leaves use parsed force-integer MV precision. Restoration consumes
-    // completed samples only for geometries admitted by its one-unit proof;
-    // intraBC remains closed in this profile.
+    // eligible single-reference inter leaves may blend coded-resolution
+    // inter-intra prediction before residuals and other inter leaves use
+    // parsed force-integer MV precision. Restoration consumes completed
+    // samples only for geometries admitted by its one-unit proof; intraBC
+    // remains closed in this profile.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && context.subsampling_y
@@ -12120,7 +12124,6 @@ fn complete_bounded_i420_rect_restoration_inter_reconstruction_context(
         && bounded_i420_rect_restoration_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12132,8 +12135,10 @@ fn complete_bounded_i420_rect_restoration_inter_reconstruction_context(
 /// this separate class admits the legal filter order while retaining the same
 /// one-B16 geometry and checked one-unit restoration bounds.
 /// Screen-enabled intra leaves may use depth-aware I420/I422 palette
-/// prediction, while inter leaves honor parsed MV precision; intraBC remains
-/// closed. Restoration remains bounded by the layout-specific one-unit proof.
+/// prediction, while eligible single-reference inter leaves may blend
+/// coded-resolution inter-intra prediction before residuals and other inter
+/// leaves honor parsed MV precision; intraBC remains closed. Restoration
+/// remains bounded by the layout-specific one-unit proof.
 fn bounded_subsampled_cdef_restoration_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -12231,7 +12236,6 @@ fn complete_bounded_i420_cdef_restoration_inter_reconstruction_context(
         && bounded_subsampled_cdef_restoration_common(context, quantization)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
@@ -12275,7 +12279,6 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
         && bounded_subsampled_cdef_restoration_common(context, quantization)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
@@ -12285,9 +12288,11 @@ fn complete_bounded_i422_cdef_restoration_inter_reconstruction_context(
 /// layout-specific wrappers below add the I420/I422 geometry and restoration
 /// exponent rules without widening the one-block predicates above.
 /// Screen-enabled intra leaves may use depth-aware I420/I422 palette
-/// prediction, while inter leaves honor parsed MV precision; intraBC remains
-/// closed. Rectangular restoration is still restricted by each wrapper's
-/// `restoration_supported()` and one-unit checks.
+/// prediction, while eligible single-reference inter leaves may blend
+/// coded-resolution inter-intra prediction before residuals and other inter
+/// leaves honor parsed MV precision; intraBC remains closed. Rectangular
+/// restoration is still restricted by each wrapper's `restoration_supported()`
+/// and one-unit checks.
 fn bounded_subsampled_rect_cdef_restoration_base(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -12392,7 +12397,6 @@ fn complete_bounded_i420_rect_cdef_restoration_inter_reconstruction_context(
         && bounded_i420_rect_cdef_restoration_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12457,7 +12461,6 @@ fn complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
         && bounded_i422_rect_cdef_restoration_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12475,9 +12478,10 @@ struct BoundedRectLoopPostfilters {
 /// predicates; this helper requires at least one later post-filter so the
 /// restoration decoder is selected only for profiles that actually need it.
 /// Screen-enabled intra leaves may use depth-aware I420/I422 palette
-/// prediction, while inter leaves honor parsed MV precision; intraBC remains
-/// closed. Active restoration is still limited by the geometry and one-unit
-/// proofs below.
+/// prediction, while eligible single-reference inter leaves may blend
+/// coded-resolution inter-intra prediction before residuals and other inter
+/// leaves honor parsed MV precision; intraBC remains closed. Active
+/// restoration is still limited by the geometry and one-unit proofs below.
 fn bounded_subsampled_rect_loop_postfilters_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -12607,7 +12611,6 @@ fn complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
         && context.subsampling_y
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12662,7 +12665,6 @@ fn complete_bounded_i422_rect_loop_postfilters_inter_reconstruction_context(
         && !context.subsampling_y
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12683,8 +12685,10 @@ struct BoundedLoopPostfilters {
 /// narrow while selecting the restoration decoder only when restoration is
 /// actually active in the frame header.
 /// Screen-enabled intra leaves may use depth-aware I420/I422 palette
-/// prediction, while inter leaves honor parsed MV precision; intraBC remains
-/// closed. Active restoration retains the layout-specific one-unit proof.
+/// prediction, while eligible single-reference inter leaves may blend
+/// coded-resolution inter-intra prediction before residuals and other inter
+/// leaves honor parsed MV precision; intraBC remains closed. Active restoration
+/// retains the layout-specific one-unit proof.
 fn bounded_subsampled_loop_postfilters_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -12813,7 +12817,6 @@ fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
         && context.subsampling_y
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12861,7 +12864,6 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
         && !context.subsampling_y
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
@@ -12876,8 +12878,10 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
 /// metadata is therefore accepted without widening the partition or tool
 /// surface that the block path can safely publish.
 /// Screen-enabled intra leaves may use depth-aware I420/I422 palette
-/// prediction, while inter leaves honor parsed MV precision; intraBC remains
-/// closed. CDEF and restoration remain disabled in this loop-only profile.
+/// prediction, while eligible single-reference inter leaves may blend
+/// coded-resolution inter-intra prediction before residuals and other inter
+/// leaves honor parsed MV precision; intraBC remains closed. CDEF and
+/// restoration remain disabled in this loop-only profile.
 fn bounded_subsampled_loop_common(
     context: &FirstBlockContext,
     quantization: QuantizationContext,
@@ -12956,7 +12960,6 @@ fn complete_bounded_i420_loop_inter_reconstruction_context(
         && bounded_subsampled_loop_common(context, quantization)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
@@ -12998,7 +13001,6 @@ fn complete_bounded_i422_loop_inter_reconstruction_context(
         && bounded_subsampled_loop_common(context, quantization)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match
@@ -13419,9 +13421,11 @@ fn bounded_i422_rect_loop_common(
     geometry: BoundedSubsampledRectGeometry,
 ) -> bool {
     // Screen-enabled intra leaves may use depth-aware I422 palette prediction;
-    // inter leaves honor parsed MV precision. This loop-only rectangle keeps
-    // CDEF/restoration disabled and retains the orientation-specific edge
-    // proof; intraBC remains closed.
+    // eligible single-reference inter leaves may blend coded-resolution
+    // inter-intra prediction before residuals and other inter leaves honor
+    // parsed MV precision. This loop-only rectangle keeps CDEF/restoration
+    // disabled and retains the orientation-specific edge proof; intraBC
+    // remains closed.
     let (frame_width, frame_height) = geometry.dimensions();
     context.subsampling_x
         && !context.subsampling_y
@@ -13492,7 +13496,6 @@ fn complete_bounded_i422_rect_loop_inter_reconstruction_context(
         && bounded_i422_rect_loop_common(context, quantization, geometry)
         && bounded_reference_mode_supported(context, inter_context)
         && !inter_context.use_ref_frame_mvs
-        && !inter_context.enable_interintra_compound
         && !inter_context.enable_masked_compound
         && !inter_context.enable_jnt_comp
         && references_match)
