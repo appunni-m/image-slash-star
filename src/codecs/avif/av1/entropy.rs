@@ -3492,8 +3492,10 @@ fn inter_lossy_wide_mode2_geometry_supported(
 
 /// A square 64px lossy leaf is either a single TX64X64 terminal or an exact
 /// mode-2 TX64→TX32/TX16 split admitted by `decode_inter_transform_size`.
-/// Keep both paths separate from the 128px chunk compositor so an unsupported
-/// deeper tree cannot accidentally consume the single-terminal sentence.
+/// Monochrome uses the single-terminal predicate only for mode 1; its mode-2
+/// path remains behind the qindex-qualified split64 predicate. Keep both
+/// paths separate from the 128px chunk compositor so an unsupported deeper
+/// tree cannot accidentally consume the single-terminal sentence.
 fn inter_lossy_square64_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3504,7 +3506,8 @@ fn inter_lossy_square64_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
-        && layout == PixelLayout::I420
+        && (layout == PixelLayout::I420
+            || (layout == PixelLayout::Monochrome && transform_mode == 1))
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && matches!(transform_mode, 1 | 2)
@@ -3541,8 +3544,9 @@ fn inter_lossy_split64_geometry_supported(
 /// Direct rectangular 64-axis terminals use one compact transform per plane;
 /// unlike the 128px families they do not need a chunk compositor. This
 /// predicate is also the high-depth exemption from the generic small-axis
-/// admission gate below. Monochrome is admitted only for mode 2 here; its
-/// mode-1 square/64-axis tranche remains a separate scope.
+/// admission gate below. Monochrome uses the same single-terminal compositor
+/// for both reachable lossy transform modes; the square-64 predicate keeps
+/// its mode-1 admission separate from the mode-2 split64 qindex gate.
 fn inter_lossy_wide_single_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3554,7 +3558,7 @@ fn inter_lossy_wide_single_geometry_supported(
 ) -> bool {
     !quantization.segment_lossless
         && (layout == PixelLayout::I420
-            || (layout == PixelLayout::Monochrome && transform_mode == 2))
+            || (layout == PixelLayout::Monochrome && matches!(transform_mode, 1 | 2)))
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && matches!(transform_mode, 1 | 2)

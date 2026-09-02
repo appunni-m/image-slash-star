@@ -53452,9 +53452,10 @@ impl Lossy420Decoder {
                 | BlockSize::B32x64
                 | BlockSize::B64x32
                 | BlockSize::B64x64
-        ) && (chroma_sampling == ChromaSampling::Subsampled420
-            || (chroma_sampling == ChromaSampling::Monochrome && tools.transform_mode == 2))
-            && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+        ) && matches!(
+            chroma_sampling,
+            ChromaSampling::Subsampled420 | ChromaSampling::Monochrome
+        ) && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.transform_mode, 1 | 2)
             && (!matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
