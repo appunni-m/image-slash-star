@@ -3440,12 +3440,14 @@ fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockCo
     has_lossless && has_lossy
 }
 
-/// Admit the bounded mixed-segment profile for monochrome inter frames. The
-/// luma-only path already has a depth-parametric `LosslessGrid` compositor, so
-/// this predicate only opens its residual grammar while keeping the ordinary
-/// monochrome and multi-tile profiles closed. Filter selection is kept out of
-/// this common proof so each finish profile can validate its own metadata.
-fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+/// Common admission for the bounded mixed-segment monochrome inter grammar.
+/// The luma-only path already has a depth-parametric `LosslessGrid`
+/// compositor, so this predicate only opens its residual grammar while
+/// keeping the ordinary monochrome and multi-tile profiles closed. Restoration
+/// and filter selection are deliberately left to the profile wrappers below;
+/// the same segment proof therefore cannot accidentally diverge between the
+/// neutral, postfilter, and active-restoration paths.
+fn mixed_monochrome_lossless_segmentation_common(context: &FirstBlockContext) -> bool {
     let segmentation = context.frame_tools.segmentation;
     if context.intra_frame
         || !context.monochrome
@@ -3468,8 +3470,6 @@ fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext)
         || !context.frame_height.is_multiple_of(4)
         || context.frame_width.div_ceil(8).checked_mul(2) != Some(context.block_width)
         || context.frame_height.div_ceil(8).checked_mul(2) != Some(context.block_height)
-        || context.frame_tools.restoration_present
-        || context.restoration_types != [None; 3]
         || context.frame_tools.film_grain_present
         || context.frame_tools.delta_q_present
         || context.frame_tools.delta_lf_present
@@ -3529,6 +3529,16 @@ fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext)
         }
     }
     has_lossless && has_lossy
+}
+
+/// Admit the bounded mixed-segment profile for monochrome inter frames with a
+/// neutral restoration header. Keeping this wrapper separate from the common
+/// segment proof prevents an active restoration plan from being silently
+/// discarded by the postfilter-only callers.
+fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+    mixed_monochrome_lossless_segmentation_common(context)
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -9045,6 +9055,9 @@ pub(super) fn validate_complete_lossy_420_partition(
     let monochrome_mixed_lossless_postfilter = inter_context.and_then(|inter_context| {
         complete_monochrome_mixed_lossless_inter_postfilter(context, inter_context)
     });
+    let monochrome_mixed_lossless_restoration = inter_context.is_some_and(|inter_context| {
+        complete_monochrome_mixed_lossless_inter_restoration(context, inter_context)
+    });
     let monochrome_mixed_lossless_inter = inter_context.is_some_and(|inter_context| {
         complete_monochrome_mixed_lossless_inter_reconstruction_context(context, inter_context)
     });
@@ -9375,6 +9388,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             || generic_high_depth_inter
             || generic_high_depth_lossless_inter
             || monochrome_mixed_lossless_postfilter.is_some()
+            || monochrome_mixed_lossless_restoration
             || monochrome_mixed_lossless_inter
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
@@ -9522,6 +9536,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || bounded_i422_rect_cdef_restoration
         || bounded_i422_rect_loop_postfilters_restoration
         || (monochrome_postfilter && context.restoration_types[0].is_some())
+        || monochrome_mixed_lossless_restoration
         || monochrome_mode2_restoration
         || monochrome_matrix_restoration
         || monochrome_single_tile_loop_restoration
@@ -15856,6 +15871,61 @@ fn complete_monochrome_mixed_lossless_inter_postfilter(
 ) -> Option<MixedMonochromePostfilter> {
     mixed_monochrome_postfilter_profile(context)
         .filter(|_| complete_monochrome_references(context, inter_context))
+}
+
+/// Complete monochrome inter admission for a mixed-segment lossless frame
+/// with one active luma Wiener/SGR restoration unit. The block walk remains
+/// the same mode-1/2 mixed WHT/lossy grammar; restoration is decoded once
+/// before the walk and applied by `frame.rs` only after the complete luma plane
+/// has been reconstructed. Keep this first restoration tranche single-tile,
+/// non-superres, and free of other frame filters so the ordering is explicit
+/// and no tile-local state can leak into the restored reference.
+fn complete_monochrome_mixed_lossless_inter_restoration(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    if !mixed_monochrome_lossless_segmentation_common(context)
+        || !context.frame_tools.restoration_present
+        || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.cdef.is_some()
+        || !inter_context.references.iter().all(|reference| {
+            reference.surface.validate().is_ok()
+                && reference.surface.depth.bits() == context.bit_depth
+                && reference.surface.layout == PixelLayout::Monochrome
+                && reference.surface.coded_width == context.frame_width
+                && reference.surface.upscaled_width == context.frame_width
+                && reference.surface.frame_height == context.frame_height
+                && !reference.scale.scaled
+                && matches!(
+                    reference.global_motion.kind,
+                    GlobalMotionType::Identity | GlobalMotionType::Translation
+                )
+        })
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || inter_context.allow_warped_motion
+        || inter_context.motion_mode_switchable
+        || inter_context.use_ref_frame_mvs
+    {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) || !complete_monochrome_restoration_supported(context)
+    {
+        return false;
+    }
+    true
 }
 
 /// Common frame-level proof for the lossy monochrome super-resolution
