@@ -53391,6 +53391,7 @@ impl Lossy420Decoder {
             transform_plan,
             InterTransformPlan::LossyWideMode2Mixed { .. }
         );
+        let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8);
         let split_b8x16 = matches!(transform_plan, InterTransformPlan::SplitB8x16);
         let split_b16x8 = matches!(transform_plan, InterTransformPlan::SplitB16x8);
         let split_b8x32 = matches!(transform_plan, InterTransformPlan::SplitB8x32);
@@ -53429,9 +53430,10 @@ impl Lossy420Decoder {
         // The direct lossy chroma-grid tranche is deliberately narrow: exact
         // depth-matched 4:2:2/4:4:4 terminals whose chroma plane can be
         // consumed by the bounded grid compositor, plus the existing 4:2:0
-        // single-terminal tranche. I422 roots in the bounded vertical split
-        // family inherit each luma child transform into its TX4 chroma rows;
-        // 64-axis direct profiles retain their DCT-only transform restriction.
+        // single-terminal tranche. Monochrome mode-2 roots use the same
+        // luma-only 64-axis validation. I422 roots in the bounded vertical
+        // split family inherit each luma child transform into its TX4 chroma
+        // rows; 64-axis direct profiles retain their DCT-only restriction.
         let wide_lossy_single = matches!(
             transform_plan,
             InterTransformPlan::Single {
@@ -53450,7 +53452,8 @@ impl Lossy420Decoder {
                 | BlockSize::B32x64
                 | BlockSize::B64x32
                 | BlockSize::B64x64
-        ) && chroma_sampling == ChromaSampling::Subsampled420
+        ) && (chroma_sampling == ChromaSampling::Subsampled420
+            || (chroma_sampling == ChromaSampling::Monochrome && tools.transform_mode == 2))
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.transform_mode, 1 | 2)
@@ -53819,11 +53822,29 @@ impl Lossy420Decoder {
             .then_some(())
             .portable()?;
         }
+        if split_b8 {
+            (block_size == BlockSize::B8x8
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                )
+                && tools.sample_depth == quantization.sample_depth
+                && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
+                && tools.transform_mode == 2
+                && quantization.segment_qindex > 0
+                && !quantization.segment_lossless)
+                .then_some(())
+                .portable()?;
+        }
         if split_b16 {
             (block_size == BlockSize::B16x16
                 && matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled420
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                         | ChromaSampling::Full
                 )
@@ -53840,6 +53861,7 @@ impl Lossy420Decoder {
                 (block_size, chroma_sampling),
                 (BlockSize::B16x32, ChromaSampling::Subsampled420)
                     | (BlockSize::B16x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x32, ChromaSampling::Monochrome)
                     | (BlockSize::B16x32, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -53854,8 +53876,10 @@ impl Lossy420Decoder {
                 (block_size, chroma_sampling),
                 (BlockSize::B8x16, ChromaSampling::Subsampled420)
                     | (BlockSize::B8x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B8x16, ChromaSampling::Monochrome)
                     | (BlockSize::B16x8, ChromaSampling::Subsampled420)
                     | (BlockSize::B16x8, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x8, ChromaSampling::Monochrome)
                     | (BlockSize::B8x16, ChromaSampling::Full)
                     | (BlockSize::B16x8, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
@@ -53871,8 +53895,10 @@ impl Lossy420Decoder {
                 (block_size, chroma_sampling),
                 (BlockSize::B8x32, ChromaSampling::Subsampled420)
                     | (BlockSize::B8x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B8x32, ChromaSampling::Monochrome)
                     | (BlockSize::B32x8, ChromaSampling::Subsampled420)
                     | (BlockSize::B32x8, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x8, ChromaSampling::Monochrome)
                     | (BlockSize::B8x32, ChromaSampling::Full)
                     | (BlockSize::B32x8, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
@@ -53890,6 +53916,8 @@ impl Lossy420Decoder {
                     | (BlockSize::B64x16, ChromaSampling::Subsampled420)
                     | (BlockSize::B16x64, ChromaSampling::Subsampled422)
                     | (BlockSize::B64x16, ChromaSampling::Subsampled422)
+                    | (BlockSize::B16x64, ChromaSampling::Monochrome)
+                    | (BlockSize::B64x16, ChromaSampling::Monochrome)
                     | (BlockSize::B16x64, ChromaSampling::Full)
                     | (BlockSize::B64x16, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
@@ -53907,6 +53935,8 @@ impl Lossy420Decoder {
                     | (BlockSize::B64x32, ChromaSampling::Subsampled420)
                     | (BlockSize::B32x64, ChromaSampling::Subsampled422)
                     | (BlockSize::B64x32, ChromaSampling::Subsampled422)
+                    | (BlockSize::B32x64, ChromaSampling::Monochrome)
+                    | (BlockSize::B64x32, ChromaSampling::Monochrome)
                     | (BlockSize::B32x64, ChromaSampling::Full)
                     | (BlockSize::B64x32, ChromaSampling::Full)
             ) && tools.sample_depth == quantization.sample_depth
@@ -53930,7 +53960,10 @@ impl Lossy420Decoder {
         }
         if split_b32x16 {
             (block_size == BlockSize::B32x16
-                && chroma_sampling == ChromaSampling::Subsampled420
+                && matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Subsampled420
+                )
                 && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
@@ -53943,7 +53976,8 @@ impl Lossy420Decoder {
             (block_size == BlockSize::B32x32
                 && matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled420
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                         | ChromaSampling::Full
                 )
@@ -53959,7 +53993,8 @@ impl Lossy420Decoder {
             (block_size == BlockSize::B64x64
                 && matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled420
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                         | ChromaSampling::Full
                 )
@@ -53981,7 +54016,8 @@ impl Lossy420Decoder {
             (block_size == BlockSize::B64x64
                 && matches!(
                     chroma_sampling,
-                    ChromaSampling::Subsampled420
+                    ChromaSampling::Monochrome
+                        | ChromaSampling::Subsampled420
                         | ChromaSampling::Subsampled422
                         | ChromaSampling::Full
                 )
@@ -54151,7 +54187,6 @@ impl Lossy420Decoder {
                 .then_some(())
                 .portable()?;
         }
-        let split_b8 = matches!(transform_plan, InterTransformPlan::SplitB8);
         if split_b8
             || split_b8x16
             || split_b16x8

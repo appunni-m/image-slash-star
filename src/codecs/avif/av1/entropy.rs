@@ -3514,8 +3514,8 @@ fn inter_lossy_square64_geometry_supported(
 
 /// Exact mode-2 B64x64 split geometry. Unlike the existing one-terminal I420
 /// square-64 predicate, this profile owns a TX32x32 chroma grid for I422 and
-/// I444, so it must remain distinct until the block compositor has consumed
-/// every chroma child.
+/// I444; monochrome uses the same preflight so a root-unsplit/skipped leaf can
+/// still pass through the mode-2 single-terminal validation.
 fn inter_lossy_split64_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3528,7 +3528,7 @@ fn inter_lossy_split64_geometry_supported(
     !quantization.segment_lossless
         && matches!(
             layout,
-            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
@@ -3541,7 +3541,8 @@ fn inter_lossy_split64_geometry_supported(
 /// Direct rectangular 64-axis terminals use one compact transform per plane;
 /// unlike the 128px families they do not need a chunk compositor. This
 /// predicate is also the high-depth exemption from the generic small-axis
-/// admission gate below.
+/// admission gate below. Monochrome is admitted only for mode 2 here; its
+/// mode-1 square/64-axis tranche remains a separate scope.
 fn inter_lossy_wide_single_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -3552,7 +3553,8 @@ fn inter_lossy_wide_single_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
-        && layout == PixelLayout::I420
+        && (layout == PixelLayout::I420
+            || (layout == PixelLayout::Monochrome && transform_mode == 2))
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && matches!(transform_mode, 1 | 2)
@@ -5217,7 +5219,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B8x8
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 8
             && visible_height == 8
@@ -5229,7 +5231,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B8x16
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 8
             && visible_height == 16
@@ -5275,7 +5277,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B16x8
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 16
             && visible_height == 8
@@ -5321,7 +5323,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B8x32
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 8
             && visible_height == 32
@@ -5367,7 +5369,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B32x8
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 32
             && visible_height == 8
@@ -5413,7 +5415,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B16x64
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 16
             && visible_height == 64
@@ -5459,7 +5461,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B64x16
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 64
             && visible_height == 16
@@ -5505,7 +5507,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B32x64
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 32
             && visible_height == 64
@@ -5551,7 +5553,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B64x32
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 64
             && visible_height == 32
@@ -5597,7 +5599,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B16x16
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 16
             && visible_height == 16
@@ -5646,7 +5648,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B32x32
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 32
             && visible_height == 32
@@ -5695,7 +5697,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B16x32
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 16
             && visible_height == 32
@@ -5741,7 +5743,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B32x16
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 32
             && visible_height == 16
@@ -5787,7 +5789,7 @@ fn decode_inter_transform_size(
         if block_size == BlockSize::B64x64
             && matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             )
             && visible_width == 64
             && visible_height == 64
@@ -5848,7 +5850,7 @@ fn decode_inter_transform_size(
             }
             if matches!(
                 layout,
-                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
             ) {
                 return Ok(InterTransformPlan::SplitB64Topology { child_splits });
             }
@@ -13686,8 +13688,9 @@ fn bounded_i444_cdef_supported(context: &FirstBlockContext) -> bool {
 /// bounded tile-local dimensions, bounded transform-depth plans, and no
 /// frame-level state that would require a second plane or a separate
 /// publication path. Intra leaves may materialize TX_MODE_SELECT depth; inter
-/// leaves admit only an unsplit maximum transform and reject transform-grid
-/// splits transactionally.
+/// leaves may materialize the bounded luma transform-partition plans supported
+/// by the shared inter compositor, while unsupported deeper trees remain
+/// transactional.
 /// Screen-enabled monochrome intra leaves may decode the luma-only palette
 /// syntax; screen-enabled inter leaves use force-integer MV precision. IntraBC
 /// and intra/palette blocks inside inter frames remain outside the profile.
