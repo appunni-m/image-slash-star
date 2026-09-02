@@ -8583,9 +8583,9 @@ pub(super) fn validate_complete_lossy_420_partition(
         && inter_context.is_some_and(|inter_context| {
             high_depth_lossless_monochrome_superres_restoration_supported(context, inter_context)
         });
-    let high_depth_lossless_inter_nonsuperres_active_restoration = generic_high_depth_lossless_inter
-        && inter_context.is_some_and(|inter_context| {
-            high_depth_lossless_inter_nonsuperres_restoration_supported(context, inter_context)
+    let lossless_inter_nonsuperres_active_restoration =
+        inter_context.is_some_and(|inter_context| {
+            lossless_nonsuperres_inter_restoration_supported(context, inter_context)
         });
     let lossless_color_inter = inter_context.is_some_and(|inter_context| {
         complete_lossless_inter_color_reconstruction_context(context, inter_context)
@@ -8610,14 +8610,12 @@ pub(super) fn validate_complete_lossy_420_partition(
     let streamed_lossless_color = complete_streamed_lossless_color_context(context);
     let lossless_intra_color_active_restoration =
         streamed_lossless_color && lossless_intra_color_superres_restoration_supported(context);
-    let high_depth_lossless_intra_nonsuperres_active_restoration = streamed_lossless_color
-        && high_depth_lossless_intra_nonsuperres_restoration_supported(context);
     let streamed_lossless_monochrome = complete_streamed_lossless_monochrome_context(context);
     let lossless_intra_monochrome_active_restoration = streamed_lossless_monochrome
         && lossless_intra_monochrome_superres_restoration_supported(context);
-    let high_depth_lossless_intra_monochrome_nonsuperres_active_restoration =
-        streamed_lossless_monochrome
-            && high_depth_lossless_intra_nonsuperres_restoration_supported(context);
+    let lossless_intra_nonsuperres_active_restoration = (streamed_lossless_color
+        || streamed_lossless_monochrome)
+        && lossless_nonsuperres_intra_restoration_supported(context);
     let bounded_monochrome_intrabc = complete_bounded_monochrome_intrabc_context(context);
     let streamed_lossless_reconstruction = streamed_lossless_color || streamed_lossless_monochrome;
     let generic_high_depth_i444_inter = (generic_high_depth_inter
@@ -9014,15 +9012,14 @@ pub(super) fn validate_complete_lossy_420_partition(
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
         || high_depth_lossless_monochrome_active_restoration
-        || high_depth_lossless_inter_nonsuperres_active_restoration
+        || lossless_inter_nonsuperres_active_restoration
         || lossless_i420_active_restoration
         || lossless_i422_active_restoration
         || lossless_i444_active_restoration
         || lossless_monochrome_active_restoration
         || lossless_intra_color_active_restoration
         || lossless_intra_monochrome_active_restoration
-        || high_depth_lossless_intra_nonsuperres_active_restoration
-        || high_depth_lossless_intra_monochrome_nonsuperres_active_restoration
+        || lossless_intra_nonsuperres_active_restoration
     {
         let Some(plan) =
             decode_bounded_restoration_plan(&mut decoder, context, &mut tile_cdfs.restoration)
@@ -15523,13 +15520,12 @@ fn lossless_intra_monochrome_superres_restoration_supported(context: &FirstBlock
 }
 
 /// Shared admission for one-unit active restoration on a non-super-resolution
-/// high-depth lossless frame. The streamed TX4x4/WHT walker already owns the
-/// complete coded raster for these layouts; this predicate proves only the
-/// surrounding frame state and the checked one-unit geometry consumed after
-/// reconstruction. Keeping the layout and unit rules here avoids making the
-/// intra and inter wrappers disagree about chroma rounding or restoration
-/// exponent boundaries.
-fn high_depth_lossless_nonsuperres_restoration_common(
+/// lossless frame. The streamed TX4x4/WHT walker already owns the complete
+/// coded raster for these layouts; this predicate proves only the surrounding
+/// frame state and the checked one-unit geometry consumed after reconstruction.
+/// Keeping the layout and unit rules here avoids making the intra and inter
+/// wrappers disagree about chroma rounding or restoration exponent boundaries.
+fn lossless_nonsuperres_restoration_common(
     context: &FirstBlockContext,
     layout: PixelLayout,
 ) -> bool {
@@ -15560,7 +15556,7 @@ fn high_depth_lossless_nonsuperres_restoration_common(
         });
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
-    if !matches!(context.bit_depth, 10 | 12)
+    if !matches!(context.bit_depth, 8 | 10 | 12)
         || !context.all_lossless
         || !context.frame_tools.segment_lossless
         || context.frame_tools.segment_qindex != 0
@@ -15695,9 +15691,7 @@ fn high_depth_lossless_nonsuperres_restoration_common(
     true
 }
 
-fn high_depth_lossless_intra_nonsuperres_restoration_supported(
-    context: &FirstBlockContext,
-) -> bool {
+fn lossless_nonsuperres_intra_restoration_supported(context: &FirstBlockContext) -> bool {
     let Some(layout) = PixelLayout::from_sequence(
         context.monochrome,
         context.subsampling_x,
@@ -15705,10 +15699,10 @@ fn high_depth_lossless_intra_nonsuperres_restoration_supported(
     ) else {
         return false;
     };
-    context.intra_frame && high_depth_lossless_nonsuperres_restoration_common(context, layout)
+    context.intra_frame && lossless_nonsuperres_restoration_common(context, layout)
 }
 
-fn high_depth_lossless_inter_nonsuperres_restoration_supported(
+fn lossless_nonsuperres_inter_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
@@ -15720,7 +15714,7 @@ fn high_depth_lossless_inter_nonsuperres_restoration_supported(
         return false;
     };
     if context.intra_frame
-        || !high_depth_lossless_nonsuperres_restoration_common(context, layout)
+        || !lossless_nonsuperres_restoration_common(context, layout)
         || inter_context.skip_mode_references.is_some()
         || inter_context.allow_warped_motion
     {
@@ -15763,7 +15757,7 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         return false;
     };
     let active_restoration = lossless_intra_color_superres_restoration_supported(context)
-        || high_depth_lossless_intra_nonsuperres_restoration_supported(context);
+        || lossless_nonsuperres_intra_restoration_supported(context);
     let layout_supported = context.subsampling_x || !context.subsampling_y;
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
@@ -15812,7 +15806,7 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
 /// is not met.
 fn complete_streamed_lossless_monochrome_context(context: &FirstBlockContext) -> bool {
     let active_restoration = lossless_intra_monochrome_superres_restoration_supported(context)
-        || high_depth_lossless_intra_nonsuperres_restoration_supported(context);
+        || lossless_nonsuperres_intra_restoration_supported(context);
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let resize_geometry_supported = if context.superres_enabled {
@@ -16223,7 +16217,8 @@ fn complete_lossless_inter_color_reconstruction_context(
     let active_color_restoration =
         lossless_i420_superres_restoration_supported(context, inter_context)
             || lossless_i422_superres_restoration_supported(context, inter_context)
-            || lossless_i444_superres_restoration_supported(context, inter_context);
+            || lossless_i444_superres_restoration_supported(context, inter_context)
+            || lossless_nonsuperres_inter_restoration_supported(context, inter_context);
     let horizontal_multitile_color = context.superres_enabled
         && matches!(
             layout,
@@ -16684,7 +16679,8 @@ fn complete_lossless_inter_monochrome_reconstruction_context(
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let neutral_restoration = !context.frame_tools.restoration_present
         || (context.superres_enabled && context.restoration_types == [None; 3]);
-    let active_restoration = lossless_monochrome_superres_restoration_supported(context);
+    let active_restoration = lossless_monochrome_superres_restoration_supported(context)
+        || lossless_nonsuperres_inter_restoration_supported(context, inter_context);
     let restoration_supported =
         (neutral_restoration && context.restoration_types == [None; 3]) || active_restoration;
     let film_grain_supported = if context.superres_enabled {
@@ -16883,7 +16879,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
                 context,
                 inter_context,
             )
-            || high_depth_lossless_inter_nonsuperres_restoration_supported(context, inter_context);
+            || lossless_nonsuperres_inter_restoration_supported(context, inter_context);
     let restoration_supported = (neutral_restoration && context.restoration_types == [None; 3])
         || active_high_depth_restoration;
     let superres_layout = context.superres_enabled
