@@ -59481,49 +59481,56 @@ impl Lossy420Decoder {
         } else if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Horizontal8x4)
         {
-            let mut leaf = reconstruct_following_lossy_full_8x4_leaf(syntax, &neighbor)?;
-            if matches!(
+            let target = matches!(
                 syntax.chroma_predictor,
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
-            ) {
+            );
+            let target_edges = if target {
+                let neighbor_width_usize =
+                    usize::try_from(neighbor_width).map_err(|_| PortableUnavailable)?;
+                let neighbor_height_usize =
+                    usize::try_from(neighbor_height).map_err(|_| PortableUnavailable)?;
+                let expected_len = neighbor_width_usize
+                    .checked_mul(neighbor_height_usize)
+                    .ok_or(PortableUnavailable)?;
+                let mut edges: [(Option<[u16; 4]>, Option<[u16; 4]>); 2] = [(None, None); 2];
                 for plane in 1..=2 {
-                    let edge = chroma_left_edges_8[plane - 1];
-                    let (left, below_left) = if let Some(edge) = edge {
-                        (
-                            [edge[0], edge[1], edge[2], edge[3]],
-                            Some([edge[4], edge[5], edge[6], edge[7]]),
-                        )
-                    } else {
-                        let left = checked_right_edge_at::<4>(
-                            &neighbor.planes[plane],
-                            neighbor_width,
-                            neighbor_height,
-                            0,
-                        )
-                        .ok_or(PortableUnavailable)?;
-                        let below_left = checked_right_edge_at::<4>(
-                            &neighbor.planes[plane],
-                            neighbor_width,
-                            neighbor_height,
-                            4,
-                        );
-                        (left, below_left)
-                    };
-                    let below_left =
+                    (neighbor.planes[plane].samples.len() == expected_len)
+                        .then_some(())
+                        .portable()?;
+                    let edge = checked_right_edge_at::<4>(
+                        &neighbor.planes[plane],
+                        neighbor_width,
+                        neighbor_height,
+                        0,
+                    )
+                    .ok_or(PortableUnavailable)?;
+                    let continuation =
                         if matches!(syntax.chroma_predictor, ChromaPredictor::Diagonal203) {
-                            below_left
+                            full_chroma_bottom_left_8[plane - 1].map(|extension| {
+                                [extension[0], extension[1], extension[2], extension[3]]
+                            })
                         } else {
                             None
                         };
+                    edges[plane - 1] = (Some(edge), continuation);
+                }
+                Some(edges)
+            } else {
+                None
+            };
+            let mut leaf = reconstruct_following_lossy_full_8x4_leaf(syntax, &neighbor)?;
+            if let Some(edges) = target_edges {
+                for plane in 1..=2 {
                     leaf.planes[plane] = reconstruct_lossy_full_8x4_chroma_normalized_target(
                         syntax.chroma_predictor,
                         syntax.chroma_angle,
-                        left,
-                        below_left,
+                        edges[plane - 1].0.ok_or(PortableUnavailable)?,
+                        edges[plane - 1].1,
                         syntax.lossy_chroma_8x4_coefficients[plane - 1],
                         tools.enable_intra_edge_filter,
                         smooth_chroma_edges,
