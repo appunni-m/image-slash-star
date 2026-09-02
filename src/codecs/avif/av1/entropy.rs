@@ -15605,6 +15605,8 @@ pub(super) fn validate_complete_lossless_444_partition(
                 (8, 2) => (32, 8, super::block::TransformGrid::Horizontal32x8),
                 (2, 8) => (8, 32, super::block::TransformGrid::Vertical8x32),
                 (8, 8) => (32, 32, super::block::TransformGrid::Square32),
+                (4, 16) => (16, 64, super::block::TransformGrid::Vertical16x64),
+                (16, 4) => (64, 16, super::block::TransformGrid::Horizontal64x16),
                 _ => {
                     unsupported = true;
                     return Ok(PartitionVisitControl::Stop);

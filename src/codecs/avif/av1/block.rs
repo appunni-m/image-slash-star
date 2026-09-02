@@ -43,6 +43,12 @@ impl<T> PortableOptionExt<T> for Option<T> {
 type TransformCoefficients = [i32; 16];
 type PlaneCoefficients = [TransformCoefficients; 64];
 
+/// Maximum number of 4x4 transform-edge contexts retained by the complete
+/// lossless 4:4:4 walker.  The 64-pixel rectangular grids use sixteen edge
+/// segments on their long axis; Square64 remains closed because it needs 256
+/// transform carriers rather than a wider edge array.
+const LOSSLESS444_NEIGHBOR_CAPACITY: usize = 16;
+
 /// Maximum number of four-pixel neighbor leaves needed to cover one complete
 /// 128-pixel AV1 edge.  The monochrome frame walker keeps this bounded array
 /// instead of allocating a temporary list while assembling intra references.
@@ -2178,12 +2184,12 @@ enum CoefficientPolicy {
     DcThenLumaAc,
     ColorFrameTopLeft,
     ColorFrameSquareContextual {
-        neighbor_contexts: [[u8; 8]; 3],
+        neighbor_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
         orientation: SplitOrientation,
     },
     ColorFrameBoundaryContextual {
-        above_contexts: [[u8; 8]; 3],
-        left_contexts: [[u8; 8]; 3],
+        above_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
+        left_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
     },
     Skipped,
     Lossy420DcOrSkipped {
@@ -2357,7 +2363,7 @@ pub(super) enum SplitOrientation {
 
 #[derive(Clone, Copy)]
 struct FollowingCoefficientContext {
-    neighbor_contexts: [u8; 8],
+    neighbor_contexts: [u8; LOSSLESS444_NEIGHBOR_CAPACITY],
     orientation: SplitOrientation,
     transform_grid_width: usize,
     transform_grid_height: usize,
@@ -2719,8 +2725,8 @@ pub(super) struct Lossless444Leaf {
     width: u32,
     height: u32,
     closed: ClosedLeaf,
-    right_contexts: [[u8; 8]; 3],
-    bottom_contexts: [[u8; 8]; 3],
+    right_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
+    bottom_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
     palette_cache: PaletteCacheState,
 }
 
@@ -2735,9 +2741,9 @@ pub(super) struct Lossless444BlockGeometry {
 
 pub(super) struct Lossless444Neighbors<'a> {
     pub(super) above_left: Option<&'a Lossless444Leaf>,
-    pub(super) above: [Option<&'a Lossless444Leaf>; 8],
+    pub(super) above: [Option<&'a Lossless444Leaf>; LOSSLESS444_NEIGHBOR_CAPACITY],
     pub(super) above_right: Option<&'a Lossless444Leaf>,
-    pub(super) left: [Option<&'a Lossless444Leaf>; 8],
+    pub(super) left: [Option<&'a Lossless444Leaf>; LOSSLESS444_NEIGHBOR_CAPACITY],
     pub(super) left_below: [Option<&'a Lossless444Leaf>; 8],
 }
 
@@ -8630,17 +8636,19 @@ fn decode_contextual_top_left_color_coefficients(
     transform_grid_width: usize,
     transform_grid_height: usize,
 ) -> PortableResult<PlaneCoefficients> {
-    if !(1..=8).contains(&transform_grid_width)
-        || !(1..=8).contains(&transform_grid_height)
-        || transform_grid_width.saturating_mul(transform_grid_height) > 64
+    let Some(transform_count) = transform_grid_width.checked_mul(transform_grid_height) else {
+        return Err(PortableUnavailable);
+    };
+    if !(1..=LOSSLESS444_NEIGHBOR_CAPACITY).contains(&transform_grid_width)
+        || !(1..=LOSSLESS444_NEIGHBOR_CAPACITY).contains(&transform_grid_height)
+        || transform_count > 64
     {
         return Err(PortableUnavailable);
     }
     let coefficient_context = usize::from(plane != 0);
     let mut coefficients = [[0_i32; 16]; 64];
-    let mut above_contexts = [0x40_u8; 8];
+    let mut above_contexts = [0x40_u8; LOSSLESS444_NEIGHBOR_CAPACITY];
     let mut left_context = 0x40_u8;
-    let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
 
     for (transform_index, coefficients) in coefficients.iter_mut().enumerate().take(transform_count)
     {
@@ -8723,9 +8731,9 @@ fn coefficient_edge_contexts_wide(
     orientation: SplitOrientation,
     transform_grid: TransformGrid,
     chroma_sampling: ChromaSampling,
-) -> PortableResult<[[u8; 8]; 3]> {
+) -> PortableResult<[[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3]> {
     let (luma_grid_width, luma_grid_height, _) = transform_grid.properties();
-    let mut edge_contexts = [[0x40_u8; 8]; 3];
+    let mut edge_contexts = [[0x40_u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3];
     for (plane, edge_context) in edge_contexts.iter_mut().enumerate() {
         let (grid_width, grid_height) =
             chroma_sampling.transform_grid(luma_grid_width, luma_grid_height, plane);
@@ -8733,7 +8741,10 @@ fn coefficient_edge_contexts_wide(
             SplitOrientation::Horizontal => grid_height,
             SplitOrientation::Vertical => grid_width,
         };
-        if edge_count > 8 || grid_width.saturating_mul(grid_height) > 64 {
+        let Some(transform_count) = grid_width.checked_mul(grid_height) else {
+            return Err(PortableUnavailable);
+        };
+        if edge_count > LOSSLESS444_NEIGHBOR_CAPACITY || transform_count > 64 {
             return Err(PortableUnavailable);
         }
         if plane != 0 && matches!(chroma_sampling, ChromaSampling::Subsampled420) {
@@ -8755,21 +8766,23 @@ fn coefficient_edge_contexts_wide(
     Ok(edge_contexts)
 }
 
-fn widen_contexts(contexts: [u8; 2]) -> [u8; 8] {
-    let mut widened = [0x40_u8; 8];
+fn widen_contexts(contexts: [u8; 2]) -> [u8; LOSSLESS444_NEIGHBOR_CAPACITY] {
+    let mut widened = [0x40_u8; LOSSLESS444_NEIGHBOR_CAPACITY];
     widened[..2].copy_from_slice(&contexts);
     widened
 }
 
 fn lossless444_neighbor_contexts(
-    neighbors: [Option<&Lossless444Leaf>; 8],
+    neighbors: [Option<&Lossless444Leaf>; LOSSLESS444_NEIGHBOR_CAPACITY],
     geometry: Lossless444BlockGeometry,
     above: bool,
-) -> PortableResult<[[u8; 8]; 3]> {
+) -> PortableResult<[[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3]> {
     let (grid_width, grid_height, _) = geometry.transform_grid.properties();
     let edge_count = if above { grid_width } else { grid_height };
-    (edge_count <= 8).then_some(()).portable()?;
-    let mut contexts = [[0x40_u8; 8]; 3];
+    (edge_count <= LOSSLESS444_NEIGHBOR_CAPACITY)
+        .then_some(())
+        .portable()?;
+    let mut contexts = [[0x40_u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3];
     if neighbors.iter().all(Option::is_none) {
         return Ok(contexts);
     }
@@ -8831,17 +8844,27 @@ fn decode_contextual_following_coefficients(
         require_skipped,
         general_luma,
     } = context;
-    if !(1..=8).contains(&transform_grid_width) || !(1..=8).contains(&transform_grid_height) {
+    let axis_limit = if general_luma {
+        LOSSLESS444_NEIGHBOR_CAPACITY
+    } else {
+        8
+    };
+    let Some(transform_count) = transform_grid_width.checked_mul(transform_grid_height) else {
+        return Err(PortableUnavailable);
+    };
+    if !(1..=axis_limit).contains(&transform_grid_width)
+        || !(1..=axis_limit).contains(&transform_grid_height)
+        || transform_count > 64
+    {
         return Err(PortableUnavailable);
     }
     let coefficient_context = usize::from(plane != 0);
     let mut coefficients = [[0_i32; 16]; 64];
     let mut above_contexts = match orientation {
-        SplitOrientation::Horizontal => [0x40; 8],
+        SplitOrientation::Horizontal => [0x40; LOSSLESS444_NEIGHBOR_CAPACITY],
         SplitOrientation::Vertical => neighbor_contexts,
     };
     let mut left_context = 0x40;
-    let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
 
     for (transform_index, coefficients) in coefficients.iter_mut().enumerate().take(transform_count)
     {
@@ -9031,21 +9054,23 @@ fn decode_contextual_boundary_coefficients_general(
     decoder: &mut RangeDecoder<'_, '_, '_>,
     plane: usize,
     cdfs: &mut BlockCdfs,
-    mut above_contexts: [u8; 8],
-    left_contexts: [u8; 8],
+    mut above_contexts: [u8; LOSSLESS444_NEIGHBOR_CAPACITY],
+    left_contexts: [u8; LOSSLESS444_NEIGHBOR_CAPACITY],
     transform_grid_width: usize,
     transform_grid_height: usize,
 ) -> PortableResult<PlaneCoefficients> {
-    if !(1..=8).contains(&transform_grid_width)
-        || !(1..=8).contains(&transform_grid_height)
-        || transform_grid_width.saturating_mul(transform_grid_height) > 64
+    let Some(transform_count) = transform_grid_width.checked_mul(transform_grid_height) else {
+        return Err(PortableUnavailable);
+    };
+    if !(1..=LOSSLESS444_NEIGHBOR_CAPACITY).contains(&transform_grid_width)
+        || !(1..=LOSSLESS444_NEIGHBOR_CAPACITY).contains(&transform_grid_height)
+        || transform_count > 64
     {
         return Err(PortableUnavailable);
     }
     let mut coefficients = [[0_i32; 16]; 64];
     let coefficient_context = usize::from(plane != 0);
     let mut left_context = 0x40_u8;
-    let transform_count = transform_grid_width.saturating_mul(transform_grid_height);
     for (transform_index, coefficients) in coefficients.iter_mut().enumerate().take(transform_count)
     {
         let column = transform_index % transform_grid_width;
@@ -19147,6 +19172,28 @@ fn decode_syntax_with_cdef(
     segment_delta_q: i32,
     segment_lossless: bool,
 ) -> PortableResult<(BlockSyntax, CdefMetadata, u32)> {
+    let SyntaxPolicy {
+        spatial_luma_context,
+        coefficient_policy,
+        quantization_syntax,
+        ..
+    } = policy;
+    let lossless_full_rect = matches!(
+        (
+            quantization_syntax,
+            coefficient_policy,
+            transform_grid,
+            chroma_sampling,
+        ),
+        (
+            QuantizationSyntax::Lossless,
+            CoefficientPolicy::ColorFrameTopLeft
+                | CoefficientPolicy::ColorFrameSquareContextual { .. }
+                | CoefficientPolicy::ColorFrameBoundaryContextual { .. },
+            TransformGrid::Vertical16x64 | TransformGrid::Horizontal64x16,
+            ChromaSampling::Full,
+        )
+    );
     // The current pure-Rust 4:2:2 path is deliberately limited to the
     // reference-proven Square16 terminal. Reject other geometries before
     // reading even the block skip symbol; their transform/CDF tables are not
@@ -19159,15 +19206,10 @@ fn decode_syntax_with_cdef(
     if matches!(chroma_sampling, ChromaSampling::Full)
         && full_large_chroma_geometry(transform_grid).is_ok()
         && large_coeff_arena.is_none()
+        && !lossless_full_rect
     {
         return Err(PortableUnavailable);
     }
-    let SyntaxPolicy {
-        spatial_luma_context,
-        coefficient_policy,
-        quantization_syntax,
-        ..
-    } = policy;
     let (transform_grid_width, transform_grid_height, _) = transform_grid.properties();
     let header = decode_intra_header(
         decoder,
@@ -19199,7 +19241,8 @@ fn decode_syntax_with_cdef(
         ..
     } = header;
 
-    if matches!(chroma_sampling, ChromaSampling::Full)
+    if !lossless_full_rect
+        && matches!(chroma_sampling, ChromaSampling::Full)
         && let Ok((_, _, columns, rows)) = full_large_chroma_geometry(transform_grid)
     {
         let directional_chroma = matches!(
@@ -30824,7 +30867,7 @@ fn lossless444_sample_at(leaf: &Lossless444Leaf, plane: usize, x: u32, y: u32) -
 }
 
 fn lossless444_external_edges(
-    neighbors: [Option<&Lossless444Leaf>; 8],
+    neighbors: [Option<&Lossless444Leaf>; LOSSLESS444_NEIGHBOR_CAPACITY],
     above_right: Option<&Lossless444Leaf>,
     geometry: Lossless444BlockGeometry,
     plane: usize,
@@ -33994,9 +34037,9 @@ fn reconstruct_lossless444_leaf(
     sample_depth: SampleDepth,
     palette_map_arena: &PaletteMapArena,
     above_left: Option<&Lossless444Leaf>,
-    above: [Option<&Lossless444Leaf>; 8],
+    above: [Option<&Lossless444Leaf>; LOSSLESS444_NEIGHBOR_CAPACITY],
     above_right: Option<&Lossless444Leaf>,
-    left: [Option<&Lossless444Leaf>; 8],
+    left: [Option<&Lossless444Leaf>; LOSSLESS444_NEIGHBOR_CAPACITY],
     left_below: [Option<&Lossless444Leaf>; 8],
     enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
@@ -47844,8 +47887,8 @@ pub(super) fn decode_first_lossless_444_leaf(
 impl Lossless444Leaf {
     fn new(
         geometry: Lossless444BlockGeometry,
-        right_contexts: [[u8; 8]; 3],
-        bottom_contexts: [[u8; 8]; 3],
+        right_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
+        bottom_contexts: [[u8; LOSSLESS444_NEIGHBOR_CAPACITY]; 3],
         palette_cache: PaletteCacheState,
         closed: ClosedLeaf,
     ) -> PortableResult<Self> {
@@ -47966,9 +48009,9 @@ impl Lossless444Decoder {
             self.sample_depth,
             &self.palette_map_arena,
             None,
-            [None; 8],
+            [None; LOSSLESS444_NEIGHBOR_CAPACITY],
             None,
-            [None; 8],
+            [None; LOSSLESS444_NEIGHBOR_CAPACITY],
             [None; 8],
             tools.enable_intra_edge_filter,
         )?;
