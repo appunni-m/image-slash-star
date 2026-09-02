@@ -4619,6 +4619,37 @@ fn inter_high_depth_i422_single_geometry_supported(
         && inter_single_transform_geometry_supported(node.block_size, layout)
 }
 
+/// Exact high-depth 4:2:0 single terminals whose maximum luma and chroma
+/// transforms cover their complete coded planes. A one-MI subsampled axis may
+/// be a non-owner, so ownership is deliberately left to the shared block
+/// compositor rather than folded into this geometry admission.
+fn inter_high_depth_i420_narrow_single_geometry_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    node: PartitionNode,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    quantization: super::block::LossyQuantization,
+) -> bool {
+    matches!(context.bit_depth, 10 | 12)
+        && complete_high_depth_inter_reconstruction_context(context, inter_context)
+        && layout == PixelLayout::I420
+        && matches!(
+            node.block_size,
+            BlockSize::B4x4
+                | BlockSize::B4x8
+                | BlockSize::B8x4
+                | BlockSize::B4x16
+                | BlockSize::B16x4
+        )
+        && (visible_width, visible_height) == node.block_size.pixel_dimensions()
+        && context.frame_tools.transform_mode == 1
+        && !quantization.segment_lossless
+        && quantization.sample_depth.bits() == context.bit_depth
+        && inter_single_transform_geometry_supported(node.block_size, layout)
+}
+
 /// Exact mode-2 split geometry for the narrow 4:2:2 leaves whose luma axis is
 /// four pixels wide. The luma transform partition is decoded for both
 /// horizontal siblings; only the odd-column sibling owns the shared chroma
@@ -8214,6 +8245,19 @@ fn decode_inter_leaf(
             visible_height,
             prepared_quantization.quantization,
         );
+        // I420's five narrow single-terminal families have complete maximum
+        // transforms in mode 1, but their four-pixel axes fall below the
+        // generic high-depth color minimum. Keep the exact exception
+        // ownership-aware in the block compositor and leave mode 2 gated.
+        let tiny_high_depth_i420 = inter_high_depth_i420_narrow_single_geometry_supported(
+            context,
+            inter_context,
+            node,
+            layout,
+            visible_width,
+            visible_height,
+            prepared_quantization.quantization,
+        );
         let wide_lossy_geometry = lossy_wide_single_geometry
             || lossy_direct_chroma_grid_geometry
             || lossy_i444_rect_split_geometry
@@ -8227,6 +8271,7 @@ fn decode_inter_leaf(
         if !wide_lossy_geometry
             && !tiny_high_depth_i444
             && !tiny_high_depth_i422
+            && !tiny_high_depth_i420
             && !lossy_i422_narrow_split_geometry
             && (!(minimum..=maximum).contains(&block_width)
                 || !(minimum..=maximum).contains(&block_height))
