@@ -5079,6 +5079,13 @@ fn inter_lossy_wide_single_geometry_supported(
             // split/deep/topology plans through their positive-q gates.
             || (layout == PixelLayout::I420
                 && transform_mode == 2
+                && quantization.segment_qindex == 0)
+            // Monochrome has no shared chroma ownership, so its qindex-zero
+            // mode-2 thin-64 root uses the same existing luma-only terminal
+            // as the positive-q path. Split/deep/topology plans remain
+            // behind their independent positive-q parser gates.
+            || (layout == PixelLayout::Monochrome
+                && transform_mode == 2
                 && quantization.segment_qindex == 0))
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }

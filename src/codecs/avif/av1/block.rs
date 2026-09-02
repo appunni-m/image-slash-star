@@ -55281,6 +55281,12 @@ impl Lossy420Decoder {
                 // plans retain their independent positive-q validation.
                 || (chroma_sampling == ChromaSampling::Subsampled420
                     && tools.transform_mode == 2
+                    && quantization.segment_qindex == 0)
+                // Monochrome has no chroma ownership, so a qindex-zero
+                // mode-2 thin-64 root can use the existing luma-only single
+                // terminal. Split plans retain their positive-q validation.
+                || (chroma_sampling == ChromaSampling::Monochrome
+                    && tools.transform_mode == 2
                     && quantization.segment_qindex == 0))
             && !quantization.segment_lossless;
         if matches!(
