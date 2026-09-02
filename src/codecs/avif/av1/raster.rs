@@ -236,6 +236,36 @@ impl MonochromeFrameCanvas {
             samples: self.samples,
         })
     }
+
+    /// Run the shared luma-only CDEF kernel over an assembled monochrome
+    /// canvas. The color-shaped carriers are intentionally empty; the shared
+    /// implementation validates and filters plane zero only, so wrapping the
+    /// checked monochrome storage here avoids duplicating its direction and
+    /// strength arithmetic.
+    pub(super) fn finish_monochrome_with_cdef(
+        self,
+        frame_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        let canvas = FrameCanvas {
+            visible_width: self.width,
+            visible_height: self.height,
+            width: self.width,
+            height: self.height,
+            subsampling_x: false,
+            subsampling_y: false,
+            planes: [self.samples, Vec::new(), Vec::new()],
+            written: [self.written, Vec::new(), Vec::new()],
+        };
+        canvas.finish_monochrome_with_cdef(
+            frame_parameters,
+            cdef_indices,
+            cdef_active,
+            sample_depth,
+        )
+    }
 }
 
 /// Checked source and destination extents for one reconstructed cell.

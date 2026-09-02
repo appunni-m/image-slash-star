@@ -8414,6 +8414,39 @@ impl Lossy420Reconstruction {
         let [plane, _, _] = leaf.planes;
         Ok(plane)
     }
+
+    /// Extract an unfiltered monochrome tile plus its frame-level CDEF
+    /// metadata. Multi-tile CDEF must run only after the tile planes have been
+    /// assembled, because the filter reads reconstructed neighbors across
+    /// tile boundaries.
+    pub(super) fn into_unfiltered_monochrome_tile(
+        self,
+    ) -> Av1Result<(
+        super::block::ReconstructedPlane,
+        Option<super::cdef::FrameParameters>,
+        Vec<Option<usize>>,
+        Vec<bool>,
+    )> {
+        let Lossy420Reconstruction {
+            leaf,
+            monochrome,
+            cdef_indices,
+            cdef_active,
+            cdef_parameters,
+            restoration,
+            ..
+        } = self;
+        if !monochrome {
+            return Err(malformed(
+                "color reconstruction cannot enter the monochrome tile path",
+            ));
+        }
+        if restoration.is_some() {
+            return Err(malformed("monochrome tile carries a post-filter plan"));
+        }
+        let [plane, _, _] = leaf.planes;
+        Ok((plane, cdef_parameters, cdef_indices, cdef_active))
+    }
 }
 
 /// Reconstruct the complete entropy output for the first general 8-bit 4:2:0
@@ -8447,6 +8480,8 @@ pub(super) fn validate_complete_lossy_420_partition(
         complete_monochrome_mode2_restoration_reconstruction_context(context);
     let monochrome_matrix_restoration =
         complete_monochrome_matrix_restoration_reconstruction_context(context);
+    let monochrome_multitile_cdef =
+        complete_monochrome_multitile_cdef_reconstruction_context(context);
     let monochrome_lossy_active_restoration = if context.intra_frame {
         lossy_monochrome_intra_superres_restoration_supported(context)
     } else {
@@ -8785,6 +8820,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             || (!context.intra_frame
                 && monochrome_matrix_restoration
                 && complete_monochrome_references(context, inter_context))
+            || (!context.intra_frame
+                && monochrome_multitile_cdef
+                && complete_monochrome_references(context, inter_context))
             || bounded_inter_restoration
             || bounded_i444_restoration
             || bounded_i422_inter_restoration
@@ -8818,6 +8856,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || (context.intra_frame && monochrome_matrix_cdef)
         || (context.intra_frame && monochrome_mode2_restoration)
         || (context.intra_frame && monochrome_matrix_restoration)
+        || (context.intra_frame && monochrome_multitile_cdef)
         || bounded_intra_restoration
         || bounded_i444_intra_restoration
         || bounded_i422_intra_restoration
@@ -9705,11 +9744,15 @@ pub(super) fn validate_complete_lossy_420_partition(
     let cdef_frame_parameters = cdef_frame_parameters(context);
     let loop_parameters = loop_filter_parameters(context);
     let (planes, monochrome) = if context.monochrome {
-        let plane = if monochrome_postfilter
-            || monochrome_cdef_mode2
-            || monochrome_matrix_cdef
-            || (monochrome_mode2_restoration && context.frame_tools.cdef.is_some())
-            || (monochrome_matrix_restoration && context.frame_tools.cdef.is_some())
+        // A multi-tile monochrome CDEF tranche retains these maps for the
+        // frame compositor. Only a complete single-tile canvas may filter in
+        // this tile-local function.
+        let plane = if context.single_tile
+            && (monochrome_postfilter
+                || monochrome_cdef_mode2
+                || monochrome_matrix_cdef
+                || (monochrome_mode2_restoration && context.frame_tools.cdef.is_some())
+                || (monochrome_matrix_restoration && context.frame_tools.cdef.is_some()))
         {
             let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
                 .ok_or_else(|| malformed("monochrome CDEF sample depth is unsupported"))?;
@@ -14826,6 +14869,27 @@ fn complete_monochrome_matrix_restoration_reconstruction_context(
         && context.restoration_types[1].is_none()
         && context.restoration_types[2].is_none()
         && complete_monochrome_restoration_supported(context)
+}
+
+/// Admit luma-only CDEF for independently decoded tiles. Each tile keeps its
+/// reconstructed plane and local CDEF maps until `frame.rs` has assembled the
+/// full frame; applying CDEF here would make samples at a tile boundary depend
+/// on the tile partition rather than on the normative frame-wide source.
+/// Active restoration, film grain, and partial visible 8x8 blocks stay outside
+/// this tranche so the existing single-tile post-filter ordering remains
+/// unchanged.
+fn complete_monochrome_multitile_cdef_reconstruction_context(context: &FirstBlockContext) -> bool {
+    complete_monochrome_lossy_base(context)
+        && !context.single_tile
+        && context.frame_width >= 8
+        && context.frame_height >= 8
+        && context.frame_width.is_multiple_of(8)
+        && context.frame_height.is_multiple_of(8)
+        && context.frame_tools.cdef.is_some()
+        && complete_monochrome_cdef_supported(context)
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
 }
 
 fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockContext) -> bool {

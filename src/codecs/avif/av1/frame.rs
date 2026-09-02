@@ -1838,6 +1838,9 @@ struct ReconstructedMonochromeTile {
     width: u32,
     height: u32,
     plane: super::block::ReconstructedPlane,
+    cdef_parameters: Option<super::cdef::FrameParameters>,
+    cdef_indices: Vec<Option<usize>>,
+    cdef_active: Vec<bool>,
 }
 
 fn assemble_color_tiles(
@@ -2114,9 +2117,75 @@ fn assemble_monochrome_tiles(
     }
     let depth = SampleDepth::new(sequence.bit_depth)
         .ok_or_else(|| malformed("monochrome tile sample depth is unsupported"))?;
+    let frame_width = usize::try_from(header.frame_width)
+        .map_err(|_| malformed("assembled monochrome frame width exceeds usize"))?;
+    let frame_height = usize::try_from(header.frame_height)
+        .map_err(|_| malformed("assembled monochrome frame height exceeds usize"))?;
+    let cdef_enabled = tiles
+        .iter()
+        .chain(trailing_tiles)
+        .any(|tile| tile.cdef_parameters.is_some());
+    if cdef_enabled
+        && (frame_width < 8
+            || frame_height < 8
+            || !frame_width.is_multiple_of(8)
+            || !frame_height.is_multiple_of(8))
+    {
+        return Err(malformed(
+            "multi-tile monochrome CDEF requires an 8-pixel-aligned frame",
+        ));
+    }
+    let active_width = frame_width.div_ceil(8);
+    let active_height = frame_height.div_ceil(8);
+    let region_width = frame_width.div_ceil(64);
+    let region_height = frame_height.div_ceil(64);
+    let mut cdef_indices = Vec::new();
+    let mut cdef_active = Vec::new();
+    if cdef_enabled {
+        let region_count = region_width
+            .checked_mul(region_height)
+            .ok_or_else(|| malformed("assembled monochrome CDEF region map overflows"))?;
+        cdef_indices.try_reserve_exact(region_count).map_err(|_| {
+            CodecError::Dimensions("unable to allocate assembled monochrome CDEF map".to_owned())
+        })?;
+        cdef_indices.resize(region_count, None);
+        let active_count = active_width
+            .checked_mul(active_height)
+            .ok_or_else(|| malformed("assembled monochrome CDEF active map overflows"))?;
+        cdef_active.try_reserve_exact(active_count).map_err(|_| {
+            CodecError::Dimensions(
+                "unable to allocate assembled monochrome CDEF active map".to_owned(),
+            )
+        })?;
+        cdef_active.resize(active_count, false);
+    }
+    let mut cdef_parameters = None;
     let mut canvas =
         super::raster::MonochromeFrameCanvas::new(header.frame_width, header.frame_height)?;
     for tile in tiles.iter().chain(trailing_tiles) {
+        if cdef_enabled {
+            let Some(tile_parameters) = tile.cdef_parameters else {
+                return Err(malformed(
+                    "assembled monochrome CDEF tile omits frame parameters",
+                ));
+            };
+            if let Some(existing) = cdef_parameters {
+                if existing != tile_parameters {
+                    return Err(malformed(
+                        "assembled monochrome tiles disagree on CDEF parameters",
+                    ));
+                }
+            } else {
+                cdef_parameters = Some(tile_parameters);
+            }
+        } else if tile.cdef_parameters.is_some()
+            || !tile.cdef_indices.is_empty()
+            || !tile.cdef_active.is_empty()
+        {
+            return Err(malformed(
+                "CDEF-disabled monochrome tile carries CDEF metadata",
+            ));
+        }
         canvas.place_cropped_plane(
             tile.width,
             tile.height,
@@ -2126,8 +2195,140 @@ fn assemble_monochrome_tiles(
             tile.y,
             &tile.plane,
         )?;
+
+        if !cdef_enabled {
+            continue;
+        }
+        let tile_x = usize::try_from(tile.x)
+            .map_err(|_| malformed("monochrome CDEF tile x origin exceeds usize"))?;
+        let tile_y = usize::try_from(tile.y)
+            .map_err(|_| malformed("monochrome CDEF tile y origin exceeds usize"))?;
+        let tile_width = usize::try_from(tile.width)
+            .map_err(|_| malformed("monochrome CDEF tile width exceeds usize"))?;
+        let tile_height = usize::try_from(tile.height)
+            .map_err(|_| malformed("monochrome CDEF tile height exceeds usize"))?;
+        if tile_x % 64 != 0 || tile_y % 64 != 0 {
+            return Err(malformed(
+                "monochrome CDEF tile origin is not 64-pixel aligned",
+            ));
+        }
+        if tile_width < 8
+            || tile_height < 8
+            || !tile_width.is_multiple_of(8)
+            || !tile_height.is_multiple_of(8)
+        {
+            return Err(malformed(
+                "monochrome CDEF tile extent is not 8-pixel aligned",
+            ));
+        }
+        let local_active_width = tile_width.div_ceil(8);
+        let local_active_height = tile_height.div_ceil(8);
+        let local_active_length = local_active_width
+            .checked_mul(local_active_height)
+            .ok_or_else(|| malformed("monochrome tile CDEF active map overflows"))?;
+        if tile.cdef_active.len() != local_active_length {
+            return Err(malformed(
+                "monochrome tile CDEF active map has an invalid extent",
+            ));
+        }
+        for local_y in 0..local_active_height {
+            for local_x in 0..local_active_width {
+                let local_index = local_y
+                    .checked_mul(local_active_width)
+                    .and_then(|row| row.checked_add(local_x))
+                    .ok_or_else(|| malformed("monochrome tile CDEF active index overflows"))?;
+                if !tile.cdef_active[local_index] {
+                    continue;
+                }
+                let x = tile_x
+                    .checked_add(
+                        local_x
+                            .checked_mul(8)
+                            .ok_or_else(|| malformed("monochrome CDEF x overflows"))?,
+                    )
+                    .ok_or_else(|| malformed("monochrome CDEF x overflows"))?;
+                let y = tile_y
+                    .checked_add(
+                        local_y
+                            .checked_mul(8)
+                            .ok_or_else(|| malformed("monochrome CDEF y overflows"))?,
+                    )
+                    .ok_or_else(|| malformed("monochrome CDEF y overflows"))?;
+                if x >= frame_width || y >= frame_height {
+                    return Err(malformed("monochrome CDEF active block exceeds frame"));
+                }
+                let global_index = (y / 8)
+                    .checked_mul(active_width)
+                    .and_then(|row| row.checked_add(x / 8))
+                    .ok_or_else(|| malformed("assembled monochrome CDEF active index overflows"))?;
+                let Some(slot) = cdef_active.get_mut(global_index) else {
+                    return Err(malformed(
+                        "assembled monochrome CDEF active index exceeds frame",
+                    ));
+                };
+                *slot = true;
+            }
+        }
+
+        let local_region_width = tile_width.div_ceil(64);
+        let local_region_height = tile_height.div_ceil(64);
+        let local_region_length = local_region_width
+            .checked_mul(local_region_height)
+            .ok_or_else(|| malformed("monochrome tile CDEF index map overflows"))?;
+        if tile.cdef_indices.len() != local_region_length {
+            return Err(malformed(
+                "monochrome tile CDEF index map has an invalid extent",
+            ));
+        }
+        for local_y in 0..local_region_height {
+            for local_x in 0..local_region_width {
+                let local_index = local_y
+                    .checked_mul(local_region_width)
+                    .and_then(|row| row.checked_add(local_x))
+                    .ok_or_else(|| malformed("monochrome tile CDEF index overflows"))?;
+                let Some(cdef_index) = tile.cdef_indices[local_index] else {
+                    continue;
+                };
+                let x = tile_x
+                    .checked_add(
+                        local_x
+                            .checked_mul(64)
+                            .ok_or_else(|| malformed("monochrome CDEF region x overflows"))?,
+                    )
+                    .ok_or_else(|| malformed("monochrome CDEF region x overflows"))?;
+                let y = tile_y
+                    .checked_add(
+                        local_y
+                            .checked_mul(64)
+                            .ok_or_else(|| malformed("monochrome CDEF region y overflows"))?,
+                    )
+                    .ok_or_else(|| malformed("monochrome CDEF region y overflows"))?;
+                if x >= frame_width || y >= frame_height {
+                    return Err(malformed("monochrome CDEF region exceeds frame"));
+                }
+                let global_index = (y / 64)
+                    .checked_mul(region_width)
+                    .and_then(|row| row.checked_add(x / 64))
+                    .ok_or_else(|| malformed("assembled monochrome CDEF region overflows"))?;
+                let Some(slot) = cdef_indices.get_mut(global_index) else {
+                    return Err(malformed("assembled monochrome CDEF region exceeds frame"));
+                };
+                if let Some(existing) = *slot {
+                    if existing != cdef_index {
+                        return Err(malformed("assembled monochrome CDEF regions disagree"));
+                    }
+                } else {
+                    *slot = Some(cdef_index);
+                }
+            }
+        }
     }
-    canvas.finish(depth).map(Some)
+    let plane = if cdef_enabled {
+        canvas.finish_monochrome_with_cdef(cdef_parameters, &cdef_indices, &cdef_active, depth)?
+    } else {
+        canvas.finish(depth)?
+    };
+    Ok(Some(plane))
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:3149-3181 and libaom 3.13.2
@@ -2528,7 +2729,8 @@ fn validate_tile_entropy_prefixes(
                         "multi-tile monochrome reconstruction carries a post-filter",
                     ));
                 }
-                let plane = reconstruction.into_monochrome_plane()?;
+                let (plane, cdef_parameters, cdef_indices, cdef_active) =
+                    reconstruction.into_unfiltered_monochrome_tile()?;
                 complete_monochrome_tiles.try_reserve(1).map_err(|_| {
                     CodecError::Dimensions(
                         "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
@@ -2540,6 +2742,9 @@ fn validate_tile_entropy_prefixes(
                     width: tile_width,
                     height: tile_height,
                     plane,
+                    cdef_parameters,
+                    cdef_indices,
+                    cdef_active,
                 });
             } else {
                 complete_color_tiles.push(ReconstructedColorTile {
@@ -2601,6 +2806,9 @@ fn validate_tile_entropy_prefixes(
                             width: tile_width,
                             height: tile_height,
                             plane,
+                            cdef_parameters: None,
+                            cdef_indices: Vec::new(),
+                            cdef_active: Vec::new(),
                         });
                     }
                 }
