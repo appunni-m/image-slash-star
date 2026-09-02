@@ -4987,6 +4987,37 @@ fn inter_lossy_direct_chroma_grid_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact high-depth mode-1 4:2:2 narrow leaves.  A four-pixel-wide leaf has
+/// one luma transform covering the complete coded extent, while each chroma
+/// plane is traversed as a causal TX4x4 grid.  Keep this exception separate
+/// from the broader direct-grid tranche so 8-bit, mode-2, and unrelated
+/// subsampling profiles cannot inherit the high-depth minimum-axis bypass.
+fn inter_high_depth_i422_narrow_chroma_grid_geometry_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+    node: PartitionNode,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    quantization: super::block::LossyQuantization,
+) -> bool {
+    complete_high_depth_inter_reconstruction_context(context, inter_context)
+        && layout == PixelLayout::I422
+        && matches!(node.block_size, BlockSize::B4x8 | BlockSize::B4x16)
+        && (visible_width, visible_height) == node.block_size.pixel_dimensions()
+        && context.frame_tools.transform_mode == 1
+        && matches!(context.bit_depth, 10 | 12)
+        && quantization.sample_depth.bits() == context.bit_depth
+        && quantization.segment_qindex > 0
+        && !quantization.segment_lossless
+        // `partition_node_has_chroma` is indexed in tile-local MI units,
+        // while block reconstruction receives the absolute tile origin.
+        // AV1 tile origins are required to be even for subsampled chroma, so
+        // retain the proof here instead of allowing the two ownership paths
+        // to disagree on an odd-origin tile.
+        && context.tile_origin_b4_x & 1 == 0
+}
+
 /// Exact mode-2 I444 rectangular-root split geometry.  The root owns two
 /// TX32x32 luma children and the same two-cell TX32 chroma grid; keep this
 /// exemption separate from the direct unsplit terminal above.
@@ -8043,7 +8074,16 @@ fn decode_inter_leaf(
         context.bit_depth,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
-    );
+    )
+        || inter_high_depth_i422_narrow_chroma_grid_geometry_supported(
+            context,
+            inter_context,
+            node,
+            layout,
+            visible_width,
+            visible_height,
+            prepared_quantization.quantization,
+        );
     let lossy_i422_narrow_split_geometry = inter_lossy_i422_narrow_split_geometry_supported(
         context,
         inter_context,

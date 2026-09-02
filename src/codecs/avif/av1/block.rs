@@ -55459,6 +55459,8 @@ impl Lossy420Decoder {
                     | (ChromaSampling::Full, BlockSize::B32x64)
                     | (ChromaSampling::Full, BlockSize::B64x32)
                     | (ChromaSampling::Full, BlockSize::B64x64)
+                    | (ChromaSampling::Subsampled422, BlockSize::B4x8)
+                    | (ChromaSampling::Subsampled422, BlockSize::B4x16)
                     | (ChromaSampling::Subsampled422, BlockSize::B8x16)
                     | (ChromaSampling::Subsampled422, BlockSize::B8x32)
                     | (ChromaSampling::Subsampled422, BlockSize::B16x32)
@@ -55473,9 +55475,21 @@ impl Lossy420Decoder {
                 && matches!(tools.transform_mode, 1 | 2)
                 && (tools.transform_mode != 2 || quantization.segment_qindex > 0)
                 && !quantization.segment_lossless
+                && (!matches!(
+                    (sampling, block_size),
+                    (ChromaSampling::Subsampled422, BlockSize::B4x8)
+                        | (ChromaSampling::Subsampled422, BlockSize::B4x16)
+                ) || (matches!(tools.sample_depth.bits(), 10 | 12)
+                    && tools.transform_mode == 1
+                    && quantization.segment_qindex > 0))
                 && matches!(
                     block_size,
-                    BlockSize::B16x64
+                    BlockSize::B4x8
+                        | BlockSize::B4x16
+                        | BlockSize::B8x16
+                        | BlockSize::B8x32
+                        | BlockSize::B16x32
+                        | BlockSize::B16x64
                         | BlockSize::B64x16
                         | BlockSize::B32x64
                         | BlockSize::B64x32
@@ -55484,6 +55498,12 @@ impl Lossy420Decoder {
                 && (luma_width, luma_height) == block_size.pixel_dimensions()
                 && luma_tx == block_size.maximum_luma_tx()
                 && match (chroma_sampling, block_size) {
+                    // TX4x8/TX4x16 luma transforms inherit into the
+                    // TX4x4 chroma grid without a transform-type symbol;
+                    // the small inter transform set is already checked by
+                    // the entropy decoder.
+                    (ChromaSampling::Subsampled422, BlockSize::B4x8)
+                    | (ChromaSampling::Subsampled422, BlockSize::B4x16) => true,
                     (ChromaSampling::Subsampled422, BlockSize::B8x16) => true,
                     (ChromaSampling::Subsampled422, BlockSize::B8x32)
                     | (ChromaSampling::Subsampled422, BlockSize::B16x32) => matches!(
