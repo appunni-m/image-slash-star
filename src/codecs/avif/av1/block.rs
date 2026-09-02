@@ -42065,7 +42065,14 @@ fn reconstruct_lossy_full_4x8_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::Smooth
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
+        ChromaPredictor::Paeth
+        | ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
@@ -42073,9 +42080,13 @@ fn reconstruct_lossy_full_4x8_chroma_normalized_target(
 
     let mut left_edge = [0_u16; 12];
     left_edge[..8].copy_from_slice(&left);
-    let have_below_left = if let Some(extension) = bottom_left {
-        left_edge[8..].copy_from_slice(&extension);
-        true
+    let have_below_left = if matches!(predictor, ChromaPredictor::Diagonal203) {
+        if let Some(extension) = bottom_left {
+            left_edge[8..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -43744,7 +43755,14 @@ fn reconstruct_lossy_full_8x4_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::Smooth
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
+        ChromaPredictor::Paeth
+        | ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
@@ -43752,9 +43770,13 @@ fn reconstruct_lossy_full_8x4_chroma_normalized_target(
 
     let mut left_edge = [0_u16; 8];
     left_edge[..4].copy_from_slice(&left);
-    let have_below_left = if let Some(extension) = bottom_left {
-        left_edge[4..].copy_from_slice(&extension);
-        true
+    let have_below_left = if matches!(predictor, ChromaPredictor::Diagonal203) {
+        if let Some(extension) = bottom_left {
+            left_edge[4..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -60274,6 +60296,10 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
                     | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
@@ -60312,7 +60338,15 @@ impl Lossy420Decoder {
             } else {
                 None
             };
-            let mut leaf = reconstruct_following_lossy_full_8x4_leaf(syntax, &neighbor)?;
+            let base_syntax = if target {
+                BlockSyntax {
+                    chroma_predictor: ChromaPredictor::Dc,
+                    ..syntax
+                }
+            } else {
+                syntax
+            };
+            let mut leaf = reconstruct_following_lossy_full_8x4_leaf(base_syntax, &neighbor)?;
             if let Some(edges) = target_edges {
                 for plane in 1..=2 {
                     leaf.planes[plane] = reconstruct_lossy_full_8x4_chroma_normalized_target(
@@ -61018,8 +61052,29 @@ impl Lossy420Decoder {
         if matches!(self.chroma_sampling, ChromaSampling::Full)
             && matches!(transform_grid, TransformGrid::Vertical4x8)
         {
+            let target = matches!(
+                syntax.chroma_predictor,
+                ChromaPredictor::Diagonal45
+                    | ChromaPredictor::Diagonal67
+                    | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
+                    | ChromaPredictor::Smooth
+                    | ChromaPredictor::SmoothVertical
+                    | ChromaPredictor::SmoothHorizontal
+            );
+            let base_syntax = if target {
+                BlockSyntax {
+                    chroma_predictor: ChromaPredictor::Dc,
+                    ..syntax
+                }
+            } else {
+                syntax
+            };
             let mut leaf = reconstruct_following_lossy_420_vertical_4x8_leaf(
-                syntax,
+                base_syntax,
                 &above_left,
                 left_top_neighbor.as_ref(),
                 left_neighbor.as_ref(),
@@ -61044,6 +61099,10 @@ impl Lossy420Decoder {
                     ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
                     | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal => {
