@@ -4684,12 +4684,12 @@ fn inter_lossy_i422_narrow_split_geometry_supported(
         && quantization.sample_depth.bits() == context.bit_depth
 }
 
-/// Exact mode-2 split geometry for the narrow 4:2:0 leaves whose luma axis
-/// is four pixels wide or high. The luma transform partition is decoded for
-/// both siblings; only the subsampled-axis owner emits the shared TX4x4 U/V
-/// terminals in the block compositor. Keep the depth-specific frame proof
-/// here so the generic high-depth color minimum is not lowered for unrelated
-/// I420 leaves.
+/// Exact mode-2 split geometry for the narrow 4:2:0 leaves whose subsampled
+/// axis is four pixels wide or high. The luma transform partition is decoded
+/// for both siblings; only the subsampled-axis owner emits the shared maximum
+/// chroma terminals in the block compositor. Keep the depth-specific frame
+/// proof here so the generic high-depth color minimum is not lowered for
+/// unrelated I420 leaves.
 fn inter_lossy_i420_narrow_split_geometry_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -4709,7 +4709,10 @@ fn inter_lossy_i420_narrow_split_geometry_supported(
     };
     complete
         && layout == PixelLayout::I420
-        && matches!(node.block_size, BlockSize::B4x8 | BlockSize::B8x4)
+        && matches!(
+            node.block_size,
+            BlockSize::B4x8 | BlockSize::B8x4 | BlockSize::B4x16 | BlockSize::B16x4
+        )
         && (visible_width, visible_height) == node.block_size.pixel_dimensions()
         && context.frame_tools.transform_mode == 2
         && !block_skipped
@@ -6951,7 +6954,7 @@ fn decode_inter_transform_size(
         }
         if matches!(
             layout,
-            PixelLayout::Monochrome | PixelLayout::I422 | PixelLayout::I444
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         ) && split_b8_rect_supported
             && visible_width == 4
             && visible_height == 16
@@ -6988,7 +6991,7 @@ fn decode_inter_transform_size(
         }
         if matches!(
             layout,
-            PixelLayout::Monochrome | PixelLayout::I422 | PixelLayout::I444
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         ) && split_b8_rect_supported
             && visible_width == 16
             && visible_height == 4

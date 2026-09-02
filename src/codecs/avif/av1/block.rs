@@ -56583,7 +56583,9 @@ impl Lossy420Decoder {
                     ChromaSampling::Monochrome | ChromaSampling::Full
                 ) || (split_b4x16
                     && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b16x4 && chroma_sampling == ChromaSampling::Subsampled422);
+                    || (split_b16x4 && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x16 || split_b16x4)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
                 (layout_supported
                     && ((split_b4x16 && exact_b4x16) || (split_b16x4 && exact_b16x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -56629,7 +56631,9 @@ impl Lossy420Decoder {
                     ChromaSampling::Monochrome | ChromaSampling::Full
                 ) || (split_b4x16_deep
                     && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b16x4_deep && chroma_sampling == ChromaSampling::Subsampled422);
+                    || (split_b16x4_deep && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x16_deep || split_b16x4_deep)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
                 (layout_supported
                     && ((split_b4x16_deep && exact_b4x16) || (split_b16x4_deep && exact_b16x4))
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
@@ -56655,7 +56659,9 @@ impl Lossy420Decoder {
                     ChromaSampling::Monochrome | ChromaSampling::Full
                 ) || (split_b4x16_topology
                     && chroma_sampling == ChromaSampling::Subsampled422)
-                    || (split_b16x4_topology && chroma_sampling == ChromaSampling::Subsampled422);
+                    || (split_b16x4_topology && chroma_sampling == ChromaSampling::Subsampled422)
+                    || ((split_b4x16_topology || split_b16x4_topology)
+                        && chroma_sampling == ChromaSampling::Subsampled420);
                 (layout_supported
                     && ((split_b4x16_topology && exact_b4x16)
                         || (split_b16x4_topology && exact_b16x4))
