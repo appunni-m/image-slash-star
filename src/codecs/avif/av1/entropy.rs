@@ -7054,8 +7054,15 @@ fn decode_inter_leaf(
         }),
         None => None,
     };
-    let local_warp_profile = context.monochrome
-        && context.bit_depth == 8
+    // The local affine model is derived once in luma coordinates and the
+    // common warp kernel applies the same checked payload to every validated
+    // plane. Subsampled planes below 8x8 intentionally fall back to ordinary
+    // center-MV prediction inside `mc`; the block-level LOCALWARP metadata and
+    // interpolation-filter suppression remain unchanged.
+    let local_warp_profile = matches!(
+        layout,
+        PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+    ) && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
         && (visible_width, visible_height) == node.block_size.pixel_dimensions()
         && matches!(
@@ -9950,10 +9957,10 @@ fn complete_bounded_restoration_inter_420_reconstruction_context(
 /// loop filtering and the bounded CDEF profile enabled. Single-reference and
 /// average/distance compound prediction share the checked MC boundary;
 /// difference-weighted, wedge, and inter-intra predictions are materialized
-/// from checked masks. OBMC/LOCALWARP selections and transform-partition
-/// splits are still rejected before a block publishes neighbor metadata;
-/// TX_MODE_SELECT blocks whose root remains unsplit share the fixed-transform
-/// terminal below.
+/// from checked masks. OBMC and the bounded exact-visible LOCALWARP profile
+/// share the checked prediction boundary; transform-partition splits are still
+/// rejected before a block publishes neighbor metadata. TX_MODE_SELECT blocks
+/// whose root remains unsplit share the fixed-transform terminal below.
 fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
     let Some(cdef) = context.frame_tools.cdef else {
         return true;
@@ -10848,9 +10855,11 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// factors and layout-specific MC kernels operate before the current frame is
 /// published. Frame-global ROTZOOM/AFFINE references use the checked 8x8 warp
 /// predictor when eligible and fall back to the center-MV path for scaled,
-/// integer-forced, small-plane, or invalid-shear cases; LOCALWARP remains
-/// transactional. Every retained reference is validated up front so a later
-/// reference choice cannot narrow the path back to eight-bit geometry. An
+/// integer-forced, small-plane, or invalid-shear cases; the bounded
+/// exact-visible LOCALWARP profile uses the same per-plane kernel and falls
+/// back to center-MV prediction when affine preparation is unavailable. Every
+/// retained reference is validated up front so a later reference choice cannot
+/// narrow the path back to eight-bit geometry. An
 /// all-NONE restoration header is a semantic no-op:
 /// it carries no tile restoration units or postfilter plan, while active
 /// restoration types remain outside this generic class. I444 film grain is
@@ -14687,8 +14696,9 @@ fn complete_monochrome_lossy_intra_reconstruction_context(context: &FirstBlockCo
 /// Average/Distance/Difference/Wedge and OBMC on plane zero. Inter-intra is
 /// handled by the shared one-plane compositor for its AV1 size-eligible
 /// single-transform blocks; frame-global ROTZOOM/AFFINE uses the checked
-/// per-plane warp predictor with ordinary-MC fallback, while LOCALWARP and
-/// unsupported transform branches remain transactional at the leaf boundary.
+/// per-plane warp predictor with ordinary-MC fallback, while bounded
+/// exact-visible LOCALWARP uses the same per-plane payload and unsupported
+/// transform branches remain transactional at the leaf boundary.
 fn complete_monochrome_lossy_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
