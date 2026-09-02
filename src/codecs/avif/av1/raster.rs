@@ -288,6 +288,36 @@ impl MonochromeFrameCanvas {
         }
         self.finish(sample_depth)
     }
+
+    /// Apply the normative monochrome post-filter order for an assembled
+    /// multi-tile frame: luma deblocking first, then frame-wide CDEF. The
+    /// complete coded canvas is validated before either pass so no filter can
+    /// observe unwritten tile storage.
+    pub(super) fn finish_monochrome_with_loop_filter_and_cdef(
+        mut self,
+        loop_parameters: Option<filter::Parameters>,
+        blocks: &[filter::Block],
+        cdef_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        if self.written.iter().any(|written| !written) {
+            return Err(malformed(
+                "monochrome canvas is missing reconstructed samples",
+            ));
+        }
+        if let Some(parameters) = loop_parameters {
+            filter::apply_luma(
+                &mut self.samples,
+                (self.width, self.height),
+                blocks,
+                parameters,
+            )
+            .ok_or_else(|| malformed("monochrome loop-filter geometry is invalid"))?;
+        }
+        self.finish_monochrome_with_cdef(cdef_parameters, cdef_indices, cdef_active, sample_depth)
+    }
 }
 
 /// Checked source and destination extents for one reconstructed cell.

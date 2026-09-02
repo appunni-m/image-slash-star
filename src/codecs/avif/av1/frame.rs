@@ -2131,11 +2131,6 @@ fn assemble_monochrome_tiles(
         .iter()
         .chain(trailing_tiles)
         .any(|tile| tile.loop_parameters.is_some());
-    if cdef_enabled && loop_filter_enabled {
-        return Err(malformed(
-            "combined monochrome tile filters are not admitted",
-        ));
-    }
     if cdef_enabled
         && (frame_width < 8
             || frame_height < 8
@@ -2375,6 +2370,11 @@ fn assemble_monochrome_tiles(
         }
         if loop_filter_enabled {
             for block in &tile.filter_blocks {
+                if block.has_chroma || block.levels[2] != 0 || block.levels[3] != 0 {
+                    return Err(malformed(
+                        "monochrome loop-filter block carries chroma metadata",
+                    ));
+                }
                 let local_end_x = block
                     .x
                     .checked_add(block.width)
@@ -2415,7 +2415,16 @@ fn assemble_monochrome_tiles(
             }
         }
     }
-    let plane = if cdef_enabled {
+    let plane = if cdef_enabled && loop_filter_enabled {
+        canvas.finish_monochrome_with_loop_filter_and_cdef(
+            loop_parameters,
+            &filter_blocks,
+            cdef_parameters,
+            &cdef_indices,
+            &cdef_active,
+            depth,
+        )?
+    } else if cdef_enabled {
         canvas.finish_monochrome_with_cdef(cdef_parameters, &cdef_indices, &cdef_active, depth)?
     } else if loop_filter_enabled {
         canvas.finish_monochrome_with_loop_filter(loop_parameters, &filter_blocks, depth)?
