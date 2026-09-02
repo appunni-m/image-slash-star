@@ -3443,9 +3443,8 @@ fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockCo
 /// Admit the bounded mixed-segment profile for monochrome inter frames. The
 /// luma-only path already has a depth-parametric `LosslessGrid` compositor, so
 /// this predicate only opens its residual grammar while keeping the ordinary
-/// monochrome filter and multi-tile profiles closed. Frame-level filters are
-/// intentionally neutral in this first tranche; a later profile can compose
-/// them once mixed segment metadata has independent parity evidence.
+/// monochrome and multi-tile profiles closed. Filter selection is kept out of
+/// this common proof so each finish profile can validate its own metadata.
 fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
     let segmentation = context.frame_tools.segmentation;
     if context.intra_frame
@@ -3472,10 +3471,6 @@ fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext)
         || context.frame_tools.restoration_present
         || context.restoration_types != [None; 3]
         || context.frame_tools.film_grain_present
-        || context.frame_tools.loop_filter.level_y != [0; 2]
-        || context.frame_tools.loop_filter.level_u != 0
-        || context.frame_tools.loop_filter.level_v != 0
-        || context.frame_tools.cdef.is_some()
         || context.frame_tools.delta_q_present
         || context.frame_tools.delta_lf_present
         || !matches!(context.frame_tools.transform_mode, 1 | 2)
@@ -3534,6 +3529,58 @@ fn mixed_monochrome_lossless_segmentation_supported(context: &FirstBlockContext)
         }
     }
     has_lossless && has_lossy
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MixedMonochromePostfilter {
+    Loop,
+    Cdef,
+    LoopAndCdef,
+}
+
+fn mixed_monochrome_neutral_filters(context: &FirstBlockContext) -> bool {
+    context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && context.frame_tools.cdef.is_none()
+}
+
+/// Select the bounded mixed monochrome finish profile. The shared mixed
+/// segmentation proof covers residual and frame geometry; this layer admits
+/// only luma deblocking/CDEF combinations whose existing raster compositor can
+/// apply the normative order for a complete 8-pixel grid.
+fn mixed_monochrome_postfilter_profile(
+    context: &FirstBlockContext,
+) -> Option<MixedMonochromePostfilter> {
+    if !mixed_monochrome_lossless_segmentation_supported(context)
+        || context.frame_width < 8
+        || context.frame_height < 8
+        || !context.frame_width.is_multiple_of(8)
+        || !context.frame_height.is_multiple_of(8)
+    {
+        return None;
+    }
+    let loop_filter = context.frame_tools.loop_filter;
+    if loop_filter.sharpness > 7
+        || loop_filter.level_y.iter().any(|&level| level > 63)
+        || loop_filter.level_u != 0
+        || loop_filter.level_v != 0
+    {
+        return None;
+    }
+    let has_loop = loop_filter.level_y != [0; 2];
+    let has_cdef = context
+        .frame_tools
+        .cdef
+        .is_some_and(|_| complete_monochrome_cdef_supported(context));
+    match (has_loop, has_cdef) {
+        (true, true) => Some(MixedMonochromePostfilter::LoopAndCdef),
+        (true, false) if context.frame_tools.cdef.is_none() => {
+            Some(MixedMonochromePostfilter::Loop)
+        }
+        (false, true) => Some(MixedMonochromePostfilter::Cdef),
+        _ => None,
+    }
 }
 
 fn interintra_allowed(block_size: BlockSize) -> bool {
@@ -8995,6 +9042,9 @@ pub(super) fn validate_complete_lossy_420_partition(
             lossy_monochrome_inter_superres_restoration_supported(context, inter_context)
         })
     };
+    let monochrome_mixed_lossless_postfilter = inter_context.and_then(|inter_context| {
+        complete_monochrome_mixed_lossless_inter_postfilter(context, inter_context)
+    });
     let monochrome_mixed_lossless_inter = inter_context.is_some_and(|inter_context| {
         complete_monochrome_mixed_lossless_inter_reconstruction_context(context, inter_context)
     });
@@ -9324,6 +9374,7 @@ pub(super) fn validate_complete_lossy_420_partition(
             || generic_i444_inter
             || generic_high_depth_inter
             || generic_high_depth_lossless_inter
+            || monochrome_mixed_lossless_postfilter.is_some()
             || monochrome_mixed_lossless_inter
             || bounded_i444_inter
             || complete_monochrome_lossy_inter_reconstruction_context(context, inter_context)
@@ -10296,7 +10347,37 @@ pub(super) fn validate_complete_lossy_420_partition(
         // A multi-tile monochrome CDEF tranche retains these maps for the
         // frame compositor. Only a complete single-tile canvas may filter in
         // this tile-local function.
-        let plane = if context.single_tile && monochrome_single_tile_loop_cdef {
+        let plane = if context.single_tile
+            && monochrome_mixed_lossless_postfilter == Some(MixedMonochromePostfilter::LoopAndCdef)
+        {
+            let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("monochrome loop-filter sample depth is unsupported"))?;
+            canvas.finish_monochrome_with_loop_filter_and_cdef(
+                loop_parameters,
+                &filter_blocks,
+                cdef_frame_parameters,
+                &cdef_indices,
+                &cdef_active,
+                depth,
+            )?
+        } else if context.single_tile
+            && monochrome_mixed_lossless_postfilter == Some(MixedMonochromePostfilter::Cdef)
+        {
+            let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("monochrome CDEF sample depth is unsupported"))?;
+            canvas.finish_monochrome_with_cdef(
+                cdef_frame_parameters,
+                &cdef_indices,
+                &cdef_active,
+                depth,
+            )?
+        } else if context.single_tile
+            && monochrome_mixed_lossless_postfilter == Some(MixedMonochromePostfilter::Loop)
+        {
+            let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("monochrome loop-filter sample depth is unsupported"))?;
+            canvas.finish_monochrome_with_loop_filter(loop_parameters, &filter_blocks, depth)?
+        } else if context.single_tile && monochrome_single_tile_loop_cdef {
             let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
                 .ok_or_else(|| malformed("monochrome loop-filter sample depth is unsupported"))?;
             canvas.finish_monochrome_with_loop_filter_and_cdef(
@@ -15754,15 +15835,27 @@ fn complete_monochrome_lossy_inter_reconstruction_context(
 }
 
 /// Complete monochrome inter admission for the bounded mixed-segment
-/// lossless profile. The segment predicate owns frame-level geometry and
-/// neutral-filter checks; references retain the ordinary monochrome
+/// lossless profile with neutral frame filters. The shared segment predicate
+/// owns residual and frame geometry; references retain the ordinary monochrome
 /// layout/depth validator used by the lossy path.
 fn complete_monochrome_mixed_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
     mixed_monochrome_lossless_segmentation_supported(context)
+        && mixed_monochrome_neutral_filters(context)
         && complete_monochrome_references(context, inter_context)
+}
+
+/// Complete monochrome inter admission for a mixed-segment lossless frame
+/// whose luma deblocking/CDEF metadata can be composed by the existing raster
+/// finish paths.
+fn complete_monochrome_mixed_lossless_inter_postfilter(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> Option<MixedMonochromePostfilter> {
+    mixed_monochrome_postfilter_profile(context)
+        .filter(|_| complete_monochrome_references(context, inter_context))
 }
 
 /// Common frame-level proof for the lossy monochrome super-resolution
