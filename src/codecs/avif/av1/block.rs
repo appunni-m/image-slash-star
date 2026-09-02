@@ -41265,6 +41265,70 @@ fn reconstruct_lossy_full_16x32_chroma(
     Ok(reconstruct_lossy_predicted_plane(&prediction, &residual))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the exact R16x32 Zone-1 path carries positioned edges, availability, and filter policy"
+)]
+fn reconstruct_lossy_full_16x32_chroma_zone1(
+    predictor: ChromaPredictor,
+    angle: Option<i32>,
+    top: [u16; 16],
+    top_extension: Option<[u16; 16]>,
+    left: [u16; 32],
+    top_left: Option<u16>,
+    has_left: bool,
+    coefficients: Option<Lossy16x32TransformCoefficients>,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
+) -> PortableResult<ReconstructedPlane> {
+    matches!(
+        predictor,
+        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
+    )
+    .then_some(())
+    .portable()?;
+    let mut top_edge = [0_u16; 32];
+    top_edge[..16].copy_from_slice(&top);
+    let have_above_right = if let Some(extension) = top_extension {
+        top_edge[16..].copy_from_slice(&extension);
+        true
+    } else {
+        false
+    };
+    let top_edge = if have_above_right {
+        &top_edge[..]
+    } else {
+        &top_edge[..16]
+    };
+    let edges = FullIntraPlaneEdges::prepare(
+        16,
+        32,
+        SampleDepth::EIGHT,
+        top_edge,
+        &left,
+        top_left,
+        true,
+        has_left,
+        have_above_right,
+        false,
+        smooth_edges,
+    )?;
+    let mut prediction = [0_u16; 512];
+    full_intra_prediction_into(
+        &mut prediction,
+        lossless_chroma_predictor(predictor),
+        angle,
+        None,
+        16,
+        32,
+        &edges,
+        SampleDepth::EIGHT,
+        enable_intra_edge_filter,
+    )?;
+    let residual = transform::inverse_dct16x32(&coefficients.unwrap_or([0_i32; 512]));
+    Ok(reconstruct_lossy_predicted_plane(&prediction, &residual))
+}
+
 /// Reconstruct a 16×16 full-resolution chroma transform with CFL.
 ///
 /// I444 CFL has one luma sample for every chroma sample. The luma plane is
@@ -59131,15 +59195,119 @@ impl Lossy420Decoder {
         {
             let chroma_top_left =
                 std::array::from_fn(|plane| full_resolution_chroma_top_left(&neighbors, plane + 1));
-            return reconstruct_following_lossy_full_vertical_16x32_leaf(
+            let chroma_zone1 = matches!(
+                syntax.chroma_predictor,
+                ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
+            );
+            let mut leaf = reconstruct_following_lossy_full_vertical_16x32_leaf(
                 syntax,
                 &above_left,
                 &above_right,
                 left_neighbor.as_ref(),
                 chroma_top_left,
                 tools.enable_intra_edge_filter,
-            )
-            .map(visible);
+            )?;
+            if chroma_zone1 {
+                let left_chroma_mode = neighbors
+                    .left_chroma
+                    .or(neighbors.left_luma_top)
+                    .or(neighbors.left)
+                    .and_then(|neighbor| neighbor.chroma_predictor);
+                let smooth_chroma_edges =
+                    is_smooth_chroma_predictor(neighbors.above_left.chroma_predictor)
+                        || is_smooth_chroma_predictor(left_chroma_mode);
+                for plane in 1..=2 {
+                    let top = positioned_top_edge::<16>(
+                        plane,
+                        neighbors.above_left,
+                        neighbors.above_left_x_offset,
+                        neighbors.above_right,
+                        neighbors.above_right_x_offset,
+                    )
+                    .ok_or(PortableUnavailable)?;
+                    let top_extension = if let Some(extension) = neighbors.above_chroma_extension {
+                        (extension.width != 0 && extension.height != 0)
+                            .then_some(())
+                            .portable()?;
+                        let extension_width =
+                            usize::try_from(extension.width).map_err(|_| PortableUnavailable)?;
+                        let extension_height =
+                            usize::try_from(extension.height).map_err(|_| PortableUnavailable)?;
+                        let extension_len = extension_width
+                            .checked_mul(extension_height)
+                            .ok_or(PortableUnavailable)?;
+                        (extension.planes[plane].samples.len() == extension_len)
+                            .then_some(())
+                            .portable()?;
+                        let end = neighbors
+                            .above_chroma_extension_x_offset
+                            .checked_add(16)
+                            .ok_or(PortableUnavailable)?;
+                        (end <= extension.width).then_some(()).portable()?;
+                        let mut edge = [0_u16; 16];
+                        for (index, sample) in edge.iter_mut().enumerate() {
+                            let offset = neighbors
+                                .above_chroma_extension_x_offset
+                                .checked_add(u32::try_from(index).map_err(|_| PortableUnavailable)?)
+                                .ok_or(PortableUnavailable)?;
+                            *sample = checked_bottom_sample_at(
+                                &extension.planes[plane],
+                                extension.width,
+                                offset,
+                            )
+                            .ok_or(PortableUnavailable)?;
+                        }
+                        Some(edge)
+                    } else {
+                        None
+                    };
+                    let left = neighbors
+                        .left_chroma
+                        .and_then(|neighbor| {
+                            checked_right_edge_at::<32>(
+                                &neighbor.planes[plane],
+                                neighbor.width,
+                                neighbor.height,
+                                neighbors.left_chroma_y_offset,
+                            )
+                        })
+                        .or_else(|| {
+                            neighbors.left.and_then(|neighbor| {
+                                checked_right_edge_at::<32>(
+                                    &neighbor.planes[plane],
+                                    neighbor.width,
+                                    neighbor.height,
+                                    neighbors.left_y_offset,
+                                )
+                            })
+                        });
+                    let has_left_owner =
+                        neighbors.left_chroma.is_some() || neighbors.left.is_some();
+                    if has_left_owner && left.is_none() {
+                        return Err(PortableUnavailable);
+                    }
+                    let has_left = left.is_some();
+                    let top_left = if has_left {
+                        full_resolution_chroma_top_left(&neighbors, plane)
+                            .ok_or(PortableUnavailable)?
+                    } else {
+                        top[0]
+                    };
+                    leaf.planes[plane] = reconstruct_lossy_full_16x32_chroma_zone1(
+                        syntax.chroma_predictor,
+                        syntax.chroma_angle,
+                        top,
+                        top_extension,
+                        left.unwrap_or([top[0]; 32]),
+                        has_left.then_some(top_left),
+                        has_left,
+                        syntax.lossy_chroma_16x32_coefficients[plane - 1],
+                        tools.enable_intra_edge_filter,
+                        smooth_chroma_edges,
+                    )?;
+                }
+            }
+            return Ok(visible(leaf));
         }
         if matches!(transform_grid, TransformGrid::Vertical16x32) {
             let leaf = reconstruct_following_lossy_420_vertical_16x32_leaf(
