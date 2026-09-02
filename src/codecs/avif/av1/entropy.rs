@@ -3444,7 +3444,7 @@ fn mixed_8bit_color_lossless_restoration_supported(
 /// supported plane layout.  This predicate mirrors the bounded 8-bit I420
 /// tranche above while keeping the extension isolated from monochrome and
 /// from the all-lossless mode-0 profiles.
-fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+fn mixed_high_depth_color_lossless_segmentation_common(context: &FirstBlockContext) -> bool {
     let Some(layout) = PixelLayout::from_sequence(
         context.monochrome,
         context.subsampling_x,
@@ -3467,8 +3467,6 @@ fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockCo
         || context.tile_origin_b4_y != 0
         || context.block_width != context.frame_block_width
         || context.block_height != context.frame_block_height
-        || context.frame_tools.restoration_present
-        || context.restoration_types != [None; 3]
         || context.frame_tools.film_grain_present
         || !matches!(context.frame_tools.transform_mode, 1 | 2)
         || context.frame_tools.reduced_transform_set
@@ -3527,6 +3525,109 @@ fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockCo
         }
     }
     has_lossless && has_lossy
+}
+
+/// Admit the neutral-restoration mixed high-depth color profile. Restoration
+/// state is kept outside the common segment proof so an active luma-only plan
+/// cannot be consumed by the no-restoration callers.
+fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+    mixed_high_depth_color_lossless_segmentation_common(context)
+        && !context.frame_tools.restoration_present
+        && context.restoration_types == [None; 3]
+}
+
+/// Admit one active luma Wiener/SGR restoration unit for the bounded mixed
+/// high-depth color profile. The lossless-grid block walker owns the
+/// I420/I422/I444 residual grammar; this predicate adds only the frame-level
+/// restoration state and a conservative single-reference motion boundary.
+fn mixed_high_depth_color_lossless_restoration_supported(
+    context: &FirstBlockContext,
+    inter_context: &InterFrameContext<'_>,
+) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
+    if !mixed_high_depth_color_lossless_segmentation_common(context)
+        || !matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        || context.skip_mode_enabled
+        || context.allow_intrabc
+        || !context.frame_tools.restoration_present
+        || context.restoration_types[1].is_some()
+        || context.restoration_types[2].is_some()
+        || context.frame_tools.loop_filter.level_y != [0; 2]
+        || context.frame_tools.loop_filter.level_u != 0
+        || context.frame_tools.loop_filter.level_v != 0
+        || context.frame_tools.cdef.is_some()
+        || !inter_context.references.iter().all(|reference| {
+            reference.surface.validate().is_ok()
+                && reference.surface.depth.bits() == context.bit_depth
+                && reference.surface.layout == layout
+                && reference.surface.coded_width == context.frame_width
+                && reference.surface.upscaled_width == context.frame_width
+                && reference.surface.frame_height == context.frame_height
+                && !reference.scale.scaled
+                && matches!(
+                    reference.global_motion.kind,
+                    GlobalMotionType::Identity | GlobalMotionType::Translation
+                )
+        })
+        || inter_context.skip_mode_references.is_some()
+        || inter_context.reference_mode_select
+        || inter_context.enable_masked_compound
+        || inter_context.enable_jnt_comp
+        || inter_context.allow_warped_motion
+        || inter_context.motion_mode_switchable
+        || inter_context.use_ref_frame_mvs
+    {
+        return false;
+    }
+    let Some(restoration_type) = context.restoration_types[0] else {
+        return false;
+    };
+    if !matches!(
+        restoration_type,
+        RestorationType::Wiener | RestorationType::SgrProjection
+    ) {
+        return false;
+    }
+    let luma_log2 = context.restoration_unit_size_log2[0];
+    let chroma_log2 = context.restoration_unit_size_log2[1];
+    let (luma_supported, chroma_supported) = match (layout, context.level) {
+        (PixelLayout::I420, 0) => ((7..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2)),
+        (PixelLayout::I420, 1) => ((6..=8).contains(&luma_log2), (5..=8).contains(&chroma_log2)),
+        (PixelLayout::I422 | PixelLayout::I444, 0) => {
+            ((7..=8).contains(&luma_log2), (7..=8).contains(&chroma_log2))
+        }
+        (PixelLayout::I422 | PixelLayout::I444, 1) => {
+            ((6..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2))
+        }
+        _ => (false, false),
+    };
+    if !luma_supported
+        || !chroma_supported
+        || chroma_log2 != luma_log2
+        || context.restoration_unit_size_log2[2] != luma_log2
+        || context.frame_height > 56
+    {
+        return false;
+    }
+    let Some(unit_size) = 1_u32.checked_shl(luma_log2) else {
+        return false;
+    };
+    let Some(width_with_half) = context.frame_width.checked_add(unit_size / 2) else {
+        return false;
+    };
+    let Some(height_with_half) = context.frame_height.checked_add(unit_size / 2) else {
+        return false;
+    };
+    (width_with_half >> luma_log2).max(1) == 1 && (height_with_half >> luma_log2).max(1) == 1
 }
 
 /// Common admission for the bounded mixed-segment monochrome inter grammar.
@@ -9190,6 +9291,9 @@ pub(super) fn validate_complete_lossy_420_partition(
     let generic_high_depth_inter = inter_context.is_some_and(|inter_context| {
         complete_high_depth_inter_reconstruction_context(context, inter_context)
     });
+    let mixed_high_depth_lossless_restoration = inter_context.is_some_and(|inter_context| {
+        mixed_high_depth_color_lossless_restoration_supported(context, inter_context)
+    });
     let high_depth_lossy_i444_active_restoration = generic_high_depth_inter
         && inter_context.is_some_and(|inter_context| {
             high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
@@ -9653,6 +9757,7 @@ pub(super) fn validate_complete_lossy_420_partition(
         || high_depth_lossy_i444_active_restoration
         || high_depth_lossy_i422_active_restoration
         || high_depth_lossy_i420_active_restoration
+        || mixed_high_depth_lossless_restoration
         || high_depth_lossless_i444_active_restoration
         || high_depth_lossless_i422_active_restoration
         || high_depth_lossless_i420_active_restoration
@@ -11737,6 +11842,8 @@ fn complete_high_depth_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
+    let mixed_lossless_restoration =
+        mixed_high_depth_color_lossless_restoration_supported(context, inter_context);
     let active_restoration =
         high_depth_lossy_i444_superres_restoration_supported(context, inter_context)
             || high_depth_lossy_i422_superres_restoration_supported(context, inter_context)
@@ -11744,7 +11851,8 @@ fn complete_high_depth_inter_reconstruction_context(
             || complete_high_depth_color_inter_restoration_reconstruction_context(
                 context,
                 inter_context,
-            );
+            )
+            || mixed_lossless_restoration;
     let i420 = context.subsampling_x && context.subsampling_y;
     let i422 = context.subsampling_x && !context.subsampling_y;
     let i444 = !context.subsampling_x && !context.subsampling_y;
@@ -11798,7 +11906,8 @@ fn complete_high_depth_inter_reconstruction_context(
         && !context.all_lossless
         && !context.allow_intrabc
         && (postskip_altq_segmentation_supported(context)
-            || mixed_high_depth_color_lossless_segmentation_supported(context))
+            || mixed_high_depth_color_lossless_segmentation_supported(context)
+            || mixed_lossless_restoration)
         // TX_MODE_ONLY_4X4 is depth-independent; the explicit bounded I420
         // and color grids plus the wide mode-0 plan consume its high-depth
         // raster without weakening unrelated single-terminal geometry.
