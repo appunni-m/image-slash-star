@@ -3252,22 +3252,34 @@ fn postskip_altq_segmentation_supported(context: &FirstBlockContext) -> bool {
     })
 }
 
-/// Admit one deliberately narrow mixed-segment profile for generic 8-bit
-/// 4:2:0 inter frames.  A segment-lossless block is legal while the frame is
-/// otherwise lossy, so frame-level deblocking/CDEF syntax remains present;
-/// its residual grammar is selected later from the per-block segment state.
-/// Keep this separate from the ordinary ALT_Q predicate because the latter is
-/// reused by layouts whose lossless transform paths are not connected to the
-/// mode-1/2 parser.  Temporal segment prediction, restoration, film grain,
+/// Admit one deliberately narrow mixed-segment profile for 8-bit color inter
+/// frames.  A segment-lossless block is legal while the frame is otherwise
+/// lossy, so frame-level deblocking/CDEF syntax remains present; its residual
+/// grammar is selected later from the per-block segment state.  Keep this
+/// separate from the ordinary ALT_Q predicate because the latter is reused by
+/// layouts whose lossless transform paths are not connected to the mode-1/2
+/// parser.  Temporal segment prediction, restoration, film grain,
 /// super-resolution, and multi-tile assembly stay outside this first tranche.
-fn mixed_i420_lossless_segmentation_supported(context: &FirstBlockContext) -> bool {
+fn mixed_8bit_color_lossless_segmentation_supported(
+    context: &FirstBlockContext,
+    expected_layout: PixelLayout,
+) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
     let segmentation = context.frame_tools.segmentation;
     if context.intra_frame
         || context.all_lossless
         || context.bit_depth != 8
-        || context.monochrome
-        || !context.subsampling_x
-        || !context.subsampling_y
+        || layout != expected_layout
+        || !matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
         || context.superres_enabled
         || context.upscaled_width != context.frame_width
         || !context.single_tile
@@ -3927,9 +3939,9 @@ fn inter_lossless_grid_geometry_supported(
 
 /// Segment-lossless residuals in a mixed frame still follow the fixed WHT
 /// grid, even though the frame transform mode is 1 or 2.  Keep this extension
-/// scoped to 8-bit I420; the ordinary helper above remains mode-0-only for
-/// all existing monochrome, 4:2:2, 4:4:4, and high-depth profiles.
-fn inter_mixed_i420_lossless_grid_geometry_supported(
+/// scoped to 8-bit color layouts; the ordinary helper above remains mode-0-only
+/// for existing monochrome and all other profiles.
+fn inter_mixed_8bit_color_lossless_grid_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
     visible_width: u32,
@@ -3938,7 +3950,7 @@ fn inter_mixed_i420_lossless_grid_geometry_supported(
     quantization: super::block::LossyQuantization,
     transform_mode: u32,
 ) -> bool {
-    layout == PixelLayout::I420
+    matches!(layout, PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444)
         && bit_depth == 8
         && matches!(transform_mode, 1 | 2)
         // Reuse the complete geometry/quantization proof while evaluating it
@@ -6735,7 +6747,7 @@ fn decode_inter_leaf(
         context.bit_depth,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
-    ) || inter_mixed_i420_lossless_grid_geometry_supported(
+    ) || inter_mixed_8bit_color_lossless_grid_geometry_supported(
         node.block_size,
         layout,
         visible_width,
@@ -10511,7 +10523,7 @@ fn complete_inter_420_reconstruction_context(
             no_unsupported_film_grain(context)
         }
         && (postskip_altq_segmentation_supported(context)
-            || mixed_i420_lossless_segmentation_supported(context))
+            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I420))
         && context.block_x == 0
         && context.block_y == 0
         && matches!(context.level, 0 | 1)
@@ -10724,7 +10736,8 @@ fn complete_inter_422_reconstruction_context(
         && !context.monochrome
         && dimensions_supported
         && !context.all_lossless
-        && postskip_altq_segmentation_supported(context)
+        && (postskip_altq_segmentation_supported(context)
+            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I422))
         && !context.allow_intrabc
         && if context.superres_enabled {
             superres_color_film_grain_supported(context, PixelLayout::I422)
@@ -10947,7 +10960,8 @@ fn complete_inter_444_reconstruction_context(
         && !context.monochrome
         && dimensions_supported
         && !context.all_lossless
-        && postskip_altq_segmentation_supported(context)
+        && (postskip_altq_segmentation_supported(context)
+            || mixed_8bit_color_lossless_segmentation_supported(context, PixelLayout::I444))
         && !context.allow_intrabc
         && film_grain_supported
         && context.frame_tools.quantization.is_some()

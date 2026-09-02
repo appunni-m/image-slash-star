@@ -55285,7 +55285,12 @@ impl Lossy420Decoder {
                     | ChromaSampling::Full
             )
             && (tools.sample_depth != SampleDepth::EIGHT
-                || chroma_sampling == ChromaSampling::Subsampled420);
+                || matches!(
+                    chroma_sampling,
+                    ChromaSampling::Subsampled420
+                        | ChromaSampling::Subsampled422
+                        | ChromaSampling::Full
+                ));
         (common_geometry
             && if lossless_grid {
                 matches!(
