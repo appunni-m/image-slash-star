@@ -3402,11 +3402,13 @@ fn inter_lossy_wide_mode0_geometry_supported(
             (
                 PixelLayout::I420,
                 BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-            ) | (PixelLayout::I422, BlockSize::B128x64 | BlockSize::B128x128)
-                | (
-                    PixelLayout::I444,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
+            ) | (
+                PixelLayout::I422,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (
+                PixelLayout::I444,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            )
         )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
@@ -3433,11 +3435,13 @@ fn inter_lossy_wide_chunk_geometry_supported(
             (
                 PixelLayout::I420,
                 BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-            ) | (PixelLayout::I422, BlockSize::B128x64 | BlockSize::B128x128)
-                | (
-                    PixelLayout::I444,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
+            ) | (
+                PixelLayout::I422,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (
+                PixelLayout::I444,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            )
         )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
@@ -3467,11 +3471,13 @@ fn inter_lossy_wide_mode2_geometry_supported(
             (
                 PixelLayout::I420,
                 BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-            ) | (PixelLayout::I422, BlockSize::B128x64 | BlockSize::B128x128)
-                | (
-                    PixelLayout::I444,
-                    BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-                )
+            ) | (
+                PixelLayout::I422,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            ) | (
+                PixelLayout::I444,
+                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
+            )
         )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
