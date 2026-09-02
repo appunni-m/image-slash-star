@@ -11630,7 +11630,8 @@ fn decode_lossy_luma_8x8_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -11640,9 +11641,9 @@ fn decode_lossy_luma_8x8_coefficients(
         );
 
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -11824,9 +11825,10 @@ fn decode_lossy_luma_8x8_1d_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        // This compact table is padded at indices zero and one; its index is
-        // the decoded EOB-bin symbol.
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        // dav1d compacts the decoded EOB symbol by two before selecting the
+        // high-bit CDF and reading the extra EOB bits.
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -11835,9 +11837,9 @@ fn decode_lossy_luma_8x8_1d_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -12018,7 +12020,8 @@ fn decode_lossy_luma_4x8_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -12027,9 +12030,9 @@ fn decode_lossy_luma_4x8_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -12214,7 +12217,8 @@ fn decode_lossy_luma_8x4_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -12223,9 +12227,9 @@ fn decode_lossy_luma_8x4_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -12410,7 +12414,8 @@ fn decode_lossy_luma_16x4_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -12419,9 +12424,9 @@ fn decode_lossy_luma_16x4_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -12599,9 +12604,10 @@ fn decode_lossy_luma_16x4_1d_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        // The compact Rust table keeps the decoded EOB-bin symbol as its
-        // index, matching the existing 8x8 one-dimensional sentence.
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        // dav1d compacts the decoded EOB symbol by two before selecting the
+        // high-bit CDF and reading the extra EOB bits.
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -12610,9 +12616,9 @@ fn decode_lossy_luma_16x4_1d_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -12836,7 +12842,8 @@ fn decode_lossy_luma_4x16_1d_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -12845,9 +12852,9 @@ fn decode_lossy_luma_4x16_1d_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -13035,7 +13042,8 @@ fn decode_lossy_luma_8x4_1d_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -13044,9 +13052,9 @@ fn decode_lossy_luma_8x4_1d_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -13268,7 +13276,8 @@ fn decode_lossy_luma_4x8_1d_coefficients(
     }
 
     let eob = if eob_bin > 1 {
-        let eob_bin_index = usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?;
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
         let high_bit = u32::from(
             decoder.adaptive_bool(
                 cdfs.lossy_luma_8x8_eob_high
@@ -13277,9 +13286,9 @@ fn decode_lossy_luma_4x8_1d_coefficients(
             ),
         );
         (high_bit | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
-            .unwrap_or(0)
-            | decoder.bits(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
+            .ok_or(PortableUnavailable)?
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
@@ -16359,14 +16368,16 @@ fn decode_generic_lossy_coefficients_into(
 
     let eob_bin = decode_generic_eob_bin(decoder, cdfs, tx_size, chroma, one_dimensional);
     let eob = if eob_bin > 1 {
-        let high = u32::from(decoder.adaptive_bool(
-            &mut cdfs.coefficient.eob_hi_bit[tx_context][chroma]
-                [usize::try_from(eob_bin).map_err(|_| PortableUnavailable)?],
-        ));
+        let eob_exponent = eob_bin.checked_sub(2).ok_or(PortableUnavailable)?;
+        let eob_bin_index = usize::try_from(eob_exponent).map_err(|_| PortableUnavailable)?;
+        let high = u32::from(
+            decoder
+                .adaptive_bool(&mut cdfs.coefficient.eob_hi_bit[tx_context][chroma][eob_bin_index]),
+        );
         (high | 2)
-            .checked_shl(eob_bin.saturating_sub(2))
+            .checked_shl(eob_exponent)
             .ok_or(PortableUnavailable)?
-            | decoder.bits(eob_bin.saturating_sub(2))
+            | decoder.bits(eob_exponent)
     } else {
         eob_bin
     };
