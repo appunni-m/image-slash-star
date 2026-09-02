@@ -41419,6 +41419,12 @@ fn reconstruct_lossy_full_4x16_chroma_normalized_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
         ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
@@ -41427,9 +41433,16 @@ fn reconstruct_lossy_full_4x16_chroma_normalized_target(
 
     let mut top_edge = [0_u16; 8];
     top_edge[..4].copy_from_slice(&top);
-    let have_above_right = if let Some(extension) = top_extension {
-        top_edge[4..].copy_from_slice(&extension);
-        true
+    let have_above_right = if matches!(
+        predictor,
+        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
+    ) {
+        if let Some(extension) = top_extension {
+            top_edge[4..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -41441,9 +41454,13 @@ fn reconstruct_lossy_full_4x16_chroma_normalized_target(
 
     let mut left_edge = [0_u16; 20];
     left_edge[..16].copy_from_slice(&left);
-    let have_below_left = if let Some(extension) = bottom_left {
-        left_edge[16..].copy_from_slice(&extension);
-        true
+    let have_below_left = if matches!(predictor, ChromaPredictor::Diagonal203) {
+        if let Some(extension) = bottom_left {
+            left_edge[16..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -41506,16 +41523,27 @@ fn reconstruct_lossy_full_4x16_chroma_horizontal_target(
             let angle = angle.ok_or(PortableUnavailable)?;
             (180 < angle && angle < 270).then_some(()).portable()?;
         }
-        ChromaPredictor::Smooth
+        ChromaPredictor::DiagonalDownRight
+        | ChromaPredictor::Diagonal113
+        | ChromaPredictor::Diagonal157 => {
+            let angle = angle.ok_or(PortableUnavailable)?;
+            (90 < angle && angle < 180).then_some(()).portable()?;
+        }
+        ChromaPredictor::Paeth
+        | ChromaPredictor::Smooth
         | ChromaPredictor::SmoothVertical
         | ChromaPredictor::SmoothHorizontal => {}
         _ => return Err(PortableUnavailable),
     }
     let mut left_edge = [0_u16; 20];
     left_edge[..16].copy_from_slice(&left);
-    let have_below_left = if let Some(extension) = bottom_left {
-        left_edge[16..].copy_from_slice(&extension);
-        true
+    let have_below_left = if matches!(predictor, ChromaPredictor::Diagonal203) {
+        if let Some(extension) = bottom_left {
+            left_edge[16..].copy_from_slice(&extension);
+            true
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -60023,6 +60051,10 @@ impl Lossy420Decoder {
                 ChromaPredictor::Diagonal45
                     | ChromaPredictor::Diagonal67
                     | ChromaPredictor::Diagonal203
+                    | ChromaPredictor::DiagonalDownRight
+                    | ChromaPredictor::Diagonal113
+                    | ChromaPredictor::Diagonal157
+                    | ChromaPredictor::Paeth
                     | ChromaPredictor::Smooth
                     | ChromaPredictor::SmoothVertical
                     | ChromaPredictor::SmoothHorizontal
@@ -60032,6 +60064,9 @@ impl Lossy420Decoder {
                     usize::try_from(neighbor_width).map_err(|_| PortableUnavailable)?;
                 let neighbor_height_usize =
                     usize::try_from(neighbor_height).map_err(|_| PortableUnavailable)?;
+                (neighbor_width_usize > 0 && neighbor_height_usize >= 16)
+                    .then_some(())
+                    .portable()?;
                 let expected_len = neighbor_width_usize
                     .checked_mul(neighbor_height_usize)
                     .ok_or(PortableUnavailable)?;
@@ -62748,6 +62783,10 @@ impl Lossy420Decoder {
                         ChromaPredictor::Diagonal45
                         | ChromaPredictor::Diagonal67
                         | ChromaPredictor::Diagonal203
+                        | ChromaPredictor::DiagonalDownRight
+                        | ChromaPredictor::Diagonal113
+                        | ChromaPredictor::Diagonal157
+                        | ChromaPredictor::Paeth
                         | ChromaPredictor::Smooth
                         | ChromaPredictor::SmoothVertical
                         | ChromaPredictor::SmoothHorizontal => {
@@ -62759,7 +62798,10 @@ impl Lossy420Decoder {
                                 neighbors.above_right_x_offset,
                             )
                             .ok_or(PortableUnavailable)?;
-                            let top_extension =
+                            let top_extension = if matches!(
+                                syntax.chroma_predictor,
+                                ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67
+                            ) {
                                 if let Some(extension) = neighbors.above_chroma_extension {
                                     (extension.width != 0 && extension.height != 0)
                                         .then_some(())
@@ -62798,7 +62840,10 @@ impl Lossy420Decoder {
                                     Some(edge)
                                 } else {
                                     None
-                                };
+                                }
+                            } else {
+                                None
+                            };
                             let assembled_left = neighbors.left_chroma_edges_16[plane - 1];
                             let left = assembled_left
                                 .or_else(|| {
