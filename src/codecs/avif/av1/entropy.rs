@@ -14675,9 +14675,16 @@ fn lossless_intra_monochrome_superres_restoration_supported(context: &FirstBlock
 /// is assembled. A restoration header is allowed to be present when every
 /// plane type is `NONE`; the bounded single-tile color helper below also
 /// admits one active Wiener/SGR unit per selected plane. Super-resolution
-/// film grain is admitted for I420 only; I422/I444 remain on their existing
-/// display-width restrictions.
+/// film grain is synthesized on the post-resize display leaf for I420/I422;
+/// I444 keeps the shared bounded display-dimension whitelist.
 fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool {
+    let Some(layout) = PixelLayout::from_sequence(
+        context.monochrome,
+        context.subsampling_x,
+        context.subsampling_y,
+    ) else {
+        return false;
+    };
     let active_restoration = lossless_intra_color_superres_restoration_supported(context);
     let layout_supported = context.subsampling_x || !context.subsampling_y;
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
@@ -14692,13 +14699,8 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && resize_geometry_supported;
-    let superres_i420_grain = context.superres_enabled
-        && context.subsampling_x
-        && context.subsampling_y
-        && context.restoration_types == [None; 3]
-        && no_unsupported_film_grain(context);
     let film_grain_supported = if context.superres_enabled {
-        !context.frame_tools.film_grain_present || superres_i420_grain
+        superres_color_film_grain_supported(context, layout)
     } else {
         no_unsupported_film_grain(context)
     };
@@ -14825,7 +14827,7 @@ fn lossless_intra_color_superres_restoration_supported(context: &FirstBlockConte
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, layout)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -14943,7 +14945,8 @@ fn lossless_intra_color_superres_restoration_supported(context: &FirstBlockConte
 /// I420, I422, and I444 additionally admit a horizontally tiled, full-height
 /// layout so the existing frame assembler can preserve cross-tile resize taps.
 /// A single-tile I420, I422, or I444 super-resolution frame may also carry one
-/// active Wiener/SGR unit on any subset of its planes.
+/// active Wiener/SGR unit on any subset of its planes; display-only film grain
+/// is applied afterward on the owned post-resize leaf.
 fn complete_lossless_inter_color_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -14981,6 +14984,11 @@ fn complete_lossless_inter_color_reconstruction_context(
             layout,
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
+    let film_grain_supported = if superres_color {
+        superres_color_film_grain_supported(context, layout)
+    } else {
+        !context.frame_tools.film_grain_present
+    };
     let active_color_restoration =
         lossless_i420_superres_restoration_supported(context, inter_context)
             || lossless_i422_superres_restoration_supported(context, inter_context)
@@ -15091,7 +15099,7 @@ fn complete_lossless_inter_color_reconstruction_context(
         && inter_context.skip_mode_references.is_none()
         && context.frame_tools.cdef.is_none()
         && (context.restoration_types == [None; 3] || active_color_restoration)
-        && !context.frame_tools.film_grain_present
+        && film_grain_supported
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
@@ -15131,7 +15139,7 @@ fn lossless_i420_superres_restoration_supported(
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I420)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -15246,7 +15254,7 @@ fn lossless_i422_superres_restoration_supported(
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I422)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -15344,7 +15352,7 @@ fn lossless_i444_superres_restoration_supported(
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I444)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -15587,6 +15595,8 @@ fn lossless_monochrome_superres_restoration_supported(context: &FirstBlockContex
 /// intact. Under super-resolution, a present restoration header is accepted
 /// only when every plane is `NONE`, except for the bounded single-tile 8-bit
 /// and high-depth I444/I422/I420/monochrome active-restoration slices below.
+/// Color film grain, when present, is likewise synthesized only after resize
+/// and restoration on the owned display copy.
 fn complete_high_depth_lossless_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -15636,6 +15646,15 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         );
+    let film_grain_supported = if superres_layout
+        && matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        ) {
+        superres_color_film_grain_supported(context, layout)
+    } else {
+        !context.frame_tools.film_grain_present
+    };
     let horizontal_multitile_high_depth = context.superres_enabled
         && matches!(
             layout,
@@ -15726,7 +15745,7 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         && !inter_context.enable_interintra_compound
         && context.frame_tools.cdef.is_none()
         && restoration_supported
-        && !context.frame_tools.film_grain_present
+        && film_grain_supported
         && context.frame_tools.loop_filter.level_y == [0; 2]
         && context.frame_tools.loop_filter.level_u == 0
         && context.frame_tools.loop_filter.level_v == 0
@@ -15768,7 +15787,7 @@ fn high_depth_lossless_i444_superres_restoration_supported(
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I444)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -15862,7 +15881,7 @@ fn high_depth_lossless_i422_superres_restoration_supported(
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I422)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
@@ -15964,7 +15983,7 @@ fn high_depth_lossless_i420_superres_restoration_supported(
         || context.block_height != context.frame_block_height
         || !matches!(context.level, 0 | 1)
         || context.frame_tools.cdef.is_some()
-        || context.frame_tools.film_grain_present
+        || !superres_color_film_grain_supported(context, PixelLayout::I420)
         || context.frame_tools.loop_filter.level_y != [0; 2]
         || context.frame_tools.loop_filter.level_u != 0
         || context.frame_tools.loop_filter.level_v != 0
