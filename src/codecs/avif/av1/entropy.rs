@@ -8678,6 +8678,7 @@ fn decode_inter_leaf(
             || lossy_color_mode0_geometry
             || lossy_wide_chunk_geometry
             || lossy_thin64_split_geometry
+            || lossy_wide64_split_geometry
             || lossy_wide_mode2_geometry;
         if !wide_lossy_geometry
             && !tiny_high_depth_i444
@@ -8699,6 +8700,7 @@ fn decode_inter_leaf(
         && !lossy_color_mode0_geometry
         && !lossy_wide_mode0_geometry
         && !lossy_wide_chunk_geometry
+        && !lossy_wide64_split_geometry
         && !lossy_wide_mode2_geometry
         && !lossy_split64_geometry
         && !lossy_direct_chroma_grid_geometry
