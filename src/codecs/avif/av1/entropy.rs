@@ -3269,6 +3269,18 @@ fn mixed_8bit_color_lossless_segmentation_common(
     context: &FirstBlockContext,
     expected_layout: PixelLayout,
 ) -> bool {
+    mixed_8bit_color_lossless_segmentation_common_with_policy(context, expected_layout, false)
+}
+
+/// Structural mixed 8-bit segmentation proof with an explicit policy for the
+/// syntax-moving segment-global feature. Only the active-restoration wrapper
+/// enables that policy after it proves exact unscaled reference geometry; all
+/// neutral/postfilter callers retain the strict post-skip map grammar.
+fn mixed_8bit_color_lossless_segmentation_common_with_policy(
+    context: &FirstBlockContext,
+    expected_layout: PixelLayout,
+    allow_segment_global_motion: bool,
+) -> bool {
     let Some(layout) = PixelLayout::from_sequence(
         context.monochrome,
         context.subsampling_x,
@@ -3298,7 +3310,7 @@ fn mixed_8bit_color_lossless_segmentation_common(
         || !segmentation.enabled
         || !segmentation.update_map
         || segmentation.temporal
-        || segmentation.preskip
+        || (segmentation.preskip && !allow_segment_global_motion)
         || context.frame_tools.delta_q_present
         || context.frame_tools.delta_lf_present
     {
@@ -3324,18 +3336,20 @@ fn mixed_8bit_color_lossless_segmentation_common(
         && quantization.v_ac_delta == 0;
     let mut has_lossless = false;
     let mut has_lossy = false;
+    let mut has_segment_global_motion = false;
     for segment in &segmentation.segments[..active_count] {
         let expected_qindex = i64::from(quantization.base)
             .saturating_add(i64::from(segment.delta_q))
             .clamp(0, 255);
         if segment.reference >= 0
             || segment.skip
-            || segment.global_motion
+            || (!allow_segment_global_motion && segment.global_motion)
             || segment.delta_lf != [0; 4]
             || u32::try_from(expected_qindex).ok() != Some(segment.qindex)
         {
             return false;
         }
+        has_segment_global_motion |= segment.global_motion;
         // `segment.lossless` is parser-derived from this exact frame-level
         // delta-lossless condition.  Rechecking it here prevents a qindex-0
         // lossy segment from entering the fixed WHT grammar accidentally.
@@ -3350,6 +3364,9 @@ fn mixed_8bit_color_lossless_segmentation_common(
         } else {
             return false;
         }
+    }
+    if allow_segment_global_motion && segmentation.preskip != has_segment_global_motion {
+        return false;
     }
     has_lossless && has_lossy
 }
@@ -3376,7 +3393,7 @@ fn mixed_8bit_color_lossless_restoration_supported(
     inter_context: &InterFrameContext<'_>,
     expected_layout: PixelLayout,
 ) -> bool {
-    if !mixed_8bit_color_lossless_segmentation_common(context, expected_layout)
+    if !mixed_8bit_color_lossless_segmentation_common_with_policy(context, expected_layout, true)
         || context.skip_mode_enabled
         || context.allow_intrabc
         || !context.frame_tools.restoration_present
@@ -3455,6 +3472,17 @@ fn mixed_8bit_color_lossless_restoration_supported(
 /// tranche above while keeping the extension isolated from monochrome and
 /// from the all-lossless mode-0 profiles.
 fn mixed_high_depth_color_lossless_segmentation_common(context: &FirstBlockContext) -> bool {
+    mixed_high_depth_color_lossless_segmentation_common_with_policy(context, false)
+}
+
+/// High-depth mixed segmentation proof with the same narrowly scoped
+/// segment-global policy as the 8-bit color tranche. The policy is enabled
+/// only by the active-restoration wrapper below, after exact unscaled
+/// references and depth/layout parity have been established.
+fn mixed_high_depth_color_lossless_segmentation_common_with_policy(
+    context: &FirstBlockContext,
+    allow_segment_global_motion: bool,
+) -> bool {
     let Some(layout) = PixelLayout::from_sequence(
         context.monochrome,
         context.subsampling_x,
@@ -3484,7 +3512,7 @@ fn mixed_high_depth_color_lossless_segmentation_common(context: &FirstBlockConte
         || !segmentation.enabled
         || !segmentation.update_map
         || segmentation.temporal
-        || segmentation.preskip
+        || (segmentation.preskip && !allow_segment_global_motion)
         || context.frame_tools.delta_q_present
         || context.frame_tools.delta_lf_present
     {
@@ -3510,18 +3538,20 @@ fn mixed_high_depth_color_lossless_segmentation_common(context: &FirstBlockConte
         && quantization.v_ac_delta == 0;
     let mut has_lossless = false;
     let mut has_lossy = false;
+    let mut has_segment_global_motion = false;
     for segment in &segmentation.segments[..active_count] {
         let expected_qindex = i64::from(quantization.base)
             .saturating_add(i64::from(segment.delta_q))
             .clamp(0, 255);
         if segment.reference >= 0
             || segment.skip
-            || segment.global_motion
+            || (!allow_segment_global_motion && segment.global_motion)
             || segment.delta_lf != [0; 4]
             || u32::try_from(expected_qindex).ok() != Some(segment.qindex)
         {
             return false;
         }
+        has_segment_global_motion |= segment.global_motion;
         let segment_lossless = segment.qindex == 0 && delta_lossless;
         if segment.lossless != segment_lossless {
             return false;
@@ -3533,6 +3563,9 @@ fn mixed_high_depth_color_lossless_segmentation_common(context: &FirstBlockConte
         } else {
             return false;
         }
+    }
+    if allow_segment_global_motion && segmentation.preskip != has_segment_global_motion {
+        return false;
     }
     has_lossless && has_lossy
 }
@@ -3563,7 +3596,7 @@ fn mixed_high_depth_color_lossless_restoration_supported(
     ) else {
         return false;
     };
-    if !mixed_high_depth_color_lossless_segmentation_common(context)
+    if !mixed_high_depth_color_lossless_segmentation_common_with_policy(context, true)
         || !matches!(
             layout,
             PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
@@ -4409,6 +4442,17 @@ fn mixed_i444_lossless_superres_restoration_postfilter_film_grain_supported(
 /// the same segment proof therefore cannot accidentally diverge between the
 /// neutral, postfilter, and active-restoration paths.
 fn mixed_monochrome_lossless_segmentation_common(context: &FirstBlockContext) -> bool {
+    mixed_monochrome_lossless_segmentation_common_with_policy(context, false)
+}
+
+/// Monochrome mixed segmentation proof with an explicit segment-global
+/// policy. Only the active-restoration path enables the syntax-moving feature;
+/// neutral and postfilter monochrome callers continue using the strict
+/// post-skip segmentation grammar.
+fn mixed_monochrome_lossless_segmentation_common_with_policy(
+    context: &FirstBlockContext,
+    allow_segment_global_motion: bool,
+) -> bool {
     let segmentation = context.frame_tools.segmentation;
     if context.intra_frame
         || !context.monochrome
@@ -4439,7 +4483,7 @@ fn mixed_monochrome_lossless_segmentation_common(context: &FirstBlockContext) ->
         || !segmentation.enabled
         || !segmentation.update_map
         || segmentation.temporal
-        || segmentation.preskip
+        || (segmentation.preskip && !allow_segment_global_motion)
         || context.skip_mode_enabled
         || context.allow_intrabc
     {
@@ -4465,18 +4509,20 @@ fn mixed_monochrome_lossless_segmentation_common(context: &FirstBlockContext) ->
         && quantization.v_ac_delta == 0;
     let mut has_lossless = false;
     let mut has_lossy = false;
+    let mut has_segment_global_motion = false;
     for segment in &segmentation.segments[..active_count] {
         let expected_qindex = i64::from(quantization.base)
             .saturating_add(i64::from(segment.delta_q))
             .clamp(0, 255);
         if segment.reference >= 0
             || segment.skip
-            || segment.global_motion
+            || (!allow_segment_global_motion && segment.global_motion)
             || segment.delta_lf != [0; 4]
             || u32::try_from(expected_qindex).ok() != Some(segment.qindex)
         {
             return false;
         }
+        has_segment_global_motion |= segment.global_motion;
         let segment_lossless = segment.qindex == 0 && delta_lossless;
         if segment.lossless != segment_lossless {
             return false;
@@ -4488,6 +4534,9 @@ fn mixed_monochrome_lossless_segmentation_common(context: &FirstBlockContext) ->
         } else {
             return false;
         }
+    }
+    if allow_segment_global_motion && segmentation.preskip != has_segment_global_motion {
+        return false;
     }
     has_lossless && has_lossy
 }
@@ -17875,7 +17924,7 @@ fn complete_monochrome_mixed_lossless_inter_restoration(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> bool {
-    if !mixed_monochrome_lossless_segmentation_common(context)
+    if !mixed_monochrome_lossless_segmentation_common_with_policy(context, true)
         || !context.frame_tools.restoration_present
         || context.restoration_types[1].is_some()
         || context.restoration_types[2].is_some()
