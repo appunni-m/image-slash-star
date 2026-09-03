@@ -195,6 +195,11 @@ pub(super) struct FrameSurface {
     pub(super) layout: PixelLayout,
     pub(super) coded_width: u32,
     pub(super) upscaled_width: u32,
+    /// Authoritative syntax marker selecting the full-resolution versus
+    /// super-resolution film-grain admission policy. This must not be inferred
+    /// from widths because the AV1 minimum coded-width clamp permits an
+    /// enabled super-resolution frame to have equal coded and upscaled widths.
+    pub(super) superres_enabled: bool,
     pub(super) frame_height: u32,
     pub(super) render_width: u32,
     pub(super) render_height: u32,
@@ -240,6 +245,7 @@ impl FrameSurface {
             || self.frame_height == 0
             || self.render_width == 0
             || self.render_height == 0
+            || (!self.superres_enabled && self.coded_width != self.upscaled_width)
             || self.motion.coded_width() != self.coded_width
             || self.motion.frame_height() != self.frame_height
         {

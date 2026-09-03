@@ -2656,8 +2656,8 @@ fn no_unsupported_film_grain(context: &FirstBlockContext) -> bool {
 /// Validate film-grain admission for a color super-resolution display path.
 /// Grain synthesis consumes the owned post-resize leaf, so coded and display
 /// widths may differ. I420 and I422 use the checked depth-parametric grain
-/// kernel directly; I444 retains the bounded display-dimension whitelist used
-/// by its full-resolution grain path.
+/// kernel directly; I444 intentionally retains the legacy display-dimension
+/// whitelist for super-resolution surfaces.
 fn superres_color_film_grain_supported(context: &FirstBlockContext, layout: PixelLayout) -> bool {
     let layout_matches = match layout {
         PixelLayout::I420 => context.subsampling_x && context.subsampling_y,
@@ -16788,10 +16788,12 @@ fn bounded_i444_geometry_for_context(
     }
 }
 
-/// Exact dimension whitelist for the bounded full-resolution I444 film-grain
-/// profiles. Keep this separate from the reconstruction selector: dimensions
-/// alone must never admit a block topology, but the frame/display film-grain
-/// gates need to share the same narrow set without duplicating it in siblings.
+/// Legacy dimension whitelist for the I444 film-grain super-resolution path.
+///
+/// Full-resolution I444 uses the checked kernel's separate bounded geometry
+/// predicate in [`super::film_grain`]. Keep this legacy list because resized
+/// leaves have different reference/display ownership and remain intentionally
+/// narrower until their complete parity profile is proven.
 pub(super) const fn bounded_i444_film_grain_dimensions(width: u32, height: u32) -> bool {
     matches!(
         (width, height),
@@ -16817,7 +16819,10 @@ pub(super) const fn bounded_i444_film_grain_dimensions(width: u32, height: u32) 
 fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
     !context.frame_tools.film_grain_present
         || (matches!(context.bit_depth, 8 | 10 | 12)
-            && bounded_i444_film_grain_dimensions(context.frame_width, context.frame_height))
+            && super::film_grain::bounded_fullres_i444_film_grain_dimensions(
+                context.frame_width,
+                context.frame_height,
+            ))
 }
 
 /// Exact bounded 4:4:4 intra tranche with one Wiener/SGR unit per plane.
@@ -20833,7 +20838,10 @@ fn complete_lossless_444_reconstruction_context(context: &FirstBlockContext) -> 
 
 fn exact_lossless_i444_film_grain_profile(context: &FirstBlockContext) -> bool {
     matches!(context.bit_depth, 8 | 10 | 12)
-        && bounded_i444_film_grain_dimensions(context.frame_width, context.frame_height)
+        && super::film_grain::bounded_fullres_i444_film_grain_dimensions(
+            context.frame_width,
+            context.frame_height,
+        )
         && context.upscaled_width == context.frame_width
         && context.block_width == context.frame_width / 4
         && context.block_height == context.frame_height / 4

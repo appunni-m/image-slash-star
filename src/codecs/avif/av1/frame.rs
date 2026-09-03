@@ -436,6 +436,7 @@ impl FrameSurface {
             layout,
             coded_width: header.frame_width,
             upscaled_width: header.upscaled_width,
+            superres_enabled: header.superres_enabled,
             frame_height: header.frame_height,
             render_width: header.render_width,
             render_height: header.render_height,
@@ -479,6 +480,7 @@ impl FrameSurface {
             layout: PixelLayout::Monochrome,
             coded_width: header.frame_width,
             upscaled_width: header.upscaled_width,
+            superres_enabled: header.superres_enabled,
             frame_height: header.frame_height,
             render_width: header.render_width,
             render_height: header.render_height,
@@ -1055,6 +1057,20 @@ impl FrameState {
             )?);
             return Ok(display);
         }
+        let i444_film_grain_dimensions_supported = if surface.superres_enabled {
+            // Super-resolution I444 keeps the legacy display whitelist. The
+            // syntax marker is carried by the retained surface because width
+            // equality is allowed after AV1's minimum coded-width clamp.
+            entropy::bounded_i444_film_grain_dimensions(
+                surface.upscaled_width,
+                surface.frame_height,
+            )
+        } else {
+            super::film_grain::bounded_fullres_i444_film_grain_dimensions(
+                surface.upscaled_width,
+                surface.frame_height,
+            )
+        };
         if !matches!(surface.depth.bits(), 8 | 10 | 12)
             || !matches!(
                 surface.layout,
@@ -1062,11 +1078,7 @@ impl FrameState {
             )
             || surface.render_width != surface.upscaled_width
             || surface.render_height != surface.frame_height
-            || (surface.layout == PixelLayout::I444
-                && !entropy::bounded_i444_film_grain_dimensions(
-                    surface.upscaled_width,
-                    surface.frame_height,
-                ))
+            || (surface.layout == PixelLayout::I444 && !i444_film_grain_dimensions_supported)
             || surface.planes.iter().any(Option::is_none)
             || matches!(grain.matrix_coefficients, 0 | 3)
         {

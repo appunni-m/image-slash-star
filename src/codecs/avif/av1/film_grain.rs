@@ -19,6 +19,18 @@ const SUB_GRAIN_WIDTH: usize = 44;
 const SUB_GRAIN_HEIGHT: usize = 38;
 const BLOCK_SIZE: usize = 32;
 
+/// Return whether a full-resolution 4:4:4 display has the geometry supported
+/// by the checked film-grain kernel.
+///
+/// The synthesis kernel operates on clipped 32x32 grain regions and therefore
+/// does not require the old block-topology whitelist.  Full-resolution paths
+/// still keep a deliberately bounded envelope so allocation and reconstruction
+/// admission remain finite and auditable: each axis is 4-pixel aligned and
+/// spans 4 through 128 pixels.
+pub(super) const fn bounded_fullres_i444_film_grain_dimensions(width: u32, height: u32) -> bool {
+    width >= 4 && width <= 128 && height >= 4 && height <= 128 && width % 4 == 0 && height % 4 == 0
+}
+
 #[derive(Clone, Copy)]
 struct GrainSampling {
     subx: usize,
@@ -339,8 +351,9 @@ pub(super) fn apply_monochrome(
 }
 
 /// Apply a parsed film-grain payload to an owned, post-filter I444 display
-/// leaf. I444 grain remains limited to the bounded geometry whitelist, while
-/// the synthesis itself is depth-parametric for 8/10/12-bit samples.
+/// leaf. Full-resolution I444 grain is admitted for 4-pixel-aligned dimensions
+/// in the bounded 4..=128 envelope above; synthesis is depth-parametric for
+/// 8/10/12-bit samples.
 pub(super) fn apply_i444(
     leaf: FirstLeaf,
     bit_depth: u32,
