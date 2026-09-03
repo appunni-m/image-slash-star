@@ -586,20 +586,54 @@ fn decode_monochrome_portable(
     {
         return None;
     }
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(still.bit_depth)?;
+    let alpha_plane = still
+        .alpha_plane
+        .as_ref()
+        .map(|plane| plane.samples.as_slice());
+    // Preserve the scalar truncation boundary before shifting any SIMD lanes:
+    // a sample above the declared nominal depth must reject the whole image.
+    if still.planes[0]
+        .samples
+        .iter()
+        .any(|&sample| sample_depth.truncate_to_u8(sample).is_none())
+        || alpha_plane.is_some_and(|plane| {
+            plane
+                .iter()
+                .any(|&sample| sample_depth.truncate_to_u8(sample).is_none())
+        })
+    {
+        return None;
+    }
     let has_alpha = still.alpha_plane.is_some();
     let channels = if has_alpha { 4 } else { 3 };
     let pixel_capacity = sample_count.checked_mul(channels)?;
+    let shift = sample_depth.bits().checked_sub(8)?;
     let mut pixels = Vec::new();
     pixels.try_reserve_exact(pixel_capacity).ok()?;
-    for (index, &sample) in still.planes[0].samples.iter().enumerate() {
-        let gray = super::av1::truncate_to_u8(sample, still.bit_depth)?;
-        pixels.extend_from_slice(&[gray, gray, gray]);
-        if let Some(alpha_plane) = &still.alpha_plane {
-            pixels.push(super::av1::truncate_to_u8(
-                alpha_plane.samples[index],
-                still.bit_depth,
-            )?);
+    let vectorized = sample_count - sample_count % 8;
+    for offset in (0..vectorized).step_by(8) {
+        let gray = truncate_u16_lanes(&still.planes[0].samples, offset, shift)?;
+        let alpha = match alpha_plane {
+            Some(plane) => Some(truncate_u16_lanes(plane, offset, shift)?),
+            None => None,
+        };
+        for lane in 0..8 {
+            pixels.extend_from_slice(&[gray[lane], gray[lane], gray[lane]]);
+            if let Some(alpha) = alpha.as_ref() {
+                pixels.push(alpha[lane]);
+            }
         }
+    }
+    for index in vectorized..sample_count {
+        let gray = sample_depth.truncate_to_u8(still.planes[0].samples[index])?;
+        pixels.extend_from_slice(&[gray, gray, gray]);
+        if let Some(alpha_plane) = alpha_plane {
+            pixels.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
+        }
+    }
+    if pixels.len() != pixel_capacity {
+        return None;
     }
     Some(DecodedImage {
         width: still.width,
