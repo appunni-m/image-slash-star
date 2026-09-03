@@ -16623,7 +16623,7 @@ fn select_generic_intra_transform(
     tx_size: TxSize,
     skipped: bool,
     reduced_transform_set: bool,
-    segment_qindex: u32,
+    segment_lossless: bool,
     transform_luma_mode: usize,
     chroma_predictor: ChromaPredictor,
 ) -> PortableResult<Av1TransformType> {
@@ -16641,7 +16641,7 @@ fn select_generic_intra_transform(
             chroma_predictor,
         )));
     }
-    if segment_qindex == 0 {
+    if segment_lossless {
         return Ok(Av1TransformType::DctDct);
     }
     let minimum_context = tx_size.minimum_context();
@@ -16765,7 +16765,7 @@ fn decode_generic_lossy_terminal(
         tx_size,
         skipped,
         quantization.reduced_transform_set,
-        quantization.segment_qindex,
+        quantization.segment_lossless,
         transform_luma_mode,
         chroma_predictor,
     )?;
