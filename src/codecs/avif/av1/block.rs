@@ -52361,7 +52361,7 @@ pub(super) fn decode_first_lossy_420_leaf(
     quantization: LossyQuantization,
     tools: BlockTools,
 ) -> PortableResult<FirstLeaf> {
-    let mut state = Lossy420Decoder::with_qindex(quantization.qindex).portable()?;
+    let mut state = Lossy420Decoder::with_qindex(quantization.qindex, false).portable()?;
     state.decode_origin(decoder, width, height, quantization, tools)
 }
 
@@ -52371,7 +52371,7 @@ pub(super) fn decode_first_lossy_444_16x16_leaf(
     quantization: LossyQuantization,
     tools: BlockTools,
 ) -> PortableResult<FirstLeaf> {
-    let mut state = Lossy420Decoder::with_qindex(quantization.qindex).portable()?;
+    let mut state = Lossy420Decoder::with_qindex(quantization.qindex, false).portable()?;
     let decoded = state.decode_origin_full(
         decoder,
         16,
@@ -53068,7 +53068,7 @@ impl Lossy420Decoder {
         }
     }
 
-    pub(super) fn with_qindex(qindex: u32) -> Option<Self> {
+    pub(super) fn with_qindex(qindex: u32, segment_lossless: bool) -> Option<Self> {
         Some(Self {
             cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
             large_coeff_arena: LargeCoefficientArena::new(),
@@ -53088,7 +53088,7 @@ impl Lossy420Decoder {
             current_qindex: Some(qindex),
             segment: BlockSegmentState {
                 qindex,
-                lossless: qindex == 0,
+                lossless: segment_lossless,
                 ..BlockSegmentState::DEFAULT
             },
             pending_skip: None,
@@ -53101,6 +53101,7 @@ impl Lossy420Decoder {
     pub(super) fn with_qindex_and_sampling(
         qindex: u32,
         chroma_sampling: ChromaSampling,
+        segment_lossless: bool,
     ) -> Option<Self> {
         Some(Self {
             cdfs: BlockCdfs::defaults_for_qindex([0, 0], qindex)?,
@@ -53121,7 +53122,7 @@ impl Lossy420Decoder {
             current_qindex: Some(qindex),
             segment: BlockSegmentState {
                 qindex,
-                lossless: qindex == 0,
+                lossless: segment_lossless,
                 ..BlockSegmentState::DEFAULT
             },
             pending_skip: None,
@@ -53134,9 +53135,11 @@ impl Lossy420Decoder {
     pub(super) fn with_cdf_state(
         qindex: u32,
         chroma_sampling: ChromaSampling,
+        segment_lossless: bool,
         state: &BlockCdfState,
     ) -> Option<Self> {
-        let mut decoder = Self::with_qindex_and_sampling(qindex, chroma_sampling)?;
+        let mut decoder =
+            Self::with_qindex_and_sampling(qindex, chroma_sampling, segment_lossless)?;
         decoder.cdfs.install_snapshot(state);
         Some(decoder)
     }
@@ -72215,7 +72218,7 @@ pub(super) fn decode_four_lossy_420_horizontal_leaves<F>(
 where
     F: FnMut(&mut RangeDecoder<'_, '_, '_>) -> PortableResult<()>,
 {
-    let mut state = Lossy420Decoder::with_qindex(quantization.qindex).portable()?;
+    let mut state = Lossy420Decoder::with_qindex(quantization.qindex, false).portable()?;
     let first = state.decode_origin_without_chroma(
         decoder,
         16,

@@ -11324,6 +11324,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let Some(mut block_decoder) = super::block::Lossy420Decoder::with_cdf_state(
         quantization.qindex,
         chroma_sampling,
+        context.frame_tools.segment_lossless,
         &tile_cdfs.block,
     ) else {
         return Ok(None);
