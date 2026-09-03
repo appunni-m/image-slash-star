@@ -66514,7 +66514,6 @@ impl Lossy420Decoder {
                 && !edges.planes[0].has_left
                 && edges.planes[0].top.valid_len() == 8
                 && !quantization.segment_lossless
-                && !tools.enable_intra_edge_filter
         });
         let spatial_luma_context = if following_vertical_zone1_context {
             SpatialLumaContext::FollowingVerticalZone1
@@ -67013,8 +67012,7 @@ impl Lossy420Decoder {
             && edges.planes[0].has_top
             && !edges.planes[0].has_left
             && edges.planes[0].top.valid_len() == 8
-            && !quantization.segment_lossless
-            && !tools.enable_intra_edge_filter;
+            && !quantization.segment_lossless;
         let spatial_luma_context = if following_vertical_zone1_context {
             SpatialLumaContext::FollowingVerticalZone1
         } else {
