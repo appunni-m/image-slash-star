@@ -5380,6 +5380,31 @@ fn inter_lossy_thin64_split_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact mode-2 B32x64/B64x32 split geometry. Keep this pair separate from
+/// the thin-64 predicate because the parser shares its capability argument
+/// with no other 64-axis roots, while the block compositor has distinct TX32
+/// shallow and TX16 deep source maps.
+fn inter_lossy_wide64_split_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && transform_mode == 2
+        && matches!(block_size, BlockSize::B32x64 | BlockSize::B64x32)
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 fn inter_lossless_grid_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -8507,6 +8532,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_wide64_split_geometry = inter_lossy_wide64_split_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let neighbors = inter_neighbors(tile_state, node)?;
     let intra_context = inter_intra_context(neighbors);
     let inter_flag = if skip_mode {
@@ -9308,7 +9342,8 @@ fn decode_inter_leaf(
                 || lossy_thin64_split_geometry),
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && prepared_quantization.quantization.segment_qindex > 0,
+            && (prepared_quantization.quantization.segment_qindex > 0
+                || lossy_wide64_split_geometry),
         lossy_split16_geometry,
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
