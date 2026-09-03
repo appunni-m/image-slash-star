@@ -9188,9 +9188,8 @@ fn decode_inter_leaf(
         layout,
         visible_width,
         visible_height,
+        context.bit_depth == 8,
         lossy_split8_geometry,
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth,
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && prepared_quantization.quantization.segment_qindex > 0,
