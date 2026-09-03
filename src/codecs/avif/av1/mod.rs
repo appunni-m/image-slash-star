@@ -383,12 +383,14 @@ pub(super) fn validate_sequence_frames(
             let Some(alpha_display) = alpha_displays.get_mut(index).and_then(Option::take) else {
                 return Ok(None);
             };
+            if monochrome_display_dimensions(&alpha_display)
+                != Some((color_leaf.width, color_leaf.height))
+            {
+                return Ok(None);
+            };
             let Some(alpha_plane) = alpha_display.monochrome_plane else {
                 return Ok(None);
             };
-            if alpha_display.dimensions != Some((color_leaf.width, color_leaf.height)) {
-                return Ok(None);
-            }
             Some(alpha_plane)
         } else {
             None
@@ -1189,21 +1191,19 @@ fn validate_still_with_token(
             return Ok(None);
         }
         let alpha_plane = if let Some(alpha) = &still.alpha {
-            let alpha = validate_plane_with_token(extracted.input, alpha, token)?;
-            let Some(alpha_plane) = alpha.complete_monochrome_plane else {
-                return Ok(None);
-            };
-            if !(alpha.sequence.monochrome
-                && alpha.sequence.bit_depth == color.sequence.bit_depth
-                && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
-                && usize::try_from(color_leaf.width).ok().and_then(|width| {
-                    usize::try_from(color_leaf.height)
-                        .ok()
-                        .and_then(|height| width.checked_mul(height))
-                }) == Some(alpha_plane.samples.len()))
+            let mut alpha = validate_plane_with_token(extracted.input, alpha, token)?;
+            if alpha.first_leaf.is_some()
+                || !monochrome_alpha_matches(
+                    &alpha,
+                    (color_leaf.width, color_leaf.height),
+                    color.sequence.bit_depth,
+                )
             {
                 return Ok(None);
             }
+            let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
             Some(alpha_plane)
         } else {
             None
@@ -1300,27 +1300,25 @@ fn validate_first_sequence_sample(
             .samples
             .first()
             .ok_or_else(|| malformed("AVIF sequence has no alpha sample"))?;
-        let alpha = validate_plane_with_token(
+        let mut alpha = validate_plane_with_token(
             extracted.input,
             &super::samples::EncodedPlane {
                 samples: vec![alpha_sample.clone()],
             },
             token,
         )?;
-        let Some(alpha_plane) = alpha.complete_monochrome_plane else {
-            return Ok(None);
-        };
-        if !(alpha.sequence.monochrome
-            && alpha.sequence.bit_depth == color.sequence.bit_depth
-            && alpha.frame_dimensions == Some((color_width, color_height))
-            && usize::try_from(color_width).ok().and_then(|width| {
-                usize::try_from(color_height)
-                    .ok()
-                    .and_then(|height| width.checked_mul(height))
-            }) == Some(alpha_plane.samples.len()))
+        if alpha.first_leaf.is_some()
+            || !monochrome_alpha_matches(
+                &alpha,
+                (color_width, color_height),
+                color.sequence.bit_depth,
+            )
         {
             return Ok(None);
         }
+        let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+            return Ok(None);
+        };
         Some(alpha_plane)
     } else {
         None
