@@ -25023,12 +25023,28 @@ fn add_constant_prediction_residual(
     output: &mut [u16],
     maximum: u16,
 ) {
-    let predictor = i32::from(predictor);
+    let predictor_i32 = i32::from(predictor);
     let maximum_sample = maximum;
     let maximum = i32::from(maximum);
-    for (destination, value) in output.iter_mut().zip(residual.iter().copied()) {
-        let reconstructed = predictor.saturating_add(value).clamp(0, maximum);
-        *destination = u16::try_from(reconstructed).unwrap_or(maximum_sample);
+    let sample_count = residual.len().min(output.len());
+    let vectorized = sample_count - sample_count % 8;
+
+    // Keep arbitrary residual overflow behavior identical to the scalar
+    // reference with saturating lane addition; the scalar tail preserves all
+    // short and non-multiple-of-eight inputs without touching the remainder.
+    let predictor_lanes = i32x8::splat(predictor_i32);
+    for offset in (0..vectorized).step_by(8) {
+        let values = i32x8::new(std::array::from_fn(|lane| residual[offset + lane]));
+        let reconstructed = predictor_lanes.saturating_add(values);
+        let samples = narrow_av1_samples(reconstructed, maximum);
+        output[offset..offset + 8].copy_from_slice(&samples);
+    }
+
+    for offset in vectorized..sample_count {
+        let reconstructed = predictor_i32
+            .saturating_add(residual[offset])
+            .clamp(0, maximum);
+        output[offset] = u16::try_from(reconstructed).unwrap_or(maximum_sample);
     }
 }
 
