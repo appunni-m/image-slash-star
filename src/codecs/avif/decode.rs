@@ -410,8 +410,11 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
     let plane_length = width.checked_mul(height)?;
-    if !matches!(still.bit_depth, 8 | 10 | 12) || still.monochrome || !still.color_range {
+    if !matches!(still.bit_depth, 8 | 10 | 12) || !still.color_range {
         return None;
+    }
+    if still.monochrome {
+        return decode_monochrome_portable(still, plane_length);
     }
     let subsampled = match (still.subsampling_x, still.subsampling_y) {
         (false, false) => false,
@@ -539,6 +542,64 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         }
         pixels
     };
+    Some(DecodedImage {
+        width: still.width,
+        height: still.height,
+        pixels,
+        color: if has_alpha {
+            ColorType::Rgba8
+        } else {
+            ColorType::Rgb8
+        },
+        mode: if has_alpha {
+            ImageMode::Rgba8
+        } else {
+            ImageMode::Rgb8
+        },
+        palette: None,
+        cursor_hotspot: None,
+        source: if has_alpha {
+            crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Auxiliary)
+        } else {
+            crate::types::SourceDescriptor::new()
+        },
+        opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
+        source_color: SourceColor::new(),
+    })
+}
+
+fn decode_monochrome_portable(
+    still: &super::av1::PortableStill,
+    sample_count: usize,
+) -> Option<DecodedImage> {
+    if !still.subsampling_x
+        || !still.subsampling_y
+        || !still.planes[1].samples.is_empty()
+        || !still.planes[2].samples.is_empty()
+        || still.planes[0].samples.len() != sample_count
+        || still
+            .alpha_plane
+            .as_ref()
+            .is_some_and(|plane| plane.samples.len() != sample_count)
+    {
+        return None;
+    }
+    let has_alpha = still.alpha_plane.is_some();
+    let channels = if has_alpha { 4 } else { 3 };
+    let pixel_capacity = sample_count.checked_mul(channels)?;
+    let mut pixels = Vec::new();
+    pixels.try_reserve_exact(pixel_capacity).ok()?;
+    for (index, &sample) in still.planes[0].samples.iter().enumerate() {
+        let gray = super::av1::truncate_to_u8(sample, still.bit_depth)?;
+        pixels.extend_from_slice(&[gray, gray, gray]);
+        if let Some(alpha_plane) = &still.alpha_plane {
+            pixels.push(super::av1::truncate_to_u8(
+                alpha_plane.samples[index],
+                still.bit_depth,
+            )?);
+        }
+    }
     Some(DecodedImage {
         width: still.width,
         height: still.height,

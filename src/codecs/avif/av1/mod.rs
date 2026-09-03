@@ -29,7 +29,7 @@ pub(super) use sample_depth::truncate_to_u8;
 use self::bit_reader::SegmentedData;
 #[cfg(test)]
 pub(super) use self::block::ReconstructedPlane;
-use self::frame::FrameState;
+use self::frame::{DisplayGeometryProof, FrameState};
 pub(super) use self::raster::FrameCanvas;
 #[cfg(coverage)]
 use super::samples::ByteSpan;
@@ -80,6 +80,7 @@ struct ValidatedPlane {
     complete_monochrome_plane: Option<block::ReconstructedPlane>,
     sequence: sequence::SequenceHeader,
     frame_dimensions: Option<(u32, u32)>,
+    display_geometry: Option<DisplayGeometryProof>,
 }
 
 // ✅ VERIFIED: AV1 specification sections 5.3.2-5.3.3; dav1d 1.5.3
@@ -372,7 +373,83 @@ fn validate_plane_with_token(
         complete_monochrome_plane: selected.monochrome_plane,
         sequence,
         frame_dimensions: selected.dimensions,
+        display_geometry: selected.geometry,
     })
+}
+
+fn monochrome_primary_dimensions(plane: &ValidatedPlane) -> Option<(u32, u32)> {
+    let sequence = &plane.sequence;
+    if !sequence.monochrome
+        || !matches!(sequence.bit_depth, 8 | 10 | 12)
+        || !sequence.color_range
+        || (
+            sequence.color_primaries,
+            sequence.transfer_characteristics,
+            sequence.matrix_coefficients,
+        ) != (1, 13, 6)
+        || (sequence.subsampling_x, sequence.subsampling_y) != (true, true)
+        || sequence.film_grain_present
+    {
+        return None;
+    }
+    let geometry = plane.display_geometry?;
+    if geometry.superres_enabled {
+        return None;
+    }
+    let dimensions = plane.frame_dimensions?;
+    if dimensions.0 == 0
+        || dimensions.1 == 0
+        || geometry.render_width != dimensions.0
+        || geometry.render_height != dimensions.1
+    {
+        return None;
+    }
+    let width = usize::try_from(dimensions.0).ok()?;
+    let height = usize::try_from(dimensions.1).ok()?;
+    let sample_count = width.checked_mul(height)?;
+    (plane
+        .complete_monochrome_plane
+        .as_ref()
+        .is_some_and(|plane| plane.samples.len() == sample_count))
+    .then_some(dimensions)
+}
+
+fn monochrome_alpha_matches(
+    plane: &ValidatedPlane,
+    dimensions: (u32, u32),
+    bit_depth: u32,
+) -> bool {
+    let sequence = &plane.sequence;
+    if !sequence.monochrome
+        || !sequence.color_range
+        || sequence.bit_depth != bit_depth
+        || sequence.film_grain_present
+        || plane.frame_dimensions != Some(dimensions)
+    {
+        return false;
+    }
+    let Some(geometry) = plane.display_geometry else {
+        return false;
+    };
+    if geometry.superres_enabled
+        || geometry.render_width != dimensions.0
+        || geometry.render_height != dimensions.1
+    {
+        return false;
+    }
+    let Some(width) = usize::try_from(dimensions.0).ok() else {
+        return false;
+    };
+    let Some(height) = usize::try_from(dimensions.1).ok() else {
+        return false;
+    };
+    let Some(sample_count) = width.checked_mul(height) else {
+        return false;
+    };
+    plane
+        .complete_monochrome_plane
+        .as_ref()
+        .is_some_and(|plane| plane.samples.len() == sample_count)
 }
 
 fn portable_still(
@@ -395,6 +472,33 @@ fn portable_still(
         alpha_plane,
         #[cfg(coverage)]
         entropy_operations: leaf.entropy_operations,
+    }
+}
+
+fn portable_monochrome_still(
+    plane: block::ReconstructedPlane,
+    dimensions: (u32, u32),
+    sequence: sequence::SequenceHeader,
+    alpha_plane: Option<block::ReconstructedPlane>,
+) -> PortableStill {
+    let empty = block::ReconstructedPlane {
+        samples: Vec::new(),
+    };
+    PortableStill {
+        width: dimensions.0,
+        height: dimensions.1,
+        bit_depth: sequence.bit_depth,
+        monochrome: true,
+        color_primaries: sequence.color_primaries,
+        transfer_characteristics: sequence.transfer_characteristics,
+        matrix_coefficients: sequence.matrix_coefficients,
+        color_range: sequence.color_range,
+        subsampling_x: sequence.subsampling_x,
+        subsampling_y: sequence.subsampling_y,
+        planes: [plane, empty.clone(), empty],
+        alpha_plane,
+        #[cfg(coverage)]
+        entropy_operations: Vec::new(),
     }
 }
 
@@ -720,7 +824,39 @@ fn validate_still_with_token(
         if extracted.grid_properties.is_some() || !extracted.grid_item_ids.is_empty() {
             return validate_grid_with_token(extracted, still, token);
         }
-        let color = validate_plane_with_token(extracted.input, &still.color, token)?;
+        let mut color = validate_plane_with_token(extracted.input, &still.color, token)?;
+        if color.first_leaf.is_none() {
+            if still.color.samples.len() != 1 {
+                return Ok(None);
+            }
+            let Some(dimensions) = monochrome_primary_dimensions(&color) else {
+                return Ok(None);
+            };
+            let Some(color_plane) = color.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
+            let alpha_plane = if let Some(alpha) = &still.alpha {
+                if alpha.samples.len() != 1 {
+                    return Ok(None);
+                }
+                let mut alpha = validate_plane_with_token(extracted.input, alpha, token)?;
+                if !monochrome_alpha_matches(&alpha, dimensions, color.sequence.bit_depth) {
+                    return Ok(None);
+                }
+                let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                    return Ok(None);
+                };
+                Some(alpha_plane)
+            } else {
+                None
+            };
+            return Ok(Some(portable_monochrome_still(
+                color_plane,
+                dimensions,
+                color.sequence,
+                alpha_plane,
+            )));
+        }
         let Some(color_leaf) = color.first_leaf.as_ref() else {
             return Ok(None);
         };
@@ -788,6 +924,42 @@ fn validate_first_sequence_sample(
         },
         token,
     )?;
+    if color.first_leaf.is_none() {
+        let Some(dimensions) = monochrome_primary_dimensions(&color) else {
+            return Ok(None);
+        };
+        let Some(color_plane) = color.complete_monochrome_plane else {
+            return Ok(None);
+        };
+        let alpha_plane = if let Some(alpha) = &sequence.alpha {
+            let alpha_sample = alpha
+                .samples
+                .first()
+                .ok_or_else(|| malformed("AVIF sequence has no alpha sample"))?;
+            let mut alpha = validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![alpha_sample.clone()],
+                },
+                token,
+            )?;
+            if !monochrome_alpha_matches(&alpha, dimensions, color.sequence.bit_depth) {
+                return Ok(None);
+            }
+            let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
+            Some(alpha_plane)
+        } else {
+            None
+        };
+        return Ok(Some(portable_monochrome_still(
+            color_plane,
+            dimensions,
+            color.sequence,
+            alpha_plane,
+        )));
+    }
     let Some((color_width, color_height)) = color
         .first_leaf
         .as_ref()

@@ -510,6 +510,11 @@ impl FrameSurface {
                     .map(FramePlane::reconstructed_copy)
                     .transpose()?,
                 dimensions: Some((self.upscaled_width, self.frame_height)),
+                geometry: Some(DisplayGeometryProof {
+                    superres_enabled: self.superres_enabled,
+                    render_width: self.render_width,
+                    render_height: self.render_height,
+                }),
             });
         }
         let planes = [
@@ -550,14 +555,27 @@ impl FrameSurface {
             }),
             monochrome_plane: None,
             dimensions: Some((self.upscaled_width, self.frame_height)),
+            geometry: Some(DisplayGeometryProof {
+                superres_enabled: self.superres_enabled,
+                render_width: self.render_width,
+                render_height: self.render_height,
+            }),
         })
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct DisplayGeometryProof {
+    pub(super) superres_enabled: bool,
+    pub(super) render_width: u32,
+    pub(super) render_height: u32,
 }
 
 pub(super) struct SelectedDisplay {
     pub(super) color_leaf: Option<super::block::FirstLeaf>,
     pub(super) monochrome_plane: Option<super::block::ReconstructedPlane>,
     pub(super) dimensions: Option<(u32, u32)>,
+    pub(super) geometry: Option<DisplayGeometryProof>,
 }
 
 impl SelectedDisplay {
@@ -566,6 +584,7 @@ impl SelectedDisplay {
             color_leaf: None,
             monochrome_plane: None,
             dimensions: None,
+            geometry: None,
         }
     }
 }
@@ -1029,6 +1048,7 @@ impl FrameState {
                 color_leaf: completion.diagnostic_leaf.clone(),
                 monochrome_plane: None,
                 dimensions: completion.diagnostic_frame_dimensions,
+                geometry: None,
             })
         }?;
         let Some(grain) = completion.film_grain.as_ref() else {
