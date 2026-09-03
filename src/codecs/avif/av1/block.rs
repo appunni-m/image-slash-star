@@ -56375,8 +56375,8 @@ impl Lossy420Decoder {
                 && tools.transform_mode == 2
                 && quantization.segment_qindex == 0
                 && !quantization.segment_lossless;
-            let i422_b4x16_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
-                && exact_b4x16
+            let i422_b4_long_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
+                && (exact_b4x16 || exact_b16x4)
                 && tools.transform_mode == 2
                 && quantization.segment_qindex == 0
                 && !quantization.segment_lossless;
@@ -56662,7 +56662,7 @@ impl Lossy420Decoder {
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
-                        || i422_b4x16_mode2_q0
+                        || i422_b4_long_mode2_q0
                         || i420_narrow_mode2_q0
                         || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless
@@ -56712,7 +56712,7 @@ impl Lossy420Decoder {
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
-                        || i422_b4x16_mode2_q0
+                        || i422_b4_long_mode2_q0
                         || i420_narrow_mode2_q0
                         || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless
@@ -56744,7 +56744,7 @@ impl Lossy420Decoder {
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
-                        || i422_b4x16_mode2_q0
+                        || i422_b4_long_mode2_q0
                         || i420_narrow_mode2_q0
                         || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless

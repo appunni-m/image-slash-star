@@ -5075,6 +5075,31 @@ fn inter_lossy_split8_rect_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
+/// Exact mode-2 B4x16/B16x4 split geometry. These long-axis roots have
+/// layout-specific chroma ownership, so keep their parser capability separate
+/// from the B4x8/B8x4/B8x16/B16x8 split family. The block validator owns the
+/// corresponding shallow/deep/mixed qindex policy.
+fn inter_lossy_b4_long_split_geometry_supported(
+    block_size: BlockSize,
+    layout: PixelLayout,
+    visible_width: u32,
+    visible_height: u32,
+    bit_depth: u32,
+    quantization: super::block::LossyQuantization,
+    transform_mode: u32,
+) -> bool {
+    !quantization.segment_lossless
+        && matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        && matches!(bit_depth, 8 | 10 | 12)
+        && quantization.sample_depth.bits() == bit_depth
+        && transform_mode == 2
+        && matches!(block_size, BlockSize::B4x16 | BlockSize::B16x4)
+        && (visible_width, visible_height) == block_size.pixel_dimensions()
+}
+
 /// Exact mode-2 B8x32/B32x8 split geometry. The shared wide-rectangle parser
 /// argument also feeds other transform families, so this predicate stays
 /// scoped to the two 8x32-axis roots and their exact visible extents.
@@ -8427,6 +8452,15 @@ fn decode_inter_leaf(
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
+    let lossy_b4_long_split_geometry = inter_lossy_b4_long_split_geometry_supported(
+        node.block_size,
+        layout,
+        visible_width,
+        visible_height,
+        context.bit_depth,
+        prepared_quantization.quantization,
+        context.frame_tools.transform_mode,
+    );
     let lossy_split8_wide_geometry = inter_lossy_split8_wide_geometry_supported(
         node.block_size,
         layout,
@@ -8681,7 +8715,8 @@ fn decode_inter_leaf(
             || lossy_wide_chunk_geometry
             || lossy_thin64_split_geometry
             || lossy_wide64_split_geometry
-            || lossy_wide_mode2_geometry;
+            || lossy_wide_mode2_geometry
+            || lossy_b4_long_split_geometry;
         if !wide_lossy_geometry
             && !tiny_high_depth_i444
             && !tiny_high_depth_i422
@@ -8709,6 +8744,7 @@ fn decode_inter_leaf(
         && !lossy_i444_rect_split_geometry
         && !lossy_i422_narrow_mode2_geometry
         && !lossy_i420_narrow_mode2_geometry
+        && !lossy_b4_long_split_geometry
     {
         return Ok(Err(super::block::PortableUnavailable));
     }
@@ -9335,7 +9371,8 @@ fn decode_inter_leaf(
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && (prepared_quantization.quantization.segment_qindex > 0
-                || lossy_split8_rect_geometry),
+                || lossy_split8_rect_geometry
+                || lossy_b4_long_split_geometry),
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && (prepared_quantization.quantization.segment_qindex > 0
