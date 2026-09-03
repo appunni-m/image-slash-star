@@ -71881,9 +71881,13 @@ impl Lossy420Decoder {
                         (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
                     ),
                 allow_diagonal_luma: true,
-                allow_smooth_chroma: full_resolution,
-                allow_smooth_luma: full_resolution
-                    || matches!(transform_grid, TransformGrid::Horizontal16x4),
+                // Smooth modes are prediction syntax, independent of the
+                // sampling layout or transform grid. The normalized origin
+                // compositor already handles all three smooth families for
+                // each supported plane; keep their admission orthogonal to
+                // the narrower diagonal-chroma exception above.
+                allow_smooth_chroma: true,
+                allow_smooth_luma: true,
             },
             tools,
             cdef_index_bits,
