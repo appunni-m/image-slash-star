@@ -293,17 +293,65 @@ pub(super) fn validate_sequence_frames(
         alpha_displays = Some(displays);
     }
 
-    if let Some(alpha_sequence) = &alpha_sequence
-        && (!alpha_sequence.monochrome
-            || !alpha_sequence.color_range
-            || alpha_sequence.bit_depth != color_sequence.bit_depth
-            || alpha_sequence.film_grain_present
-            || !matches!(alpha_sequence.bit_depth, 8 | 10 | 12))
+    if alpha_displays
+        .as_ref()
+        .is_some_and(|displays| displays.len() != color_displays.len())
     {
         return Ok(None);
     }
+    if let Some(alpha_sequence) = &alpha_sequence
+        && !monochrome_alpha_sequence_supported(alpha_sequence, color_sequence.bit_depth)
+    {
+        return Ok(None);
+    }
+
+    let mut frames = Vec::new();
+    frames.try_reserve(color_displays.len()).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
+    })?;
+    if color_sequence.monochrome {
+        if !monochrome_primary_sequence_supported(&color_sequence) {
+            return Ok(None);
+        }
+        for display in &mut color_displays {
+            let Some(mut display) = display.take() else {
+                return Ok(None);
+            };
+            let Some(dimensions) = monochrome_display_dimensions(&display) else {
+                return Ok(None);
+            };
+            let Some(color_plane) = display.monochrome_plane.take() else {
+                return Ok(None);
+            };
+            let alpha_plane = if let Some(alpha_displays) = alpha_displays.as_mut() {
+                let Some(mut alpha_display) =
+                    alpha_displays.get_mut(frames.len()).and_then(Option::take)
+                else {
+                    return Ok(None);
+                };
+                let Some(alpha_dimensions) = monochrome_display_dimensions(&alpha_display) else {
+                    return Ok(None);
+                };
+                if alpha_dimensions != dimensions {
+                    return Ok(None);
+                }
+                let Some(alpha_plane) = alpha_display.monochrome_plane.take() else {
+                    return Ok(None);
+                };
+                Some(alpha_plane)
+            } else {
+                None
+            };
+            frames.push(portable_monochrome_still(
+                color_plane,
+                dimensions,
+                color_sequence.clone(),
+                alpha_plane,
+            ));
+        }
+        return Ok(Some(frames));
+    }
     if !matches!(color_sequence.bit_depth, 8 | 10 | 12)
-        || color_sequence.monochrome
         || !color_sequence.color_range
         || (
             color_sequence.color_primaries,
@@ -314,11 +362,6 @@ pub(super) fn validate_sequence_frames(
     {
         return Ok(None);
     }
-
-    let mut frames = Vec::new();
-    frames.try_reserve(color_displays.len()).map_err(|_| {
-        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
-    })?;
     for (index, display) in color_displays.iter_mut().enumerate() {
         let Some(display) = display.take() else {
             return Ok(None);
@@ -377,26 +420,41 @@ fn validate_plane_with_token(
     })
 }
 
-fn monochrome_primary_dimensions(plane: &ValidatedPlane) -> Option<(u32, u32)> {
-    let sequence = &plane.sequence;
-    if !sequence.monochrome
-        || !matches!(sequence.bit_depth, 8 | 10 | 12)
-        || !sequence.color_range
-        || (
+fn monochrome_primary_sequence_supported(sequence: &sequence::SequenceHeader) -> bool {
+    sequence.monochrome
+        && matches!(sequence.bit_depth, 8 | 10 | 12)
+        && sequence.color_range
+        && (
             sequence.color_primaries,
             sequence.transfer_characteristics,
             sequence.matrix_coefficients,
-        ) != (1, 13, 6)
-        || (sequence.subsampling_x, sequence.subsampling_y) != (true, true)
-        || sequence.film_grain_present
-    {
-        return None;
-    }
-    let geometry = plane.display_geometry?;
+        ) == (1, 13, 6)
+        && (sequence.subsampling_x, sequence.subsampling_y) == (true, true)
+        && !sequence.film_grain_present
+}
+
+fn monochrome_alpha_sequence_supported(
+    sequence: &sequence::SequenceHeader,
+    bit_depth: u32,
+) -> bool {
+    sequence.monochrome
+        && matches!(sequence.bit_depth, 8 | 10 | 12)
+        && sequence.color_range
+        && sequence.bit_depth == bit_depth
+        && (sequence.subsampling_x, sequence.subsampling_y) == (true, true)
+        && !sequence.film_grain_present
+}
+
+fn monochrome_plane_dimensions(
+    display_geometry: Option<DisplayGeometryProof>,
+    frame_dimensions: Option<(u32, u32)>,
+    plane: Option<&block::ReconstructedPlane>,
+) -> Option<(u32, u32)> {
+    let geometry = display_geometry?;
     if geometry.superres_enabled {
         return None;
     }
-    let dimensions = plane.frame_dimensions?;
+    let dimensions = frame_dimensions?;
     if dimensions.0 == 0
         || dimensions.1 == 0
         || geometry.render_width != dimensions.0
@@ -407,11 +465,30 @@ fn monochrome_primary_dimensions(plane: &ValidatedPlane) -> Option<(u32, u32)> {
     let width = usize::try_from(dimensions.0).ok()?;
     let height = usize::try_from(dimensions.1).ok()?;
     let sample_count = width.checked_mul(height)?;
-    (plane
-        .complete_monochrome_plane
-        .as_ref()
-        .is_some_and(|plane| plane.samples.len() == sample_count))
-    .then_some(dimensions)
+    plane.filter(|plane| plane.samples.len() == sample_count)?;
+    Some(dimensions)
+}
+
+fn monochrome_display_dimensions(display: &frame::SelectedDisplay) -> Option<(u32, u32)> {
+    if display.color_leaf.is_some() {
+        return None;
+    }
+    monochrome_plane_dimensions(
+        display.geometry,
+        display.dimensions,
+        display.monochrome_plane.as_ref(),
+    )
+}
+
+fn monochrome_primary_dimensions(plane: &ValidatedPlane) -> Option<(u32, u32)> {
+    if !monochrome_primary_sequence_supported(&plane.sequence) {
+        return None;
+    }
+    monochrome_plane_dimensions(
+        plane.display_geometry,
+        plane.frame_dimensions,
+        plane.complete_monochrome_plane.as_ref(),
+    )
 }
 
 fn monochrome_alpha_matches(
@@ -419,37 +496,16 @@ fn monochrome_alpha_matches(
     dimensions: (u32, u32),
     bit_depth: u32,
 ) -> bool {
-    let sequence = &plane.sequence;
-    if !sequence.monochrome
-        || !sequence.color_range
-        || sequence.bit_depth != bit_depth
-        || sequence.film_grain_present
+    if !monochrome_alpha_sequence_supported(&plane.sequence, bit_depth)
         || plane.frame_dimensions != Some(dimensions)
     {
         return false;
     }
-    let Some(geometry) = plane.display_geometry else {
-        return false;
-    };
-    if geometry.superres_enabled
-        || geometry.render_width != dimensions.0
-        || geometry.render_height != dimensions.1
-    {
-        return false;
-    }
-    let Some(width) = usize::try_from(dimensions.0).ok() else {
-        return false;
-    };
-    let Some(height) = usize::try_from(dimensions.1).ok() else {
-        return false;
-    };
-    let Some(sample_count) = width.checked_mul(height) else {
-        return false;
-    };
-    plane
-        .complete_monochrome_plane
-        .as_ref()
-        .is_some_and(|plane| plane.samples.len() == sample_count)
+    monochrome_plane_dimensions(
+        plane.display_geometry,
+        plane.frame_dimensions,
+        plane.complete_monochrome_plane.as_ref(),
+    ) == Some(dimensions)
 }
 
 fn portable_still(
