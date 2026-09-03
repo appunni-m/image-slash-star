@@ -5048,10 +5048,9 @@ fn inter_lossy_split8_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
-/// Exact mode-2 B8x16/B16x8 split geometry. The shared rectangular parser
-/// argument also serves the narrower B4-axis families, so this predicate is
-/// kept separate and is ORed only into that argument for the two paired
-/// rectangles.
+/// Exact mode-2 B4x8/B8x4/B8x16/B16x8 split geometry. The shared rectangular
+/// parser argument serves all four narrow-axis families, so keep this
+/// capability exact to the supported root shapes and their visible extents.
 fn inter_lossy_split8_rect_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -5069,7 +5068,10 @@ fn inter_lossy_split8_rect_geometry_supported(
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 2
-        && matches!(block_size, BlockSize::B8x16 | BlockSize::B16x8)
+        && matches!(
+            block_size,
+            BlockSize::B4x8 | BlockSize::B8x4 | BlockSize::B8x16 | BlockSize::B16x8
+        )
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 

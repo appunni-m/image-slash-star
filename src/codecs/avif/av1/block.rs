@@ -56380,15 +56380,17 @@ impl Lossy420Decoder {
                 && tools.transform_mode == 2
                 && quantization.segment_qindex == 0
                 && !quantization.segment_lossless;
-            let mono_i444_b4_rect_mode2_q0 =
-                matches!(
-                    chroma_sampling,
-                    ChromaSampling::Monochrome | ChromaSampling::Full
-                ) && matches!(block_size, BlockSize::B4x16 | BlockSize::B16x4)
-                    && (visible_width, visible_height) == block_size.pixel_dimensions()
-                    && tools.transform_mode == 2
-                    && quantization.segment_qindex == 0
-                    && !quantization.segment_lossless;
+            let mono_i444_b4_rect_mode2_q0 = matches!(
+                chroma_sampling,
+                ChromaSampling::Monochrome | ChromaSampling::Full
+            ) && matches!(
+                block_size,
+                BlockSize::B4x8 | BlockSize::B8x4 | BlockSize::B4x16 | BlockSize::B16x4
+            ) && (visible_width, visible_height)
+                == block_size.pixel_dimensions()
+                && tools.transform_mode == 2
+                && quantization.segment_qindex == 0
+                && !quantization.segment_lossless;
             let i420_narrow_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled420
                 && matches!(
                     block_size,
@@ -56637,7 +56639,8 @@ impl Lossy420Decoder {
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
                         || i422_b4x8_mode2_q0
-                        || i420_narrow_mode2_q0)
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless
                     && prediction_state.inter_intra.is_none()
                     && prediction_state.obmc.is_none())
