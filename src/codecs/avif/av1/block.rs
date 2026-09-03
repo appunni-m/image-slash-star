@@ -39856,83 +39856,47 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     above_right_x_offset: u32,
     following_v8x16_filter_intra_mode: Option<usize>,
     exact_top_only_context: bool,
-    above_chroma_is_dc: bool,
     enable_intra_edge_filter: bool,
 ) -> PortableResult<ClosedLeaf> {
-    let smooth_quantization = syntax.lossy_quantization;
-    let exact_smooth_syntax_class = syntax.luma_angle.is_none()
+    // Smooth predictors are selected by the intra mode, not by the
+    // quantizer, matrix, residual presence, or the global angular
+    // edge-filter switch. Keep the gate semantic: this arm is only for an
+    // unsplit 8x16 luma residual whose decoded transform is handled by the
+    // checked rectangular kernels below. Split carriers take the causal
+    // compositor branch before this match and are validated there.
+    let smooth_luma_syntax_class = matches!(
+        syntax.luma_predictor,
+        LumaPredictor::Smooth | LumaPredictor::SmoothVertical | LumaPredictor::SmoothHorizontal
+    ) && syntax.luma_angle.is_none()
         && syntax.filter_intra_mode.is_none()
-        && matches!(syntax.chroma_predictor, ChromaPredictor::Dc)
-        && syntax.chroma_angle.is_none()
         && syntax.lossy_luma_rect_coefficients.is_some()
-        && matches!(syntax.lossy_luma_rect_transform, LossyTransformKind::DctDct)
+        && syntax.lossy_luma_4x4_split.is_none()
         && syntax.lossy_luma_4x4_grid_split.is_none()
+        && syntax.lossy_luma_8x4_split.is_none()
         && syntax.lossy_luma_8x8_split.is_none()
-        && syntax
-            .lossy_chroma_8x4_coefficients
-            .iter()
-            .all(Option::is_none)
-        && matches!(syntax.transform_grid, TransformGrid::Vertical8x16)
-        && matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
-        && !syntax.palette.is_present()
-        && smooth_quantization.qindex == 16
-        && !smooth_quantization.delta_q_present
-        && smooth_quantization.resolution_log2 == 0
-        && smooth_quantization.y_dc_delta == 0
-        && smooth_quantization.y_ac_delta == 0
-        && smooth_quantization.u_dc_delta == 0
-        && smooth_quantization.u_ac_delta == 0
-        && smooth_quantization.v_dc_delta == 0
-        && smooth_quantization.v_ac_delta == 0
-        && smooth_quantization.using_matrix
-        && smooth_quantization.matrix_y == 10
-        && smooth_quantization.matrix_u == 10
-        && smooth_quantization.matrix_v == 10;
-    let exact_chroma_smooth_syntax_class = exact_top_only_context
-        && matches!(syntax.luma_predictor, LumaPredictor::Dc)
-        && syntax.luma_angle.is_none()
-        && syntax.filter_intra_mode.is_none()
-        && matches!(
-            syntax.chroma_predictor,
-            ChromaPredictor::Smooth
-                | ChromaPredictor::SmoothVertical
-                | ChromaPredictor::SmoothHorizontal
-        )
-        && syntax.chroma_angle.is_none()
-        && syntax.lossy_luma_rect_coefficients.is_none()
-        && syntax.lossy_luma_4x4_grid_split.is_none()
         && syntax.lossy_luma_8x8_grid_split.is_none()
-        && syntax.lossy_luma_8x8_split.is_some_and(|split| {
-            split.coefficients.iter().all(Option::is_none)
-                && split
-                    .transforms
-                    .iter()
-                    .all(|transform| matches!(transform, LossyTransformKind::DctDct))
-        })
-        && syntax
-            .lossy_chroma_8x4_coefficients
-            .iter()
-            .all(Option::is_some)
+        && syntax.lossy_luma_16x16_split.is_none()
+        && syntax.lossy_luma_16x16_horizontal_split.is_none()
+        && syntax.lossy_luma_32x16_horizontal_split.is_none()
+        && syntax.lossy_luma_16x16_vertical_split.is_none()
         && matches!(syntax.transform_grid, TransformGrid::Vertical8x16)
         && matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
-        && !syntax.palette.is_present()
-        && smooth_quantization.qindex == 16
-        && !smooth_quantization.delta_q_present
-        && smooth_quantization.resolution_log2 == 0
-        && smooth_quantization.y_dc_delta == 0
-        && smooth_quantization.y_ac_delta == 0
-        && smooth_quantization.u_dc_delta == 0
-        && smooth_quantization.u_ac_delta == 0
-        && smooth_quantization.v_dc_delta == 0
-        && smooth_quantization.v_ac_delta == 0
-        && smooth_quantization.using_matrix
-        && smooth_quantization.matrix_y == 10
-        && smooth_quantization.matrix_u == 10
-        && smooth_quantization.matrix_v == 10
-        && matches!(above_left.luma_predictor, LumaPredictor::Dc)
-        && above_chroma_is_dc
-        && following_v8x16_filter_intra_mode.is_none()
-        && !enable_intra_edge_filter;
+        && !syntax.palette.is_present();
+
+    // Chroma smooth modes use the prepared top/left 4:2:0 edges in both
+    // origin-like and true-following contexts. They do not depend on the
+    // luma predictor, quantization, matrix selection, or whether the luma
+    // plane arrived through a split compositor. Residual skips remain valid
+    // because the reconstruction kernels accept an absent coefficient block.
+    let smooth_chroma_syntax_class = matches!(
+        syntax.chroma_predictor,
+        ChromaPredictor::Smooth
+            | ChromaPredictor::SmoothVertical
+            | ChromaPredictor::SmoothHorizontal
+    ) && syntax.chroma_angle.is_none()
+        && matches!(syntax.transform_grid, TransformGrid::Vertical8x16)
+        && matches!(syntax.chroma_sampling, ChromaSampling::Subsampled420)
+        && !syntax.palette.is_present();
     let BlockSyntax {
         luma_predictor,
         luma_angle,
@@ -39964,19 +39928,6 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     };
     let has_left = left_luma_edge_16.is_some()
         || (left_neighbor.is_some() && left_y_offset.saturating_add(16) <= left_neighbor_height);
-    let exact_smooth_witness_class = exact_smooth_syntax_class
-        && !has_left
-        && left_neighbor.is_none()
-        && left_luma_edge_16.is_none()
-        && left_luma_bottom.is_none()
-        && above_right_is_above_left
-        && above_left_width == 8
-        && above_right_width == 8
-        && above_left_x_offset == 0
-        && above_right_x_offset == 0
-        && matches!(above_left.luma_predictor, LumaPredictor::Dc)
-        && following_v8x16_filter_intra_mode.is_none()
-        && !enable_intra_edge_filter;
     let luma_left = left_luma_edge_16.unwrap_or_else(|| {
         if has_left {
             left_neighbor.map_or([luma_top[0]; 16], |neighbor| {
@@ -40106,7 +40057,7 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                 | LumaPredictor::SmoothVertical
                 | LumaPredictor::SmoothHorizontal),
                 None,
-            ) if exact_smooth_witness_class => reconstruct_lossy_luma_8x16_smooth_family(
+            ) if smooth_luma_syntax_class => reconstruct_lossy_luma_8x16_smooth_family(
                 predictor,
                 std::array::from_fn(|index| luma_top[index]),
                 luma_left,
@@ -40211,7 +40162,7 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                     transform,
                 ))
             }
-            ChromaPredictor::Smooth if exact_chroma_smooth_syntax_class => {
+            ChromaPredictor::Smooth if smooth_chroma_syntax_class => {
                 Ok(reconstruct_lossy_luma_4x8_smooth(
                     [top[0], top[1], top[2], top[3]],
                     top[3],
@@ -40220,7 +40171,7 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                     transform,
                 ))
             }
-            ChromaPredictor::SmoothVertical if exact_chroma_smooth_syntax_class => {
+            ChromaPredictor::SmoothVertical if smooth_chroma_syntax_class => {
                 Ok(reconstruct_lossy_luma_4x8_smooth_vertical(
                     [top[0], top[1], top[2], top[3]],
                     left[7],
@@ -40228,7 +40179,7 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
                     transform,
                 ))
             }
-            ChromaPredictor::SmoothHorizontal if exact_chroma_smooth_syntax_class => Ok(
+            ChromaPredictor::SmoothHorizontal if smooth_chroma_syntax_class => Ok(
                 reconstruct_lossy_luma_4x8_smooth_horizontal(left, top[3], coefficients, transform),
             ),
             _ => Err(PortableUnavailable),
@@ -71401,10 +71352,6 @@ impl Lossy420Decoder {
                         neighbors.above_right_x_offset,
                         neighbors.following_v8x16_filter_intra_mode,
                         following_vertical_zone1_context,
-                        matches!(
-                            neighbors.above_left.chroma_predictor,
-                            Some(ChromaPredictor::Dc)
-                        ),
                         tools.enable_intra_edge_filter,
                     )?;
                     let reconstruct_target = |edges: (
@@ -71479,10 +71426,6 @@ impl Lossy420Decoder {
                     neighbors.above_right_x_offset,
                     neighbors.following_v8x16_filter_intra_mode,
                     following_vertical_zone1_context,
-                    matches!(
-                        neighbors.above_left.chroma_predictor,
-                        Some(ChromaPredictor::Dc)
-                    ),
                     tools.enable_intra_edge_filter,
                 )?;
                 for plane in 1..=2 {
@@ -71695,10 +71638,6 @@ impl Lossy420Decoder {
                 neighbors.above_right_x_offset,
                 neighbors.following_v8x16_filter_intra_mode,
                 following_vertical_zone1_context,
-                matches!(
-                    neighbors.above_left.chroma_predictor,
-                    Some(ChromaPredictor::Dc)
-                ),
                 tools.enable_intra_edge_filter,
             );
 
