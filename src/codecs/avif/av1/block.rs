@@ -56370,8 +56370,8 @@ impl Lossy420Decoder {
                 block_size == BlockSize::B4x16 && visible_width == 4 && visible_height == 16;
             let exact_b16x4 =
                 block_size == BlockSize::B16x4 && visible_width == 16 && visible_height == 4;
-            let i422_b4x8_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
-                && exact_b4x8
+            let i422_b4_axis_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled422
+                && (exact_b4x8 || exact_b8x4)
                 && tools.transform_mode == 2
                 && quantization.segment_qindex == 0
                 && !quantization.segment_lossless;
@@ -56638,7 +56638,7 @@ impl Lossy420Decoder {
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
-                        || i422_b4x8_mode2_q0
+                        || i422_b4_axis_mode2_q0
                         || i420_narrow_mode2_q0
                         || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless
