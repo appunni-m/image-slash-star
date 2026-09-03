@@ -52730,6 +52730,7 @@ enum WideChromaTransformSource<'a> {
 enum InterSplitQindexPolicy {
     PositiveOnly,
     Mode2SplitB8Rect,
+    Mode2SplitB8WideRect,
     Mode2SplitB16,
     Mode2SplitB32,
     Mode2SplitB64,
@@ -55906,7 +55907,6 @@ impl Lossy420Decoder {
             ) && tools.sample_depth == quantization.sample_depth
                 && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                 && tools.transform_mode == 2
-                && quantization.segment_qindex > 0
                 && !quantization.segment_lossless)
                 .then_some(())
                 .portable()?;
@@ -56768,7 +56768,9 @@ impl Lossy420Decoder {
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
-                    && quantization.segment_qindex > 0
+                    && (quantization.segment_qindex > 0
+                        || (split_b8x32_deep && exact_b8x32)
+                        || (split_b32x8_deep && exact_b32x8))
                     && !quantization.segment_lossless)
                     .then_some(())
                     .portable()?;
@@ -56792,7 +56794,6 @@ impl Lossy420Decoder {
                     && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
                     && tools.sample_depth == quantization.sample_depth
                     && tools.transform_mode == 2
-                    && quantization.segment_qindex > 0
                     && !quantization.segment_lossless
                     && any_child_split
                     && !all_children_split)
@@ -57674,6 +57675,14 @@ impl Lossy420Decoder {
                     }
                     _ => return Err(PortableUnavailable),
                 };
+                let qindex_policy = if matches!(
+                    topology,
+                    RectSplitTopology::B8x32 { .. } | RectSplitTopology::B32x8 { .. }
+                ) {
+                    InterSplitQindexPolicy::Mode2SplitB8WideRect
+                } else {
+                    InterSplitQindexPolicy::PositiveOnly
+                };
                 let (grid_contexts, grid_transforms) = self.decode_inter_split_luma_rect_topology(
                     decoder,
                     &prediction,
@@ -57682,6 +57691,7 @@ impl Lossy420Decoder {
                     tools,
                     coefficient_contexts,
                     topology,
+                    qindex_policy,
                     &mut decode_transform_type,
                 )?;
                 contexts[0] = grid_contexts.bottom_right;
@@ -57847,6 +57857,7 @@ impl Lossy420Decoder {
                         tools,
                         coefficient_contexts,
                         &mut decode_transform_type,
+                        InterSplitQindexPolicy::Mode2SplitB8WideRect,
                     )?;
                 contexts[0] = split_contexts[1];
                 luma_right_contexts[..8].copy_from_slice(&split_right);
@@ -57867,6 +57878,7 @@ impl Lossy420Decoder {
                         tools,
                         coefficient_contexts,
                         &mut decode_transform_type,
+                        InterSplitQindexPolicy::Mode2SplitB8WideRect,
                     )?;
                 contexts[0] = split_contexts[1];
                 luma_right_contexts[..2].copy_from_slice(&split_right);
@@ -57878,6 +57890,7 @@ impl Lossy420Decoder {
             }
             if (split_b8x32_deep || split_b32x8_deep) && plane == 0 {
                 let (block_width, block_height) = if split_b8x32_deep { (8, 32) } else { (32, 8) };
+                let qindex_policy = InterSplitQindexPolicy::Mode2SplitB8WideRect;
                 let (grid_contexts, grid_transforms) = self.decode_inter_split_luma_tx8_grid(
                     decoder,
                     &prediction,
@@ -57888,7 +57901,7 @@ impl Lossy420Decoder {
                     &mut decode_transform_type,
                     block_width,
                     block_height,
-                    InterSplitQindexPolicy::PositiveOnly,
+                    qindex_policy,
                 )?;
                 contexts[0] = grid_contexts.bottom_right;
                 luma_right_contexts = grid_contexts.right;
@@ -59452,6 +59465,8 @@ impl Lossy420Decoder {
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
             && (quantization.segment_qindex > 0
+                || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB8WideRect)
+                    && matches!((block_width, block_height), (8, 32) | (32, 8)))
                 || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB32)
                     && (block_width, block_height) == (32, 32)))
             && !quantization.segment_lossless)
@@ -59950,6 +59965,7 @@ impl Lossy420Decoder {
         tools: BlockTools,
         coefficient_contexts: InterCoefficientContexts,
         topology: RectSplitTopology,
+        qindex_policy: InterSplitQindexPolicy,
         decode_transform_type: &mut impl FnMut(
             &mut RangeDecoder<'_, '_, '_>,
             TxSize,
@@ -60017,7 +60033,9 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
+            && (quantization.segment_qindex > 0
+                || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB8WideRect)
+                    && matches!((block_width, block_height), (8, 32) | (32, 8))))
             && !quantization.segment_lossless
             && child_splits.iter().any(|&split| split)
             && child_splits.iter().any(|&split| !split))
@@ -60648,6 +60666,7 @@ impl Lossy420Decoder {
             &mut RangeDecoder<'_, '_, '_>,
             TxSize,
         ) -> PortableResult<Av1TransformType>,
+        qindex_policy: InterSplitQindexPolicy,
     ) -> PortableResult<([u8; 2], [u8; 8], [u8; 2], [Av1TransformType; 2])> {
         (prediction.len() == 256
             && raster.coded_width == 8
@@ -60657,7 +60676,8 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
+            && (quantization.segment_qindex > 0
+                || matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB8WideRect))
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
@@ -60896,6 +60916,7 @@ impl Lossy420Decoder {
             &mut RangeDecoder<'_, '_, '_>,
             TxSize,
         ) -> PortableResult<Av1TransformType>,
+        qindex_policy: InterSplitQindexPolicy,
     ) -> PortableResult<([u8; 2], [u8; 2], [u8; 8], Av1TransformType)> {
         (prediction.len() == 256
             && raster.coded_width == 32
@@ -60905,7 +60926,8 @@ impl Lossy420Decoder {
             && tools.sample_depth == quantization.sample_depth
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
-            && quantization.segment_qindex > 0
+            && (quantization.segment_qindex > 0
+                || matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB8WideRect))
             && !quantization.segment_lossless)
             .then_some(())
             .portable()?;
