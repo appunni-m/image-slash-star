@@ -919,28 +919,25 @@ fn validate_grid_with_token(
             return Ok(None);
         }
         let alpha_plane = if let Some(alpha) = &still.alpha {
-            let alpha = validate_plane_with_token(
+            let mut alpha = validate_plane_with_token(
                 extracted.input,
                 &super::samples::EncodedPlane {
                     samples: vec![alpha.samples[index].clone()],
                 },
                 token,
             )?;
-            let Some(alpha_plane) = alpha.complete_monochrome_plane else {
-                return Ok(None);
-            };
-            if !(alpha.sequence.monochrome
-                && alpha.sequence.color_range
-                && alpha.sequence.bit_depth == color.sequence.bit_depth
-                && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
-                && usize::try_from(color_leaf.width).ok().and_then(|width| {
-                    usize::try_from(color_leaf.height)
-                        .ok()
-                        .and_then(|height| width.checked_mul(height))
-                }) == Some(alpha_plane.samples.len()))
+            if alpha.first_leaf.is_some()
+                || !monochrome_alpha_matches(
+                    &alpha,
+                    (color_leaf.width, color_leaf.height),
+                    color.sequence.bit_depth,
+                )
             {
                 return Ok(None);
             }
+            let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
             Some(alpha_plane)
         } else {
             None
