@@ -55652,7 +55652,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 2
                 && !quantization.segment_lossless
-                && quantization.segment_qindex > 0
                 && matches!(
                     block_size,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
@@ -55687,7 +55686,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 2
                 && !quantization.segment_lossless
-                && quantization.segment_qindex > 0
                 && matches!(
                     block_size,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
@@ -55723,7 +55721,6 @@ impl Lossy420Decoder {
                 && tools.sample_depth == quantization.sample_depth
                 && tools.transform_mode == 2
                 && !quantization.segment_lossless
-                && quantization.segment_qindex > 0
                 && matches!(
                     block_size,
                     BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
@@ -64594,9 +64591,19 @@ impl Lossy420Decoder {
                 } else {
                     1
                 }
+            // Every mode-2 transform source has a complete causal map.  A
+            // non-lossless qindex-zero segment therefore consumes the same
+            // TX32 syntax as the positive-q path; keep the source match
+            // explicit so mode-1/mode-0 callers cannot inherit this rule.
             && (!mode2
                 || quantization.segment_qindex > 0
-                || matches!(transform_source, WideChromaTransformSource::Mode2UnsplitDct))
+                || matches!(
+                    transform_source,
+                    WideChromaTransformSource::Mode2UnsplitDct
+                        | WideChromaTransformSource::Mode2Split32(_)
+                        | WideChromaTransformSource::Mode2Deep16(_)
+                        | WideChromaTransformSource::Mode2Mixed(_)
+                ))
             && !quantization.segment_lossless
             && (!matches!(
                 transform_source,
@@ -64862,9 +64869,18 @@ impl Lossy420Decoder {
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.sample_depth == quantization.sample_depth
             && tools.transform_mode == mode
+            // All mode-2 I422 region sources retain their exact luma origin
+            // map, including split/deep/mixed trees, so qindex zero is valid
+            // whenever the segment remains lossy.
             && (mode != 2
                 || quantization.segment_qindex > 0
-                || matches!(transform_source, WideChromaTransformSource::Mode2UnsplitDct))
+                || matches!(
+                    transform_source,
+                    WideChromaTransformSource::Mode2UnsplitDct
+                        | WideChromaTransformSource::Mode2Split32(_)
+                        | WideChromaTransformSource::Mode2Deep16(_)
+                        | WideChromaTransformSource::Mode2Mixed(_)
+                ))
             && !quantization.segment_lossless
             && external_above.len() == 8
             && external_left.len() == 16)
