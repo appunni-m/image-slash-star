@@ -5356,7 +5356,9 @@ fn inter_lossy_i444_rect_split_geometry_supported(
 /// Exact mode-2 64-axis rectangular split geometry. These thin blocks retain
 /// one 64-pixel axis at the root and split into two TX32-sized children; keep
 /// this predicate separate from the mode-1 wide-terminal admission so the
-/// high-depth gate cannot broaden unrelated 64-axis shapes.
+/// high-depth gate cannot broaden unrelated 64-axis shapes. The split tree is
+/// valid at qindex zero for every supported inter layout as long as the
+/// segment remains lossy.
 fn inter_lossy_thin64_split_geometry_supported(
     block_size: BlockSize,
     layout: PixelLayout,
@@ -5367,11 +5369,13 @@ fn inter_lossy_thin64_split_geometry_supported(
     transform_mode: u32,
 ) -> bool {
     !quantization.segment_lossless
-        && layout == PixelLayout::I420
+        && matches!(
+            layout,
+            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
         && matches!(bit_depth, 8 | 10 | 12)
         && quantization.sample_depth.bits() == bit_depth
         && transform_mode == 2
-        && quantization.segment_qindex > 0
         && matches!(block_size, BlockSize::B16x64 | BlockSize::B64x16)
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
@@ -9300,7 +9304,8 @@ fn decode_inter_leaf(
                 || lossy_split8_wide_geometry),
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && prepared_quantization.quantization.segment_qindex > 0,
+            && (prepared_quantization.quantization.segment_qindex > 0
+                || lossy_thin64_split_geometry),
         matches!(context.bit_depth, 8 | 10 | 12)
             && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
             && prepared_quantization.quantization.segment_qindex > 0,
