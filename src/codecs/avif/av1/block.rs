@@ -21027,28 +21027,21 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
     let mut full_large_chroma_grids = [None; 2];
     let mut lossless_square64_coefficients = [None; 3];
     let mut lossy_chroma_residual_contexts = [0x40_u8; 2];
-    let following_vertical_zone1_split_target = matches!(
+    let following_vertical_zone1_split_target =
+        matches!(
             spatial_luma_context,
             SpatialLumaContext::FollowingVerticalZone1
         ) && matches!(transform_grid, TransformGrid::Vertical8x16)
             && matches!(chroma_sampling, ChromaSampling::Subsampled420)
+            && matches!(quantization_syntax, QuantizationSyntax::Lossy { .. })
+            && !segment_lossless
             && transform_depth == 2
             && matches!(luma_predictor, LumaPredictor::Diagonal67)
             && luma_angle == Some(64)
             && filter_intra_mode.is_none()
             && !palette.is_present()
             && matches!(chroma_predictor, ChromaPredictor::Dc)
-            && chroma_angle.is_none()
-            // The target is in AV1 qcat-two (the target's base qindex is 72),
-            // so the gate follows the CDF category rather than one fixture's
-            // exact quality value.
-            && lossy_quantization.qindex > 60
-            && lossy_quantization.qindex <= 120
-            && !lossy_quantization.delta_q_present
-            && lossy_quantization.using_matrix
-            && lossy_quantization.matrix_y == 9
-            && lossy_quantization.matrix_u == 9
-            && lossy_quantization.matrix_v == 9;
+            && chroma_angle.is_none();
     let mut large_coeff_arena = large_coeff_arena;
     let mut lossless_square64_arena = lossless_square64_arena;
     let mut decode_plane = |decoder: &mut RangeDecoder<'_, '_, '_>, plane, cdfs: &mut BlockCdfs| {
@@ -22101,14 +22094,6 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
                                 left_luma_contexts[3],
                             ],
                         )?;
-                        if split.coefficients.iter().any(Option::is_some)
-                            || split
-                                .transforms
-                                .iter()
-                                .any(|transform| !matches!(transform, LossyTransformKind::DctDct))
-                        {
-                            return Err(PortableUnavailable);
-                        }
                         cdfs.last_lossy_luma_residual_context = Some(split.bottom_contexts[1]);
                         lossy_luma_4x4_grid_split = Some(split);
                         return Ok([[0_i32; 16]; 64]);
@@ -22762,12 +22747,6 @@ fn decode_syntax_with_cdef_with_lossless_square64_arena(
         let plane0 = decode_plane(decoder, 0, cdfs)?;
         let plane1 = decode_plane(decoder, 1, cdfs)?;
         let plane2 = decode_plane(decoder, 2, cdfs)?;
-        if following_vertical_zone1_split_target
-            && (lossy_chroma_8x4_coefficients.iter().any(Option::is_some)
-                || lossy_chroma_residual_contexts != [0x40; 2])
-        {
-            return Err(PortableUnavailable);
-        }
         [plane0, plane1, plane2]
     };
     if skip
@@ -39976,14 +39955,20 @@ fn reconstruct_following_lossy_420_vertical_8x16_leaf(
     let luma = if let Some(split) = lossy_luma_4x4_grid_split {
         if has_left
             || !above_right_is_above_left
-            || enable_intra_edge_filter
             || !matches!(luma_predictor, LumaPredictor::Diagonal67)
             || luma_angle != Some(64)
             || filter_intra_mode.is_some()
         {
             return Err(PortableUnavailable);
         }
-        reconstruct_lossy_luma_8x16_4x4_grid_diagonal_z1(luma_top, luma_top_left, 64, split)?
+        reconstruct_lossy_luma_8x16_4x4_grid_diagonal_z1(
+            luma_top,
+            luma_top_left,
+            64,
+            enable_intra_edge_filter,
+            smooth_neighbor_edges,
+            split,
+        )?
     } else if let Some(split) = lossy_luma_8x8_split {
         match reconstruct_lossy_luma_8x16_split(
             luma_predictor,
@@ -46356,27 +46341,21 @@ fn reconstruct_lossy_luma_8x16_split(
     Ok(ReconstructedPlane { samples })
 }
 
-/// Reconstruct the promoted following R8x16 Zone-1 leaf from eight skipped
-/// TX4x4 children. The child-local top edge is taken from the real eight
-/// samples above the leaf, with the final sample repeated for the right
-/// child. Once the first row has been written, later rows read their top and
-/// northwest samples from the reconstructed pixels, exactly as the AV1
-/// directional predictor does for an internal transform grid.
+/// Reconstruct the promoted following R8x16 Zone-1 leaf from its 2×4 TX4x4
+/// children. Each child is predicted, inverse-transformed with its decoded
+/// residual, and committed before the next causal child is visited. The
+/// child-local top edge is taken from the real eight samples above the leaf,
+/// with the final sample repeated for the right child; lower rows read their
+/// top and northwest samples from the private reconstructed raster.
 fn reconstruct_lossy_luma_8x16_4x4_grid_diagonal_z1(
     top: [u16; 16],
     top_left: u16,
     angle: i32,
+    enable_intra_edge_filter: bool,
+    smooth_edges: bool,
     split: LossyLuma4x4GridSplit,
 ) -> PortableResult<ReconstructedPlane> {
     (0 < angle && angle < 90).then_some(()).portable()?;
-    if split.coefficients.iter().any(Option::is_some)
-        || split
-            .transforms
-            .iter()
-            .any(|transform| !matches!(transform, LossyTransformKind::DctDct))
-    {
-        return Err(PortableUnavailable);
-    }
 
     let mut samples = vec![0_u16; 128];
     for row in 0_usize..4 {
@@ -46432,8 +46411,8 @@ fn reconstruct_lossy_luma_8x16_4x4_grid_diagonal_z1(
                 top_edge,
                 block_top_left,
                 angle,
-                false,
-                false,
+                enable_intra_edge_filter,
+                smooth_edges,
                 coefficients,
                 transform,
             )?;
@@ -68966,6 +68945,7 @@ impl Lossy420Decoder {
                 (self.chroma_sampling, transform_grid),
                 (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
             ) && std::ptr::eq(neighbors.above_left, neighbors.above_right)
+                && !quantization.segment_lossless
                 && neighbors.above_left.width == 8
                 && neighbors.above_left.height == 16
                 && neighbors.above_left_width == 8
@@ -68987,8 +68967,10 @@ impl Lossy420Decoder {
                 && neighbors
                     .left_full_chroma_bottom_8
                     .iter()
-                    .all(Option::is_none)
-                && !tools.enable_intra_edge_filter;
+                    .all(Option::is_none);
+        // Zone-1 diagonal prediction still uses this syntax context when
+        // intra-edge filtering is enabled; the reconstruction helper applies
+        // the normative filter per TX4 child.
         let spatial_luma_context = if following_vertical_zone1_context {
             SpatialLumaContext::FollowingVerticalZone1
         } else {
