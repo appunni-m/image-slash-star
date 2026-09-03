@@ -83,6 +83,13 @@ struct ValidatedPlane {
     display_geometry: Option<DisplayGeometryProof>,
 }
 
+struct MonochromeGridCell {
+    width: u32,
+    height: u32,
+    luma: block::ReconstructedPlane,
+    alpha: Option<block::ReconstructedPlane>,
+}
+
 // ✅ VERIFIED: AV1 specification sections 5.3.2-5.3.3; dav1d 1.5.3
 // src/getbits.c:95-112 and src/obu.c:1169-1195.
 fn read_uleb128(data: &SegmentedData<'_, '_>, offset: &mut usize) -> Av1Result<u32> {
@@ -604,6 +611,236 @@ fn validate_grid(
     validate_grid_with_token(extracted, still, None)
 }
 
+/// Validate and assemble a grid whose cells are complete monochrome AV1
+/// displays. Grid-level cropping is performed by the checked monochrome
+/// canvases; per-cell display transforms remain unsupported by the narrow
+/// portable admission.
+fn validate_monochrome_grid_with_token(
+    extracted: &ExtractedAvif<'_>,
+    still: &super::samples::StillPayload,
+    token: Option<&crate::CancellationToken>,
+    properties: crate::types::AvifGridProperties,
+    columns: usize,
+    cell_count: usize,
+    first_color: ValidatedPlane,
+) -> Av1Result<Option<PortableStill>> {
+    if first_color.first_leaf.is_some() {
+        return Ok(None);
+    }
+    let Some(first_dimensions) = monochrome_primary_dimensions(&first_color) else {
+        return Ok(None);
+    };
+    let first_sequence = first_color.sequence.clone();
+    let first_geometry = first_color.display_geometry;
+    let mut first_color = Some(first_color);
+
+    let mut cells = Vec::new();
+    cells.try_reserve(cell_count).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF monochrome grid cells".to_owned())
+    })?;
+    for index in 0..cell_count {
+        crate::codecs::error::check_cancelled(token)?;
+        let mut color = if index == 0 {
+            first_color
+                .take()
+                .ok_or_else(|| malformed("AVIF grid first cell was consumed"))?
+        } else {
+            let sample = still
+                .color
+                .samples
+                .get(index)
+                .ok_or_else(|| malformed("AVIF grid color sample is missing"))?;
+            validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![sample.clone()],
+                },
+                token,
+            )?
+        };
+        if color.first_leaf.is_some() {
+            return Ok(None);
+        }
+        let Some(dimensions) = monochrome_primary_dimensions(&color) else {
+            return Ok(None);
+        };
+        if dimensions != first_dimensions
+            || color.display_geometry != first_geometry
+            || color.sequence.bit_depth != first_sequence.bit_depth
+            || color.sequence.monochrome != first_sequence.monochrome
+            || color.sequence.color_primaries != first_sequence.color_primaries
+            || color.sequence.transfer_characteristics != first_sequence.transfer_characteristics
+            || color.sequence.matrix_coefficients != first_sequence.matrix_coefficients
+            || color.sequence.color_range != first_sequence.color_range
+            || color.sequence.subsampling_x != first_sequence.subsampling_x
+            || color.sequence.subsampling_y != first_sequence.subsampling_y
+        {
+            return Err(malformed(
+                "AVIF grid cells disagree on decoded monochrome format",
+            ));
+        }
+        let Some(luma) = color.complete_monochrome_plane.take() else {
+            return Ok(None);
+        };
+        let alpha = if let Some(alpha_track) = &still.alpha {
+            let alpha_sample = alpha_track
+                .samples
+                .get(index)
+                .ok_or_else(|| malformed("AVIF grid alpha sample is missing"))?;
+            let mut alpha = validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![alpha_sample.clone()],
+                },
+                token,
+            )?;
+            if alpha.first_leaf.is_some()
+                || alpha.display_geometry != color.display_geometry
+                || !monochrome_alpha_matches(&alpha, dimensions, first_sequence.bit_depth)
+            {
+                return Ok(None);
+            }
+            let Some(alpha) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
+            Some(alpha)
+        } else {
+            None
+        };
+        cells.push(MonochromeGridCell {
+            width: dimensions.0,
+            height: dimensions.1,
+            luma,
+            alpha,
+        });
+    }
+
+    let first = cells
+        .first()
+        .ok_or_else(|| malformed("AVIF grid has no monochrome cells"))?;
+    let cell_width = first.width;
+    let cell_height = first.height;
+    let output_width = properties.output_width();
+    let output_height = properties.output_height();
+    if cell_width == 0 || cell_height == 0 || output_width == 0 || output_height == 0 {
+        return Err(malformed(
+            "AVIF monochrome grid has an empty cell or output canvas",
+        ));
+    }
+    let total_width = cell_width
+        .checked_mul(properties.columns())
+        .ok_or_else(|| malformed("AVIF monochrome grid width overflows"))?;
+    let total_height = cell_height
+        .checked_mul(properties.rows())
+        .ok_or_else(|| malformed("AVIF monochrome grid height overflows"))?;
+    if total_width < output_width || total_height < output_height {
+        return Err(malformed(
+            "AVIF monochrome grid cells do not cover the output canvas",
+        ));
+    }
+    let last_column = properties
+        .columns()
+        .checked_sub(1)
+        .ok_or_else(|| malformed("AVIF monochrome grid has no columns"))?;
+    let last_row = properties
+        .rows()
+        .checked_sub(1)
+        .ok_or_else(|| malformed("AVIF monochrome grid has no rows"))?;
+    if cell_width
+        .checked_mul(last_column)
+        .ok_or_else(|| malformed("AVIF monochrome grid last column overflows"))?
+        >= output_width
+        || cell_height
+            .checked_mul(last_row)
+            .ok_or_else(|| malformed("AVIF monochrome grid last row overflows"))?
+            >= output_height
+    {
+        return Err(malformed(
+            "AVIF monochrome grid has an invisible final row or column",
+        ));
+    }
+
+    let mut luma_canvas = raster::MonochromeFrameCanvas::new(output_width, output_height)?;
+    let mut alpha_canvas = if first.alpha.is_some() {
+        Some(raster::MonochromeFrameCanvas::new(
+            output_width,
+            output_height,
+        )?)
+    } else {
+        None
+    };
+    for (index, cell) in cells.iter().enumerate() {
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "cell_count is nonzero above, so the validated grid column count cannot be zero"
+        )]
+        let (row, column) = (index / columns, index % columns);
+        let x = u32::try_from(
+            column
+                .checked_mul(
+                    usize::try_from(cell_width)
+                        .map_err(|_| malformed("AVIF monochrome cell width exceeds usize"))?,
+                )
+                .ok_or_else(|| malformed("AVIF monochrome grid x origin overflows usize"))?,
+        )
+        .map_err(|_| malformed("AVIF monochrome grid x origin exceeds u32"))?;
+        let y = u32::try_from(
+            row.checked_mul(
+                usize::try_from(cell_height)
+                    .map_err(|_| malformed("AVIF monochrome cell height exceeds usize"))?,
+            )
+            .ok_or_else(|| malformed("AVIF monochrome grid y origin overflows usize"))?,
+        )
+        .map_err(|_| malformed("AVIF monochrome grid y origin exceeds u32"))?;
+        let visible_width = output_width
+            .checked_sub(x)
+            .ok_or_else(|| malformed("AVIF monochrome cell starts outside output width"))?
+            .min(cell.width);
+        let visible_height = output_height
+            .checked_sub(y)
+            .ok_or_else(|| malformed("AVIF monochrome cell starts outside output height"))?
+            .min(cell.height);
+        if visible_width == 0 || visible_height == 0 {
+            return Err(malformed(
+                "AVIF monochrome grid cell has no visible samples",
+            ));
+        }
+        luma_canvas.place_cropped_plane(
+            cell.width,
+            cell.height,
+            visible_width,
+            visible_height,
+            x,
+            y,
+            &cell.luma,
+        )?;
+        if let (Some(alpha_canvas), Some(alpha)) = (alpha_canvas.as_mut(), cell.alpha.as_ref()) {
+            alpha_canvas.place_cropped_plane(
+                cell.width,
+                cell.height,
+                visible_width,
+                visible_height,
+                x,
+                y,
+                alpha,
+            )?;
+        }
+    }
+
+    let sample_depth = sample_depth::SampleDepth::new(first_sequence.bit_depth)
+        .ok_or_else(|| malformed("AVIF monochrome grid sample depth is unsupported"))?;
+    let luma = luma_canvas.finish(sample_depth)?;
+    let alpha = alpha_canvas
+        .map(|canvas| canvas.finish(sample_depth))
+        .transpose()?;
+    Ok(Some(portable_monochrome_still(
+        luma,
+        (output_width, output_height),
+        first_sequence,
+        alpha,
+    )))
+}
+
 fn validate_grid_with_token(
     extracted: &ExtractedAvif<'_>,
     still: &super::samples::StillPayload,
@@ -631,15 +868,50 @@ fn validate_grid_with_token(
         return Ok(None);
     }
 
+    let first_sample = still
+        .color
+        .samples
+        .first()
+        .ok_or_else(|| malformed("AVIF grid has no color samples"))?;
+    let mut first_color = Some(validate_plane_with_token(
+        extracted.input,
+        &super::samples::EncodedPlane {
+            samples: vec![first_sample.clone()],
+        },
+        token,
+    )?);
+    if first_color
+        .as_ref()
+        .is_some_and(|color| color.sequence.monochrome)
+    {
+        return validate_monochrome_grid_with_token(
+            extracted,
+            still,
+            token,
+            properties,
+            columns,
+            cell_count,
+            first_color
+                .take()
+                .ok_or_else(|| malformed("AVIF grid first cell was consumed"))?,
+        );
+    }
+
     let mut cells = Vec::with_capacity(cell_count);
     for (index, sample) in still.color.samples.iter().enumerate() {
-        let color = validate_plane_with_token(
-            extracted.input,
-            &super::samples::EncodedPlane {
-                samples: vec![sample.clone()],
-            },
-            token,
-        )?;
+        let color = if index == 0 {
+            first_color
+                .take()
+                .ok_or_else(|| malformed("AVIF grid first cell was consumed"))?
+        } else {
+            validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![sample.clone()],
+                },
+                token,
+            )?
+        };
         let Some(color_leaf) = color.first_leaf else {
             return Ok(None);
         };
