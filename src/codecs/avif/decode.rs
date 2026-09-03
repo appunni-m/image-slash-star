@@ -7,6 +7,7 @@ use crate::types::{
     ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
     FrameDuration, FrameRect, ImageMode, SequenceKind, SourceColor, SourceDescriptor,
 };
+use wide::{i32x8, u16x8};
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
 pub fn decode(
@@ -480,7 +481,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                     .as_ref()
                     .map(|plane| plane.samples.as_slice()),
                 still.bit_depth,
-                libyuv_bt601_full_range_rgb,
+                PortableYuvMatrix::Bt601,
             )?,
             PortableYuvMatrix::Bt2020 => convert_full_resolution_rgb(
                 &y_plane.samples,
@@ -488,7 +489,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                 &v_plane.samples,
                 None,
                 still.bit_depth,
-                libyuv_bt2020_full_range_rgb,
+                PortableYuvMatrix::Bt2020,
             )?,
         }
     } else {
@@ -627,20 +628,18 @@ fn decode_monochrome_portable(
     })
 }
 
-/// Convert contiguous I444 planes with all format dispatch hoisted out of the
-/// sample loop. The generic matrix function is monomorphized at each caller,
-/// leaving one predictable checked shift and one fixed integer color kernel.
-fn convert_full_resolution_rgb<F>(
+/// Convert contiguous I444 planes with matrix dispatch hoisted out of the
+/// sample loop. Complete eight-sample batches use the same fixed-point
+/// equations as the scalar libyuv-compatible tail, with checked lane loading
+/// and interleaving so malformed samples still fail before any output escapes.
+fn convert_full_resolution_rgb(
     y_plane: &[u16],
     u_plane: &[u16],
     v_plane: &[u16],
     alpha_plane: Option<&[u16]>,
     bit_depth: u32,
-    matrix: F,
-) -> Option<Vec<u8>>
-where
-    F: Fn(u8, u8, u8) -> [u8; 3],
-{
+    matrix: PortableYuvMatrix,
+) -> Option<Vec<u8>> {
     let sample_depth = super::av1::sample_depth::SampleDepth::new(bit_depth)?;
     let sample_count = y_plane.len();
     if u_plane.len() != sample_count
@@ -651,38 +650,126 @@ where
     }
     let channels = if alpha_plane.is_some() { 4 } else { 3 };
     let output_length = sample_count.checked_mul(channels)?;
-    let mut output = vec![0_u8; output_length];
-    if let Some(alpha_plane) = alpha_plane {
-        for ((((pixel, &y), &u), &v), &alpha) in output
-            .chunks_exact_mut(4)
-            .zip(y_plane)
-            .zip(u_plane)
-            .zip(v_plane)
-            .zip(alpha_plane)
-        {
-            let rgb = matrix(
-                sample_depth.truncate_to_u8(y)?,
-                sample_depth.truncate_to_u8(u)?,
-                sample_depth.truncate_to_u8(v)?,
-            );
-            pixel[..3].copy_from_slice(&rgb);
-            pixel[3] = sample_depth.truncate_to_u8(alpha)?;
+    // Validate the complete input domain before allocating or shifting lanes.
+    // This preserves `SampleDepth::truncate_to_u8`'s rejection of any sample
+    // outside the declared nominal depth, including values that would shift
+    // into an apparently valid byte.
+    if y_plane
+        .iter()
+        .chain(u_plane)
+        .chain(v_plane)
+        .chain(alpha_plane.into_iter().flatten())
+        .any(|&sample| sample_depth.validate(sample).is_none())
+    {
+        return None;
+    }
+    let mut output = Vec::new();
+    output.try_reserve_exact(output_length).ok()?;
+    output.resize(output_length, 0);
+
+    let shift = bit_depth.checked_sub(8)?;
+    let vectorized = sample_count - sample_count % 8;
+    for offset in (0..vectorized).step_by(8) {
+        let [red, green, blue] =
+            convert_i444_rgb_lanes(y_plane, u_plane, v_plane, offset, shift, matrix)?;
+        let alpha = if let Some(plane) = alpha_plane {
+            Some(truncate_u16_lanes(plane, offset, shift)?)
+        } else {
+            None
+        };
+        let output_start = offset.checked_mul(channels)?;
+        let output_end = output_start.checked_add(8_usize.checked_mul(channels)?)?;
+        let batch = output.get_mut(output_start..output_end)?;
+        for (lane, pixel) in batch.chunks_exact_mut(channels).enumerate() {
+            pixel[..3].copy_from_slice(&[red[lane], green[lane], blue[lane]]);
+            if let Some(alpha) = alpha.as_ref() {
+                pixel[3] = alpha[lane];
+            }
         }
-    } else {
-        for (((pixel, &y), &u), &v) in output
-            .chunks_exact_mut(3)
-            .zip(y_plane)
-            .zip(u_plane)
-            .zip(v_plane)
-        {
-            pixel.copy_from_slice(&matrix(
-                sample_depth.truncate_to_u8(y)?,
-                sample_depth.truncate_to_u8(u)?,
-                sample_depth.truncate_to_u8(v)?,
-            ));
+    }
+    for index in vectorized..sample_count {
+        let y = sample_depth.truncate_to_u8(y_plane[index])?;
+        let u = sample_depth.truncate_to_u8(u_plane[index])?;
+        let v = sample_depth.truncate_to_u8(v_plane[index])?;
+        let rgb = match matrix {
+            PortableYuvMatrix::Bt601 => libyuv_bt601_full_range_rgb(y, u, v),
+            PortableYuvMatrix::Bt2020 => libyuv_bt2020_full_range_rgb(y, u, v),
+        };
+        let output_start = index.checked_mul(channels)?;
+        let output_end = output_start.checked_add(channels)?;
+        let pixel = output.get_mut(output_start..output_end)?;
+        pixel[..3].copy_from_slice(&rgb);
+        if let Some(alpha_plane) = alpha_plane {
+            pixel[3] = sample_depth.truncate_to_u8(alpha_plane[index])?;
         }
     }
     Some(output)
+}
+
+#[inline(always)]
+fn convert_i444_rgb_lanes(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    offset: usize,
+    shift: u32,
+    matrix: PortableYuvMatrix,
+) -> Option<[[u8; 8]; 3]> {
+    let y = truncate_u16x8(y_plane, offset, shift)?;
+    let u = truncate_u16x8(u_plane, offset, shift)?;
+    let v = truncate_u16x8(v_plane, offset, shift)?;
+    let y_scaled = ((y * i32x8::splat(257)) * i32x8::splat(16_320)) >> 16;
+    let (red, green, blue) = match matrix {
+        PortableYuvMatrix::Bt601 => (
+            y_scaled + v * i32x8::splat(90) - i32x8::splat(11_488),
+            y_scaled + i32x8::splat(8_736) - (u * i32x8::splat(22) + v * i32x8::splat(46)),
+            y_scaled + u * i32x8::splat(113) - i32x8::splat(14_432),
+        ),
+        PortableYuvMatrix::Bt2020 => (
+            y_scaled + v * i32x8::splat(94) - i32x8::splat(12_000),
+            y_scaled + i32x8::splat(6_176) - (u * i32x8::splat(11) + v * i32x8::splat(37)),
+            y_scaled + u * i32x8::splat(120) - i32x8::splat(15_328),
+        ),
+    };
+    Some([
+        narrow_rgb_lanes(red),
+        narrow_rgb_lanes(green),
+        narrow_rgb_lanes(blue),
+    ])
+}
+
+#[inline(always)]
+fn truncate_u16x8(samples: &[u16], offset: usize, shift: u32) -> Option<i32x8> {
+    let values = samples
+        .get(offset..offset.checked_add(8)?)?
+        .try_into()
+        .ok()?;
+    Some(i32x8::from_u16x8(u16x8::new(values) >> shift))
+}
+
+#[inline(always)]
+fn truncate_u16_lanes(samples: &[u16], offset: usize, shift: u32) -> Option<[u8; 8]> {
+    let values = u16x8::new(
+        samples
+            .get(offset..offset.checked_add(8)?)?
+            .try_into()
+            .ok()?,
+    ) >> shift;
+    let values = values.to_array();
+    let mut lanes = [0_u8; 8];
+    for (lane, value) in lanes.iter_mut().zip(values) {
+        *lane = u8::try_from(value).ok()?;
+    }
+    Some(lanes)
+}
+
+#[inline(always)]
+fn narrow_rgb_lanes(values: i32x8) -> [u8; 8] {
+    let values = (values >> 6_u32)
+        .max(i32x8::ZERO)
+        .min(i32x8::splat(255))
+        .to_array();
+    std::array::from_fn(|lane| u8::try_from(values[lane]).unwrap_or(0))
 }
 
 // ✅ VERIFIED: libavif 1.4.1 `src/reformat.c`'s bilinear YUV422 branch. The
