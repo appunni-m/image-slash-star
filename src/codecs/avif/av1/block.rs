@@ -52730,6 +52730,7 @@ enum WideChromaTransformSource<'a> {
 enum InterSplitQindexPolicy {
     PositiveOnly,
     Mode2SplitB8Rect,
+    Mode2SplitB4LongRect,
     Mode2SplitB8WideRect,
     Mode2SplitB16WideRect,
     Mode2SplitB16Thin64,
@@ -56379,6 +56380,15 @@ impl Lossy420Decoder {
                 && tools.transform_mode == 2
                 && quantization.segment_qindex == 0
                 && !quantization.segment_lossless;
+            let mono_i444_b4_rect_mode2_q0 =
+                matches!(
+                    chroma_sampling,
+                    ChromaSampling::Monochrome | ChromaSampling::Full
+                ) && matches!(block_size, BlockSize::B4x16 | BlockSize::B16x4)
+                    && (visible_width, visible_height) == block_size.pixel_dimensions()
+                    && tools.transform_mode == 2
+                    && quantization.segment_qindex == 0
+                    && !quantization.segment_lossless;
             let i420_narrow_mode2_q0 = chroma_sampling == ChromaSampling::Subsampled420
                 && matches!(
                     block_size,
@@ -56650,7 +56660,8 @@ impl Lossy420Decoder {
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
                         || i422_b4x16_mode2_q0
-                        || i420_narrow_mode2_q0)
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless
                     && prediction_state.inter_intra.is_none()
                     && prediction_state.obmc.is_none())
@@ -56699,7 +56710,8 @@ impl Lossy420Decoder {
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
                         || i422_b4x16_mode2_q0
-                        || i420_narrow_mode2_q0)
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless
                     && prediction_state.inter_intra.is_none()
                     && prediction_state.obmc.is_none())
@@ -56730,7 +56742,8 @@ impl Lossy420Decoder {
                     && tools.transform_mode == 2
                     && (quantization.segment_qindex > 0
                         || i422_b4x16_mode2_q0
-                        || i420_narrow_mode2_q0)
+                        || i420_narrow_mode2_q0
+                        || mono_i444_b4_rect_mode2_q0)
                     && !quantization.segment_lossless
                     && any_child_split
                     && !all_children_split
@@ -57953,7 +57966,7 @@ impl Lossy420Decoder {
                         tools,
                         coefficient_contexts,
                         topology,
-                        InterSplitQindexPolicy::PositiveOnly,
+                        InterSplitQindexPolicy::Mode2SplitB4LongRect,
                         &mut decode_transform_type,
                     )?;
                 contexts[0] = grid_contexts.bottom_right;
@@ -57986,7 +57999,9 @@ impl Lossy420Decoder {
                 } else {
                     (16, 8)
                 };
-                let qindex_policy = if matches!((block_width, block_height), (8, 16) | (16, 8)) {
+                let qindex_policy = if matches!((block_width, block_height), (4, 16) | (16, 4)) {
+                    InterSplitQindexPolicy::Mode2SplitB4LongRect
+                } else if matches!((block_width, block_height), (8, 16) | (16, 8)) {
                     InterSplitQindexPolicy::Mode2SplitB8Rect
                 } else {
                     InterSplitQindexPolicy::PositiveOnly
@@ -59290,6 +59305,8 @@ impl Lossy420Decoder {
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
             && (quantization.segment_qindex > 0
+                || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB4LongRect)
+                    && matches!((block_width, block_height), (4, 16) | (16, 4)))
                 || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB8Rect)
                     && matches!((block_width, block_height), (8, 16) | (16, 8)))
                 || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB16)
@@ -59783,6 +59800,8 @@ impl Lossy420Decoder {
             && matches!(tools.sample_depth.bits(), 8 | 10 | 12)
             && tools.transform_mode == 2
             && (quantization.segment_qindex > 0
+                || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB4LongRect)
+                    && matches!((block_width, block_height), (4, 16) | (16, 4)))
                 || (matches!(qindex_policy, InterSplitQindexPolicy::Mode2SplitB8Rect)
                     && matches!((block_width, block_height), (8, 16) | (16, 8))))
             && !quantization.segment_lossless
