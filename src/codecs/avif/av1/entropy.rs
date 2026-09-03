@@ -3749,7 +3749,9 @@ fn mixed_segment_superres_common(context: &FirstBlockContext) -> bool {
 /// Shared reference/motion proof for mixed-segment super-resolution wrappers.
 /// The retained reference is already in display-width coordinates; its coded
 /// width and scale marker may legitimately differ from the current coded
-/// width, so only the checked upscaled geometry is compared here.
+/// width, so only the checked upscaled geometry is compared here. Frame-header
+/// ROTZOOM/AFFINE models are valid as well: scaled references continue through
+/// ordinary scaled MC, while the affine warp kernel remains unscaled-only.
 fn mixed_segment_superres_references_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -3768,7 +3770,10 @@ fn mixed_segment_superres_references_supported(
                 && reference.surface.frame_height == context.frame_height
                 && matches!(
                     reference.global_motion.kind,
-                    GlobalMotionType::Identity | GlobalMotionType::Translation
+                    GlobalMotionType::Identity
+                        | GlobalMotionType::Translation
+                        | GlobalMotionType::RotZoom
+                        | GlobalMotionType::Affine
                 )
         })
         && inter_context.skip_mode_references.is_none()
