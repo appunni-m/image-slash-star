@@ -3369,7 +3369,8 @@ fn mixed_8bit_color_lossless_segmentation_supported(
 /// Admit one active luma Wiener/SGR restoration unit for the bounded mixed
 /// 8-bit color profile. The mixed block walker already owns the I420/I422/I444
 /// lossless-grid grammar; this predicate adds only the frame-level restoration
-/// state and the conservative single-reference motion boundary.
+/// state and the unscaled single-reference motion boundary. Frame-header
+/// ROTZOOM/AFFINE models use the existing checked global-warp path.
 fn mixed_8bit_color_lossless_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -3395,7 +3396,10 @@ fn mixed_8bit_color_lossless_restoration_supported(
                 && !reference.scale.scaled
                 && matches!(
                     reference.global_motion.kind,
-                    GlobalMotionType::Identity | GlobalMotionType::Translation
+                    GlobalMotionType::Identity
+                        | GlobalMotionType::Translation
+                        | GlobalMotionType::RotZoom
+                        | GlobalMotionType::Affine
                 )
         })
         || inter_context.skip_mode_references.is_some()
@@ -3545,7 +3549,9 @@ fn mixed_high_depth_color_lossless_segmentation_supported(context: &FirstBlockCo
 /// Admit one active luma Wiener/SGR restoration unit for the bounded mixed
 /// high-depth color profile. The lossless-grid block walker owns the
 /// I420/I422/I444 residual grammar; this predicate adds only the frame-level
-/// restoration state and a conservative single-reference motion boundary.
+/// restoration state and an unscaled single-reference motion boundary.
+/// Frame-header ROTZOOM/AFFINE models use the existing checked global-warp
+/// path.
 fn mixed_high_depth_color_lossless_restoration_supported(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
@@ -3581,7 +3587,10 @@ fn mixed_high_depth_color_lossless_restoration_supported(
                 && !reference.scale.scaled
                 && matches!(
                     reference.global_motion.kind,
-                    GlobalMotionType::Identity | GlobalMotionType::Translation
+                    GlobalMotionType::Identity
+                        | GlobalMotionType::Translation
+                        | GlobalMotionType::RotZoom
+                        | GlobalMotionType::Affine
                 )
         })
         || inter_context.skip_mode_references.is_some()
@@ -17884,7 +17893,10 @@ fn complete_monochrome_mixed_lossless_inter_restoration(
                 && !reference.scale.scaled
                 && matches!(
                     reference.global_motion.kind,
-                    GlobalMotionType::Identity | GlobalMotionType::Translation
+                    GlobalMotionType::Identity
+                        | GlobalMotionType::Translation
+                        | GlobalMotionType::RotZoom
+                        | GlobalMotionType::Affine
                 )
         })
         || inter_context.skip_mode_references.is_some()
