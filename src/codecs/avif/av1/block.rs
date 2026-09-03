@@ -55766,7 +55766,6 @@ impl Lossy420Decoder {
                 && !quantization.segment_lossless
                 && any_child_split
                 && !all_children_split
-                && prediction_state.inter_intra.is_none()
                 && prediction_state.obmc.is_none())
             .then_some(())
             .portable()?;
