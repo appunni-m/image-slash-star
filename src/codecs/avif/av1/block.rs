@@ -25035,15 +25035,28 @@ fn add_constant_prediction_residual(
 /// Add contiguous predictor and residual vectors with one final sample clip.
 fn add_prediction_residual(prediction: &[u16], residual: &[i32], output: &mut [u16], maximum: u16) {
     let maximum_i32 = i32::from(maximum);
-    for ((destination, predictor), value) in output
-        .iter_mut()
-        .zip(prediction.iter().copied())
-        .zip(residual.iter().copied())
-    {
+    let sample_count = prediction.len().min(residual.len()).min(output.len());
+    let vectorized = sample_count - sample_count % 8;
+
+    // Saturating lane addition is intentional here: callers may provide
+    // arbitrary residual values, so the vector path must retain the scalar
+    // `i32::saturating_add` behavior even outside AV1's normal coefficient
+    // bounds. The scalar tail preserves exact semantics for every remainder.
+    for offset in (0..vectorized).step_by(8) {
+        let predictors = u16x8::new(std::array::from_fn(|lane| prediction[offset + lane]));
+        let values = i32x8::new(std::array::from_fn(|lane| residual[offset + lane]));
+        let reconstructed = i32x8::from_u16x8(predictors).saturating_add(values);
+        let samples = narrow_av1_samples(reconstructed, maximum_i32);
+        output[offset..offset + 8].copy_from_slice(&samples);
+    }
+
+    for offset in vectorized..sample_count {
+        let predictor = prediction[offset];
+        let value = residual[offset];
         let reconstructed = i32::from(predictor)
             .saturating_add(value)
             .clamp(0, maximum_i32);
-        *destination = u16::try_from(reconstructed).unwrap_or(maximum);
+        output[offset] = u16::try_from(reconstructed).unwrap_or(maximum);
     }
 }
 
