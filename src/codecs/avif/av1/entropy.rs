@@ -9193,16 +9193,57 @@ fn decode_inter_leaf(
     // Subsampled planes below 8x8 intentionally fall back to ordinary center-
     // MV prediction inside `mc`; the block-level LOCALWARP metadata and
     // interpolation-filter suppression remain unchanged.
-    let local_warp_supported = matches!(
-        layout,
-        PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-    ) && matches!(context.bit_depth, 8 | 10 | 12)
+    // AV1's LOCALWARP syntax is available for every luma block whose two
+    // axes are at least 8 pixels. Keep the explicit list here instead of
+    // deriving it from the coded dimensions: the 4:2:2 layout has two
+    // normative aspect-ratio exceptions (8x32 and 16x64), while the generic
+    // `BlockSize::valid_for_layout` helper intentionally remains permissive
+    // for the other decode paths.
+    let local_warp_block_supported = match layout {
+        PixelLayout::I422 => matches!(
+            node.block_size,
+            BlockSize::B8x8
+                | BlockSize::B8x16
+                | BlockSize::B16x8
+                | BlockSize::B16x16
+                | BlockSize::B16x32
+                | BlockSize::B32x16
+                | BlockSize::B32x32
+                | BlockSize::B32x64
+                | BlockSize::B64x32
+                | BlockSize::B64x64
+                | BlockSize::B64x128
+                | BlockSize::B128x64
+                | BlockSize::B128x128
+                | BlockSize::B32x8
+                | BlockSize::B64x16
+        ),
+        PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I444 => matches!(
+            node.block_size,
+            BlockSize::B8x8
+                | BlockSize::B8x16
+                | BlockSize::B16x8
+                | BlockSize::B16x16
+                | BlockSize::B16x32
+                | BlockSize::B32x16
+                | BlockSize::B32x32
+                | BlockSize::B32x64
+                | BlockSize::B64x32
+                | BlockSize::B64x64
+                | BlockSize::B64x128
+                | BlockSize::B128x64
+                | BlockSize::B128x128
+                | BlockSize::B8x32
+                | BlockSize::B32x8
+                | BlockSize::B16x64
+                | BlockSize::B64x16
+        ),
+    };
+    let local_warp_supported = local_warp_block_supported
+        && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
         && (visible_width, visible_height) == node.block_size.pixel_dimensions()
-        && matches!(
-            node.block_size,
-            BlockSize::B8x8 | BlockSize::B8x16 | BlockSize::B16x8 | BlockSize::B16x16
-        );
+        && node.block_size.valid_for_layout(layout);
     let (motion_mode, local_warp) = if compound {
         (MotionMode::Translation, None)
     } else if interintra.is_none()
