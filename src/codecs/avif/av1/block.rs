@@ -71874,12 +71874,12 @@ impl Lossy420Decoder {
                     reduced_transform_set: quantization.reduced_transform_set,
                     segment_qindex: quantization.segment_qindex,
                 },
-                allow_horizontal_chroma: full_resolution,
-                allow_diagonal_chroma: full_resolution
-                    || matches!(
-                        (syntax_chroma_sampling, transform_grid),
-                        (ChromaSampling::Subsampled420, TransformGrid::Vertical8x16)
-                    ),
+                // Directional chroma modes are prediction syntax, orthogonal
+                // to sampling and transform topology. The normalized origin
+                // compositor supplies the checked plane edges and applies
+                // the decoded angle for every supported color layout.
+                allow_horizontal_chroma: true,
+                allow_diagonal_chroma: true,
                 allow_diagonal_luma: true,
                 // Smooth modes are prediction syntax, independent of the
                 // sampling layout or transform grid. The normalized origin
