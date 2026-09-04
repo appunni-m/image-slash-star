@@ -495,10 +495,8 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     // The high-depth subsampled alpha kernel retains filtered 10-bit chroma
     // until the matrix stage.  Select it explicitly so ordinary RGB and
     // 12-bit fallback paths continue to downshift before interpolation.
-    let bt2020_10bit_subsampled_alpha = has_alpha
-        && matches!(matrix, PortableYuvMatrix::Bt2020)
-        && still.bit_depth == 10
-        && still.subsampling_x;
+    let high_depth_10bit_subsampled_alpha =
+        has_alpha && still.bit_depth == 10 && still.subsampling_x;
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
     let pixels = if !still.subsampling_x && !still.subsampling_y {
@@ -539,7 +537,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                 #[allow(clippy::arithmetic_side_effects)]
                 let column = index.wrapping_rem(width);
                 (
-                    if bt2020_10bit_subsampled_alpha || shift == 0 {
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
                         libyuv_420_bilinear_sample(
                             &u_plane.samples,
                             chroma_width,
@@ -559,7 +557,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                             shift,
                         )
                     },
-                    if bt2020_10bit_subsampled_alpha || shift == 0 {
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
                         libyuv_420_bilinear_sample(
                             &v_plane.samples,
                             chroma_width,
@@ -586,7 +584,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                 #[allow(clippy::arithmetic_side_effects)]
                 let column = index.wrapping_rem(width);
                 (
-                    if bt2020_10bit_subsampled_alpha || shift == 0 {
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
                         libavif_422_bilinear_sample(
                             &u_plane.samples,
                             chroma_width,
@@ -604,7 +602,7 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                             shift,
                         )
                     },
-                    if bt2020_10bit_subsampled_alpha || shift == 0 {
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
                         libavif_422_bilinear_sample(
                             &v_plane.samples,
                             chroma_width,
@@ -624,8 +622,8 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                     },
                 )
             };
-            let rgb = if bt2020_10bit_subsampled_alpha {
-                libyuv_bt2020_full_range_rgb_10bit(y_sample, u_sample, v_sample)?
+            let rgb = if high_depth_10bit_subsampled_alpha {
+                libyuv_full_range_rgb_10bit(y_sample, u_sample, v_sample, matrix)?
             } else {
                 let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
                 // The depth-aware samplers already performed the source-plane
@@ -1131,27 +1129,36 @@ fn libyuv_bt2020_full_range_rgb(y: u8, u: u8, v: u8) -> [u8; 3] {
     [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
 }
 
-/// Match libyuv's `YuvPixel10` BT.2020-NCL arithmetic for the I010/I210
-/// alpha conversion family.  Unlike the RGB24 fallback, chroma remains in the
-/// filtered 10-bit domain until the `>> 2` boundary, and luma uses libyuv's
-/// high-depth expansion before the fixed-point matrix.
-fn libyuv_bt2020_full_range_rgb_10bit(y: u16, u: u16, v: u16) -> Option<[u8; 3]> {
+/// Match libyuv's `YuvPixel10` arithmetic for the I010/I210 alpha conversion
+/// family. Unlike the RGB24 fallback, chroma remains in the filtered 10-bit
+/// domain until the `>> 2` boundary, and luma uses libyuv's high-depth
+/// expansion before the fixed-point matrix.
+fn libyuv_full_range_rgb_10bit(
+    y: u16,
+    u: u16,
+    v: u16,
+    matrix: PortableYuvMatrix,
+) -> Option<[u8; 3]> {
     let y = u32::from(y);
     let y32 = y.checked_shl(6)? | (y >> 4);
     let ybase = i32::try_from(y32.checked_mul(16_320)?.checked_shr(16)?).ok()?;
     let u = u8::try_from(u.checked_shr(2)?).ok()?;
     let v = u8::try_from(v.checked_shr(2)?).ok()?;
+    let (blue_u, green_bias, green_u, green_v, red_v, blue_bias, red_bias) = match matrix {
+        PortableYuvMatrix::Bt601 => (113, 8_736, 22, 46, 90, 14_432, 11_488),
+        PortableYuvMatrix::Bt2020 => (120, 6_176, 11, 37, 94, 15_328, 12_000),
+    };
     let blue = ybase
-        .checked_add(i32::from(u).checked_mul(120)?)?
-        .checked_sub(15_328)?;
-    let green = ybase.checked_add(6_176)?.checked_sub(
+        .checked_add(i32::from(u).checked_mul(blue_u)?)?
+        .checked_sub(blue_bias)?;
+    let green = ybase.checked_add(green_bias)?.checked_sub(
         i32::from(u)
-            .checked_mul(11)?
-            .checked_add(i32::from(v).checked_mul(37)?)?,
+            .checked_mul(green_u)?
+            .checked_add(i32::from(v).checked_mul(green_v)?)?,
     )?;
     let red = ybase
-        .checked_add(i32::from(v).checked_mul(94)?)?
-        .checked_sub(12_000)?;
+        .checked_add(i32::from(v).checked_mul(red_v)?)?
+        .checked_sub(red_bias)?;
     Some([libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)])
 }
 
