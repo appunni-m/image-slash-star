@@ -500,29 +500,39 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
     let pixels = if !still.subsampling_x && !still.subsampling_y {
-        match matrix {
-            PortableYuvMatrix::Bt601 => convert_full_resolution_rgb(
+        if has_alpha && still.bit_depth == 10 {
+            convert_full_resolution_rgb_10bit_alpha(
                 &y_plane.samples,
                 &u_plane.samples,
                 &v_plane.samples,
-                still
-                    .alpha_plane
-                    .as_ref()
-                    .map(|plane| plane.samples.as_slice()),
-                still.bit_depth,
-                PortableYuvMatrix::Bt601,
-            )?,
-            PortableYuvMatrix::Bt2020 => convert_full_resolution_rgb(
-                &y_plane.samples,
-                &u_plane.samples,
-                &v_plane.samples,
-                still
-                    .alpha_plane
-                    .as_ref()
-                    .map(|plane| plane.samples.as_slice()),
-                still.bit_depth,
-                PortableYuvMatrix::Bt2020,
-            )?,
+                still.alpha_plane.as_ref()?.samples.as_slice(),
+                matrix,
+            )?
+        } else {
+            match matrix {
+                PortableYuvMatrix::Bt601 => convert_full_resolution_rgb(
+                    &y_plane.samples,
+                    &u_plane.samples,
+                    &v_plane.samples,
+                    still
+                        .alpha_plane
+                        .as_ref()
+                        .map(|plane| plane.samples.as_slice()),
+                    still.bit_depth,
+                    PortableYuvMatrix::Bt601,
+                )?,
+                PortableYuvMatrix::Bt2020 => convert_full_resolution_rgb(
+                    &y_plane.samples,
+                    &u_plane.samples,
+                    &v_plane.samples,
+                    still
+                        .alpha_plane
+                        .as_ref()
+                        .map(|plane| plane.samples.as_slice()),
+                    still.bit_depth,
+                    PortableYuvMatrix::Bt2020,
+                )?,
+            }
         }
     } else {
         let shift = sample_depth.bits().checked_sub(8)?;
@@ -840,6 +850,48 @@ fn convert_full_resolution_rgb(
         if let Some(alpha_plane) = alpha_plane {
             pixel[3] = sample_depth.truncate_to_u8(alpha_plane[index])?;
         }
+    }
+    Some(output)
+}
+
+/// Convert a validated 10-bit I444 color plane with auxiliary alpha through
+/// libyuv's raw high-depth ARGB kernel. The RGB24 path deliberately remains a
+/// separate downshifted conversion for 10-bit images without alpha.
+fn convert_full_resolution_rgb_10bit_alpha(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    alpha_plane: &[u16],
+    matrix: PortableYuvMatrix,
+) -> Option<Vec<u8>> {
+    let sample_count = y_plane.len();
+    if u_plane.len() != sample_count
+        || v_plane.len() != sample_count
+        || alpha_plane.len() != sample_count
+    {
+        return None;
+    }
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(10)?;
+    if y_plane
+        .iter()
+        .chain(u_plane)
+        .chain(v_plane)
+        .chain(alpha_plane)
+        .any(|&sample| sample_depth.validate(sample).is_none())
+    {
+        return None;
+    }
+    let output_length = sample_count.checked_mul(4)?;
+    let mut output = Vec::new();
+    output.try_reserve_exact(output_length).ok()?;
+    for index in 0..sample_count {
+        let rgb =
+            libyuv_full_range_rgb_10bit(y_plane[index], u_plane[index], v_plane[index], matrix)?;
+        output.extend_from_slice(&rgb);
+        output.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
+    }
+    if output.len() != output_length {
+        return None;
     }
     Some(output)
 }
