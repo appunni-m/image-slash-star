@@ -1765,6 +1765,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 color: invalid_plane(),
                 alpha: None,
                 timescale: NonZeroU32::new(1).unwrap(),
+                loop_count: crate::types::AnimationLoop::Unspecified,
             }),
             consumed: 0,
             retained_boxes: Vec::new(),
@@ -1794,6 +1795,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 color: valid_plane(),
                 alpha: Some(invalid_plane()),
                 timescale: NonZeroU32::new(1).unwrap(),
+                loop_count: crate::types::AnimationLoop::Unspecified,
             }),
             consumed: 0,
             retained_boxes: Vec::new(),
@@ -1984,6 +1986,7 @@ mod tests {
                 }),
             timescale: NonZeroU32::new(1)
                 .ok_or_else(|| malformed("test timescale unexpectedly became zero"))?,
+            loop_count: crate::types::AnimationLoop::Unspecified,
         };
         extracted.still = Some(still);
         extracted.sequence = Some(sequence);

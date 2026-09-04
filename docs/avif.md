@@ -65,7 +65,7 @@ those parts in small, testable safe-Rust stages—not to keep the bridge hidden.
 | Inspection | Safe Rust bounded container inspection and source facts |
 | Still decode | Safe Rust, manifest-bounded AV1 subset |
 | Still decode outside that subset | Typed `Unsupported`, never a partial image or native fallback |
-| Sequence decode | A supported still may be exposed as one frame; multi-frame tracks are an explicit planned gap |
+| Sequence decode | A supported still may be exposed as one frame; bounded stateful multi-frame tracks retain timing and one-entry edit-list repetition metadata, while independently evidenced full presentation remains planned |
 | Still encode | Typed `Unsupported`: pure-Rust encoder not implemented yet |
 | Sequence encode | Typed `Unsupported`: pure-Rust sequence encoder not implemented yet |
 

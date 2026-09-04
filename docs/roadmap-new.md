@@ -112,6 +112,12 @@ the corresponding status is recorded in `roadmap.json`:
   independent parity run is attached to these admissions in this checkpoint,
   so `high_bitdepth`, `hdr`, and `animated` remain planned and the matrix
   counts do not change.
+- Sequence-container hardening: movie tracks now require a complete positive
+  `stts` table, reject fabricated or under-covered durations, and retain the
+  bounded one-entry `edts`/`elst` repetition contract (`Unspecified`, one
+  play, finite repetition, or infinite repetition) for the color track. This
+  improves malformed-input safety and metadata fidelity only; it does not
+  promote the planned animation row without independent multi-frame evidence.
 - New bounded AVIF witness: `coverage_h16x4_tx4x4_split_01.avif` is a 16x16,
   8-bit 4:2:0 `PARTITION_H4` stream whose following `Horizontal16x4` leaf
   selects transform depth two, yielding four TX4x4 luma children and

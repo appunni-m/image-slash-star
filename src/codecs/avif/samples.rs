@@ -4,12 +4,12 @@ use std::num::NonZeroU32;
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifFileTypeProperties, AvifGridProperties, AvifItemCodecProperties,
-    AvifItemColorProperties, AvifItemExtent, AvifItemIccProfile, AvifItemLocation,
-    AvifItemLocationSource, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
-    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
+    AnimationLoop, AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture,
+    AvifColorProperties, AvifContentLightLevel, AvifFileTypeProperties, AvifGridProperties,
+    AvifItemCodecProperties, AvifItemColorProperties, AvifItemExtent, AvifItemIccProfile,
+    AvifItemLocation, AvifItemLocationSource, AvifItemPlaneProperties, AvifItemProperty,
+    AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
+    AvifRotation, AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1683,6 +1683,7 @@ pub(super) struct SequencePayload {
     pub(super) color: EncodedPlane,
     pub(super) alpha: Option<EncodedPlane>,
     pub(super) timescale: NonZeroU32,
+    pub(super) loop_count: AnimationLoop,
 }
 
 pub(super) struct ExtractedAvif<'input> {
@@ -1867,13 +1868,34 @@ struct SampleTable {
     descriptions: Vec<SampleDescription>,
 }
 
-#[derive(Default)]
 struct Track {
     id: u32,
     handler: FourCc,
     aux_for_id: Option<u32>,
     timescale: Option<NonZeroU32>,
+    track_duration: u64,
+    repetition: AnimationLoop,
     table: Option<SampleTable>,
+}
+
+impl Default for Track {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            handler: [0; 4],
+            aux_for_id: None,
+            timescale: None,
+            track_duration: 0,
+            repetition: AnimationLoop::Unspecified,
+            table: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct EditList {
+    repeating: bool,
+    segment_duration: u64,
 }
 
 #[derive(Default)]
@@ -1904,6 +1926,8 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
     let mut tkhd_seen = false;
     let mut mdia_seen = false;
     let mut tref_seen = false;
+    let mut edit_list = None;
+    let mut edts_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
             kind if kind == *b"tkhd" => {
@@ -1911,7 +1935,9 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
                     return Err(parse_failure!());
                 }
                 tkhd_seen = true;
-                track.id = parse_tkhd(input, child.payload)?;
+                let (id, duration) = parse_tkhd(input, child.payload)?;
+                track.id = id;
+                track.track_duration = duration;
             }
             kind if kind == *b"mdia" => {
                 if mdia_seen {
@@ -1927,30 +1953,130 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
                 tref_seen = true;
                 track.aux_for_id = parse_tref(input, child.payload, budget)?;
             }
+            kind if kind == *b"edts" => {
+                if edts_seen {
+                    return Err(parse_failure!());
+                }
+                edts_seen = true;
+                edit_list = Some(parse_edit_box(input, child.payload, budget)?);
+            }
             _ => {}
         }
     }
     if !tkhd_seen || !mdia_seen {
         return Err(parse_failure!());
     }
+    track.repetition = match edit_list {
+        None => AnimationLoop::Unspecified,
+        Some(edit) if !edit.repeating => AnimationLoop::Finite { total_plays: 1 },
+        Some(_edit) if track.track_duration == u64::MAX => AnimationLoop::Infinite,
+        Some(_edit) if track.track_duration == 0 => return Err(parse_failure!()),
+        Some(edit) => {
+            let plays = track.track_duration / edit.segment_duration
+                + u64::from(!track.track_duration.is_multiple_of(edit.segment_duration));
+            AnimationLoop::Finite {
+                total_plays: u32::try_from(plays).map_err(|_| {
+                    CodecError::NotImplemented(
+                        "AVIF repetition count exceeds the public sequence limit".to_owned(),
+                    )
+                })?,
+            }
+        }
+    };
     Ok(track)
 }
 
-fn parse_tkhd(input: &[u8], payload: ByteSpan) -> ParseResult<u32> {
+fn parse_tkhd(input: &[u8], payload: ByteSpan) -> ParseResult<(u32, u64)> {
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
-    match version {
-        0 => reader.skip(8)?,
-        1 => reader.skip(16)?,
+    let (track_id, duration) = match version {
+        0 => {
+            reader.skip(8)?;
+            let track_id = reader.u32()?;
+            reader.skip(4)?;
+            let duration = reader.u32()?;
+            let duration = if duration == u32::MAX {
+                u64::MAX
+            } else {
+                u64::from(duration)
+            };
+            (track_id, duration)
+        }
+        1 => {
+            reader.skip(16)?;
+            let track_id = reader.u32()?;
+            reader.skip(4)?;
+            let duration = reader.u64()?;
+            (track_id, duration)
+        }
         _ => return Err(parse_failure!()),
-    }
-    let track_id = reader.u32()?;
+    };
     if track_id == 0 {
         return Err(parse_failure!());
     }
-    Ok(track_id)
+    Ok((track_id, duration))
 }
 
+fn parse_edit_box(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<EditList> {
+    let mut reader = Reader::new(input, payload);
+    let mut edit_list = None;
+    while let Some(child) = next_box(&mut reader, false, budget)? {
+        if child.kind == *b"elst" {
+            if edit_list.is_some() {
+                return Err(parse_failure!());
+            }
+            edit_list = Some(parse_edit_list_box(input, child.payload)?);
+        }
+    }
+    edit_list.ok_or_else(|| parse_failure!())
+}
+
+fn parse_edit_list_box(input: &[u8], payload: ByteSpan) -> ParseResult<EditList> {
+    let mut reader = Reader::new(input, payload);
+    let (version, flags) = parse_full_box(&mut reader)?;
+    if flags & !1 != 0 {
+        return Err(CodecError::NotImplemented(
+            "AVIF edit-list flags outside the bounded repetition contract".to_owned(),
+        ));
+    }
+    let entry_count = reader.u32()?;
+    if entry_count != 1 {
+        return Err(CodecError::NotImplemented(
+            "AVIF edit lists with multiple entries are not supported".to_owned(),
+        ));
+    }
+    let segment_duration = match version {
+        0 => u64::from(reader.u32()?),
+        1 => reader.u64()?,
+        _ => {
+            return Err(CodecError::NotImplemented(
+                "AVIF edit-list version is not supported".to_owned(),
+            ));
+        }
+    };
+    let media_time = match version {
+        0 => i64::from(i32::from_be_bytes(reader.u32()?.to_be_bytes())),
+        1 => i64::from_be_bytes(reader.u64()?.to_be_bytes()),
+        _ => unreachable!(),
+    };
+    let media_rate_integer = i32::from(i16::from_be_bytes(reader.u16()?.to_be_bytes()));
+    let media_rate_fraction = i32::from(i16::from_be_bytes(reader.u16()?.to_be_bytes()));
+    if segment_duration == 0 {
+        return Err(parse_failure!());
+    }
+    if media_time != 0 || media_rate_integer != 1 || media_rate_fraction != 0 {
+        return Err(CodecError::NotImplemented(
+            "AVIF edit-list media timing is outside the bounded contract".to_owned(),
+        ));
+    }
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(EditList {
+        repeating: flags & 1 != 0,
+        segment_duration,
+    })
+}
 fn parse_tref(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<Option<u32>> {
     let mut reader = Reader::new(input, payload);
     let mut aux_for = None;
@@ -2455,6 +2581,7 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
         color,
         alpha,
         timescale,
+        loop_count: color_track.repetition,
     })
 }
 
@@ -3329,6 +3456,8 @@ fn coverage_track(
         handler,
         aux_for_id,
         timescale: NonZeroU32::new(timescale),
+        track_duration: 0,
+        repetition: AnimationLoop::Unspecified,
         table: Some(SampleTable {
             chunk_offsets: vec![0],
             mappings: vec![SampleToChunk {
@@ -4424,6 +4553,7 @@ fn coverage_structural_states() {
             color: coverage_plane(&[(14, 16)]),
             alpha: Some(coverage_plane(&[(16, 18)])),
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
         consumed: 0,
         retained_boxes: Vec::new(),
@@ -4896,6 +5026,7 @@ fn coverage_structural_states() {
             },
             alpha: None,
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = sequence_only.validate();
@@ -4925,6 +5056,7 @@ fn coverage_structural_states() {
             },
             alpha: None,
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = invalid_sequence_color.validate();
@@ -4961,6 +5093,7 @@ fn coverage_structural_states() {
                 samples: Vec::new(),
             }),
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = invalid_sequence_alpha.validate();
@@ -5010,6 +5143,7 @@ fn coverage_structural_states() {
                 ],
             }),
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = invalid_sequence.validate();

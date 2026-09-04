@@ -191,6 +191,7 @@ pub fn decode_sequence(
         sequence.source_color = source_color;
         return Ok((sequence, consumed));
     };
+    let loop_count = sequence_payload.loop_count;
 
     validate_sequence_timing(sequence_payload)?;
     let portable_frames = super::av1::validate_sequence_frames(&extracted, token)
@@ -286,7 +287,7 @@ pub fn decode_sequence(
             width,
             height,
             frames,
-            loop_count: crate::types::AnimationLoop::Unspecified,
+            loop_count,
             background: None,
             kind: SequenceKind::TimedAnimation,
             opaque_blocks,
