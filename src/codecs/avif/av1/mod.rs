@@ -358,15 +358,7 @@ pub(super) fn validate_sequence_frames(
         }
         return Ok(Some(frames));
     }
-    if !matches!(color_sequence.bit_depth, 8 | 10 | 12)
-        || !color_sequence.color_range
-        || (
-            color_sequence.color_primaries,
-            color_sequence.transfer_characteristics,
-            color_sequence.matrix_coefficients,
-        ) != (1, 13, 6)
-        || (!color_sequence.subsampling_x && color_sequence.subsampling_y)
-    {
+    if !portable_color_sequence_supported(&color_sequence) {
         return Ok(None);
     }
     for (index, display) in color_displays.iter_mut().enumerate() {
@@ -440,6 +432,33 @@ fn monochrome_primary_sequence_supported(sequence: &sequence::SequenceHeader) ->
         ) == (1, 13, 6)
         && (sequence.subsampling_x, sequence.subsampling_y) == (true, true)
         && !sequence.film_grain_present
+}
+
+/// Color formats that have a checked RGB8 boundary in `decode_portable`.
+///
+/// Keep this sequence-level admission in the AV1 module independent from the
+/// private decoder matrix enum. Every returned frame still goes through the
+/// final conversion gate, while this predicate prevents a stateful track from
+/// being rejected before that per-frame path can run.
+fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader) -> bool {
+    if sequence.monochrome
+        || !sequence.color_range
+        || (!sequence.subsampling_x && sequence.subsampling_y)
+    {
+        return false;
+    }
+    match (
+        (
+            sequence.color_primaries,
+            sequence.transfer_characteristics,
+            sequence.matrix_coefficients,
+        ),
+        sequence.bit_depth,
+    ) {
+        ((1, 13, 6), depth) if matches!(depth, 8 | 10 | 12) => true,
+        ((9, 16, 9), depth) if matches!(depth, 10 | 12) => true,
+        _ => false,
+    }
 }
 
 fn monochrome_alpha_sequence_supported(
