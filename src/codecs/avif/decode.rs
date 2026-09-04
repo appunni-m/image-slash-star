@@ -465,9 +465,6 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         return None;
     }
     let has_alpha = still.alpha_plane.is_some();
-    if has_alpha && matches!(matrix, PortableYuvMatrix::Bt2020) {
-        return None;
-    }
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
     let pixels = if !still.subsampling_x && !still.subsampling_y {
@@ -487,7 +484,10 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                 &y_plane.samples,
                 &u_plane.samples,
                 &v_plane.samples,
-                None,
+                still
+                    .alpha_plane
+                    .as_ref()
+                    .map(|plane| plane.samples.as_slice()),
                 still.bit_depth,
                 PortableYuvMatrix::Bt2020,
             )?,
