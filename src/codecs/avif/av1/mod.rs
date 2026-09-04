@@ -455,8 +455,8 @@ fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader) -> boo
         ),
         sequence.bit_depth,
     ) {
-        ((1, 13, 6), depth) if matches!(depth, 8 | 10 | 12) => true,
-        ((9, 16, 9), depth) if matches!(depth, 10 | 12) => true,
+        ((1, 13, 6), 8 | 10 | 12) => true,
+        ((9, 16, 9), 10 | 12) => true,
         _ => false,
     }
 }

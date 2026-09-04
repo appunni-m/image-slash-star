@@ -1972,8 +1972,16 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
         Some(_edit) if track.track_duration == u64::MAX => AnimationLoop::Infinite,
         Some(_edit) if track.track_duration == 0 => return Err(parse_failure!()),
         Some(edit) => {
-            let plays = track.track_duration / edit.segment_duration
-                + u64::from(!track.track_duration.is_multiple_of(edit.segment_duration));
+            let quotient = track.track_duration / edit.segment_duration;
+            let plays = quotient
+                .checked_add(u64::from(
+                    !track.track_duration.is_multiple_of(edit.segment_duration),
+                ))
+                .ok_or_else(|| {
+                    CodecError::NotImplemented(
+                        "AVIF repetition count overflows the public sequence limit".to_owned(),
+                    )
+                })?;
             AnimationLoop::Finite {
                 total_plays: u32::try_from(plays).map_err(|_| {
                     CodecError::NotImplemented(
