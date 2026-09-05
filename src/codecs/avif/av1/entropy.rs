@@ -12572,7 +12572,7 @@ fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
 
 /// Admit the neutral padded I420 CDEF profile observed by the pinned animated
 /// AVIF sequence oracle (`scripts/generate_av1_sequence_refs.py`, commit
-/// `8d9c7fab352a4f4b69a5387e4d92f6842bed433`). The `animated.avif` evidence
+/// `8d9c7fab352a4f4b69a5387e4d92f6842bed433a`). The `animated.avif` evidence
 /// has one active zero-strength entry and a 150x150 visible canvas, so its
 /// frame-level CDEF operation is neutral even though the padded block grid is
 /// not a multiple-of-eight visible rectangle. The CDEF implementation already
