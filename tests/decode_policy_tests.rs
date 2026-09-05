@@ -6,7 +6,7 @@ use std::path::Path;
 
 use bytemuck as _;
 use image_slash_star as img;
-#[cfg(feature = "jpeg")]
+#[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
 #[path = "support/sha256.rs"]

@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use bytemuck as _;
 use image_slash_star::{ColorType, DecodedImage, ImageFormat, decode, encode_default};
-#[cfg(feature = "jpeg")]
+#[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
 #[cfg_attr(coverage, coverage(off))]

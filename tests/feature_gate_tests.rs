@@ -11,7 +11,7 @@ use image_slash_star::{
     EncodeOptions, EncodedImage, ImageDiagnostic, ImageError, ImageErrorStage, ImageFormat,
     ImageMode, ImagePalette, SequenceKind, SourceColor, UnsupportedReason,
 };
-#[cfg(feature = "jpeg")]
+#[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
 mod support;
