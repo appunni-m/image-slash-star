@@ -726,7 +726,8 @@ fn decode_monochrome_portable(
     let shift = sample_depth.bits().checked_sub(8)?;
     let mut pixels = Vec::new();
     pixels.try_reserve_exact(pixel_capacity).ok()?;
-    let vectorized = sample_count - sample_count % 8;
+    let remainder = sample_count.checked_rem(8)?;
+    let vectorized = sample_count.checked_sub(remainder)?;
     for offset in (0..vectorized).step_by(8) {
         let gray = truncate_u16_lanes(&still.planes[0].samples, offset, shift)?;
         let alpha = match alpha_plane {
@@ -817,7 +818,8 @@ fn convert_full_resolution_rgb(
     output.resize(output_length, 0);
 
     let shift = bit_depth.checked_sub(8)?;
-    let vectorized = sample_count - sample_count % 8;
+    let remainder = sample_count.checked_rem(8)?;
+    let vectorized = sample_count.checked_sub(remainder)?;
     for offset in (0..vectorized).step_by(8) {
         let [red, green, blue] =
             convert_i444_rgb_lanes(y_plane, u_plane, v_plane, offset, shift, matrix)?;
@@ -897,6 +899,18 @@ fn convert_full_resolution_rgb_10bit_alpha(
     Some(output)
 }
 
+// `convert_full_resolution_rgb` validates every plane against the declared
+// sample depth before allocating or reaching this helper. After the checked
+// 0/2/4-bit shift, every Y/U/V lane is therefore in 0..=255. The fixed-point
+// intermediates remain in the i32 domain: y * 257 <= 65_535,
+// (y * 257) * 16_320 <= 1_069_531_200, and y_scaled <= 16_319. The BT.601
+// lane bounds are R[-11_488, 27_781], G[-8_604, 25_055], and
+// B[-14_432, 30_702]; BT.2020 bounds are R[-12_000, 28_289],
+// G[-6_064, 22_495], and B[-15_328, 31_591].
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated 0..=255 lanes and bounded libyuv fixed-point coefficients remain within i32"
+)]
 #[inline(always)]
 fn convert_i444_rgb_lanes(
     y_plane: &[u16],
@@ -929,6 +943,13 @@ fn convert_i444_rgb_lanes(
     ])
 }
 
+// Callers validate the complete nominal sample domain before allocation.
+// Supported AVIF depths here are 8, 10, and 12 bits, so the supplied shifts
+// are 0, 2, or 4 and all remain below the 16-bit lane width.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "callers validate 8/10/12-bit samples and shifts 0/2/4 are below the u16 lane width"
+)]
 #[inline(always)]
 fn truncate_u16x8(samples: &[u16], offset: usize, shift: u32) -> Option<i32x8> {
     let values = samples
@@ -938,6 +959,13 @@ fn truncate_u16x8(samples: &[u16], offset: usize, shift: u32) -> Option<i32x8> {
     Some(i32x8::from_u16x8(u16x8::new(values) >> shift))
 }
 
+// Callers validate the complete nominal sample domain before allocation.
+// Supported AVIF depths here are 8, 10, and 12 bits, so the supplied shifts
+// are 0, 2, or 4 and all remain below the 16-bit lane width.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "callers validate 8/10/12-bit samples and shifts 0/2/4 are below the u16 lane width"
+)]
 #[inline(always)]
 fn truncate_u16_lanes(samples: &[u16], offset: usize, shift: u32) -> Option<[u8; 8]> {
     let values = u16x8::new(
@@ -954,6 +982,14 @@ fn truncate_u16_lanes(samples: &[u16], offset: usize, shift: u32) -> Option<[u8;
     Some(lanes)
 }
 
+// The conversion helper proves every lane lies in [-15_328, 31_591]. The
+// constant right shift is 6 (<32), then clamping to 0..=255 makes the final
+// checked narrowing total even if a future caller supplies an out-of-range
+// lane.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated conversion lanes are bounded in i32; constant shift 6 is below the width and clamp precedes narrowing"
+)]
 #[inline(always)]
 fn narrow_rgb_lanes(values: i32x8) -> [u8; 8] {
     let values = (values >> 6_u32)
