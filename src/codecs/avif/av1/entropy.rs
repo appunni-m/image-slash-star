@@ -12570,6 +12570,52 @@ fn inter_cdef_supported(context: &FirstBlockContext) -> bool {
         && cdef.first_uv_strength.is_some()
 }
 
+/// Admit the neutral padded I420 CDEF profile observed by the pinned animated
+/// AVIF sequence oracle (`scripts/generate_av1_sequence_refs.py`, commit
+/// `8d9c7fab352a4f4b69a5387e4d92f6842bed433`). The `animated.avif` evidence
+/// has one active zero-strength entry and a 150x150 visible canvas, so its
+/// frame-level CDEF operation is neutral even though the padded block grid is
+/// not a multiple-of-eight visible rectangle. The CDEF implementation already
+/// clips its maps to the ceil-divided plane extents and skips zero-strength
+/// entries; keep every other frame and tile guard explicit here.
+fn neutral_padded_i420_cdef_supported(context: &FirstBlockContext) -> bool {
+    let Some(cdef) = context.frame_tools.cdef else {
+        return false;
+    };
+    context.bit_depth == 8
+        && !context.monochrome
+        && context.subsampling_x
+        && context.subsampling_y
+        && !context.superres_enabled
+        && context.upscaled_width == context.frame_width
+        && context.single_tile
+        && context.restoration_types == [None; 3]
+        && !context.frame_tools.film_grain_present
+        && context.frame_tools.loop_filter.level_y == [0; 2]
+        && context.frame_tools.loop_filter.level_u == 0
+        && context.frame_tools.loop_filter.level_v == 0
+        && !context.segmentation_enabled
+        && !context.frame_tools.segmentation.enabled
+        && context.block_x == 0
+        && context.block_y == 0
+        && context.tile_origin_b4_x == 0
+        && context.tile_origin_b4_y == 0
+        && context.block_width == context.frame_block_width
+        && context.block_height == context.frame_block_height
+        && context.frame_width != 0
+        && context.frame_height != 0
+        && context.frame_width.div_ceil(8).checked_mul(2) == Some(context.block_width)
+        && context.frame_height.div_ceil(8).checked_mul(2) == Some(context.block_height)
+        && cdef.bits == 0
+        && cdef.y_strength_count == 1
+        && cdef.uv_strength_count == 1
+        && cdef.first_y_strength == Some(0)
+        && cdef.first_uv_strength == Some(0)
+        && cdef.y_strengths[0] == 0
+        && cdef.uv_strengths[0] == 0
+        && matches!(cdef.damping, 3 | 4)
+}
+
 /// Screen-content-enabled inter leaves use parsed force-integer-MV precision;
 /// frame-level skip mode is admitted only for transform modes 1/2 so its
 /// predictor-only terminals retain a normative full-block transform extent.
@@ -12608,7 +12654,7 @@ fn complete_inter_420_reconstruction_context(
         && (!context.skip_mode_enabled || matches!(context.frame_tools.transform_mode, 1 | 2))
         && !context.allow_intrabc
         && matches!(context.frame_tools.transform_mode, 0..=2)
-        && inter_cdef_supported(context)
+        && (inter_cdef_supported(context) || neutral_padded_i420_cdef_supported(context))
         && (context.restoration_types == [None; 3]
             || active_restoration
             || mixed_lossless_restoration
