@@ -157,7 +157,8 @@ gaps.
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled format restrictions and limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
-| `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
+| `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the legacy decoded contract |
+| `ImageInfo::detailed_transfer_layout`, `DecodedImage::detailed_transfer_layout` | Add the transfer byte order and the current one-plane transport description while retaining the legacy layout |
 | `DecodedImage::try_new`, `try_with_mode`, `try_with_palette` | Checked zero-copy construction for validated pixels, color/mode state, and indexed palettes; the compatibility builders remain explicitly unchecked |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
