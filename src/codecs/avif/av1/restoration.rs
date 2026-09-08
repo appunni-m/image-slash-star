@@ -207,8 +207,8 @@ fn restore_wiener_plane(
         return Err(malformed("restoration plane extent is invalid"));
     }
 
-    let horizontal_filter = full_filter(horizontal);
-    let vertical_filter = full_filter(vertical);
+    let horizontal_filter = full_filter(horizontal)?;
+    let vertical_filter = full_filter(vertical)?;
     let mut intermediate = Vec::<i32>::new();
     intermediate
         .try_reserve(sample_count)
@@ -276,9 +276,11 @@ fn restore_wiener_plane(
         }
     }
 
-    let vertical_bias = -(1_i64
+    let vertical_bias = 1_i64
         .checked_shl(depth.bits().saturating_add(round_v).saturating_sub(1))
-        .ok_or_else(|| malformed("restoration vertical bias overflows"))?);
+        .ok_or_else(|| malformed("restoration vertical bias overflows"))?
+        .checked_neg()
+        .ok_or_else(|| malformed("restoration vertical bias negation overflows"))?;
     let vertical_round = 1_i64
         .checked_shl(round_v.saturating_sub(1))
         .ok_or_else(|| malformed("restoration vertical rounding overflows"))?;
@@ -596,6 +598,9 @@ fn sgr_intermediates(
     output.resize(extended_count, SgrIntermediate { mean: 0, gain: 0 });
     let radius_signed =
         isize::try_from(radius).map_err(|_| malformed("SGR radius exceeds isize"))?;
+    let negative_radius = radius_signed
+        .checked_neg()
+        .ok_or_else(|| malformed("SGR radius negation overflows"))?;
     let diameter = radius
         .checked_mul(2)
         .and_then(|value| value.checked_add(1))
@@ -624,9 +629,9 @@ fn sgr_intermediates(
                 .ok_or_else(|| malformed("SGR intermediate x underflows"))?;
             let mut sum = 0_u64;
             let mut sumsq = 0_u64;
-            let mut dy = -radius_signed;
+            let mut dy = negative_radius;
             while dy <= radius_signed {
-                let mut dx = -radius_signed;
+                let mut dx = negative_radius;
                 while dx <= radius_signed {
                     let sample_x = center_x
                         .checked_add(dx)
@@ -714,7 +719,7 @@ fn sgr_radius_one_residual(
     let mut gain_cross = 0_i64;
     let mut mean_cross = 0_i64;
     for (dx, dy) in [(0_i32, 0_i32), (-1, 0), (1, 0), (0, -1), (0, 1)] {
-        let value = sgr_ab_at(intermediates, extended_width, width, height, x, y, dx, dy)?;
+        let value = sgr_ab_at(intermediates, extended_width, width, height, x, y, (dx, dy))?;
         gain_cross = gain_cross
             .checked_add(value.gain)
             .ok_or_else(|| malformed("SGR cross gain overflows"))?;
@@ -725,7 +730,7 @@ fn sgr_radius_one_residual(
     let mut gain_corners = 0_i64;
     let mut mean_corners = 0_i64;
     for (dx, dy) in [(-1_i32, -1_i32), (1, -1), (-1, 1), (1, 1)] {
-        let value = sgr_ab_at(intermediates, extended_width, width, height, x, y, dx, dy)?;
+        let value = sgr_ab_at(intermediates, extended_width, width, height, x, y, (dx, dy))?;
         gain_corners = gain_corners
             .checked_add(value.gain)
             .ok_or_else(|| malformed("SGR corner gain overflows"))?;
@@ -793,9 +798,9 @@ fn sgr_radius_two_row(
     y: usize,
     dy: i32,
 ) -> Av1Result<(i64, i64)> {
-    let center = sgr_ab_at(intermediates, extended_width, width, height, x, y, 0, dy)?;
-    let left = sgr_ab_at(intermediates, extended_width, width, height, x, y, -1, dy)?;
-    let right = sgr_ab_at(intermediates, extended_width, width, height, x, y, 1, dy)?;
+    let center = sgr_ab_at(intermediates, extended_width, width, height, x, y, (0, dy))?;
+    let left = sgr_ab_at(intermediates, extended_width, width, height, x, y, (-1, dy))?;
+    let right = sgr_ab_at(intermediates, extended_width, width, height, x, y, (1, dy))?;
     let gain = center
         .gain
         .checked_mul(6)
@@ -826,8 +831,7 @@ fn sgr_ab_at(
     height: usize,
     x: usize,
     y: usize,
-    dx: i32,
-    dy: i32,
+    (dx, dy): (i32, i32),
 ) -> Av1Result<SgrIntermediate> {
     let x = isize::try_from(x)
         .map_err(|_| malformed("SGR x exceeds isize"))?
@@ -884,17 +888,23 @@ fn clamp_signed(value: isize, extent: usize) -> usize {
     }
 }
 
-fn full_filter(side: [i32; 3]) -> [i32; 7] {
-    let sum = side[0] + side[1] + side[2];
-    let center = 128_i32 - 2 * sum;
-    [side[0], side[1], side[2], center, side[2], side[1], side[0]]
+fn full_filter(side: [i32; 3]) -> Av1Result<[i32; 7]> {
+    let sum = side[0]
+        .checked_add(side[1])
+        .and_then(|value| value.checked_add(side[2]))
+        .ok_or_else(|| malformed("restoration Wiener side coefficient sum overflows"))?;
+    let center = sum
+        .checked_mul(2)
+        .and_then(|value| 128_i32.checked_sub(value))
+        .ok_or_else(|| malformed("restoration Wiener center coefficient overflows"))?;
+    Ok([side[0], side[1], side[2], center, side[2], side[1], side[0]])
 }
 
 fn clamp_offset(index: usize, offset: isize, extent: usize) -> usize {
     let shifted = if offset.is_negative() {
         index.saturating_sub(offset.unsigned_abs())
     } else {
-        index.saturating_add(offset as usize)
+        index.saturating_add(offset.unsigned_abs())
     };
     shifted.min(extent.saturating_sub(1))
 }
