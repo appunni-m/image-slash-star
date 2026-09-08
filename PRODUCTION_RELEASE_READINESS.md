@@ -10,6 +10,13 @@ until the canonical roadmap and evidence say otherwise.
       surface name the same `image-slash-star` package.
 - [x] `Cargo.toml` has an explicit include list and excludes fixtures, coverage
       state, build output, and release-only tooling.
+- [x] `make verify`, `make lint`, and the nightly coverage-harness compile pass
+      on the current local release candidate.
+- [ ] `make package-verify` passes with the exact Cargo package list recorded
+      in `tests/fixtures/package_surface_manifest.json`.
+- [ ] The pushed history contains no generated fixture blob at or above
+      GitHub's 100 MiB limit; the current local branch still has five older
+      oversized AV1-oracle blobs.
 - [ ] The exact clean commit has a successful pinned CI run.
 - [ ] Managed Pillow parity and Coverage MCP receipts identify that commit.
 - [ ] The four release coverage metrics and every planned codec class remain
