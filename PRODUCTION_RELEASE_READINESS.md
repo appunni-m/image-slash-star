@@ -12,6 +12,12 @@ until the canonical roadmap and evidence say otherwise.
       state, build output, and release-only tooling.
 - [x] `make verify`, `make lint`, and the nightly coverage-harness compile pass
       on the current local release candidate.
+- [ ] The full pinned nightly LLVM coverage run is green from a clean checkout.
+      The current run executes 43/45 coverage-matrix tests: the AV1
+      reconstruction test needs the maintained index sidecars, and the
+      coverage-only AV1 state probe still has an outdated sequence-state
+      assertion. Keep this gate open until those inputs and the probe are
+      corrected and the complete run produces a verified report.
 - [x] The exact 170-file Cargo package list is recorded in
       `tests/fixtures/package_surface_manifest.json`; the package-surface
       check and isolated archive consumer pass. The full `make package-verify`
