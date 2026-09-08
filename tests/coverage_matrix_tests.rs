@@ -1721,15 +1721,41 @@ static AV1_FIXTURE_SELECTION_REPORT: OnceLock<()> = OnceLock::new();
 #[cfg(coverage)]
 fn av1_reconstruction_document() -> Result<&'static Av1ReconstructionDocument, &'static str> {
     let result = AV1_RECONSTRUCTION_DOCUMENT.get_or_init(|| {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let path = root
             .join("tests")
             .join("fixtures")
             .join("outputs")
             .join("av1_reconstruction.json");
         let contents = fs::read_to_string(&path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-        let document: Av1ReconstructionDocument = json::from_str(&contents)
+        let mut document: Av1ReconstructionDocument = json::from_str(&contents)
             .map_err(|error| format!("cannot parse {}: {error:?}", path.display()))?;
+        let mut part_count = 0;
+        loop {
+            let part_path = root
+                .join("tests")
+                .join("fixtures")
+                .join("outputs")
+                .join(format!("av1_reconstruction.part-{part_count:03}.json"));
+            let part_contents = match fs::read_to_string(&part_path) {
+                Ok(contents) => contents,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+                Err(error) => {
+                    return Err(format!("cannot read {}: {error}", part_path.display()));
+                }
+            };
+            let mut cases: Vec<Av1ReconstructionCase> = json::from_str(&part_contents)
+                .map_err(|error| format!("cannot parse {}: {error:?}", part_path.display()))?;
+            document.cases.append(&mut cases);
+            part_count += 1;
+        }
+        if part_count == 0 {
+            return Err(format!(
+                "AV1 reconstruction index has no case parts next to {}",
+                path.display()
+            ));
+        }
         let mut names = BTreeSet::new();
         for case in &document.cases {
             if !names.insert(case.fixture.as_str()) {

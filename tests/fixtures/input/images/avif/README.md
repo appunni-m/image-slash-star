@@ -183,8 +183,11 @@ oracle and remains a normal active matrix row.
 | `portable_lossy_420_q99_luma_eob_bin2_eob3.avif` | 4×4 luma impulse at `(3,0)`, legal TX8×8 EOB-bin two / EOB three / EOB-base zero | `1e8f492d54742c0662595952247b15cd98054d4f6e11346041d1d7db4cf5b34` |
 
 The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
-and Pillow RGB hashes are pinned in `docs/avif.md` and
-`tests/fixtures/outputs/av1_reconstruction.json`.
+and Pillow RGB hashes are pinned in `docs/avif.md` and the indexed
+`tests/fixtures/outputs/av1_reconstruction.json` oracle. Its
+`av1_reconstruction.part-*.json` sidecars hold the case records so each
+tracked blob stays below common hosting limits; the harness joins them before
+validation.
 
 The fixture `coverage_r32x16_filter_intra_tx8x8_01.avif` is an origin
 Horizontal32x16 TX8x8 split witness. Its `Post-filterintramode[0/0]` trace
@@ -578,10 +581,12 @@ intra block copy. The promoted file hashes are:
 `scripts/generate_av1_reconstruction_refs.py` checks every positive file hash,
 builds an instrumented scalar copy of exact dav1d 1.5.3 commit
 `b546257f770768b2c88258c533da38b91a06f737` outside the repository, and writes
-`tests/fixtures/outputs/av1_reconstruction.json`. That oracle records all
+the indexed `tests/fixtures/outputs/av1_reconstruction.json` plus its
+`av1_reconstruction.part-*.json` case files. That oracle records all
 partition-block headers, scalar entropy operations, reconstructed Y/U/V plane
 rows and hashes, and Pillow RGB rows and hashes. The Rust integration test
-consumes this JSON and the positive AVIF fixtures directly.
+joins the index and parts, then consumes the resulting document and the
+positive AVIF fixtures directly.
 
 The bounded vertical Diagonal67 fixture
 `coverage_square8_chroma_diagonal67_vertical_01.avif` is the promoted

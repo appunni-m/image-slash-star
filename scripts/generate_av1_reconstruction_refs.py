@@ -33,6 +33,10 @@ from inspect_avif_bitstreams import inspect as inspect_avif
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
 DEFAULT_OUTPUT = ROOT / "tests" / "fixtures" / "outputs" / "av1_reconstruction.json"
+# Keep each generated JSON blob comfortably below GitHub's 100 MiB limit. The
+# index remains at the historical path and the test harness joins these parts
+# back into the exact document before it compares any oracle fields.
+RECONSTRUCTION_PART_MAX_COMPACT_BYTES = 16_000_000
 DAV1D_COMMIT = "b546257f770768b2c88258c533da38b91a06f737"
 VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
     {
@@ -2433,6 +2437,44 @@ def resolve_tool(value: str, name: str) -> Path:
     return Path(resolved).resolve()
 
 
+def write_document(output: Path, document: dict) -> None:
+    """Write the reconstruction oracle as a small index plus JSON case parts."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+    cases = document["cases"]
+    index = {key: value for key, value in document.items() if key != "cases"}
+    index["cases"] = []
+    output.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n")
+
+    parts: list[list[dict]] = []
+    current: list[dict] = []
+    current_size = 0
+    for case in cases:
+        case_size = len(
+            json.dumps(
+                case,
+                ensure_ascii=True,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+        )
+        if current and current_size + case_size + 1 > RECONSTRUCTION_PART_MAX_COMPACT_BYTES:
+            parts.append(current)
+            current = []
+            current_size = 0
+        current.append(case)
+        current_size += case_size + 1
+    if current:
+        parts.append(current)
+
+    prefix = f"{output.stem}.part-"
+    for stale in output.parent.glob(f"{prefix}*{output.suffix}"):
+        stale.unlink()
+    for index, part in enumerate(parts):
+        part_path = output.with_name(f"{prefix}{index:03d}{output.suffix}")
+        part_path.write_text(json.dumps(part, indent=2, sort_keys=True) + "\n")
+    print(f"Written deterministic trace: {output} ({len(parts)} case parts)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dav1d-source", type=Path, required=True)
@@ -2462,9 +2504,7 @@ def main() -> None:
     )
     if first != second:
         raise RuntimeError("instrumented dav1d trace is not deterministic")
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(first, indent=2, sort_keys=True) + "\n")
-    print(f"Written deterministic trace: {args.output}")
+    write_document(args.output, first)
 
 
 if __name__ == "__main__":
