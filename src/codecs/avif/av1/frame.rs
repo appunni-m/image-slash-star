@@ -1427,6 +1427,28 @@ impl FrameState {
         );
     }
 
+    #[cfg(coverage)]
+    #[coverage(off)]
+    pub(super) fn __coverage_seed_missing_reference_surfaces(&mut self) {
+        // The compact parser probes intentionally omit full reconstruction for
+        // later inter frames. Reuse the validated key surface only to keep the
+        // synthetic state machine on the same precondition as production.
+        let Some(surface) = self
+            .references
+            .iter()
+            .find_map(|reference| reference.as_ref().and_then(|value| value.surface.clone()))
+        else {
+            return;
+        };
+        for reference in &mut self.references {
+            if let Some(reference) = reference.as_mut() {
+                if reference.surface.is_none() {
+                    reference.surface = Some(surface.clone());
+                }
+            }
+        }
+    }
+
     // ✅ VERIFIED: AV1 specification section 5.11.1; dav1d 1.5.3
     // src/obu.c:1154-1167 and src/decode.c:3149-3181.
     fn read_tile_group(
@@ -4655,7 +4677,18 @@ fn coverage_state_paths() {
     let mut rejected_entropy = FrameState::new();
     rejected_entropy.sequence = Some(sequence.clone());
     rejected_entropy.pending = Some(coverage_pending(entropy_header));
-    assert!(coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8).is_ok());
+    assert!(matches!(
+        coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8),
+        Err(CodecError::Malformed(message))
+            if message == "invalid AV1 bitstream: decoded inter frame references an empty slot"
+    ));
+    let mut accepted_entropy = FrameState::new();
+    accepted_entropy.sequence = Some(sequence.clone());
+    let mut accepted_header = coverage_header();
+    accepted_header.frame_type = FrameType::Key;
+    accepted_header.primary_ref_frame = PRIMARY_REF_NONE;
+    accepted_entropy.pending = Some(coverage_pending(accepted_header));
+    assert!(coverage_read_tile_group(&accepted_entropy, &tile_input, tile_input.len() * 8).is_ok());
     let _ = state.begin_frame(&empty_data, 0..0, false, 0, 0, false);
     let _ = state.tile_group_obu(&empty_data, 0, 0, false, 0, 0);
     let _ = state.tile_group_obu(&empty_data, 1, 0, false, 0, 0);
@@ -4678,15 +4711,16 @@ fn coverage_state_paths() {
         0,
     );
     let mut missing_sequence = FrameState::new();
-    assert_eq!(
+    assert!(matches!(
         missing_sequence.accept_parsed_header(
             true,
             sequence.frame_id_bits,
             false,
             coverage_header(),
         ),
-        Ok(())
-    );
+        Err(CodecError::Malformed(message))
+            if message == "invalid AV1 bitstream: frame header has no sequence state"
+    ));
     assert_eq!(state.temporal_delimiter(), Ok(()));
     assert!(state.finish().is_err());
     assert_eq!(state.accept_sequence(sequence.clone()), Ok(()));
@@ -4938,6 +4972,7 @@ fn coverage_state_paths() {
     animated_state
         .accept_sequence(animated_sequence.clone())
         .unwrap();
+    let mut coverage_surface: Option<Arc<FrameSurface>> = None;
     for (frame_index, frame) in [
         ANIMATED_KEY,
         ANIMATED_INTER_1,
@@ -4947,6 +4982,15 @@ fn coverage_state_paths() {
     .into_iter()
     .enumerate()
     {
+        if let Some(surface) = coverage_surface.as_ref() {
+            for reference in &mut animated_state.references {
+                if let Some(reference) = reference.as_mut() {
+                    if reference.surface.is_none() {
+                        reference.surface = Some(surface.clone());
+                    }
+                }
+            }
+        }
         let animated_references = animated_state.reference_headers();
         coverage_sweep_frame(frame, &animated_sequence, &animated_references);
         if frame_index == 1 {
@@ -4976,6 +5020,12 @@ fn coverage_state_paths() {
             animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
             Ok(())
         );
+        if frame_index == 0 {
+            coverage_surface = animated_state
+                .references
+                .iter()
+                .find_map(|reference| reference.as_ref().and_then(|value| value.surface.clone()));
+        }
     }
     let show_existing = [0xa8_u8];
     let animated_references = animated_state.reference_headers();
@@ -4987,6 +5037,15 @@ fn coverage_state_paths() {
         Ok(())
     );
     for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
+        if let Some(surface) = coverage_surface.as_ref() {
+            for reference in &mut animated_state.references {
+                if let Some(reference) = reference.as_mut() {
+                    if reference.surface.is_none() {
+                        reference.surface = Some(surface.clone());
+                    }
+                }
+            }
+        }
         let animated_references = animated_state.reference_headers();
         coverage_sweep_frame(frame, &animated_sequence, &animated_references);
         if frame_index == 0 {
