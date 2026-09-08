@@ -588,10 +588,10 @@ impl IntraTxPlan {
                 return None;
             }
             let mut tx = block_size.maximum_luma_tx();
-            let mut depth = 0;
+            let mut depth = 0_usize;
             while depth < tx_depth {
                 tx = tx.sub_size();
-                depth += 1;
+                depth = depth.saturating_add(1);
             }
             tx
         };
@@ -690,8 +690,8 @@ impl Iterator for IntraTxIter {
             let (scale_x, scale_y) = self.plane_scale(plane);
             let chunk_width = block_width.saturating_sub(self.chunk_x).min(64);
             let chunk_height = block_height.saturating_sub(self.chunk_y).min(64);
-            let plane_chunk_x = self.chunk_x / scale_x;
-            let plane_chunk_y = self.chunk_y / scale_y;
+            let plane_chunk_x = self.chunk_x.checked_div(scale_x)?;
+            let plane_chunk_y = self.chunk_y.checked_div(scale_y)?;
             // AV1 promotes a subsampled coded axis smaller than four pixels
             // to one complete 4-pixel chroma transform footprint.
             let plane_chunk_width = if plane == 0 {

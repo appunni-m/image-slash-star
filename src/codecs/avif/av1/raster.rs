@@ -16,6 +16,18 @@ use super::sample_depth::SampleDepth;
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 
+/// Geometry and prediction state needed to prepare one intra block's edges.
+pub(super) struct IntraEdgeRequest {
+    pub(super) x_units: u32,
+    pub(super) y_units: u32,
+    pub(super) width_units: u32,
+    pub(super) height_units: u32,
+    pub(super) has_chroma: bool,
+    pub(super) sample_depth: SampleDepth,
+    pub(super) intra_edges: IntraEdgeFlags,
+    pub(super) smooth: [bool; 3],
+}
+
 /// A checked row-major canvas for one AV1 frame.
 pub(in crate::codecs::avif) struct FrameCanvas {
     visible_width: usize,
@@ -507,17 +519,17 @@ impl FrameCanvas {
     /// per-axis ceil-and-align geometry as [`Self::place_av1_partition_leaf`];
     /// a luma-only leaf receives inert chroma edges instead of consulting
     /// unowned chroma cells.
-    pub(super) fn intra_edges(
-        &self,
-        x_units: u32,
-        y_units: u32,
-        width_units: u32,
-        height_units: u32,
-        has_chroma: bool,
-        sample_depth: SampleDepth,
-        intra_edges: IntraEdgeFlags,
-        smooth: [bool; 3],
-    ) -> PortableResult<FullIntraEdges> {
+    pub(super) fn intra_edges(&self, request: IntraEdgeRequest) -> PortableResult<FullIntraEdges> {
+        let IntraEdgeRequest {
+            x_units,
+            y_units,
+            width_units,
+            height_units,
+            has_chroma,
+            sample_depth,
+            intra_edges,
+            smooth,
+        } = request;
         let pixels = |units: u32| {
             usize::try_from(units)
                 .ok()
@@ -905,12 +917,17 @@ impl FrameCanvas {
                 })
         };
 
-        let has_top = y != 0;
-        let has_left = x != 0;
+        // None denotes a genuinely absent edge at the plane's top/left border.
+        let top_y = y.checked_sub(1);
+        let left_x = x.checked_sub(1);
+        let has_top = top_y.is_some();
+        let has_left = left_x.is_some();
         let visible_top = plane_width.saturating_sub(x).min(width);
         let visible_left = plane_height.saturating_sub(y).min(height);
-        if (has_top && (visible_top == 0 || !row_is_written(x, y - 1, visible_top)))
-            || (has_left && (visible_left == 0 || !column_is_written(x - 1, y, visible_left)))
+        if top_y.is_some_and(|top_y| visible_top == 0 || !row_is_written(x, top_y, visible_top))
+            || left_x.is_some_and(|left_x| {
+                visible_left == 0 || !column_is_written(left_x, y, visible_left)
+            })
         {
             return Err(PortableUnavailable);
         }
@@ -919,15 +936,17 @@ impl FrameCanvas {
         let top_extension_x = x.checked_add(width).ok_or(PortableUnavailable)?;
         let visible_top_extension = plane_width.saturating_sub(top_extension_x).min(extension);
         let have_above_right = top_has_right
-            && has_top
-            && visible_top_extension != 0
-            && row_is_written(top_extension_x, y - 1, visible_top_extension);
+            && top_y.is_some_and(|top_y| {
+                visible_top_extension != 0
+                    && row_is_written(top_extension_x, top_y, visible_top_extension)
+            });
         let left_extension_y = y.checked_add(height).ok_or(PortableUnavailable)?;
         let visible_left_extension = plane_height.saturating_sub(left_extension_y).min(extension);
         let have_below_left = left_has_bottom
-            && has_left
-            && visible_left_extension != 0
-            && column_is_written(x - 1, left_extension_y, visible_left_extension);
+            && left_x.is_some_and(|left_x| {
+                visible_left_extension != 0
+                    && column_is_written(left_x, left_extension_y, visible_left_extension)
+            });
 
         let top_length = if have_above_right {
             width.checked_add(extension).ok_or(PortableUnavailable)?
@@ -949,10 +968,10 @@ impl FrameCanvas {
         } else {
             0
         };
-        if has_top {
+        if let Some(top_y) = top_y {
             for offset in 0..top_len {
                 let sample_x = x.checked_add(offset).ok_or(PortableUnavailable)?;
-                *top.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(sample_x, y - 1)?;
+                *top.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(sample_x, top_y)?;
             }
         }
         let mut left = [0_u16; MAX_INTRA_EDGE_SAMPLES];
@@ -961,14 +980,14 @@ impl FrameCanvas {
         } else {
             0
         };
-        if has_left {
+        if let Some(left_x) = left_x {
             for offset in 0..left_len {
                 let sample_y = y.checked_add(offset).ok_or(PortableUnavailable)?;
-                *left.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(x - 1, sample_y)?;
+                *left.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(left_x, sample_y)?;
             }
         }
-        let top_left = if has_top && has_left {
-            Some(sample_at(x - 1, y - 1)?)
+        let top_left = if let (Some(top_y), Some(left_x)) = (top_y, left_x) {
+            Some(sample_at(left_x, top_y)?)
         } else {
             None
         };
@@ -1603,8 +1622,12 @@ impl FrameCanvas {
                 if !active {
                     continue;
                 }
-                let row = index / active_width;
-                let column = index % active_width;
+                let row = index
+                    .checked_div(active_width)
+                    .ok_or_else(|| malformed("monochrome CDEF active map has zero width"))?;
+                let column = index
+                    .checked_rem(active_width)
+                    .ok_or_else(|| malformed("monochrome CDEF active map has zero width"))?;
                 let region_index = row
                     .checked_mul(8)
                     .and_then(|y| y.checked_div(64))
@@ -1642,11 +1665,13 @@ impl FrameCanvas {
                 if !active {
                     continue;
                 }
-                let block_x = (active_index % active_width)
-                    .checked_mul(8)
+                let block_x = active_index
+                    .checked_rem(active_width)
+                    .and_then(|column| column.checked_mul(8))
                     .ok_or_else(|| malformed("monochrome CDEF block x overflows"))?;
-                let block_y = (active_index / active_width)
-                    .checked_mul(8)
+                let block_y = active_index
+                    .checked_div(active_width)
+                    .and_then(|row| row.checked_mul(8))
                     .ok_or_else(|| malformed("monochrome CDEF block y overflows"))?;
                 let region_index = (block_y / 64)
                     .checked_mul(region_width)
@@ -1713,7 +1738,7 @@ impl FrameCanvas {
                     &mut block_output,
                 )
                 .ok_or_else(|| malformed("monochrome CDEF block exceeds its source plane"))?;
-                for row in 0..8 {
+                for (row, source_row) in block_output.chunks_exact(8).enumerate() {
                     let destination = block_y
                         .checked_add(row)
                         .and_then(|y| y.checked_mul(coded_width))
@@ -1722,9 +1747,7 @@ impl FrameCanvas {
                     let end = destination
                         .checked_add(8)
                         .ok_or_else(|| malformed("monochrome CDEF output end overflows"))?;
-                    let source_start = row * 8;
-                    output[destination..end]
-                        .copy_from_slice(&block_output[source_start..source_start + 8]);
+                    output[destination..end].copy_from_slice(source_row);
                 }
             }
             self.planes[0] = output;
@@ -1868,8 +1891,12 @@ impl FrameCanvas {
                 if !active {
                     continue;
                 }
-                let block_x = active_index % active_width;
-                let block_y = active_index / active_width;
+                let block_x = active_index
+                    .checked_rem(active_width)
+                    .ok_or_else(|| malformed("CDEF active map has zero width"))?;
+                let block_y = active_index
+                    .checked_div(active_width)
+                    .ok_or_else(|| malformed("CDEF active map has zero width"))?;
                 let region_index = block_y
                     .checked_div(8)
                     .and_then(|row| row.checked_mul(region_width))

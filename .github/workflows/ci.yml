@@ -11,22 +11,28 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: "1.96.1"
+  COVERAGE_TOOLCHAIN: "nightly-2026-07-16"
+  NODE_VERSION: "22.14.0"
+  NPM_VERSION: "11.5.1"
 
 jobs:
   quality:
     name: Format, lint, and parity
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
         with:
-          toolchain: 1.96.1
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown, wasm32-wasip1
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Install pinned npm
+        run: npm install --global "npm@$NPM_VERSION"
       - name: Verify retained third-party legal texts
         run: python3 scripts/verify_third_party_licenses.py
       - name: Verify malformed-class ledger
@@ -53,7 +59,7 @@ jobs:
       - run: cargo test --locked --all-features --test coverage_matrix_tests
       - name: Test native, core-WASM, and WASI runtime feature matrix
         run: scripts/test_feature_matrix.sh
-      - run: cargo package --allow-dirty
+      - run: cargo package --locked
       - name: Verify clean consumer against the release archive
         run: python3 scripts/verify_package_consumer.py
 
@@ -61,26 +67,27 @@ jobs:
     name: Dependencies and licenses
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
 
   coverage:
     name: Coverage report
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
         with:
-          toolchain: nightly
+          toolchain: ${{ env.COVERAGE_TOOLCHAIN }}
           components: llvm-tools-preview
-      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install pinned coverage driver
+        run: cargo +${COVERAGE_TOOLCHAIN} install cargo-llvm-cov --locked --version 0.8.7
       - name: Run aggregate all-feature coverage
         run: >-
-          cargo +nightly llvm-cov --all-features --branch --json
+          cargo +${COVERAGE_TOOLCHAIN} llvm-cov --all-features --branch --json
           --output-path coverage.json --no-fail-fast
       - name: Require complete line, branch, function, and region coverage
         run: python3 scripts/verify_llvm_coverage.py coverage.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: llvm-coverage
           path: coverage.json

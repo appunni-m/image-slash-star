@@ -108,8 +108,7 @@ pub(super) fn upscale_i420_leaf(
         frame_height,
         superres_denominator,
         depth,
-        true,
-        true,
+        (true, true),
     )
 }
 
@@ -134,8 +133,7 @@ pub(super) fn upscale_i422_leaf(
         frame_height,
         superres_denominator,
         depth,
-        true,
-        false,
+        (true, false),
     )
 }
 
@@ -159,8 +157,7 @@ pub(super) fn upscale_i444_leaf(
         frame_height,
         superres_denominator,
         depth,
-        false,
-        false,
+        (false, false),
     )
 }
 
@@ -198,8 +195,7 @@ fn upscale_subsampled_leaf(
     frame_height: u32,
     superres_denominator: u32,
     depth: SampleDepth,
-    subsampling_x: bool,
-    subsampling_y: bool,
+    (subsampling_x, subsampling_y): (bool, bool),
 ) -> Av1Result<FirstLeaf> {
     validate_header_geometry(
         leaf.width,

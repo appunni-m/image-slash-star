@@ -31,14 +31,18 @@ impl MotionVector {
     pub(super) const fn reduce_precision(self, force_integer: bool, high_precision: bool) -> Self {
         const fn component(value: i16, force_integer: bool, high_precision: bool) -> i16 {
             let value = value as i32;
+            // Widening i16 bounds both corrections to -32768..=32770.
             let corrected = if force_integer {
-                (value - (value >> 15) + 3) & !7
+                value.saturating_sub(value >> 15).saturating_add(3) & !7
             } else if !high_precision {
-                (value - (value >> 15)) & !1
+                value.saturating_sub(value >> 15) & !1
             } else {
                 value
             };
-            corrected as i16
+            // Scalar dav1d stores the rounded result in signed 16 bits. Preserve
+            // those low bits even when integer rounding produces +32768.
+            let [low, high, _, _] = corrected.to_le_bytes();
+            i16::from_le_bytes([low, high])
         }
         Self {
             y: component(self.y, force_integer, high_precision),
@@ -96,10 +100,22 @@ impl MotionVector {
         }
         // The ref-MV clamp includes four extra 4x4 cells on each side. The
         // equations below convert that sixteen-pixel border to Q3 units.
-        let minimum_x = -((block_x + width + 4) * 32);
-        let maximum_x = (frame_width - block_x + 4) * 32;
-        let minimum_y = -((block_y + height + 4) * 32);
-        let maximum_y = (frame_height - block_y + 4) * 32;
+        let bounds = |position: i64, extent: i64, frame: i64| -> Av1Result<(i64, i64)> {
+            let minimum = position
+                .checked_add(extent)
+                .and_then(|value| value.checked_add(4))
+                .and_then(|value| value.checked_mul(32))
+                .and_then(i64::checked_neg)
+                .ok_or_else(|| malformed("motion-vector minimum bound overflows"))?;
+            let maximum = frame
+                .checked_sub(position)
+                .and_then(|value| value.checked_add(4))
+                .and_then(|value| value.checked_mul(32))
+                .ok_or_else(|| malformed("motion-vector maximum bound overflows"))?;
+            Ok((minimum, maximum))
+        };
+        let (minimum_x, maximum_x) = bounds(block_x, width, frame_width)?;
+        let (minimum_y, maximum_y) = bounds(block_y, height, frame_height)?;
         let x = i64::from(self.x).clamp(minimum_x, maximum_x);
         let y = i64::from(self.y).clamp(minimum_y, maximum_y);
         Ok(Self {
@@ -149,14 +165,33 @@ impl ReferenceFrame {
     /// A segmentation reference feature stores zero for intra and 1..=7 for
     /// the seven logical inter references.
     pub(super) const fn from_segment_feature(value: i32) -> Option<Self> {
-        if value <= 0 {
-            return None;
+        match value {
+            1 => Some(Self::Last),
+            2 => Some(Self::Last2),
+            3 => Some(Self::Last3),
+            4 => Some(Self::Golden),
+            5 => Some(Self::Backward),
+            6 => Some(Self::Alt2),
+            7 => Some(Self::Alt),
+            _ => None,
         }
-        Self::from_index(value.saturating_sub(1) as usize)
     }
 
     pub(super) const fn index(self) -> usize {
         self as usize
+    }
+
+    /// The one-based inter reference stored in the spatial motion grid.
+    const fn spatial_reference(self) -> i8 {
+        match self {
+            Self::Last => 1,
+            Self::Last2 => 2,
+            Self::Last3 => 3,
+            Self::Golden => 4,
+            Self::Backward => 5,
+            Self::Alt2 => 6,
+            Self::Alt => 7,
+        }
     }
 
     pub(super) const fn is_forward(self) -> bool {
@@ -215,11 +250,13 @@ pub(super) enum InterMode {
 
 impl InterMode {
     pub(super) const fn uses_new_mv(self, index: usize) -> bool {
-        match (self, index) {
-            (Self::New | Self::NewNew | Self::NewNearest | Self::NewNear, 0) => true,
-            (Self::NewNew | Self::NearestNew | Self::NearNew, 1) => true,
-            _ => false,
-        }
+        matches!(
+            (self, index),
+            (
+                Self::New | Self::NewNew | Self::NewNearest | Self::NewNear,
+                0
+            ) | (Self::NewNew | Self::NearestNew | Self::NearNew, 1)
+        )
     }
 
     pub(super) const fn uses_global_mv(self, index: usize) -> bool {
@@ -377,7 +414,12 @@ fn global_motion_clip_wmp(value: i64) -> Av1Result<i32> {
         .map_err(|_| malformed("global-motion shear magnitude exceeds i32"))?
         .checked_mul(64)
         .ok_or_else(|| malformed("global-motion shear scale overflows"))?;
-    Ok(if value < 0 { -magnitude } else { magnitude })
+    // A converted unsigned magnitude is nonnegative, so negation cannot overflow.
+    Ok(if value < 0 {
+        magnitude.saturating_neg()
+    } else {
+        magnitude
+    })
 }
 
 fn global_motion_divisor(value: i32) -> Av1Result<(u32, i32)> {
@@ -392,18 +434,19 @@ fn global_motion_divisor(value: i32) -> Av1Result<(u32, i32)> {
     let error = value
         .checked_sub(base)
         .ok_or_else(|| malformed("global-motion divisor normalization underflows"))?;
+    // The branch bounds each subtraction's shift count to 0..=23.
     let index = if shift > 8 {
         error
             .checked_add(
                 1_u32
-                    .checked_shl(shift - 9)
+                    .checked_shl(shift.saturating_sub(9))
                     .ok_or_else(|| malformed("global-motion divisor rounding shift overflows"))?,
             )
             .ok_or_else(|| malformed("global-motion divisor index overflows"))?
-            >> (shift - 8)
+            >> (shift.saturating_sub(8))
     } else {
         error
-            .checked_shl(8 - shift)
+            .checked_shl(8_u32.saturating_sub(shift))
             .ok_or_else(|| malformed("global-motion divisor index shift overflows"))?
     };
     let reciprocal = i32::from(
@@ -444,7 +487,11 @@ pub(super) fn prepare_global_warp(global: GlobalMotion) -> Av1Result<Option<Prep
     if global.matrix[2] <= 0 {
         return Ok(None);
     }
-    let alpha = global_motion_clip_wmp(i64::from(global.matrix[2]) - (1_i64 << 16))?;
+    let alpha = global_motion_clip_wmp(
+        i64::from(global.matrix[2])
+            .checked_sub(1_i64 << 16)
+            .ok_or_else(|| malformed("global-motion alpha offset overflows"))?,
+    )?;
     let beta = global_motion_clip_wmp(i64::from(global.matrix[3]))?;
     let (shift, reciprocal) = global_motion_divisor(global.matrix[2])?;
     let reciprocal = i64::from(reciprocal);
@@ -763,10 +810,6 @@ fn local_warp_mult_shift(
     }
 }
 
-#[allow(
-    clippy::arithmetic_side_effects,
-    reason = "the reciprocal index and shifts are bounded by the 257-entry AV1 LUT"
-)]
 fn local_warp_divisor(value: u64) -> Av1Result<(u32, i64)> {
     if value == 0 {
         return Err(malformed("local-warp affine determinant is zero"));
@@ -780,18 +823,19 @@ fn local_warp_divisor(value: u64) -> Av1Result<(u32, i64)> {
     let error = value
         .checked_sub(base)
         .ok_or_else(|| malformed("local-warp determinant normalization underflows"))?;
+    // The branch bounds each subtraction's shift count to 0..=55.
     let index = if shift > 8 {
         error
             .checked_add(
                 1_u64
-                    .checked_shl(shift - 9)
+                    .checked_shl(shift.saturating_sub(9))
                     .ok_or_else(|| malformed("local-warp determinant rounding overflows"))?,
             )
             .ok_or_else(|| malformed("local-warp determinant index overflows"))?
-            >> (shift - 8)
+            >> (shift.saturating_sub(8))
     } else {
         error
-            .checked_shl(8 - shift)
+            .checked_shl(8_u32.saturating_sub(shift))
             .ok_or_else(|| malformed("local-warp determinant index shift overflows"))?
     };
     let reciprocal = i64::from(
@@ -1055,7 +1099,12 @@ fn signed_rounded_shift(value: i64, shift: u32) -> Av1Result<i64> {
         >> shift;
     let magnitude = i64::try_from(magnitude)
         .map_err(|_| malformed("global-motion rounded value exceeds i64"))?;
-    Ok(if value < 0 { -magnitude } else { magnitude })
+    // A converted unsigned magnitude is nonnegative, so negation cannot overflow.
+    Ok(if value < 0 {
+        magnitude.saturating_neg()
+    } else {
+        magnitude
+    })
 }
 
 /// Derive the block-centred global MV used by both spatial candidates and the
@@ -1217,17 +1266,20 @@ impl ScaleFactors {
         let scale = i64::from(scale);
         let temporary = origin
             .checked_mul(scale)
-            .and_then(|value| value.checked_add((scale - 0x4000).checked_mul(8)?))
+            .and_then(|value| value.checked_add(scale.checked_sub(0x4000)?.checked_mul(8)?))
             .ok_or_else(|| malformed("scaled MC position overflows"))?;
         let rounded = temporary
             .unsigned_abs()
             .checked_add(128)
             .ok_or_else(|| malformed("scaled MC rounding overflows"))?
             >> 8;
+        let magnitude =
+            i64::try_from(rounded).map_err(|_| malformed("scaled MC coordinate exceeds i64"))?;
+        // The unsigned magnitude converted above cannot be i64::MIN.
         let signed = if temporary < 0 {
-            -(i64::try_from(rounded).map_err(|_| malformed("scaled MC coordinate exceeds i64"))?)
+            magnitude.saturating_neg()
         } else {
-            i64::try_from(rounded).map_err(|_| malformed("scaled MC coordinate exceeds i64"))?
+            magnitude
         };
         i32::try_from(
             signed
@@ -1350,7 +1402,7 @@ impl MotionCandidateStack {
         if start >= end {
             return;
         }
-        self.candidates[start..end].sort_by(|left, right| right.weight.cmp(&left.weight));
+        self.candidates[start..end].sort_by_key(|candidate| std::cmp::Reverse(candidate.weight));
     }
 
     fn add_weight_to_range(&mut self, end: usize, weight: i32) {
@@ -1380,13 +1432,10 @@ impl MotionCandidateStack {
 
     pub(super) fn ensure_two(&mut self, fallbacks: [[MotionVector; 2]; 2]) {
         let old_count = self.len();
-        for index in old_count..2 {
+        for (index, vectors) in fallbacks.into_iter().enumerate().skip(old_count) {
             // Global fallbacks fill stack positions directly. Equal vectors
             // in slots zero and one are intentional and must not coalesce.
-            self.candidates[index] = MotionCandidate {
-                vectors: fallbacks[index],
-                weight: 0,
-            };
+            self.candidates[index] = MotionCandidate { vectors, weight: 0 };
         }
         self.coded_count = self.coded_count.max(2);
     }
@@ -1458,7 +1507,7 @@ impl SpatialRefBlock {
     ) -> Self {
         Self {
             block_size,
-            references: [reference.index() as i8 + 1, -1],
+            references: [reference.spatial_reference(), -1],
             vectors: [vector, MotionVector::ZERO],
             global_affine: [global_affine, false],
             new_mv: [new_mv, false],
@@ -1475,7 +1524,7 @@ impl SpatialRefBlock {
     ) -> Self {
         Self {
             block_size,
-            references: [reference.index() as i8 + 1, 0],
+            references: [reference.spatial_reference(), 0],
             vectors: [vector, MotionVector::ZERO],
             global_affine: [global_affine, false],
             new_mv: [new_mv, false],
@@ -1493,7 +1542,7 @@ impl SpatialRefBlock {
     ) -> Self {
         Self {
             block_size,
-            references: [first.index() as i8 + 1, second.index() as i8 + 1],
+            references: [first.spatial_reference(), second.spatial_reference()],
             vectors,
             global_affine,
             new_mv,
@@ -1569,11 +1618,10 @@ impl ReferenceMvRequest<'_> {
 fn target_references(target: ReferenceMvTarget) -> [i8; 2] {
     match target {
         ReferenceMvTarget::IntraBc => [0, -1],
-        ReferenceMvTarget::Single(reference) => [reference.index() as i8 + 1, -1],
+        ReferenceMvTarget::Single(reference) => [reference.spatial_reference(), -1],
         ReferenceMvTarget::Compound(pair) => [
-            pair.first.index() as i8 + 1,
-            pair.second
-                .map_or(0, |reference| reference.index() as i8 + 1),
+            pair.first.spatial_reference(),
+            pair.second.map_or(0, ReferenceFrame::spatial_reference),
         ],
     }
 }
@@ -1590,7 +1638,8 @@ fn target_global_vectors(
         if encoded <= 0 {
             continue;
         }
-        let reference = usize::try_from(encoded - 1)
+        // Positive spatial references are in 1..=7; subtraction stays in i8.
+        let reference = usize::try_from(encoded.saturating_sub(1))
             .map_err(|_| malformed("global-motion reference index is invalid"))?;
         let global = *request
             .global_motion
@@ -1650,20 +1699,43 @@ fn add_spatial_candidate(
     stack.add_or_weight(vectors, weight);
 }
 
-fn scan_row<S: SpatialMotionSource>(
-    source: &S,
-    stack: &mut MotionCandidateStack,
+struct SpatialScan<'a> {
+    stack: &'a mut MotionCandidateStack,
     target: ReferenceMvTarget,
     affine: [Option<MotionVector>; 2],
-    start_x: u32,
+    have_new_mv: &'a mut i32,
+    have_ref_mvs: &'a mut i32,
+}
+
+struct SpatialScanLine {
+    x: u32,
     y: u32,
-    block_width: u32,
-    visible_width: u32,
-    max_rows: u32,
+    block_extent: u32,
+    visible_extent: u32,
+    max_lines: u32,
     step: u32,
-    have_new_mv: &mut i32,
-    have_row_mvs: &mut i32,
+}
+
+fn scan_row<S: SpatialMotionSource>(
+    source: &S,
+    scan: SpatialScan<'_>,
+    line: SpatialScanLine,
 ) -> Av1Result<u32> {
+    let SpatialScan {
+        stack,
+        target,
+        affine,
+        have_new_mv,
+        have_ref_mvs: have_row_mvs,
+    } = scan;
+    let SpatialScanLine {
+        x: start_x,
+        y,
+        block_extent: block_width,
+        visible_extent: visible_width,
+        max_lines: max_rows,
+        step,
+    } = line;
     let Some(first) = source.spatial_block(start_x, y)? else {
         return Ok(0);
     };
@@ -1739,18 +1811,24 @@ fn scan_row<S: SpatialMotionSource>(
 
 fn scan_col<S: SpatialMotionSource>(
     source: &S,
-    stack: &mut MotionCandidateStack,
-    target: ReferenceMvTarget,
-    affine: [Option<MotionVector>; 2],
-    x: u32,
-    start_y: u32,
-    block_height: u32,
-    visible_height: u32,
-    max_cols: u32,
-    step: u32,
-    have_new_mv: &mut i32,
-    have_col_mvs: &mut i32,
+    scan: SpatialScan<'_>,
+    line: SpatialScanLine,
 ) -> Av1Result<u32> {
+    let SpatialScan {
+        stack,
+        target,
+        affine,
+        have_new_mv,
+        have_ref_mvs: have_col_mvs,
+    } = scan;
+    let SpatialScanLine {
+        x,
+        y: start_y,
+        block_extent: block_height,
+        visible_extent: visible_height,
+        max_lines: max_cols,
+        step,
+    } = line;
     let Some(first) = source.spatial_block(x, start_y)? else {
         return Ok(0);
     };
@@ -1836,7 +1914,7 @@ fn add_compound_extended_candidate(
         if candidate_ref <= 0 {
             break;
         }
-        let Ok(candidate_index) = usize::try_from(candidate_ref - 1) else {
+        let Ok(candidate_index) = usize::try_from(candidate_ref.saturating_sub(1)) else {
             continue;
         };
         let candidate_sign = sign_bias.get(candidate_index).copied().unwrap_or(false);
@@ -1908,7 +1986,7 @@ fn add_single_extended_candidate(
         if candidate_ref <= 0 {
             break;
         }
-        let Ok(candidate_index) = usize::try_from(candidate_ref - 1) else {
+        let Ok(candidate_index) = usize::try_from(candidate_ref.saturating_sub(1)) else {
             continue;
         };
         let mut vector = block.vectors[index];
@@ -1943,7 +2021,7 @@ fn add_temporal_candidate(
         if encoded <= 0 {
             return;
         }
-        let Some(reference_index) = usize::try_from(encoded - 1).ok() else {
+        let Some(reference_index) = usize::try_from(encoded.saturating_sub(1)).ok() else {
             return;
         };
         let target_distance = relative_distance(
@@ -2035,63 +2113,81 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
     let mut n_cols = None;
 
     if request.local_y_b4 > request.tile_top_b4 {
-        max_rows = ((request.local_y_b4 - request.tile_top_b4 + 1) >> 1)
-            .min(2 + u32::from(block_height > 1));
+        max_rows = (request
+            .local_y_b4
+            .checked_sub(request.tile_top_b4)
+            .and_then(|distance| distance.checked_add(1))
+            .ok_or_else(|| malformed("reference-MV top scan distance overflows"))?
+            >> 1)
+            .min(if block_height > 1 { 3 } else { 2 });
         n_rows = Some(scan_row(
             source,
-            &mut stack,
-            request.target,
-            affine_vectors,
-            request.local_x_b4,
-            request.local_y_b4 - 1,
-            block_width,
-            width,
-            max_rows,
-            if block_width >= 16 { 4 } else { 1 },
-            &mut have_new_mv,
-            &mut have_row_mvs,
+            SpatialScan {
+                stack: &mut stack,
+                target: request.target,
+                affine: affine_vectors,
+                have_new_mv: &mut have_new_mv,
+                have_ref_mvs: &mut have_row_mvs,
+            },
+            SpatialScanLine {
+                x: request.local_x_b4,
+                y: request.local_y_b4.saturating_sub(1),
+                block_extent: block_width,
+                visible_extent: width,
+                max_lines: max_rows,
+                step: if block_width >= 16 { 4 } else { 1 },
+            },
         )?);
     }
     if request.local_x_b4 > request.tile_left_b4 {
-        max_cols = ((request.local_x_b4 - request.tile_left_b4 + 1) >> 1)
-            .min(2 + u32::from(block_width > 1));
+        max_cols = (request
+            .local_x_b4
+            .checked_sub(request.tile_left_b4)
+            .and_then(|distance| distance.checked_add(1))
+            .ok_or_else(|| malformed("reference-MV left scan distance overflows"))?
+            >> 1)
+            .min(if block_width > 1 { 3 } else { 2 });
         n_cols = Some(scan_col(
             source,
-            &mut stack,
-            request.target,
-            affine_vectors,
-            request.local_x_b4 - 1,
-            request.local_y_b4,
-            block_height,
-            height,
-            max_cols,
-            if block_height >= 16 { 4 } else { 1 },
-            &mut have_new_mv,
-            &mut have_col_mvs,
+            SpatialScan {
+                stack: &mut stack,
+                target: request.target,
+                affine: affine_vectors,
+                have_new_mv: &mut have_new_mv,
+                have_ref_mvs: &mut have_col_mvs,
+            },
+            SpatialScanLine {
+                x: request.local_x_b4.saturating_sub(1),
+                y: request.local_y_b4,
+                block_extent: block_height,
+                visible_extent: height,
+                max_lines: max_cols,
+                step: if block_height >= 16 { 4 } else { 1 },
+            },
         )?);
     }
     if n_rows.is_some()
         && request.top_has_right
         && block_width.max(block_height) <= 16
         && request.local_x_b4.saturating_add(block_width) < request.tile_right_b4
-    {
-        if let Some(block) = source.spatial_block(
+        && let Some(block) = source.spatial_block(
             request.local_x_b4.saturating_add(block_width),
             request.local_y_b4.saturating_sub(1),
-        )? {
-            add_spatial_candidate(
-                &mut stack,
-                block,
-                request.target,
-                affine_vectors,
-                &mut have_new_mv,
-                &mut have_row_mvs,
-                4,
-            );
-        }
+        )?
+    {
+        add_spatial_candidate(
+            &mut stack,
+            block,
+            request.target,
+            affine_vectors,
+            &mut have_new_mv,
+            &mut have_row_mvs,
+            4,
+        );
     }
 
-    let nearest_match = have_col_mvs + have_row_mvs;
+    // Each match flag is 0/1; add_spatial_candidate only sets it to one.
+    let nearest_match = have_col_mvs.saturating_add(have_row_mvs);
     let nearest_count = stack.coded_count();
     stack.add_weight_to_range(nearest_count, 640);
 
@@ -2100,12 +2196,14 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
         let temporal = request
             .temporal
             .ok_or_else(|| malformed("reference-MV temporal field is unavailable"))?;
+        // Halved u32 coordinates leave ample room for the aligned +8 cell
+        // windows below; those saturating additions always equal exact sums.
         let base_x = request.absolute_x_b4 / 2;
         let base_y = request.absolute_y_b4 / 2;
         let step_h = if block_width >= 16 { 2 } else { 1 };
         let step_v = if block_height >= 16 { 2 } else { 1 };
-        let temporal_width = ((width + 1) / 2).min(8);
-        let temporal_height = ((height + 1) / 2).min(8);
+        let temporal_width = width.div_ceil(2).min(8);
+        let temporal_height = height.div_ceil(2).min(8);
         for y in (0..temporal_height).step_by(usize::try_from(step_v).unwrap_or(1)) {
             for x in (0..temporal_width).step_by(usize::try_from(step_h).unwrap_or(1)) {
                 let x8 = base_x.saturating_add(x);
@@ -2135,7 +2233,7 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
                 .checked_add(block_height)
                 .is_some_and(|end| end < tile_bottom_abs_b4)
                 && base_y.saturating_add(block_height8)
-                    < ((base_y & !7) + 8).min(tile_bottom_abs_b4 / 2);
+                    < (base_y & !7).saturating_add(8).min(tile_bottom_abs_b4 / 2);
             if has_bottom
                 && base_x > tile_left_abs_b4 / 2
                 && let Some(entry) = temporal.get(base_x, base_y.saturating_add(block_height8))
@@ -2149,7 +2247,8 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
                     None,
                 );
             }
-            if base_x.saturating_add(block_width8) < ((base_x & !7) + 8).min(tile_right_abs_b4 / 2)
+            if base_x.saturating_add(block_width8)
+                < (base_x & !7).saturating_add(8).min(tile_right_abs_b4 / 2)
             {
                 if has_bottom
                     && let Some(entry) = temporal.get(
@@ -2167,7 +2266,7 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
                     );
                 }
                 if base_y.saturating_add(block_height8).saturating_sub(1)
-                    < ((base_y & !7) + 8).min(tile_bottom_abs_b4 / 2)
+                    < (base_y & !7).saturating_add(8).min(tile_bottom_abs_b4 / 2)
                     && let Some(entry) = temporal.get(
                         base_x.saturating_add(block_width8),
                         base_y.saturating_add(block_height8).saturating_sub(1),
@@ -2186,78 +2285,95 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
         }
     }
 
-    if n_rows.is_some() && n_cols.is_some() {
-        if let Some(block) = source.spatial_block(request.local_x_b4 - 1, request.local_y_b4 - 1)? {
-            let mut dummy = 0_i32;
-            add_spatial_candidate(
-                &mut stack,
-                block,
-                request.target,
-                affine_vectors,
-                &mut dummy,
-                &mut have_row_mvs,
-                4,
-            );
-        }
+    if n_rows.is_some()
+        && n_cols.is_some()
+        && let Some(block) = source.spatial_block(
+            request.local_x_b4.saturating_sub(1),
+            request.local_y_b4.saturating_sub(1),
+        )?
+    {
+        let mut dummy = 0_i32;
+        add_spatial_candidate(
+            &mut stack,
+            block,
+            request.target,
+            affine_vectors,
+            &mut dummy,
+            &mut have_row_mvs,
+            4,
+        );
     }
 
     let mut scanned_rows = n_rows.unwrap_or(u32::MAX);
     let mut scanned_cols = n_cols.unwrap_or(u32::MAX);
     let mut dummy_new_mv = 0_i32;
+    // Offsets are two or three, and a scanned side has offset <= max_lines
+    // <= 3. The scan depth arithmetic therefore remains in 1..=6.
     for offset in 2..=3_u32 {
         if offset > scanned_rows && offset <= max_rows {
             let row = request
                 .local_y_b4
-                .checked_sub(2 * offset)
-                .unwrap_or(0)
+                .saturating_sub(offset.saturating_mul(2))
                 .saturating_add(1)
                 | 1;
             let start_x = request.local_x_b4 | 1;
             scanned_rows = scanned_rows.saturating_add(scan_row(
                 source,
-                &mut stack,
-                request.target,
-                affine_vectors,
-                start_x,
-                row,
-                block_width,
-                width,
-                1 + max_rows - offset,
-                if block_width >= 16 { 4 } else { 2 },
-                &mut dummy_new_mv,
-                &mut have_row_mvs,
+                SpatialScan {
+                    stack: &mut stack,
+                    target: request.target,
+                    affine: affine_vectors,
+                    have_new_mv: &mut dummy_new_mv,
+                    have_ref_mvs: &mut have_row_mvs,
+                },
+                SpatialScanLine {
+                    x: start_x,
+                    y: row,
+                    block_extent: block_width,
+                    visible_extent: width,
+                    max_lines: max_rows.saturating_sub(offset).saturating_add(1),
+                    step: if block_width >= 16 { 4 } else { 2 },
+                },
             )?);
         }
         if offset > scanned_cols && offset <= max_cols {
             let column = request
                 .local_x_b4
-                .checked_sub(2 * offset)
-                .unwrap_or(0)
+                .saturating_sub(offset.saturating_mul(2))
                 .saturating_add(1)
                 | 1;
             let start_y = request.local_y_b4 | 1;
             scanned_cols = scanned_cols.saturating_add(scan_col(
                 source,
-                &mut stack,
-                request.target,
-                affine_vectors,
-                column,
-                start_y,
-                block_height,
-                height,
-                1 + max_cols - offset,
-                if block_height >= 16 { 4 } else { 2 },
-                &mut dummy_new_mv,
-                &mut have_col_mvs,
+                SpatialScan {
+                    stack: &mut stack,
+                    target: request.target,
+                    affine: affine_vectors,
+                    have_new_mv: &mut dummy_new_mv,
+                    have_ref_mvs: &mut have_col_mvs,
+                },
+                SpatialScanLine {
+                    x: column,
+                    y: start_y,
+                    block_extent: block_height,
+                    visible_extent: height,
+                    max_lines: max_cols.saturating_sub(offset).saturating_add(1),
+                    step: if block_height >= 16 { 4 } else { 2 },
+                },
             )?);
         }
     }
 
-    let ref_match_count = have_col_mvs + have_row_mvs;
+    // Match flags remain 0/1 and have_new_mv is the OR of two boolean bits,
+    // so the context arithmetic below has range 0..=8 without saturation.
+    let ref_match_count = have_col_mvs.saturating_add(have_row_mvs);
     let (reference_context, new_mv_context) = match nearest_match {
         0 => (2.min(ref_match_count), i32::from(ref_match_count > 0)),
-        1 => ((3 * ref_match_count).min(4), 3 - have_new_mv),
-        2 => (5, 5 - have_new_mv),
+        1 => (
+            ref_match_count.saturating_mul(3).min(4),
+            3_i32.saturating_sub(have_new_mv),
+        ),
+        2 => (5, 5_i32.saturating_sub(have_new_mv)),
         _ => (0, 0),
     };
     stack.sort_range_by_weight_until(0, nearest_count);
@@ -2272,12 +2388,12 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
             let signs = [
                 request
                     .sign_bias
-                    .get(usize::try_from(wanted[0] - 1).unwrap_or(0))
+                    .get(usize::try_from(wanted[0].saturating_sub(1)).unwrap_or(0))
                     .copied()
                     .unwrap_or(false),
                 request
                     .sign_bias
-                    .get(usize::try_from(wanted[1] - 1).unwrap_or(0))
+                    .get(usize::try_from(wanted[1].saturating_sub(1)).unwrap_or(0))
                     .copied()
                     .unwrap_or(false),
             ];
@@ -2329,22 +2445,14 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
                 }
             }
             let mut component = [[MotionVector::ZERO; 2]; 2];
-            for index in 0..2 {
-                let mut filled = 0_usize;
-                for value in same[index]
+            for (index, component) in component.iter_mut().enumerate() {
+                let values = same[index]
                     .into_iter()
-                    .chain(different[index].into_iter())
+                    .chain(different[index])
                     .flatten()
-                {
-                    if filled >= 2 {
-                        break;
-                    }
-                    component[index][filled] = value;
-                    filled += 1;
-                }
-                while filled < 2 {
-                    component[index][filled] = temporal_vectors[index];
-                    filled += 1;
+                    .chain(std::iter::repeat(temporal_vectors[index]));
+                for (slot, value) in component.iter_mut().zip(values) {
+                    *slot = value;
                 }
             }
             let extension = [
@@ -2386,8 +2494,8 @@ pub(super) fn find_reference_mvs<S: SpatialMotionSource>(
         }
         stack.context = match reference_context >> 1 {
             0 => u8::try_from(new_mv_context.min(1)).unwrap_or(0),
-            1 => u8::try_from(1 + new_mv_context.min(3)).unwrap_or(0),
-            2 => u8::try_from((3 + new_mv_context).clamp(4, 7)).unwrap_or(0),
+            1 => u8::try_from(new_mv_context.min(3).saturating_add(1)).unwrap_or(0),
+            2 => u8::try_from(new_mv_context.saturating_add(3).clamp(4, 7)).unwrap_or(0),
             _ => stack.context,
         };
         let coded_count = stack.coded_count();
@@ -2527,19 +2635,26 @@ pub(super) fn relocate_intrabc_source(
     let tile_top = i64::from(input.tile_top_b4)
         .checked_mul(4)
         .ok_or_else(|| malformed("intraBC tile-top coordinate overflows"))?;
+    let block_width_mask = block_width
+        .checked_sub(1)
+        .ok_or_else(|| malformed("intraBC block-width mask underflows"))?;
     let tile_right_b4 = i64::from(input.tile_right_b4)
-        .checked_add(block_width - 1)
+        .checked_add(block_width_mask)
         .ok_or_else(|| malformed("intraBC tile-right coordinate overflows"))?;
-    let border_right = (tile_right_b4 & !(block_width - 1))
+    let border_right = (tile_right_b4 & !block_width_mask)
         .checked_mul(4)
         .ok_or_else(|| malformed("intraBC right border overflows"))?;
-    let block_left = block_x
+    let block_origin_x = block_x
         .checked_mul(4)
-        .and_then(|value| value.checked_add(i64::from(decoded_mv.x) >> 3))
+        .ok_or_else(|| malformed("intraBC block x coordinate overflows"))?;
+    let block_origin_y = block_y
+        .checked_mul(4)
+        .ok_or_else(|| malformed("intraBC block y coordinate overflows"))?;
+    let block_left = block_origin_x
+        .checked_add(i64::from(decoded_mv.x) >> 3)
         .ok_or_else(|| malformed("intraBC source-left coordinate overflows"))?;
-    let block_top = block_y
-        .checked_mul(4)
-        .and_then(|value| value.checked_add(i64::from(decoded_mv.y) >> 3))
+    let block_top = block_origin_y
+        .checked_add(i64::from(decoded_mv.y) >> 3)
         .ok_or_else(|| malformed("intraBC source-top coordinate overflows"))?;
     let source_width = block_width
         .checked_mul(4)
@@ -2574,7 +2689,9 @@ pub(super) fn relocate_intrabc_source(
         )
         .ok_or_else(|| malformed("intraBC top border overflows"))?;
     if left < border_left {
-        let shift = border_left - left;
+        let shift = border_left
+            .checked_sub(left)
+            .ok_or_else(|| malformed("intraBC left relocation distance overflows"))?;
         left = left
             .checked_add(shift)
             .ok_or_else(|| malformed("intraBC left relocation overflows"))?;
@@ -2582,7 +2699,9 @@ pub(super) fn relocate_intrabc_source(
             .checked_add(shift)
             .ok_or_else(|| malformed("intraBC right relocation overflows"))?;
     } else if right > border_right {
-        let shift = right - border_right;
+        let shift = right
+            .checked_sub(border_right)
+            .ok_or_else(|| malformed("intraBC right relocation distance overflows"))?;
         left = left
             .checked_sub(shift)
             .ok_or_else(|| malformed("intraBC left relocation underflows"))?;
@@ -2591,7 +2710,9 @@ pub(super) fn relocate_intrabc_source(
             .ok_or_else(|| malformed("intraBC right relocation underflows"))?;
     }
     if top < border_top {
-        let shift = border_top - top;
+        let shift = border_top
+            .checked_sub(top)
+            .ok_or_else(|| malformed("intraBC top relocation distance overflows"))?;
         top = top
             .checked_add(shift)
             .ok_or_else(|| malformed("intraBC top relocation overflows"))?;
@@ -2600,39 +2721,69 @@ pub(super) fn relocate_intrabc_source(
             .ok_or_else(|| malformed("intraBC bottom relocation overflows"))?;
     }
 
-    let sb_width_b4 = if input.sb128 { 32_i64 } else { 16_i64 };
+    let sb_shift_b4 = if input.sb128 { 5 } else { 4 };
     let sb_size = if input.sb128 { 128_i64 } else { 64_i64 };
-    let sb_left = (block_x / sb_width_b4)
+    // Grid coordinates are nonnegative; shifting equals division by 16/32.
+    let sb_left = (block_x >> sb_shift_b4)
         .checked_mul(sb_size)
         .ok_or_else(|| malformed("intraBC superblock x coordinate overflows"))?;
-    let sb_top = (block_y / sb_width_b4)
+    let sb_top = (block_y >> sb_shift_b4)
         .checked_mul(sb_size)
         .ok_or_else(|| malformed("intraBC superblock y coordinate overflows"))?;
     if bottom > sb_top && right > sb_left {
-        if top - border_top >= bottom - sb_top {
-            let shift = bottom - sb_top;
-            top -= shift;
-            bottom -= shift;
-        } else if left - border_left >= right - sb_left {
-            let shift = right - sb_left;
-            left -= shift;
-            right -= shift;
+        let available_top = top
+            .checked_sub(border_top)
+            .ok_or_else(|| malformed("intraBC top clearance overflows"))?;
+        let overlap_y = bottom
+            .checked_sub(sb_top)
+            .ok_or_else(|| malformed("intraBC vertical overlap overflows"))?;
+        if available_top >= overlap_y {
+            top = top
+                .checked_sub(overlap_y)
+                .ok_or_else(|| malformed("intraBC top relocation underflows"))?;
+            bottom = bottom
+                .checked_sub(overlap_y)
+                .ok_or_else(|| malformed("intraBC bottom relocation underflows"))?;
+        } else {
+            let available_left = left
+                .checked_sub(border_left)
+                .ok_or_else(|| malformed("intraBC left clearance overflows"))?;
+            let overlap_x = right
+                .checked_sub(sb_left)
+                .ok_or_else(|| malformed("intraBC horizontal overlap overflows"))?;
+            if available_left >= overlap_x {
+                left = left
+                    .checked_sub(overlap_x)
+                    .ok_or_else(|| malformed("intraBC left relocation underflows"))?;
+                right = right
+                    .checked_sub(overlap_x)
+                    .ok_or_else(|| malformed("intraBC right relocation underflows"))?;
+            }
         }
     }
-    if bottom > sb_top + sb_size {
-        let shift = bottom - (sb_top + sb_size);
-        top -= shift;
-        bottom -= shift;
+    let sb_bottom = sb_top
+        .checked_add(sb_size)
+        .ok_or_else(|| malformed("intraBC superblock bottom overflows"))?;
+    if bottom > sb_bottom {
+        let shift = bottom
+            .checked_sub(sb_bottom)
+            .ok_or_else(|| malformed("intraBC bottom relocation distance overflows"))?;
+        top = top
+            .checked_sub(shift)
+            .ok_or_else(|| malformed("intraBC top relocation underflows"))?;
+        bottom = bottom
+            .checked_sub(shift)
+            .ok_or_else(|| malformed("intraBC bottom relocation underflows"))?;
     }
     if bottom > sb_top && right > sb_left {
         return Err(malformed("intraBC source overlaps current superblock"));
     }
     let motion_x = left
-        .checked_sub(block_x * 4)
+        .checked_sub(block_origin_x)
         .and_then(|value| value.checked_mul(8))
         .ok_or_else(|| malformed("intraBC horizontal MV conversion overflows"))?;
     let motion_y = top
-        .checked_sub(block_y * 4)
+        .checked_sub(block_origin_y)
         .and_then(|value| value.checked_mul(8))
         .ok_or_else(|| malformed("intraBC vertical MV conversion overflows"))?;
     Ok(IntrabcSource {
@@ -2916,7 +3067,27 @@ impl TemporalMotionField {
 }
 
 fn apply_sign(value: i32, sign: i32) -> i32 {
-    if sign < 0 { -value } else { value }
+    // Callers pass an i16 component's unsigned magnitude shifted by six,
+    // which is in 0..=512 and cannot overflow under negation.
+    if sign < 0 {
+        value.saturating_neg()
+    } else {
+        value
+    }
+}
+
+/// Frame geometry, order hints, and tile region for temporal projection.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct TemporalProjectionRequest {
+    pub(super) current_width: u32,
+    pub(super) current_height: u32,
+    pub(super) current_order_hint: u32,
+    pub(super) order_hint_bits: u32,
+    pub(super) reference_order_hints: [u32; 7],
+    pub(super) col_start8: u32,
+    pub(super) col_end8: u32,
+    pub(super) row_start8: u32,
+    pub(super) row_end8: u32,
 }
 
 /// Load retained temporal fields into the current frame's projected 8x8
@@ -2924,17 +3095,20 @@ fn apply_sign(value: i32, sign: i32) -> i32 {
 /// keeps the source MV plus its positive `ref2ref` denominator for the later
 /// target-reference projection.
 pub(super) fn load_projected_temporal_field(
-    current_width: u32,
-    current_height: u32,
-    current_order_hint: u32,
-    order_hint_bits: u32,
-    reference_order_hints: [u32; 7],
+    request: TemporalProjectionRequest,
     retained: [Option<&TemporalMotionField>; 7],
-    col_start8: u32,
-    col_end8: u32,
-    row_start8: u32,
-    row_end8: u32,
 ) -> Av1Result<ProjectedTemporalField> {
+    let TemporalProjectionRequest {
+        current_width,
+        current_height,
+        current_order_hint,
+        order_hint_bits,
+        reference_order_hints,
+        col_start8,
+        col_end8,
+        row_start8,
+        row_end8,
+    } = request;
     let mut projected = ProjectedTemporalField::new(current_width, current_height)?;
     projected.clear_region(col_start8, col_end8, row_start8, row_end8)?;
     if order_hint_bits == 0 {
@@ -2951,7 +3125,8 @@ pub(super) fn load_projected_temporal_field(
     ) {
         if *selected_count < selected.len() {
             selected[*selected_count] = index;
-            *selected_count += 1;
+            // The selected array has three slots and the guard leaves room.
+            *selected_count = selected_count.saturating_add(1);
             *total_limit = (*total_limit).max(*selected_count);
         }
     }
@@ -2980,6 +3155,8 @@ pub(super) fn load_projected_temporal_field(
         select_source(&mut selected, &mut selected_count, 1, &mut total);
     }
 
+    // Dividing u32 dimensions by eight bounds every scanned coordinate to
+    // 2^29; the aligned +8/+16 windows below cannot saturate.
     let logical_width8 = current_width.div_ceil(8);
     let logical_height8 = current_height.div_ceil(8);
     let row_end8 = row_end8.min(logical_height8);
@@ -2994,12 +3171,17 @@ pub(super) fn load_projected_temporal_field(
         if diff1.unsigned_abs() > 31 {
             continue;
         }
-        let ref2cur = if source_index < 4 { -diff1 } else { diff1 };
-        let ref_sign = i32::try_from(source_index).unwrap_or(0) - 4;
+        // The distance was restricted to -31..=31 above.
+        let ref2cur = if source_index < 4 {
+            diff1.saturating_neg()
+        } else {
+            diff1
+        };
+        let ref_sign = i32::try_from(source_index).unwrap_or(0).saturating_sub(4);
         for y in row_start8..row_end8 {
             let y_sb_align = y & !7;
             let y_project_start = y_sb_align.max(row_start8);
-            let y_project_end = (y_sb_align + 8).min(row_end8);
+            let y_project_end = y_sb_align.saturating_add(8).min(row_end8);
             let mut x = source_col_start;
             while x < source_col_end {
                 let Some(retained_entry) = source.get(x, y) else {
@@ -3037,7 +3219,7 @@ pub(super) fn load_projected_temporal_field(
                 {
                     let x_sb_align = x & !7;
                     let window_start = x_sb_align.saturating_sub(8).max(col_start8);
-                    let window_end = (x_sb_align + 16).min(col_end8);
+                    let window_end = x_sb_align.saturating_add(16).min(col_end8);
                     if pos_x >= window_start && pos_x < window_end {
                         projected.set_padded(
                             pos_x,
@@ -3064,10 +3246,7 @@ pub(super) fn relative_distance(bits: u32, first: u32, second: u32) -> i32 {
     let sign = 1_i64 << bits.saturating_sub(1);
     let difference = i64::from(first).saturating_sub(i64::from(second));
     let distance = (difference & sign.saturating_sub(1)).saturating_sub(difference & sign);
-    match i32::try_from(distance) {
-        Ok(distance) => distance,
-        Err(_) => 0,
-    }
+    i32::try_from(distance).unwrap_or_default()
 }
 
 /// AV1 temporal MV projection using the normative reciprocal approximation.

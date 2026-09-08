@@ -622,16 +622,9 @@ impl<'a> InterFrameContext<'a> {
         self,
         target: ReferenceMvTarget,
         block_size: BlockSize,
-        local_x_b4: u32,
-        local_y_b4: u32,
-        absolute_x_b4: u32,
-        absolute_y_b4: u32,
-        tile_left_b4: u32,
-        tile_top_b4: u32,
-        tile_right_b4: u32,
-        tile_bottom_b4: u32,
-        frame_width_b4: u32,
-        frame_height_b4: u32,
+        ((local_x_b4, local_y_b4), (absolute_x_b4, absolute_y_b4)): ((u32, u32), (u32, u32)),
+        (tile_left_b4, tile_top_b4, tile_right_b4, tile_bottom_b4): (u32, u32, u32, u32),
+        (frame_width_b4, frame_height_b4): (u32, u32),
         top_has_right: bool,
     ) -> ReferenceMvRequest<'a> {
         ReferenceMvRequest {
@@ -1689,16 +1682,16 @@ fn decode_complete_following_leaf(
             neighbor.has_chroma
                 && super::block::is_smooth_chroma_predictor(neighbor.chroma_predictor)
         }));
-    let edges = match canvas.intra_edges(
-        node.x,
-        node.y,
-        palette_coded_width,
-        palette_coded_height,
+    let edges = match canvas.intra_edges(super::raster::IntraEdgeRequest {
+        x_units: node.x,
+        y_units: node.y,
+        width_units: palette_coded_width,
+        height_units: palette_coded_height,
         has_chroma,
-        tools.sample_depth,
-        node.intra_edges,
-        [smooth_luma, smooth_chroma, smooth_chroma],
-    ) {
+        sample_depth: tools.sample_depth,
+        intra_edges: node.intra_edges,
+        smooth: [smooth_luma, smooth_chroma, smooth_chroma],
+    }) {
         Ok(edges) => edges,
         Err(_) => return Ok(Err(super::block::PortableUnavailable)),
     };
@@ -1714,7 +1707,7 @@ fn decode_complete_following_leaf(
     };
     if super::block::uses_streamed_intra(node.block_size) {
         let spatial = super::block::LargeIntraSpatial::Following {
-            neighbors,
+            neighbors: &neighbors,
             edges: &edges,
         };
         if let Some(luma_mode) = inter_luma_mode {
@@ -2211,8 +2204,7 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         &mut self,
         level: u32,
         kind: PartitionKind,
-        x: u32,
-        y: u32,
+        (x, y): (u32, u32),
         half_size: u32,
         intra_edges: RecursiveIntraEdges,
         visit: &mut F,
@@ -2395,7 +2387,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         }
 
         if !kind.is_recursive() {
-            let control = self.visit_terminal(level, kind, x, y, half_size, intra_edges, visit)?;
+            let control =
+                self.visit_terminal(level, kind, (x, y), half_size, intra_edges, visit)?;
             if matches!(control, PartitionVisitControl::Stop) {
                 return Ok(PartitionVisitControl::Stop);
             }
@@ -2415,7 +2408,8 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
             // 8x8 SPLIT footprint, after all four block payloads have been
             // consumed; recording only the implicit leaves would lose the
             // left-edge bit needed by the next 8x8 partition.
-            let control = self.visit_terminal(level, kind, x, y, half_size, intra_edges, visit)?;
+            let control =
+                self.visit_terminal(level, kind, (x, y), half_size, intra_edges, visit)?;
             if matches!(control, PartitionVisitControl::Stop) {
                 return Ok(PartitionVisitControl::Stop);
             }
@@ -2858,7 +2852,10 @@ fn decode_segment_id(
     let temporal_allowed = segmentation.temporal && skip != Some(true);
     let predicted_from_previous = temporal_allowed
         && decoder.adaptive_bool(
-            &mut cdfs.inter.segment_prediction[usize::from(above_pred) + usize::from(left_pred)].0,
+            &mut cdfs.inter.segment_prediction[usize::from(above_pred)
+                .checked_add(usize::from(left_pred))
+                .ok_or_else(|| malformed("segment prediction context overflows"))?]
+            .0,
         );
     if predicted_from_previous {
         return Ok((previous_segment_id(previous, context, node), true));
@@ -2888,10 +2885,11 @@ fn skip_context_for_node(tile_state: &TileState, node: PartitionNode) -> Av1Resu
         Some(x) => tile_state.neighbor_at_checked(x, node.y)?,
         None => None,
     };
-    Ok(
-        usize::from(above.is_some_and(|neighbor| neighbor.block_skipped))
-            + usize::from(left.is_some_and(|neighbor| neighbor.block_skipped)),
-    )
+    usize::from(above.is_some_and(|neighbor| neighbor.block_skipped))
+        .checked_add(usize::from(
+            left.is_some_and(|neighbor| neighbor.block_skipped),
+        ))
+        .ok_or_else(|| malformed("skip context overflows"))
 }
 
 fn skip_mode_context_for_node(tile_state: &TileState, node: PartitionNode) -> Av1Result<usize> {
@@ -3439,6 +3437,8 @@ fn mixed_8bit_color_lossless_restoration_supported(
         return false;
     }
     let luma_log2 = context.restoration_unit_size_log2[0];
+    // The frame header carries one luma and one shared chroma exponent;
+    // I444's U and V planes both use the latter.
     let chroma_log2 = context.restoration_unit_size_log2[1];
     let (luma_supported, chroma_supported) = match (expected_layout, context.level) {
         (PixelLayout::I420, 0) => ((7..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2)),
@@ -3646,6 +3646,8 @@ fn mixed_high_depth_color_lossless_restoration_supported(
         return false;
     }
     let luma_log2 = context.restoration_unit_size_log2[0];
+    // The frame header carries one luma and one shared chroma exponent;
+    // I444's U and V planes both use the latter.
     let chroma_log2 = context.restoration_unit_size_log2[1];
     let (luma_supported, chroma_supported) = match (layout, context.level) {
         (PixelLayout::I420, 0) => ((7..=8).contains(&luma_log2), (6..=8).contains(&chroma_log2)),
@@ -3658,11 +3660,7 @@ fn mixed_high_depth_color_lossless_restoration_supported(
         }
         _ => (false, false),
     };
-    if !luma_supported
-        || !chroma_supported
-        || chroma_log2 != luma_log2
-        || context.restoration_unit_size_log2[2] != luma_log2
-        || context.frame_height > 56
+    if !luma_supported || !chroma_supported || chroma_log2 != luma_log2 || context.frame_height > 56
     {
         return false;
     }
@@ -5803,37 +5801,37 @@ fn collect_obmc_context<'a>(
             let step_b4 = neighbor.map_or(2, |neighbor| {
                 neighbor.block_size.mi_dimensions().0.clamp(2, 16)
             });
-            if let Some(neighbor) = neighbor {
-                if let Some(inter) = neighbor.coding.inter() {
-                    let reference = inter_context.reference(inter.references.first);
-                    let overlap_width = step_b4.min(current_width_b4);
-                    let source_height = top_overlap_height
-                        .checked_mul(3)
-                        .and_then(|height| height.checked_add(3))
-                        .ok_or_else(|| malformed("OBMC top source height overflows"))?
-                        >> 2;
-                    let origin_x_b4 = tile_origin_b4_x
-                        .checked_add(node.x)
-                        .and_then(|origin| origin.checked_add(x))
-                        .ok_or_else(|| malformed("OBMC top origin x overflows"))?;
-                    let origin_y_b4 = tile_origin_b4_y
-                        .checked_add(node.y)
-                        .ok_or_else(|| malformed("OBMC top origin y overflows"))?;
-                    top[admitted] = Some(super::block::ObmcNeighbor {
-                        surface: reference.surface,
-                        scale: reference.scale,
-                        motion: inter.motion_vectors[0],
-                        filters: inter.filters,
-                        origin_x_b4,
-                        origin_y_b4,
-                        request_width_b4: overlap_width,
-                        request_height_b4: source_height,
-                        overlap_width_b4: overlap_width,
-                        overlap_height_b4: top_overlap_height,
-                        destination_offset_b4: x,
-                    });
-                    admitted = admitted.saturating_add(1);
-                }
+            if let Some(neighbor) = neighbor
+                && let Some(inter) = neighbor.coding.inter()
+            {
+                let reference = inter_context.reference(inter.references.first);
+                let overlap_width = step_b4.min(current_width_b4);
+                let source_height = top_overlap_height
+                    .checked_mul(3)
+                    .and_then(|height| height.checked_add(3))
+                    .ok_or_else(|| malformed("OBMC top source height overflows"))?
+                    >> 2;
+                let origin_x_b4 = tile_origin_b4_x
+                    .checked_add(node.x)
+                    .and_then(|origin| origin.checked_add(x))
+                    .ok_or_else(|| malformed("OBMC top origin x overflows"))?;
+                let origin_y_b4 = tile_origin_b4_y
+                    .checked_add(node.y)
+                    .ok_or_else(|| malformed("OBMC top origin y overflows"))?;
+                top[admitted] = Some(super::block::ObmcNeighbor {
+                    surface: reference.surface,
+                    scale: reference.scale,
+                    motion: inter.motion_vectors[0],
+                    filters: inter.filters,
+                    origin_x_b4,
+                    origin_y_b4,
+                    request_width_b4: overlap_width,
+                    request_height_b4: source_height,
+                    overlap_width_b4: overlap_width,
+                    overlap_height_b4: top_overlap_height,
+                    destination_offset_b4: x,
+                });
+                admitted = admitted.saturating_add(1);
             }
             x = x
                 .checked_add(step_b4)
@@ -5854,32 +5852,32 @@ fn collect_obmc_context<'a>(
             let step_b4 = neighbor.map_or(2, |neighbor| {
                 neighbor.block_size.mi_dimensions().1.clamp(2, 16)
             });
-            if let Some(neighbor) = neighbor {
-                if let Some(inter) = neighbor.coding.inter() {
-                    let reference = inter_context.reference(inter.references.first);
-                    let overlap_height = step_b4.min(current_height_b4);
-                    let origin_x_b4 = tile_origin_b4_x
-                        .checked_add(node.x)
-                        .ok_or_else(|| malformed("OBMC left origin x overflows"))?;
-                    let origin_y_b4 = tile_origin_b4_y
-                        .checked_add(node.y)
-                        .and_then(|origin| origin.checked_add(y))
-                        .ok_or_else(|| malformed("OBMC left origin y overflows"))?;
-                    left[admitted] = Some(super::block::ObmcNeighbor {
-                        surface: reference.surface,
-                        scale: reference.scale,
-                        motion: inter.motion_vectors[0],
-                        filters: inter.filters,
-                        origin_x_b4,
-                        origin_y_b4,
-                        request_width_b4: left_overlap_width,
-                        request_height_b4: overlap_height,
-                        overlap_width_b4: left_overlap_width,
-                        overlap_height_b4: overlap_height,
-                        destination_offset_b4: y,
-                    });
-                    admitted = admitted.saturating_add(1);
-                }
+            if let Some(neighbor) = neighbor
+                && let Some(inter) = neighbor.coding.inter()
+            {
+                let reference = inter_context.reference(inter.references.first);
+                let overlap_height = step_b4.min(current_height_b4);
+                let origin_x_b4 = tile_origin_b4_x
+                    .checked_add(node.x)
+                    .ok_or_else(|| malformed("OBMC left origin x overflows"))?;
+                let origin_y_b4 = tile_origin_b4_y
+                    .checked_add(node.y)
+                    .and_then(|origin| origin.checked_add(y))
+                    .ok_or_else(|| malformed("OBMC left origin y overflows"))?;
+                left[admitted] = Some(super::block::ObmcNeighbor {
+                    surface: reference.surface,
+                    scale: reference.scale,
+                    motion: inter.motion_vectors[0],
+                    filters: inter.filters,
+                    origin_x_b4,
+                    origin_y_b4,
+                    request_width_b4: left_overlap_width,
+                    request_height_b4: overlap_height,
+                    overlap_width_b4: left_overlap_width,
+                    overlap_height_b4: overlap_height,
+                    destination_offset_b4: y,
+                });
+                admitted = admitted.saturating_add(1);
             }
             y = y
                 .checked_add(step_b4)
@@ -6068,7 +6066,7 @@ fn switchable_interpolation_context(
     } else {
         3
     };
-    Ok(context.saturating_add(usize::from(compound) * 4))
+    Ok(context.saturating_add(if compound { 4 } else { 0 }))
 }
 
 fn inter_forward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> (u8, u8, u8) {
@@ -6084,13 +6082,17 @@ fn inter_forward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> (
             if reference <= 0 || reference >= 5 {
                 continue;
             }
-            let reference = usize::try_from(reference - 1).unwrap_or(usize::MAX);
+            // The guarded 1..=4 sentinels have an exact unsigned zero-based offset.
+            let reference = usize::from(reference.abs_diff(1));
             if let Some(count) = broad.get_mut(reference) {
                 *count = count.saturating_add(1);
             }
             if reference < 2 {
                 first[reference] = first[reference].saturating_add(1);
-            } else if let Some(count) = second.get_mut(reference - 2) {
+            } else if let Some(count) = reference
+                .checked_sub(2)
+                .and_then(|index| second.get_mut(index))
+            {
                 *count = count.saturating_add(1);
             }
         }
@@ -6114,7 +6116,8 @@ fn inter_backward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> 
     {
         for reference in block.references {
             if reference >= 5 {
-                let index = usize::try_from(reference - 5).unwrap_or(usize::MAX);
+                // Keep oversized sentinels outside the array lookup, as before.
+                let index = usize::from(reference.abs_diff(5));
                 if let Some(count) = counts.get_mut(index) {
                     *count = count.saturating_add(1);
                 }
@@ -6128,9 +6131,7 @@ fn inter_backward_reference_context(neighbors: [Option<SpatialRefBlock>; 2]) -> 
 }
 
 fn reference_type_from_sentinel(value: i8) -> Option<ReferenceFrame> {
-    (value > 0)
-        .then(|| ReferenceFrame::from_index(usize::try_from(value - 1).ok()?))
-        .flatten()
+    ReferenceFrame::from_index(usize::try_from(value).ok()?.checked_sub(1)?)
 }
 
 fn neighbor_reference_types(
@@ -6170,8 +6171,20 @@ fn inter_compound_context(neighbors: [Option<SpatialRefBlock>; 2]) -> usize {
                 usize::from(is_backward_reference(above.0))
                     ^ usize::from(is_backward_reference(left.0))
             }
-            (false, true) => 2 + usize::from(above.0.is_none() || is_backward_reference(above.0)),
-            (true, false) => 2 + usize::from(left.0.is_none() || is_backward_reference(left.0)),
+            (false, true) => {
+                if above.0.is_none() || is_backward_reference(above.0) {
+                    3
+                } else {
+                    2
+                }
+            }
+            (true, false) => {
+                if left.0.is_none() || is_backward_reference(left.0) {
+                    3
+                } else {
+                    2
+                }
+            }
             (true, true) => 4,
         },
         (Some(reference), None) | (None, Some(reference)) => {
@@ -6199,24 +6212,28 @@ fn inter_compound_reference_type_context(neighbors: [Option<SpatialRefBlock>; 2]
                 let inter = if above_intra { left } else { above };
                 if inter.1.is_none() {
                     2
+                } else if is_unidirectional_compound(inter) {
+                    3
                 } else {
-                    1 + 2 * usize::from(is_unidirectional_compound(inter))
+                    1
                 }
             } else {
                 let above_single = above.1.is_none();
                 let left_single = left.1.is_none();
                 if above_single && left_single {
-                    1 + 2 * usize::from(
-                        is_backward_reference(above.0) == is_backward_reference(left.0),
-                    )
+                    if is_backward_reference(above.0) == is_backward_reference(left.0) {
+                        3
+                    } else {
+                        1
+                    }
                 } else if above_single || left_single {
                     let compound = if above_single { left } else { above };
                     if !is_unidirectional_compound(compound) {
                         1
+                    } else if is_backward_reference(above.0) == is_backward_reference(left.0) {
+                        4
                     } else {
-                        3 + usize::from(
-                            is_backward_reference(above.0) == is_backward_reference(left.0),
-                        )
+                        3
                     }
                 } else {
                     let above_uni = is_unidirectional_compound(above);
@@ -6225,10 +6242,10 @@ fn inter_compound_reference_type_context(neighbors: [Option<SpatialRefBlock>; 2]
                         0
                     } else if above_uni != left_uni {
                         2
+                    } else if is_backward_reference(above.0) == is_backward_reference(left.0) {
+                        4
                     } else {
-                        3 + usize::from(
-                            is_backward_reference(above.0) == is_backward_reference(left.0),
-                        )
+                        3
                     }
                 }
             }
@@ -6236,8 +6253,10 @@ fn inter_compound_reference_type_context(neighbors: [Option<SpatialRefBlock>; 2]
         (Some(reference), None) | (None, Some(reference)) => {
             if reference.0.is_none() || reference.1.is_none() {
                 2
+            } else if is_unidirectional_compound(reference) {
+                4
             } else {
-                4 * usize::from(is_unidirectional_compound(reference))
+                0
             }
         }
         (None, None) => 2,
@@ -6395,17 +6414,19 @@ fn decode_inter_single_reference(
             return Ok(ReferenceFrame::Alt);
         }
         return ReferenceFrame::from_index(
-            4 + usize::from(
-                decoder.adaptive_bool(
-                    &mut cdfs
-                        .inter
-                        .reference
-                        .get_mut(3)
-                        .and_then(|row| row.get_mut(usize::from(backward_one_ctx)))
-                        .ok_or_else(|| malformed("backward-reference leaf CDF is unavailable"))?
-                        .0,
-                ),
-            ),
+            4_usize
+                .checked_add(usize::from(
+                    decoder.adaptive_bool(
+                        &mut cdfs
+                            .inter
+                            .reference
+                            .get_mut(3)
+                            .and_then(|row| row.get_mut(usize::from(backward_one_ctx)))
+                            .ok_or_else(|| malformed("backward-reference leaf CDF is unavailable"))?
+                            .0,
+                    ),
+                ))
+                .ok_or_else(|| malformed("single-reference index overflows"))?,
         )
         .ok_or_else(|| malformed("decoded backward reference exceeds seven"));
     }
@@ -6421,17 +6442,19 @@ fn decode_inter_single_reference(
             .0,
     ) {
         return ReferenceFrame::from_index(
-            2 + usize::from(
-                decoder.adaptive_bool(
-                    &mut cdfs
-                        .inter
-                        .reference
-                        .get_mut(4)
-                        .and_then(|row| row.get_mut(usize::from(forward_two_ctx)))
-                        .ok_or_else(|| malformed("forward-reference leaf CDF is unavailable"))?
-                        .0,
-                ),
-            ),
+            2_usize
+                .checked_add(usize::from(
+                    decoder.adaptive_bool(
+                        &mut cdfs
+                            .inter
+                            .reference
+                            .get_mut(4)
+                            .and_then(|row| row.get_mut(usize::from(forward_two_ctx)))
+                            .ok_or_else(|| malformed("forward-reference leaf CDF is unavailable"))?
+                            .0,
+                    ),
+                ))
+                .ok_or_else(|| malformed("single-reference index overflows"))?,
         )
         .ok_or_else(|| malformed("decoded forward reference exceeds seven"));
     }
@@ -6510,7 +6533,13 @@ fn decode_mv_component(
         .ok_or_else(|| malformed("motion-vector magnitude overflows"))?;
     let magnitude =
         i32::try_from(magnitude).map_err(|_| malformed("motion-vector magnitude exceeds i32"))?;
-    let value = if negative { -magnitude } else { magnitude };
+    let value = if negative {
+        magnitude
+            .checked_neg()
+            .ok_or_else(|| malformed("motion-vector residual negation overflows"))?
+    } else {
+        magnitude
+    };
     i16::try_from(value).map_err(|_| malformed("motion-vector residual exceeds i16"))
 }
 
@@ -6522,7 +6551,11 @@ fn decode_mv_residual(
     high_precision_mv: bool,
 ) -> Av1Result<()> {
     let joint = decoder.adaptive_symbol(&mut cdfs.joint.0, 3);
-    let precision = i32::from(high_precision_mv) - i32::from(force_integer_mv);
+    let precision = match (high_precision_mv, force_integer_mv) {
+        (true, false) => 1,
+        (false, true) => -1,
+        _ => 0,
+    };
     if joint == 2 || joint == 3 {
         let residual = decode_mv_component(decoder, &mut cdfs.component[0], precision)?;
         *vector = vector.checked_add(MotionVector { y: residual, x: 0 })?;
@@ -6799,11 +6832,9 @@ enum InterTransformPlan {
     },
 }
 
-fn decode_inter_transform_size(
-    decoder: &mut RangeDecoder<'_, '_, '_>,
-    cdfs: &mut FrameCdfs,
-    tile_state: &TileState,
-    node: PartitionNode,
+/// Geometry and eligibility already established for one inter transform parse.
+/// These values preserve the caller's admission decisions without reading symbols.
+struct InterTransformContext {
     block_size: BlockSize,
     layout: PixelLayout,
     visible_width: u32,
@@ -6830,6 +6861,41 @@ fn decode_inter_transform_size(
     i420_narrow_mode2_geometry: bool,
     block_skipped: bool,
     transform_mode: u32,
+}
+
+fn decode_inter_transform_size(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut FrameCdfs,
+    tile_state: &TileState,
+    node: PartitionNode,
+    InterTransformContext {
+        block_size,
+        layout,
+        visible_width,
+        visible_height,
+        eight_bit,
+        split_depth_supported,
+        split_b8_rect_supported,
+        split_b8_wide_supported,
+        split_b16_wide_supported,
+        split_b32x64_supported,
+        split_b16_supported,
+        split_b16x32_supported,
+        split_b32x16_supported,
+        split_b32_supported,
+        split_b64_supported,
+        lossless_grid_geometry,
+        lossy_grid_geometry,
+        lossy_color_mode0_geometry,
+        lossy_wide_mode0_geometry,
+        lossy_wide_chunk_geometry,
+        lossy_wide_mode2_geometry,
+        lossy_direct_chroma_grid_geometry,
+        i422_narrow_mode2_geometry,
+        i420_narrow_mode2_geometry,
+        block_skipped,
+        transform_mode,
+    }: InterTransformContext,
 ) -> super::block::PortableResult<InterTransformPlan> {
     let max_tx = block_size.maximum_luma_tx();
     // Segment losslessness overrides the frame transform mode.  In a mixed
@@ -7096,7 +7162,9 @@ fn decode_inter_transform_size(
                         .and_then(|y| tile_state.transform_contexts_at(child_x, y))
                         .is_some_and(|(tx_width, _)| tx_width < 4)
                 } else {
-                    root_splits[root_row - 1][root_column]
+                    root_splits[root_row
+                        .checked_sub(1)
+                        .ok_or(super::block::PortableUnavailable)?][root_column]
                 };
                 let left_small = if root_column == 0 {
                     child_x
@@ -7104,7 +7172,9 @@ fn decode_inter_transform_size(
                         .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                         .is_some_and(|(_, tx_height)| tx_height < 4)
                 } else {
-                    root_splits[root_row][root_column - 1]
+                    root_splits[root_row][root_column
+                        .checked_sub(1)
+                        .ok_or(super::block::PortableUnavailable)?]
                 };
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
                 let split =
@@ -7142,7 +7212,9 @@ fn decode_inter_transform_size(
                                 .and_then(|y| tile_state.transform_contexts_at(child_x, y))
                                 .is_some_and(|(tx_width, _)| tx_width < 3)
                         } else {
-                            child_splits[child_grid_row - 1][child_grid_column]
+                            child_splits[child_grid_row
+                                .checked_sub(1)
+                                .ok_or(super::block::PortableUnavailable)?][child_grid_column]
                         };
                         let left_small = if child_grid_column == 0 {
                             child_x
@@ -7150,7 +7222,9 @@ fn decode_inter_transform_size(
                                 .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                                 .is_some_and(|(_, tx_height)| tx_height < 3)
                         } else {
-                            child_splits[child_grid_row][child_grid_column - 1]
+                            child_splits[child_grid_row][child_grid_column
+                                .checked_sub(1)
+                                .ok_or(super::block::PortableUnavailable)?]
                         };
                         let context =
                             usize::from(above_small).saturating_add(usize::from(left_small));
@@ -7836,8 +7910,14 @@ fn decode_inter_transform_size(
             let mut child_splits = [[false; 2]; 2];
             for row in 0..2 {
                 for column in 0..2 {
-                    let offset_x = (column as u32) * 2;
-                    let offset_y = (row as u32) * 2;
+                    let offset_x = u32::try_from(column)
+                        .map_err(|_| super::block::PortableUnavailable)?
+                        .checked_mul(2)
+                        .ok_or(super::block::PortableUnavailable)?;
+                    let offset_y = u32::try_from(row)
+                        .map_err(|_| super::block::PortableUnavailable)?
+                        .checked_mul(2)
+                        .ok_or(super::block::PortableUnavailable)?;
                     let child_x = node
                         .x
                         .checked_add(offset_x)
@@ -7893,8 +7973,14 @@ fn decode_inter_transform_size(
             let mut child_splits = [[false; 2]; 2];
             for row in 0..2 {
                 for column in 0..2 {
-                    let offset_x = (column as u32) * 4;
-                    let offset_y = (row as u32) * 4;
+                    let offset_x = u32::try_from(column)
+                        .map_err(|_| super::block::PortableUnavailable)?
+                        .checked_mul(4)
+                        .ok_or(super::block::PortableUnavailable)?;
+                    let offset_y = u32::try_from(row)
+                        .map_err(|_| super::block::PortableUnavailable)?
+                        .checked_mul(4)
+                        .ok_or(super::block::PortableUnavailable)?;
                     let child_x = node
                         .x
                         .checked_add(offset_x)
@@ -8071,7 +8157,9 @@ fn decode_inter_transform_size(
                         .and_then(|y| tile_state.transform_contexts_at(child_x, y))
                         .is_some_and(|(tx_width, _)| tx_width < 3)
                 } else {
-                    child_splits[row - 1][column]
+                    child_splits[row
+                        .checked_sub(1)
+                        .ok_or(super::block::PortableUnavailable)?][column]
                 };
                 let left_small = if offset_x == 0 {
                     child_x
@@ -8079,7 +8167,9 @@ fn decode_inter_transform_size(
                         .and_then(|x| tile_state.transform_contexts_at(x, child_y))
                         .is_some_and(|(_, tx_height)| tx_height < 3)
                 } else {
-                    child_splits[row][column - 1]
+                    child_splits[row][column
+                        .checked_sub(1)
+                        .ok_or(super::block::PortableUnavailable)?]
                 };
                 let context = usize::from(above_small).saturating_add(usize::from(left_small));
                 let split =
@@ -8280,9 +8370,12 @@ fn rect_topology_tx_cells(
     for row in 0..height {
         for column in 0..width {
             let child = if along_rows {
-                row / child_cell_span
+                row.checked_div(child_cell_span)
+                    .ok_or(super::block::PortableUnavailable)?
             } else {
-                column / child_cell_span
+                column
+                    .checked_div(child_cell_span)
+                    .ok_or(super::block::PortableUnavailable)?
             };
             let split = child_splits
                 .get(child)
@@ -8331,8 +8424,12 @@ fn square_topology_tx_cells(
         .map_err(|_| super::block::PortableUnavailable)?;
     for row in 0..height {
         for column in 0..width {
-            let child_row = row / child_cell_span;
-            let child_column = column / child_cell_span;
+            let child_row = row
+                .checked_div(child_cell_span)
+                .ok_or(super::block::PortableUnavailable)?;
+            let child_column = column
+                .checked_div(child_cell_span)
+                .ok_or(super::block::PortableUnavailable)?;
             let child_split = child_splits
                 .get(child_row)
                 .and_then(|children| children.get(child_column))
@@ -8841,22 +8938,21 @@ fn decode_inter_leaf(
         let request = inter_context.mv_request(
             ReferenceMvTarget::Compound(references),
             node.block_size,
-            node.x,
-            node.y,
-            context
-                .tile_origin_b4_x
-                .checked_add(node.x)
-                .ok_or_else(|| malformed("skip-mode MV x coordinate overflows"))?,
-            context
-                .tile_origin_b4_y
-                .checked_add(node.y)
-                .ok_or_else(|| malformed("skip-mode MV y coordinate overflows"))?,
-            0,
-            0,
-            context.block_width,
-            context.block_height,
-            context.frame_block_width,
-            context.frame_block_height,
+            (
+                (node.x, node.y),
+                (
+                    context
+                        .tile_origin_b4_x
+                        .checked_add(node.x)
+                        .ok_or_else(|| malformed("skip-mode MV x coordinate overflows"))?,
+                    context
+                        .tile_origin_b4_y
+                        .checked_add(node.y)
+                        .ok_or_else(|| malformed("skip-mode MV y coordinate overflows"))?,
+                ),
+            ),
+            (0, 0, context.block_width, context.block_height),
+            (context.frame_block_width, context.frame_block_height),
             node.x.saturating_add(block_width_b4) < context.block_width,
         );
         let stack = find_reference_mvs(tile_state, request)?;
@@ -8888,22 +8984,21 @@ fn decode_inter_leaf(
         let request = inter_context.mv_request(
             ReferenceMvTarget::Compound(references),
             node.block_size,
-            node.x,
-            node.y,
-            context
-                .tile_origin_b4_x
-                .checked_add(node.x)
-                .ok_or_else(|| malformed("compound MV x coordinate overflows"))?,
-            context
-                .tile_origin_b4_y
-                .checked_add(node.y)
-                .ok_or_else(|| malformed("compound MV y coordinate overflows"))?,
-            0,
-            0,
-            context.block_width,
-            context.block_height,
-            context.frame_block_width,
-            context.frame_block_height,
+            (
+                (node.x, node.y),
+                (
+                    context
+                        .tile_origin_b4_x
+                        .checked_add(node.x)
+                        .ok_or_else(|| malformed("compound MV x coordinate overflows"))?,
+                    context
+                        .tile_origin_b4_y
+                        .checked_add(node.y)
+                        .ok_or_else(|| malformed("compound MV y coordinate overflows"))?,
+                ),
+            ),
+            (0, 0, context.block_width, context.block_height),
+            (context.frame_block_width, context.frame_block_height),
             node.x.saturating_add(block_width_b4) < context.block_width,
         );
         let stack = find_reference_mvs(tile_state, request)?;
@@ -9041,22 +9136,21 @@ fn decode_inter_leaf(
         let request = inter_context.mv_request(
             ReferenceMvTarget::Single(reference),
             node.block_size,
-            node.x,
-            node.y,
-            context
-                .tile_origin_b4_x
-                .checked_add(node.x)
-                .ok_or_else(|| malformed("single-reference MV x coordinate overflows"))?,
-            context
-                .tile_origin_b4_y
-                .checked_add(node.y)
-                .ok_or_else(|| malformed("single-reference MV y coordinate overflows"))?,
-            0,
-            0,
-            context.block_width,
-            context.block_height,
-            context.frame_block_width,
-            context.frame_block_height,
+            (
+                (node.x, node.y),
+                (
+                    context
+                        .tile_origin_b4_x
+                        .checked_add(node.x)
+                        .ok_or_else(|| malformed("single-reference MV x coordinate overflows"))?,
+                    context
+                        .tile_origin_b4_y
+                        .checked_add(node.y)
+                        .ok_or_else(|| malformed("single-reference MV y coordinate overflows"))?,
+                ),
+            ),
+            (0, 0, context.block_width, context.block_height),
+            (context.frame_block_width, context.frame_block_height),
             node.x.saturating_add(block_width_b4) < context.block_width,
         );
         let stack = find_reference_mvs(tile_state, request)?;
@@ -9222,16 +9316,16 @@ fn decode_inter_leaf(
     let inter_intra_edges = if interintra.is_some() {
         let (coded_mi_width, coded_mi_height) = node.block_size.mi_dimensions();
         let has_chroma = partition_node_has_chroma(context, node, false);
-        let edges = match canvas.intra_edges(
-            node.x,
-            node.y,
-            coded_mi_width,
-            coded_mi_height,
+        let edges = match canvas.intra_edges(super::raster::IntraEdgeRequest {
+            x_units: node.x,
+            y_units: node.y,
+            width_units: coded_mi_width,
+            height_units: coded_mi_height,
             has_chroma,
-            tools.sample_depth,
-            node.intra_edges,
-            [false; 3],
-        ) {
+            sample_depth: tools.sample_depth,
+            intra_edges: node.intra_edges,
+            smooth: [false; 3],
+        }) {
             Ok(edges) => edges,
             Err(_) => return Ok(Err(super::block::PortableUnavailable)),
         };
@@ -9466,51 +9560,53 @@ fn decode_inter_leaf(
         cdfs,
         tile_state,
         node,
-        node.block_size,
-        layout,
-        visible_width,
-        visible_height,
-        context.bit_depth == 8,
-        lossy_split8_geometry,
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && (prepared_quantization.quantization.segment_qindex > 0
-                || lossy_split8_rect_geometry
-                || lossy_b4_long_split_geometry),
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && (prepared_quantization.quantization.segment_qindex > 0
-                || lossy_split8_wide_geometry),
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && (prepared_quantization.quantization.segment_qindex > 0
-                || lossy_thin64_split_geometry),
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && (prepared_quantization.quantization.segment_qindex > 0
-                || lossy_wide64_split_geometry),
-        lossy_split16_geometry,
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && (prepared_quantization.quantization.segment_qindex > 0
-                || lossy_split16_wide_geometry),
-        matches!(context.bit_depth, 8 | 10 | 12)
-            && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
-            && (prepared_quantization.quantization.segment_qindex > 0
-                || lossy_split16_wide_geometry),
-        lossy_split32_geometry,
-        lossy_split64_geometry,
-        lossless_grid_geometry,
-        lossy_grid_geometry,
-        lossy_color_mode0_geometry,
-        lossy_wide_mode0_geometry,
-        lossy_wide_chunk_geometry,
-        lossy_wide_mode2_geometry,
-        lossy_direct_chroma_grid_geometry,
-        lossy_i422_narrow_mode2_geometry,
-        lossy_i420_narrow_mode2_geometry,
-        block_skipped,
-        context.frame_tools.transform_mode,
+        InterTransformContext {
+            block_size: node.block_size,
+            layout,
+            visible_width,
+            visible_height,
+            eight_bit: context.bit_depth == 8,
+            split_depth_supported: lossy_split8_geometry,
+            split_b8_rect_supported: matches!(context.bit_depth, 8 | 10 | 12)
+                && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+                && (prepared_quantization.quantization.segment_qindex > 0
+                    || lossy_split8_rect_geometry
+                    || lossy_b4_long_split_geometry),
+            split_b8_wide_supported: matches!(context.bit_depth, 8 | 10 | 12)
+                && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+                && (prepared_quantization.quantization.segment_qindex > 0
+                    || lossy_split8_wide_geometry),
+            split_b16_wide_supported: matches!(context.bit_depth, 8 | 10 | 12)
+                && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+                && (prepared_quantization.quantization.segment_qindex > 0
+                    || lossy_thin64_split_geometry),
+            split_b32x64_supported: matches!(context.bit_depth, 8 | 10 | 12)
+                && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+                && (prepared_quantization.quantization.segment_qindex > 0
+                    || lossy_wide64_split_geometry),
+            split_b16_supported: lossy_split16_geometry,
+            split_b16x32_supported: matches!(context.bit_depth, 8 | 10 | 12)
+                && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+                && (prepared_quantization.quantization.segment_qindex > 0
+                    || lossy_split16_wide_geometry),
+            split_b32x16_supported: matches!(context.bit_depth, 8 | 10 | 12)
+                && prepared_quantization.quantization.sample_depth.bits() == context.bit_depth
+                && (prepared_quantization.quantization.segment_qindex > 0
+                    || lossy_split16_wide_geometry),
+            split_b32_supported: lossy_split32_geometry,
+            split_b64_supported: lossy_split64_geometry,
+            lossless_grid_geometry,
+            lossy_grid_geometry,
+            lossy_color_mode0_geometry,
+            lossy_wide_mode0_geometry,
+            lossy_wide_chunk_geometry,
+            lossy_wide_mode2_geometry,
+            lossy_direct_chroma_grid_geometry,
+            i422_narrow_mode2_geometry: lossy_i422_narrow_mode2_geometry,
+            i420_narrow_mode2_geometry: lossy_i420_narrow_mode2_geometry,
+            block_skipped,
+            transform_mode: context.frame_tools.transform_mode,
+        },
     ) {
         Ok(plan) => plan,
         Err(super::block::PortableUnavailable) => {
@@ -10028,23 +10124,25 @@ fn decode_inter_leaf(
         } else {
             node.y
         };
-        for plane in 0..2 {
-            coefficient_contexts.above[plane + 1][..chroma_context_width_usize].copy_from_slice(
-                &tile_state.chroma_contexts_above::<32>(
-                    plane,
-                    chroma_x,
-                    chroma_y,
-                    chroma_context_width,
-                )?[..chroma_context_width_usize],
-            );
-            coefficient_contexts.left[plane + 1][..chroma_context_height_usize].copy_from_slice(
-                &tile_state.chroma_contexts_left::<32>(
-                    plane,
-                    chroma_x,
-                    chroma_y,
-                    chroma_context_height,
-                )?[..chroma_context_height_usize],
-            );
+        for (plane, context_plane) in [(0, 1), (1, 2)] {
+            coefficient_contexts.above[context_plane][..chroma_context_width_usize]
+                .copy_from_slice(
+                    &tile_state.chroma_contexts_above::<32>(
+                        plane,
+                        chroma_x,
+                        chroma_y,
+                        chroma_context_width,
+                    )?[..chroma_context_width_usize],
+                );
+            coefficient_contexts.left[context_plane][..chroma_context_height_usize]
+                .copy_from_slice(
+                    &tile_state.chroma_contexts_left::<32>(
+                        plane,
+                        chroma_x,
+                        chroma_y,
+                        chroma_context_height,
+                    )?[..chroma_context_height_usize],
+                );
         }
     }
 
@@ -10061,10 +10159,11 @@ fn decode_inter_leaf(
                     decoder,
                     0,
                     tx_size,
-                    luma_block_width,
-                    luma_block_height,
-                    &coefficient_contexts.above[0][..luma_context_width_usize],
-                    &coefficient_contexts.left[0][..luma_context_height_usize],
+                    (luma_block_width, luma_block_height),
+                    [
+                        &coefficient_contexts.above[0][..luma_context_width_usize],
+                        &coefficient_contexts.left[0][..luma_context_height_usize],
+                    ],
                     block_skipped,
                 )
                 .map_err(|_| malformed("inter luma coefficient-skip sentence is unavailable"))?;
@@ -10610,6 +10709,16 @@ fn effective_loop_levels(
     levels
 }
 
+/// A monochrome tile and the deferred frame-filter metadata moved with it.
+pub(super) type UnfilteredMonochromeTile = (
+    super::block::ReconstructedPlane,
+    Option<super::cdef::FrameParameters>,
+    Vec<Option<usize>>,
+    Vec<bool>,
+    Option<super::filter::Parameters>,
+    Vec<super::filter::Block>,
+);
+
 impl Lossy420Reconstruction {
     /// Apply this tile's filters in isolation for the single-tile path.
     pub(super) fn into_filtered_leaf(self) -> Av1Result<super::block::FirstLeaf> {
@@ -10669,16 +10778,7 @@ impl Lossy420Reconstruction {
     /// metadata. Multi-tile CDEF must run only after the tile planes have been
     /// assembled, because the filter reads reconstructed neighbors across
     /// tile boundaries.
-    pub(super) fn into_unfiltered_monochrome_tile(
-        self,
-    ) -> Av1Result<(
-        super::block::ReconstructedPlane,
-        Option<super::cdef::FrameParameters>,
-        Vec<Option<usize>>,
-        Vec<bool>,
-        Option<super::filter::Parameters>,
-        Vec<super::filter::Block>,
-    )> {
+    pub(super) fn into_unfiltered_monochrome_tile(self) -> Av1Result<UnfilteredMonochromeTile> {
         let Lossy420Reconstruction {
             leaf,
             monochrome,
@@ -10722,7 +10822,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     range: Range<usize>,
     context: &FirstBlockContext,
     input_cdfs: &FrameCdfs,
-    mut current_segment_map: Option<&mut SegmentMap>,
+    current_segment_map: Option<&mut SegmentMap>,
     previous_segment_map: Option<&SegmentMap>,
     inter_context: Option<&InterFrameContext<'_>>,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
@@ -11468,8 +11568,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     let mut filter_blocks = Vec::<super::filter::Block>::new();
     let bounded_i444_filter_reserve = bounded_i444_geometry
         .filter(|_| collect_loop_filter)
-        .map(|geometry| geometry.expected_leaf_count())
-        .unwrap_or(0);
+        .map_or(0, |geometry| geometry.expected_leaf_count());
     let bounded_subsampled_filter_reserve = [
         bounded_i422_rect_loop_geometry,
         bounded_i420_rect_loop_geometry,
@@ -12162,15 +12261,15 @@ pub(super) fn validate_complete_lossy_420_partition(
             if unsupported || matches!(control, PartitionVisitControl::Stop) {
                 return Ok(None);
             }
-            if let Some(geometry) = bounded_i444_geometry {
-                if bounded_i444_leaf_count != geometry.expected_leaf_count() {
-                    return Ok(None);
-                }
+            if let Some(geometry) = bounded_i444_geometry
+                && bounded_i444_leaf_count != geometry.expected_leaf_count()
+            {
+                return Ok(None);
             }
-            if let Some(geometry) = bounded_subsampled_rect_geometry {
-                if bounded_subsampled_rect_leaf_count != geometry.expected_leaf_count() {
-                    return Ok(None);
-                }
+            if let Some(geometry) = bounded_subsampled_rect_geometry
+                && bounded_subsampled_rect_leaf_count != geometry.expected_leaf_count()
+            {
+                return Ok(None);
             }
         }
     }
@@ -12297,7 +12396,6 @@ pub(super) fn validate_complete_lossy_420_partition(
     };
     if !segment_updates.is_empty() {
         let map = current_segment_map
-            .as_deref_mut()
             .ok_or_else(|| malformed("segment updates omit their current map"))?;
         for update in segment_updates {
             map.fill(update.x, update.y, update.width, update.height, update.id)?;
@@ -14738,9 +14836,7 @@ fn bounded_i422_rect_cdef_common(
 fn complete_bounded_i422_rect_cdef_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
@@ -14752,9 +14848,7 @@ fn complete_bounded_i422_rect_cdef_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -14845,9 +14939,7 @@ fn bounded_i422_rect_restoration_common(
 fn complete_bounded_i422_rect_restoration_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
@@ -14859,9 +14951,7 @@ fn complete_bounded_i422_rect_restoration_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -14937,9 +15027,7 @@ fn bounded_i420_rect_loop_common(
 fn complete_bounded_i420_rect_loop_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -14951,9 +15039,7 @@ fn complete_bounded_i420_rect_loop_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -15034,9 +15120,7 @@ fn bounded_i420_rect_cdef_common(
 fn complete_bounded_i420_rect_cdef_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -15048,9 +15132,7 @@ fn complete_bounded_i420_rect_cdef_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -15141,9 +15223,7 @@ fn bounded_i420_rect_restoration_common(
 fn complete_bounded_i420_rect_restoration_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -15155,9 +15235,7 @@ fn complete_bounded_i420_rect_restoration_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -15423,9 +15501,7 @@ fn bounded_i420_rect_cdef_restoration_common(
 fn complete_bounded_i420_rect_cdef_restoration_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -15437,9 +15513,7 @@ fn complete_bounded_i420_rect_cdef_restoration_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -15490,9 +15564,7 @@ fn bounded_i422_rect_cdef_restoration_common(
 fn complete_bounded_i422_rect_cdef_restoration_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
@@ -15504,9 +15576,7 @@ fn complete_bounded_i422_rect_cdef_restoration_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -15638,9 +15708,7 @@ fn bounded_subsampled_rect_loop_postfilters_common(
 fn complete_bounded_i420_rect_loop_postfilters_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedRectLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -15656,9 +15724,7 @@ fn complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedRectLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -15695,9 +15761,7 @@ fn complete_bounded_i420_rect_loop_postfilters_inter_reconstruction_context(
 fn complete_bounded_i422_rect_loop_postfilters_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedRectLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
@@ -15713,9 +15777,7 @@ fn complete_bounded_i422_rect_loop_postfilters_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedRectLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -15855,9 +15917,7 @@ fn bounded_subsampled_loop_postfilters_common(
 fn complete_bounded_i420_loop_postfilters_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && context.subsampling_x
@@ -15870,9 +15930,7 @@ fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == context.bit_depth
@@ -15905,9 +15963,7 @@ fn complete_bounded_i420_loop_postfilters_inter_reconstruction_context(
 fn complete_bounded_i422_loop_postfilters_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
         && context.subsampling_x
@@ -15920,9 +15976,7 @@ fn complete_bounded_i422_loop_postfilters_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedLoopPostfilters> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let references_match = inter_context.references.iter().all(|reference| {
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == context.bit_depth
@@ -16546,9 +16600,7 @@ fn bounded_i422_rect_loop_common(
 fn complete_bounded_i422_rect_loop_intra_reconstruction_context(
     context: &FirstBlockContext,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
@@ -16560,9 +16612,7 @@ fn complete_bounded_i422_rect_loop_inter_reconstruction_context(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedSubsampledRectGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_subsampled_rect_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -16988,9 +17038,7 @@ fn bounded_i444_film_grain_supported(context: &FirstBlockContext) -> bool {
 fn bounded_i444_intra_restoration_geometry(
     context: &FirstBlockContext,
 ) -> Option<BoundedI444InterGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_i444_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 8 | 10 | 12)
@@ -17042,9 +17090,7 @@ fn bounded_i444_intra_restoration_geometry(
 fn bounded_i444_intra_cdef_geometry(
     context: &FirstBlockContext,
 ) -> Option<BoundedI444InterGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_i444_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -17089,9 +17135,7 @@ fn bounded_i444_intra_cdef_geometry(
 fn bounded_i444_intra_loop_geometry(
     context: &FirstBlockContext,
 ) -> Option<BoundedI444InterGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_i444_geometry_for_context(context)?;
     (context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
@@ -17134,9 +17178,7 @@ fn bounded_i444_inter_reconstruction_geometry(
     context: &FirstBlockContext,
     inter_context: &InterFrameContext<'_>,
 ) -> Option<BoundedI444InterGeometry> {
-    let Some(quantization) = context.frame_tools.quantization else {
-        return None;
-    };
+    let quantization = context.frame_tools.quantization?;
     let geometry = bounded_i444_geometry_for_context(context)?;
     let (reference_width, reference_height) = geometry.dimensions();
     let references_match = inter_context.references.iter().all(|reference| {
@@ -17436,15 +17478,14 @@ fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
 }
 
 fn complete_monochrome_cdef_inactive(context: &FirstBlockContext) -> bool {
-    let cdef_is_inactive = context.frame_tools.cdef.is_none_or(|cdef| {
+    context.frame_tools.cdef.is_none_or(|cdef| {
         cdef.bits == 0
             && cdef.y_strength_count == 1
             && cdef.first_y_strength == Some(0)
             && cdef.y_strengths[0] == 0
             && cdef.uv_strength_count == 0
             && cdef.first_uv_strength.is_none()
-    });
-    cdef_is_inactive
+    })
 }
 
 fn complete_monochrome_cdef_supported(context: &FirstBlockContext) -> bool {
@@ -18708,11 +18749,15 @@ fn validate_bounded_intrabc_wavefront(
         .checked_mul(sb64_cols)
         .and_then(|value| value.checked_add(active_col))
         .ok_or_else(|| malformed("intraBC active superblock index overflows"))?;
-    let source_row = (source.bottom - 1)
-        .checked_div(64)
+    let source_row = source
+        .bottom
+        .checked_sub(1)
+        .and_then(|value| value.checked_div(64))
         .ok_or_else(|| malformed("intraBC source row conversion fails"))?;
-    let source_col = (source.right - 1)
-        .checked_div(64)
+    let source_col = source
+        .right
+        .checked_sub(1)
+        .and_then(|value| value.checked_div(64))
         .ok_or_else(|| malformed("intraBC source column conversion fails"))?;
     let source_linear = source_row
         .checked_mul(sb64_cols)
@@ -21115,10 +21160,15 @@ fn insert_monochrome_neighbor(
         })
         .unwrap_or(current);
     for slot in (insert_at..current).rev() {
-        candidates[slot + 1] = candidates[slot];
+        let next = slot
+            .checked_add(1)
+            .ok_or_else(|| malformed("monochrome neighbor insertion index overflows"))?;
+        candidates[next] = candidates[slot];
     }
     candidates[insert_at] = (origin, index);
-    *count = current + 1;
+    *count = current
+        .checked_add(1)
+        .ok_or_else(|| malformed("monochrome neighbor count overflows"))?;
     Ok(())
 }
 
@@ -21233,8 +21283,8 @@ fn coverage_partition_walker_paths() {
     let mut contexts = PartitionContexts {
         origin_x: 1,
         origin_y: 1,
-        above: [0; 32],
-        left: [0; 32],
+        above: vec![0; 32],
+        left: vec![0; 32],
     };
     let _ = contexts.cell(0, 1);
     let _ = contexts.cell(100, 1);

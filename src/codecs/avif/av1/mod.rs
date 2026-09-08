@@ -61,6 +61,9 @@ pub(super) struct PortableStill {
     pub(super) color_range: bool,
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
+    /// AV1 frame-ID syntax is retained so first-frame APIs can distinguish
+    /// an error-resilient movie from the ordinary multi-frame gap.
+    pub(super) frame_id_numbers_present: bool,
     pub(super) planes: [block::ReconstructedPlane; 3],
     /// A validated monochrome auxiliary plane for the narrow composition
     /// class. Unsupported alpha syntax never becomes a silent RGB decode.
@@ -185,8 +188,7 @@ fn validate_sample_and_return_temporal_unit(
             3 => {
                 state.frame_header_obu(
                     &data,
-                    payload_start,
-                    payload_end,
+                    payload_start..payload_end,
                     has_extension,
                     temporal_id,
                     spatial_id,
@@ -216,8 +218,7 @@ fn validate_sample_and_return_temporal_unit(
             7 => {
                 state.frame_header_obu(
                     &data,
-                    payload_start,
-                    payload_end,
+                    payload_start..payload_end,
                     has_extension,
                     temporal_id,
                     spatial_id,
@@ -267,13 +268,29 @@ pub(super) fn validate_sequence_frames(
         .map_err(|_| {
             CodecError::Dimensions("unable to reserve AVIF color sequence state".to_owned())
         })?;
-    for sample in &sequence.color.samples {
+    for (sample_index, sample) in sequence.color.samples.iter().enumerate() {
         crate::codecs::error::check_cancelled(token)?;
         let temporal_unit =
             validate_sample_and_return_temporal_unit(extracted.input, sample, &mut color_state)?;
         let display =
             color_state.selected_display_for_temporal_unit_with_token(temporal_unit, token)?;
         color_displays.push(display);
+        if sample_index == 0 {
+            let first_sequence = color_state.finish()?;
+            // Reject an unsupported color profile before validating later
+            // reference samples. This keeps a known pure-Rust capability gap
+            // typed as Unsupported instead of exposing an incidental missing
+            // reference surface from the next temporal unit.
+            if !first_sequence.monochrome && !portable_color_sequence_supported(first_sequence) {
+                return Ok(None);
+            }
+            // Ordinary multi-frame AVIF presentation still lacks the
+            // reference and timing contract. Keep that gap typed even when a
+            // later sample would otherwise fail during partial validation.
+            if sequence.color.samples.len() > 1 && !first_sequence.frame_id_numbers_present {
+                return Ok(None);
+            }
+        }
     }
     let color_sequence = color_state.finish()?.clone();
 
@@ -447,18 +464,17 @@ fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader) -> boo
     {
         return false;
     }
-    match (
+    matches!(
         (
-            sequence.color_primaries,
-            sequence.transfer_characteristics,
-            sequence.matrix_coefficients,
+            (
+                sequence.color_primaries,
+                sequence.transfer_characteristics,
+                sequence.matrix_coefficients,
+            ),
+            sequence.bit_depth,
         ),
-        sequence.bit_depth,
-    ) {
-        ((1, 13, 6), 8 | 10 | 12) => true,
-        ((9, 16, 9), 10 | 12) => true,
-        _ => false,
-    }
+        ((1, 13, 6), 8 | 10 | 12)
+    )
 }
 
 fn monochrome_alpha_sequence_supported(
@@ -552,6 +568,7 @@ fn portable_still(
         color_range: sequence.color_range,
         subsampling_x: sequence.subsampling_x,
         subsampling_y: sequence.subsampling_y,
+        frame_id_numbers_present: sequence.frame_id_numbers_present,
         planes: leaf.planes,
         alpha_plane,
         #[cfg(coverage)]
@@ -579,6 +596,7 @@ fn portable_monochrome_still(
         color_range: sequence.color_range,
         subsampling_x: sequence.subsampling_x,
         subsampling_y: sequence.subsampling_y,
+        frame_id_numbers_present: sequence.frame_id_numbers_present,
         planes: [plane, empty.clone(), empty],
         alpha_plane,
         #[cfg(coverage)]
@@ -1865,6 +1883,7 @@ pub(super) fn __coverage_portable_still() -> PortableStill {
         color_range: true,
         subsampling_x: false,
         subsampling_y: false,
+        frame_id_numbers_present: false,
         planes: std::array::from_fn(|_| block::ReconstructedPlane {
             samples: vec![128; 16],
         }),

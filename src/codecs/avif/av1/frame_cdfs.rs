@@ -15,10 +15,10 @@ impl<const N: usize> Cdf<N> {
     const fn from_probabilities<const P: usize>(probabilities: [u16; P]) -> Self {
         assert!(P < N);
         let mut values = [0_u16; N];
-        let mut index = 0;
+        let mut index = 0_usize;
         while index < P {
             values[index] = 32_768_u16.wrapping_sub(probabilities[index]) & !32_768;
-            index += 1;
+            index = index.saturating_add(1);
         }
         Self(values)
     }
@@ -424,10 +424,10 @@ impl InterCdfs {
 
 const fn binary_rows<const N: usize>(probabilities: [u16; N]) -> [Cdf<2>; N] {
     let mut rows = [EMPTY_BINARY; N];
-    let mut index = 0;
+    let mut index = 0_usize;
     while index < N {
         rows[index] = Cdf::from_probabilities([probabilities[index]]);
-        index += 1;
+        index = index.saturating_add(1);
     }
     rows
 }
@@ -436,10 +436,10 @@ const fn binary_matrix<const R: usize, const C: usize>(
     probabilities: [[u16; C]; R],
 ) -> [[Cdf<2>; C]; R] {
     let mut rows = [[EMPTY_BINARY; C]; R];
-    let mut row = 0;
+    let mut row = 0_usize;
     while row < R {
         rows[row] = binary_rows(probabilities[row]);
-        row += 1;
+        row = row.saturating_add(1);
     }
     rows
 }

@@ -99,10 +99,10 @@ pub(super) struct TransformTypeCdfs {{
 const fn cdf0d<const P: usize, const N: usize>(probabilities: [u16; P]) -> [u16; N] {{
     assert!(P < N);
     let mut cdf = [0; N];
-    let mut index = 0;
+    let mut index = 0_usize;
     while index < P {{
-        cdf[index] = (32_768 - probabilities[index]) & !32_768;
-        index += 1;
+        cdf[index] = 32_768_u16.wrapping_sub(probabilities[index]) & !32_768;
+        index = index.saturating_add(1);
     }}
     cdf
 }}
@@ -111,10 +111,10 @@ const fn cdf1d<const P: usize, const N: usize, const M: usize>(
     probabilities: [[u16; P]; M],
 ) -> [[u16; N]; M] {{
     let mut cdf = [[0; N]; M];
-    let mut index = 0;
+    let mut index = 0_usize;
     while index < M {{
         cdf[index] = cdf0d(probabilities[index]);
-        index += 1;
+        index = index.saturating_add(1);
     }}
     cdf
 }}
@@ -123,10 +123,10 @@ const fn cdf2d<const P: usize, const N: usize, const M: usize, const L: usize>(
     probabilities: [[[u16; P]; M]; L],
 ) -> [[[u16; N]; M]; L] {{
     let mut cdf = [[[0; N]; M]; L];
-    let mut index = 0;
+    let mut index = 0_usize;
     while index < L {{
         cdf[index] = cdf1d(probabilities[index]);
-        index += 1;
+        index = index.saturating_add(1);
     }}
     cdf
 }}
@@ -139,16 +139,16 @@ const fn cdf3d<
     const K: usize,
 >(probabilities: [[[[u16; P]; M]; L]; K]) -> [[[[u16; N]; M]; L]; K] {{
     let mut cdf = [[[[0; N]; M]; L]; K];
-    let mut index = 0;
+    let mut index = 0_usize;
     while index < K {{
         cdf[index] = cdf2d(probabilities[index]);
-        index += 1;
+        index = index.saturating_add(1);
     }}
     cdf
 }}
 
 #[rustfmt::skip]
-pub(super) const DEFAULT_COEFFICIENT_CDFS: [CoefficientCdfs; 4] = {coefficient_initializer};
+pub(super) static DEFAULT_COEFFICIENT_CDFS: [CoefficientCdfs; 4] = {coefficient_initializer};
 
 #[rustfmt::skip]
 pub(super) const DEFAULT_TRANSFORM_TYPE_CDFS: TransformTypeCdfs = TransformTypeCdfs {{

@@ -5,7 +5,6 @@
   "package_command": [
     "cargo",
     "package",
-    "--allow-dirty",
     "--locked",
     "--list"
   ],

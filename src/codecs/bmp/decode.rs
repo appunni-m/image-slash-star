@@ -418,6 +418,7 @@ pub fn decode(
     let bit_depth_offset = if header_size == 12 { 24 } else { 28 };
     let bit_depth = BmpBitDepth::from_raw(bit_depth_raw)
         .map_err(|error| error.at(bit_depth_offset, "bmp_dib_header"))?;
+    super::validate_compression(data, header_size, bit_depth_raw, compression)?;
     if matches!(compression, 1 | 2) && !bit_depth.is_indexed() {
         return Err(CodecError::Malformed(
             "BMP RLE compression requires indexed pixels".to_owned(),

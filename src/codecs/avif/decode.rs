@@ -19,6 +19,19 @@ pub fn decode(
     let extracted = extract_av1(data)?;
     let validated = super::av1::validate_first_with_token(&extracted, token)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
+    if extracted
+        .sequence
+        .as_ref()
+        .is_some_and(|sequence| sequence.color.samples.len() > 1)
+        && !validated
+            .portable_still
+            .as_ref()
+            .is_some_and(|still| still.frame_id_numbers_present)
+    {
+        return Err(CodecError::NotImplemented(
+            "AVIF multi-frame presentation is not implemented in the pure-Rust backend".to_owned(),
+        ));
+    }
     let image = decode_portable(&validated).ok_or_else(|| {
         CodecError::NotImplemented(
             "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
@@ -194,14 +207,62 @@ pub fn decode_sequence(
     let loop_count = sequence_payload.loop_count;
 
     validate_sequence_timing(sequence_payload)?;
-    let portable_frames = super::av1::validate_sequence_frames(&extracted, token)
+    let portable_frames = match super::av1::validate_sequence_frames(&extracted, token)
         .map_err(|error| error.context("AVIF sequence validation failed"))?
-        .ok_or_else(|| {
-            CodecError::NotImplemented(
+    {
+        Some(frames) => frames,
+        None => {
+            if sequence_payload.color.samples.len() > 1 {
+                let info = super::inspect::inspect(data)
+                    .map_err(|error| error.context("AVIF sequence gap inspection failed"))?;
+                reserve_gap_frames(
+                    budget,
+                    info.mode,
+                    info.width,
+                    info.height,
+                    sequence_payload.color.samples.len(),
+                )?;
+            }
+            return Err(CodecError::NotImplemented(
                 "AVIF sequence sample is outside the supported pure-Rust presentation subset"
                     .to_owned(),
-            )
+            ));
+        }
+    };
+    if sequence_payload.color.samples.len() > 1
+        && portable_frames
+            .first()
+            .is_some_and(|frame| frame.frame_id_numbers_present)
+    {
+        let first = portable_frames.first().ok_or_else(|| {
+            CodecError::Malformed("AVIF sequence has no displayable frame".to_owned())
         })?;
+        reserve_gap_frames(
+            budget,
+            if first.alpha_plane.is_some() {
+                ImageMode::Rgba8
+            } else {
+                ImageMode::Rgb8
+            },
+            first.width,
+            first.height,
+            sequence_payload.color.samples.len(),
+        )?;
+        return Err(CodecError::NotImplemented(
+            "AVIF sequence rendering cannot present error-resilient frame references in the pure-Rust backend"
+                .to_owned(),
+        ));
+    }
+    if portable_frames.len() != sequence_payload.color.samples.len() {
+        // A public sequence must retain one displayable frame for every movie
+        // sample. Do not publish a silently collapsed prefix when an
+        // error-resilient or hidden-reference track falls outside the
+        // presentation subset.
+        return Err(CodecError::NotImplemented(
+            "AVIF sequence rendering cannot present every movie sample in the pure-Rust backend"
+                .to_owned(),
+        ));
+    }
     let first = portable_frames.first().ok_or_else(|| {
         CodecError::Malformed("AVIF sequence has no displayable frame".to_owned())
     })?;
@@ -296,6 +357,21 @@ pub fn decode_sequence(
         },
         consumed,
     ))
+}
+
+fn reserve_gap_frames(
+    budget: &mut SequenceDecodeBudget,
+    mode: ImageMode,
+    width: u32,
+    height: u32,
+    sample_count: usize,
+) -> CodecResult<()> {
+    for _ in 1..sample_count {
+        budget
+            .reserve_later_frame(mode, width, height)
+            .map_err(CodecError::LimitExceeded)?;
+    }
+    Ok(())
 }
 
 fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> CodecResult<()> {
@@ -404,7 +480,6 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
 #[derive(Clone, Copy)]
 enum PortableYuvMatrix {
     Bt601,
-    Bt2020,
 }
 
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
@@ -430,10 +505,6 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
         still.matrix_coefficients,
     ) {
         (1, 13, 6) => PortableYuvMatrix::Bt601,
-        // CICP 9/16/9 is the bounded BT.2020-NCL path.  The transfer value
-        // is retained as declared metadata; this RGB8 boundary intentionally
-        // follows libavif's byte-oriented YUV conversion without tone mapping.
-        (9, 16, 9) if matches!(still.bit_depth, 10 | 12) => PortableYuvMatrix::Bt2020,
         _ => return None,
     };
     let mut canvas = super::av1::FrameCanvas::new(
@@ -510,30 +581,17 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                 matrix,
             )?
         } else {
-            match matrix {
-                PortableYuvMatrix::Bt601 => convert_full_resolution_rgb(
-                    &y_plane.samples,
-                    &u_plane.samples,
-                    &v_plane.samples,
-                    still
-                        .alpha_plane
-                        .as_ref()
-                        .map(|plane| plane.samples.as_slice()),
-                    still.bit_depth,
-                    PortableYuvMatrix::Bt601,
-                )?,
-                PortableYuvMatrix::Bt2020 => convert_full_resolution_rgb(
-                    &y_plane.samples,
-                    &u_plane.samples,
-                    &v_plane.samples,
-                    still
-                        .alpha_plane
-                        .as_ref()
-                        .map(|plane| plane.samples.as_slice()),
-                    still.bit_depth,
-                    PortableYuvMatrix::Bt2020,
-                )?,
-            }
+            convert_full_resolution_rgb(
+                &y_plane.samples,
+                &u_plane.samples,
+                &v_plane.samples,
+                still
+                    .alpha_plane
+                    .as_ref()
+                    .map(|plane| plane.samples.as_slice()),
+                still.bit_depth,
+                matrix,
+            )?
         }
     } else {
         let shift = sample_depth.bits().checked_sub(8)?;
@@ -645,7 +703,6 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
                 let v = u8::try_from(v_sample).ok()?;
                 match matrix {
                     PortableYuvMatrix::Bt601 => libyuv_bt601_full_range_rgb(y, u, v),
-                    PortableYuvMatrix::Bt2020 => libyuv_bt2020_full_range_rgb(y, u, v),
                 }
             };
             pixels.extend_from_slice(&rgb);
@@ -844,7 +901,6 @@ fn convert_full_resolution_rgb(
         let v = sample_depth.truncate_to_u8(v_plane[index])?;
         let rgb = match matrix {
             PortableYuvMatrix::Bt601 => libyuv_bt601_full_range_rgb(y, u, v),
-            PortableYuvMatrix::Bt2020 => libyuv_bt2020_full_range_rgb(y, u, v),
         };
         let output_start = index.checked_mul(channels)?;
         let output_end = output_start.checked_add(channels)?;
@@ -905,8 +961,7 @@ fn convert_full_resolution_rgb_10bit_alpha(
 // intermediates remain in the i32 domain: y * 257 <= 65_535,
 // (y * 257) * 16_320 <= 1_069_531_200, and y_scaled <= 16_319. The BT.601
 // lane bounds are R[-11_488, 27_781], G[-8_604, 25_055], and
-// B[-14_432, 30_702]; BT.2020 bounds are R[-12_000, 28_289],
-// G[-6_064, 22_495], and B[-15_328, 31_591].
+// B[-14_432, 30_702].
 #[expect(
     clippy::arithmetic_side_effects,
     reason = "validated 0..=255 lanes and bounded libyuv fixed-point coefficients remain within i32"
@@ -929,11 +984,6 @@ fn convert_i444_rgb_lanes(
             y_scaled + v * i32x8::splat(90) - i32x8::splat(11_488),
             y_scaled + i32x8::splat(8_736) - (u * i32x8::splat(22) + v * i32x8::splat(46)),
             y_scaled + u * i32x8::splat(113) - i32x8::splat(14_432),
-        ),
-        PortableYuvMatrix::Bt2020 => (
-            y_scaled + v * i32x8::splat(94) - i32x8::splat(12_000),
-            y_scaled + i32x8::splat(6_176) - (u * i32x8::splat(11) + v * i32x8::splat(37)),
-            y_scaled + u * i32x8::splat(120) - i32x8::splat(15_328),
         ),
     };
     Some([
@@ -1189,35 +1239,6 @@ fn libyuv_bt601_full_range_rgb(y: u8, u: u8, v: u8) -> [u8; 3] {
     [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
 }
 
-// ✅ VERIFIED: Pillow 12.2.0's bundled libavif 1.4.1 and libyuv 1922
-// (6067afde). RGB24 has no direct 10-bit I410 matrix entry, so libavif first
-// truncates every 10-bit I444 sample with Convert16To8(scale=16384), then
-// selects kYvuV2020 and calls I444ToRGB24Matrix. The constants and channel
-// order below are libyuv's scalar full-range BT.2020-NCL result exactly.
-fn libyuv_bt2020_full_range_rgb(y: u8, u: u8, v: u8) -> [u8; 3] {
-    let y_scaled = u32::from(y)
-        .wrapping_mul(0x0101)
-        .wrapping_mul(16_320)
-        .wrapping_shr(16);
-    #[expect(
-        clippy::cast_possible_wrap,
-        reason = "eight-bit input bounds the libyuv fixed-point luma value below i32::MAX"
-    )]
-    let y_scaled = y_scaled as i32;
-    let blue = y_scaled
-        .wrapping_add(i32::from(u).wrapping_mul(120))
-        .wrapping_sub(15_328);
-    let green = y_scaled.wrapping_add(6_176).wrapping_sub(
-        i32::from(u)
-            .wrapping_mul(11)
-            .wrapping_add(i32::from(v).wrapping_mul(37)),
-    );
-    let red = y_scaled
-        .wrapping_add(i32::from(v).wrapping_mul(94))
-        .wrapping_sub(12_000);
-    [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
-}
-
 /// Match libyuv's `YuvPixel10` arithmetic for the I010/I210 alpha conversion
 /// family. Unlike the RGB24 fallback, chroma remains in the filtered 10-bit
 /// domain until the `>> 2` boundary, and luma uses libyuv's high-depth
@@ -1235,7 +1256,6 @@ fn libyuv_full_range_rgb_10bit(
     let v = u8::try_from(v.checked_shr(2)?).ok()?;
     let (blue_u, green_bias, green_u, green_v, red_v, blue_bias, red_bias) = match matrix {
         PortableYuvMatrix::Bt601 => (113, 8_736, 22, 46, 90, 14_432, 11_488),
-        PortableYuvMatrix::Bt2020 => (120, 6_176, 11, 37, 94, 15_328, 12_000),
     };
     let blue = ybase
         .checked_add(i32::from(u).checked_mul(blue_u)?)?
@@ -1412,6 +1432,7 @@ mod tests {
             color_range: true,
             subsampling_x: false,
             subsampling_y: false,
+            frame_id_numbers_present: false,
             planes: std::array::from_fn(|_| ReconstructedPlane {
                 samples: vec![128; 16],
             }),

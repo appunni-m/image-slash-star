@@ -1234,8 +1234,8 @@
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 518,
-        "files": 86
+        "guards": 530,
+        "files": 87
       },
       "status": "open_until_all_four_metrics_are_100_percent"
     },

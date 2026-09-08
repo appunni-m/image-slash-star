@@ -186,7 +186,7 @@ impl MotionScratch {
             None,
             CompoundBlend::Average,
             depth,
-        );
+        )?;
         Ok(&self.predictor[..length])
     }
 
@@ -208,7 +208,7 @@ impl MotionScratch {
             None,
             CompoundBlend::Distance(weight),
             depth,
-        );
+        )?;
         Ok(&self.predictor[..length])
     }
 
@@ -233,7 +233,7 @@ impl MotionScratch {
             Some(mask),
             CompoundBlend::Masked { inverted: false },
             depth,
-        );
+        )?;
         Ok(&self.predictor[..length])
     }
 
@@ -266,7 +266,7 @@ impl MotionScratch {
             Some(mask),
             CompoundBlend::Masked { inverted },
             depth,
-        );
+        )?;
         Ok(&self.predictor[..length])
     }
 
@@ -304,10 +304,10 @@ impl MotionScratch {
         height: usize,
         index: u8,
         inverted: bool,
-        subsampling_x: bool,
-        subsampling_y: bool,
+        subsampling: [bool; 2],
         depth: SampleDepth,
     ) -> Av1Result<&[u16]> {
+        let [subsampling_x, subsampling_y] = subsampling;
         let length = Self::length(width, height)?;
         fill_wedge_mask(&mut self.mask, width, height, index)?;
         blend_compound(
@@ -317,7 +317,7 @@ impl MotionScratch {
             Some(&self.mask[..length]),
             CompoundBlend::Masked { inverted },
             depth,
-        );
+        )?;
         reduce_wedge_mask(
             &mut self.mask,
             width,
@@ -354,7 +354,7 @@ impl MotionScratch {
             Some(mask),
             CompoundBlend::Masked { inverted },
             depth,
-        );
+        )?;
         Ok(&self.predictor[..length])
     }
 
@@ -562,22 +562,27 @@ fn wedge_oblique63(row: usize, column: usize) -> u8 {
     source[source_index]
 }
 
-fn wedge_master_value(direction: u8, inverse: bool, row: usize, column: usize) -> u8 {
+fn wedge_master_value(direction: u8, inverse: bool, row: usize, column: usize) -> Av1Result<u8> {
     let row = row.min(63);
     let column = column.min(63);
+    let reversed_column = 63_usize
+        .checked_sub(column)
+        .ok_or_else(|| malformed("wedge master column exceeds sixty-three"))?;
     let (value, base_inverse) = match direction {
         WEDGE_DIRECTION_OBLIQUE27 => (wedge_oblique63(column, row), false),
         WEDGE_DIRECTION_OBLIQUE63 => (wedge_oblique63(row, column), false),
-        WEDGE_DIRECTION_OBLIQUE117 => (wedge_oblique63(row, 63 - column), true),
-        WEDGE_DIRECTION_OBLIQUE153 => (wedge_oblique63(63 - column, row), true),
+        WEDGE_DIRECTION_OBLIQUE117 => (wedge_oblique63(row, reversed_column), true),
+        WEDGE_DIRECTION_OBLIQUE153 => (wedge_oblique63(reversed_column, row), true),
         WEDGE_DIRECTION_HORIZONTAL => (WEDGE_MASTER_VERTICAL[row], false),
         WEDGE_DIRECTION_VERTICAL => (WEDGE_MASTER_VERTICAL[column], false),
-        _ => return 32,
+        _ => return Ok(32),
     };
     if inverse ^ base_inverse {
-        64 - value
+        64_u8
+            .checked_sub(value)
+            .ok_or_else(|| malformed("wedge master value exceeds sixty-four"))
     } else {
-        value
+        Ok(value)
     }
 }
 
@@ -615,7 +620,7 @@ fn fill_wedge_mask(mask: &mut [u8], width: usize, height: usize, index: u8) -> A
             let master_x = x_origin
                 .checked_add(x)
                 .ok_or_else(|| malformed("wedge mask x coordinate overflows"))?;
-            *value = wedge_master_value(code.direction, sign_flip, master_y, master_x);
+            *value = wedge_master_value(code.direction, sign_flip, master_y, master_x)?;
         }
     }
     Ok(())
@@ -759,7 +764,9 @@ fn fill_inter_intra_mask(mask: &mut [u8], width: usize, height: usize, mode: u8)
         return Err(malformed("inter-intra mask has a non-normative geometry"));
     }
     let max_axis = width.max(height);
-    let step = 32 / max_axis;
+    let step = 32_usize
+        .checked_div(max_axis)
+        .ok_or_else(|| malformed("inter-intra mask geometry is invalid"))?;
     if mode == 0 {
         mask[..length].fill(32);
         return Ok(());
@@ -784,6 +791,35 @@ fn fill_inter_intra_mask(mask: &mut [u8], width: usize, height: usize, mode: u8)
     Ok(())
 }
 
+fn blend_sample_vector(current: [u16; 8], staged: [u16; 8], mask: [u8; 8]) -> i32x8 {
+    let current = i32x8::new(current.map(i32::from));
+    let staged = i32x8::new(staged.map(i32::from));
+    let mask = i32x8::new(mask.map(i32::from));
+    // Samples span 0..=65535 and masks span 0..=255 even before the callers'
+    // tighter AV1 checks. Thus 64-mask spans -191..=64 and both products
+    // have magnitude <= 65535 * 255. Their sum plus 32 has magnitude at most
+    // 33422882, well inside i32. wide exposes no checked lane operations.
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "u16 samples and u8 masks bound every SIMD intermediate to i32"
+    )]
+    let value = current * (i32x8::new([64; 8]) - mask) + staged * mask + i32x8::new([32; 8]);
+    value.unbounded_shr_scalar(6)
+}
+
+fn blend_sample(current: u16, staged: u16, mask: u8) -> Av1Result<i32> {
+    let mask = i32::from(mask);
+    let complement = 64_i32
+        .checked_sub(mask)
+        .ok_or_else(|| malformed("sample blend mask complement overflows"))?;
+    i32::from(current)
+        .checked_mul(complement)
+        .and_then(|value| value.checked_add(i32::from(staged).checked_mul(mask)?))
+        .and_then(|value| value.checked_add(32))
+        .map(|value| value >> 6)
+        .ok_or_else(|| malformed("sample blend arithmetic overflows"))
+}
+
 fn blend_inter_intra_samples(
     inter: &mut [u16],
     intra: &[u16],
@@ -800,22 +836,20 @@ fn blend_inter_intra_samples(
         return Err(malformed("inter-intra mask sample exceeds sixty-four"));
     }
     let maximum = i32::from(depth.maximum());
-    let vector_length = length / 8 * 8;
-    for offset in (0..vector_length).step_by(8) {
-        let inter_values = i32x8::new(std::array::from_fn(|lane| i32::from(inter[offset + lane])));
-        let intra_values = i32x8::new(std::array::from_fn(|lane| i32::from(intra[offset + lane])));
-        let weights = i32x8::new(std::array::from_fn(|lane| i32::from(mask[offset + lane])));
-        let value = (inter_values * (i32x8::new([64; 8]) - weights)
-            + intra_values * weights
-            + i32x8::new([32; 8]))
-        .unbounded_shr_scalar(6);
-        inter[offset..offset + 8].copy_from_slice(&narrow_samples(value, maximum));
+    let (inter_vectors, inter_tail) = inter.as_chunks_mut::<8>();
+    let (intra_vectors, intra_tail) = intra.as_chunks::<8>();
+    let (mask_vectors, mask_tail) = mask[..length].as_chunks::<8>();
+    for ((inter, intra), mask) in inter_vectors
+        .iter_mut()
+        .zip(intra_vectors)
+        .zip(mask_vectors)
+    {
+        let value = blend_sample_vector(*inter, *intra, *mask);
+        inter.copy_from_slice(&narrow_samples(value, maximum));
     }
-    for index in vector_length..length {
-        let weight = i32::from(mask[index]);
-        let value =
-            (i32::from(inter[index]) * (64 - weight) + i32::from(intra[index]) * weight + 32) >> 6;
-        inter[index] = u16::try_from(value.clamp(0, maximum))
+    for ((inter, intra), &mask) in inter_tail.iter_mut().zip(intra_tail).zip(mask_tail) {
+        let value = blend_sample(*inter, *intra, mask)?;
+        *inter = u16::try_from(value.clamp(0, maximum))
             .map_err(|_| malformed("inter-intra sample exceeds sample depth"))?;
     }
     Ok(())
@@ -889,13 +923,19 @@ impl PredictionRequest {
         let phase_x = usize::try_from(if self.subsampling_x {
             motion_x.rem_euclid(16)
         } else {
-            motion_x.rem_euclid(8) * 2
+            motion_x
+                .rem_euclid(8)
+                .checked_mul(2)
+                .ok_or_else(|| malformed("horizontal subpixel phase overflows"))?
         })
         .map_err(|_| malformed("horizontal subpixel phase exceeds usize"))?;
         let phase_y = usize::try_from(if self.subsampling_y {
             motion_y.rem_euclid(16)
         } else {
-            motion_y.rem_euclid(8) * 2
+            motion_y
+                .rem_euclid(8)
+                .checked_mul(2)
+                .ok_or_else(|| malformed("vertical subpixel phase overflows"))?
         })
         .map_err(|_| malformed("vertical subpixel phase exceeds usize"))?;
         Ok(PredictionGeometry {
@@ -1283,10 +1323,18 @@ fn horizontal_intermediate(
     y: i64,
     filter: Option<&[i8; 8]>,
     bits: i32,
-) -> i32 {
+) -> Av1Result<i32> {
     filter.map_or_else(
-        || i32::from(reference.replicated(x, y)) << u32::try_from(bits).unwrap_or(0),
-        |filter| rounded_shift(sample_filter(reference, x, y, true, filter), 6 - bits),
+        || Ok(i32::from(reference.replicated(x, y)) << u32::try_from(bits).unwrap_or(0)),
+        |filter| {
+            let shift = 6_i32
+                .checked_sub(bits)
+                .ok_or_else(|| malformed("motion horizontal shift overflows"))?;
+            Ok(rounded_shift(
+                sample_filter(reference, x, y, true, filter),
+                shift,
+            ))
+        },
     )
 }
 
@@ -1316,7 +1364,11 @@ fn warp_round(value: i32, shift: u32) -> Av1Result<i32> {
         return Ok(value);
     }
     let rounding = 1_i32
-        .checked_shl(shift - 1)
+        .checked_shl(
+            shift
+                .checked_sub(1)
+                .ok_or_else(|| malformed("warped-motion rounding shift overflows"))?,
+        )
         .ok_or_else(|| malformed("warped-motion rounding shift overflows"))?;
     value
         .checked_add(rounding)
@@ -1416,7 +1468,7 @@ fn warp_horizontal(
     let scratch = scratch
         .get_mut(..WIDTH * HEIGHT)
         .ok_or_else(|| malformed("warped-motion intermediate scratch is too short"))?;
-    for y in 0..HEIGHT {
+    for (y, row) in scratch.chunks_exact_mut(WIDTH).enumerate() {
         let y_offset = i32::try_from(y)
             .map_err(|_| malformed("warped-motion intermediate row exceeds i32"))?;
         let row_phase = mx
@@ -1426,7 +1478,7 @@ fn warp_horizontal(
                     .ok_or_else(|| malformed("warped-motion horizontal row phase overflows"))?,
             )
             .ok_or_else(|| malformed("warped-motion horizontal row phase overflows"))?;
-        for x in 0..WIDTH {
+        for (x, destination) in row.iter_mut().enumerate() {
             let x_offset = i32::try_from(x)
                 .map_err(|_| malformed("warped-motion intermediate column exceeds i32"))?;
             let phase = warp_phase(
@@ -1447,7 +1499,7 @@ fn warp_horizontal(
                     .checked_add(
                         i64::try_from(x).map_err(|_| malformed("warped-motion x exceeds i64"))?,
                     )
-                    .and_then(|value| value.checked_add(tap - 3))
+                    .and_then(|value| value.checked_add(tap.checked_sub(3)?))
                     .ok_or_else(|| malformed("warped-motion horizontal source overflows"))?;
                 let source_y = i64::from(dy)
                     .checked_add(
@@ -1470,7 +1522,7 @@ fn warp_horizontal(
             )
             .map_err(|_| malformed("warped-motion horizontal shift is invalid"))?;
             let value = warp_round(sum, shift)?;
-            scratch[y * WIDTH + x] = i16::try_from(value)
+            *destination = i16::try_from(value)
                 .map_err(|_| malformed("warped-motion horizontal intermediate exceeds i16"))?;
         }
     }
@@ -1482,12 +1534,12 @@ fn warp_vertical(
     my: i32,
     abcd: [i16; 4],
     bits: i32,
-    x: usize,
-    y: usize,
+    position: [usize; 2],
     preparation: bool,
     bias: i32,
 ) -> Av1Result<i32> {
     const WIDTH: usize = 8;
+    let [x, y] = position;
     let row_phase = my
         .checked_add(
             i32::try_from(y)
@@ -1564,7 +1616,7 @@ fn put_warped_kernel(
             warp_horizontal(reference, dx, dy, mx, warp.abcd, bits, warp_scratch)?;
             for y in 0..tile_height {
                 for x in 0..tile_width {
-                    let value = warp_vertical(warp_scratch, my, warp.abcd, bits, x, y, false, 0)?;
+                    let value = warp_vertical(warp_scratch, my, warp.abcd, bits, [x, y], false, 0)?;
                     let index = tile_y
                         .checked_add(y)
                         .and_then(|row| row.checked_mul(geometry.width))
@@ -1597,7 +1649,8 @@ fn prep_warped_kernel(
             warp_horizontal(reference, dx, dy, mx, warp.abcd, bits, warp_scratch)?;
             for y in 0..tile_height {
                 for x in 0..tile_width {
-                    let value = warp_vertical(warp_scratch, my, warp.abcd, bits, x, y, true, bias)?;
+                    let value =
+                        warp_vertical(warp_scratch, my, warp.abcd, bits, [x, y], true, bias)?;
                     let index = tile_y
                         .checked_add(y)
                         .and_then(|row| row.checked_mul(geometry.width))
@@ -1635,7 +1688,10 @@ fn put_unscaled_kernel(
                 (None, None) => i32::from(reference.replicated(source_x, source_y)),
                 (Some(filter), None) => {
                     let sum = sample_filter(reference, source_x, source_y, true, filter);
-                    let extra = 1_i32 << u32::try_from(5 - bits).unwrap_or(0);
+                    let extra_shift = 5_i32
+                        .checked_sub(bits)
+                        .ok_or_else(|| malformed("motion horizontal rounding shift overflows"))?;
+                    let extra = 1_i32 << u32::try_from(extra_shift).unwrap_or(0);
                     sum.saturating_add(32).saturating_add(extra) >> 6
                 }
                 (None, Some(filter)) => rounded_shift(
@@ -1652,10 +1708,15 @@ fn put_unscaled_kernel(
                             source_y.saturating_add(offset),
                             horizontal,
                             bits,
-                        );
+                        )?;
                         sum = sum.saturating_add(value.saturating_mul(i32::from(coefficient)));
                     }
-                    rounded_shift(sum, 6 + bits)
+                    rounded_shift(
+                        sum,
+                        6_i32
+                            .checked_add(bits)
+                            .ok_or_else(|| malformed("motion vertical shift overflows"))?,
+                    )
                 }
             };
             let index = y
@@ -1694,12 +1755,16 @@ fn prep_unscaled_kernel(
                 .saturating_sub(bias),
                 (Some(filter), None) => rounded_shift(
                     sample_filter(reference, source_x, source_y, true, filter),
-                    6 - bits,
+                    6_i32
+                        .checked_sub(bits)
+                        .ok_or_else(|| malformed("motion preparation shift overflows"))?,
                 )
                 .saturating_sub(bias),
                 (None, Some(filter)) => rounded_shift(
                     sample_filter(reference, source_x, source_y, false, filter),
-                    6 - bits,
+                    6_i32
+                        .checked_sub(bits)
+                        .ok_or_else(|| malformed("motion preparation shift overflows"))?,
                 )
                 .saturating_sub(bias),
                 (horizontal, Some(vertical)) => {
@@ -1712,7 +1777,7 @@ fn prep_unscaled_kernel(
                             source_y.saturating_add(offset),
                             horizontal,
                             bits,
-                        );
+                        )?;
                         sum = sum.saturating_add(value.saturating_mul(i32::from(coefficient)));
                     }
                     rounded_shift(sum, 6).saturating_sub(bias)
@@ -1751,7 +1816,7 @@ fn scaled_horizontal(
     filter: InterpolationFilter,
     reduced: bool,
     bits: i32,
-) -> i32 {
+) -> Av1Result<i32> {
     let source_x = i64::from(x_position.div_euclid(1024));
     let phase = usize::try_from(x_position.rem_euclid(1024) >> 6).unwrap_or(0);
     let coefficients = filter_coefficients(filter, reduced, phase);
@@ -1804,10 +1869,15 @@ fn put_scaled_kernel(
                         request.filters[0],
                         geometry.width <= 4,
                         bits,
-                    );
+                    )?;
                     sum = sum.saturating_add(horizontal.saturating_mul(i32::from(coefficient)));
                 }
-                rounded_shift(sum, 6 + bits)
+                rounded_shift(
+                    sum,
+                    6_i32
+                        .checked_add(bits)
+                        .ok_or_else(|| malformed("motion vertical shift overflows"))?,
+                )
             } else {
                 let horizontal = scaled_horizontal(
                     reference,
@@ -1816,7 +1886,7 @@ fn put_scaled_kernel(
                     request.filters[0],
                     geometry.width <= 4,
                     bits,
-                );
+                )?;
                 rounded_shift(horizontal, bits)
             };
             let index = y
@@ -1876,7 +1946,7 @@ fn prep_scaled_kernel(
                         request.filters[0],
                         geometry.width <= 4,
                         bits,
-                    );
+                    )?;
                     sum = sum.saturating_add(horizontal.saturating_mul(i32::from(coefficient)));
                 }
                 rounded_shift(sum, 6).saturating_sub(bias)
@@ -1888,7 +1958,7 @@ fn prep_scaled_kernel(
                     request.filters[0],
                     geometry.width <= 4,
                     bits,
-                )
+                )?
                 .saturating_sub(bias)
             };
             let index = y
@@ -1914,6 +1984,131 @@ fn narrow_samples(values: i32x8, maximum: i32) -> [u16; 8] {
     cast::<i16x8, u16x8>(i16x8::from_i32x8_saturate(clamped)).to_array()
 }
 
+/// Rounding constants shared by the sample and SIMD compound paths.
+/// `intermediate_bits` returns 0, 2, or 4, and preparation bias is 0 or 8192.
+/// Therefore `rounding + bias` is at most 524800 and `shift` is at most 10.
+#[derive(Clone, Copy)]
+struct CompoundRounding {
+    rounding: i32,
+    bias: i32,
+    shift: u32,
+}
+
+impl CompoundRounding {
+    fn new(depth: SampleDepth, blend: CompoundBlend) -> Av1Result<Self> {
+        let weight_bits = match blend {
+            CompoundBlend::Average => 1_u32,
+            CompoundBlend::Distance(_) => 4,
+            CompoundBlend::Masked { .. } => 6,
+        };
+        let bits = u32::try_from(intermediate_bits(depth))
+            .map_err(|_| malformed("compound intermediate shift is negative"))?;
+        let weight_round_shift = weight_bits
+            .checked_sub(1)
+            .ok_or_else(|| malformed("compound weight rounding shift overflows"))?;
+        let rounding = 1_i32
+            .checked_shl(weight_round_shift)
+            .and_then(|value| value.checked_shl(bits))
+            .ok_or_else(|| malformed("compound rounding overflows"))?;
+        let bias = preparation_bias(depth)
+            .checked_mul(1_i32 << weight_bits)
+            .ok_or_else(|| malformed("compound preparation bias overflows"))?;
+        let shift = bits
+            .checked_add(weight_bits)
+            .ok_or_else(|| malformed("compound rounding shift overflows"))?;
+        Ok(Self {
+            rounding,
+            bias,
+            shift,
+        })
+    }
+}
+
+fn blend_compound_vector(
+    first: [i16; 8],
+    second: [i16; 8],
+    mask: [u8; 8],
+    blend: CompoundBlend,
+    rounding: CompoundRounding,
+) -> Av1Result<i32x8> {
+    let first = i32x8::from_i16x8(i16x8::new(first));
+    let second = i32x8::from_i16x8(i16x8::new(second));
+    let offset = rounding
+        .rounding
+        .checked_add(rounding.bias)
+        .ok_or_else(|| malformed("compound rounding offset overflows"))?;
+    let offset = i32x8::new([offset; 8]);
+    // Both predictors are i16. Even the full u8 weight domain gives weights
+    // and complements with absolute value <= 255, including inverted masks.
+    // Each product has magnitude <= 32768 * 255; their sum plus the offset
+    // (<= 524800 from CompoundRounding::new) has magnitude <= 17236480.
+    // Every intermediate therefore fits i32. wide has no checked lane math.
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "the i16 predictors, u8 weights, and bounded rounding keep every SIMD lane in i32"
+    )]
+    let value = match blend {
+        CompoundBlend::Average => first + second + offset,
+        CompoundBlend::Distance(weight) => {
+            let weight = i32x8::new([i32::from(weight); 8]);
+            first * weight + second * (i32x8::new([16; 8]) - weight) + offset
+        }
+        CompoundBlend::Masked { inverted } => {
+            let masks = i32x8::new(mask.map(i32::from));
+            let masks = if inverted {
+                i32x8::new([64; 8]) - masks
+            } else {
+                masks
+            };
+            first * masks + second * (i32x8::new([64; 8]) - masks) + offset
+        }
+    };
+    Ok(value.unbounded_shr_scalar(rounding.shift))
+}
+
+fn blend_compound_sample(
+    first: i16,
+    second: i16,
+    mask: u8,
+    blend: CompoundBlend,
+    rounding: CompoundRounding,
+) -> Av1Result<i32> {
+    let first = i32::from(first);
+    let second = i32::from(second);
+    let sum = match blend {
+        CompoundBlend::Average => first.checked_add(second),
+        CompoundBlend::Distance(weight) => {
+            let weight = i32::from(weight);
+            let complement = 16_i32
+                .checked_sub(weight)
+                .ok_or_else(|| malformed("compound weight complement overflows"))?;
+            first
+                .checked_mul(weight)
+                .and_then(|first| first.checked_add(second.checked_mul(complement)?))
+        }
+        CompoundBlend::Masked { inverted } => {
+            let mask = i32::from(mask);
+            let mask = if inverted {
+                64_i32
+                    .checked_sub(mask)
+                    .ok_or_else(|| malformed("compound inverse mask overflows"))?
+            } else {
+                mask
+            };
+            let complement = 64_i32
+                .checked_sub(mask)
+                .ok_or_else(|| malformed("compound mask complement overflows"))?;
+            first
+                .checked_mul(mask)
+                .and_then(|first| first.checked_add(second.checked_mul(complement)?))
+        }
+    };
+    sum.and_then(|value| value.checked_add(rounding.rounding))
+        .and_then(|value| value.checked_add(rounding.bias))
+        .map(|value| value >> rounding.shift)
+        .ok_or_else(|| malformed("compound blend arithmetic overflows"))
+}
+
 fn blend_compound(
     first: &[i16],
     second: &[i16],
@@ -1921,63 +2116,26 @@ fn blend_compound(
     mask: Option<&[u8]>,
     blend: CompoundBlend,
     depth: SampleDepth,
-) {
+) -> Av1Result<()> {
     let length = first.len().min(second.len()).min(output.len());
-    let bits = intermediate_bits(depth);
-    let bias = preparation_bias(depth);
+    let rounding = CompoundRounding::new(depth, blend)?;
     let maximum = i32::from(depth.maximum());
-    let vector_length = length / 8 * 8;
-    for offset in (0..vector_length).step_by(8) {
-        let first = i32x8::from_i16x8(i16x8::new(std::array::from_fn(|lane| first[offset + lane])));
-        let second = i32x8::from_i16x8(i16x8::new(std::array::from_fn(|lane| {
-            second[offset + lane]
-        })));
-        let value = match blend {
-            CompoundBlend::Average => (first + second + i32x8::new([(1 << bits) + 2 * bias; 8]))
-                .unbounded_shr_scalar(u32::try_from(bits + 1).unwrap_or(0)),
-            CompoundBlend::Distance(weight) => {
-                let weight = i32::from(weight);
-                (first * i32x8::new([weight; 8])
-                    + second * i32x8::new([16 - weight; 8])
-                    + i32x8::new([(8 << bits) + 16 * bias; 8]))
-                .unbounded_shr_scalar(u32::try_from(bits + 4).unwrap_or(0))
-            }
-            CompoundBlend::Masked { inverted } => {
-                let masks = i32x8::new(std::array::from_fn(|lane| {
-                    let value = mask
-                        .and_then(|mask| mask.get(offset + lane))
-                        .copied()
-                        .map_or(32, i32::from);
-                    if inverted { 64 - value } else { value }
-                }));
-                (first * masks
-                    + second * (i32x8::new([64; 8]) - masks)
-                    + i32x8::new([(32 << bits) + 64 * bias; 8]))
-                .unbounded_shr_scalar(u32::try_from(bits + 6).unwrap_or(0))
-            }
-        };
-        output[offset..offset + 8].copy_from_slice(&narrow_samples(value, maximum));
+    let (first_vectors, first_tail) = first[..length].as_chunks::<8>();
+    let (second_vectors, second_tail) = second[..length].as_chunks::<8>();
+    let (output_vectors, output_tail) = output[..length].as_chunks_mut::<8>();
+    // An absent mask, or a missing mask entry, retains the original half weight.
+    let mut masks = mask.unwrap_or_default().iter().copied();
+    for ((first, second), output) in first_vectors.iter().zip(second_vectors).zip(output_vectors) {
+        let masks = std::array::from_fn(|_| masks.next().unwrap_or(32));
+        let value = blend_compound_vector(*first, *second, masks, blend, rounding)?;
+        output.copy_from_slice(&narrow_samples(value, maximum));
     }
-    for index in vector_length..length {
-        let first = i32::from(first[index]);
-        let second = i32::from(second[index]);
-        let value = match blend {
-            CompoundBlend::Average => (first + second + (1 << bits) + 2 * bias) >> (bits + 1),
-            CompoundBlend::Distance(weight) => {
-                let weight = i32::from(weight);
-                (first * weight + second * (16 - weight) + (8 << bits) + 16 * bias) >> (bits + 4)
-            }
-            CompoundBlend::Masked { inverted } => {
-                let mask = mask
-                    .and_then(|mask| mask.get(index))
-                    .copied()
-                    .map_or(32, i32::from);
-                let mask = if inverted { 64 - mask } else { mask };
-                (first * mask + second * (64 - mask) + (32 << bits) + 64 * bias) >> (bits + 6)
-            }
-        };
-        output[index] = u16::try_from(value.clamp(0, maximum)).unwrap_or(depth.maximum());
+    for ((&first, &second), output) in first_tail.iter().zip(second_tail).zip(output_tail) {
+        let value =
+            blend_compound_sample(first, second, masks.next().unwrap_or(32), blend, rounding)?;
+        *output = u16::try_from(value.clamp(0, maximum)).unwrap_or(depth.maximum());
     }
+    Ok(())
 }
 
 #[expect(
@@ -2023,13 +2181,31 @@ fn difference_mask_and_blend(
     let maximum = i32::from(depth.maximum());
     let depth_bits =
         i32::try_from(depth.bits()).map_err(|_| malformed("sample depth exceeds i32"))?;
-    let mask_shift = depth_bits + bits - 4;
-    let mask_round = 1_i32 << u32::try_from(mask_shift - 5).unwrap_or(0);
+    let mask_shift = depth_bits
+        .checked_add(bits)
+        .and_then(|value| value.checked_sub(4))
+        .ok_or_else(|| malformed("difference mask shift overflows"))?;
+    let mask_round_shift = mask_shift
+        .checked_sub(5)
+        .ok_or_else(|| malformed("difference mask rounding shift overflows"))?;
+    let mask_round = 1_i32 << u32::try_from(mask_round_shift).unwrap_or(0);
+    let blend_shift = bits
+        .checked_add(6)
+        .ok_or_else(|| malformed("difference compound rounding shift overflows"))?;
+    let blend_bias = bias
+        .checked_mul(64)
+        .ok_or_else(|| malformed("difference compound preparation bias overflows"))?;
     let mut full_row = [0_u8; MAX_BLOCK_EDGE];
     let mut previous_pair_sums = [0_u16; MAX_BLOCK_EDGE / 2];
     for y in 0..height {
-        for x in 0..width {
-            let index = y * width + x;
+        let next_y = y
+            .checked_add(1)
+            .ok_or_else(|| malformed("difference mask row overflows"))?;
+        for (x, mask_sample) in full_row[..width].iter_mut().enumerate() {
+            let index = y
+                .checked_mul(width)
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("difference compound sample index overflows"))?;
             let difference = i32::from(first[index]).saturating_sub(i32::from(second[index]));
             let magnitude = difference
                 .unsigned_abs()
@@ -2039,49 +2215,72 @@ fn difference_mask_and_blend(
             let magnitude = i32::try_from(magnitude)
                 .map_err(|_| malformed("difference mask magnitude exceeds i32"))?;
             let raw_mask = 38_i32.saturating_add(magnitude).min(64);
-            let blend_mask = if inverted { 64 - raw_mask } else { raw_mask };
-            full_row[x] = u8::try_from(raw_mask)
+            let blend_mask = if inverted {
+                64_i32
+                    .checked_sub(raw_mask)
+                    .ok_or_else(|| malformed("difference compound inverse mask overflows"))?
+            } else {
+                raw_mask
+            };
+            *mask_sample = u8::try_from(raw_mask)
                 .map_err(|_| malformed("difference mask sample exceeds u8"))?;
-            let value = (difference * blend_mask
-                + i32::from(second[index]) * 64
-                + (32 << bits)
-                + bias * 64)
-                >> (bits + 6);
+            let value = difference
+                .checked_mul(blend_mask)
+                .and_then(|value| value.checked_add(i32::from(second[index]).checked_mul(64)?))
+                .and_then(|value| value.checked_add(32 << bits))
+                .and_then(|value| value.checked_add(blend_bias))
+                .ok_or_else(|| malformed("difference compound blend arithmetic overflows"))?
+                >> blend_shift;
             output[index] = u16::try_from(value.clamp(0, maximum))
                 .map_err(|_| malformed("difference compound sample exceeds u16"))?;
         }
         if subsampling_x {
-            for x in 0..mask_width {
-                let first_x = x * 2;
-                let second_x = first_x.saturating_add(1).min(width.saturating_sub(1));
-                let pair_sum = u16::from(full_row[first_x]) + u16::from(full_row[second_x]);
-                if subsampling_y && y % 2 == 0 && y + 1 < height {
-                    previous_pair_sums[x] = pair_sum;
+            for (x, (pair, previous_pair_sum)) in full_row[..width]
+                .chunks(2)
+                .zip(&mut previous_pair_sums[..mask_width])
+                .enumerate()
+            {
+                // A final odd-width pair replicates its first sample, as before.
+                let second = pair.get(1).copied().unwrap_or(pair[0]);
+                let pair_sum = u16::from(pair[0])
+                    .checked_add(u16::from(second))
+                    .ok_or_else(|| malformed("difference mask pair sum overflows"))?;
+                if subsampling_y && y % 2 == 0 && next_y < height {
+                    *previous_pair_sum = pair_sum;
                 } else {
-                    let mask_y = y / (usize::from(subsampling_y) + 1);
+                    let mask_y = y >> u32::from(subsampling_y);
                     let destination = mask_y
                         .checked_mul(mask_width)
                         .and_then(|row| row.checked_add(x))
                         .ok_or_else(|| malformed("difference mask index overflows"))?;
                     let sign = u16::from(inverted);
                     let reduced = if subsampling_y && y % 2 == 1 {
-                        (previous_pair_sums[x] + pair_sum + 2 - sign) >> 2
+                        previous_pair_sum
+                            .checked_add(pair_sum)
+                            .and_then(|value| value.checked_add(2))
+                            .and_then(|value| value.checked_sub(sign))
+                            .ok_or_else(|| malformed("difference mask pair reduction overflows"))?
+                            >> 2
                     } else {
-                        (pair_sum + 1 - sign) >> 1
+                        pair_sum
+                            .checked_add(1)
+                            .and_then(|value| value.checked_sub(sign))
+                            .ok_or_else(|| malformed("difference mask pair reduction overflows"))?
+                            >> 1
                     };
                     mask[destination] = u8::try_from(reduced)
                         .map_err(|_| malformed("reduced difference mask exceeds u8"))?;
                 }
             }
         } else {
-            let mask_y = y / (usize::from(subsampling_y) + 1);
-            if !subsampling_y || y % 2 == 1 || y + 1 == height {
-                for x in 0..width {
+            let mask_y = y >> u32::from(subsampling_y);
+            if !subsampling_y || y % 2 == 1 || next_y == height {
+                for (x, &sample) in full_row[..width].iter().enumerate() {
                     let destination = mask_y
                         .checked_mul(mask_width)
                         .and_then(|row| row.checked_add(x))
                         .ok_or_else(|| malformed("difference mask index overflows"))?;
-                    mask[destination] = full_row[x];
+                    mask[destination] = sample;
                 }
             }
         }
@@ -2130,27 +2329,14 @@ fn blend_obmc_row(destination: &mut [u16], neighbor: &[u16], mask: u8) -> Av1Res
     if destination.len() != neighbor.len() {
         return Err(malformed("OBMC row buffers have different lengths"));
     }
-    let mask = i32x8::new([i32::from(mask); 8]);
-    let complement = i32x8::new([64; 8]) - mask;
-    let vector_length = destination.len() / 8 * 8;
-    for offset in (0..vector_length).step_by(8) {
-        let current = i32x8::new(std::array::from_fn(|lane| {
-            i32::from(destination[offset + lane])
-        }));
-        let staged = i32x8::new(std::array::from_fn(|lane| {
-            i32::from(neighbor[offset + lane])
-        }));
-        let value =
-            (current * complement + staged * mask + i32x8::new([32; 8])).unbounded_shr_scalar(6);
-        destination[offset..offset + 8]
-            .copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
+    let (destination_vectors, destination_tail) = destination.as_chunks_mut::<8>();
+    let (neighbor_vectors, neighbor_tail) = neighbor.as_chunks::<8>();
+    for (current, staged) in destination_vectors.iter_mut().zip(neighbor_vectors) {
+        let value = blend_sample_vector(*current, *staged, [mask; 8]);
+        current.copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
     }
-    for (current, staged) in destination[vector_length..]
-        .iter_mut()
-        .zip(&neighbor[vector_length..])
-    {
-        let mask = i32::from(mask.to_array()[0]);
-        let value = (i32::from(*current) * (64 - mask) + i32::from(*staged) * mask + 32) >> 6;
+    for (current, &staged) in destination_tail.iter_mut().zip(neighbor_tail) {
+        let value = blend_sample(*current, staged, mask)?;
         *current = u16::try_from(value).map_err(|_| malformed("OBMC blend sample exceeds u16"))?;
     }
     Ok(())
@@ -2202,8 +2388,11 @@ pub(super) fn blend_obmc_top(
         let neighbor_end = neighbor_start
             .checked_add(overlap_width)
             .ok_or_else(|| malformed("OBMC top neighbor row exceeds buffer"))?;
+        let mask_index = overlap_height
+            .checked_add(row)
+            .ok_or_else(|| malformed("OBMC top mask index exceeds table"))?;
         let mask = *OBMC_MASKS
-            .get(overlap_height + row)
+            .get(mask_index)
             .ok_or_else(|| malformed("OBMC top mask index exceeds table"))?;
         blend_obmc_row(
             destination
@@ -2261,50 +2450,42 @@ pub(super) fn blend_obmc_left(
         let neighbor_row = row
             .checked_mul(overlap_width)
             .ok_or_else(|| malformed("OBMC left neighbor row overflows"))?;
-        let vector_length = active_width / 8 * 8;
-        for offset in (0..vector_length).step_by(8) {
-            let current = i32x8::new(std::array::from_fn(|lane| {
-                i32::from(destination[destination_row + offset + lane])
-            }));
-            let staged = i32x8::new(std::array::from_fn(|lane| {
-                i32::from(neighbor[neighbor_row + offset + lane])
-            }));
-            let masks = i32x8::new(std::array::from_fn(|lane| {
-                i32::from(OBMC_MASKS[overlap_width + offset + lane])
-            }));
-            let value =
-                (current * (i32x8::new([64; 8]) - masks) + staged * masks + i32x8::new([32; 8]))
-                    .unbounded_shr_scalar(6);
-            destination[destination_row + offset..destination_row + offset + 8]
-                .copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
+        let destination_end = destination_row
+            .checked_add(active_width)
+            .ok_or_else(|| malformed("OBMC left destination index overflows"))?;
+        let destination = destination
+            .get_mut(destination_row..destination_end)
+            .ok_or_else(|| malformed("OBMC left destination sample is unavailable"))?;
+        let neighbor_end = neighbor_row
+            .checked_add(active_width)
+            .ok_or_else(|| malformed("OBMC left neighbor index overflows"))?;
+        let neighbor = neighbor
+            .get(neighbor_row..neighbor_end)
+            .ok_or_else(|| malformed("OBMC left neighbor sample is unavailable"))?;
+        let mask_end = overlap_width
+            .checked_add(active_width)
+            .ok_or_else(|| malformed("OBMC left mask index exceeds table"))?;
+        let masks = OBMC_MASKS
+            .get(overlap_width..mask_end)
+            .ok_or_else(|| malformed("OBMC left mask index exceeds table"))?;
+        let (destination_vectors, destination_tail) = destination.as_chunks_mut::<8>();
+        let (neighbor_vectors, neighbor_tail) = neighbor.as_chunks::<8>();
+        let (mask_vectors, mask_tail) = masks.as_chunks::<8>();
+        for ((current, staged), mask) in destination_vectors
+            .iter_mut()
+            .zip(neighbor_vectors)
+            .zip(mask_vectors)
+        {
+            let value = blend_sample_vector(*current, *staged, *mask);
+            current.copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
         }
-        for offset in vector_length..active_width {
-            let destination_index = destination_row
-                .checked_add(offset)
-                .ok_or_else(|| malformed("OBMC left destination index overflows"))?;
-            let neighbor_index = neighbor_row
-                .checked_add(offset)
-                .ok_or_else(|| malformed("OBMC left neighbor index overflows"))?;
-            let mask = i32::from(
-                *OBMC_MASKS
-                    .get(overlap_width + offset)
-                    .ok_or_else(|| malformed("OBMC left mask index exceeds table"))?,
-            );
-            let value = (i32::from(
-                *destination
-                    .get(destination_index)
-                    .ok_or_else(|| malformed("OBMC left destination sample is unavailable"))?,
-            ) * (64 - mask)
-                + i32::from(
-                    *neighbor
-                        .get(neighbor_index)
-                        .ok_or_else(|| malformed("OBMC left neighbor sample is unavailable"))?,
-                ) * mask
-                + 32)
-                >> 6;
-            *destination
-                .get_mut(destination_index)
-                .ok_or_else(|| malformed("OBMC left destination sample is unavailable"))? =
+        for ((current, &staged), &mask) in destination_tail
+            .iter_mut()
+            .zip(neighbor_tail)
+            .zip(mask_tail)
+        {
+            let value = blend_sample(*current, staged, mask)?;
+            *current =
                 u16::try_from(value).map_err(|_| malformed("OBMC blend sample exceeds u16"))?;
         }
     }

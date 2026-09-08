@@ -937,7 +937,10 @@ impl TileState {
             if encoded <= 0 {
                 continue;
             }
-            let reference_index = usize::try_from(encoded - 1)
+            let encoded = encoded
+                .checked_sub(1)
+                .ok_or_else(|| malformed("temporal sample reference underflows"))?;
+            let reference_index = usize::try_from(encoded)
                 .map_err(|_| malformed("temporal sample reference exceeds seven"))?;
             if !sign_bias.get(reference_index).copied().unwrap_or(false) {
                 continue;

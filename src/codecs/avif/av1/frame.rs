@@ -786,16 +786,18 @@ fn projected_temporal_field(
     let width8 = header.frame_width.div_ceil(8);
     let height8 = header.frame_height.div_ceil(8);
     Ok(Some(load_projected_temporal_field(
-        header.frame_width,
-        header.frame_height,
-        header.order_hint,
-        sequence.order_hint_bits,
-        reference_order_hints,
+        super::motion::TemporalProjectionRequest {
+            current_width: header.frame_width,
+            current_height: header.frame_height,
+            current_order_hint: header.order_hint,
+            order_hint_bits: sequence.order_hint_bits,
+            reference_order_hints,
+            col_start8: 0,
+            col_end8: width8,
+            row_start8: 0,
+            row_end8: height8,
+        },
         retained,
-        0,
-        width8,
-        0,
-        height8,
     )?))
 }
 
@@ -1133,8 +1135,7 @@ impl FrameState {
     ) -> Av1Result<()> {
         let mut reader = self.begin_frame(
             data,
-            start,
-            end,
+            start..end,
             has_extension,
             temporal_id,
             spatial_id,
@@ -1155,8 +1156,7 @@ impl FrameState {
     pub(super) fn frame_header_obu(
         &mut self,
         data: &SegmentedData<'_, '_>,
-        start: usize,
-        end: usize,
+        payload: Range<usize>,
         has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
@@ -1164,8 +1164,7 @@ impl FrameState {
     ) -> Av1Result<()> {
         let mut reader = self.begin_frame(
             data,
-            start,
-            end,
+            payload,
             has_extension,
             temporal_id,
             spatial_id,
@@ -1193,8 +1192,7 @@ impl FrameState {
     fn begin_frame<'data, 'input, 'spans>(
         &mut self,
         data: &'data SegmentedData<'input, 'spans>,
-        start: usize,
-        end: usize,
+        payload: Range<usize>,
         has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
@@ -1215,8 +1213,8 @@ impl FrameState {
             });
             let (header, reader) = parse(
                 data,
-                start,
-                end,
+                payload.start,
+                payload.end,
                 sequence,
                 &references,
                 temporal_id,
@@ -1233,8 +1231,8 @@ impl FrameState {
         let references = self.reference_headers();
         let (header, reader) = parse(
             data,
-            start,
-            end,
+            payload.start,
+            payload.end,
             sequence,
             &references,
             temporal_id,
@@ -1494,10 +1492,12 @@ impl FrameState {
             header,
             sequence,
             tiling,
-            pending.input_cdfs.as_ref(),
-            pending.segment_map.as_ref(),
-            pending.previous_segment_map.as_ref(),
-            inter_context.as_ref(),
+            TileEntropyInputs {
+                input_cdfs: pending.input_cdfs.as_ref(),
+                current_segment_map: pending.segment_map.as_ref(),
+                previous_segment_map: pending.previous_segment_map.as_ref(),
+                inter_context: inter_context.as_ref(),
+            },
         )?;
         Ok(TileGroup {
             start,
@@ -2526,6 +2526,13 @@ fn split_tile_payloads(
     Ok(ranges)
 }
 
+struct TileEntropyInputs<'state, 'reference> {
+    input_cdfs: Option<&'state entropy::FrameCdfs>,
+    current_segment_map: Option<&'state entropy::SegmentMap>,
+    previous_segment_map: Option<&'state entropy::SegmentMap>,
+    inter_context: Option<&'state entropy::InterFrameContext<'reference>>,
+}
+
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:2425-2457 (`setup_tile`) and
 // src/decode.c:2117-2162 (`decode_sb`). This consumes the first actual
 // partition syntax element rather than constructing and dropping MSAC state.
@@ -2536,11 +2543,14 @@ fn validate_tile_entropy_prefixes(
     header: &FrameHeader,
     sequence: &SequenceHeader,
     tiling: &Tiling,
-    input_cdfs: Option<&entropy::FrameCdfs>,
-    current_segment_map: Option<&entropy::SegmentMap>,
-    previous_segment_map: Option<&entropy::SegmentMap>,
-    inter_context: Option<&entropy::InterFrameContext<'_>>,
+    inputs: TileEntropyInputs<'_, '_>,
 ) -> Av1Result<TileValidation> {
+    let TileEntropyInputs {
+        input_cdfs,
+        current_segment_map,
+        previous_segment_map,
+        inter_context,
+    } = inputs;
     let root_level = u32::from(!sequence.use_128x128_superblock);
     // Frame dimensions and superblock mode were validated while parsing the
     // sequence/frame headers, so overflow is unreachable for valid AV1. Keep
@@ -2836,7 +2846,7 @@ fn validate_tile_entropy_prefixes(
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
                         .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
-                    upscale_color_leaf_for_superres(leaf, &header, sequence, depth)?
+                    upscale_color_leaf_for_superres(leaf, header, sequence, depth)?
                 } else {
                     leaf
                 };
@@ -2936,26 +2946,26 @@ fn validate_tile_entropy_prefixes(
                             }
                         })
                         .transpose()?;
-                } else if header.superres_enabled {
-                    if let Some(plane) = plane {
-                        complete_monochrome_tiles.try_reserve(1).map_err(|_| {
-                            CodecError::Dimensions(
-                                "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
-                            )
-                        })?;
-                        complete_monochrome_tiles.push(ReconstructedMonochromeTile {
-                            x: tile_origin_x,
-                            y: tile_origin_y,
-                            width: tile_width,
-                            height: tile_height,
-                            plane,
-                            cdef_parameters: None,
-                            cdef_indices: Vec::new(),
-                            cdef_active: Vec::new(),
-                            loop_parameters: None,
-                            filter_blocks: Vec::new(),
-                        });
-                    }
+                } else if header.superres_enabled
+                    && let Some(plane) = plane
+                {
+                    complete_monochrome_tiles.try_reserve(1).map_err(|_| {
+                        CodecError::Dimensions(
+                            "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
+                        )
+                    })?;
+                    complete_monochrome_tiles.push(ReconstructedMonochromeTile {
+                        x: tile_origin_x,
+                        y: tile_origin_y,
+                        width: tile_width,
+                        height: tile_height,
+                        plane,
+                        cdef_parameters: None,
+                        cdef_indices: Vec::new(),
+                        cdef_active: Vec::new(),
+                        loop_parameters: None,
+                        filter_blocks: Vec::new(),
+                    });
                 }
             }
             decode_complete = false;
@@ -4609,10 +4619,12 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
-            Some(&entropy_cdfs),
-            None,
-            None,
-            None,
+            TileEntropyInputs {
+                input_cdfs: Some(&entropy_cdfs),
+                current_segment_map: None,
+                previous_segment_map: None,
+                inter_context: None,
+            },
         )
         .is_err()
     );
@@ -4629,10 +4641,12 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
-            Some(&entropy_cdfs),
-            None,
-            None,
-            None,
+            TileEntropyInputs {
+                input_cdfs: Some(&entropy_cdfs),
+                current_segment_map: None,
+                previous_segment_map: None,
+                inter_context: None,
+            },
         )
         .is_ok()
     );
@@ -4642,7 +4656,7 @@ fn coverage_state_paths() {
     rejected_entropy.sequence = Some(sequence.clone());
     rejected_entropy.pending = Some(coverage_pending(entropy_header));
     assert!(coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8).is_ok());
-    let _ = state.begin_frame(&empty_data, 0, 0, false, 0, 0, false);
+    let _ = state.begin_frame(&empty_data, 0..0, false, 0, 0, false);
     let _ = state.tile_group_obu(&empty_data, 0, 0, false, 0, 0);
     let _ = state.tile_group_obu(&empty_data, 1, 0, false, 0, 0);
     let _ = parse(
@@ -4969,7 +4983,7 @@ fn coverage_state_paths() {
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show_existing, &show_spans).unwrap();
     assert_eq!(
-        animated_state.frame_header_obu(&show_data, 0, 1, false, 0, 0, false),
+        animated_state.frame_header_obu(&show_data, 0..1, false, 0, 0, false),
         Ok(())
     );
     for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
@@ -5001,27 +5015,27 @@ fn coverage_state_paths() {
     direct.accept_sequence(parsed_sequence.clone()).unwrap();
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, false, 0, 0, false)
+            .begin_frame(&data, frame_start..frame_end, false, 0, 0, false)
             .is_ok()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, false, 0, 0, false)
+            .begin_frame(&data, frame_start..frame_end, false, 0, 0, false)
             .is_err()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, false, 0, 0, true)
+            .begin_frame(&data, frame_start..frame_end, false, 0, 0, true)
             .is_ok()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, true, 1, 0, true)
+            .begin_frame(&data, frame_start..frame_end, true, 1, 0, true)
             .is_err()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_start, false, 0, 0, true)
+            .begin_frame(&data, frame_start..frame_start, false, 0, 0, true)
             .is_err()
     );
 
@@ -5038,7 +5052,7 @@ fn coverage_state_paths() {
     let mut frame_id_state = FrameState::new();
     frame_id_state.accept_sequence(frame_id_sequence).unwrap();
     frame_id_state.current_frame_id = Some(3);
-    let _ = frame_id_state.begin_frame(&frame_id_data, 0, frame_with_id.len(), false, 0, 0, false);
+    let _ = frame_id_state.begin_frame(&frame_id_data, 0..frame_with_id.len(), false, 0, 0, false);
 
     let header_bits = direct.pending.as_ref().unwrap().header.header_bits;
     let header_length = header_bits.saturating_add(1).div_ceil(8);
@@ -5055,11 +5069,11 @@ fn coverage_state_paths() {
     let mut split = FrameState::new();
     split.accept_sequence(parsed_sequence.clone()).unwrap();
     assert_eq!(
-        split.frame_header_obu(&header_data, 0, reduced_header.len(), false, 0, 0, false,),
+        split.frame_header_obu(&header_data, 0..reduced_header.len(), false, 0, 0, false,),
         Ok(())
     );
     assert_eq!(
-        split.frame_header_obu(&header_data, 0, reduced_header.len(), false, 0, 0, true,),
+        split.frame_header_obu(&header_data, 0..reduced_header.len(), false, 0, 0, true,),
         Ok(())
     );
     assert!(matches!(

@@ -1972,7 +1972,10 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
         Some(_edit) if track.track_duration == u64::MAX => AnimationLoop::Infinite,
         Some(_edit) if track.track_duration == 0 => return Err(parse_failure!()),
         Some(edit) => {
-            let quotient = track.track_duration / edit.segment_duration;
+            let quotient = track
+                .track_duration
+                .checked_div(edit.segment_duration)
+                .ok_or_else(|| parse_failure!())?;
             let plays = quotient
                 .checked_add(u64::from(
                     !track.track_duration.is_multiple_of(edit.segment_duration),

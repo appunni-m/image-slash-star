@@ -5,6 +5,8 @@ All notable changes will be documented in this file. This project follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-08
+
 ### Added
 
 - Incremental input status for still-receiving callers: `detect_prefix` and

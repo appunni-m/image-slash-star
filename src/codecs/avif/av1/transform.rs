@@ -2437,8 +2437,7 @@ fn inverse_transform_with_ranges<
 /// combinations return `None` instead of silently selecting another transform.
 pub(super) fn inverse_transform_with_depth_into(
     coefficients: &[i32],
-    width: usize,
-    height: usize,
+    (width, height): (usize, usize),
     horizontal: AxisTransform,
     vertical: AxisTransform,
     sample_depth: SampleDepth,

@@ -50,6 +50,13 @@ default-features = false
 features = ["png", "jpeg"]
 ```
 
+After the first bootstrap, depend on the immutable crates.io version:
+
+```toml
+[dependencies]
+image-slash-star = { version = "=0.1.0", default-features = false, features = ["png", "jpeg"] }
+```
+
 Cargo package names use hyphens; Rust imports use underscores.
 
 ```rust,no_run
@@ -805,6 +812,7 @@ classes return the documented typed gap until their Rust implementation lands.
 - [Contributing](CONTRIBUTING.md)
 - [Support](SUPPORT.md)
 - [Release checklist](RELEASING.md)
+- [Production release readiness](PRODUCTION_RELEASE_READINESS.md)
 - [Security policy](SECURITY.md)
 - [Third-party provenance](third_party/README.md)
 
