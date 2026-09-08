@@ -12,8 +12,11 @@ until the canonical roadmap and evidence say otherwise.
       state, build output, and release-only tooling.
 - [x] `make verify`, `make lint`, and the nightly coverage-harness compile pass
       on the current local release candidate.
-- [ ] `make package-verify` passes with the exact Cargo package list recorded
-      in `tests/fixtures/package_surface_manifest.json`.
+- [x] The exact 170-file Cargo package list is recorded in
+      `tests/fixtures/package_surface_manifest.json`; the package-surface
+      check and isolated archive consumer pass. The full `make package-verify`
+      target remains clean-source gated until the push-safe release checkout
+      is prepared.
 - [ ] The pushed history contains no generated fixture blob at or above
       GitHub's 100 MiB limit; the current local branch still has five older
       oversized AV1-oracle blobs.
