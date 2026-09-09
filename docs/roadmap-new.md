@@ -3859,7 +3859,7 @@ scope, a validation command, and a visible proved/planned/unknown label.
 
 The following is the exact set of active roadmap IDs at this review. A task is
 not complete until its ID is removed from this list and its current behavior is
-moved into the appropriate contract document. The list contains **245 active
+moved into the appropriate contract document. The list contains **244 active
 finding rows**. Resolved findings are pruned from this rendering and from
 `roadmap.json`; their historical evidence remains in Git history and the
 historical [roadmap](roadmap.md).
@@ -3875,7 +3875,7 @@ historical [roadmap](roadmap.md).
 | TIFF | 26 | `TIF-002`, `TIF-003`, `TIF-005`–`TIF-014`, `TIF-016`–`TIF-018`, `TIF-020`–`TIF-030` |
 | WebP | 20 | `WEP-001`, `WEP-003`–`WEP-005`, `WEP-007`–`WEP-022` |
 | AVIF | 30 | `AVF-001`, `AVF-003`–`AVF-006`, `AVF-008`–`AVF-009`, `AVF-011`–`AVF-016`, `AVF-018`–`AVF-020`, `AVF-022`–`AVF-035` |
-| Features/package | 24 | `FTR-001`–`FTR-002`, `FTR-006`, `FTR-009`–`FTR-018`, `FTR-020`–`FTR-024`, `FTR-027`, `FTR-029`, `FTR-034`–`FTR-035`, `FTR-037`–`FTR-038` |
+| Features/package | 23 | `FTR-001`–`FTR-002`, `FTR-006`, `FTR-009`–`FTR-011`, `FTR-013`–`FTR-018`, `FTR-020`–`FTR-024`, `FTR-027`, `FTR-029`, `FTR-034`–`FTR-035`, `FTR-037`–`FTR-038` |
 | Assurance | 29 | `QA-001`, `QA-002`, `QA-003`, `QA-006`, `QA-009`–`QA-012`, `QA-016`, `QA-019`–`QA-024`, `QA-026`–`QA-028`, `QA-030`, `QA-031`, `QA-033`–`QA-037`, `QA-039`–`QA-042` |
 | Documentation | 2 | `DOC-007`, `DOC-008` |
 
@@ -3887,7 +3887,7 @@ and acceptance contract.
 These 245 rows are not 245 equal-sized coding tasks. A row may be a small
 documentation or policy decision, a new fixture, a codec algorithm, a WASM
 runtime experiment, or a release gate. The reliable “how much is left” numbers
-today are the exact 245 active finding rows, the current four-metric coverage
+today are the exact 244 active finding rows, the current four-metric coverage
 result recorded above, and the explicit dependency order; an hour estimate
 would be invented until the
 next slice is chosen and measured.

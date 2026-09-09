@@ -1647,7 +1647,6 @@
         "FTR-009",
         "FTR-010",
         "FTR-011",
-        "FTR-012",
         "FTR-013",
         "FTR-014",
         "FTR-015",
@@ -8962,18 +8961,6 @@
     ]
   },
   {
-    "id": "FTR-012",
-    "area": "features_package",
-    "status": "open",
-    "finding": "`cargo package` warns that both named integration tests are excluded. Package verification therefore does not prove the published first-use test path.",
-    "next": "Implement the existing package-policy item with a small packaged smoke test or remove repository-only targets from published metadata.",
-    "source": "docs/roadmap.md historical finding context",
-    "finding_class": "Package verification",
-    "workstreams": [
-      "RN-008"
-    ]
-  },
-  {
     "id": "FTR-013",
     "area": "features_package",
     "status": "open",
@@ -9661,7 +9648,7 @@
   }
 ],
   "open_inventory": {
-    "count": 245,
+    "count": 244,
     "groups": {
       "common_api": [
         "API-008",
@@ -9878,7 +9865,6 @@
         "FTR-009",
         "FTR-010",
         "FTR-011",
-        "FTR-012",
         "FTR-013",
         "FTR-014",
         "FTR-015",
@@ -10130,7 +10116,6 @@
       "FTR-009",
       "FTR-010",
       "FTR-011",
-      "FTR-012",
       "FTR-013",
       "FTR-014",
       "FTR-015",
