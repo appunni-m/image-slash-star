@@ -1810,11 +1810,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_page(b"", 0, None).is_err());
     assert!(decode_page(b"II", 0, None).is_err());
     let mut bad_page =
-        include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff").to_vec();
+        include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff").to_vec();
     bad_page[106..110].copy_from_slice(&2000u32.to_le_bytes());
     assert!(decode_page(&bad_page, 1, None).is_err());
     let mut cyclic_page =
-        include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff").to_vec();
+        include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff").to_vec();
     cyclic_page[106..110].copy_from_slice(&8u32.to_le_bytes());
     assert!(decode_page(&cyclic_page, 1, None).is_err());
 
@@ -1834,7 +1834,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode(b"", None).is_err());
     assert!(decode(b"II", None).is_err());
     assert!(decode(b"ZZ\0\0\0\0\0\0", None).is_err());
-    let fixture = include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff");
+    let fixture = include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff");
     for checks in 0..=6 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
@@ -1859,7 +1859,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = metadata_bytes(&[b'I', b'I', 0x2a, 0, 0, 0, 0, 8, 0xff]);
     // A self-referencing IFD chain exercises the cycle guard: patch the
     // classic `1bit.tiff` chain terminator (at 106) back to the first IFD.
-    let mut cyclic = include_bytes!("../../../tests/fixtures/input/images/tiff/1bit.tiff").to_vec();
+    let mut cyclic = include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff").to_vec();
     cyclic[106..110].copy_from_slice(&8u32.to_le_bytes());
     let _ = metadata_bytes(&cyclic);
     // Strip offset/count arrays of different lengths exercise the mismatch
@@ -2392,7 +2392,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = decode_lzw_with_token(&repeated_growth, 526_851, &token);
     }
     let dictionary_saturation =
-        include_bytes!("../../../tests/fixtures/input/images/tiff/lzw_dictionary_saturation.tiff");
+        include_bytes!("../../test_support/fixtures/input/images/tiff/lzw_dictionary_saturation.tiff");
     let token = crate::CancellationToken::new();
     let _ = decode(dictionary_saturation, Some(&token));
     let mut prefixes = [0u16; 4096];
@@ -2593,7 +2593,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut predicted = vec![0, 0, 0, 1, 0, 0, 0, 2];
     reverse_horizontal_predictor(&mut predicted, 8, 1, 32, Endian::Little);
     let tiled_predictor =
-        include_bytes!("../../../tests/fixtures/input/images/tiff/tiled_lzw_predictor.tiff");
+        include_bytes!("../../test_support/fixtures/input/images/tiff/tiled_lzw_predictor.tiff");
     let token = crate::CancellationToken::new();
     let _ = decode(tiled_predictor, Some(&token));
     let _ = decode(tiled_predictor, None);
@@ -2677,21 +2677,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let _ = decode(&tiny, Some(&token));
     }
     let conversion_fixtures: &[&[u8]] = &[
-        include_bytes!("../../../tests/fixtures/input/images/tiff/bilevel.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/miniswhite_8bit.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/gray2.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/gray4.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/16bit.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/palette.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/palette2.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/palette4.tiff"),
-        include_bytes!("../../../tests/fixtures/input/images/tiff/ycbcr.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/bilevel.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/miniswhite_8bit.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/gray2.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/gray4.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/16bit.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/palette.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/palette2.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/palette4.tiff"),
+        include_bytes!("../../test_support/fixtures/input/images/tiff/ycbcr.tiff"),
     ];
     for fixture in conversion_fixtures {
         let token = crate::CancellationToken::new();
         let _ = decode(fixture, Some(&token));
     }
-    let raw_payload = include_bytes!("../../../tests/fixtures/input/images/tiff/uncompressed.tiff");
+    let raw_payload = include_bytes!("../../test_support/fixtures/input/images/tiff/uncompressed.tiff");
     let token = crate::CancellationToken::new();
     let _ = decode(raw_payload, Some(&token));
     let palette = Some(ImagePalette {

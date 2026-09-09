@@ -18,7 +18,7 @@ until the canonical roadmap and evidence say otherwise.
       AV1 reconstruction test, which needs the maintained index sidecars.
       Keep this gate open until those inputs are restored in a push-safe
       history and the complete run produces a verified report.
-- [x] The exact 170-file Cargo package list is recorded in
+- [x] The exact 208-file Cargo package list is recorded in
       `tests/fixtures/package_surface_manifest.json`; the package-surface
       check and isolated archive consumer pass. The full `make package-verify`
       target remains clean-source gated until the push-safe release checkout

@@ -3628,11 +3628,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     });
     let _ = details_meta.has_alpha(1);
 
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
+    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
     let mut duplicate_meta = baseline.to_vec();
     duplicate_meta.extend_from_slice(&baseline[32..274]);
     assert!(inspect_inner(&duplicate_meta).is_err());
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let mut duplicate_movie = animated[..1015].to_vec();
     duplicate_movie.extend_from_slice(&animated[286..1015]);
     let _ = inspect_inner(&duplicate_movie);
@@ -3665,30 +3665,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
     coverage_prefixes(baseline);
     coverage_prefixes(animated);
     coverage_prefixes(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/alpha.avif"
+        "../../test_support/fixtures/input/images/avif/alpha.avif"
     ));
     coverage_prefixes(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/grid.avif"
+        "../../test_support/fixtures/input/images/avif/grid.avif"
     ));
     coverage_prefixes(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/hdr.avif"
+        "../../test_support/fixtures/input/images/avif/hdr.avif"
     ));
     coverage_prefixes(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/10bit.avif"
+        "../../test_support/fixtures/input/images/avif/10bit.avif"
     ));
     coverage_metadata_mutations(baseline);
     coverage_metadata_mutations(animated);
     coverage_metadata_mutations(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/alpha.avif"
+        "../../test_support/fixtures/input/images/avif/alpha.avif"
     ));
     coverage_metadata_mutations(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/grid.avif"
+        "../../test_support/fixtures/input/images/avif/grid.avif"
     ));
     coverage_metadata_mutations(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/hdr.avif"
+        "../../test_support/fixtures/input/images/avif/hdr.avif"
     ));
     coverage_metadata_mutations(include_bytes!(
-        "../../../tests/fixtures/input/images/avif/10bit.avif"
+        "../../test_support/fixtures/input/images/avif/10bit.avif"
     ));
     let _ = image_info(Details {
         width: 0,

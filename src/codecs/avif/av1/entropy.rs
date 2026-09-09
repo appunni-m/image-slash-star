@@ -23132,7 +23132,7 @@ mod tests {
 
     #[test]
     fn alpha_auxiliary_monochrome_first_leaf_is_bounded() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
         let extracted = crate::codecs::avif::samples::validated(bytes)?;
         let sample = &extracted
             .still
@@ -23164,7 +23164,7 @@ mod tests {
 
     #[test]
     fn alpha_auxiliary_monochrome_partition_reconstructs_canvas() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
         let extracted = crate::codecs::avif::samples::validated(bytes)?;
         let sample = &extracted
             .still
@@ -23193,7 +23193,7 @@ mod tests {
     #[test]
     fn alpha_auxiliary_monochrome_partition_reconstructs_canvas_with_explicit_neighbors()
     -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
         let extracted = crate::codecs::avif::samples::validated(bytes)?;
         let sample = &extracted
             .still
@@ -23306,7 +23306,7 @@ mod tests {
 
     #[test]
     fn baseline_first_terminal_lossy_syntax_is_consumed() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/baseline.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/baseline.avif");
         let tile = &bytes[307..307 + 2770];
         let spans = [crate::codecs::avif::samples::ByteSpan {
             start: 0,
@@ -23383,7 +23383,7 @@ mod tests {
 
     #[test]
     fn baseline_frame_first_leaf_remains_an_explicit_gap() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/baseline.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/baseline.avif");
         let tile = &bytes[307..307 + 2770];
         let spans = [crate::codecs::avif::samples::ByteSpan {
             start: 0,
@@ -23406,7 +23406,7 @@ mod tests {
 
     #[test]
     fn baseline_partition_prefix_stops_before_unsupported_block() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/baseline.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/baseline.avif");
         let tile = &bytes[307..307 + 2770];
         let spans = [crate::codecs::avif::samples::ByteSpan {
             start: 0,
@@ -23436,7 +23436,7 @@ mod tests {
 
     #[test]
     fn baseline_full_frame_does_not_publish_a_partial_canvas() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/baseline.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/baseline.avif");
         let tile = &bytes[307..307 + 2770];
         let spans = [crate::codecs::avif::samples::ByteSpan {
             start: 0,

@@ -2940,7 +2940,7 @@ fn coverage_assert_sample(
 
 #[cfg(coverage)]
 fn coverage_fixture_contracts() {
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
+    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
     let baseline_payload = extract_inner(baseline).unwrap();
     let baseline_still = baseline_payload.still.as_ref().unwrap();
     coverage_assert_sample(
@@ -2955,7 +2955,7 @@ fn coverage_fixture_contracts() {
 
     // A complete avis sequence followed by unparseable bytes exercises the
     // has_avis trailing-tolerance branch of the top-level box loop.
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let mut animated_trailing = animated.to_vec();
     animated_trailing.extend_from_slice(b"garbage");
     let animated_payload =
@@ -3034,7 +3034,7 @@ fn coverage_fixture_contracts() {
     let _ = append_top_level_box(vec![9, 0, 0, 0, b'm', b'e', b't', b'a'], b"meta");
     let _ = append_top_level_box(baseline.to_vec(), b"XXXX");
 
-    let alpha = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
+    let alpha = include_bytes!("../../test_support/fixtures/input/images/avif/alpha.avif");
     let alpha_payload = extract_inner(alpha).unwrap();
     let alpha_still = alpha_payload.still.as_ref().unwrap();
     coverage_assert_sample(
@@ -3054,7 +3054,7 @@ fn coverage_fixture_contracts() {
         1,
     );
 
-    let grid = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+    let grid = include_bytes!("../../test_support/fixtures/input/images/avif/grid.avif");
     let grid_payload = extract_inner(grid).unwrap();
     let grid_still = grid_payload.still.as_ref().unwrap();
     for (sample, expected) in grid_still
@@ -3076,7 +3076,7 @@ fn coverage_fixture_contracts() {
         coverage_assert_sample(grid, sample, expected, &[0x81, 0x00, 0x1c, 0x00], true, 1);
     }
 
-    let hdr = include_bytes!("../../../tests/fixtures/input/images/avif/hdr.avif");
+    let hdr = include_bytes!("../../test_support/fixtures/input/images/avif/hdr.avif");
     let hdr_payload = extract_inner(hdr).unwrap();
     coverage_assert_sample(
         hdr,
@@ -3087,7 +3087,7 @@ fn coverage_fixture_contracts() {
         1,
     );
 
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let animated_payload = extract_inner(animated).unwrap();
     coverage_assert_sample(
         animated,
@@ -3117,7 +3117,7 @@ fn coverage_fixture_contracts() {
     }
     assert!(animated_sequence.alpha.is_none());
 
-    let high_bit = include_bytes!("../../../tests/fixtures/input/images/avif/10bit.avif");
+    let high_bit = include_bytes!("../../test_support/fixtures/input/images/avif/10bit.avif");
     let high_bit_payload = extract_inner(high_bit).unwrap();
     let high_bit_still = high_bit_payload.still.as_ref().unwrap();
     coverage_assert_sample(
@@ -3492,7 +3492,7 @@ fn coverage_track(
 
 #[cfg(coverage)]
 fn coverage_parser_truncations() {
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
+    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
     for end in 8..=32 {
         let _ = parse_ftyp(baseline, ByteSpan { start: 8, end });
     }
@@ -3563,7 +3563,7 @@ fn coverage_parser_truncations() {
         );
     }
 
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     for end in 294..=1015 {
         let _ = parse_movie(
             animated,
@@ -3762,8 +3762,8 @@ fn coverage_structural_states() {
     let _ = next_box(&mut reader, true, &mut Budget::default());
     let _ = parse_ftyp(&[0; 8], ByteSpan { start: 0, end: 12 });
 
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let meta_payload = &baseline[40..274];
     for duplicate in [
         &baseline[44..84],
@@ -5178,11 +5178,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     coverage_parser_truncations();
     coverage_structural_states();
 
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
-    let alpha = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
-    let grid = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
-    let high_bit = include_bytes!("../../../tests/fixtures/input/images/avif/10bit.avif");
+    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
+    let alpha = include_bytes!("../../test_support/fixtures/input/images/avif/alpha.avif");
+    let grid = include_bytes!("../../test_support/fixtures/input/images/avif/grid.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
+    let high_bit = include_bytes!("../../test_support/fixtures/input/images/avif/10bit.avif");
     coverage_prefixes(baseline);
     coverage_prefixes(alpha);
     coverage_prefixes(grid);

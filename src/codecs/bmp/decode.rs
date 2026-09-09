@@ -818,8 +818,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode(b"", None).is_err());
     assert!(decode(b"BM", None).is_err());
     assert!(decode(b"not a bitmap", None).is_err());
-    let rle8 = include_bytes!("../../../tests/fixtures/input/images/bmp/rle8.bmp");
-    let rle4 = include_bytes!("../../../tests/fixtures/input/images/bmp/rle4.bmp");
+    let rle8 = include_bytes!("../../test_support/fixtures/input/images/bmp/rle8.bmp");
+    let rle4 = include_bytes!("../../test_support/fixtures/input/images/bmp/rle4.bmp");
     for checks in 0..=5 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);

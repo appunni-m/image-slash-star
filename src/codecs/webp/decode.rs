@@ -274,8 +274,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),
         None,
     );
-    let still = include_bytes!("../../../tests/fixtures/input/images/webp/16x16.webp");
-    let animated = include_bytes!("../../../tests/fixtures/input/images/webp/animated.webp");
+    let still = include_bytes!("../../test_support/fixtures/input/images/webp/16x16.webp");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/webp/animated.webp");
     for checks in 0..=4 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);

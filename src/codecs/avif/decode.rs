@@ -1378,8 +1378,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0,
         None,
     );
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let mut malformed_file_type = baseline.to_vec();
     malformed_file_type[8..12].copy_from_slice(b"free");
     for offset in (16..32).step_by(4) {
@@ -1412,7 +1412,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 #[cfg(test)]
 mod tests {
     mod sha256 {
-        include!("../../../tests/support/sha256.rs");
+        include!("../../test_support/sha256.rs");
     }
 
     use super::{decode_portable, libavif_422_bilinear_sample};
@@ -1496,7 +1496,7 @@ mod tests {
 
     #[test]
     fn alpha_fixture_decodes_to_pure_rust_rgba() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/alpha.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let validated = super::super::av1::validate_first(&extracted)?;
         let still = validated
@@ -1530,7 +1530,7 @@ mod tests {
 
     #[test]
     fn grid_fixture_decodes_to_pure_rust_rgba() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/grid.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let validated = super::super::av1::validate_first(&extracted)?;
         let still = validated
@@ -1551,7 +1551,7 @@ mod tests {
             plane.samples.len() == 80 * 80 && plane.samples.iter().any(|&sample| sample != 0)
         }));
         let expected_raw =
-            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
+            include_bytes!("../../test_support/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
         let alpha = still
             .alpha_plane
             .as_ref()
@@ -1579,10 +1579,10 @@ mod tests {
 
     #[test]
     fn public_grid_decode_preserves_validation_inputs() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/grid.avif");
         let (image, _) = super::decode(bytes, None)?;
         let expected =
-            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
+            include_bytes!("../../test_support/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
         assert_eq!(image.color, ColorType::Rgba8);
         assert_eq!(image.mode, ImageMode::Rgba8);
         assert_eq!(image.pixels.as_slice(), &expected[..]);
@@ -1595,10 +1595,10 @@ mod tests {
 
     #[test]
     fn public_multitile_decode_materializes_exact_rgb() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/multitile.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/multitile.avif");
         let (image, _) = super::decode(bytes, None)?;
         let expected =
-            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_multitile_avif.bin");
+            include_bytes!("../../test_support/fixtures/outputs/raws/Decode.avif_multitile_avif.bin");
         assert_eq!(image.color, ColorType::Rgb8);
         assert_eq!(image.mode, ImageMode::Rgb8);
         assert_eq!(image.pixels.as_slice(), &expected[..]);

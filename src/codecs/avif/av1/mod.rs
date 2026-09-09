@@ -1940,7 +1940,7 @@ mod tests {
 
     #[test]
     fn alpha_fixture_production_validation_retains_complete_plane() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let still = extracted
             .still
@@ -1961,7 +1961,7 @@ mod tests {
 
     #[test]
     fn grid_fixture_production_validation_retains_complete_cells() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/grid.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/grid.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let still = extracted
             .still
@@ -1994,7 +1994,7 @@ mod tests {
     fn primary_item_validation_is_independent_of_sequence_track() -> Av1Result<()> {
         use std::num::NonZeroU32;
 
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
         let mut extracted = super::super::samples::validated(bytes)?;
         let still = extracted
             .still
