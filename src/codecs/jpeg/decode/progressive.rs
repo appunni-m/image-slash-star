@@ -1412,8 +1412,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut fast_info = info.clone();
     fast_info.scans = vec![base_scan(1, 1, 0, 0, 0, 1)];
     let _ = progressive_reconstruct(&fast_info, &[0], None);
-    let progressive_data =
-        include_bytes!("../../../../tests/fixtures/input/images/jpeg/progressive.jpg");
+    let progressive_data = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/jpeg/progressive.jpg"
+    ));
     let progressive_info =
         super::parser::parse_jpeg(progressive_data).expect("coverage progressive JPEG must parse");
     assert!(progressive_reconstruct(&progressive_info, progressive_data, None).is_ok());

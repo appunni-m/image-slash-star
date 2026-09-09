@@ -19,7 +19,7 @@ mod sha256;
 use image_slash_star::{ColorType, DecodedImage, EncodeOptions, ImageFormat, ImageMode};
 
 use bytemuck as _;
-#[cfg(feature = "jpeg")]
+#[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
 fn checkerboard(width: u32, height: u32) -> Vec<u8> {

@@ -3628,11 +3628,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
     });
     let _ = details_meta.has_alpha(1);
 
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
+    let baseline = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/baseline.avif"
+    ));
     let mut duplicate_meta = baseline.to_vec();
     duplicate_meta.extend_from_slice(&baseline[32..274]);
     assert!(inspect_inner(&duplicate_meta).is_err());
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/animated.avif"
+    ));
     let mut duplicate_movie = animated[..1015].to_vec();
     duplicate_movie.extend_from_slice(&animated[286..1015]);
     let _ = inspect_inner(&duplicate_movie);

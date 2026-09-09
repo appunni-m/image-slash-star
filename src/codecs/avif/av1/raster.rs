@@ -5,14 +5,33 @@
 //! frame; this type supplies that missing boundary without raw pointers or
 //! unchecked slice construction.
 
-use super::block::ReconstructedPlane;
+use super::block::{
+    CflLumaContext, FullIntraEdges, FullIntraPlaneEdges, MAX_INTRA_EDGE_SAMPLES, PortableResult,
+    PortableUnavailable, ReconstructedPlane,
+};
 use super::cdef::{self, Block as CdefBlock, Parameters as CdefParameters};
 use super::filter;
+use super::geometry::{IntraEdgeFlags, PixelLayout};
+use super::sample_depth::SampleDepth;
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 
+/// Geometry and prediction state needed to prepare one intra block's edges.
+pub(super) struct IntraEdgeRequest {
+    pub(super) x_units: u32,
+    pub(super) y_units: u32,
+    pub(super) width_units: u32,
+    pub(super) height_units: u32,
+    pub(super) has_chroma: bool,
+    pub(super) sample_depth: SampleDepth,
+    pub(super) intra_edges: IntraEdgeFlags,
+    pub(super) smooth: [bool; 3],
+}
+
 /// A checked row-major canvas for one AV1 frame.
 pub(in crate::codecs::avif) struct FrameCanvas {
+    visible_width: usize,
+    visible_height: usize,
     width: usize,
     height: usize,
     subsampling_x: bool,
@@ -214,13 +233,102 @@ impl MonochromeFrameCanvas {
         Ok(())
     }
 
-    pub(super) fn finish(self) -> Av1Result<ReconstructedPlane> {
+    pub(super) fn finish(self, sample_depth: SampleDepth) -> Av1Result<ReconstructedPlane> {
         if self.written.iter().any(|written| !written) {
             return Err(malformed("alpha canvas is missing reconstructed samples"));
+        }
+        if self
+            .samples
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("alpha canvas contains an out-of-range sample"));
         }
         Ok(ReconstructedPlane {
             samples: self.samples,
         })
+    }
+
+    /// Run the shared luma-only CDEF kernel over an assembled monochrome
+    /// canvas. The color-shaped carriers are intentionally empty; the shared
+    /// implementation validates and filters plane zero only, so wrapping the
+    /// checked monochrome storage here avoids duplicating its direction and
+    /// strength arithmetic.
+    pub(super) fn finish_monochrome_with_cdef(
+        self,
+        frame_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        let canvas = FrameCanvas {
+            visible_width: self.width,
+            visible_height: self.height,
+            width: self.width,
+            height: self.height,
+            subsampling_x: false,
+            subsampling_y: false,
+            planes: [self.samples, Vec::new(), Vec::new()],
+            written: [self.written, Vec::new(), Vec::new()],
+        };
+        canvas.finish_monochrome_with_cdef(
+            frame_parameters,
+            cdef_indices,
+            cdef_active,
+            sample_depth,
+        )
+    }
+
+    /// Run the shared checked deblocking kernel over an assembled monochrome
+    /// plane. The vertical pass precedes the horizontal pass exactly as in the
+    /// three-plane path, while the luma-only filter boundary avoids allocating
+    /// unowned chroma carriers.
+    pub(super) fn finish_monochrome_with_loop_filter(
+        mut self,
+        parameters: Option<filter::Parameters>,
+        blocks: &[filter::Block],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        if let Some(parameters) = parameters {
+            filter::apply_luma(
+                &mut self.samples,
+                (self.width, self.height),
+                blocks,
+                parameters,
+            )
+            .ok_or_else(|| malformed("monochrome loop-filter geometry is invalid"))?;
+        }
+        self.finish(sample_depth)
+    }
+
+    /// Apply the normative monochrome post-filter order for an assembled
+    /// multi-tile frame: luma deblocking first, then frame-wide CDEF. The
+    /// complete coded canvas is validated before either pass so no filter can
+    /// observe unwritten tile storage.
+    pub(super) fn finish_monochrome_with_loop_filter_and_cdef(
+        mut self,
+        loop_parameters: Option<filter::Parameters>,
+        blocks: &[filter::Block],
+        cdef_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        if self.written.iter().any(|written| !written) {
+            return Err(malformed(
+                "monochrome canvas is missing reconstructed samples",
+            ));
+        }
+        if let Some(parameters) = loop_parameters {
+            filter::apply_luma(
+                &mut self.samples,
+                (self.width, self.height),
+                blocks,
+                parameters,
+            )
+            .ok_or_else(|| malformed("monochrome loop-filter geometry is invalid"))?;
+        }
+        self.finish_monochrome_with_cdef(cdef_parameters, cdef_indices, cdef_active, sample_depth)
     }
 }
 
@@ -243,10 +351,39 @@ impl FrameCanvas {
         subsampling_x: bool,
         subsampling_y: bool,
     ) -> Av1Result<Self> {
-        let width = usize::try_from(width).map_err(|_| malformed("frame width exceeds usize"))?;
+        Self::new_padded(width, height, width, height, subsampling_x, subsampling_y)
+    }
+
+    /// Allocate a coded/padded tile canvas while retaining the raw-visible
+    /// crop returned to the AVIF frame assembler.
+    ///
+    /// AV1 entropy and intra prediction operate through the 8-pixel-rounded
+    /// frame boundary. Keeping those samples until all filters complete lets
+    /// the tile-state path drop reconstructed leaves without losing the
+    /// invisible edge pixels needed by later blocks.
+    pub(super) fn new_padded(
+        visible_width: u32,
+        visible_height: u32,
+        padded_width: u32,
+        padded_height: u32,
+        subsampling_x: bool,
+        subsampling_y: bool,
+    ) -> Av1Result<Self> {
+        let visible_width = usize::try_from(visible_width)
+            .map_err(|_| malformed("visible frame width exceeds usize"))?;
+        let visible_height = usize::try_from(visible_height)
+            .map_err(|_| malformed("visible frame height exceeds usize"))?;
+        let width =
+            usize::try_from(padded_width).map_err(|_| malformed("frame width exceeds usize"))?;
         let height =
-            usize::try_from(height).map_err(|_| malformed("frame height exceeds usize"))?;
-        if width == 0 || height == 0 {
+            usize::try_from(padded_height).map_err(|_| malformed("frame height exceeds usize"))?;
+        if visible_width == 0
+            || visible_height == 0
+            || width == 0
+            || height == 0
+            || visible_width > width
+            || visible_height > height
+        {
             return Err(malformed("frame canvas has an empty extent"));
         }
         let chroma_width = if subsampling_x {
@@ -275,6 +412,8 @@ impl FrameCanvas {
             allocate_zeroed(dimensions[2], "second chroma coverage")?,
         ];
         Ok(Self {
+            visible_width,
+            visible_height,
             width,
             height,
             subsampling_x,
@@ -282,6 +421,590 @@ impl FrameCanvas {
             planes,
             written,
         })
+    }
+
+    /// Copy one fully reconstructed current-frame rectangle into caller-owned
+    /// scratch without exposing the mutable canvas backing storage.
+    ///
+    /// IntraBC uses this transaction boundary: source coverage and every
+    /// coordinate are proved before any destination block is mutated, so an
+    /// overlapping source/destination pair can never depend on copy order.
+    #[allow(
+        dead_code,
+        reason = "wired by the intraBC reconstruction branch in the inter slice"
+    )]
+    pub(super) fn stage_written_rect(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+        output: &mut [u16],
+    ) -> Av1Result<()> {
+        let x = usize::try_from(x).map_err(|_| malformed("intraBC source x exceeds usize"))?;
+        let y = usize::try_from(y).map_err(|_| malformed("intraBC source y exceeds usize"))?;
+        let width =
+            usize::try_from(width).map_err(|_| malformed("intraBC source width exceeds usize"))?;
+        let height = usize::try_from(height)
+            .map_err(|_| malformed("intraBC source height exceeds usize"))?;
+        let length = width
+            .checked_mul(height)
+            .filter(|&length| length != 0)
+            .ok_or_else(|| malformed("intraBC source rectangle has an invalid extent"))?;
+        if output.len() != length {
+            return Err(malformed("intraBC staging buffer has the wrong extent"));
+        }
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let end_x = x
+            .checked_add(width)
+            .ok_or_else(|| malformed("intraBC source x extent overflows"))?;
+        let end_y = y
+            .checked_add(height)
+            .ok_or_else(|| malformed("intraBC source y extent overflows"))?;
+        if plane >= self.planes.len() || end_x > plane_width || end_y > plane_height {
+            return Err(malformed(
+                "intraBC source rectangle exceeds the current tile",
+            ));
+        }
+        for row in 0..height {
+            let source_start = y
+                .checked_add(row)
+                .and_then(|row| row.checked_mul(plane_width))
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("intraBC source row offset overflows"))?;
+            let source_end = source_start
+                .checked_add(width)
+                .ok_or_else(|| malformed("intraBC source row end overflows"))?;
+            if self
+                .written
+                .get(plane)
+                .and_then(|coverage| coverage.get(source_start..source_end))
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed("intraBC source contains undecoded samples"));
+            }
+        }
+        for row in 0..height {
+            let source_start = y
+                .checked_add(row)
+                .and_then(|row| row.checked_mul(plane_width))
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("intraBC source row offset overflows"))?;
+            let source_end = source_start
+                .checked_add(width)
+                .ok_or_else(|| malformed("intraBC source row end overflows"))?;
+            let destination_start = row
+                .checked_mul(width)
+                .ok_or_else(|| malformed("intraBC staging row offset overflows"))?;
+            let destination_end = destination_start
+                .checked_add(width)
+                .ok_or_else(|| malformed("intraBC staging row end overflows"))?;
+            let source = self
+                .planes
+                .get(plane)
+                .and_then(|samples| samples.get(source_start..source_end))
+                .ok_or_else(|| malformed("intraBC source samples exceed the current tile"))?;
+            output[destination_start..destination_end].copy_from_slice(source);
+        }
+        Ok(())
+    }
+
+    /// Prepare the exact tile-local prefilter edges for one intra block.
+    ///
+    /// The caller invokes this before placing the current leaf, so coverage
+    /// proves that an authorized edge sample was decoded first. Partition
+    /// flags independently prove whether each extension is legal for the
+    /// current block and pixel layout. Chroma coordinates use the same
+    /// per-axis ceil-and-align geometry as [`Self::place_av1_partition_leaf`];
+    /// a luma-only leaf receives inert chroma edges instead of consulting
+    /// unowned chroma cells.
+    pub(super) fn intra_edges(&self, request: IntraEdgeRequest) -> PortableResult<FullIntraEdges> {
+        let IntraEdgeRequest {
+            x_units,
+            y_units,
+            width_units,
+            height_units,
+            has_chroma,
+            sample_depth,
+            intra_edges,
+            smooth,
+        } = request;
+        let pixels = |units: u32| {
+            usize::try_from(units)
+                .ok()
+                .and_then(|value| value.checked_mul(4))
+                .ok_or(PortableUnavailable)
+        };
+        let x = pixels(x_units)?;
+        let y = pixels(y_units)?;
+        let width = pixels(width_units)?;
+        let height = pixels(height_units)?;
+        if width == 0 || height == 0 || x >= self.width || y >= self.height {
+            return Err(PortableUnavailable);
+        }
+        let layout = PixelLayout::from_sequence(false, self.subsampling_x, self.subsampling_y)
+            .ok_or(PortableUnavailable)?;
+        let luma = self.full_intra_plane_edges(
+            0,
+            x,
+            y,
+            width,
+            height,
+            sample_depth,
+            intra_edges.top_has_right(PixelLayout::I444),
+            intra_edges.left_has_bottom(PixelLayout::I444),
+            smooth[0],
+        )?;
+
+        let chroma_units = |units: u32, subsampled: bool| {
+            let units = if subsampled {
+                units.checked_add(1)?.checked_div(2)?
+            } else {
+                units
+            };
+            usize::try_from(units).ok()?.checked_mul(4)
+        };
+        let chroma_x_units = if self.subsampling_x {
+            x_units / 2
+        } else {
+            x_units
+        };
+        let chroma_y_units = if self.subsampling_y {
+            y_units / 2
+        } else {
+            y_units
+        };
+        let chroma_x = pixels(chroma_x_units)?;
+        let chroma_y = pixels(chroma_y_units)?;
+        let chroma_width = chroma_units(width_units, self.subsampling_x)
+            .filter(|&extent| extent != 0)
+            .ok_or(PortableUnavailable)?;
+        let chroma_height = chroma_units(height_units, self.subsampling_y)
+            .filter(|&extent| extent != 0)
+            .ok_or(PortableUnavailable)?;
+        let chroma = |plane: usize| {
+            if has_chroma {
+                self.full_intra_plane_edges(
+                    plane,
+                    chroma_x,
+                    chroma_y,
+                    chroma_width,
+                    chroma_height,
+                    sample_depth,
+                    intra_edges.top_has_right(layout),
+                    intra_edges.left_has_bottom(layout),
+                    smooth[plane],
+                )
+            } else {
+                FullIntraPlaneEdges::origin(chroma_width, chroma_height, sample_depth)
+            }
+        };
+        let edges = FullIntraEdges::from_planes([luma, chroma(1)?, chroma(2)?]);
+        if !has_chroma {
+            return Ok(edges);
+        }
+
+        let subsampling_width = if self.subsampling_x { 2 } else { 1 };
+        let subsampling_height = if self.subsampling_y { 2 } else { 1 };
+        let required_luma_width = chroma_width
+            .checked_mul(subsampling_width)
+            .ok_or(PortableUnavailable)?;
+        let required_luma_height = chroma_height
+            .checked_mul(subsampling_height)
+            .ok_or(PortableUnavailable)?;
+        let missing_x = required_luma_width
+            .checked_sub(width)
+            .ok_or(PortableUnavailable)?;
+        let missing_y = required_luma_height
+            .checked_sub(height)
+            .ok_or(PortableUnavailable)?;
+        let source_x = x.checked_sub(missing_x).ok_or(PortableUnavailable)?;
+        let source_y = y.checked_sub(missing_y).ok_or(PortableUnavailable)?;
+        let sample_before = |sample_x: usize, sample_y: usize| -> PortableResult<u16> {
+            let sample_x = sample_x.min(self.width.saturating_sub(1));
+            let sample_y = sample_y.min(self.height.saturating_sub(1));
+            let index = sample_y
+                .checked_mul(self.width)
+                .and_then(|offset| offset.checked_add(sample_x))
+                .ok_or(PortableUnavailable)?;
+            self.written[0]
+                .get(index)
+                .copied()
+                .filter(|written| *written)
+                .ok_or(PortableUnavailable)?;
+            let sample = self.planes[0]
+                .get(index)
+                .copied()
+                .ok_or(PortableUnavailable)?;
+            sample_depth.validate(sample).ok_or(PortableUnavailable)
+        };
+        let above_len = width.checked_mul(missing_y).ok_or(PortableUnavailable)?;
+        let left_len = height.checked_mul(missing_x).ok_or(PortableUnavailable)?;
+        let corner_len = missing_x
+            .checked_mul(missing_y)
+            .ok_or(PortableUnavailable)?;
+        let mut above = [0_u16; MAX_INTRA_EDGE_SAMPLES * 2];
+        let mut left = [0_u16; MAX_INTRA_EDGE_SAMPLES * 2];
+        let mut corner = [0_u16; 16];
+        if above_len > above.len() || left_len > left.len() || corner_len > corner.len() {
+            return Err(PortableUnavailable);
+        }
+        for row in 0..missing_y {
+            for column in 0..width {
+                let index = row
+                    .checked_mul(width)
+                    .and_then(|offset| offset.checked_add(column))
+                    .ok_or(PortableUnavailable)?;
+                above[index] = sample_before(
+                    x.checked_add(column).ok_or(PortableUnavailable)?,
+                    source_y.checked_add(row).ok_or(PortableUnavailable)?,
+                )?;
+            }
+        }
+        for row in 0..height {
+            for column in 0..missing_x {
+                let index = row
+                    .checked_mul(missing_x)
+                    .and_then(|offset| offset.checked_add(column))
+                    .ok_or(PortableUnavailable)?;
+                left[index] = sample_before(
+                    source_x.checked_add(column).ok_or(PortableUnavailable)?,
+                    y.checked_add(row).ok_or(PortableUnavailable)?,
+                )?;
+            }
+        }
+        for row in 0..missing_y {
+            for column in 0..missing_x {
+                let index = row
+                    .checked_mul(missing_x)
+                    .and_then(|offset| offset.checked_add(column))
+                    .ok_or(PortableUnavailable)?;
+                corner[index] = sample_before(
+                    source_x.checked_add(column).ok_or(PortableUnavailable)?,
+                    source_y.checked_add(row).ok_or(PortableUnavailable)?,
+                )?;
+            }
+        }
+        let cfl_luma = CflLumaContext::prepare(
+            width,
+            height,
+            missing_x,
+            missing_y,
+            &above[..above_len],
+            &left[..left_len],
+            &corner[..corner_len],
+        )?;
+        Ok(edges.with_cfl_luma(cfl_luma))
+    }
+
+    /// Copy a contiguous reconstructed column immediately left of `x` into
+    /// fixed stack storage. Coordinates are plane pixels, not luma units.
+    #[allow(dead_code, reason = "retained for strict following-block edge access")]
+    pub(super) fn written_column_before<const COUNT: usize>(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+    ) -> PortableResult<[u16; COUNT]> {
+        let x = usize::try_from(x).map_err(|_| PortableUnavailable)?;
+        let y = usize::try_from(y).map_err(|_| PortableUnavailable)?;
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let column = x.checked_sub(1).ok_or(PortableUnavailable)?;
+        let end_y = y.checked_add(COUNT).ok_or(PortableUnavailable)?;
+        if column >= plane_width || end_y > plane_height {
+            return Err(PortableUnavailable);
+        }
+        let mut edge = [0_u16; COUNT];
+        for (offset, sample) in edge.iter_mut().enumerate() {
+            let index = y
+                .checked_add(offset)
+                .and_then(|row| row.checked_mul(plane_width))
+                .and_then(|row| row.checked_add(column))
+                .ok_or(PortableUnavailable)?;
+            if !self
+                .written
+                .get(plane)
+                .and_then(|written| written.get(index))
+                .copied()
+                .unwrap_or(false)
+            {
+                return Err(PortableUnavailable);
+            }
+            *sample = self
+                .planes
+                .get(plane)
+                .and_then(|samples| samples.get(index))
+                .copied()
+                .ok_or(PortableUnavailable)?;
+        }
+        Ok(edge)
+    }
+
+    /// Copy the available reconstructed prefix of the column immediately
+    /// left of `x`, substituting `default` for every unavailable sample.
+    ///
+    /// A few retained compatibility predictors historically distinguish an
+    /// absent edge from a present fixed-size edge whose unavailable suffix is
+    /// the neutral 8-bit midpoint. Keep that policy explicit at those call
+    /// sites while strict edge readers continue to use
+    /// [`Self::written_column_before`].
+    #[allow(dead_code, reason = "retained for compatibility edge access")]
+    pub(super) fn column_before_or_default<const COUNT: usize>(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+        default: u16,
+    ) -> [u16; COUNT] {
+        let mut edge = [default; COUNT];
+        let Ok(x) = usize::try_from(x) else {
+            return edge;
+        };
+        let Ok(y) = usize::try_from(y) else {
+            return edge;
+        };
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let Some(column) = x.checked_sub(1).filter(|&column| column < plane_width) else {
+            return edge;
+        };
+        for (offset, sample) in edge.iter_mut().enumerate() {
+            let Some(row) = y.checked_add(offset).filter(|&row| row < plane_height) else {
+                continue;
+            };
+            let Some(index) = row
+                .checked_mul(plane_width)
+                .and_then(|row| row.checked_add(column))
+            else {
+                continue;
+            };
+            if self
+                .written
+                .get(plane)
+                .and_then(|written| written.get(index))
+                .copied()
+                .unwrap_or(false)
+                && let Some(value) = self
+                    .planes
+                    .get(plane)
+                    .and_then(|samples| samples.get(index))
+                    .copied()
+            {
+                *sample = value;
+            }
+        }
+        edge
+    }
+
+    /// Copy a contiguous reconstructed row immediately above `y` into fixed
+    /// stack storage. Coordinates are plane pixels, not luma units.
+    #[allow(
+        dead_code,
+        reason = "top-edge readers migrate after the current left-edge compatibility callers"
+    )]
+    pub(super) fn written_row_above<const COUNT: usize>(
+        &self,
+        plane: usize,
+        x: u32,
+        y: u32,
+    ) -> PortableResult<[u16; COUNT]> {
+        let x = usize::try_from(x).map_err(|_| PortableUnavailable)?;
+        let y = usize::try_from(y).map_err(|_| PortableUnavailable)?;
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        let row = y.checked_sub(1).ok_or(PortableUnavailable)?;
+        let end_x = x.checked_add(COUNT).ok_or(PortableUnavailable)?;
+        if row >= plane_height || end_x > plane_width {
+            return Err(PortableUnavailable);
+        }
+        let start = row
+            .checked_mul(plane_width)
+            .and_then(|row| row.checked_add(x))
+            .ok_or(PortableUnavailable)?;
+        let end = start.checked_add(COUNT).ok_or(PortableUnavailable)?;
+        if !self
+            .written
+            .get(plane)
+            .and_then(|written| written.get(start..end))
+            .is_some_and(|written| written.iter().all(|value| *value))
+        {
+            return Err(PortableUnavailable);
+        }
+        let source = self
+            .planes
+            .get(plane)
+            .and_then(|samples| samples.get(start..end))
+            .ok_or(PortableUnavailable)?;
+        let mut edge = [0_u16; COUNT];
+        edge.copy_from_slice(source);
+        Ok(edge)
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the checked edge builder keeps plane, geometry, depth, and smooth state explicit"
+    )]
+    fn full_intra_plane_edges(
+        &self,
+        plane: usize,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+        sample_depth: SampleDepth,
+        top_has_right: bool,
+        left_has_bottom: bool,
+        smooth: bool,
+    ) -> PortableResult<FullIntraPlaneEdges> {
+        let (plane_width, plane_height) = self.plane_dimensions(plane);
+        if x >= plane_width || y >= plane_height {
+            return Err(PortableUnavailable);
+        }
+
+        let sample_at = |sample_x: usize, sample_y: usize| -> PortableResult<u16> {
+            if sample_x >= plane_width || sample_y >= plane_height {
+                return Err(PortableUnavailable);
+            }
+            let index = sample_y
+                .checked_mul(plane_width)
+                .and_then(|row| row.checked_add(sample_x))
+                .ok_or(PortableUnavailable)?;
+            if !self
+                .written
+                .get(plane)
+                .and_then(|written| written.get(index))
+                .copied()
+                .unwrap_or(false)
+            {
+                return Err(PortableUnavailable);
+            }
+            let sample = self
+                .planes
+                .get(plane)
+                .and_then(|samples| samples.get(index))
+                .copied()
+                .ok_or(PortableUnavailable)?;
+            sample_depth.validate(sample).ok_or(PortableUnavailable)
+        };
+        let row_is_written = |start_x: usize, row: usize, length: usize| {
+            start_x
+                .checked_add(length)
+                .filter(|&end| end <= plane_width)
+                .and_then(|end| {
+                    let start = row.checked_mul(plane_width)?.checked_add(start_x)?;
+                    let end = row.checked_mul(plane_width)?.checked_add(end)?;
+                    self.written
+                        .get(plane)
+                        .and_then(|written| written.get(start..end))
+                })
+                .is_some_and(|written| written.iter().all(|value| *value))
+        };
+        let column_is_written = |column: usize, start_y: usize, length: usize| {
+            start_y
+                .checked_add(length)
+                .filter(|&end| end <= plane_height)
+                .is_some_and(|end| {
+                    (start_y..end).all(|row| {
+                        row.checked_mul(plane_width)
+                            .and_then(|offset| offset.checked_add(column))
+                            .and_then(|index| {
+                                self.written
+                                    .get(plane)
+                                    .and_then(|written| written.get(index))
+                            })
+                            .copied()
+                            .unwrap_or(false)
+                    })
+                })
+        };
+
+        // None denotes a genuinely absent edge at the plane's top/left border.
+        let top_y = y.checked_sub(1);
+        let left_x = x.checked_sub(1);
+        let has_top = top_y.is_some();
+        let has_left = left_x.is_some();
+        let visible_top = plane_width.saturating_sub(x).min(width);
+        let visible_left = plane_height.saturating_sub(y).min(height);
+        if top_y.is_some_and(|top_y| visible_top == 0 || !row_is_written(x, top_y, visible_top))
+            || left_x.is_some_and(|left_x| {
+                visible_left == 0 || !column_is_written(left_x, y, visible_left)
+            })
+        {
+            return Err(PortableUnavailable);
+        }
+
+        let extension = width.min(height);
+        let top_extension_x = x.checked_add(width).ok_or(PortableUnavailable)?;
+        let visible_top_extension = plane_width.saturating_sub(top_extension_x).min(extension);
+        let have_above_right = top_has_right
+            && top_y.is_some_and(|top_y| {
+                visible_top_extension != 0
+                    && row_is_written(top_extension_x, top_y, visible_top_extension)
+            });
+        let left_extension_y = y.checked_add(height).ok_or(PortableUnavailable)?;
+        let visible_left_extension = plane_height.saturating_sub(left_extension_y).min(extension);
+        let have_below_left = left_has_bottom
+            && left_x.is_some_and(|left_x| {
+                visible_left_extension != 0
+                    && column_is_written(left_x, left_extension_y, visible_left_extension)
+            });
+
+        let top_length = if have_above_right {
+            width.checked_add(extension).ok_or(PortableUnavailable)?
+        } else {
+            width
+        };
+        let left_length = if have_below_left {
+            height.checked_add(extension).ok_or(PortableUnavailable)?
+        } else {
+            height
+        };
+        let edge_capacity = width.checked_add(height).ok_or(PortableUnavailable)?;
+        if edge_capacity > MAX_INTRA_EDGE_SAMPLES {
+            return Err(PortableUnavailable);
+        }
+        let mut top = [0_u16; MAX_INTRA_EDGE_SAMPLES];
+        let top_len = if has_top {
+            plane_width.saturating_sub(x).min(top_length)
+        } else {
+            0
+        };
+        if let Some(top_y) = top_y {
+            for offset in 0..top_len {
+                let sample_x = x.checked_add(offset).ok_or(PortableUnavailable)?;
+                *top.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(sample_x, top_y)?;
+            }
+        }
+        let mut left = [0_u16; MAX_INTRA_EDGE_SAMPLES];
+        let left_len = if has_left {
+            plane_height.saturating_sub(y).min(left_length)
+        } else {
+            0
+        };
+        if let Some(left_x) = left_x {
+            for offset in 0..left_len {
+                let sample_y = y.checked_add(offset).ok_or(PortableUnavailable)?;
+                *left.get_mut(offset).ok_or(PortableUnavailable)? = sample_at(left_x, sample_y)?;
+            }
+        }
+        let top_left = if let (Some(top_y), Some(left_x)) = (top_y, left_x) {
+            Some(sample_at(left_x, top_y)?)
+        } else {
+            None
+        };
+
+        FullIntraPlaneEdges::prepare(
+            width,
+            height,
+            sample_depth,
+            &top[..top_len],
+            &left[..left_len],
+            top_left,
+            has_top,
+            has_left,
+            have_above_right,
+            have_below_left,
+            smooth,
+        )
     }
 
     /// Place a complete set of reconstructed planes at a luma-pixel origin.
@@ -365,11 +1088,12 @@ impl FrameCanvas {
     /// Place one AV1 4:2:0 partition leaf using the codec's coded chroma
     /// geometry.
     ///
-    /// A 4×4 luma leaf at an odd luma-unit coordinate owns a full 4×4
-    /// chroma transform. Its chroma origin is aligned to the even 4×4
-    /// chroma grid, and a luma leaf at an even/even coordinate owns no
-    /// chroma samples at all. The generic cell placement API cannot express
-    /// that ownership rule, so the lossy AV1 walker uses this checked path.
+    /// A subsampled one-MI axis is shared by adjacent luma leaves: only the
+    /// odd member owns the corresponding chroma carrier, and its origin is
+    /// aligned to the even 4×4 chroma grid. I420 applies the rule on both
+    /// axes; I422 applies it horizontally. The generic cell placement API
+    /// cannot express that ownership rule, so the AV1 walker uses this
+    /// checked path.
     pub(in crate::codecs::avif) fn place_av1_partition_leaf(
         &mut self,
         x_units: u32,
@@ -665,6 +1389,374 @@ impl FrameCanvas {
         self.finish_after_cdef(None, None)
     }
 
+    /// Finish a luma-only canvas without requiring dummy chroma coverage.
+    ///
+    /// Monochrome AV1 frames still travel through the shared block walker so
+    /// their partition, motion, and adaptive-CDF state remains identical to
+    /// the colour path.  Only plane zero is normatively present, however;
+    /// requiring the two color-shaped scratch planes to be written would
+    /// turn a complete alpha frame into a false partial decode.
+    pub(super) fn finish_monochrome(self) -> Av1Result<ReconstructedPlane> {
+        let coded_dimensions = self.plane_dimensions(0);
+        let visible_dimensions = (self.visible_width, self.visible_height);
+        for row in 0..visible_dimensions.1 {
+            let start = row
+                .checked_mul(coded_dimensions.0)
+                .ok_or_else(|| malformed("monochrome canvas row offset overflows"))?;
+            let end = start
+                .checked_add(visible_dimensions.0)
+                .ok_or_else(|| malformed("monochrome canvas row end overflows"))?;
+            if self.written[0]
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed(
+                    "monochrome canvas is missing reconstructed samples",
+                ));
+            }
+        }
+        let [luma, _, _] = self.planes;
+        crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
+    }
+
+    /// Finish a monochrome canvas after applying luma-only deblocking. The
+    /// complete coded plane is checked before filtering so the kernel cannot
+    /// read zero-filled storage from an omitted leaf; the private result is
+    /// depth-checked again after the in-place pass before cropping.
+    pub(super) fn finish_monochrome_with_loop_filter(
+        mut self,
+        parameters: Option<filter::Parameters>,
+        blocks: &[filter::Block],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        let coded_dimensions = self.plane_dimensions(0);
+        let visible_dimensions = (self.visible_width, self.visible_height);
+        let required_dimensions = if parameters.is_some() {
+            coded_dimensions
+        } else {
+            visible_dimensions
+        };
+        for row in 0..required_dimensions.1 {
+            let start = row
+                .checked_mul(coded_dimensions.0)
+                .ok_or_else(|| malformed("monochrome loop-filter row offset overflows"))?;
+            let end = start
+                .checked_add(required_dimensions.0)
+                .ok_or_else(|| malformed("monochrome loop-filter row end overflows"))?;
+            if self.written[0]
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed(
+                    "monochrome canvas is missing reconstructed samples",
+                ));
+            }
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome canvas sample exceeds bit depth"));
+        }
+        if let Some(parameters) = parameters {
+            filter::apply_luma(&mut self.planes[0], coded_dimensions, blocks, parameters)
+                .ok_or_else(|| malformed("monochrome loop-filter geometry is invalid"))?;
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome loop-filter sample exceeds bit depth"));
+        }
+        let [luma, _, _] = self.planes;
+        crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
+    }
+
+    /// Finish a monochrome canvas after applying luma deblocking followed by
+    /// frame-wide CDEF. The complete coded plane is checked before either
+    /// pass, ensuring that neither filter can observe zero-filled storage
+    /// from an omitted leaf.
+    pub(super) fn finish_monochrome_with_loop_filter_and_cdef(
+        mut self,
+        loop_parameters: Option<filter::Parameters>,
+        blocks: &[filter::Block],
+        cdef_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        let coded_dimensions = self.plane_dimensions(0);
+        let visible_dimensions = (self.visible_width, self.visible_height);
+        let required_dimensions = if loop_parameters.is_some() || cdef_parameters.is_some() {
+            coded_dimensions
+        } else {
+            visible_dimensions
+        };
+        for row in 0..required_dimensions.1 {
+            let start = row
+                .checked_mul(coded_dimensions.0)
+                .ok_or_else(|| malformed("monochrome loop-filter row offset overflows"))?;
+            let end = start
+                .checked_add(required_dimensions.0)
+                .ok_or_else(|| malformed("monochrome loop-filter row end overflows"))?;
+            if self.written[0]
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed(
+                    "monochrome canvas is missing reconstructed samples",
+                ));
+            }
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome canvas sample exceeds bit depth"));
+        }
+        if let Some(parameters) = loop_parameters {
+            filter::apply_luma(&mut self.planes[0], coded_dimensions, blocks, parameters)
+                .ok_or_else(|| malformed("monochrome loop-filter geometry is invalid"))?;
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome loop-filter sample exceeds bit depth"));
+        }
+        self.finish_monochrome_with_cdef(cdef_parameters, cdef_indices, cdef_active, sample_depth)
+    }
+
+    /// Finish a monochrome canvas after applying the frame's Y-only CDEF.
+    ///
+    /// Monochrome AV1 has no UV strength table or UV active map. Keeping this
+    /// operation separate from the three-plane color filter path lets the
+    /// caller prove luma coverage and all CDEF map invariants without asking
+    /// dummy chroma planes to participate. The source is immutable for the
+    /// whole pass, matching the AV1 CDEF requirement that neighboring blocks
+    /// observe the post-reconstruction, pre-CDEF frame.
+    pub(super) fn finish_monochrome_with_cdef(
+        mut self,
+        frame_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        let coded_dimensions = self.plane_dimensions(0);
+        let visible_dimensions = (self.visible_width, self.visible_height);
+        let (coded_width, coded_height) = coded_dimensions;
+        if coded_width == 0 || coded_height == 0 || coded_width % 8 != 0 || coded_height % 8 != 0 {
+            return Err(malformed(
+                "monochrome CDEF requires complete luma 8x8 blocks",
+            ));
+        }
+        let required_dimensions = if frame_parameters.is_some() {
+            coded_dimensions
+        } else {
+            visible_dimensions
+        };
+        for row in 0..required_dimensions.1 {
+            let start = row
+                .checked_mul(coded_width)
+                .ok_or_else(|| malformed("monochrome coverage row offset overflows"))?;
+            let end = start
+                .checked_add(required_dimensions.0)
+                .ok_or_else(|| malformed("monochrome coverage row end overflows"))?;
+            if self.written[0]
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed(
+                    "monochrome canvas is missing reconstructed samples",
+                ));
+            }
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome canvas sample exceeds bit depth"));
+        }
+
+        if let Some(frame) = frame_parameters {
+            if frame.bit_depth != sample_depth.bits()
+                || !(1..=4).contains(&frame.y_strength_count)
+                || frame.uv_strength_count != 0
+            {
+                return Err(malformed("monochrome CDEF strength tables are invalid"));
+            }
+            let expected_count = match frame.y_strength_count {
+                1 => 1,
+                2 => 2,
+                4 => 4,
+                _ => 0,
+            };
+            if expected_count == 0 || frame.y_strength_count != expected_count {
+                return Err(malformed("monochrome CDEF strength count is invalid"));
+            }
+            if frame.damping < 3 || frame.damping > 6 {
+                return Err(malformed("monochrome CDEF damping is invalid"));
+            }
+            let active_width = coded_width.div_ceil(8);
+            let active_height = coded_height.div_ceil(8);
+            let active_length = active_width
+                .checked_mul(active_height)
+                .ok_or_else(|| malformed("monochrome CDEF active map overflows"))?;
+            if cdef_active.len() != active_length {
+                return Err(malformed("monochrome CDEF active map has the wrong extent"));
+            }
+            let region_width = coded_width.div_ceil(64);
+            let region_height = coded_height.div_ceil(64);
+            let region_length = region_width
+                .checked_mul(region_height)
+                .ok_or_else(|| malformed("monochrome CDEF index map overflows"))?;
+            if cdef_indices.len() != region_length {
+                return Err(malformed("monochrome CDEF index map has the wrong extent"));
+            }
+            for index in cdef_indices.iter().flatten() {
+                if *index >= frame.y_strength_count {
+                    return Err(malformed("monochrome CDEF index is out of range"));
+                }
+            }
+            for (index, &active) in cdef_active.iter().enumerate() {
+                if !active {
+                    continue;
+                }
+                let row = index
+                    .checked_div(active_width)
+                    .ok_or_else(|| malformed("monochrome CDEF active map has zero width"))?;
+                let column = index
+                    .checked_rem(active_width)
+                    .ok_or_else(|| malformed("monochrome CDEF active map has zero width"))?;
+                let region_index = row
+                    .checked_mul(8)
+                    .and_then(|y| y.checked_div(64))
+                    .and_then(|region_y| {
+                        column
+                            .checked_mul(8)
+                            .and_then(|x| x.checked_div(64))
+                            .and_then(|region_x| {
+                                region_y.checked_mul(region_width)?.checked_add(region_x)
+                            })
+                    })
+                    .ok_or_else(|| malformed("monochrome CDEF region index overflows"))?;
+                if cdef_indices
+                    .get(region_index)
+                    .and_then(|entry| *entry)
+                    .is_none()
+                {
+                    return Err(malformed(
+                        "monochrome CDEF active block has no region index",
+                    ));
+                }
+            }
+
+            let source = &self.planes[0];
+            let source_len = coded_width
+                .checked_mul(coded_height)
+                .ok_or_else(|| malformed("monochrome CDEF output size overflows"))?;
+            let mut output = Vec::new();
+            output
+                .try_reserve(source_len)
+                .map_err(|_| malformed("unable to allocate monochrome CDEF output"))?;
+            output.extend_from_slice(source);
+            let mut block_output = [0_u16; 64];
+            for (active_index, &active) in cdef_active.iter().enumerate() {
+                if !active {
+                    continue;
+                }
+                let block_x = active_index
+                    .checked_rem(active_width)
+                    .and_then(|column| column.checked_mul(8))
+                    .ok_or_else(|| malformed("monochrome CDEF block x overflows"))?;
+                let block_y = active_index
+                    .checked_div(active_width)
+                    .and_then(|row| row.checked_mul(8))
+                    .ok_or_else(|| malformed("monochrome CDEF block y overflows"))?;
+                let region_index = (block_y / 64)
+                    .checked_mul(region_width)
+                    .and_then(|row| row.checked_add(block_x / 64))
+                    .ok_or_else(|| malformed("monochrome CDEF region index overflows"))?;
+                let cdef_index = cdef_indices
+                    .get(region_index)
+                    .and_then(|entry| *entry)
+                    .ok_or_else(|| malformed("monochrome CDEF region index is missing"))?;
+                let strength = *frame
+                    .y_strengths
+                    .get(cdef_index)
+                    .ok_or_else(|| malformed("monochrome CDEF strength is missing"))?;
+                let primary_code = strength >> 2;
+                let secondary_code = strength & 3;
+                let shift = sample_depth.bits().saturating_sub(8);
+                let primary_strength = primary_code
+                    .checked_shl(shift)
+                    .ok_or_else(|| malformed("monochrome CDEF primary strength overflows"))?;
+                let secondary_strength = secondary_code
+                    .saturating_add(u32::from(secondary_code == 3))
+                    .checked_shl(shift)
+                    .ok_or_else(|| malformed("monochrome CDEF secondary strength overflows"))?;
+                let mut parameters = CdefParameters {
+                    primary_strength,
+                    secondary_strength,
+                    direction: 0,
+                    damping: frame.damping.saturating_add(shift),
+                    bit_depth: frame.bit_depth,
+                };
+                if primary_strength != 0 {
+                    let (direction, variance) = cdef::direction_for_block(
+                        source,
+                        coded_dimensions,
+                        CdefBlock {
+                            x: block_x,
+                            y: block_y,
+                            width: 8,
+                            height: 8,
+                        },
+                        frame.bit_depth,
+                    )
+                    .ok_or_else(|| malformed("monochrome CDEF direction is unavailable"))?;
+                    parameters.direction =
+                        if cdef::adjust_primary_strength(primary_strength, variance) == 0 {
+                            0
+                        } else {
+                            direction
+                        };
+                    parameters.primary_strength =
+                        cdef::adjust_primary_strength(primary_strength, variance);
+                }
+                let block = CdefBlock {
+                    x: block_x,
+                    y: block_y,
+                    width: 8,
+                    height: 8,
+                };
+                cdef::filter_block_into(
+                    source,
+                    coded_dimensions,
+                    block,
+                    parameters,
+                    &mut block_output,
+                )
+                .ok_or_else(|| malformed("monochrome CDEF block exceeds its source plane"))?;
+                for (row, source_row) in block_output.chunks_exact(8).enumerate() {
+                    let destination = block_y
+                        .checked_add(row)
+                        .and_then(|y| y.checked_mul(coded_width))
+                        .and_then(|row| row.checked_add(block_x))
+                        .ok_or_else(|| malformed("monochrome CDEF output offset overflows"))?;
+                    let end = destination
+                        .checked_add(8)
+                        .ok_or_else(|| malformed("monochrome CDEF output end overflows"))?;
+                    output[destination..end].copy_from_slice(source_row);
+                }
+            }
+            self.planes[0] = output;
+        }
+
+        let [luma, _, _] = self.planes;
+        crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
+    }
+
     // The frame walker passes the frame-header strengths here. CDEF direction
     // selection is derived from the immutable post-deblock luma source, while
     // each chroma block uses the corresponding luma direction.
@@ -698,12 +1790,32 @@ impl FrameCanvas {
         cdef_indices: &[Option<usize>],
         cdef_active: &[bool],
     ) -> Av1Result<[ReconstructedPlane; 3]> {
-        if self
-            .written
-            .iter()
-            .any(|plane| plane.iter().any(|written| !written))
-        {
-            return Err(malformed("frame canvas is missing reconstructed samples"));
+        let visible_dimensions = self.visible_plane_dimensions();
+        let filters_present = loop_parameters.is_some()
+            || frame_parameters.is_some()
+            || luma_parameters.is_some()
+            || chroma_parameters.is_some();
+        for (plane, &visible_dimensions) in visible_dimensions.iter().enumerate() {
+            let coded_dimensions = self.plane_dimensions(plane);
+            let (required_width, required_height) = if filters_present {
+                coded_dimensions
+            } else {
+                visible_dimensions
+            };
+            for row in 0..required_height {
+                let start = row
+                    .checked_mul(coded_dimensions.0)
+                    .ok_or_else(|| malformed("frame coverage row offset overflows"))?;
+                let end = start
+                    .checked_add(required_width)
+                    .ok_or_else(|| malformed("frame coverage row end overflows"))?;
+                if self.written[plane]
+                    .get(start..end)
+                    .is_none_or(|coverage| coverage.iter().any(|written| !written))
+                {
+                    return Err(malformed("frame canvas is missing reconstructed samples"));
+                }
+            }
         }
 
         if let Some(parameters) = loop_parameters {
@@ -732,7 +1844,17 @@ impl FrameCanvas {
                 cdef_active,
             )?;
         }
-        Ok(self.planes.map(|samples| ReconstructedPlane { samples }))
+        let coded_dimensions = [
+            self.plane_dimensions(0),
+            self.plane_dimensions(1),
+            self.plane_dimensions(2),
+        ];
+        let [luma, chroma_u, chroma_v] = self.planes;
+        Ok([
+            crop_canvas_plane(luma, coded_dimensions[0], visible_dimensions[0])?,
+            crop_canvas_plane(chroma_u, coded_dimensions[1], visible_dimensions[1])?,
+            crop_canvas_plane(chroma_v, coded_dimensions[2], visible_dimensions[2])?,
+        ])
     }
 
     fn apply_cdef(
@@ -743,10 +1865,63 @@ impl FrameCanvas {
         cdef_indices: &[Option<usize>],
         cdef_active: &[bool],
     ) -> Av1Result<()> {
-        let source = self.planes.clone();
         let luma_dimensions = self.plane_dimensions(0);
         let active_width = luma_dimensions.0.div_ceil(8);
+        let active_height = luma_dimensions.1.div_ceil(8);
         let region_width = self.width.div_ceil(64);
+        let region_height = self.height.div_ceil(64);
+        if let Some(frame) = frame_parameters {
+            let active_length = active_width
+                .checked_mul(active_height)
+                .ok_or_else(|| malformed("CDEF active-map size overflows"))?;
+            let region_length = region_width
+                .checked_mul(region_height)
+                .ok_or_else(|| malformed("CDEF index-map size overflows"))?;
+            if cdef_active.len() != active_length || cdef_indices.len() != region_length {
+                return Err(malformed("CDEF metadata maps have invalid extents"));
+            }
+            if !(1..=4).contains(&frame.y_strength_count)
+                || !(1..=4).contains(&frame.uv_strength_count)
+                || frame.y_strength_count > frame.y_strengths.len()
+                || frame.uv_strength_count > frame.uv_strengths.len()
+            {
+                return Err(malformed("CDEF strength counts are invalid"));
+            }
+            for (active_index, &active) in cdef_active.iter().enumerate() {
+                if !active {
+                    continue;
+                }
+                let block_x = active_index
+                    .checked_rem(active_width)
+                    .ok_or_else(|| malformed("CDEF active map has zero width"))?;
+                let block_y = active_index
+                    .checked_div(active_width)
+                    .ok_or_else(|| malformed("CDEF active map has zero width"))?;
+                let region_index = block_y
+                    .checked_div(8)
+                    .and_then(|row| row.checked_mul(region_width))
+                    .and_then(|row| row.checked_add(block_x.checked_div(8)?))
+                    .ok_or_else(|| malformed("CDEF active region index overflows"))?;
+                let cdef_index = cdef_indices
+                    .get(region_index)
+                    .and_then(|entry| *entry)
+                    .or_else(|| {
+                        (frame.y_strength_count == 1 && frame.uv_strength_count == 1).then_some(0)
+                    })
+                    .ok_or_else(|| malformed("CDEF active region index is missing"))?;
+                if cdef_index >= frame.y_strength_count || cdef_index >= frame.uv_strength_count {
+                    return Err(malformed("CDEF active region index exceeds strengths"));
+                }
+            }
+        }
+
+        let mut source: [Vec<u16>; 3] = std::array::from_fn(|_| Vec::new());
+        let mut output: [Vec<u16>; 3] = std::array::from_fn(|_| Vec::new());
+        for plane in 0..3 {
+            source[plane] = clone_plane(&self.planes[plane], "CDEF source plane")?;
+            output[plane] = clone_plane(&self.planes[plane], "CDEF output plane")?;
+        }
+        let mut block_output = [0_u16; 64];
 
         for plane in 0..3 {
             let scalar_parameters = if plane == 0 {
@@ -791,10 +1966,10 @@ impl FrameCanvas {
                             .checked_div(8)
                             .and_then(|row| row.checked_mul(active_width))
                             .and_then(|row| row.checked_add(luma_x.checked_div(8)?));
-                        if !active_index
+                        let active = active_index
                             .and_then(|index| cdef_active.get(index).copied())
-                            .unwrap_or(false)
-                        {
+                            .ok_or_else(|| malformed("CDEF active-map index exceeds frame"))?;
+                        if !active {
                             continue;
                         }
                         let region_index = luma_y
@@ -807,30 +1982,31 @@ impl FrameCanvas {
                                 (frame.y_strength_count == 1 && frame.uv_strength_count == 1)
                                     .then_some(0)
                             });
-                        let Some(cdef_index) = cdef_index else {
-                            continue;
-                        };
+                        let cdef_index =
+                            cdef_index.ok_or_else(|| malformed("CDEF region index is missing"))?;
                         let (strengths, count) = if plane == 0 {
                             (frame.y_strengths, frame.y_strength_count)
                         } else {
                             (frame.uv_strengths, frame.uv_strength_count)
                         };
-                        let Some(&strength) =
-                            strengths.get(cdef_index).filter(|_| cdef_index < count)
-                        else {
-                            continue;
-                        };
+                        let strength = *strengths
+                            .get(cdef_index)
+                            .filter(|_| cdef_index < count)
+                            .ok_or_else(|| malformed("CDEF strength index exceeds count"))?;
                         if strength == 0 {
                             continue;
                         }
                         let secondary = strength & 3;
-                        let base = CdefParameters {
-                            primary_strength: strength >> 2,
-                            secondary_strength: if secondary == 3 { 4 } else { secondary },
-                            direction: 0,
-                            damping: frame.damping.saturating_sub(u32::from(plane != 0)),
-                            bit_depth: frame.bit_depth,
-                        };
+                        let base = scale_cdef_parameters(
+                            CdefParameters {
+                                primary_strength: strength >> 2,
+                                secondary_strength: if secondary == 3 { 4 } else { secondary },
+                                direction: 0,
+                                damping: frame.damping.saturating_sub(u32::from(plane != 0)),
+                                bit_depth: frame.bit_depth,
+                            },
+                            frame.bit_depth,
+                        )?;
                         let direction = cdef::direction_for_block(
                             &source[0],
                             luma_dimensions,
@@ -872,6 +2048,7 @@ impl FrameCanvas {
                         let Some(base) = scalar_parameters else {
                             continue;
                         };
+                        let base = scale_cdef_parameters(base, base.bit_depth)?;
                         if plane == 0 {
                             let Some((direction, variance)) = cdef::direction_for_block(
                                 &source[0],
@@ -915,9 +2092,20 @@ impl FrameCanvas {
                         }
                     };
 
-                    let filtered =
-                        cdef::filter_block(&source[plane], dimensions, block, parameters)
-                            .ok_or_else(|| malformed("CDEF block exceeds its source plane"))?;
+                    let block_length = block
+                        .width
+                        .checked_mul(block.height)
+                        .ok_or_else(|| malformed("CDEF block size overflows"))?;
+                    cdef::filter_block_into(
+                        &source[plane],
+                        dimensions,
+                        block,
+                        parameters,
+                        block_output
+                            .get_mut(..block_length)
+                            .ok_or_else(|| malformed("CDEF block exceeds scratch"))?,
+                    )
+                    .ok_or_else(|| malformed("CDEF block exceeds its source plane"))?;
                     for row in 0..block.height {
                         let source_start = row.saturating_mul(block.width);
                         let source_end = source_start.saturating_add(block.width);
@@ -926,12 +2114,13 @@ impl FrameCanvas {
                             .saturating_mul(dimensions.0)
                             .saturating_add(x);
                         let destination_end = destination_start.saturating_add(block.width);
-                        self.planes[plane][destination_start..destination_end]
-                            .copy_from_slice(&filtered[source_start..source_end]);
+                        output[plane][destination_start..destination_end]
+                            .copy_from_slice(&block_output[source_start..source_end]);
                     }
                 }
             }
         }
+        self.planes = output;
         Ok(())
     }
 
@@ -1030,6 +2219,86 @@ impl FrameCanvas {
             )
         }
     }
+
+    fn visible_plane_dimensions(&self) -> [(usize, usize); 3] {
+        let chroma_width = if self.subsampling_x {
+            self.visible_width.div_ceil(2)
+        } else {
+            self.visible_width
+        };
+        let chroma_height = if self.subsampling_y {
+            self.visible_height.div_ceil(2)
+        } else {
+            self.visible_height
+        };
+        [
+            (self.visible_width, self.visible_height),
+            (chroma_width, chroma_height),
+            (chroma_width, chroma_height),
+        ]
+    }
+}
+
+fn scale_cdef_parameters(parameters: CdefParameters, bit_depth: u32) -> Av1Result<CdefParameters> {
+    let shift = bit_depth
+        .checked_sub(8)
+        .ok_or_else(|| malformed("CDEF bit depth is below eight"))?;
+    let primary_strength = parameters
+        .primary_strength
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("CDEF primary strength overflows"))?;
+    let secondary_strength = parameters
+        .secondary_strength
+        .checked_shl(shift)
+        .ok_or_else(|| malformed("CDEF secondary strength overflows"))?;
+    Ok(CdefParameters {
+        primary_strength,
+        secondary_strength,
+        damping: parameters.damping.saturating_add(shift),
+        ..parameters
+    })
+}
+
+fn crop_canvas_plane(
+    samples: Vec<u16>,
+    (coded_width, coded_height): (usize, usize),
+    (visible_width, visible_height): (usize, usize),
+) -> Av1Result<ReconstructedPlane> {
+    let coded_length = coded_width
+        .checked_mul(coded_height)
+        .ok_or_else(|| malformed("coded canvas plane size overflows usize"))?;
+    if samples.len() != coded_length
+        || visible_width == 0
+        || visible_height == 0
+        || visible_width > coded_width
+        || visible_height > coded_height
+    {
+        return Err(malformed("canvas crop has an invalid extent"));
+    }
+    if coded_width == visible_width && coded_height == visible_height {
+        return Ok(ReconstructedPlane { samples });
+    }
+    let mut visible = allocate_zeroed(
+        (visible_width, visible_height),
+        "visible reconstructed plane",
+    )?;
+    for row in 0..visible_height {
+        let source_start = row
+            .checked_mul(coded_width)
+            .ok_or_else(|| malformed("canvas crop source offset overflows"))?;
+        let source_end = source_start
+            .checked_add(visible_width)
+            .ok_or_else(|| malformed("canvas crop source end overflows"))?;
+        let destination_start = row
+            .checked_mul(visible_width)
+            .ok_or_else(|| malformed("canvas crop destination offset overflows"))?;
+        let destination_end = destination_start
+            .checked_add(visible_width)
+            .ok_or_else(|| malformed("canvas crop destination end overflows"))?;
+        visible[destination_start..destination_end]
+            .copy_from_slice(&samples[source_start..source_end]);
+    }
+    Ok(ReconstructedPlane { samples: visible })
 }
 
 struct CellGeometry {
@@ -1052,6 +2321,14 @@ fn rectangles_overlap(
         && second_x < first_end_x
         && first_y < second_end_y
         && second_y < first_end_y
+}
+
+fn clone_plane(source: &[u16], label: &str) -> Av1Result<Vec<u16>> {
+    let mut copy = Vec::new();
+    copy.try_reserve_exact(source.len())
+        .map_err(|_| CodecError::Dimensions(format!("unable to allocate {label}")))?;
+    copy.extend_from_slice(source);
+    Ok(copy)
 }
 
 fn allocate_zeroed<T: Clone + Default>(

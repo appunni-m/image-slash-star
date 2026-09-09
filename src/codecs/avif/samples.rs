@@ -4,12 +4,12 @@ use std::num::NonZeroU32;
 
 use crate::codecs::{CodecError, CodecResult};
 use crate::types::{
-    AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture, AvifColorProperties,
-    AvifContentLightLevel, AvifFileTypeProperties, AvifGridProperties, AvifItemCodecProperties,
-    AvifItemColorProperties, AvifItemExtent, AvifItemIccProfile, AvifItemLocation,
-    AvifItemLocationSource, AvifItemPlaneProperties, AvifItemProperty, AvifItemRelationship,
-    AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio, AvifRotation,
-    AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
+    AnimationLoop, AvifAuxiliaryRelationship, AvifChromaSamplePosition, AvifCleanAperture,
+    AvifColorProperties, AvifContentLightLevel, AvifFileTypeProperties, AvifGridProperties,
+    AvifItemCodecProperties, AvifItemColorProperties, AvifItemExtent, AvifItemIccProfile,
+    AvifItemLocation, AvifItemLocationSource, AvifItemPlaneProperties, AvifItemProperty,
+    AvifItemRelationship, AvifMasteringDisplayColorVolume, AvifMirrorAxis, AvifPixelAspectRatio,
+    AvifRotation, AvifTransformProperties, OpaqueMetadata, RawIccProfile, SourceColor,
 };
 
 const MAX_BOXES: usize = 4_096;
@@ -1683,6 +1683,7 @@ pub(super) struct SequencePayload {
     pub(super) color: EncodedPlane,
     pub(super) alpha: Option<EncodedPlane>,
     pub(super) timescale: NonZeroU32,
+    pub(super) loop_count: AnimationLoop,
 }
 
 pub(super) struct ExtractedAvif<'input> {
@@ -1867,13 +1868,34 @@ struct SampleTable {
     descriptions: Vec<SampleDescription>,
 }
 
-#[derive(Default)]
 struct Track {
     id: u32,
     handler: FourCc,
     aux_for_id: Option<u32>,
     timescale: Option<NonZeroU32>,
+    track_duration: u64,
+    repetition: AnimationLoop,
     table: Option<SampleTable>,
+}
+
+impl Default for Track {
+    fn default() -> Self {
+        Self {
+            id: 0,
+            handler: [0; 4],
+            aux_for_id: None,
+            timescale: None,
+            track_duration: 0,
+            repetition: AnimationLoop::Unspecified,
+            table: None,
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct EditList {
+    repeating: bool,
+    segment_duration: u64,
 }
 
 #[derive(Default)]
@@ -1904,6 +1926,8 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
     let mut tkhd_seen = false;
     let mut mdia_seen = false;
     let mut tref_seen = false;
+    let mut edit_list = None;
+    let mut edts_seen = false;
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match child.kind {
             kind if kind == *b"tkhd" => {
@@ -1911,7 +1935,9 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
                     return Err(parse_failure!());
                 }
                 tkhd_seen = true;
-                track.id = parse_tkhd(input, child.payload)?;
+                let (id, duration) = parse_tkhd(input, child.payload)?;
+                track.id = id;
+                track.track_duration = duration;
             }
             kind if kind == *b"mdia" => {
                 if mdia_seen {
@@ -1927,30 +1953,141 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
                 tref_seen = true;
                 track.aux_for_id = parse_tref(input, child.payload, budget)?;
             }
+            kind if kind == *b"edts" => {
+                if edts_seen {
+                    return Err(parse_failure!());
+                }
+                edts_seen = true;
+                edit_list = Some(parse_edit_box(input, child.payload, budget)?);
+            }
             _ => {}
         }
     }
     if !tkhd_seen || !mdia_seen {
         return Err(parse_failure!());
     }
+    track.repetition = match edit_list {
+        None => AnimationLoop::Unspecified,
+        Some(edit) if !edit.repeating => AnimationLoop::Finite { total_plays: 1 },
+        Some(_edit) if track.track_duration == u64::MAX => AnimationLoop::Infinite,
+        Some(_edit) if track.track_duration == 0 => return Err(parse_failure!()),
+        Some(edit) => {
+            let quotient = track
+                .track_duration
+                .checked_div(edit.segment_duration)
+                .ok_or_else(|| parse_failure!())?;
+            let plays = quotient
+                .checked_add(u64::from(
+                    !track.track_duration.is_multiple_of(edit.segment_duration),
+                ))
+                .ok_or_else(|| {
+                    CodecError::NotImplemented(
+                        "AVIF repetition count overflows the public sequence limit".to_owned(),
+                    )
+                })?;
+            AnimationLoop::Finite {
+                total_plays: u32::try_from(plays).map_err(|_| {
+                    CodecError::NotImplemented(
+                        "AVIF repetition count exceeds the public sequence limit".to_owned(),
+                    )
+                })?,
+            }
+        }
+    };
     Ok(track)
 }
 
-fn parse_tkhd(input: &[u8], payload: ByteSpan) -> ParseResult<u32> {
+fn parse_tkhd(input: &[u8], payload: ByteSpan) -> ParseResult<(u32, u64)> {
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
-    match version {
-        0 => reader.skip(8)?,
-        1 => reader.skip(16)?,
+    let (track_id, duration) = match version {
+        0 => {
+            reader.skip(8)?;
+            let track_id = reader.u32()?;
+            reader.skip(4)?;
+            let duration = reader.u32()?;
+            let duration = if duration == u32::MAX {
+                u64::MAX
+            } else {
+                u64::from(duration)
+            };
+            (track_id, duration)
+        }
+        1 => {
+            reader.skip(16)?;
+            let track_id = reader.u32()?;
+            reader.skip(4)?;
+            let duration = reader.u64()?;
+            (track_id, duration)
+        }
         _ => return Err(parse_failure!()),
-    }
-    let track_id = reader.u32()?;
+    };
     if track_id == 0 {
         return Err(parse_failure!());
     }
-    Ok(track_id)
+    Ok((track_id, duration))
 }
 
+fn parse_edit_box(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<EditList> {
+    let mut reader = Reader::new(input, payload);
+    let mut edit_list = None;
+    while let Some(child) = next_box(&mut reader, false, budget)? {
+        if child.kind == *b"elst" {
+            if edit_list.is_some() {
+                return Err(parse_failure!());
+            }
+            edit_list = Some(parse_edit_list_box(input, child.payload)?);
+        }
+    }
+    edit_list.ok_or_else(|| parse_failure!())
+}
+
+fn parse_edit_list_box(input: &[u8], payload: ByteSpan) -> ParseResult<EditList> {
+    let mut reader = Reader::new(input, payload);
+    let (version, flags) = parse_full_box(&mut reader)?;
+    if flags & !1 != 0 {
+        return Err(CodecError::NotImplemented(
+            "AVIF edit-list flags outside the bounded repetition contract".to_owned(),
+        ));
+    }
+    let entry_count = reader.u32()?;
+    if entry_count != 1 {
+        return Err(CodecError::NotImplemented(
+            "AVIF edit lists with multiple entries are not supported".to_owned(),
+        ));
+    }
+    let segment_duration = match version {
+        0 => u64::from(reader.u32()?),
+        1 => reader.u64()?,
+        _ => {
+            return Err(CodecError::NotImplemented(
+                "AVIF edit-list version is not supported".to_owned(),
+            ));
+        }
+    };
+    let media_time = match version {
+        0 => i64::from(i32::from_be_bytes(reader.u32()?.to_be_bytes())),
+        1 => i64::from_be_bytes(reader.u64()?.to_be_bytes()),
+        _ => unreachable!(),
+    };
+    let media_rate_integer = i32::from(i16::from_be_bytes(reader.u16()?.to_be_bytes()));
+    let media_rate_fraction = i32::from(i16::from_be_bytes(reader.u16()?.to_be_bytes()));
+    if segment_duration == 0 {
+        return Err(parse_failure!());
+    }
+    if media_time != 0 || media_rate_integer != 1 || media_rate_fraction != 0 {
+        return Err(CodecError::NotImplemented(
+            "AVIF edit-list media timing is outside the bounded contract".to_owned(),
+        ));
+    }
+    if !reader.is_empty() {
+        return Err(parse_failure!());
+    }
+    Ok(EditList {
+        repeating: flags & 1 != 0,
+        segment_duration,
+    })
+}
 fn parse_tref(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<Option<u32>> {
     let mut reader = Reader::new(input, payload);
     let mut aux_for = None;
@@ -2313,24 +2450,46 @@ fn parse_sample_description(
     })
 }
 
-fn duration_at(timings: &[TimeToSample], sample_index: usize) -> u32 {
-    let Some(last) = timings.last() else {
-        return 1;
-    };
-    let mut maximum = 0_u64;
+/// Prove that a track's decode-time table supplies one positive duration for
+/// every sample. `stts` is optional for still-image item tables, but a movie
+/// track must not silently invent a duration when the table is absent or
+/// under-filled. Keep this proof local to `track_plane`, which is used only by
+/// sequence tracks.
+fn validate_track_timings(table: &SampleTable) -> ParseResult<()> {
+    if table.timings.is_empty() {
+        return Err(parse_failure!());
+    }
+    let mut covered = 0_usize;
+    for timing in &table.timings {
+        if timing.sample_count == 0 || timing.sample_delta == 0 {
+            return Err(parse_failure!());
+        }
+        covered = covered
+            .checked_add(usize::try_from(timing.sample_count).map_err(|_| parse_failure!())?)
+            .ok_or_else(|| parse_failure!())?;
+    }
+    if covered != table.sample_sizes.len() {
+        return Err(parse_failure!());
+    }
+    Ok(())
+}
+
+fn duration_at(timings: &[TimeToSample], sample_index: usize) -> Option<u32> {
+    let mut covered = 0_usize;
     for timing in timings {
-        maximum = maximum.saturating_add(u64::from(timing.sample_count));
-        if (sample_index as u64) < maximum {
-            return timing.sample_delta;
+        covered = covered.checked_add(usize::try_from(timing.sample_count).ok()?)?;
+        if sample_index < covered {
+            return Some(timing.sample_delta);
         }
     }
-    last.sample_delta
+    None
 }
 
 // ✅ VERIFIED: libavif 1.4.1 read.c:520-607. Chunk mappings expand in
 // declaration order, and the first sample is sync even without stss.
 fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
     let table = track.table.as_ref().ok_or_else(|| parse_failure!())?;
+    validate_track_timings(table)?;
     let mut samples = Vec::with_capacity(table.sample_sizes.len());
     let mut sample_index = 0_usize;
     let mut mapping_index = 0_usize;
@@ -2373,7 +2532,8 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
                 spans: vec![span],
                 config,
                 sync: sample_index == 0 || table.sync_samples.contains(&sample_number),
-                duration: duration_at(&table.timings, sample_index),
+                duration: duration_at(&table.timings, sample_index)
+                    .ok_or_else(|| parse_failure!())?,
             });
             sample_offset = sample_offset.saturating_add(u64::from(size));
             sample_index = sample_index.saturating_add(1);
@@ -2432,6 +2592,7 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
         color,
         alpha,
         timescale,
+        loop_count: color_track.repetition,
     })
 }
 
@@ -2779,7 +2940,10 @@ fn coverage_assert_sample(
 
 #[cfg(coverage)]
 fn coverage_fixture_contracts() {
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
+    let baseline = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/baseline.avif"
+    ));
     let baseline_payload = extract_inner(baseline).unwrap();
     let baseline_still = baseline_payload.still.as_ref().unwrap();
     coverage_assert_sample(
@@ -2794,7 +2958,10 @@ fn coverage_fixture_contracts() {
 
     // A complete avis sequence followed by unparseable bytes exercises the
     // has_avis trailing-tolerance branch of the top-level box loop.
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/animated.avif"
+    ));
     let mut animated_trailing = animated.to_vec();
     animated_trailing.extend_from_slice(b"garbage");
     let animated_payload =
@@ -2873,7 +3040,10 @@ fn coverage_fixture_contracts() {
     let _ = append_top_level_box(vec![9, 0, 0, 0, b'm', b'e', b't', b'a'], b"meta");
     let _ = append_top_level_box(baseline.to_vec(), b"XXXX");
 
-    let alpha = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
+    let alpha = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/alpha.avif"
+    ));
     let alpha_payload = extract_inner(alpha).unwrap();
     let alpha_still = alpha_payload.still.as_ref().unwrap();
     coverage_assert_sample(
@@ -2893,7 +3063,10 @@ fn coverage_fixture_contracts() {
         1,
     );
 
-    let grid = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+    let grid = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/grid.avif"
+    ));
     let grid_payload = extract_inner(grid).unwrap();
     let grid_still = grid_payload.still.as_ref().unwrap();
     for (sample, expected) in grid_still
@@ -2915,7 +3088,10 @@ fn coverage_fixture_contracts() {
         coverage_assert_sample(grid, sample, expected, &[0x81, 0x00, 0x1c, 0x00], true, 1);
     }
 
-    let hdr = include_bytes!("../../../tests/fixtures/input/images/avif/hdr.avif");
+    let hdr = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/hdr.avif"
+    ));
     let hdr_payload = extract_inner(hdr).unwrap();
     coverage_assert_sample(
         hdr,
@@ -2926,7 +3102,10 @@ fn coverage_fixture_contracts() {
         1,
     );
 
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/animated.avif"
+    ));
     let animated_payload = extract_inner(animated).unwrap();
     coverage_assert_sample(
         animated,
@@ -2956,7 +3135,10 @@ fn coverage_fixture_contracts() {
     }
     assert!(animated_sequence.alpha.is_none());
 
-    let high_bit = include_bytes!("../../../tests/fixtures/input/images/avif/10bit.avif");
+    let high_bit = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/10bit.avif"
+    ));
     let high_bit_payload = extract_inner(high_bit).unwrap();
     let high_bit_still = high_bit_payload.still.as_ref().unwrap();
     coverage_assert_sample(
@@ -3306,6 +3488,8 @@ fn coverage_track(
         handler,
         aux_for_id,
         timescale: NonZeroU32::new(timescale),
+        track_duration: 0,
+        repetition: AnimationLoop::Unspecified,
         table: Some(SampleTable {
             chunk_offsets: vec![0],
             mappings: vec![SampleToChunk {
@@ -3329,7 +3513,10 @@ fn coverage_track(
 
 #[cfg(coverage)]
 fn coverage_parser_truncations() {
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
+    let baseline = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/baseline.avif"
+    ));
     for end in 8..=32 {
         let _ = parse_ftyp(baseline, ByteSpan { start: 8, end });
     }
@@ -3400,7 +3587,10 @@ fn coverage_parser_truncations() {
         );
     }
 
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let animated = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/animated.avif"
+    ));
     for end in 294..=1015 {
         let _ = parse_movie(
             animated,
@@ -3599,8 +3789,14 @@ fn coverage_structural_states() {
     let _ = next_box(&mut reader, true, &mut Budget::default());
     let _ = parse_ftyp(&[0; 8], ByteSpan { start: 0, end: 12 });
 
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let baseline = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/baseline.avif"
+    ));
+    let animated = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/animated.avif"
+    ));
     let meta_payload = &baseline[40..274];
     for duplicate in [
         &baseline[44..84],
@@ -4401,6 +4597,7 @@ fn coverage_structural_states() {
             color: coverage_plane(&[(14, 16)]),
             alpha: Some(coverage_plane(&[(16, 18)])),
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
         consumed: 0,
         retained_boxes: Vec::new(),
@@ -4873,6 +5070,7 @@ fn coverage_structural_states() {
             },
             alpha: None,
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = sequence_only.validate();
@@ -4902,6 +5100,7 @@ fn coverage_structural_states() {
             },
             alpha: None,
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = invalid_sequence_color.validate();
@@ -4938,6 +5137,7 @@ fn coverage_structural_states() {
                 samples: Vec::new(),
             }),
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = invalid_sequence_alpha.validate();
@@ -4987,6 +5187,7 @@ fn coverage_structural_states() {
                 ],
             }),
             timescale: NonZeroU32::new(1).unwrap(),
+            loop_count: AnimationLoop::Unspecified,
         }),
     };
     let _ = invalid_sequence.validate();
@@ -5010,11 +5211,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     coverage_parser_truncations();
     coverage_structural_states();
 
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
-    let alpha = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
-    let grid = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
-    let high_bit = include_bytes!("../../../tests/fixtures/input/images/avif/10bit.avif");
+    let baseline = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/baseline.avif"
+    ));
+    let alpha = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/alpha.avif"
+    ));
+    let grid = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/grid.avif"
+    ));
+    let animated = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/animated.avif"
+    ));
+    let high_bit = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/test_support/fixtures/input/images/avif/10bit.avif"
+    ));
     coverage_prefixes(baseline);
     coverage_prefixes(alpha);
     coverage_prefixes(grid);

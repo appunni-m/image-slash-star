@@ -21,6 +21,26 @@ pub(crate) struct SampleDepth {
 }
 
 impl SampleDepth {
+    /// Validated eight-bit AV1 sample domain.
+    pub(crate) const EIGHT: Self = Self {
+        bits: 8,
+        maximum: 255,
+    };
+
+    /// Validated ten-bit AV1 sample domain.
+    #[allow(dead_code, reason = "reserved for high-bit-depth AVIF reconstruction")]
+    pub(crate) const TEN: Self = Self {
+        bits: 10,
+        maximum: 1_023,
+    };
+
+    /// Validated twelve-bit AV1 sample domain.
+    #[allow(dead_code, reason = "reserved for high-bit-depth AVIF reconstruction")]
+    pub(crate) const TWELVE: Self = Self {
+        bits: 12,
+        maximum: 4_095,
+    };
+
     /// Construct a depth supported by the checked AVIF sample domain.
     pub(crate) fn new(bits: u32) -> Option<Self> {
         if !matches!(bits, 8 | 10 | 12) {
@@ -58,9 +78,29 @@ impl SampleDepth {
         self.midpoint().saturating_add(1)
     }
 
+    /// Greatest positive dequantized coefficient admitted by AV1.
+    ///
+    /// The signed coefficient domain has `bits + 8` total bits. Its negative
+    /// endpoint therefore has one greater magnitude than its positive endpoint.
+    pub(crate) const fn coefficient_positive_max(self) -> u32 {
+        (1_u32 << self.bits.saturating_add(7)).saturating_sub(1)
+    }
+
+    /// Greatest magnitude admitted for a negative dequantized coefficient.
+    pub(crate) const fn coefficient_negative_magnitude_max(self) -> u32 {
+        1_u32 << self.bits.saturating_add(7)
+    }
+
     /// Validate one reconstructed sample against this depth's nominal range.
     pub(crate) fn validate(self, value: u16) -> Option<u16> {
         (value <= self.maximum()).then_some(value)
+    }
+
+    /// Clip one signed reconstruction result to this nominal sample domain.
+    #[allow(dead_code, reason = "reserved for high-bit-depth AVIF reconstruction")]
+    pub(crate) fn clip_i32(self, value: i32) -> u16 {
+        let clipped = value.clamp(0, i32::from(self.maximum()));
+        u16::try_from(clipped).unwrap_or(self.maximum())
     }
 
     /// Truncate one validated sample to the crate's 8-bit transfer boundary.

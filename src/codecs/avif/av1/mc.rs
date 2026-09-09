@@ -1,0 +1,2493 @@
+//! Scalar-authoritative, safely vectorized AV1 motion compensation.
+//!
+//! The checked public boundary operates on immutable retained-plane views and
+//! one fallibly allocated tile scratch arena. Integer/edge/scaled predicates
+//! are shared by scalar and SIMD paths so optimization cannot change syntax
+//! or rounding behavior.
+//!
+//! The interpolation tables and arithmetic are an altered safe-Rust
+//! translation of the pinned dav1d/libaom AV1 reference material. The
+//! applicable BSD-2-Clause and patent notices are retained in `NOTICE.md`,
+//! `PATENTS`, and `third_party/`.
+
+#![allow(
+    dead_code,
+    reason = "motion-compensation kernels are wired incrementally by the inter decoder"
+)]
+
+use bytemuck::cast;
+use wide::{i16x8, i32x8, u16x8};
+
+use super::motion::{InterpolationFilter, MotionVector, PreparedGlobalWarp, ScaleFactors};
+use super::sample_depth::SampleDepth;
+use super::surface::PlaneView;
+use super::{Av1Result, malformed};
+use crate::codecs::CodecError;
+
+const MAX_BLOCK_EDGE: usize = 128;
+const MAX_BLOCK_SAMPLES: usize = MAX_BLOCK_EDGE * MAX_BLOCK_EDGE;
+const HORIZONTAL_ROWS: usize = MAX_BLOCK_EDGE + 7;
+const HORIZONTAL_SAMPLES: usize = MAX_BLOCK_EDGE * HORIZONTAL_ROWS;
+
+/// One tile's reusable motion-compensation storage.
+pub(super) struct MotionScratch {
+    compound: [Vec<i16>; 2],
+    predictor: Vec<u16>,
+    mask: Vec<u8>,
+    horizontal: Vec<i16>,
+    edge: Vec<u16>,
+    warp: Vec<i16>,
+}
+
+impl MotionScratch {
+    pub(super) fn new() -> Av1Result<Self> {
+        Ok(Self {
+            compound: [
+                allocate_zeroed(MAX_BLOCK_SAMPLES, "first compound predictor")?,
+                allocate_zeroed(MAX_BLOCK_SAMPLES, "second compound predictor")?,
+            ],
+            predictor: allocate_zeroed(MAX_BLOCK_SAMPLES, "motion predictor")?,
+            mask: allocate_zeroed(MAX_BLOCK_SAMPLES, "compound mask")?,
+            horizontal: allocate_zeroed(HORIZONTAL_SAMPLES, "motion horizontal ring")?,
+            edge: allocate_zeroed(320, "motion edge row")?,
+            warp: allocate_zeroed(15 * 8, "motion warp intermediate")?,
+        })
+    }
+
+    fn length(width: usize, height: usize) -> Av1Result<usize> {
+        if width == 0 || height == 0 || width > MAX_BLOCK_EDGE || height > MAX_BLOCK_EDGE {
+            return Err(malformed("motion predictor has invalid block geometry"));
+        }
+        width
+            .checked_mul(height)
+            .ok_or_else(|| malformed("motion predictor size overflows"))
+    }
+
+    pub(super) fn predictor(&self, width: usize, height: usize) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        self.predictor
+            .get(..length)
+            .ok_or_else(|| malformed("motion predictor exceeds scratch"))
+    }
+
+    pub(super) fn predictor_mut(&mut self, width: usize, height: usize) -> Av1Result<&mut [u16]> {
+        let length = Self::length(width, height)?;
+        self.predictor
+            .get_mut(..length)
+            .ok_or_else(|| malformed("motion predictor exceeds scratch"))
+    }
+
+    pub(super) fn compound(&self, index: usize, length: usize) -> Av1Result<&[i16]> {
+        self.compound
+            .get(index)
+            .and_then(|values| values.get(..length))
+            .ok_or_else(|| malformed("compound predictor exceeds scratch"))
+    }
+
+    pub(super) fn mask(&self, length: usize) -> Av1Result<&[u8]> {
+        self.mask
+            .get(..length)
+            .ok_or_else(|| malformed("compound mask exceeds scratch"))
+    }
+
+    pub(super) fn put_unscaled(
+        &mut self,
+        reference: PlaneView<'_>,
+        request: PredictionRequest,
+    ) -> Av1Result<&[u16]> {
+        let geometry = request.geometry()?;
+        let length = Self::length(geometry.width, geometry.height)?;
+        let output = self
+            .predictor
+            .get_mut(..length)
+            .ok_or_else(|| malformed("motion predictor exceeds scratch"))?;
+        if let Some(warp) = request
+            .warp
+            .filter(|_| geometry.width >= 8 && geometry.height >= 8)
+        {
+            let warp_scratch = &mut self.warp;
+            put_warped_kernel(reference, request, geometry, warp, warp_scratch, output)?;
+        } else {
+            put_unscaled_kernel(reference, request, geometry, output)?;
+        }
+        Ok(output)
+    }
+
+    pub(super) fn prep_unscaled(
+        &mut self,
+        index: usize,
+        reference: PlaneView<'_>,
+        request: PredictionRequest,
+    ) -> Av1Result<&[i16]> {
+        let geometry = request.geometry()?;
+        let length = Self::length(geometry.width, geometry.height)?;
+        let output = self
+            .compound
+            .get_mut(index)
+            .and_then(|values| values.get_mut(..length))
+            .ok_or_else(|| malformed("compound predictor exceeds scratch"))?;
+        if let Some(warp) = request
+            .warp
+            .filter(|_| geometry.width >= 8 && geometry.height >= 8)
+        {
+            let warp_scratch = &mut self.warp;
+            prep_warped_kernel(reference, request, geometry, warp, warp_scratch, output)?;
+        } else {
+            prep_unscaled_kernel(reference, request, geometry, output)?;
+        }
+        Ok(output)
+    }
+
+    pub(super) fn put_scaled(
+        &mut self,
+        reference: PlaneView<'_>,
+        request: PredictionRequest,
+        scale: ScaleFactors,
+    ) -> Av1Result<&[u16]> {
+        let geometry = request.geometry()?;
+        let length = Self::length(geometry.width, geometry.height)?;
+        let output = self
+            .predictor
+            .get_mut(..length)
+            .ok_or_else(|| malformed("motion predictor exceeds scratch"))?;
+        put_scaled_kernel(reference, request, geometry, scale, output)?;
+        Ok(output)
+    }
+
+    pub(super) fn prep_scaled(
+        &mut self,
+        index: usize,
+        reference: PlaneView<'_>,
+        request: PredictionRequest,
+        scale: ScaleFactors,
+    ) -> Av1Result<&[i16]> {
+        let geometry = request.geometry()?;
+        let length = Self::length(geometry.width, geometry.height)?;
+        let output = self
+            .compound
+            .get_mut(index)
+            .and_then(|values| values.get_mut(..length))
+            .ok_or_else(|| malformed("compound predictor exceeds scratch"))?;
+        prep_scaled_kernel(reference, request, geometry, scale, output)?;
+        Ok(output)
+    }
+
+    pub(super) fn blend_average(
+        &mut self,
+        width: usize,
+        height: usize,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            None,
+            CompoundBlend::Average,
+            depth,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    pub(super) fn blend_distance(
+        &mut self,
+        width: usize,
+        height: usize,
+        weight: u8,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        if weight > 16 {
+            return Err(malformed("distance compound weight exceeds sixteen"));
+        }
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            None,
+            CompoundBlend::Distance(weight),
+            depth,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    pub(super) fn blend_masked(
+        &mut self,
+        width: usize,
+        height: usize,
+        mask: &[u8],
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        let mask = mask
+            .get(..length)
+            .ok_or_else(|| malformed("compound mask is shorter than the block"))?;
+        if mask.iter().any(|&value| value > 64) {
+            return Err(malformed("compound mask sample exceeds sixty-four"));
+        }
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            Some(mask),
+            CompoundBlend::Masked { inverted: false },
+            depth,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    /// Blend chroma predictors with the luma-derived difference mask retained
+    /// in this tile's scratch arena. AV1 derives that mask once from the full
+    /// luma predictors and reuses its layout-reduced form for both chroma
+    /// planes; recomputing it from a chroma predictor would change the coded
+    /// result.
+    pub(super) fn blend_retained_difference_mask(
+        &mut self,
+        width: usize,
+        height: usize,
+        inverted: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        let mask = self
+            .mask
+            .get(..length)
+            .ok_or_else(|| malformed("retained difference mask is shorter than chroma"))?;
+        if mask.iter().any(|&value| value > 64) {
+            return Err(malformed(
+                "retained difference mask sample exceeds sixty-four",
+            ));
+        }
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            Some(mask),
+            CompoundBlend::Masked { inverted },
+            depth,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    pub(super) fn blend_difference(
+        &mut self,
+        width: usize,
+        height: usize,
+        subsampling_x: bool,
+        subsampling_y: bool,
+        inverted: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        difference_mask_and_blend(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            &mut self.mask,
+            width,
+            height,
+            subsampling_x,
+            subsampling_y,
+            inverted,
+            depth,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    /// Construct and blend the canonical luma wedge mask. The mask is kept in
+    /// canonical orientation so the entropy sign can be applied consistently
+    /// by the shared vectorized compound kernel and by the later chroma pass.
+    pub(super) fn blend_wedge(
+        &mut self,
+        width: usize,
+        height: usize,
+        index: u8,
+        inverted: bool,
+        subsampling: [bool; 2],
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let [subsampling_x, subsampling_y] = subsampling;
+        let length = Self::length(width, height)?;
+        fill_wedge_mask(&mut self.mask, width, height, index)?;
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            Some(&self.mask[..length]),
+            CompoundBlend::Masked { inverted },
+            depth,
+        )?;
+        reduce_wedge_mask(
+            &mut self.mask,
+            width,
+            height,
+            subsampling_x,
+            subsampling_y,
+            inverted,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    /// Blend chroma predictors with the wedge mask reduced from luma. The
+    /// retained mask is shared by U and V so both planes observe identical
+    /// layout and sign-dependent rounding.
+    pub(super) fn blend_retained_wedge_mask(
+        &mut self,
+        width: usize,
+        height: usize,
+        inverted: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<&[u16]> {
+        let length = Self::length(width, height)?;
+        let mask = self
+            .mask
+            .get(..length)
+            .ok_or_else(|| malformed("retained wedge mask is shorter than chroma"))?;
+        if mask.iter().any(|&value| value > 64) {
+            return Err(malformed("retained wedge mask sample exceeds sixty-four"));
+        }
+        blend_compound(
+            &self.compound[0][..length],
+            &self.compound[1][..length],
+            &mut self.predictor[..length],
+            Some(mask),
+            CompoundBlend::Masked { inverted },
+            depth,
+        )?;
+        Ok(&self.predictor[..length])
+    }
+
+    /// Blend a single-reference inter predictor with the selected intra
+    /// predictor. Inter-intra uses sample-domain u16 values and a direct
+    /// 6-bit round, unlike compound blending which first removes the
+    /// intermediate MC preparation bias.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "inter-intra blending keeps plane, luma-mask, sampling, and depth facts explicit"
+    )]
+    pub(super) fn blend_inter_intra_in_place(
+        &mut self,
+        inter: &mut [u16],
+        width: usize,
+        height: usize,
+        mode: u8,
+        wedge_index: Option<u8>,
+        plane: usize,
+        luma_width: usize,
+        luma_height: usize,
+        subsampling_x: bool,
+        subsampling_y: bool,
+        depth: SampleDepth,
+    ) -> Av1Result<()> {
+        let length = Self::length(width, height)?;
+        (inter.len() == length)
+            .then_some(())
+            .ok_or_else(|| malformed("inter-intra predictor length is invalid"))?;
+        let intra = self
+            .predictor
+            .get(..length)
+            .ok_or_else(|| malformed("inter-intra predictor exceeds scratch"))?;
+        if let Some(index) = wedge_index {
+            if plane == 0 {
+                (width == luma_width && height == luma_height)
+                    .then_some(())
+                    .ok_or_else(|| malformed("luma inter-intra wedge geometry differs"))?;
+                fill_wedge_mask(&mut self.mask, width, height, index)?;
+                blend_inter_intra_samples(inter, intra, &self.mask[..length], depth)?;
+                reduce_wedge_mask(
+                    &mut self.mask,
+                    width,
+                    height,
+                    subsampling_x,
+                    subsampling_y,
+                    false,
+                )?;
+            } else {
+                let mask = self
+                    .mask
+                    .get(..length)
+                    .ok_or_else(|| malformed("retained inter-intra wedge mask is shorter"))?;
+                blend_inter_intra_samples(inter, intra, mask, depth)?;
+            }
+        } else {
+            fill_inter_intra_mask(&mut self.mask, width, height, mode)?;
+            blend_inter_intra_samples(inter, intra, &self.mask[..length], depth)?;
+        }
+        Ok(())
+    }
+
+    pub(super) fn retained_capacity(&self) -> usize {
+        self.horizontal
+            .len()
+            .saturating_add(self.edge.len())
+            .saturating_add(self.warp.len())
+    }
+}
+
+// The wedge codebooks and transition borders below are an altered safe-Rust
+// translation of the pinned dav1d/libaom AV1 reference tables. The repository
+// retains their BSD-2-Clause and patent notices in NOTICE.md, PATENTS, and
+// third_party/.
+const WEDGE_MASTER_EVEN: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4,
+    11, 27, 46, 58, 62, 63, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64,
+];
+const WEDGE_MASTER_ODD: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2,
+    6, 18, 37, 53, 60, 63, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64,
+];
+const WEDGE_MASTER_VERTICAL: [u8; 64] = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7,
+    21, 43, 57, 62, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64,
+    64, 64, 64, 64, 64, 64, 64, 64,
+];
+
+const WEDGE_DIRECTION_OBLIQUE27: u8 = 0;
+const WEDGE_DIRECTION_OBLIQUE63: u8 = 1;
+const WEDGE_DIRECTION_OBLIQUE117: u8 = 2;
+const WEDGE_DIRECTION_OBLIQUE153: u8 = 3;
+const WEDGE_DIRECTION_HORIZONTAL: u8 = 4;
+const WEDGE_DIRECTION_VERTICAL: u8 = 5;
+
+#[derive(Clone, Copy)]
+struct WedgeCode {
+    direction: u8,
+    x_offset: u8,
+    y_offset: u8,
+}
+
+impl WedgeCode {
+    const fn new(direction: u8, x_offset: u8, y_offset: u8) -> Self {
+        Self {
+            direction,
+            x_offset,
+            y_offset,
+        }
+    }
+}
+
+const WEDGE_CODEBOOK_HGTW: [WedgeCode; 16] = [
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 6, 4),
+];
+
+const WEDGE_CODEBOOK_HLTW: [WedgeCode; 16] = [
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 6, 4),
+];
+
+const WEDGE_CODEBOOK_HEQW: [WedgeCode; 16] = [
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 4),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_HORIZONTAL, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_VERTICAL, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE27, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 2),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE153, 4, 6),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE63, 6, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 2, 4),
+    WedgeCode::new(WEDGE_DIRECTION_OBLIQUE117, 6, 4),
+];
+
+fn wedge_sign_flips(width: usize, height: usize) -> Option<u16> {
+    Some(match (width, height) {
+        (32, 32) | (16, 16) | (8, 8) => 0x7bfb,
+        (32, 16) | (16, 32) | (16, 8) | (8, 16) => 0x7beb,
+        (32, 8) => 0x6beb,
+        (8, 32) => 0x7aeb,
+        _ => return None,
+    })
+}
+
+fn wedge_code(width: usize, height: usize, index: u8) -> Option<(WedgeCode, bool)> {
+    let codes = match (width, height) {
+        (8, 16) | (16, 32) | (8, 32) => &WEDGE_CODEBOOK_HGTW,
+        (16, 8) | (32, 16) | (32, 8) => &WEDGE_CODEBOOK_HLTW,
+        (8, 8) | (16, 16) | (32, 32) => &WEDGE_CODEBOOK_HEQW,
+        _ => return None,
+    };
+    let sign_flips = wedge_sign_flips(width, height)?;
+    let index = usize::from(index);
+    codes
+        .get(index)
+        .copied()
+        .map(|code| (code, (sign_flips >> index) & 1 != 0))
+}
+
+fn wedge_oblique63(row: usize, column: usize) -> u8 {
+    let shift = 16_usize.saturating_sub(row.div_ceil(2));
+    let source_index = column.saturating_sub(shift).min(63);
+    let source = if row & 1 == 0 {
+        &WEDGE_MASTER_EVEN
+    } else {
+        &WEDGE_MASTER_ODD
+    };
+    source[source_index]
+}
+
+fn wedge_master_value(direction: u8, inverse: bool, row: usize, column: usize) -> Av1Result<u8> {
+    let row = row.min(63);
+    let column = column.min(63);
+    let reversed_column = 63_usize
+        .checked_sub(column)
+        .ok_or_else(|| malformed("wedge master column exceeds sixty-three"))?;
+    let (value, base_inverse) = match direction {
+        WEDGE_DIRECTION_OBLIQUE27 => (wedge_oblique63(column, row), false),
+        WEDGE_DIRECTION_OBLIQUE63 => (wedge_oblique63(row, column), false),
+        WEDGE_DIRECTION_OBLIQUE117 => (wedge_oblique63(row, reversed_column), true),
+        WEDGE_DIRECTION_OBLIQUE153 => (wedge_oblique63(reversed_column, row), true),
+        WEDGE_DIRECTION_HORIZONTAL => (WEDGE_MASTER_VERTICAL[row], false),
+        WEDGE_DIRECTION_VERTICAL => (WEDGE_MASTER_VERTICAL[column], false),
+        _ => return Ok(32),
+    };
+    if inverse ^ base_inverse {
+        64_u8
+            .checked_sub(value)
+            .ok_or_else(|| malformed("wedge master value exceeds sixty-four"))
+    } else {
+        Ok(value)
+    }
+}
+
+fn fill_wedge_mask(mask: &mut [u8], width: usize, height: usize, index: u8) -> Av1Result<()> {
+    if width == 0 || height == 0 {
+        return Err(malformed("wedge mask has empty block geometry"));
+    }
+    let length = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("wedge mask size overflows"))?;
+    if mask.len() < length {
+        return Err(malformed("wedge mask exceeds scratch"));
+    }
+    let (code, sign_flip) = wedge_code(width, height, index)
+        .ok_or_else(|| malformed("wedge mask has an unsupported block geometry or index"))?;
+    let x_offset = width
+        .checked_mul(usize::from(code.x_offset))
+        .ok_or_else(|| malformed("wedge mask x offset overflows"))?
+        >> 3;
+    let y_offset = height
+        .checked_mul(usize::from(code.y_offset))
+        .ok_or_else(|| malformed("wedge mask y offset overflows"))?
+        >> 3;
+    let x_origin = 32_usize
+        .checked_sub(x_offset)
+        .ok_or_else(|| malformed("wedge mask x origin underflows"))?;
+    let y_origin = 32_usize
+        .checked_sub(y_offset)
+        .ok_or_else(|| malformed("wedge mask y origin underflows"))?;
+    for (y, row) in mask[..length].chunks_exact_mut(width).enumerate() {
+        let master_y = y_origin
+            .checked_add(y)
+            .ok_or_else(|| malformed("wedge mask y coordinate overflows"))?;
+        for (x, value) in row.iter_mut().enumerate() {
+            let master_x = x_origin
+                .checked_add(x)
+                .ok_or_else(|| malformed("wedge mask x coordinate overflows"))?;
+            *value = wedge_master_value(code.direction, sign_flip, master_y, master_x)?;
+        }
+    }
+    Ok(())
+}
+
+fn reduce_wedge_mask(
+    mask: &mut [u8],
+    width: usize,
+    height: usize,
+    subsampling_x: bool,
+    subsampling_y: bool,
+    inverted: bool,
+) -> Av1Result<()> {
+    if width == 0 || height == 0 {
+        return Err(malformed("wedge source mask has empty geometry"));
+    }
+    let source_length = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("wedge source mask size overflows"))?;
+    if mask.len() < source_length {
+        return Err(malformed("wedge source mask exceeds scratch"));
+    }
+    if !subsampling_x && !subsampling_y {
+        return Ok(());
+    }
+    let destination_width = if subsampling_x {
+        width.div_ceil(2)
+    } else {
+        width
+    };
+    let destination_height = if subsampling_y {
+        height.div_ceil(2)
+    } else {
+        height
+    };
+    let sign = u16::from(inverted);
+    for destination_y in 0..destination_height {
+        let source_y = destination_y
+            .checked_mul(if subsampling_y { 2 } else { 1 })
+            .ok_or_else(|| malformed("wedge mask source y overflows"))?;
+        let source_y_next = source_y.saturating_add(1).min(height.saturating_sub(1));
+        for destination_x in 0..destination_width {
+            let source_x = destination_x
+                .checked_mul(if subsampling_x { 2 } else { 1 })
+                .ok_or_else(|| malformed("wedge mask source x overflows"))?;
+            let source_x_next = source_x.saturating_add(1).min(width.saturating_sub(1));
+            let first = mask
+                .get(
+                    source_y
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x))
+                        .ok_or_else(|| malformed("wedge mask first sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask first sample is unavailable"))?;
+            let second = mask
+                .get(
+                    source_y
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x_next))
+                        .ok_or_else(|| malformed("wedge mask second sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask second sample is unavailable"))?;
+            let third = mask
+                .get(
+                    source_y_next
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x))
+                        .ok_or_else(|| malformed("wedge mask third sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask third sample is unavailable"))?;
+            let fourth = mask
+                .get(
+                    source_y_next
+                        .checked_mul(width)
+                        .and_then(|row| row.checked_add(source_x_next))
+                        .ok_or_else(|| malformed("wedge mask fourth sample overflows"))?,
+                )
+                .copied()
+                .ok_or_else(|| malformed("wedge mask fourth sample is unavailable"))?;
+            let reduced = match (subsampling_x, subsampling_y) {
+                (true, true) => {
+                    u16::from(first)
+                        .saturating_add(u16::from(second))
+                        .saturating_add(u16::from(third))
+                        .saturating_add(u16::from(fourth))
+                        .saturating_add(2)
+                        .saturating_sub(sign)
+                        >> 2
+                }
+                (true, false) => {
+                    u16::from(first)
+                        .saturating_add(u16::from(second))
+                        .saturating_add(1)
+                        .saturating_sub(sign)
+                        >> 1
+                }
+                (false, true) => {
+                    u16::from(first)
+                        .saturating_add(u16::from(third))
+                        .saturating_add(1)
+                        .saturating_sub(sign)
+                        >> 1
+                }
+                (false, false) => u16::from(first),
+            };
+            let destination = destination_y
+                .checked_mul(destination_width)
+                .and_then(|row| row.checked_add(destination_x))
+                .ok_or_else(|| malformed("wedge mask destination overflows"))?;
+            *mask
+                .get_mut(destination)
+                .ok_or_else(|| malformed("wedge mask destination is unavailable"))? =
+                u8::try_from(reduced).map_err(|_| malformed("reduced wedge mask exceeds u8"))?;
+        }
+    }
+    Ok(())
+}
+
+// The inter-intra weights below are an altered safe-Rust translation of the
+// pinned dav1d/libaom AV1 reference table. The repository retains their
+// BSD-2-Clause and patent notices in NOTICE.md, PATENTS, and third_party/.
+const INTER_INTRA_WEIGHTS: [u8; 32] = [
+    60, 52, 45, 39, 34, 30, 26, 22, 19, 17, 15, 13, 11, 10, 8, 7, 6, 6, 5, 4, 4, 3, 3, 2, 2, 2, 2,
+    1, 1, 1, 1, 1,
+];
+
+fn fill_inter_intra_mask(mask: &mut [u8], width: usize, height: usize, mode: u8) -> Av1Result<()> {
+    if !(0..=3).contains(&mode) {
+        return Err(malformed("inter-intra mode exceeds smooth"));
+    }
+    let length = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("inter-intra mask size overflows"))?;
+    if width == 0 || height == 0 || mask.len() < length {
+        return Err(malformed("inter-intra mask geometry is invalid"));
+    }
+    if !matches!(width, 4 | 8 | 16 | 32) || !matches!(height, 4 | 8 | 16 | 32) {
+        return Err(malformed("inter-intra mask has a non-normative geometry"));
+    }
+    let max_axis = width.max(height);
+    let step = 32_usize
+        .checked_div(max_axis)
+        .ok_or_else(|| malformed("inter-intra mask geometry is invalid"))?;
+    if mode == 0 {
+        mask[..length].fill(32);
+        return Ok(());
+    }
+    for (y, row) in mask[..length].chunks_exact_mut(width).enumerate() {
+        for (x, value) in row.iter_mut().enumerate() {
+            let coordinate = if mode == 1 {
+                y
+            } else if mode == 2 {
+                x
+            } else {
+                x.min(y)
+            };
+            let index = coordinate
+                .checked_mul(step)
+                .ok_or_else(|| malformed("inter-intra mask index overflows"))?;
+            *value = *INTER_INTRA_WEIGHTS
+                .get(index)
+                .ok_or_else(|| malformed("inter-intra mask index exceeds table"))?;
+        }
+    }
+    Ok(())
+}
+
+fn blend_sample_vector(current: [u16; 8], staged: [u16; 8], mask: [u8; 8]) -> i32x8 {
+    let current = i32x8::new(current.map(i32::from));
+    let staged = i32x8::new(staged.map(i32::from));
+    let mask = i32x8::new(mask.map(i32::from));
+    // Samples span 0..=65535 and masks span 0..=255 even before the callers'
+    // tighter AV1 checks. Thus 64-mask spans -191..=64 and both products
+    // have magnitude <= 65535 * 255. Their sum plus 32 has magnitude at most
+    // 33422882, well inside i32. wide exposes no checked lane operations.
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "u16 samples and u8 masks bound every SIMD intermediate to i32"
+    )]
+    let value = current * (i32x8::new([64; 8]) - mask) + staged * mask + i32x8::new([32; 8]);
+    value.unbounded_shr_scalar(6)
+}
+
+fn blend_sample(current: u16, staged: u16, mask: u8) -> Av1Result<i32> {
+    let mask = i32::from(mask);
+    let complement = 64_i32
+        .checked_sub(mask)
+        .ok_or_else(|| malformed("sample blend mask complement overflows"))?;
+    i32::from(current)
+        .checked_mul(complement)
+        .and_then(|value| value.checked_add(i32::from(staged).checked_mul(mask)?))
+        .and_then(|value| value.checked_add(32))
+        .map(|value| value >> 6)
+        .ok_or_else(|| malformed("sample blend arithmetic overflows"))
+}
+
+fn blend_inter_intra_samples(
+    inter: &mut [u16],
+    intra: &[u16],
+    mask: &[u8],
+    depth: SampleDepth,
+) -> Av1Result<()> {
+    let length = inter.len();
+    if intra.len() != length || mask.len() < length {
+        return Err(malformed(
+            "inter-intra blend buffers have different lengths",
+        ));
+    }
+    if mask[..length].iter().any(|&value| value > 64) {
+        return Err(malformed("inter-intra mask sample exceeds sixty-four"));
+    }
+    let maximum = i32::from(depth.maximum());
+    let (inter_vectors, inter_tail) = inter.as_chunks_mut::<8>();
+    let (intra_vectors, intra_tail) = intra.as_chunks::<8>();
+    let (mask_vectors, mask_tail) = mask[..length].as_chunks::<8>();
+    for ((inter, intra), mask) in inter_vectors
+        .iter_mut()
+        .zip(intra_vectors)
+        .zip(mask_vectors)
+    {
+        let value = blend_sample_vector(*inter, *intra, *mask);
+        inter.copy_from_slice(&narrow_samples(value, maximum));
+    }
+    for ((inter, intra), &mask) in inter_tail.iter_mut().zip(intra_tail).zip(mask_tail) {
+        let value = blend_sample(*inter, *intra, mask)?;
+        *inter = u16::try_from(value.clamp(0, maximum))
+            .map_err(|_| malformed("inter-intra sample exceeds sample depth"))?;
+    }
+    Ok(())
+}
+
+fn allocate_zeroed<T: Clone + Default>(length: usize, name: &'static str) -> Av1Result<Vec<T>> {
+    let mut values = Vec::new();
+    values
+        .try_reserve_exact(length)
+        .map_err(|_| CodecError::Dimensions(format!("unable to allocate AV1 {name} scratch")))?;
+    values.resize(length, T::default());
+    Ok(values)
+}
+
+/// Absolute current-frame geometry for one plane prediction.
+#[derive(Clone, Copy, Debug)]
+pub(super) struct PredictionRequest {
+    pub(super) block_x_b4: u32,
+    pub(super) block_y_b4: u32,
+    pub(super) width: u32,
+    pub(super) height: u32,
+    pub(super) subsampling_x: bool,
+    pub(super) subsampling_y: bool,
+    pub(super) motion: MotionVector,
+    /// Optional prepared affine motion. This carries either a frame-global
+    /// model or a causal block-local LOCALWARP model; scaled references and
+    /// sub-eight planes intentionally leave this set but fall back in the
+    /// kernel to ordinary center-MV interpolation.
+    pub(super) warp: Option<PreparedGlobalWarp>,
+    /// Horizontal then vertical filter.
+    pub(super) filters: [InterpolationFilter; 2],
+}
+
+#[derive(Clone, Copy)]
+struct PredictionGeometry {
+    origin_x: i64,
+    origin_y: i64,
+    source_x: i64,
+    source_y: i64,
+    phase_x: usize,
+    phase_y: usize,
+    width: usize,
+    height: usize,
+}
+
+impl PredictionRequest {
+    fn geometry(self) -> Av1Result<PredictionGeometry> {
+        let width = usize::try_from(self.width)
+            .map_err(|_| malformed("motion block width exceeds usize"))?;
+        let height = usize::try_from(self.height)
+            .map_err(|_| malformed("motion block height exceeds usize"))?;
+        MotionScratch::length(width, height)?;
+        let plane_step_x = 4_u32 >> u32::from(self.subsampling_x);
+        let plane_step_y = 4_u32 >> u32::from(self.subsampling_y);
+        let origin_x = i64::from(self.block_x_b4)
+            .checked_mul(i64::from(plane_step_x))
+            .ok_or_else(|| malformed("motion block x origin overflows"))?;
+        let origin_y = i64::from(self.block_y_b4)
+            .checked_mul(i64::from(plane_step_y))
+            .ok_or_else(|| malformed("motion block y origin overflows"))?;
+        let divisor_x = 8_i64 << u32::from(self.subsampling_x);
+        let divisor_y = 8_i64 << u32::from(self.subsampling_y);
+        let motion_x = i64::from(self.motion.x);
+        let motion_y = i64::from(self.motion.y);
+        let source_x = origin_x
+            .checked_add(motion_x.div_euclid(divisor_x))
+            .ok_or_else(|| malformed("motion source x overflows"))?;
+        let source_y = origin_y
+            .checked_add(motion_y.div_euclid(divisor_y))
+            .ok_or_else(|| malformed("motion source y overflows"))?;
+        let phase_x = usize::try_from(if self.subsampling_x {
+            motion_x.rem_euclid(16)
+        } else {
+            motion_x
+                .rem_euclid(8)
+                .checked_mul(2)
+                .ok_or_else(|| malformed("horizontal subpixel phase overflows"))?
+        })
+        .map_err(|_| malformed("horizontal subpixel phase exceeds usize"))?;
+        let phase_y = usize::try_from(if self.subsampling_y {
+            motion_y.rem_euclid(16)
+        } else {
+            motion_y
+                .rem_euclid(8)
+                .checked_mul(2)
+                .ok_or_else(|| malformed("vertical subpixel phase overflows"))?
+        })
+        .map_err(|_| malformed("vertical subpixel phase exceeds usize"))?;
+        Ok(PredictionGeometry {
+            origin_x,
+            origin_y,
+            source_x,
+            source_y,
+            phase_x,
+            phase_y,
+            width,
+            height,
+        })
+    }
+}
+
+const REGULAR: [[i8; 8]; 15] = [
+    [0, 1, -3, 63, 4, -1, 0, 0],
+    [0, 1, -5, 61, 9, -2, 0, 0],
+    [0, 1, -6, 58, 14, -4, 1, 0],
+    [0, 1, -7, 55, 19, -5, 1, 0],
+    [0, 1, -7, 51, 24, -6, 1, 0],
+    [0, 1, -8, 47, 29, -6, 1, 0],
+    [0, 1, -7, 42, 33, -6, 1, 0],
+    [0, 1, -7, 38, 38, -7, 1, 0],
+    [0, 1, -6, 33, 42, -7, 1, 0],
+    [0, 1, -6, 29, 47, -8, 1, 0],
+    [0, 1, -6, 24, 51, -7, 1, 0],
+    [0, 1, -5, 19, 55, -7, 1, 0],
+    [0, 1, -4, 14, 58, -6, 1, 0],
+    [0, 0, -2, 9, 61, -5, 1, 0],
+    [0, 0, -1, 4, 63, -3, 1, 0],
+];
+
+const SMOOTH: [[i8; 8]; 15] = [
+    [0, 1, 14, 31, 17, 1, 0, 0],
+    [0, 0, 13, 31, 18, 2, 0, 0],
+    [0, 0, 11, 31, 20, 2, 0, 0],
+    [0, 0, 10, 30, 21, 3, 0, 0],
+    [0, 0, 9, 29, 22, 4, 0, 0],
+    [0, 0, 8, 28, 23, 5, 0, 0],
+    [0, -1, 8, 27, 24, 6, 0, 0],
+    [0, -1, 7, 26, 26, 7, -1, 0],
+    [0, 0, 6, 24, 27, 8, -1, 0],
+    [0, 0, 5, 23, 28, 8, 0, 0],
+    [0, 0, 4, 22, 29, 9, 0, 0],
+    [0, 0, 3, 21, 30, 10, 0, 0],
+    [0, 0, 2, 20, 31, 11, 0, 0],
+    [0, 0, 2, 18, 31, 13, 0, 0],
+    [0, 0, 1, 17, 31, 14, 1, 0],
+];
+
+const SHARP: [[i8; 8]; 15] = [
+    [-1, 1, -3, 63, 4, -1, 1, 0],
+    [-1, 3, -6, 62, 8, -3, 2, -1],
+    [-1, 4, -9, 60, 13, -5, 3, -1],
+    [-2, 5, -11, 58, 19, -7, 3, -1],
+    [-2, 5, -11, 54, 24, -9, 4, -1],
+    [-2, 5, -12, 50, 30, -10, 4, -1],
+    [-2, 5, -12, 45, 35, -11, 5, -1],
+    [-2, 6, -12, 40, 40, -12, 6, -2],
+    [-1, 5, -11, 35, 45, -12, 5, -2],
+    [-1, 4, -10, 30, 50, -12, 5, -2],
+    [-1, 4, -9, 24, 54, -11, 5, -2],
+    [-1, 3, -7, 19, 58, -11, 5, -2],
+    [-1, 3, -5, 13, 60, -9, 4, -1],
+    [-1, 2, -3, 8, 62, -6, 3, -1],
+    [0, 1, -1, 4, 63, -3, 1, -1],
+];
+
+const REDUCED_REGULAR: [[i8; 8]; 15] = [
+    [0, 0, -2, 63, 4, -1, 0, 0],
+    [0, 0, -4, 61, 9, -2, 0, 0],
+    [0, 0, -5, 58, 14, -3, 0, 0],
+    [0, 0, -6, 55, 19, -4, 0, 0],
+    [0, 0, -6, 51, 24, -5, 0, 0],
+    [0, 0, -7, 47, 29, -5, 0, 0],
+    [0, 0, -6, 42, 33, -5, 0, 0],
+    [0, 0, -6, 38, 38, -6, 0, 0],
+    [0, 0, -5, 33, 42, -6, 0, 0],
+    [0, 0, -5, 29, 47, -7, 0, 0],
+    [0, 0, -5, 24, 51, -6, 0, 0],
+    [0, 0, -4, 19, 55, -6, 0, 0],
+    [0, 0, -3, 14, 58, -5, 0, 0],
+    [0, 0, -2, 9, 61, -4, 0, 0],
+    [0, 0, -1, 4, 63, -2, 0, 0],
+];
+
+const REDUCED_SMOOTH: [[i8; 8]; 15] = [
+    [0, 0, 15, 31, 17, 1, 0, 0],
+    [0, 0, 13, 31, 18, 2, 0, 0],
+    [0, 0, 11, 31, 20, 2, 0, 0],
+    [0, 0, 10, 30, 21, 3, 0, 0],
+    [0, 0, 9, 29, 22, 4, 0, 0],
+    [0, 0, 8, 28, 23, 5, 0, 0],
+    [0, 0, 7, 27, 24, 6, 0, 0],
+    [0, 0, 6, 26, 26, 6, 0, 0],
+    [0, 0, 6, 24, 27, 7, 0, 0],
+    [0, 0, 5, 23, 28, 8, 0, 0],
+    [0, 0, 4, 22, 29, 9, 0, 0],
+    [0, 0, 3, 21, 30, 10, 0, 0],
+    [0, 0, 2, 20, 31, 11, 0, 0],
+    [0, 0, 2, 18, 31, 13, 0, 0],
+    [0, 0, 1, 17, 31, 15, 0, 0],
+];
+
+const SCALED_BILINEAR: [[i8; 8]; 15] = [
+    [0, 0, 0, 60, 4, 0, 0, 0],
+    [0, 0, 0, 56, 8, 0, 0, 0],
+    [0, 0, 0, 52, 12, 0, 0, 0],
+    [0, 0, 0, 48, 16, 0, 0, 0],
+    [0, 0, 0, 44, 20, 0, 0, 0],
+    [0, 0, 0, 40, 24, 0, 0, 0],
+    [0, 0, 0, 36, 28, 0, 0, 0],
+    [0, 0, 0, 32, 32, 0, 0, 0],
+    [0, 0, 0, 28, 36, 0, 0, 0],
+    [0, 0, 0, 24, 40, 0, 0, 0],
+    [0, 0, 0, 20, 44, 0, 0, 0],
+    [0, 0, 0, 16, 48, 0, 0, 0],
+    [0, 0, 0, 12, 52, 0, 0, 0],
+    [0, 0, 0, 8, 56, 0, 0, 0],
+    [0, 0, 0, 4, 60, 0, 0, 0],
+];
+
+// AV1 warped-motion 193-phase filter table, translated from the pinned
+// dav1d 1.5.3/libaom 3.13.2 reference data. The applicable BSD-2-Clause and
+// patent notices remain in NOTICE.md, PATENTS, and third_party/.
+const GLOBAL_MOTION_WARP_FILTER: [[i8; 8]; 193] = [
+    [0, 0, 127, 1, 0, 0, 0, 0],
+    [0, -1, 127, 2, 0, 0, 0, 0],
+    [1, -3, 127, 4, -1, 0, 0, 0],
+    [1, -4, 126, 6, -2, 1, 0, 0],
+    [1, -5, 126, 8, -3, 1, 0, 0],
+    [1, -6, 125, 11, -4, 1, 0, 0],
+    [1, -7, 124, 13, -4, 1, 0, 0],
+    [2, -8, 123, 15, -5, 1, 0, 0],
+    [2, -9, 122, 18, -6, 1, 0, 0],
+    [2, -10, 121, 20, -6, 1, 0, 0],
+    [2, -11, 120, 22, -7, 2, 0, 0],
+    [2, -12, 119, 25, -8, 2, 0, 0],
+    [3, -13, 117, 27, -8, 2, 0, 0],
+    [3, -13, 116, 29, -9, 2, 0, 0],
+    [3, -14, 114, 32, -10, 3, 0, 0],
+    [3, -15, 113, 35, -10, 2, 0, 0],
+    [3, -15, 111, 37, -11, 3, 0, 0],
+    [3, -16, 109, 40, -11, 3, 0, 0],
+    [3, -16, 108, 42, -12, 3, 0, 0],
+    [4, -17, 106, 45, -13, 3, 0, 0],
+    [4, -17, 104, 47, -13, 3, 0, 0],
+    [4, -17, 102, 50, -14, 3, 0, 0],
+    [4, -17, 100, 52, -14, 3, 0, 0],
+    [4, -18, 98, 55, -15, 4, 0, 0],
+    [4, -18, 96, 58, -15, 3, 0, 0],
+    [4, -18, 94, 60, -16, 4, 0, 0],
+    [4, -18, 91, 63, -16, 4, 0, 0],
+    [4, -18, 89, 65, -16, 4, 0, 0],
+    [4, -18, 87, 68, -17, 4, 0, 0],
+    [4, -18, 85, 70, -17, 4, 0, 0],
+    [4, -18, 82, 73, -17, 4, 0, 0],
+    [4, -18, 80, 75, -17, 4, 0, 0],
+    [4, -18, 78, 78, -18, 4, 0, 0],
+    [4, -17, 75, 80, -18, 4, 0, 0],
+    [4, -17, 73, 82, -18, 4, 0, 0],
+    [4, -17, 70, 85, -18, 4, 0, 0],
+    [4, -17, 68, 87, -18, 4, 0, 0],
+    [4, -16, 65, 89, -18, 4, 0, 0],
+    [4, -16, 63, 91, -18, 4, 0, 0],
+    [4, -16, 60, 94, -18, 4, 0, 0],
+    [3, -15, 58, 96, -18, 4, 0, 0],
+    [4, -15, 55, 98, -18, 4, 0, 0],
+    [3, -14, 52, 100, -17, 4, 0, 0],
+    [3, -14, 50, 102, -17, 4, 0, 0],
+    [3, -13, 47, 104, -17, 4, 0, 0],
+    [3, -13, 45, 106, -17, 4, 0, 0],
+    [3, -12, 42, 108, -16, 3, 0, 0],
+    [3, -11, 40, 109, -16, 3, 0, 0],
+    [3, -11, 37, 111, -15, 3, 0, 0],
+    [2, -10, 35, 113, -15, 3, 0, 0],
+    [3, -10, 32, 114, -14, 3, 0, 0],
+    [2, -9, 29, 116, -13, 3, 0, 0],
+    [2, -8, 27, 117, -13, 3, 0, 0],
+    [2, -8, 25, 119, -12, 2, 0, 0],
+    [2, -7, 22, 120, -11, 2, 0, 0],
+    [1, -6, 20, 121, -10, 2, 0, 0],
+    [1, -6, 18, 122, -9, 2, 0, 0],
+    [1, -5, 15, 123, -8, 2, 0, 0],
+    [1, -4, 13, 124, -7, 1, 0, 0],
+    [1, -4, 11, 125, -6, 1, 0, 0],
+    [1, -3, 8, 126, -5, 1, 0, 0],
+    [1, -2, 6, 126, -4, 1, 0, 0],
+    [0, -1, 4, 127, -3, 1, 0, 0],
+    [0, 0, 2, 127, -1, 0, 0, 0],
+    [0, 0, 0, 127, 1, 0, 0, 0],
+    [0, 0, -1, 127, 2, 0, 0, 0],
+    [0, 1, -3, 127, 4, -2, 1, 0],
+    [0, 1, -5, 127, 6, -2, 1, 0],
+    [0, 2, -6, 126, 8, -3, 1, 0],
+    [-1, 2, -7, 126, 11, -4, 2, -1],
+    [-1, 3, -8, 125, 13, -5, 2, -1],
+    [-1, 3, -10, 124, 16, -6, 3, -1],
+    [-1, 4, -11, 123, 18, -7, 3, -1],
+    [-1, 4, -12, 122, 20, -7, 3, -1],
+    [-1, 4, -13, 121, 23, -8, 3, -1],
+    [-2, 5, -14, 120, 25, -9, 4, -1],
+    [-1, 5, -15, 119, 27, -10, 4, -1],
+    [-1, 5, -16, 118, 30, -11, 4, -1],
+    [-2, 6, -17, 116, 33, -12, 5, -1],
+    [-2, 6, -17, 114, 35, -12, 5, -1],
+    [-2, 6, -18, 113, 38, -13, 5, -1],
+    [-2, 7, -19, 111, 41, -14, 6, -2],
+    [-2, 7, -19, 110, 43, -15, 6, -2],
+    [-2, 7, -20, 108, 46, -15, 6, -2],
+    [-2, 7, -20, 106, 49, -16, 6, -2],
+    [-2, 7, -21, 104, 51, -16, 7, -2],
+    [-2, 7, -21, 102, 54, -17, 7, -2],
+    [-2, 8, -21, 100, 56, -18, 7, -2],
+    [-2, 8, -22, 98, 59, -18, 7, -2],
+    [-2, 8, -22, 96, 62, -19, 7, -2],
+    [-2, 8, -22, 94, 64, -19, 7, -2],
+    [-2, 8, -22, 91, 67, -20, 8, -2],
+    [-2, 8, -22, 89, 69, -20, 8, -2],
+    [-2, 8, -22, 87, 72, -21, 8, -2],
+    [-2, 8, -21, 84, 74, -21, 8, -2],
+    [-2, 8, -22, 82, 77, -21, 8, -2],
+    [-2, 8, -21, 79, 79, -21, 8, -2],
+    [-2, 8, -21, 77, 82, -22, 8, -2],
+    [-2, 8, -21, 74, 84, -21, 8, -2],
+    [-2, 8, -21, 72, 87, -22, 8, -2],
+    [-2, 8, -20, 69, 89, -22, 8, -2],
+    [-2, 8, -20, 67, 91, -22, 8, -2],
+    [-2, 7, -19, 64, 94, -22, 8, -2],
+    [-2, 7, -19, 62, 96, -22, 8, -2],
+    [-2, 7, -18, 59, 98, -22, 8, -2],
+    [-2, 7, -18, 56, 100, -21, 8, -2],
+    [-2, 7, -17, 54, 102, -21, 7, -2],
+    [-2, 7, -16, 51, 104, -21, 7, -2],
+    [-2, 6, -16, 49, 106, -20, 7, -2],
+    [-2, 6, -15, 46, 108, -20, 7, -2],
+    [-2, 6, -15, 43, 110, -19, 7, -2],
+    [-2, 6, -14, 41, 111, -19, 7, -2],
+    [-1, 5, -13, 38, 113, -18, 6, -2],
+    [-1, 5, -12, 35, 114, -17, 6, -2],
+    [-1, 5, -12, 33, 116, -17, 6, -2],
+    [-1, 4, -11, 30, 118, -16, 5, -1],
+    [-1, 4, -10, 27, 119, -15, 5, -1],
+    [-1, 4, -9, 25, 120, -14, 5, -2],
+    [-1, 3, -8, 23, 121, -13, 4, -1],
+    [-1, 3, -7, 20, 122, -12, 4, -1],
+    [-1, 3, -7, 18, 123, -11, 4, -1],
+    [-1, 3, -6, 16, 124, -10, 3, -1],
+    [-1, 2, -5, 13, 125, -8, 3, -1],
+    [-1, 2, -4, 11, 126, -7, 2, -1],
+    [0, 1, -3, 8, 126, -6, 2, 0],
+    [0, 1, -2, 6, 127, -5, 1, 0],
+    [0, 1, -2, 4, 127, -3, 1, 0],
+    [0, 0, 0, 2, 127, -1, 0, 0],
+    [0, 0, 0, 1, 127, 0, 0, 0],
+    [0, 0, 0, -1, 127, 2, 0, 0],
+    [0, 0, 1, -3, 127, 4, -1, 0],
+    [0, 0, 1, -4, 126, 6, -2, 1],
+    [0, 0, 1, -5, 126, 8, -3, 1],
+    [0, 0, 1, -6, 125, 11, -4, 1],
+    [0, 0, 1, -7, 124, 13, -4, 1],
+    [0, 0, 2, -8, 123, 15, -5, 1],
+    [0, 0, 2, -9, 122, 18, -6, 1],
+    [0, 0, 2, -10, 121, 20, -6, 1],
+    [0, 0, 2, -11, 120, 22, -7, 2],
+    [0, 0, 2, -12, 119, 25, -8, 2],
+    [0, 0, 3, -13, 117, 27, -8, 2],
+    [0, 0, 3, -13, 116, 29, -9, 2],
+    [0, 0, 3, -14, 114, 32, -10, 3],
+    [0, 0, 3, -15, 113, 35, -10, 2],
+    [0, 0, 3, -15, 111, 37, -11, 3],
+    [0, 0, 3, -16, 109, 40, -11, 3],
+    [0, 0, 3, -16, 108, 42, -12, 3],
+    [0, 0, 4, -17, 106, 45, -13, 3],
+    [0, 0, 4, -17, 104, 47, -13, 3],
+    [0, 0, 4, -17, 102, 50, -14, 3],
+    [0, 0, 4, -17, 100, 52, -14, 3],
+    [0, 0, 4, -18, 98, 55, -15, 4],
+    [0, 0, 4, -18, 96, 58, -15, 3],
+    [0, 0, 4, -18, 94, 60, -16, 4],
+    [0, 0, 4, -18, 91, 63, -16, 4],
+    [0, 0, 4, -18, 89, 65, -16, 4],
+    [0, 0, 4, -18, 87, 68, -17, 4],
+    [0, 0, 4, -18, 85, 70, -17, 4],
+    [0, 0, 4, -18, 82, 73, -17, 4],
+    [0, 0, 4, -18, 80, 75, -17, 4],
+    [0, 0, 4, -18, 78, 78, -18, 4],
+    [0, 0, 4, -17, 75, 80, -18, 4],
+    [0, 0, 4, -17, 73, 82, -18, 4],
+    [0, 0, 4, -17, 70, 85, -18, 4],
+    [0, 0, 4, -17, 68, 87, -18, 4],
+    [0, 0, 4, -16, 65, 89, -18, 4],
+    [0, 0, 4, -16, 63, 91, -18, 4],
+    [0, 0, 4, -16, 60, 94, -18, 4],
+    [0, 0, 3, -15, 58, 96, -18, 4],
+    [0, 0, 4, -15, 55, 98, -18, 4],
+    [0, 0, 3, -14, 52, 100, -17, 4],
+    [0, 0, 3, -14, 50, 102, -17, 4],
+    [0, 0, 3, -13, 47, 104, -17, 4],
+    [0, 0, 3, -13, 45, 106, -17, 4],
+    [0, 0, 3, -12, 42, 108, -16, 3],
+    [0, 0, 3, -11, 40, 109, -16, 3],
+    [0, 0, 3, -11, 37, 111, -15, 3],
+    [0, 0, 2, -10, 35, 113, -15, 3],
+    [0, 0, 3, -10, 32, 114, -14, 3],
+    [0, 0, 2, -9, 29, 116, -13, 3],
+    [0, 0, 2, -8, 27, 117, -13, 3],
+    [0, 0, 2, -8, 25, 119, -12, 2],
+    [0, 0, 2, -7, 22, 120, -11, 2],
+    [0, 0, 1, -6, 20, 121, -10, 2],
+    [0, 0, 1, -6, 18, 122, -9, 2],
+    [0, 0, 1, -5, 15, 123, -8, 2],
+    [0, 0, 1, -4, 13, 124, -7, 1],
+    [0, 0, 1, -4, 11, 125, -6, 1],
+    [0, 0, 1, -3, 8, 126, -5, 1],
+    [0, 0, 1, -2, 6, 126, -4, 1],
+    [0, 0, 0, -1, 4, 127, -3, 1],
+    [0, 0, 0, 0, 2, 127, -1, 0],
+    [0, 0, 0, 0, 2, 127, -1, 0],
+];
+
+fn filter_coefficients(
+    filter: InterpolationFilter,
+    reduced: bool,
+    phase: usize,
+) -> Option<&'static [i8; 8]> {
+    let phase = phase.checked_sub(1)?;
+    match (filter, reduced) {
+        (InterpolationFilter::Regular | InterpolationFilter::Sharp, true) => {
+            REDUCED_REGULAR.get(phase)
+        }
+        (InterpolationFilter::Smooth, true) => REDUCED_SMOOTH.get(phase),
+        (InterpolationFilter::Bilinear, _) => SCALED_BILINEAR.get(phase),
+        (InterpolationFilter::Regular, false) => REGULAR.get(phase),
+        (InterpolationFilter::Smooth, false) => SMOOTH.get(phase),
+        (InterpolationFilter::Sharp, false) => SHARP.get(phase),
+    }
+}
+
+fn intermediate_bits(depth: SampleDepth) -> i32 {
+    match depth.bits() {
+        8 | 10 => 4,
+        12 => 2,
+        _ => 0,
+    }
+}
+
+fn preparation_bias(depth: SampleDepth) -> i32 {
+    if depth.bits() == 8 { 0 } else { 8192 }
+}
+
+fn rounded_shift(value: i32, shift: i32) -> i32 {
+    if shift <= 0 {
+        return value;
+    }
+    value.saturating_add(1_i32 << u32::try_from(shift.saturating_sub(1)).unwrap_or(0))
+        >> u32::try_from(shift).unwrap_or(0)
+}
+
+fn sample_filter(
+    reference: PlaneView<'_>,
+    x: i64,
+    y: i64,
+    horizontal: bool,
+    coefficients: &[i8; 8],
+) -> i32 {
+    coefficients
+        .iter()
+        .enumerate()
+        .fold(0_i32, |sum, (tap, &coefficient)| {
+            let offset = i64::try_from(tap).map_or(0, |tap| tap.saturating_sub(3));
+            let sample = if horizontal {
+                reference.replicated(x.saturating_add(offset), y)
+            } else {
+                reference.replicated(x, y.saturating_add(offset))
+            };
+            sum.saturating_add(i32::from(sample).saturating_mul(i32::from(coefficient)))
+        })
+}
+
+fn horizontal_intermediate(
+    reference: PlaneView<'_>,
+    x: i64,
+    y: i64,
+    filter: Option<&[i8; 8]>,
+    bits: i32,
+) -> Av1Result<i32> {
+    filter.map_or_else(
+        || Ok(i32::from(reference.replicated(x, y)) << u32::try_from(bits).unwrap_or(0)),
+        |filter| {
+            let shift = 6_i32
+                .checked_sub(bits)
+                .ok_or_else(|| malformed("motion horizontal shift overflows"))?;
+            Ok(rounded_shift(
+                sample_filter(reference, x, y, true, filter),
+                shift,
+            ))
+        },
+    )
+}
+
+fn warp_filter(phase: i64) -> Av1Result<&'static [i8; 8]> {
+    let phase = usize::try_from(phase).map_err(|_| malformed("warped-motion phase is negative"))?;
+    GLOBAL_MOTION_WARP_FILTER
+        .get(phase)
+        .ok_or_else(|| malformed("warped-motion phase exceeds filter table"))
+}
+
+fn warp_phase(value: i32) -> Av1Result<i64> {
+    let rounded = i64::from(value)
+        .checked_add(512)
+        .ok_or_else(|| malformed("warped-motion phase rounding overflows"))?
+        >> 10;
+    let phase = rounded
+        .checked_add(64)
+        .ok_or_else(|| malformed("warped-motion phase offset overflows"))?;
+    (0..=192)
+        .contains(&phase)
+        .then_some(phase)
+        .ok_or_else(|| malformed("warped-motion phase exceeds normative range"))
+}
+
+fn warp_round(value: i32, shift: u32) -> Av1Result<i32> {
+    if shift == 0 {
+        return Ok(value);
+    }
+    let rounding = 1_i32
+        .checked_shl(
+            shift
+                .checked_sub(1)
+                .ok_or_else(|| malformed("warped-motion rounding shift overflows"))?,
+        )
+        .ok_or_else(|| malformed("warped-motion rounding shift overflows"))?;
+    value
+        .checked_add(rounding)
+        .map(|value| value >> shift)
+        .ok_or_else(|| malformed("warped-motion rounding overflows"))
+}
+
+fn warp_matrix_position(
+    request: PredictionRequest,
+    warp: PreparedGlobalWarp,
+    tile_x: usize,
+    tile_y: usize,
+) -> Av1Result<(i32, i32, i32, i32)> {
+    let subsampling_x = u32::from(request.subsampling_x);
+    let subsampling_y = u32::from(request.subsampling_y);
+    let tile_center_x = tile_x
+        .checked_add(4)
+        .ok_or_else(|| malformed("warped-motion tile x overflows"))?;
+    let tile_center_y = tile_y
+        .checked_add(4)
+        .ok_or_else(|| malformed("warped-motion tile y overflows"))?;
+    let tile_center_x = i64::try_from(tile_center_x)
+        .map_err(|_| malformed("warped-motion tile x exceeds i64"))?
+        .checked_shl(subsampling_x)
+        .ok_or_else(|| malformed("warped-motion luma x shift overflows"))?;
+    let tile_center_y = i64::try_from(tile_center_y)
+        .map_err(|_| malformed("warped-motion tile y exceeds i64"))?
+        .checked_shl(subsampling_y)
+        .ok_or_else(|| malformed("warped-motion luma y shift overflows"))?;
+    let block_x = i64::from(request.block_x_b4)
+        .checked_mul(4)
+        .and_then(|value| value.checked_add(tile_center_x))
+        .ok_or_else(|| malformed("warped-motion luma x origin overflows"))?;
+    let block_y = i64::from(request.block_y_b4)
+        .checked_mul(4)
+        .and_then(|value| value.checked_add(tile_center_y))
+        .ok_or_else(|| malformed("warped-motion luma y origin overflows"))?;
+    let matrix = warp.matrix;
+    let projected_x = i64::from(matrix[2])
+        .checked_mul(block_x)
+        .and_then(|value| value.checked_add(i64::from(matrix[3]).checked_mul(block_y)?))
+        .and_then(|value| value.checked_add(i64::from(matrix[0])))
+        .ok_or_else(|| malformed("warped-motion horizontal matrix product overflows"))?;
+    let projected_y = i64::from(matrix[4])
+        .checked_mul(block_x)
+        .and_then(|value| value.checked_add(i64::from(matrix[5]).checked_mul(block_y)?))
+        .and_then(|value| value.checked_add(i64::from(matrix[1])))
+        .ok_or_else(|| malformed("warped-motion vertical matrix product overflows"))?;
+    let projected_x = projected_x >> subsampling_x;
+    let projected_y = projected_y >> subsampling_y;
+    let dx = (projected_x >> 16)
+        .checked_sub(4)
+        .ok_or_else(|| malformed("warped-motion source x underflows"))?;
+    let dy = (projected_y >> 16)
+        .checked_sub(4)
+        .ok_or_else(|| malformed("warped-motion source y underflows"))?;
+    let dx = i32::try_from(dx).map_err(|_| malformed("warped-motion source x exceeds i32"))?;
+    let dy = i32::try_from(dy).map_err(|_| malformed("warped-motion source y exceeds i32"))?;
+    let alpha = i32::from(warp.abcd[0])
+        .checked_mul(4)
+        .ok_or_else(|| malformed("warped-motion horizontal shear overflows"))?;
+    let beta = i32::from(warp.abcd[1])
+        .checked_mul(7)
+        .ok_or_else(|| malformed("warped-motion horizontal shear overflows"))?;
+    let mx = i32::try_from(projected_x & 0xffff)
+        .map_err(|_| malformed("warped-motion horizontal phase exceeds i32"))?
+        .checked_sub(alpha)
+        .and_then(|value| value.checked_sub(beta))
+        .ok_or_else(|| malformed("warped-motion horizontal phase overflows"))?
+        & !63;
+    let gamma = i32::from(warp.abcd[2])
+        .checked_mul(4)
+        .ok_or_else(|| malformed("warped-motion vertical shear overflows"))?;
+    let delta = i32::from(warp.abcd[3])
+        .checked_mul(4)
+        .ok_or_else(|| malformed("warped-motion vertical shear overflows"))?;
+    let my = i32::try_from(projected_y & 0xffff)
+        .map_err(|_| malformed("warped-motion vertical phase exceeds i32"))?
+        .checked_sub(gamma)
+        .and_then(|value| value.checked_sub(delta))
+        .ok_or_else(|| malformed("warped-motion vertical phase overflows"))?
+        & !63;
+    Ok((dx, dy, mx, my))
+}
+
+fn warp_horizontal(
+    reference: PlaneView<'_>,
+    dx: i32,
+    dy: i32,
+    mx: i32,
+    abcd: [i16; 4],
+    bits: i32,
+    scratch: &mut [i16],
+) -> Av1Result<()> {
+    const WIDTH: usize = 8;
+    const HEIGHT: usize = 15;
+    let scratch = scratch
+        .get_mut(..WIDTH * HEIGHT)
+        .ok_or_else(|| malformed("warped-motion intermediate scratch is too short"))?;
+    for (y, row) in scratch.chunks_exact_mut(WIDTH).enumerate() {
+        let y_offset = i32::try_from(y)
+            .map_err(|_| malformed("warped-motion intermediate row exceeds i32"))?;
+        let row_phase = mx
+            .checked_add(
+                y_offset
+                    .checked_mul(i32::from(abcd[1]))
+                    .ok_or_else(|| malformed("warped-motion horizontal row phase overflows"))?,
+            )
+            .ok_or_else(|| malformed("warped-motion horizontal row phase overflows"))?;
+        for (x, destination) in row.iter_mut().enumerate() {
+            let x_offset = i32::try_from(x)
+                .map_err(|_| malformed("warped-motion intermediate column exceeds i32"))?;
+            let phase = warp_phase(
+                row_phase
+                    .checked_add(
+                        x_offset
+                            .checked_mul(i32::from(abcd[0]))
+                            .ok_or_else(|| malformed("warped-motion horizontal phase overflows"))?,
+                    )
+                    .ok_or_else(|| malformed("warped-motion horizontal phase overflows"))?,
+            )?;
+            let coefficients = warp_filter(phase)?;
+            let mut sum = 0_i32;
+            for (tap, &coefficient) in coefficients.iter().enumerate() {
+                let tap =
+                    i64::try_from(tap).map_err(|_| malformed("warped-motion tap exceeds i64"))?;
+                let source_x = i64::from(dx)
+                    .checked_add(
+                        i64::try_from(x).map_err(|_| malformed("warped-motion x exceeds i64"))?,
+                    )
+                    .and_then(|value| value.checked_add(tap.checked_sub(3)?))
+                    .ok_or_else(|| malformed("warped-motion horizontal source overflows"))?;
+                let source_y = i64::from(dy)
+                    .checked_add(
+                        i64::try_from(y).map_err(|_| malformed("warped-motion y exceeds i64"))?,
+                    )
+                    .and_then(|value| value.checked_add(-3))
+                    .ok_or_else(|| malformed("warped-motion vertical source overflows"))?;
+                let sample = i32::from(reference.replicated(source_x, source_y));
+                let product = sample
+                    .checked_mul(i32::from(coefficient))
+                    .ok_or_else(|| malformed("warped-motion horizontal tap overflows"))?;
+                sum = sum
+                    .checked_add(product)
+                    .ok_or_else(|| malformed("warped-motion horizontal sum overflows"))?;
+            }
+            let shift = u32::try_from(
+                7_i32
+                    .checked_sub(bits)
+                    .ok_or_else(|| malformed("warped-motion horizontal shift is invalid"))?,
+            )
+            .map_err(|_| malformed("warped-motion horizontal shift is invalid"))?;
+            let value = warp_round(sum, shift)?;
+            *destination = i16::try_from(value)
+                .map_err(|_| malformed("warped-motion horizontal intermediate exceeds i16"))?;
+        }
+    }
+    Ok(())
+}
+
+fn warp_vertical(
+    scratch: &[i16],
+    my: i32,
+    abcd: [i16; 4],
+    bits: i32,
+    position: [usize; 2],
+    preparation: bool,
+    bias: i32,
+) -> Av1Result<i32> {
+    const WIDTH: usize = 8;
+    let [x, y] = position;
+    let row_phase = my
+        .checked_add(
+            i32::try_from(y)
+                .map_err(|_| malformed("warped-motion vertical row exceeds i32"))?
+                .checked_mul(i32::from(abcd[3]))
+                .ok_or_else(|| malformed("warped-motion vertical row phase overflows"))?,
+        )
+        .ok_or_else(|| malformed("warped-motion vertical row phase overflows"))?;
+    let phase = warp_phase(
+        row_phase
+            .checked_add(
+                i32::try_from(x)
+                    .map_err(|_| malformed("warped-motion vertical column exceeds i32"))?
+                    .checked_mul(i32::from(abcd[2]))
+                    .ok_or_else(|| malformed("warped-motion vertical phase overflows"))?,
+            )
+            .ok_or_else(|| malformed("warped-motion vertical phase overflows"))?,
+    )?;
+    let coefficients = warp_filter(phase)?;
+    let mut sum = 0_i32;
+    for (tap, &coefficient) in coefficients.iter().enumerate() {
+        let row = y
+            .checked_add(tap)
+            .ok_or_else(|| malformed("warped-motion vertical tap row overflows"))?;
+        let sample = i32::from(
+            *scratch
+                .get(
+                    row.checked_mul(WIDTH)
+                        .and_then(|row| row.checked_add(x))
+                        .ok_or_else(|| malformed("warped-motion vertical tap index overflows"))?,
+                )
+                .ok_or_else(|| malformed("warped-motion vertical tap exceeds scratch"))?,
+        );
+        let product = sample
+            .checked_mul(i32::from(coefficient))
+            .ok_or_else(|| malformed("warped-motion vertical tap overflows"))?;
+        sum = sum
+            .checked_add(product)
+            .ok_or_else(|| malformed("warped-motion vertical sum overflows"))?;
+    }
+    let value = warp_round(
+        sum,
+        if preparation {
+            7
+        } else {
+            u32::try_from(
+                7_i32
+                    .checked_add(bits)
+                    .ok_or_else(|| malformed("warped-motion vertical shift is invalid"))?,
+            )
+            .map_err(|_| malformed("warped-motion vertical shift is invalid"))?
+        },
+    )?;
+    value
+        .checked_sub(if preparation { bias } else { 0 })
+        .ok_or_else(|| malformed("warped-motion preparation bias overflows"))
+}
+
+fn put_warped_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    warp: PreparedGlobalWarp,
+    warp_scratch: &mut [i16],
+    output: &mut [u16],
+) -> Av1Result<()> {
+    let bits = intermediate_bits(reference.depth());
+    let maximum = i32::from(reference.depth().maximum());
+    for tile_y in (0..geometry.height).step_by(8) {
+        for tile_x in (0..geometry.width).step_by(8) {
+            let tile_width = geometry.width.saturating_sub(tile_x).min(8);
+            let tile_height = geometry.height.saturating_sub(tile_y).min(8);
+            let (dx, dy, mx, my) = warp_matrix_position(request, warp, tile_x, tile_y)?;
+            warp_horizontal(reference, dx, dy, mx, warp.abcd, bits, warp_scratch)?;
+            for y in 0..tile_height {
+                for x in 0..tile_width {
+                    let value = warp_vertical(warp_scratch, my, warp.abcd, bits, [x, y], false, 0)?;
+                    let index = tile_y
+                        .checked_add(y)
+                        .and_then(|row| row.checked_mul(geometry.width))
+                        .and_then(|row| row.checked_add(tile_x.checked_add(x)?))
+                        .ok_or_else(|| malformed("warped-motion output index overflows"))?;
+                    output[index] = u16::try_from(value.clamp(0, maximum))
+                        .map_err(|_| malformed("warped-motion sample exceeds u16"))?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn prep_warped_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    warp: PreparedGlobalWarp,
+    warp_scratch: &mut [i16],
+    output: &mut [i16],
+) -> Av1Result<()> {
+    let bits = intermediate_bits(reference.depth());
+    let bias = preparation_bias(reference.depth());
+    for tile_y in (0..geometry.height).step_by(8) {
+        for tile_x in (0..geometry.width).step_by(8) {
+            let tile_width = geometry.width.saturating_sub(tile_x).min(8);
+            let tile_height = geometry.height.saturating_sub(tile_y).min(8);
+            let (dx, dy, mx, my) = warp_matrix_position(request, warp, tile_x, tile_y)?;
+            warp_horizontal(reference, dx, dy, mx, warp.abcd, bits, warp_scratch)?;
+            for y in 0..tile_height {
+                for x in 0..tile_width {
+                    let value =
+                        warp_vertical(warp_scratch, my, warp.abcd, bits, [x, y], true, bias)?;
+                    let index = tile_y
+                        .checked_add(y)
+                        .and_then(|row| row.checked_mul(geometry.width))
+                        .and_then(|row| row.checked_add(tile_x.checked_add(x)?))
+                        .ok_or_else(|| malformed("warped-motion compound index overflows"))?;
+                    output[index] = i16::try_from(value)
+                        .map_err(|_| malformed("warped-motion compound sample exceeds i16"))?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn put_unscaled_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    output: &mut [u16],
+) -> Av1Result<()> {
+    let depth = reference.depth();
+    let bits = intermediate_bits(depth);
+    let maximum = i32::from(depth.maximum());
+    let horizontal = filter_coefficients(request.filters[0], geometry.width <= 4, geometry.phase_x);
+    let vertical = filter_coefficients(request.filters[1], geometry.height <= 4, geometry.phase_y);
+    for y in 0..geometry.height {
+        let source_y = geometry
+            .source_y
+            .saturating_add(i64::try_from(y).unwrap_or(0));
+        for x in 0..geometry.width {
+            let source_x = geometry
+                .source_x
+                .saturating_add(i64::try_from(x).unwrap_or(0));
+            let value = match (horizontal, vertical) {
+                (None, None) => i32::from(reference.replicated(source_x, source_y)),
+                (Some(filter), None) => {
+                    let sum = sample_filter(reference, source_x, source_y, true, filter);
+                    let extra_shift = 5_i32
+                        .checked_sub(bits)
+                        .ok_or_else(|| malformed("motion horizontal rounding shift overflows"))?;
+                    let extra = 1_i32 << u32::try_from(extra_shift).unwrap_or(0);
+                    sum.saturating_add(32).saturating_add(extra) >> 6
+                }
+                (None, Some(filter)) => rounded_shift(
+                    sample_filter(reference, source_x, source_y, false, filter),
+                    6,
+                ),
+                (horizontal, Some(vertical)) => {
+                    let mut sum = 0_i32;
+                    for (tap, &coefficient) in vertical.iter().enumerate() {
+                        let offset = i64::try_from(tap).map_or(0, |tap| tap.saturating_sub(3));
+                        let value = horizontal_intermediate(
+                            reference,
+                            source_x,
+                            source_y.saturating_add(offset),
+                            horizontal,
+                            bits,
+                        )?;
+                        sum = sum.saturating_add(value.saturating_mul(i32::from(coefficient)));
+                    }
+                    rounded_shift(
+                        sum,
+                        6_i32
+                            .checked_add(bits)
+                            .ok_or_else(|| malformed("motion vertical shift overflows"))?,
+                    )
+                }
+            };
+            let index = y
+                .checked_mul(geometry.width)
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("motion predictor index overflows"))?;
+            output[index] = u16::try_from(value.clamp(0, maximum))
+                .map_err(|_| malformed("motion predictor sample exceeds u16"))?;
+        }
+    }
+    Ok(())
+}
+
+fn prep_unscaled_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    output: &mut [i16],
+) -> Av1Result<()> {
+    let depth = reference.depth();
+    let bits = intermediate_bits(depth);
+    let bias = preparation_bias(depth);
+    let horizontal = filter_coefficients(request.filters[0], geometry.width <= 4, geometry.phase_x);
+    let vertical = filter_coefficients(request.filters[1], geometry.height <= 4, geometry.phase_y);
+    for y in 0..geometry.height {
+        let source_y = geometry
+            .source_y
+            .saturating_add(i64::try_from(y).unwrap_or(0));
+        for x in 0..geometry.width {
+            let source_x = geometry
+                .source_x
+                .saturating_add(i64::try_from(x).unwrap_or(0));
+            let value = match (horizontal, vertical) {
+                (None, None) => (i32::from(reference.replicated(source_x, source_y))
+                    << u32::try_from(bits).unwrap_or(0))
+                .saturating_sub(bias),
+                (Some(filter), None) => rounded_shift(
+                    sample_filter(reference, source_x, source_y, true, filter),
+                    6_i32
+                        .checked_sub(bits)
+                        .ok_or_else(|| malformed("motion preparation shift overflows"))?,
+                )
+                .saturating_sub(bias),
+                (None, Some(filter)) => rounded_shift(
+                    sample_filter(reference, source_x, source_y, false, filter),
+                    6_i32
+                        .checked_sub(bits)
+                        .ok_or_else(|| malformed("motion preparation shift overflows"))?,
+                )
+                .saturating_sub(bias),
+                (horizontal, Some(vertical)) => {
+                    let mut sum = 0_i32;
+                    for (tap, &coefficient) in vertical.iter().enumerate() {
+                        let offset = i64::try_from(tap).map_or(0, |tap| tap.saturating_sub(3));
+                        let value = horizontal_intermediate(
+                            reference,
+                            source_x,
+                            source_y.saturating_add(offset),
+                            horizontal,
+                            bits,
+                        )?;
+                        sum = sum.saturating_add(value.saturating_mul(i32::from(coefficient)));
+                    }
+                    rounded_shift(sum, 6).saturating_sub(bias)
+                }
+            };
+            let index = y
+                .checked_mul(geometry.width)
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("compound predictor index overflows"))?;
+            output[index] = i16::try_from(value)
+                .map_err(|_| malformed("compound predictor sample exceeds i16"))?;
+        }
+    }
+    Ok(())
+}
+
+fn scaled_positions(
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    scale: ScaleFactors,
+) -> Av1Result<(i32, i32)> {
+    let origin_x = i32::try_from(geometry.origin_x)
+        .map_err(|_| malformed("scaled horizontal origin exceeds i32"))?;
+    let origin_y = i32::try_from(geometry.origin_y)
+        .map_err(|_| malformed("scaled vertical origin exceeds i32"))?;
+    Ok((
+        ScaleFactors::position(scale.x, origin_x, request.motion.x, request.subsampling_x)?,
+        ScaleFactors::position(scale.y, origin_y, request.motion.y, request.subsampling_y)?,
+    ))
+}
+
+fn scaled_horizontal(
+    reference: PlaneView<'_>,
+    x_position: i32,
+    y: i64,
+    filter: InterpolationFilter,
+    reduced: bool,
+    bits: i32,
+) -> Av1Result<i32> {
+    let source_x = i64::from(x_position.div_euclid(1024));
+    let phase = usize::try_from(x_position.rem_euclid(1024) >> 6).unwrap_or(0);
+    let coefficients = filter_coefficients(filter, reduced, phase);
+    horizontal_intermediate(reference, source_x, y, coefficients, bits)
+}
+
+fn put_scaled_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    scale: ScaleFactors,
+    output: &mut [u16],
+) -> Av1Result<()> {
+    let depth = reference.depth();
+    let bits = intermediate_bits(depth);
+    let maximum = i32::from(depth.maximum());
+    let (start_x, start_y) = scaled_positions(request, geometry, scale)?;
+    for y in 0..geometry.height {
+        let y_position = i64::from(start_y)
+            .checked_add(
+                i64::try_from(y)
+                    .map_err(|_| malformed("scaled row exceeds i64"))?
+                    .checked_mul(i64::from(scale.step_y))
+                    .ok_or_else(|| malformed("scaled row position overflows"))?,
+            )
+            .ok_or_else(|| malformed("scaled row position overflows"))?;
+        let source_y = y_position.div_euclid(1024);
+        let phase_y = usize::try_from(y_position.rem_euclid(1024) >> 6)
+            .map_err(|_| malformed("scaled vertical phase exceeds usize"))?;
+        let vertical = filter_coefficients(request.filters[1], geometry.height <= 4, phase_y);
+        for x in 0..geometry.width {
+            let x_position = i64::from(start_x)
+                .checked_add(
+                    i64::try_from(x)
+                        .map_err(|_| malformed("scaled column exceeds i64"))?
+                        .checked_mul(i64::from(scale.step_x))
+                        .ok_or_else(|| malformed("scaled column position overflows"))?,
+                )
+                .ok_or_else(|| malformed("scaled column position overflows"))?;
+            let x_position = i32::try_from(x_position)
+                .map_err(|_| malformed("scaled column position exceeds i32"))?;
+            let value = if let Some(vertical) = vertical {
+                let mut sum = 0_i32;
+                for (tap, &coefficient) in vertical.iter().enumerate() {
+                    let offset = i64::try_from(tap).map_or(0, |tap| tap.saturating_sub(3));
+                    let horizontal = scaled_horizontal(
+                        reference,
+                        x_position,
+                        source_y.saturating_add(offset),
+                        request.filters[0],
+                        geometry.width <= 4,
+                        bits,
+                    )?;
+                    sum = sum.saturating_add(horizontal.saturating_mul(i32::from(coefficient)));
+                }
+                rounded_shift(
+                    sum,
+                    6_i32
+                        .checked_add(bits)
+                        .ok_or_else(|| malformed("motion vertical shift overflows"))?,
+                )
+            } else {
+                let horizontal = scaled_horizontal(
+                    reference,
+                    x_position,
+                    source_y,
+                    request.filters[0],
+                    geometry.width <= 4,
+                    bits,
+                )?;
+                rounded_shift(horizontal, bits)
+            };
+            let index = y
+                .checked_mul(geometry.width)
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("scaled predictor index overflows"))?;
+            output[index] = u16::try_from(value.clamp(0, maximum))
+                .map_err(|_| malformed("scaled predictor sample exceeds u16"))?;
+        }
+    }
+    Ok(())
+}
+
+fn prep_scaled_kernel(
+    reference: PlaneView<'_>,
+    request: PredictionRequest,
+    geometry: PredictionGeometry,
+    scale: ScaleFactors,
+    output: &mut [i16],
+) -> Av1Result<()> {
+    let depth = reference.depth();
+    let bits = intermediate_bits(depth);
+    let bias = preparation_bias(depth);
+    let (start_x, start_y) = scaled_positions(request, geometry, scale)?;
+    for y in 0..geometry.height {
+        let y_position = i64::from(start_y)
+            .checked_add(
+                i64::try_from(y)
+                    .map_err(|_| malformed("scaled row exceeds i64"))?
+                    .checked_mul(i64::from(scale.step_y))
+                    .ok_or_else(|| malformed("scaled row position overflows"))?,
+            )
+            .ok_or_else(|| malformed("scaled row position overflows"))?;
+        let source_y = y_position.div_euclid(1024);
+        let phase_y = usize::try_from(y_position.rem_euclid(1024) >> 6)
+            .map_err(|_| malformed("scaled vertical phase exceeds usize"))?;
+        let vertical = filter_coefficients(request.filters[1], geometry.height <= 4, phase_y);
+        for x in 0..geometry.width {
+            let x_position = i64::from(start_x)
+                .checked_add(
+                    i64::try_from(x)
+                        .map_err(|_| malformed("scaled column exceeds i64"))?
+                        .checked_mul(i64::from(scale.step_x))
+                        .ok_or_else(|| malformed("scaled column position overflows"))?,
+                )
+                .ok_or_else(|| malformed("scaled column position overflows"))?;
+            let x_position = i32::try_from(x_position)
+                .map_err(|_| malformed("scaled column position exceeds i32"))?;
+            let value = if let Some(vertical) = vertical {
+                let mut sum = 0_i32;
+                for (tap, &coefficient) in vertical.iter().enumerate() {
+                    let offset = i64::try_from(tap).map_or(0, |tap| tap.saturating_sub(3));
+                    let horizontal = scaled_horizontal(
+                        reference,
+                        x_position,
+                        source_y.saturating_add(offset),
+                        request.filters[0],
+                        geometry.width <= 4,
+                        bits,
+                    )?;
+                    sum = sum.saturating_add(horizontal.saturating_mul(i32::from(coefficient)));
+                }
+                rounded_shift(sum, 6).saturating_sub(bias)
+            } else {
+                scaled_horizontal(
+                    reference,
+                    x_position,
+                    source_y,
+                    request.filters[0],
+                    geometry.width <= 4,
+                    bits,
+                )?
+                .saturating_sub(bias)
+            };
+            let index = y
+                .checked_mul(geometry.width)
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("scaled compound index overflows"))?;
+            output[index] = i16::try_from(value)
+                .map_err(|_| malformed("scaled compound sample exceeds i16"))?;
+        }
+    }
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+enum CompoundBlend {
+    Average,
+    Distance(u8),
+    Masked { inverted: bool },
+}
+
+fn narrow_samples(values: i32x8, maximum: i32) -> [u16; 8] {
+    let clamped = values.max(i32x8::ZERO).min(i32x8::new([maximum; 8]));
+    cast::<i16x8, u16x8>(i16x8::from_i32x8_saturate(clamped)).to_array()
+}
+
+/// Rounding constants shared by the sample and SIMD compound paths.
+/// `intermediate_bits` returns 0, 2, or 4, and preparation bias is 0 or 8192.
+/// Therefore `rounding + bias` is at most 524800 and `shift` is at most 10.
+#[derive(Clone, Copy)]
+struct CompoundRounding {
+    rounding: i32,
+    bias: i32,
+    shift: u32,
+}
+
+impl CompoundRounding {
+    fn new(depth: SampleDepth, blend: CompoundBlend) -> Av1Result<Self> {
+        let weight_bits = match blend {
+            CompoundBlend::Average => 1_u32,
+            CompoundBlend::Distance(_) => 4,
+            CompoundBlend::Masked { .. } => 6,
+        };
+        let bits = u32::try_from(intermediate_bits(depth))
+            .map_err(|_| malformed("compound intermediate shift is negative"))?;
+        let weight_round_shift = weight_bits
+            .checked_sub(1)
+            .ok_or_else(|| malformed("compound weight rounding shift overflows"))?;
+        let rounding = 1_i32
+            .checked_shl(weight_round_shift)
+            .and_then(|value| value.checked_shl(bits))
+            .ok_or_else(|| malformed("compound rounding overflows"))?;
+        let bias = preparation_bias(depth)
+            .checked_mul(1_i32 << weight_bits)
+            .ok_or_else(|| malformed("compound preparation bias overflows"))?;
+        let shift = bits
+            .checked_add(weight_bits)
+            .ok_or_else(|| malformed("compound rounding shift overflows"))?;
+        Ok(Self {
+            rounding,
+            bias,
+            shift,
+        })
+    }
+}
+
+fn blend_compound_vector(
+    first: [i16; 8],
+    second: [i16; 8],
+    mask: [u8; 8],
+    blend: CompoundBlend,
+    rounding: CompoundRounding,
+) -> Av1Result<i32x8> {
+    let first = i32x8::from_i16x8(i16x8::new(first));
+    let second = i32x8::from_i16x8(i16x8::new(second));
+    let offset = rounding
+        .rounding
+        .checked_add(rounding.bias)
+        .ok_or_else(|| malformed("compound rounding offset overflows"))?;
+    let offset = i32x8::new([offset; 8]);
+    // Both predictors are i16. Even the full u8 weight domain gives weights
+    // and complements with absolute value <= 255, including inverted masks.
+    // Each product has magnitude <= 32768 * 255; their sum plus the offset
+    // (<= 524800 from CompoundRounding::new) has magnitude <= 17236480.
+    // Every intermediate therefore fits i32. wide has no checked lane math.
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "the i16 predictors, u8 weights, and bounded rounding keep every SIMD lane in i32"
+    )]
+    let value = match blend {
+        CompoundBlend::Average => first + second + offset,
+        CompoundBlend::Distance(weight) => {
+            let weight = i32x8::new([i32::from(weight); 8]);
+            first * weight + second * (i32x8::new([16; 8]) - weight) + offset
+        }
+        CompoundBlend::Masked { inverted } => {
+            let masks = i32x8::new(mask.map(i32::from));
+            let masks = if inverted {
+                i32x8::new([64; 8]) - masks
+            } else {
+                masks
+            };
+            first * masks + second * (i32x8::new([64; 8]) - masks) + offset
+        }
+    };
+    Ok(value.unbounded_shr_scalar(rounding.shift))
+}
+
+fn blend_compound_sample(
+    first: i16,
+    second: i16,
+    mask: u8,
+    blend: CompoundBlend,
+    rounding: CompoundRounding,
+) -> Av1Result<i32> {
+    let first = i32::from(first);
+    let second = i32::from(second);
+    let sum = match blend {
+        CompoundBlend::Average => first.checked_add(second),
+        CompoundBlend::Distance(weight) => {
+            let weight = i32::from(weight);
+            let complement = 16_i32
+                .checked_sub(weight)
+                .ok_or_else(|| malformed("compound weight complement overflows"))?;
+            first
+                .checked_mul(weight)
+                .and_then(|first| first.checked_add(second.checked_mul(complement)?))
+        }
+        CompoundBlend::Masked { inverted } => {
+            let mask = i32::from(mask);
+            let mask = if inverted {
+                64_i32
+                    .checked_sub(mask)
+                    .ok_or_else(|| malformed("compound inverse mask overflows"))?
+            } else {
+                mask
+            };
+            let complement = 64_i32
+                .checked_sub(mask)
+                .ok_or_else(|| malformed("compound mask complement overflows"))?;
+            first
+                .checked_mul(mask)
+                .and_then(|first| first.checked_add(second.checked_mul(complement)?))
+        }
+    };
+    sum.and_then(|value| value.checked_add(rounding.rounding))
+        .and_then(|value| value.checked_add(rounding.bias))
+        .map(|value| value >> rounding.shift)
+        .ok_or_else(|| malformed("compound blend arithmetic overflows"))
+}
+
+fn blend_compound(
+    first: &[i16],
+    second: &[i16],
+    output: &mut [u16],
+    mask: Option<&[u8]>,
+    blend: CompoundBlend,
+    depth: SampleDepth,
+) -> Av1Result<()> {
+    let length = first.len().min(second.len()).min(output.len());
+    let rounding = CompoundRounding::new(depth, blend)?;
+    let maximum = i32::from(depth.maximum());
+    let (first_vectors, first_tail) = first[..length].as_chunks::<8>();
+    let (second_vectors, second_tail) = second[..length].as_chunks::<8>();
+    let (output_vectors, output_tail) = output[..length].as_chunks_mut::<8>();
+    // An absent mask, or a missing mask entry, retains the original half weight.
+    let mut masks = mask.unwrap_or_default().iter().copied();
+    for ((first, second), output) in first_vectors.iter().zip(second_vectors).zip(output_vectors) {
+        let masks = std::array::from_fn(|_| masks.next().unwrap_or(32));
+        let value = blend_compound_vector(*first, *second, masks, blend, rounding)?;
+        output.copy_from_slice(&narrow_samples(value, maximum));
+    }
+    for ((&first, &second), output) in first_tail.iter().zip(second_tail).zip(output_tail) {
+        let value =
+            blend_compound_sample(first, second, masks.next().unwrap_or(32), blend, rounding)?;
+        *output = u16::try_from(value.clamp(0, maximum)).unwrap_or(depth.maximum());
+    }
+    Ok(())
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "difference-mask geometry and chroma reduction are explicit correctness inputs"
+)]
+fn difference_mask_and_blend(
+    first: &[i16],
+    second: &[i16],
+    output: &mut [u16],
+    mask: &mut [u8],
+    width: usize,
+    height: usize,
+    subsampling_x: bool,
+    subsampling_y: bool,
+    inverted: bool,
+    depth: SampleDepth,
+) -> Av1Result<()> {
+    let length = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("difference compound size overflows"))?;
+    if first.len() < length || second.len() < length || output.len() < length {
+        return Err(malformed("difference compound buffers are too short"));
+    }
+    let mask_width = if subsampling_x {
+        width.div_ceil(2)
+    } else {
+        width
+    };
+    let mask_height = if subsampling_y {
+        height.div_ceil(2)
+    } else {
+        height
+    };
+    let mask_length = mask_width
+        .checked_mul(mask_height)
+        .ok_or_else(|| malformed("difference mask size overflows"))?;
+    if mask.len() < mask_length {
+        return Err(malformed("difference mask exceeds scratch"));
+    }
+    let bits = intermediate_bits(depth);
+    let bias = preparation_bias(depth);
+    let maximum = i32::from(depth.maximum());
+    let depth_bits =
+        i32::try_from(depth.bits()).map_err(|_| malformed("sample depth exceeds i32"))?;
+    let mask_shift = depth_bits
+        .checked_add(bits)
+        .and_then(|value| value.checked_sub(4))
+        .ok_or_else(|| malformed("difference mask shift overflows"))?;
+    let mask_round_shift = mask_shift
+        .checked_sub(5)
+        .ok_or_else(|| malformed("difference mask rounding shift overflows"))?;
+    let mask_round = 1_i32 << u32::try_from(mask_round_shift).unwrap_or(0);
+    let blend_shift = bits
+        .checked_add(6)
+        .ok_or_else(|| malformed("difference compound rounding shift overflows"))?;
+    let blend_bias = bias
+        .checked_mul(64)
+        .ok_or_else(|| malformed("difference compound preparation bias overflows"))?;
+    let mut full_row = [0_u8; MAX_BLOCK_EDGE];
+    let mut previous_pair_sums = [0_u16; MAX_BLOCK_EDGE / 2];
+    for y in 0..height {
+        let next_y = y
+            .checked_add(1)
+            .ok_or_else(|| malformed("difference mask row overflows"))?;
+        for (x, mask_sample) in full_row[..width].iter_mut().enumerate() {
+            let index = y
+                .checked_mul(width)
+                .and_then(|row| row.checked_add(x))
+                .ok_or_else(|| malformed("difference compound sample index overflows"))?;
+            let difference = i32::from(first[index]).saturating_sub(i32::from(second[index]));
+            let magnitude = difference
+                .unsigned_abs()
+                .saturating_add(u32::try_from(mask_round).unwrap_or(0))
+                .checked_shr(u32::try_from(mask_shift).unwrap_or(0))
+                .unwrap_or(0);
+            let magnitude = i32::try_from(magnitude)
+                .map_err(|_| malformed("difference mask magnitude exceeds i32"))?;
+            let raw_mask = 38_i32.saturating_add(magnitude).min(64);
+            let blend_mask = if inverted {
+                64_i32
+                    .checked_sub(raw_mask)
+                    .ok_or_else(|| malformed("difference compound inverse mask overflows"))?
+            } else {
+                raw_mask
+            };
+            *mask_sample = u8::try_from(raw_mask)
+                .map_err(|_| malformed("difference mask sample exceeds u8"))?;
+            let value = difference
+                .checked_mul(blend_mask)
+                .and_then(|value| value.checked_add(i32::from(second[index]).checked_mul(64)?))
+                .and_then(|value| value.checked_add(32 << bits))
+                .and_then(|value| value.checked_add(blend_bias))
+                .ok_or_else(|| malformed("difference compound blend arithmetic overflows"))?
+                >> blend_shift;
+            output[index] = u16::try_from(value.clamp(0, maximum))
+                .map_err(|_| malformed("difference compound sample exceeds u16"))?;
+        }
+        if subsampling_x {
+            for (x, (pair, previous_pair_sum)) in full_row[..width]
+                .chunks(2)
+                .zip(&mut previous_pair_sums[..mask_width])
+                .enumerate()
+            {
+                // A final odd-width pair replicates its first sample, as before.
+                let second = pair.get(1).copied().unwrap_or(pair[0]);
+                let pair_sum = u16::from(pair[0])
+                    .checked_add(u16::from(second))
+                    .ok_or_else(|| malformed("difference mask pair sum overflows"))?;
+                if subsampling_y && y % 2 == 0 && next_y < height {
+                    *previous_pair_sum = pair_sum;
+                } else {
+                    let mask_y = y >> u32::from(subsampling_y);
+                    let destination = mask_y
+                        .checked_mul(mask_width)
+                        .and_then(|row| row.checked_add(x))
+                        .ok_or_else(|| malformed("difference mask index overflows"))?;
+                    let sign = u16::from(inverted);
+                    let reduced = if subsampling_y && y % 2 == 1 {
+                        previous_pair_sum
+                            .checked_add(pair_sum)
+                            .and_then(|value| value.checked_add(2))
+                            .and_then(|value| value.checked_sub(sign))
+                            .ok_or_else(|| malformed("difference mask pair reduction overflows"))?
+                            >> 2
+                    } else {
+                        pair_sum
+                            .checked_add(1)
+                            .and_then(|value| value.checked_sub(sign))
+                            .ok_or_else(|| malformed("difference mask pair reduction overflows"))?
+                            >> 1
+                    };
+                    mask[destination] = u8::try_from(reduced)
+                        .map_err(|_| malformed("reduced difference mask exceeds u8"))?;
+                }
+            }
+        } else {
+            let mask_y = y >> u32::from(subsampling_y);
+            if !subsampling_y || y % 2 == 1 || next_y == height {
+                for (x, &sample) in full_row[..width].iter().enumerate() {
+                    let destination = mask_y
+                        .checked_mul(mask_width)
+                        .and_then(|row| row.checked_add(x))
+                        .ok_or_else(|| malformed("difference mask index overflows"))?;
+                    mask[destination] = sample;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Exact AV1 distance-compound weight for two reference order distances.
+pub(super) fn distance_weight(first: i32, second: i32) -> u8 {
+    const THRESHOLDS: [[u32; 2]; 3] = [[2, 3], [2, 5], [2, 7]];
+    const WEIGHTS: [[u8; 2]; 4] = [[9, 7], [11, 5], [12, 4], [13, 3]];
+    // dav1d names these in reverse reference order: d1 is ref0 and d0 is
+    // ref1. Preserve that ordering because it also selects the returned
+    // weight column.
+    let d1 = first.unsigned_abs().min(31);
+    let d0 = second.unsigned_abs().min(31);
+    let order = usize::from(d0 <= d1);
+    let mut index = THRESHOLDS.len();
+    for (candidate, threshold) in THRESHOLDS.iter().enumerate() {
+        let c0 = threshold[order];
+        let c1 = threshold[usize::from(order == 0)];
+        let d0_c0 = d0.saturating_mul(c0);
+        let d1_c1 = d1.saturating_mul(c1);
+        if (d0 > d1 && d0_c0 < d1_c1) || (d0 <= d1 && d0_c0 > d1_c1) {
+            index = candidate;
+            break;
+        }
+    }
+    WEIGHTS[index][order]
+}
+
+const OBMC_MASKS: [u8; 64] = [
+    0, 0, 19, 0, 25, 14, 5, 0, 28, 22, 16, 11, 7, 3, 0, 0, 30, 27, 24, 21, 18, 15, 12, 10, 8, 6, 4,
+    3, 0, 0, 0, 0, 31, 29, 28, 26, 24, 23, 21, 20, 19, 17, 16, 14, 13, 12, 11, 9, 8, 7, 6, 5, 4, 4,
+    3, 2, 0, 0, 0, 0, 0, 0, 0, 0,
+];
+
+fn validate_obmc_extent(extent: usize) -> Av1Result<usize> {
+    if !matches!(extent, 2 | 4 | 8 | 16 | 32) {
+        return Err(malformed("OBMC overlap has a non-normative extent"));
+    }
+    Ok(extent.saturating_mul(3) >> 2)
+}
+
+fn blend_obmc_row(destination: &mut [u16], neighbor: &[u16], mask: u8) -> Av1Result<()> {
+    if destination.len() != neighbor.len() {
+        return Err(malformed("OBMC row buffers have different lengths"));
+    }
+    let (destination_vectors, destination_tail) = destination.as_chunks_mut::<8>();
+    let (neighbor_vectors, neighbor_tail) = neighbor.as_chunks::<8>();
+    for (current, staged) in destination_vectors.iter_mut().zip(neighbor_vectors) {
+        let value = blend_sample_vector(*current, *staged, [mask; 8]);
+        current.copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
+    }
+    for (current, &staged) in destination_tail.iter_mut().zip(neighbor_tail) {
+        let value = blend_sample(*current, staged, mask)?;
+        *current = u16::try_from(value).map_err(|_| malformed("OBMC blend sample exceeds u16"))?;
+    }
+    Ok(())
+}
+
+/// Blend a top-neighbor predictor into the first three quarters of a full
+/// overlap-height strip. The neighbor predictor may contain one extra rounded
+/// source row; AV1 deliberately leaves that row unused by the mask.
+pub(super) fn blend_obmc_top(
+    destination: &mut [u16],
+    dst_stride: usize,
+    x_offset: usize,
+    neighbor: &[u16],
+    overlap_width: usize,
+    overlap_height: usize,
+) -> Av1Result<()> {
+    let active_height = validate_obmc_extent(overlap_height)?;
+    let destination_end = x_offset
+        .checked_add(overlap_width)
+        .ok_or_else(|| malformed("OBMC top destination span overflows"))?;
+    if overlap_width == 0 || destination_end > dst_stride {
+        return Err(malformed("OBMC top destination span is invalid"));
+    }
+    let neighbor_rows = neighbor
+        .len()
+        .checked_div(overlap_width)
+        .ok_or_else(|| malformed("OBMC top neighbor width is invalid"))?;
+    if neighbor_rows < active_height {
+        return Err(malformed("OBMC top neighbor rows are too short"));
+    }
+    let destination_rows = destination
+        .len()
+        .checked_div(dst_stride)
+        .ok_or_else(|| malformed("OBMC top destination stride is invalid"))?;
+    if destination_rows < active_height {
+        return Err(malformed("OBMC top destination rows are too short"));
+    }
+    for row in 0..active_height {
+        let destination_start = row
+            .checked_mul(dst_stride)
+            .and_then(|offset| offset.checked_add(x_offset))
+            .ok_or_else(|| malformed("OBMC top destination row overflows"))?;
+        let destination_end = destination_start
+            .checked_add(overlap_width)
+            .ok_or_else(|| malformed("OBMC top destination row exceeds buffer"))?;
+        let neighbor_start = row
+            .checked_mul(overlap_width)
+            .ok_or_else(|| malformed("OBMC top neighbor row overflows"))?;
+        let neighbor_end = neighbor_start
+            .checked_add(overlap_width)
+            .ok_or_else(|| malformed("OBMC top neighbor row exceeds buffer"))?;
+        let mask_index = overlap_height
+            .checked_add(row)
+            .ok_or_else(|| malformed("OBMC top mask index exceeds table"))?;
+        let mask = *OBMC_MASKS
+            .get(mask_index)
+            .ok_or_else(|| malformed("OBMC top mask index exceeds table"))?;
+        blend_obmc_row(
+            destination
+                .get_mut(destination_start..destination_end)
+                .ok_or_else(|| malformed("OBMC top destination row is unavailable"))?,
+            neighbor
+                .get(neighbor_start..neighbor_end)
+                .ok_or_else(|| malformed("OBMC top neighbor row is unavailable"))?,
+            mask,
+        )?;
+    }
+    Ok(())
+}
+
+/// Blend a left-neighbor predictor into the first three quarters of a full
+/// overlap-width strip. The top pass is applied before this pass, so the
+/// corner receives AV1's intentional two-stage blend.
+pub(super) fn blend_obmc_left(
+    destination: &mut [u16],
+    dst_stride: usize,
+    y_offset: usize,
+    neighbor: &[u16],
+    overlap_width: usize,
+    overlap_height: usize,
+) -> Av1Result<()> {
+    let active_width = validate_obmc_extent(overlap_width)?;
+    if overlap_height == 0 || overlap_width == 0 {
+        return Err(malformed("OBMC left overlap has zero extent"));
+    }
+    let neighbor_length = overlap_width
+        .checked_mul(overlap_height)
+        .ok_or_else(|| malformed("OBMC left neighbor size overflows"))?;
+    if neighbor.len() < neighbor_length {
+        return Err(malformed("OBMC left neighbor rows are too short"));
+    }
+    if dst_stride == 0 || active_width > dst_stride {
+        return Err(malformed("OBMC left destination stride is invalid"));
+    }
+    let destination_start = y_offset
+        .checked_mul(dst_stride)
+        .ok_or_else(|| malformed("OBMC left destination offset overflows"))?;
+    let destination_last = y_offset
+        .checked_add(overlap_height.saturating_sub(1))
+        .and_then(|row| row.checked_mul(dst_stride))
+        .and_then(|row| row.checked_add(active_width))
+        .ok_or_else(|| malformed("OBMC left destination span overflows"))?;
+    if destination_start > destination.len() || destination_last > destination.len() {
+        return Err(malformed("OBMC left destination span is invalid"));
+    }
+    for row in 0..overlap_height {
+        let destination_row = y_offset
+            .checked_add(row)
+            .and_then(|value| value.checked_mul(dst_stride))
+            .ok_or_else(|| malformed("OBMC left destination row overflows"))?;
+        let neighbor_row = row
+            .checked_mul(overlap_width)
+            .ok_or_else(|| malformed("OBMC left neighbor row overflows"))?;
+        let destination_end = destination_row
+            .checked_add(active_width)
+            .ok_or_else(|| malformed("OBMC left destination index overflows"))?;
+        let destination = destination
+            .get_mut(destination_row..destination_end)
+            .ok_or_else(|| malformed("OBMC left destination sample is unavailable"))?;
+        let neighbor_end = neighbor_row
+            .checked_add(active_width)
+            .ok_or_else(|| malformed("OBMC left neighbor index overflows"))?;
+        let neighbor = neighbor
+            .get(neighbor_row..neighbor_end)
+            .ok_or_else(|| malformed("OBMC left neighbor sample is unavailable"))?;
+        let mask_end = overlap_width
+            .checked_add(active_width)
+            .ok_or_else(|| malformed("OBMC left mask index exceeds table"))?;
+        let masks = OBMC_MASKS
+            .get(overlap_width..mask_end)
+            .ok_or_else(|| malformed("OBMC left mask index exceeds table"))?;
+        let (destination_vectors, destination_tail) = destination.as_chunks_mut::<8>();
+        let (neighbor_vectors, neighbor_tail) = neighbor.as_chunks::<8>();
+        let (mask_vectors, mask_tail) = masks.as_chunks::<8>();
+        for ((current, staged), mask) in destination_vectors
+            .iter_mut()
+            .zip(neighbor_vectors)
+            .zip(mask_vectors)
+        {
+            let value = blend_sample_vector(*current, *staged, *mask);
+            current.copy_from_slice(&narrow_samples(value, i32::from(u16::MAX)));
+        }
+        for ((current, &staged), &mask) in destination_tail
+            .iter_mut()
+            .zip(neighbor_tail)
+            .zip(mask_tail)
+        {
+            let value = blend_sample(*current, staged, mask)?;
+            *current =
+                u16::try_from(value).map_err(|_| malformed("OBMC blend sample exceeds u16"))?;
+        }
+    }
+    Ok(())
+}

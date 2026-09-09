@@ -183,8 +183,11 @@ oracle and remains a normal active matrix row.
 | `portable_lossy_420_q99_luma_eob_bin2_eob3.avif` | 4×4 luma impulse at `(3,0)`, legal TX8×8 EOB-bin two / EOB three / EOB-base zero | `1e8f492d54742c0662595952247b15cd98054d4f6e11346041d1d7db4cf5b34` |
 
 The complete scalar traces, extracted AV1-item hashes, reconstructed planes,
-and Pillow RGB hashes are pinned in `docs/avif.md` and
-`tests/fixtures/outputs/av1_reconstruction.json`.
+and Pillow RGB hashes are pinned in `docs/avif.md` and the indexed
+`tests/fixtures/outputs/av1_reconstruction.json` oracle. Its
+`av1_reconstruction.part-*.json` sidecars hold the case records so each
+tracked blob stays below common hosting limits; the harness joins them before
+validation.
 
 The fixture `coverage_r32x16_filter_intra_tx8x8_01.avif` is an origin
 Horizontal32x16 TX8x8 split witness. Its `Post-filterintramode[0/0]` trace
@@ -244,6 +247,47 @@ Pillow RGB SHA-256 is
 This is bounded origin Vertical8x16 mode-2 evidence, not general filter-intra
 support.
 
+The following three repository-generated fixtures form one bounded 8x32,
+8-bit 4:2:0 following-Vertical8x16 luma smooth family. Their lower leaf uses
+qindex 16/qcat zero, matrix 10, an unsplit TX8x16 DCT-DCT luma transform, and
+skipped TX4x8 U/V transforms. Generation is pinned to Pillow 12.2.0,
+libavif 1.4.1, libaom 3.13.2, and scalar dav1d 1.5.3; each promoted input was
+double-encoded and its AV1 item, trace, decoded YUV, and Pillow RGB output were
+checked for determinism without invoking repository Rust.
+
+| Fixture | Lower luma mode | Fixture SHA-256 | Campaign report and SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| `coverage_vertical8x16_following_luma_smooth_01.avif` | Smooth (9) | `54fcb046a23c062c08a7a1ed75637bb43bc497bcea59a8ae10db8c093a8d8d24` | `coverage_vertical8x16_following_luma_smooth_campaign_01.json`, `ee10e865a3acfcb2d716af436d1501f51896ae4e70e7fbe2342ace515211364c` | `6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5` |
+| `coverage_vertical8x16_following_luma_smooth_vertical_01.avif` | SmoothVertical (10) | `6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6` | `coverage_vertical8x16_following_luma_smooth_vertical_campaign_06.json`, `977167794eaae213b6ae5a9bf39a7495c9c36b5ee06331c7dabbcf4172d99799` | `f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46` |
+| `coverage_vertical8x16_following_luma_smooth_horizontal_01.avif` | SmoothHorizontal (11) | `ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e` | `coverage_vertical8x16_following_luma_smooth_horizontal_campaign_01.json`, `6199718ea2f3f4e579feb0319000db455c70022e039071f90c8f7682394b5422` | `e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6` |
+
+This fixture set proves only the declared smooth-family class; it is not a
+general AV1/AVIF or performance claim.
+
+The following four repository-generated fixtures extend the same 8x32,
+8-bit 4:2:0 following-Vertical8x16 topology to the lower leaf's 4x8 U/V
+planes. The lower luma leaf remains DC with two skipped TX8x8 DCT-DCT
+children. Both chroma planes carry non-empty TX4x8 residuals: DC uses
+DCT-DCT, Smooth uses ADST-ADST, SmoothVertical uses ADST-DCT, and
+SmoothHorizontal uses DCT-ADST. Generation is pinned to Pillow 12.2.0,
+libavif 1.4.1, libaom 3.13.2, and scalar dav1d 1.5.3; each 100-candidate
+campaign retained deterministic AV1 item, trace, decoded YUV, and Pillow RGB
+evidence without invoking repository Rust.
+
+| Fixture | Lower chroma mode / transform | Fixture SHA-256 | Campaign report and SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- | --- | --- |
+| `coverage_vertical8x16_following_chroma_dc_01.avif` | DC (0) / DCT-DCT | `7ff17319c3b2e5c7306908618ecaaa823c734391af286b81e0a68db6af01d35a` | `coverage_vertical8x16_following_chroma_dc_campaign_01.json`, `e16c6410c48f4b22bb884cdad4b609431ef6604359714bb63bb1e0ccee93d282` | `46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6` |
+| `coverage_vertical8x16_following_chroma_smooth_01.avif` | Smooth (9) / ADST-ADST | `be6f22b1988333c303f63a7dddb3d5bbade9211bbfc519c9be51db3b510d0ccd` | `coverage_vertical8x16_following_chroma_smooth_campaign_01.json`, `22734ed045a34209876ff4ce984b4f9209cd28e1df2d07deffbd74a100dd7432` | `f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18` |
+| `coverage_vertical8x16_following_chroma_smooth_vertical_01.avif` | SmoothVertical (10) / ADST-DCT | `a29134747ab2e6cb9602b06398fa9b48f7f4bdb2e7f0193e568d0474f54a782c` | `coverage_vertical8x16_following_chroma_smooth_vertical_campaign_01.json`, `e510f2669a6dd6f8ed21555d17fd097e6e238c8ebf4df196907476e87b65dfd0` | `ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a` |
+| `coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif` | SmoothHorizontal (11) / DCT-ADST | `c3dd3717c4c639b3558b87344532650caf7f6b4d0f8c6e030250aef7efe3ccee` | `coverage_vertical8x16_following_chroma_smooth_horizontal_campaign_01.json`, `c834f57c1c1cf320b549fe6c4fc81a3631ca883fa84d3a90f7ed1a2aacf0e00e` | `f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a` |
+
+The varying upper-leaf chroma rows make the lower predictor's true top edge
+observable: it is row 7 of the 4x8 upper plane, not row 6 or a synthetic
+rectangular endpoint. Because the lower leaf has no left neighbor, DC is
+one-sided top DC and the smooth modes repeat the top-left sample for the
+missing left edge. These 32-pixel predictors intentionally use checked fixed
+arrays; this evidence does not claim that SIMD setup would improve them.
+
 `coverage_i444_palette2_square8_four_leaves.avif`
 (`7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56`)
 is a deterministic 16x16, 8-bit, single-tile, lossy 4:4:4 witness generated
@@ -274,6 +318,33 @@ the gradient orientation and residual sentences. `rect_01` has a pinned
 are full-resolution lossy 4:4:4 cases with exact dav1d Y/U/V and Pillow RGB
 references. Their evidence is intentionally bounded to these observed syntax
 classes, not a claim of general I444 support.
+
+The `coverage_i444_square8_01.avif` through `_10.avif` batch keeps that
+16x16 full-range 4:4:4 split-root/four-Square8 topology fixed while varying
+all four row-major leaves. Every leaf uses DC chroma and TX8x8 DCT-DCT on
+all coded planes. The batch proves origin, left-neighbor, top-neighbor with
+top-right extension, and combined top/left/upper-left contexts; luma covers
+DC, Vertical, Horizontal, and Smooth, including the zero-delta directional
+angle symbol. Cases 05-10 enable screen-content tools and consume only
+palette-use false: all four UV decisions are false, while luma decisions are
+present only on palette-eligible DC leaves. No fixture claims a nonzero
+palette, palette cache entry, intra block copy, CFL, non-DC chroma,
+filter-intra selection, transform split, or non-DCT transform. Exact
+partition ranges, adaptive entropy operations, coefficient endpoints, Y/U/V
+planes, and Pillow RGB bytes are pinned by the reconstruction oracle.
+
+| Fixture | Fixture SHA-256 | Pillow RGB SHA-256 |
+| --- | --- | --- |
+| `coverage_i444_square8_01.avif` | `29a9a67c2719046b5d9aa6ebe9e6666377c298a1f60e2f1b4cbf56aa757d0d61` | `e2d9ba964c5ec53a4032198999f2d96a6c04f764827521c4d8266dfd63183a8d` |
+| `coverage_i444_square8_02.avif` | `c76fd9908087d9025e5eac621d2fa7dc3e5aa2cbbe902e7df9baec31934a16fe` | `52cf14c15d3016015816a5097d48ed7b32210911f00e6533d65fc07aad401360` |
+| `coverage_i444_square8_03.avif` | `bf79a86725d4e78286972e0688a6e9551850f7b476c7febe06c5c62b7d27cadc` | `23e0828c4691405b5616f2d3d1ce2452c8643ef941ff888fdcdb08d9ddbae07b` |
+| `coverage_i444_square8_04.avif` | `7fe339ea07a4efc8592250f973f37eebd91878b64b48ef5da6ff0d928b259212` | `6af78ef081a21691dac3dbe080e0e74a4666df7c401975857a88d31be170c8d2` |
+| `coverage_i444_square8_05.avif` | `88ad2e5488e80cbeba53625826b0f90a6fb96a8f9ac9f314f11ec8b4b505f2bc` | `956047973e698d18fe70a45f57a797c94f38bdf12ee2c6b5dcbf706971763cbf` |
+| `coverage_i444_square8_06.avif` | `ce43e1768fa0d92d6821c4971ea071dedb6aeaa92b054e5cfb368a2ea903af67` | `69d96e28e665d2570868fce3d2e30aaa891a46afffc55146c8511fd3e2fe1f7d` |
+| `coverage_i444_square8_07.avif` | `f7780936d03e09920e206942151ae9378abbf4100216644316da0624f5bf437e` | `ed89a1e09548a12cf5953f812af87b33d7047922a81f71359a949fdad1378b9b` |
+| `coverage_i444_square8_08.avif` | `7ea976064f08dde24c28842e3fe3d3af3d01310f896b346fe179622d0da5322c` | `861d107c5e7958cf4bb38cc63f8c19d6460e16e7418f2e3fe4856c74d82910a2` |
+| `coverage_i444_square8_09.avif` | `f1cf6c7fa5ddec16583f99e1ad5318f9c731386f9038071e1ba51f0b2d854737` | `7df3e53c1af05ddc0e53f6c59a2e0b3433da621fc44f0c0f4714d66fe4876aaa` |
+| `coverage_i444_square8_10.avif` | `a8942600752ed77d7ecbca6b726e589d1c106963bd4bca4eca6bbbb18cc9978c` | `c9f06d709276d78fc43bc11d9712d4ea29faea7b0d52655175e827d15b1d3ced` |
 
 | Fixture | Size | File SHA-256 | Pillow RGB SHA-256 |
 | --- | ---: | --- | --- |
@@ -487,13 +558,35 @@ transform admitted by Slice 28. All ten are original project material
 generated by `scripts/generate_test_assets.py` under this repository's
 MIT/Apache licensing.
 
+The `coverage_entropy_mosaic_01.avif` through
+`coverage_entropy_mosaic_10.avif` family is an original deterministic 32x32
+4:2:0 quality-99 corpus generated from two low-contrast rectangles. Every file
+selects one matrix-10 Square32 DC/DC leaf with a TX32x32 luma transform and
+TX16x16 chroma transforms. Cases 03 and 06 through 10 enable screen-content
+tools and prove the ordered `y_pal=0`, `uv_pal=0` syntax before filter-intra;
+04 and 05 are screen-content-disabled controls. Case 06 reaches luma EOB 526,
+and cases 06 and 07 retain extended coefficient magnitudes. This evidence does
+not admit a nonzero palette, palette index map, palette neighbor context, or
+intra block copy. The promoted file hashes are:
+
+- 03: `bbf49002958d8b836d30ef5f837168a841b138e67f12ef4f6e73c072b71e65d9`
+- 04: `233617a50cfd0a8b2dbd5976e1d4296bd9f6b26b36f416970fe812ba00f79d73`
+- 05: `0509df3919b43398bd7e2bf6d812796113c750094cf7a973d58aa19fbc8d2dc7`
+- 06: `ea7d7dc634b9ef96069030b6b62b4c5c499152982dc5524f17f5dfe5b58a3028`
+- 07: `dcb3689dd4ca134fb7c221140c4e75b13abc39f6fba611ee285f7a003f1c5f2a`
+- 08: `561dcfe17d6583e0d9051cd221ea93be152c59479074bc69ff9b038848eb5451`
+- 09: `6d4b2b591d77fa312ac8f98b3478364f01c80852745dae498c48692a1e3a60f8`
+- 10: `aefbe6aab6da76fe7d51bb0fb3e9d7e83fb0622da44d6b1f835e0868662d6558`
+
 `scripts/generate_av1_reconstruction_refs.py` checks every positive file hash,
 builds an instrumented scalar copy of exact dav1d 1.5.3 commit
 `b546257f770768b2c88258c533da38b91a06f737` outside the repository, and writes
-`tests/fixtures/outputs/av1_reconstruction.json`. That oracle records all
+the indexed `tests/fixtures/outputs/av1_reconstruction.json` plus its
+`av1_reconstruction.part-*.json` case files. That oracle records all
 partition-block headers, scalar entropy operations, reconstructed Y/U/V plane
 rows and hashes, and Pillow RGB rows and hashes. The Rust integration test
-consumes this JSON and the positive AVIF fixtures directly.
+joins the index and parts, then consumes the resulting document and the
+positive AVIF fixtures directly.
 
 The bounded vertical Diagonal67 fixture
 `coverage_square8_chroma_diagonal67_vertical_01.avif` is the promoted

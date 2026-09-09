@@ -1,6 +1,8 @@
 # Release checklist
 
-This project is pre-release. A release is allowed only when the version,
+This project is pre-release. The complete go/no-go checklist is in
+[PRODUCTION_RELEASE_READINESS.md](PRODUCTION_RELEASE_READINESS.md). A release is
+allowed only when the version,
 source revision, generated fixtures, legal notices, and published claims all
 describe the same tree.
 
@@ -45,6 +47,30 @@ describe the same tree.
   pinned native projects are documented as oracle/provenance material only.
 - Keep the release artifacts, benchmark receipt, and evidence identifiers
   recoverable from the release notes.
+
+## First local crates.io bootstrap
+
+After the clean release gate passes, authenticate interactively and publish the
+single crate without creating a tag:
+
+```text
+cargo login
+RELEASE_APPROVED=1 RELEASE_CI_SHA="$(git rev-parse HEAD)" make release-bootstrap
+cargo logout
+```
+
+The helper builds twice, checks the extracted package and downstream consumer,
+publishes only when the exact version is absent, and compares the resulting
+crates.io archive byte-for-byte. It never creates or pushes a Git tag.
+
+## Later tag releases
+
+After the first bootstrap, create an annotated `v<version>` tag on each reviewed
+commit and push that tag. The tag-driven
+[`.github/workflows/release.yml`](.github/workflows/release.yml) repeats the
+clean release gate, uses crates.io OIDC Trusted Publishing, verifies the
+registry archive, attests the artifact, and creates the GitHub prerelease. No
+long-lived registry token is stored in the workflow.
 
 ## If a release is wrong
 

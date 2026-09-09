@@ -50,6 +50,13 @@ default-features = false
 features = ["png", "jpeg"]
 ```
 
+After the first bootstrap, depend on the immutable crates.io version:
+
+```toml
+[dependencies]
+image-slash-star = { version = "=0.1.0", default-features = false, features = ["png", "jpeg"] }
+```
+
 Cargo package names use hyphens; Rust imports use underscores.
 
 ```rust,no_run
@@ -157,7 +164,8 @@ gaps.
 | `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled format restrictions and limits before the corresponding operation |
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
-| `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the decoded contract |
+| `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the legacy decoded contract |
+| `ImageInfo::detailed_transfer_layout`, `DecodedImage::detailed_transfer_layout` | Add the transfer byte order and the current one-plane transport description while retaining the legacy layout |
 | `DecodedImage::try_new`, `try_with_mode`, `try_with_palette` | Checked zero-copy construction for validated pixels, color/mode state, and indexed palettes; the compatibility builders remain explicitly unchecked |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
@@ -683,11 +691,11 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `cf965d29beff5aceaf8517d8ea0203164358359b754b71a0a09f82887d8e5793`; generated matrix SHA-256: `54671e48b30ab905003be6db3684c912a76ece15bb007b7fab46bf136cb024ae`.
+- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `002f1a6293a0913d6a010f325db64a82258d5b5f7ae8e778e37b008af22ecc71`.
 <!-- current-claim-ledger:end -->
 
-The generated matrix in this tree contains 1,542 total rows: 1,145 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,142 decode rows and
+The generated matrix in this tree contains 1,567 total rows: 1,170 decode /
+inspect / verify rows and 397 encode rows. Of those, 1,167 decode rows and
 365 encode rows are active; 3 AVIF decode rows and all 32 AVIF encode rows
 are explicit planned pure-Rust gaps. Expected errors that remain active are
 fixture outcomes, and every decode-error class is catalogued in the generated,
@@ -710,18 +718,69 @@ The current accepted Coverage MCP snapshot is recorded in
 branch, function, and region counts. Coverage proves execution under the
 retained suite; it does not prove complete format support or security.
 
-The newest bounded AVIF incremental reconstruction run
-`44360fd2-4d9c-4ce0-845b-deef0d7c0ef1` passed in 31,912 ms at exact
-implementation commit `72759602317c50016a6bf38fc80ee06bb1de9afe` and ingested
-snapshot `5b0a5d63-dfe0-447a-9e3e-ffe7a97a08cb` against baseline
-`7665cda3-f4a7-4568-b871-a9d34afaa92c`. It selected only the new
-`coverage_h16x4_filter_intra_tx8x4_split_01.avif` fixture; the additive review
-reports +8 covered lines, +7 branches, +0 functions, +281 regions, and no
-reported regressions. The selected subset is bounded evidence, not a
-replacement for the complete release measurement. The matching selected
-matrix-row run `a740718c-1912-4280-8cff-4969d1acf19e` passed in 30,162 ms and
-reports +8 lines, +8 branches, +0 functions, +281 regions, and no reported
-regressions against the same baseline.
+The newest bounded AVIF reconstruction evidence activates
+`coverage_i444_square8_01.avif` through `_10.avif` at implementation commit
+`2c59a53c4602e585c34f1b41c9d13b2813e9c9d5`. All ten are exact 16x16,
+8-bit, full-range 4:4:4 frames with a split root, four row-major Square8
+leaves, effective qindex 2, matrix 10, and unsplit TX8x8 DCT-DCT Y/U/V
+transforms. The corpus covers DC, Vertical, Horizontal, and Smooth luma modes,
+directional-angle ownership, skipped and coded residuals, and serial
+palette-use-false adaptation when screen-content tools are enabled. Case 04
+also proves the generic missing-top rule for a horizontally following Vertical
+leaf: the first left sample is repeated across the unavailable top edge. The
+273-case pinned dav1d oracle checks every partition, entropy operation, EOB,
+and Y/U/V plane, while the public matrix checks exact Pillow RGB bytes.
+Managed Coverage MCP run `792e4884-8f4a-4c67-92e6-65eaa0e11a13` selected
+exactly all ten fixtures and ingested snapshot
+`44d4499a-77fd-4c6a-a764-e138ec57c9d5` against explicit baseline
+`e775c345-999e-47e7-a260-996b27f9d54c`. Its supported additive union adds
+1,297 covered lines, 213 branches, 106 functions, and 1,896 regions;
+denominators change by +6 lines, +0 branches, +1 function, and +9 regions.
+The limited selected-subset diff records 2,291 newly covered line identities
+and 4,744 baseline observations not observed; those absences are not
+regressions. Merge exactness is false and named-test attribution is
+unavailable. This is bounded evidence, not general AV1 completion or a speed
+claim.
+
+The preceding bounded AVIF reconstruction evidence activates
+`coverage_entropy_mosaic_03.avif` through `_10.avif` at implementation commit
+`05ec80ad12312a782184f83b9fa6dbc8325442c8`. All eight are exact 32x32,
+8-bit, full-range 4:2:0 origin-Square32 DC/DC witnesses at effective qindex 2
+and matrix 10, with TX32x32 luma and TX16x16 chroma DCT-DCT residuals. Cases
+03 and 06-10 additionally prove the screen-content-enabled `y_pal=0` then
+`uv_pal=0` syntax path; 04-05 are screen-content-disabled controls. The
+263-case pinned dav1d oracle checks every partition, entropy operation, EOB,
+and Y/U/V plane, while the public matrix checks exact Pillow RGB bytes. This
+does not admit nonzero palettes, palette colors/index maps, palette-neighbor
+contexts, multi-block adaptation, or intrabc. Arithmetic range decoding is
+serial and adaptive; the appropriate measured vectorization targets remain
+the shared inverse-transform, filtering, upsampling, and color-conversion
+kernels. Managed Coverage MCP run
+`11a453ea-e11d-4857-9c9d-aa255fcfd13f` selected exactly all eight fixtures,
+passed at committed tree `ded00aae53e223fd4a6dff2bc2bac9cde692dca1`, and
+ingested snapshot `066a1865-082d-43f8-95d7-f06e7802335d` against explicit
+baseline `e775c345-999e-47e7-a260-996b27f9d54c`. Its supported additive
+union adds 334 covered lines, 34 branches, 11 functions, and 1,060 regions.
+The limited selected-subset diff records 1,329 baseline observations as not
+observed, not as regressions; merge exactness is false and named-test
+attribution is unavailable.
+
+The preceding bounded AVIF reconstruction evidence covers four exact
+following-Vertical8x16 chroma fixtures at implementation commit
+`98824dd14ab25034017f11ffe5e5ebb5761a5ecb`. Managed Coverage MCP runs
+`9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66`,
+`2014be25-81a9-4e23-9ea8-39a39e383f8e`,
+`ee823300-1126-443b-aa05-ac7b0e380f9b`, and
+`6191b1e2-730f-41a2-a7bd-95d2e9a2fd03` passed their exact DC, Smooth,
+SmoothVertical, and SmoothHorizontal selectors and ingested snapshots
+`4660b226-6e92-43bc-a904-98c74805f5a8`,
+`59cbbf2f-72e2-4496-a1ec-5c1388e79b38`,
+`f2906a05-336b-440e-99f7-468be3bca9a3`, and
+`e775c345-999e-47e7-a260-996b27f9d54c` against baseline
+`7665cda3-f4a7-4568-b871-a9d34afaa92c`. Each additive review reports
++8 lines, +10 branches, +0 functions, +938 regions, and no reported
+regressions. These selected subsets are bounded evidence, not replacements
+for the complete release measurement or claims of general AV1 completion.
 
 The oracle identity, regeneration workflow, exact comparison contract, test
 tiers, current run identifiers, and troubleshooting are in
@@ -753,6 +812,7 @@ classes return the documented typed gap until their Rust implementation lands.
 - [Contributing](CONTRIBUTING.md)
 - [Support](SUPPORT.md)
 - [Release checklist](RELEASING.md)
+- [Production release readiness](PRODUCTION_RELEASE_READINESS.md)
 - [Security policy](SECURITY.md)
 - [Third-party provenance](third_party/README.md)
 

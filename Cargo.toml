@@ -26,6 +26,7 @@ include = [
     "/LICENSE-MIT",
     "/NOTICE.md",
     "/PATENTS",
+    "/PRODUCTION_RELEASE_READINESS.md",
     "/README.md",
     "/roadmap.json",
     "/scripts/verify_third_party_licenses.py",
@@ -69,7 +70,7 @@ bmp = []
 tiff = []
 webp = []
 ico = ["bmp", "png"]
-avif = []
+avif = ["dep:wide"]
 
 [lints.rust]
 future-incompatible = { level = "deny", priority = -1 }

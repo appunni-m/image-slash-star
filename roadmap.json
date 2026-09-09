@@ -30,17 +30,17 @@
   ],
   "current_state": {
     "matrix": {
-      "total_rows": 1542,
-      "decode_rows": 1145,
+      "total_rows": 1567,
+      "decode_rows": 1170,
       "encode_rows": 397,
-      "decode_active": 1142,
+      "decode_active": 1167,
       "decode_planned": 3,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
-      "decode_rows": 318,
-      "decode_active": 315,
+      "decode_rows": 343,
+      "decode_active": 340,
       "decode_planned": 3,
       "encode_rows": 32,
       "encode_active": 0,
@@ -48,7 +48,7 @@
       "former_native_remaining": 35
     },
     "tests": {
-      "coverage_matrix_tests": "44/44 matrix tests",
+      "coverage_matrix_tests": "45/45 matrix tests",
       "feature_gate_tests": "66/66 feature-gate tests",
       "animation_loop_tests": "4/4 animation-loop contract tests",
       "doctests": "1/1"
@@ -81,7 +81,7 @@
       "transport_argument": "--skip",
       "transport_prefix": "__image_slash_star_av1_fixture_selector__=",
       "name_form": "exact case-sensitive bare .avif basename from av1_reconstruction.json",
-      "no_selector_behavior": "run_all_248_reconstruction_cases",
+      "no_selector_behavior": "run_all_273_reconstruction_cases",
       "selected_execution": "selected_materialized_cases_only",
       "selected_reporting": "selected fixture count and names are emitted; the executed set must equal the requested set",
       "rejected_selections": [
@@ -138,45 +138,64 @@
       },
       "latest_evidence": {
         "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
-        "commit_sha": "54cb372443b2e07864f9187e59c254106a09980b",
-        "run_id": "3c888867-7ae2-4196-974a-191a639c0b70",
-        "snapshot_id": "7f98d0df-f1de-4509-88f4-1f85d9fd0bcd",
-        "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+        "commit_sha": "2c59a53c4602e585c34f1b41c9d13b2813e9c9d5",
+        "implementation_commit_sha": "2c59a53c4602e585c34f1b41c9d13b2813e9c9d5",
+        "baseline_snapshot_id": "e775c345-999e-47e7-a260-996b27f9d54c",
         "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
-        "duration_ms": 47582,
         "selected_fixtures": [
-          "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif"
+          "coverage_i444_square8_01.avif",
+          "coverage_i444_square8_02.avif",
+          "coverage_i444_square8_03.avif",
+          "coverage_i444_square8_04.avif",
+          "coverage_i444_square8_05.avif",
+          "coverage_i444_square8_06.avif",
+          "coverage_i444_square8_07.avif",
+          "coverage_i444_square8_08.avif",
+          "coverage_i444_square8_09.avif",
+          "coverage_i444_square8_10.avif"
+        ],
+        "runs": [
+          {
+            "run_id": "792e4884-8f4a-4c67-92e6-65eaa0e11a13",
+            "snapshot_id": "44d4499a-77fd-4c6a-a764-e138ec57c9d5",
+            "duration_ms": 44901,
+            "test_result": "1 passed; 0 failed; 44 filtered out",
+            "selected_fixtures": 10,
+            "selected_projection_newly_covered_line_identities": 2238,
+            "selected_snapshot_diff_newly_covered_line_identities": 2291,
+            "not_observed": 4744
+          }
         ],
         "status": "passed_and_ingested",
-        "log_evidence": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 44 filtered out; the exact AV1 fixture selector executed one requested fixture",
+        "log_evidence": "The exact AV1 fixture selector reported selected=10 with precisely coverage_i444_square8_01.avif through coverage_i444_square8_10.avif; the reconstruction test reported 1 passed, 0 failed, and 44 filtered out.",
         "result": {
           "passed": 1,
           "failed": 0,
-          "selected_fixtures": 1,
+          "selected_fixture_cases": 10,
           "filtered_tests": 44,
           "status": "passed_and_ingested"
         },
         "review": {
-          "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+          "claim_status": "supported",
           "measurement_scope": "selected_subset",
           "comparison_mode": "additive_union",
-          "covered_lines_delta": 8,
-          "covered_branches_delta": 10,
-          "covered_functions_delta": 0,
-          "covered_regions_delta": 937,
-          "total_lines_delta": 4785,
-          "total_branches_delta": 708,
-          "total_functions_delta": 79,
-          "total_regions_delta": 13239,
-          "newly_covered_line_identities": 1958,
-          "selected_snapshot_diff_newly_covered_line_identities": 650,
-          "not_observed": 76058,
+          "covered_lines_delta": 1297,
+          "covered_branches_delta": 213,
+          "covered_functions_delta": 106,
+          "covered_regions_delta": 1896,
+          "total_lines_delta": 6,
+          "total_branches_delta": 0,
+          "total_functions_delta": 1,
+          "total_regions_delta": 9,
+          "selected_projection_newly_covered_line_identities": 2238,
+          "selected_snapshot_diff_newly_covered_line_identities": 2291,
+          "not_observed": 4744,
           "regressed": 0,
           "merge_exact": false,
           "test_attribution": "unavailable",
           "snapshot_diff_claim_status": "limited",
-          "automatic_review": "not_measured_due_to_response_budget; standalone coverage_review measured the ingested snapshot",
-          "note": "The exact selected split-TX4x4 fixture passed 1/1 through the registered all-feature command with 44 filtered tests. Standalone coverage_review(task=incremental) measured the ingested snapshot against explicit baseline 7665cda3-f4a7-4568-b871-a9d34afaa92c. The additive baseline-union review reports +8 covered lines, +10 branches, +0 functions, and +937 regions; denominator changes are +4,785 lines, +708 branches, +79 functions, and +13,239 regions. The additive-union selected projection reports 1,958 newly covered line identities; the selected snapshot diff reports 650 newly covered line identities, 76,058 baseline observations were not observed and are not regressions, and zero regressions were reported. The merge is conservative, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db while the durable run record is exact for implementation commit 54cb372443b2e07864f9187e59c254106a09980b. This is bounded selected-subset evidence, not a complete four-metric release measurement or a global regression claim."
+          "automatic_review": "standalone coverage_review measured the ingested snapshot",
+          "note": "The exact ten-fixture I444 Square8 batch passed in one selected managed run at committed tree 2c59a53c4602e585c34f1b41c9d13b2813e9c9d5. The additive baseline union reports +1,297 covered lines, +213 branches, +106 functions, and +1,896 regions; denominator changes are +6 lines, +0 branches, +1 function, and +9 regions. The selected projection reports 2,238 newly covered line identities; the replacement-style selected-subset diff reports 2,291 newly covered identities and 4,744 baseline observations not observed. Those absences are not regressions, and the reported zero regressions is not a global claim. The merge is conservative, named-test attribution is unavailable, and the compact snapshot projection retains metadata commit 3272b3ef49a87c2947c08b46596b442195c6a8db. This is bounded selected-subset evidence, not a complete four-metric release measurement."
         }
       }
     },
@@ -1215,8 +1234,8 @@
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 513,
-        "files": 86
+        "guards": 531,
+        "files": 87
       },
       "status": "open_until_all_four_metrics_are_100_percent"
     },
@@ -2009,8 +2028,107 @@
           "partitioned_square_*"
         ],
         "deliverable": "Walk every AV1 partition across every tile, retain CDF and neighbor contexts, reconstruct bounded luma/chroma blocks, and compose one visible frame without native state.",
-        "current_evidence_addendum": "The latest bounded proofs are the paired following-Vertical8x16 Diagonal67 witnesses coverage_vertical8x16_following_luma_diagonal67_01.avif and coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif, plus the new depth-two split witness coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif: all are 8x32 8-bit 4:2:0 split roots with two ordered level-3 Vertical8x16 luma leaves and skipped TX4x8 U/V. The first selects angle symbol 3, delta 0, resolved angle 67 with lower EOB 1; the second selects angle symbol 2, delta -1, resolved angle 64 with origin/lower EOB 9/2 and a lower nonzero AC coefficient; the new following leaf selects angle symbol 2, delta -1, resolved angle 64 with transform depth two, eight skipped TX4x4 DCT-DCT luma children, and exact qindex 72/qcat 2/matrix 9 state. Their exact 66-, 85-, and 79-operation pinned scalar dav1d traces, three-record partitions, checked edge extensions, predictor rows, dequantized coefficient matrices, separate Y/U/V planes, and Pillow RGB8 outputs match safe Rust. The complete walker still admits only proven geometry and mode sequences; broader rectangular/angular states, AVF-STILL-001, encoding, and the four-metric 100% coverage gate remain open.",
+        "current_evidence_addendum": "The latest bounded proof activates coverage_i444_square8_01.avif through coverage_i444_square8_10.avif as one exact 16x16 full-range I444 corpus. Every frame has a split root and four row-major Square8 leaves, shared delta-Q state at effective qindex 2, matrix 10, TX8x8 DCT-DCT Y/U/V residuals, exact directional-angle ownership, and zero nonzero-palette or filter-intra state. Cases 05-10 additionally exercise serial screen-content-enabled palette-use-false adaptation across multiple leaves. Case 04 exposed and fixed a generic edge-preparation defect: a horizontal-following Vertical leaf at the top boundary now repeats the first left sample across the unavailable top edge, matching pinned dav1d rather than copying the varying left edge. Exact partition, adaptive entropy operations, EOBs, Y/U/V planes, and Pillow RGB bytes are pinned for all ten cases. This evidence does not admit nonzero palettes, palette colors/index maps, intrabc, arbitrary partitions, predictors, transforms, sample depths, filters, inter frames, or general AV1 completion; AVF-STILL-001 and the four-metric 100% coverage gate remain open.",
         "bounded_witnesses": {
+          "coverage_i444_square8_batch": {
+            "fixtures": [
+              "coverage_i444_square8_01.avif",
+              "coverage_i444_square8_02.avif",
+              "coverage_i444_square8_03.avif",
+              "coverage_i444_square8_04.avif",
+              "coverage_i444_square8_05.avif",
+              "coverage_i444_square8_06.avif",
+              "coverage_i444_square8_07.avif",
+              "coverage_i444_square8_08.avif",
+              "coverage_i444_square8_09.avif",
+              "coverage_i444_square8_10.avif"
+            ],
+            "dimensions": [16, 16],
+            "bit_depth": 8,
+            "subsampling": "4:4:4",
+            "range": "full",
+            "topology": "one level-3 PARTITION_SPLIT root and four row-major level-4 Square8 PARTITION_NONE leaves",
+            "syntax": "effective qindex 2 from base qindex 4 plus delta -2, matrix 10, unsplit TX8x8 DCT-DCT Y/U/V; luma DC/Vertical/Horizontal/Smooth combinations, DC chroma, directional angle symbol 3 where owned, screen-content palette-use-false adaptation in 05-10, and no true filter-intra state",
+            "entropy_operation_counts": [468, 580, 550, 524, 1704, 1720, 476, 458, 2858, 320],
+            "luma_modes_row_major": [
+              [1, 0, 1, 1],
+              [1, 2, 0, 2],
+              [1, 0, 0, 0],
+              [1, 1, 2, 9],
+              [0, 0, 0, 0],
+              [1, 9, 9, 9],
+              [0, 2, 0, 0],
+              [0, 0, 1, 0],
+              [0, 0, 0, 0],
+              [1, 0, 0, 2]
+            ],
+            "production_fix": "Horizontal-following Square8 Vertical prediction now prepares a missing top edge as eight copies of the first left sample; vertically following blocks retain their real eight-sample top edge.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json",
+            "scope": "This closes only the exact four-Square8 16x16 I444 classes represented by the ten fixtures and the generic missing-top Vertical edge rule. General AV1, nonzero palettes, intrabc, broader predictors/transforms/filters/sample depths, inter frames, AVF-STILL-001, and the complete four-metric gate remain open."
+          },
+          "coverage_entropy_mosaic_palette_zero_batch": {
+            "fixtures": [
+              "coverage_entropy_mosaic_03.avif",
+              "coverage_entropy_mosaic_04.avif",
+              "coverage_entropy_mosaic_05.avif",
+              "coverage_entropy_mosaic_06.avif",
+              "coverage_entropy_mosaic_07.avif",
+              "coverage_entropy_mosaic_08.avif",
+              "coverage_entropy_mosaic_09.avif",
+              "coverage_entropy_mosaic_10.avif"
+            ],
+            "dimensions": [
+              32,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "range": "full",
+            "topology": "one origin Square32 PARTITION_NONE leaf",
+            "syntax": "DC luma and chroma, effective qindex 2 from base qindex 4 plus delta -2, matrix 10, TX32x32 Y and TX16x16 U/V DCT-DCT, zero CDEF/restoration; 03 and 06-10 additionally consume y_pal=0 then uv_pal=0 with palette size context 4 and origin neighbor contexts 0, while 04-05 are screen-content-disabled controls",
+            "entropy_operation_counts": {
+              "03": 1105,
+              "04": 1012,
+              "05": 1007,
+              "06": 1201,
+              "07": 1172,
+              "08": 958,
+              "09": 789,
+              "10": 916
+            },
+            "eob_y_u_v": {
+              "03": [436, 149, 174],
+              "04": [297, 152, 179],
+              "05": [278, 188, 188],
+              "06": [526, 163, 188],
+              "07": [467, 176, 214],
+              "08": [250, 152, 179],
+              "09": [156, 162, 176],
+              "10": [250, 148, 175]
+            },
+            "fixture_sha256": {
+              "03": "bbf49002958d8b836d30ef5f837168a841b138e67f12ef4f6e73c072b71e65d9",
+              "04": "233617a50cfd0a8b2dbd5976e1d4296bd9f6b26b36f416970fe812ba00f79d73",
+              "05": "0509df3919b43398bd7e2bf6d812796113c750094cf7a973d58aa19fbc8d2dc7",
+              "06": "ea7d7dc634b9ef96069030b6b62b4c5c499152982dc5524f17f5dfe5b58a3028",
+              "07": "dcb3689dd4ca134fb7c221140c4e75b13abc39f6fba611ee285f7a003f1c5f2a",
+              "08": "561dcfe17d6583e0d9051cd221ea93be152c59479074bc69ff9b038848eb5451",
+              "09": "6d4b2b591d77fa312ac8f98b3478364f01c80852745dae498c48692a1e3a60f8",
+              "10": "aefbe6aab6da76fe7d51bb0fb3e9d7e83fb0622da44d6b1f835e0868662d6558"
+            },
+            "pillow_rgb_sha256": {
+              "03": "fafd75caa46a673bc0201f8cba7b6add17b09e0257301b86762c78906f94e85b",
+              "04": "05295c93b4b88873d843df1490b8dd6837398a179b2e46767f7d7f91f0eccf24",
+              "05": "ceeee3787ba0d828b6c43866bd97dc1f2537e1b5834ea6f467cafe2ebfd74b1f",
+              "06": "ff8e61edc88b2f0281c934c2f32308c262344b45043fe9449961972b47fb80b9",
+              "07": "687a954539f9a9d3f1ed33fa1322faa9a955b6122838f22fcb8418aae11c94c0",
+              "08": "26c4f0adeb8fada605676e3835ea159935ef2e828d49308833e6d8ebcf00648a",
+              "09": "9ac81a8f72e3f01542e41529833ba253f8d4eca77451da4d88fb4921bd7d1c21",
+              "10": "754444462592799314130431bbed2e9df516d2d32969683c2cea4d33c6b57d22"
+            },
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json",
+            "scope": "This closes only the bounded origin Square32 qcat-zero DC/DC DCT-DCT class and the screen-content-enabled palette-use-false sentence. Nonzero palettes, palette colors/index maps, palette-neighbor contexts, multi-block adaptation, intrabc, alternate geometries, predictors, transforms, sample depths, filters, sequences, encoding, and AVF-STILL-001 remain open."
+          },
           "coverage_h16x8_following_dct_dct_01": {
             "fixture": "coverage_h16x8_following_dct_dct_01.avif",
             "dimensions": [
@@ -3046,13 +3164,834 @@
             ],
             "scope": "This closes only the bounded 8x32 8-bit 4:2:0 following Vertical8x16 luma Diagonal67 mode-8 Zone-1 depth-two 2x4 TX4x4 DCT-DCT skipped-child class at angle symbol 2/resolved 64 with the observed qindex/matrix/tool state. It does not claim general split transforms, angular prediction, AV1, or AVF-STILL-001 completion.",
             "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_following_luma_smooth_01": {
+            "status": "completed_bounded",
+            "fixture": "coverage_vertical8x16_following_luma_smooth_01.avif",
+            "dimensions": [
+              8,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 95,
+            "speed": 0,
+            "topology": "Single-frame, one-tile PARTITION_SPLIT root with two ordered level-3 PARTITION_HORZ Vertical8x16 leaves at luma y=0 and y=16.",
+            "luma": "Both leaves use unsplit TX8x16 DCT-DCT with EOB 28. The origin is DC; the following leaf selects mode 9 Smooth with no angle syntax, consumes the reconstructed origin bottom row as its top edge, and repeats the top-left sample across its unavailable left edge.",
+            "predictor": "For x in 0..8 and y in 0..16, ((wy[y]*top[x] + (256-wy[y])*bottom + wx[x]*left[y] + (256-wx[x])*right + 256) >> 9), with AV1 size-8 width weights, size-16 height weights, right=top[7], and bottom=left[15].",
+            "chroma": "Both leaves use DC and skipped TX4x8 DCT-DCT U/V payloads.",
+            "frame_constraints": {
+              "base_qindex": 16,
+              "qindex_category": 0,
+              "delta_q_present": false,
+              "using_matrix": true,
+              "matrix_y": 10,
+              "matrix_u": 10,
+              "matrix_v": 10,
+              "transform_mode": "largest",
+              "cdef_bits": 0,
+              "restoration_types": [
+                0,
+                0,
+                0
+              ]
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_smooth_campaign_01.json",
+              "report_sha256": "ee10e865a3acfcb2d716af436d1501f51896ae4e70e7fbe2342ace515211364c",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 67,
+              "promoted": "S8x16-F01-N00",
+              "seed": 12000,
+              "repository_rust_invoked": false,
+              "target_id": "luma_smooth_following"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition_ranges": [
+                40720,
+                52494,
+                59240
+              ],
+              "entropy_operation_count": 155,
+              "trace_sha256": "2a172781f2b4caa52b486353adc3f64c0091d00d893ae7cac9038e0be274901d",
+              "decoded_yuv_sha256": "7d10df36808b17855b4d04b26b070e3785207349b1ce9af5f02750bf2c63ec64",
+              "decoded_plane_sha256": {
+                "y": "71273545cf83576197ba9c66e07d9d99ca53c4b8ce14c429eb3eeba289892c78",
+                "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
+                "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
+              }
+            },
+            "fixture_sha256": "54fcb046a23c062c08a7a1ed75637bb43bc497bcea59a8ae10db8c093a8d8d24",
+            "input_rgb_sha256": "aaa9d3ed3a1e24fd789a4e2a4328a4a6f54b1ecee9be68841f524c27d9bf1697",
+            "encoded_item": {
+              "bytes": 40,
+              "sha256": "bf0e1e6423c7f561361eec265b20a9163920711f901e1a59b098eea47fab8c1f"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5"
+            },
+            "implementation_commit": "6a76591e1463eb1086e123b3bfe582ef9d322ccd",
+            "managed_incremental_coverage": {
+              "run_id": "30cfecd4-7ab0-4188-afc2-381a5b19ca37",
+              "snapshot_id": "3491ed87-e1a3-4bf2-ad18-f0797227bd58",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "duration_ms": 76759,
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "covered_deltas": {
+                "lines": 8,
+                "branches": 10,
+                "functions": 0,
+                "regions": 938
+              },
+              "denominator_deltas": {
+                "lines": 4922,
+                "branches": 776,
+                "functions": 88,
+                "regions": 13429
+              },
+              "selected_projection_newly_covered_line_identities": 1779,
+              "selected_snapshot_diff_newly_covered_line_identities": 599,
+              "not_observed": 76109,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable"
+            },
+            "scope": "This closes only the bounded 8x32 8-bit 4:2:0 following Vertical8x16 Smooth mode-9, qcat-zero, unsplit TX8x16 DCT-DCT, skipped-TX4x8-chroma class. AVF-STILL-001 and broader AV1/AVIF work remain open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_following_luma_smooth_horizontal_01": {
+            "status": "completed_bounded",
+            "fixture": "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif",
+            "dimensions": [
+              8,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 95,
+            "speed": 0,
+            "topology": "Single-frame, one-tile PARTITION_SPLIT root with two ordered level-3 PARTITION_HORZ Vertical8x16 leaves at luma y=0 and y=16.",
+            "luma": "Both leaves use unsplit TX8x16 DCT-DCT with EOB 28. The origin is DC; the following leaf selects mode 11 SmoothHorizontal with no angle syntax and repeats the top-left sample across its unavailable left edge.",
+            "predictor": "For x in 0..8 and y in 0..16, ((wx[x]*left[y] + (256-wx[x])*right + 128) >> 8), with AV1 size-8 width weights and right=top[7]. The missing-left witness produces identical rows with nonconstant columns.",
+            "chroma": "Both leaves use DC and skipped TX4x8 DCT-DCT U/V payloads.",
+            "frame_constraints": {
+              "base_qindex": 16,
+              "qindex_category": 0,
+              "delta_q_present": false,
+              "using_matrix": true,
+              "matrix_y": 10,
+              "matrix_u": 10,
+              "matrix_v": 10,
+              "transform_mode": "largest",
+              "cdef_bits": 0,
+              "restoration_types": [
+                0,
+                0,
+                0
+              ]
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_smooth_horizontal_campaign_01.json",
+              "report_sha256": "6199718ea2f3f4e579feb0319000db455c70022e039071f90c8f7682394b5422",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 66,
+              "promoted": "SH8x16-F01-N00",
+              "seed": 12000,
+              "repository_rust_invoked": false,
+              "target_id": "luma_smooth_horizontal_following"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition_ranges": [
+                40720,
+                52494,
+                59240
+              ],
+              "entropy_operation_count": 154,
+              "trace_sha256": "c2c4fcc29c1608aa2fb0bf2223a91bacbfade57d1b0ed14852df7b3e3c4c8668",
+              "decoded_yuv_sha256": "ae6bac52ee41a5bbaeeee3c050bd9067e20a9c9dc8e277687382b8680499e15b",
+              "decoded_plane_sha256": {
+                "y": "9e6ad643a8c9c1e86e081993631365ee58b46be4919737f75d9bf6a50db6dcb9",
+                "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
+                "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
+              }
+            },
+            "fixture_sha256": "ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e",
+            "input_rgb_sha256": "293942b8fa8f2bdbee77c39733b6cac0dcad6c32933f093ce4e0d33c107f361f",
+            "encoded_item": {
+              "bytes": 39,
+              "sha256": "f3922f6a9b023b350d172af956143359bb5eee14de5c010c119bb8168110b067"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6"
+            },
+            "implementation_commit": "6a76591e1463eb1086e123b3bfe582ef9d322ccd",
+            "managed_incremental_coverage": {
+              "run_id": "ee2a7b4d-de50-4e03-b946-13d43f3fb349",
+              "snapshot_id": "0f9eb54d-9ef7-44a9-9aab-6dda040819d3",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "duration_ms": 44864,
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "covered_deltas": {
+                "lines": 8,
+                "branches": 10,
+                "functions": 0,
+                "regions": 938
+              },
+              "denominator_deltas": {
+                "lines": 4922,
+                "branches": 776,
+                "functions": 88,
+                "regions": 13429
+              },
+              "selected_projection_newly_covered_line_identities": 1783,
+              "selected_snapshot_diff_newly_covered_line_identities": 599,
+              "not_observed": 76121,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable"
+            },
+            "scope": "This closes only the bounded 8x32 8-bit 4:2:0 following Vertical8x16 SmoothHorizontal mode-11, qcat-zero, unsplit TX8x16 DCT-DCT, skipped-TX4x8-chroma class. AVF-STILL-001 and broader AV1/AVIF work remain open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_following_luma_smooth_vertical_01": {
+            "status": "completed_bounded",
+            "fixture": "coverage_vertical8x16_following_luma_smooth_vertical_01.avif",
+            "dimensions": [
+              8,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 95,
+            "speed": 0,
+            "topology": "Single-frame, one-tile PARTITION_SPLIT root with two ordered level-3 PARTITION_HORZ Vertical8x16 leaves at luma y=0 and y=16.",
+            "luma": "The origin leaf is DC with unsplit TX8x16 DCT-DCT and EOB 28. The following leaf is mode 10 SmoothVertical with no angle syntax, unsplit TX8x16 DCT-DCT and EOB 51; its prepared top edge is the reconstructed origin bottom row and its unavailable left edge repeats the top-left sample.",
+            "chroma": "Both visible leaves use skipped TX4x8 U/V payloads with tx=5, txtp=0, cbx4=0, and EOB -1.",
+            "frame_constraints": {
+              "base_qindex": 16,
+              "qindex_category": 0,
+              "delta_q_present": false,
+              "using_matrix": true,
+              "matrix_y": 10,
+              "matrix_u": 10,
+              "matrix_v": 10,
+              "transform_mode": "largest",
+              "cdef_bits": 0,
+              "restoration_types": [
+                0,
+                0,
+                0
+              ]
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_luma_smooth_vertical_campaign_06.json",
+              "report_sha256": "977167794eaae213b6ae5a9bf39a7495c9c36b5ee06331c7dabbcf4172d99799",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 21,
+              "promoted": "SV8x16-F01-N05",
+              "seed": 12005,
+              "repository_rust_invoked": false,
+              "target_id": "luma_smooth_vertical_following"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition_ranges": [
+                40720,
+                52494,
+                36016
+              ],
+              "entropy_operation_count": 284,
+              "trace_sha256": "21da40433e99b28330d3168a937cd6e65f7b32178f2369d87db993c22f954f60",
+              "decoded_yuv_sha256": "d98c590eb530e2b59988c27ed92fa28c3a8601a7523fcf0383b57cc61605097e",
+              "decoded_plane_sha256": {
+                "y": "83ebf72921b574041082298ffb5d3a54bba104430de95fd1193bb4e78edbe5bb",
+                "u": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68",
+                "v": "1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68"
+              },
+              "evidence": "The input-only scalar oracle proves qcat-zero transform-context-two skip row zero, the qcat-zero two-dimensional EOB-bin row, exact size-16 SmoothVertical weights, all residual syntax, reconstructed Y/U/V planes, and public Pillow RGB bytes. Repository Rust was not invoked by the oracle."
+            },
+            "fixture_sha256": "6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6",
+            "input_rgb_sha256": "e0b73ab8645ad10668dbf392d2808b795288189614e47eef2281951e44dca089",
+            "encoded_item": {
+              "bytes": 58,
+              "sha256": "5e46c56f8e512ca56228aadf3f10cd8ae27ea34d91584b8512f53c1ffd99c7b8"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46"
+            },
+            "implementation_commit": "4ddeacb20624d9b656554d5de5431388ade62f87",
+            "managed_incremental_coverage": {
+              "project_id": "2b9f48753c80b021b894b600",
+              "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+              "run_id": "b58d0297-11d4-4ab3-8994-a44d8776a91d",
+              "snapshot_id": "84cc7081-3b9c-46ed-b549-bf34c7187ae2",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+              "duration_ms": 38207,
+              "selected_fixtures": [
+                "coverage_vertical8x16_following_luma_smooth_vertical_01.avif"
+              ],
+              "status": "passed_and_ingested",
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "claim_status": "supported_for_aggregate; limited_for_selected_snapshot_diff",
+              "measurement_scope": "selected_subset",
+              "comparison_mode": "additive_union",
+              "covered_lines_delta": 8,
+              "covered_branches_delta": 10,
+              "covered_functions_delta": 0,
+              "covered_regions_delta": 938,
+              "total_lines_delta": 4800,
+              "total_branches_delta": 708,
+              "total_functions_delta": 83,
+              "total_regions_delta": 13277,
+              "selected_projection_newly_covered_line_identities": 1860,
+              "selected_snapshot_diff_newly_covered_line_identities": 616,
+              "not_observed": 76145,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable",
+              "note": "The exact selected fixture passed 1/1 and the fresh report was ingested. The additive union adds +8/+10/+0/+938 covered line/branch/function/region identities. The replacement-style selected snapshot diff is limited, reports 616 newly covered lines, treats 76,145 absent baseline observations as not observed rather than regressions, and reports zero regressions. This is bounded evidence, not the complete four-metric release measurement."
+            },
+            "production_changes": [
+              "Use the qcat-specific direct transform-context-two skip selector for unsplit TX8x16 as well as TX16x16, preserving qcat-two adaptive-state aliasing.",
+              "Seed the direct two-dimensional TX8x16 EOB-bin row from qcat zero while explicitly preserving the existing qcat-one boundary and qcat-two/qcat-three rows.",
+              "Use AV1's exact height-16 SmoothVertical weights and retain the prepared bottom endpoint for future genuine-left-edge cases."
+            ],
+            "negative_boundaries": [
+              "other neighbor availability, block geometries, transforms, qindex categories, and non-skipped chroma",
+              "high bit depth, HDR, sequences, malformed/truncated residuals, encoding, and general AV1 conformance"
+            ],
+            "scope": "This closes only the bounded 8x32 8-bit 4:2:0 following Vertical8x16 SmoothVertical mode-10, qcat-zero, unsplit TX8x16 DCT-DCT, skipped-TX4x8-chroma class. AVF-STILL-001 and broader AV1/AVIF work remain open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_following_chroma_dc_01": {
+            "status": "completed_bounded",
+            "fixture": "coverage_vertical8x16_following_chroma_dc_01.avif",
+            "dimensions": [
+              8,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 95,
+            "speed": 0,
+            "topology": "Single-frame, one-tile PARTITION_SPLIT root with two ordered level-3 PARTITION_HORZ Vertical8x16 leaves at luma y=0 and y=16.",
+            "luma": "Both leaves use DC and two skipped TX8x8 DCT-DCT children.",
+            "chroma": "The origin and following leaves use mode 0 DC. The following 4x8 U/V payloads are non-empty TX4x8 DCT-DCT with EOB 28 and 30.",
+            "predictor": "The following leaf has top available and left unavailable, so DC is the rounded average of the four true row-7 top samples. The varying-edge witness distinguishes that one-sided value from the former synthetic two-sided DC value and from using row 6.",
+            "frame_constraints": {
+              "base_qindex": 16,
+              "qindex_category": 0,
+              "delta_q_present": false,
+              "using_matrix": true,
+              "matrix_y": 10,
+              "matrix_u": 10,
+              "matrix_v": 10,
+              "transform_mode": "select",
+              "cdef_bits": 0,
+              "restoration_types": [
+                0,
+                0,
+                0
+              ]
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_chroma_dc_campaign_01.json",
+              "report_sha256": "e16c6410c48f4b22bb884cdad4b609431ef6604359714bb63bb1e0ccee93d282",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 74,
+              "promoted": "CDC8x16-F01-N00",
+              "seed": 12000,
+              "repository_rust_invoked": false,
+              "target_id": "chroma_dc_following_vertical"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition_ranges": [
+                40720,
+                52494,
+                45560
+              ],
+              "entropy_operation_count": 214,
+              "trace_sha256": "9a1402523a526a55bbe81b9002739beeb0125f59337410feda0d79822b131997",
+              "decoded_yuv_sha256": "c09f0f9cd1d4430188260f3a7326ab5835b3418cb75c31a1beb86d6da127f779",
+              "decoded_plane_sha256": {
+                "y": "5a5f307aa9ce504d9235634f15cf382e8914c49fbd8dd4d4c47136c917886f7b",
+                "u": "5dc0da1f09306a2e6f4f824d22f268f5558a52740f87f58739e8e7e80763e656",
+                "v": "f5934d56dc60bed417ef70febebddec6b76b8e4846efa3612cf72cd5e8943a60"
+              }
+            },
+            "fixture_sha256": "7ff17319c3b2e5c7306908618ecaaa823c734391af286b81e0a68db6af01d35a",
+            "input_rgb_sha256": "f812dd33b87558dccf09ce2e2157e2eabe4839fe2ee7ff2d2ab31ca2245ad8d4",
+            "encoded_item": {
+              "bytes": 52,
+              "sha256": "a7625f8c60c45679813ee71786dbb0e6bbdcf969e3d18dd559ca1489b593e8b1"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6"
+            },
+            "implementation_commit": "98824dd14ab25034017f11ffe5e5ebb5761a5ecb",
+            "managed_incremental_coverage": {
+              "project_id": "2b9f48753c80b021b894b600",
+              "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+              "run_id": "9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66",
+              "snapshot_id": "4660b226-6e92-43bc-a904-98c74805f5a8",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+              "duration_ms": 45478,
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "covered_deltas": {
+                "lines": 8,
+                "branches": 10,
+                "functions": 0,
+                "regions": 938
+              },
+              "denominator_deltas": {
+                "lines": 4969,
+                "branches": 838,
+                "functions": 90,
+                "regions": 13534
+              },
+              "selected_projection_newly_covered_line_identities": 1768,
+              "selected_snapshot_diff_newly_covered_line_identities": 581,
+              "not_observed": 76135,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable"
+            },
+            "scope": "This closes only the bounded following Vertical8x16 4x8-chroma mode-0 top-only DC, qcat-zero, selected-transform class. Broader AV1/AVIF support remains open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_following_chroma_smooth_01": {
+            "status": "completed_bounded",
+            "fixture": "coverage_vertical8x16_following_chroma_smooth_01.avif",
+            "dimensions": [
+              8,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 95,
+            "speed": 0,
+            "topology": "Single-frame, one-tile PARTITION_SPLIT root with two ordered level-3 PARTITION_HORZ Vertical8x16 leaves at luma y=0 and y=16.",
+            "luma": "Both leaves use DC and two skipped TX8x8 DCT-DCT children.",
+            "chroma": "The origin uses DC/DCT-DCT. The following leaf selects mode 9 Smooth with non-empty TX4x8 ADST-ADST U/V payloads and EOB 31 and 28.",
+            "predictor": "The following 4x8 predictor uses AV1 size-4 horizontal and size-8 vertical weights, the reconstructed upper chroma row 7 as top, and the repeated top-left sample as its unavailable left edge.",
+            "frame_constraints": {
+              "base_qindex": 16,
+              "qindex_category": 0,
+              "delta_q_present": false,
+              "using_matrix": true,
+              "matrix_y": 10,
+              "matrix_u": 10,
+              "matrix_v": 10,
+              "transform_mode": "select",
+              "cdef_bits": 0,
+              "restoration_types": [
+                0,
+                0,
+                0
+              ]
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_chroma_smooth_campaign_01.json",
+              "report_sha256": "22734ed045a34209876ff4ce984b4f9209cd28e1df2d07deffbd74a100dd7432",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 57,
+              "promoted": "CS8x16-F01-N01",
+              "seed": 12001,
+              "repository_rust_invoked": false,
+              "target_id": "chroma_smooth_following_vertical"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition_ranges": [
+                40720,
+                52494,
+                40304
+              ],
+              "entropy_operation_count": 211,
+              "trace_sha256": "927c462c7300da1b5ea92cb3ed5ec8b8df1b1aac9ce20497e9f056b29f0c34fb",
+              "decoded_yuv_sha256": "2a7f360715665474b1bd4c5bef5745eff94fad306ad68a17d735fc8b8a690f53",
+              "decoded_plane_sha256": {
+                "y": "5a5f307aa9ce504d9235634f15cf382e8914c49fbd8dd4d4c47136c917886f7b",
+                "u": "c08e85a8a923c01340513f44f8fa7dcd6e7cfa6e8e6f702505cf020682e90d12",
+                "v": "2796088a83aa60f46320b94b3b3fe2670f4592d5d19d08478dcbc637a5abcc60"
+              }
+            },
+            "fixture_sha256": "be6f22b1988333c303f63a7dddb3d5bbade9211bbfc519c9be51db3b510d0ccd",
+            "input_rgb_sha256": "8a839782c26915165e4020979c08a29a687a143c7241be2b707f287d6a30b506",
+            "encoded_item": {
+              "bytes": 52,
+              "sha256": "a5c1edc33cf90c0479867927ff4d83e46ea879b6b107d92a6da3d1f9ee41c973"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18"
+            },
+            "implementation_commit": "98824dd14ab25034017f11ffe5e5ebb5761a5ecb",
+            "managed_incremental_coverage": {
+              "project_id": "2b9f48753c80b021b894b600",
+              "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+              "run_id": "2014be25-81a9-4e23-9ea8-39a39e383f8e",
+              "snapshot_id": "59cbbf2f-72e2-4496-a1ec-5c1388e79b38",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+              "duration_ms": 45023,
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "covered_deltas": {
+                "lines": 8,
+                "branches": 10,
+                "functions": 0,
+                "regions": 938
+              },
+              "denominator_deltas": {
+                "lines": 4969,
+                "branches": 838,
+                "functions": 90,
+                "regions": 13534
+              },
+              "selected_projection_newly_covered_line_identities": 1796,
+              "selected_snapshot_diff_newly_covered_line_identities": 594,
+              "not_observed": 76033,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable"
+            },
+            "scope": "This closes only the bounded following Vertical8x16 4x8-chroma Smooth/ADST-ADST top-only class. Broader AV1/AVIF support remains open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_following_chroma_smooth_vertical_01": {
+            "status": "completed_bounded",
+            "fixture": "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif",
+            "dimensions": [
+              8,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 95,
+            "speed": 0,
+            "topology": "Single-frame, one-tile PARTITION_SPLIT root with two ordered level-3 PARTITION_HORZ Vertical8x16 leaves at luma y=0 and y=16.",
+            "luma": "Both leaves use DC and two skipped TX8x8 DCT-DCT children.",
+            "chroma": "The origin uses DC/DCT-DCT. The following leaf selects mode 10 SmoothVertical with non-empty TX4x8 ADST-DCT U/V payloads and EOB 28 and 28.",
+            "predictor": "The following 4x8 predictor uses AV1 size-8 vertical weights, the reconstructed upper chroma row 7 as top, and the repeated top-left sample as its unavailable lower endpoint.",
+            "frame_constraints": {
+              "base_qindex": 16,
+              "qindex_category": 0,
+              "delta_q_present": false,
+              "using_matrix": true,
+              "matrix_y": 10,
+              "matrix_u": 10,
+              "matrix_v": 10,
+              "transform_mode": "select",
+              "cdef_bits": 0,
+              "restoration_types": [
+                0,
+                0,
+                0
+              ]
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_chroma_smooth_vertical_campaign_01.json",
+              "report_sha256": "e510f2669a6dd6f8ed21555d17fd097e6e238c8ebf4df196907476e87b65dfd0",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 71,
+              "promoted": "CSV8x16-F01-N01",
+              "seed": 12001,
+              "repository_rust_invoked": false,
+              "target_id": "chroma_smooth_vertical_following_vertical"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition_ranges": [
+                40720,
+                52494,
+                40304
+              ],
+              "entropy_operation_count": 206,
+              "trace_sha256": "4e6ce0f57e11b9a9d3aaffb4b7694fabc6bc5944f3cb8aecc9dc7be503d21e6b",
+              "decoded_yuv_sha256": "58dfe75855758f0ee76ffa426b21428194b20afc99a026a37c27fd33b389d22b",
+              "decoded_plane_sha256": {
+                "y": "5a5f307aa9ce504d9235634f15cf382e8914c49fbd8dd4d4c47136c917886f7b",
+                "u": "873084c75a09f11ec22f09a83132290f3e920e7cee1cd62d2acb06f1251eb3a4",
+                "v": "a8561f7294572742829e680b8680c2321cd359e7f0031d3bca7641aca007e746"
+              }
+            },
+            "fixture_sha256": "a29134747ab2e6cb9602b06398fa9b48f7f4bdb2e7f0193e568d0474f54a782c",
+            "input_rgb_sha256": "4e238ba5b31756f9af32daa885a799e282defef9b1f06d687fd1799c185233b3",
+            "encoded_item": {
+              "bytes": 53,
+              "sha256": "8c497f1bb5aacbed23b385bdbdec81ea4a509521ccf1892bccb129ba885bf409"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a"
+            },
+            "implementation_commit": "98824dd14ab25034017f11ffe5e5ebb5761a5ecb",
+            "managed_incremental_coverage": {
+              "project_id": "2b9f48753c80b021b894b600",
+              "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+              "run_id": "ee823300-1126-443b-aa05-ac7b0e380f9b",
+              "snapshot_id": "f2906a05-336b-440e-99f7-468be3bca9a3",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+              "duration_ms": 47895,
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "covered_deltas": {
+                "lines": 8,
+                "branches": 10,
+                "functions": 0,
+                "regions": 938
+              },
+              "denominator_deltas": {
+                "lines": 4969,
+                "branches": 838,
+                "functions": 90,
+                "regions": 13534
+              },
+              "selected_projection_newly_covered_line_identities": 1798,
+              "selected_snapshot_diff_newly_covered_line_identities": 595,
+              "not_observed": 76072,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable"
+            },
+            "scope": "This closes only the bounded following Vertical8x16 4x8-chroma SmoothVertical/ADST-DCT top-only class. Broader AV1/AVIF support remains open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
+          },
+          "coverage_vertical8x16_following_chroma_smooth_horizontal_01": {
+            "status": "completed_bounded",
+            "fixture": "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif",
+            "dimensions": [
+              8,
+              32
+            ],
+            "bit_depth": 8,
+            "subsampling": "4:2:0",
+            "quality": 95,
+            "speed": 0,
+            "topology": "Single-frame, one-tile PARTITION_SPLIT root with two ordered level-3 PARTITION_HORZ Vertical8x16 leaves at luma y=0 and y=16.",
+            "luma": "Both leaves use DC and two skipped TX8x8 DCT-DCT children.",
+            "chroma": "The origin uses DC/DCT-DCT. The following leaf selects mode 11 SmoothHorizontal with non-empty TX4x8 DCT-ADST U/V payloads and EOB 28 and 28.",
+            "predictor": "The following 4x8 predictor uses AV1 size-4 horizontal weights, the reconstructed upper chroma row 7 as top, and the repeated top-left sample as its unavailable left edge.",
+            "frame_constraints": {
+              "base_qindex": 16,
+              "qindex_category": 0,
+              "delta_q_present": false,
+              "using_matrix": true,
+              "matrix_y": 10,
+              "matrix_u": 10,
+              "matrix_v": 10,
+              "transform_mode": "select",
+              "cdef_bits": 0,
+              "restoration_types": [
+                0,
+                0,
+                0
+              ]
+            },
+            "campaign": {
+              "script": "scripts/explore_avif_chroma_diagonal67_vertical.py",
+              "report": "tests/fixtures/outputs/av1_search/coverage_vertical8x16_following_chroma_smooth_horizontal_campaign_01.json",
+              "report_sha256": "c834f57c1c1cf320b549fe6c4fc81a3631ca883fa84d3a90f7ed1a2aacf0e00e",
+              "candidate_count": 100,
+              "family_count": 10,
+              "qualified": 55,
+              "promoted": "CSH8x16-F01-N01",
+              "seed": 12001,
+              "repository_rust_invoked": false,
+              "target_id": "chroma_smooth_horizontal_following_vertical"
+            },
+            "pinned_dav1d": {
+              "implementation": "dav1d 1.5.3",
+              "commit": "b546257f770768b2c88258c533da38b91a06f737",
+              "partition_ranges": [
+                40720,
+                52494,
+                40304
+              ],
+              "entropy_operation_count": 211,
+              "trace_sha256": "05374753c4c130f8d776a9b32a4b44a92defa88788e7008e68e76cbd33c3b1ed",
+              "decoded_yuv_sha256": "6400705b198ca5c73a43d4577cb2b26db2f23e62be4f81b76ca50be6ef2d91ee",
+              "decoded_plane_sha256": {
+                "y": "5a5f307aa9ce504d9235634f15cf382e8914c49fbd8dd4d4c47136c917886f7b",
+                "u": "fe7955b6001101af389eaabbfa69d5722ad8f4e2b6bc40ab2d1354e53bbf203a",
+                "v": "5127600c2803309589a0c6f31e90b883640daeb56304c1d80a8691e8f3f70e3c"
+              }
+            },
+            "fixture_sha256": "c3dd3717c4c639b3558b87344532650caf7f6b4d0f8c6e030250aef7efe3ccee",
+            "input_rgb_sha256": "90c09d0587d99cdd03b2c04945f9cc9374eed31b8f8239abe3f6ff8ecbaaacf7",
+            "encoded_item": {
+              "bytes": 54,
+              "sha256": "2188716ffce59607721d74f9b4c19e682110fcfa28d326711b20144442b1da72"
+            },
+            "pillow_rgb": {
+              "bytes": 768,
+              "mode": "RGB8",
+              "sha256": "f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a"
+            },
+            "implementation_commit": "98824dd14ab25034017f11ffe5e5ebb5761a5ecb",
+            "managed_incremental_coverage": {
+              "project_id": "2b9f48753c80b021b894b600",
+              "command_id": "76a09281-82e6-42ea-9081-a194f666527e",
+              "run_id": "6191b1e2-730f-41a2-a7bd-95d2e9a2fd03",
+              "snapshot_id": "e775c345-999e-47e7-a260-996b27f9d54c",
+              "baseline_snapshot_id": "7665cda3-f4a7-4568-b871-a9d34afaa92c",
+              "snapshot_metadata_commit_sha": "3272b3ef49a87c2947c08b46596b442195c6a8db",
+              "duration_ms": 42633,
+              "test_result": "1 passed; 0 failed; 44 filtered out",
+              "covered_deltas": {
+                "lines": 8,
+                "branches": 10,
+                "functions": 0,
+                "regions": 938
+              },
+              "denominator_deltas": {
+                "lines": 4969,
+                "branches": 838,
+                "functions": 90,
+                "regions": 13534
+              },
+              "selected_projection_newly_covered_line_identities": 1798,
+              "selected_snapshot_diff_newly_covered_line_identities": 602,
+              "not_observed": 76094,
+              "regressed": 0,
+              "merge_exact": false,
+              "test_attribution": "unavailable"
+            },
+            "scope": "This closes only the bounded following Vertical8x16 4x8-chroma SmoothHorizontal/DCT-ADST top-only class. Broader AV1/AVIF support remains open.",
+            "reconstruction_oracle": "tests/fixtures/outputs/av1_reconstruction.json"
           }
         },
-        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, H_DCT/CFL, following-H16x4 edge-handoff, both following-Vertical8x16 Diagonal67 angle classes, and the new following-Vertical8x16 depth-two TX4x4 split class recorded in bounded_witnesses, including exact partition, syntax, entropy, predictor, coefficient, Y/U/V, and Pillow RGB evidence. The production path uses checked child-local edges and the complete 4:2:0 canvas walker to publish each preceding leaf before reconstructing a following leaf; unproven rectangular geometries/modes retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: broader partition states, filter-intra contexts, V_DCT/general H_DCT states, other angular edges, sample depths, sequences, encoding, AVF-STILL-001, and the four-metric 100% coverage gate remain partial.",
-        "latest_witness": "The latest bounded proof is coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif: an 8x32 8-bit 4:2:0 one-tile PARTITION_SPLIT frame with two ordered Vertical8x16 leaves. The lower following leaf selects mode 8 Diagonal67 with angle symbol 2/delta -1/resolved angle 64, then transform depth two with eight row-major TX4x4 DCT-DCT luma children, all skipped; both U/V pairs are skipped TX4x8. Safe Rust matches the 79-operation pinned scalar dav1d trace, exact partition, repeated-edge extension, predictor rows, Y/U/V planes, and Pillow RGB8 output. The unsplit angle-symbol-2 and angle-symbol-3 witnesses remain adjacent regressions; other following geometries, angle states, and AVF-STILL-001 states remain open.",
-        "latest_slice": "The latest AVF-STILL-001 slice adds independent evidence for the following-Vertical8x16 luma Diagonal67 Zone-1 path at angle symbol 2, delta -1, and resolved angle 64 with transform depth two and a 2x4 TX4x4 luma grid in an 8x32 4:2:0 split frame. The safe-Rust implementation adds an explicit geometry-derived Zone-1 context, checked row-major child reconstruction, child-edge publication, and corrected split transform-context publication. The slice adds an input-only 100-candidate campaign, manifest fixture, generated Pillow references, pinned dav1d trace/YUV oracle, structural assertions, and selected coverage evidence without widening admission beyond the proven syntax, frame qindex/matrix/tool state, or child payload class.",
-        "latest_evidence_addition": "The latest promoted fixture is coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif. Its fixture SHA-256 is 574d297068dae1faf5647e752afc7592f8a1107e0fcbbd9b6c262ad8705f92aa, encoded-item SHA-256 a334bb711c0941e05c4a3a53928695212bc3e09e9d77e0f16a2f51199ac0ef0e, input RGB SHA-256 a4078cdb8ac240974652e99fb776eb1ef666ef5b503b5bc6b2182fd8db4e5abc, Pillow RGB8 SHA-256 3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731, decoded Y/U/V SHA-256 values 54edc17e2021de17e269714df94413932536dc8bed43305ff76db06fbe53e56b, 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, and 1df1b7ce1fd8fcbe20cde61646875e54fe38d8945ea7911afd59e025cc520a68, decoded YUV SHA-256 0e4b44ebbf2cafb11a7815f2c625a88c60295c775bb0603a9538a10b25ab212c, and pinned trace SHA-256 af967521712c5381b81ddcaf54313bbb8d049d19a03551ebccdec66a5ff71616. The input-only report SHA-256 is 825e49a8bb67b87062646ac9e2854a5280adda5c5db3f58279526d0ce45167dc; its 100 candidates qualified 1 and promoted D67V-F09-N08. The exact reconstruction test and adjacent split/unsplit regression witnesses pass; selected managed Coverage MCP evidence and strict gates are recorded after the implementation commit.",
-        "current_slice": "The current AVF-STILL-001 slice proves a following-Vertical8x16 luma Diagonal67 mode-8 Zone-1 depth-two 2x4 TX4x4 DCT-DCT skipped-child class in an 8x32 8-bit 4:2:0 root split at angle symbol 2/delta -1/resolved angle 64, alongside the adjacent unsplit angle-symbol-2 and angle-symbol-3 witnesses. It keeps other angle symbols/deltas, neighbor availability, edge policies, predictors, transforms, chroma payloads, dimensions, depths, optional tools, sequences, encoding, and four-metric coverage work open.",
+        "current_evidence": "Safe Rust now proves the committed AVIF still, tile, alpha, high-depth, rectangular, palette, predictor, filter-intra, split-transform, H_DCT/CFL, following-leaf angular, following-Vertical8x16 luma/chroma smooth families, the origin Square32 screen-content-enabled palette-use-false corpus, and the four-Square8 I444 batch recorded in bounded_witnesses, including exact partition, syntax, entropy, predictor, coefficient, Y/U/V, and Pillow RGB evidence. The production path uses checked edges and the complete canvas walker; unproven states retain typed unsupported behavior. This is bounded AV1/AVIF evidence, not general AV1 completion: nonzero palette syntax, intrabc, broader partition/predictor/transform/sample-depth/filter/restoration/inter-frame/sequence/encoding classes, AVF-STILL-001, and four-metric coverage work remain partial.",
+        "latest_witness": "The latest bounded proofs are coverage_i444_square8_01.avif through coverage_i444_square8_10.avif. Safe Rust matches their split-root/four-row-major-Square8 topology, exact shared qindex/matrix state, all ten adaptive entropy traces, per-leaf DC/Vertical/Horizontal/Smooth modes and angle ownership, TX8x8 DCT-DCT Y/U/V coefficients, exact planes, and Pillow RGB8 outputs. Cases 05-10 additionally consume screen-content palette-use-false symbols across multiple leaves. The full 273-case pinned reconstruction corpus passes.",
+        "latest_slice": "The latest AVF-STILL-001 slice promotes I444 Square8 cases 01-10 as one bounded corpus and fixes the generic missing-top rule for a horizontally following Vertical Square8 leaf. A varying left edge is no longer misused as a top edge; the first left sample is repeated across the unavailable top, while vertically following leaves retain their actual top samples. Adaptive entropy remains serial; shared transforms, filtering, upsampling, residual addition, and color conversion remain the measured vectorization targets.",
+        "latest_evidence_addition": "Ten active manifest rows, exact Pillow RGB references, and pinned dav1d partition/entropy/EOB/plane records extend the matrix to 1,567 rows, AVIF decode to 340/343 active, and the reconstruction oracle to 273 cases. Managed Coverage MCP run 792e4884-8f4a-4c67-92e6-65eaa0e11a13 passed the exact ten-fixture selector at committed tree 2c59a53c4602e585c34f1b41c9d13b2813e9c9d5 and ingested snapshot 44d4499a-77fd-4c6a-a764-e138ec57c9d5 against explicit baseline e775c345-999e-47e7-a260-996b27f9d54c.",
+        "current_slice": "The current AVF-STILL-001 slice proves the bounded four-Square8 16x16 I444 classes, screen-content palette-use-false adaptation, and the generic horizontal-following Vertical missing-top rule. Nonzero palettes, intrabc, alternate geometries/transforms, broader predictors, high depth, filters/restoration, inter frames, HDR, sequences, encoding, and four-metric coverage work remain open.",
+        "current_slice_update_2026_08_29_i444_square8_batch": {
+          "status": "completed_bounded",
+          "fixtures": [
+            "coverage_i444_square8_01.avif",
+            "coverage_i444_square8_02.avif",
+            "coverage_i444_square8_03.avif",
+            "coverage_i444_square8_04.avif",
+            "coverage_i444_square8_05.avif",
+            "coverage_i444_square8_06.avif",
+            "coverage_i444_square8_07.avif",
+            "coverage_i444_square8_08.avif",
+            "coverage_i444_square8_09.avif",
+            "coverage_i444_square8_10.avif"
+          ],
+          "implementation_commit": "2c59a53c4602e585c34f1b41c9d13b2813e9c9d5",
+          "focused_verification": "The exact coverage-configured ten-fixture reconstruction selector passes with 1 passed, 0 failed, and 44 filtered out. Managed run 792e4884-8f4a-4c67-92e6-65eaa0e11a13 selected exactly all ten fixtures, passed in 44,901 ms, and ingested snapshot 44d4499a-77fd-4c6a-a764-e138ec57c9d5 against explicit baseline e775c345-999e-47e7-a260-996b27f9d54c.",
+          "managed_coverage_run": "792e4884-8f4a-4c67-92e6-65eaa0e11a13",
+          "managed_coverage_snapshot": "44d4499a-77fd-4c6a-a764-e138ec57c9d5",
+          "managed_coverage_baseline": "e775c345-999e-47e7-a260-996b27f9d54c",
+          "managed_coverage_review": "Supported additive union: +1,297 covered lines, +213 branches, +106 functions, and +1,896 regions; denominator changes are +6 lines, +0 branches, +1 function, and +9 regions. The selected projection reports 2,238 newly covered line identities. The limited replacement-style diff reports 2,291 newly covered identities and 4,744 baseline observations not observed; those absences are not regressions. Merge exactness is false and named-test attribution is unavailable.",
+          "scope": "bounded selected-subset evidence; general AV1, AVF-STILL-001, and the complete four-metric gate remain open"
+        },
+        "current_slice_update_2026_08_29_entropy_mosaic_palette_zero": {
+          "status": "completed_bounded",
+          "fixtures": [
+            "coverage_entropy_mosaic_03.avif",
+            "coverage_entropy_mosaic_04.avif",
+            "coverage_entropy_mosaic_05.avif",
+            "coverage_entropy_mosaic_06.avif",
+            "coverage_entropy_mosaic_07.avif",
+            "coverage_entropy_mosaic_08.avif",
+            "coverage_entropy_mosaic_09.avif",
+            "coverage_entropy_mosaic_10.avif"
+          ],
+          "implementation_commit": "05ec80ad12312a782184f83b9fa6dbc8325442c8",
+          "focused_verification": "The all-feature matrix passes 40/40 in the ordinary build, including all 330 active AVIF decode rows. Managed run 11a453ea-e11d-4857-9c9d-aa255fcfd13f selected exactly all eight fixtures, passed the reconstruction test with 1 passed, 0 failed, and 44 filtered out in 41,313 ms, and ingested snapshot 066a1865-082d-43f8-95d7-f06e7802335d against explicit baseline e775c345-999e-47e7-a260-996b27f9d54c.",
+          "managed_coverage_run": "11a453ea-e11d-4857-9c9d-aa255fcfd13f",
+          "managed_coverage_snapshot": "066a1865-082d-43f8-95d7-f06e7802335d",
+          "managed_coverage_baseline": "e775c345-999e-47e7-a260-996b27f9d54c",
+          "managed_coverage_review": "Supported additive union: +334 covered lines, +34 branches, +11 functions, and +1,060 regions with unchanged denominators. The selected projection reports 989 newly covered line identities. The limited replacement-style diff reports 1,016 newly covered identities and 1,329 baseline observations not observed; those absences are not regressions. Merge exactness is false and named-test attribution is unavailable.",
+          "scope": "bounded selected-subset evidence; nonzero palettes, intrabc, AVF-STILL-001, broader AV1/AVIF support, and the complete four-metric gate remain open"
+        },
+        "current_slice_update_following_chroma_smooth_family": {
+          "status": "completed_bounded",
+          "fixtures": [
+            "coverage_vertical8x16_following_chroma_dc_01.avif",
+            "coverage_vertical8x16_following_chroma_smooth_01.avif",
+            "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif",
+            "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif"
+          ],
+          "implementation_commit": "98824dd14ab25034017f11ffe5e5ebb5761a5ecb",
+          "focused_verification": "The complete coverage-configured all-feature suite passes: 45/45 matrix tests, all 322 active AVIF decode rows, all 255 pinned reconstruction cases, 66/66 feature-gate tests, 4/4 animation-loop tests, and the doctest. Strict Clippy and rustdoc pass. Each exact fixture also passes independently through managed Coverage MCP.",
+          "managed_coverage_runs": [
+            "9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66",
+            "2014be25-81a9-4e23-9ea8-39a39e383f8e",
+            "ee823300-1126-443b-aa05-ac7b0e380f9b",
+            "6191b1e2-730f-41a2-a7bd-95d2e9a2fd03"
+          ],
+          "managed_coverage_snapshots": [
+            "4660b226-6e92-43bc-a904-98c74805f5a8",
+            "59cbbf2f-72e2-4496-a1ec-5c1388e79b38",
+            "f2906a05-336b-440e-99f7-468be3bca9a3",
+            "e775c345-999e-47e7-a260-996b27f9d54c"
+          ],
+          "scope": "bounded selected-subset evidence; AVF-STILL-001 and the complete four-metric gate remain open"
+        },
+        "current_slice_update_smooth_family": {
+          "status": "completed_bounded",
+          "fixtures": [
+            "coverage_vertical8x16_following_luma_smooth_01.avif",
+            "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif"
+          ],
+          "implementation_commit": "6a76591e1463eb1086e123b3bfe582ef9d322ccd",
+          "focused_verification": "The complete coverage-configured all-feature suite passes: 45/45 matrix tests, all 318 active AVIF decode rows, all 251 pinned reconstruction cases, 66/66 feature-gate tests, 4/4 animation-loop tests, and the doctest. Each exact fixture also passes independently through managed Coverage MCP.",
+          "managed_coverage_runs": [
+            "30cfecd4-7ab0-4188-afc2-381a5b19ca37",
+            "ee2a7b4d-de50-4e03-b946-13d43f3fb349"
+          ],
+          "managed_coverage_snapshots": [
+            "3491ed87-e1a3-4bf2-ad18-f0797227bd58",
+            "0f9eb54d-9ef7-44a9-9aab-6dda040819d3"
+          ],
+          "scope": "bounded selected-subset evidence; AVF-STILL-001 and the complete four-metric gate remain open"
+        },
+        "current_slice_update_smooth_vertical": {
+          "status": "completed_bounded",
+          "fixture": "coverage_vertical8x16_following_luma_smooth_vertical_01.avif",
+          "implementation_commit": "4ddeacb20624d9b656554d5de5431388ade62f87",
+          "focused_verification": "The exact fixture, five adjacent qcat/direct/split fixtures, complete 249-case reconstruction corpus, qcat unit assertion, size-16 weight assertion, and selected 1/1 AVIF matrix row pass.",
+          "managed_coverage_run": "b58d0297-11d4-4ab3-8994-a44d8776a91d",
+          "managed_coverage_snapshot": "84cc7081-3b9c-46ed-b549-bf34c7187ae2",
+          "scope": "bounded selected-subset evidence; AVF-STILL-001 and the complete four-metric gate remain open"
+        },
         "current_slice_update": {
           "status": "completed_bounded",
           "target": "following Vertical8x16 luma Diagonal67 mode 8 with angle symbol 2, delta -1, resolved angle 64, unsplit TX8x16 DCT-DCT luma, and skipped TX4x8 U/V",

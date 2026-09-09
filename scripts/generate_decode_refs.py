@@ -13,8 +13,10 @@ import io
 import json
 import platform
 import re
+import shutil
 import struct
 import sys
+import tempfile
 import zlib
 from pathlib import Path
 
@@ -29,6 +31,8 @@ OUTPUT_JSONS = ROOT / "tests" / "fixtures" / "outputs" / "jsons"
 OUTPUT_RAWS = ROOT / "tests" / "fixtures" / "outputs" / "raws"
 OUTPUT_ENCODED = ROOT / "tests" / "fixtures" / "outputs" / "encoded"
 ASSETS_DIR = ROOT / "tests" / "fixtures" / "input" / "images"
+STAGING_TARGET = ROOT / "target" / "oracle-staging" / "planned" / "avif"
+AVIF_INSPECTOR = ROOT / "scripts" / "inspect_avif_bitstreams.py"
 
 ASSERTION_ORIGINS = {
     "pillow_fixture",
@@ -1010,6 +1014,11 @@ def raw_ref_path(name):
 
 def sha256(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def file_sha256(path):
+    """Hash one committed input without exposing its absolute path."""
+    return sha256(path.read_bytes())
 
 
 def execution_contract():
@@ -2688,6 +2697,1010 @@ def exact_encode_parity_supported(fmt_name, row):
     return True
 
 
+def canonical_spec_digest(spec):
+    """Hash one manifest specification using a stable JSON representation."""
+    canonical = json.dumps(
+        json_pillow_value(spec),
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return sha256(canonical)
+
+
+def stage_asset_path(fmt_name, asset_name):
+    """Resolve one manifest asset while keeping reads inside the fixture root."""
+    path = ASSETS_DIR / fmt_name / asset_name
+    assets_root = ASSETS_DIR.resolve()
+    resolved = path.resolve()
+    if assets_root not in resolved.parents or not path.is_file():
+        raise RuntimeError(f"staged oracle asset is missing or escapes fixtures: {path}")
+    return path
+
+
+def stage_source_descriptor(fmt_name, asset_name):
+    path = stage_asset_path(fmt_name, asset_name)
+    return {
+        "path": path.relative_to(ROOT).as_posix(),
+        "sha256": file_sha256(path),
+    }
+
+
+def stage_write_blob(stage_dir, relative, data):
+    """Write one staged byte artifact and return its relative identity."""
+    relative_path = Path(relative)
+    if (
+        relative_path.is_absolute()
+        or not relative_path.parts
+        or any(part in {"", ".", ".."} for part in relative_path.parts)
+    ):
+        raise RuntimeError(f"invalid staged artifact path: {relative}")
+    path = stage_dir / relative_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return {
+        "path": relative_path.as_posix(),
+        "bytes": len(data),
+        "sha256": sha256(data),
+    }
+
+
+def stage_case_base(row, specification, operation, source):
+    """Build a fresh stage row without copying canonical matrix state."""
+    return {
+        "id": f"{operation.capitalize()}.avif.{row['id']}",
+        "row_id": row["id"],
+        "operation": operation,
+        "format": "avif",
+        "description": row.get("description", ""),
+        "specification_sha256": canonical_spec_digest(specification),
+        "specification": json_pillow_value(specification),
+        "source": source,
+        "applicability": {
+            "status": row.get("status"),
+            "former_native_only": bool(row.get("former_native_only", False)),
+            "pure_rust_work_item": row.get("pure_rust_work_item"),
+            "gap": row.get("gap"),
+            "expect_error": bool(row.get("expect_error", False)),
+            "expect_sequence_error": bool(row.get("expect_sequence_error", False)),
+        },
+    }
+
+
+def stage_status_detail(row, prefix):
+    """Copy a Pillow lifecycle status and only its stable error fields."""
+    status = row.get(f"{prefix}_status")
+    detail = {"status": status}
+    if status == "error":
+        detail.update(
+            {
+                "error_type": row.get(f"{prefix}_error_type"),
+                "error_message": row.get(f"{prefix}_error_message"),
+                "error_kind": row.get(f"{prefix}_error_kind"),
+            }
+        )
+    return detail
+
+
+def stage_mode_name(mode):
+    """Map a Pillow mode string to the public crate mode spelling."""
+    return {
+        "L": "L8",
+        "LA": "La8",
+        "RGB": "Rgb8",
+        "RGBA": "Rgba8",
+        "1": "1",
+        "P": "P",
+    }.get(mode, mode)
+
+
+def stage_collect_frames(image, stage_dir, prefix):
+    """Collect every Pillow frame without converting its public mode."""
+    frame_count = int(getattr(image, "n_frames", 1))
+    if frame_count < 1:
+        raise RuntimeError("Pillow returned a non-positive frame count")
+    frames = []
+    for index in range(frame_count):
+        image.seek(index)
+        image.load()
+        raw = image.tobytes()
+        blob = stage_write_blob(
+            stage_dir,
+            f"raws/{prefix}_frame_{index}.bin",
+            raw,
+        )
+        timestamp = image.info.get("timestamp")
+        duration = image.info.get("duration")
+        if timestamp is not None and not isinstance(timestamp, int):
+            raise RuntimeError("Pillow frame timestamp is not an integer")
+        if duration is not None and not isinstance(duration, int):
+            raise RuntimeError("Pillow frame duration is not an integer")
+        frames.append(
+            {
+                "index": index,
+                "mode": image.mode,
+                "crate_mode": stage_mode_name(image.mode),
+                "size": list(image.size),
+                "timestamp_ms": timestamp,
+                "duration_ms": duration,
+                "raw_path": blob["path"],
+                "raw_bytes": blob["bytes"],
+                "raw_sha256": blob["sha256"],
+            }
+        )
+    return frames
+
+
+def stage_normalize_track(report, role):
+    """Retain the independent inspector's exact track/sample fields."""
+    track_id = report.get(f"{role}_track_id")
+    if track_id is None:
+        return None
+    matches = [
+        track
+        for track in report.get("tracks", [])
+        if track.get("track_id") == track_id
+    ]
+    if len(matches) != 1:
+        raise RuntimeError(f"AVIF inspector did not uniquely identify the {role} track")
+    track = matches[0]
+    samples = []
+    for sample in track.get("samples", []):
+        samples.append(
+            {
+                "index": sample["index"],
+                "offset": sample["offset"],
+                "length": sample["length"],
+                "sync": sample["sync"],
+                "duration": sample["duration"],
+                "sha256": sample["sha256"],
+            }
+        )
+    return {
+        "track_id": track["track_id"],
+        "handler": track["handler"],
+        "aux_for_track_id": track.get("aux_for_track_id"),
+        "timescale": track["timescale"],
+        "av1c": json_pillow_value(track.get("av1c")),
+        "samples": samples,
+    }
+
+
+def stage_validate_track_samples(track, data, label):
+    """Check sample ranges and rehash each independent sample span."""
+    if track is None:
+        return
+    timescale = track.get("timescale")
+    if not isinstance(timescale, int) or timescale <= 0:
+        raise RuntimeError(f"{label} track has an invalid timescale")
+    previous = -1
+    for sample in track.get("samples", []):
+        index = sample.get("index")
+        offset = sample.get("offset")
+        length = sample.get("length")
+        if (
+            not isinstance(index, int)
+            or index != previous + 1
+            or not isinstance(offset, int)
+            or not isinstance(length, int)
+            or offset < 0
+            or length <= 0
+            or offset + length > len(data)
+        ):
+            raise RuntimeError(f"{label} track has an invalid sample range")
+        sample_bytes = data[offset : offset + length]
+        if sample.get("sha256") != sha256(sample_bytes):
+            raise RuntimeError(f"{label} track sample hash does not match source bytes")
+        duration = sample.get("duration")
+        if not isinstance(duration, int) or duration <= 0:
+            raise RuntimeError(f"{label} track has an invalid sample duration")
+        previous = index
+    av1c = track.get("av1c")
+    if av1c is not None:
+        offset = av1c.get("offset")
+        length = av1c.get("length")
+        if (
+            not isinstance(offset, int)
+            or not isinstance(length, int)
+            or offset < 0
+            or length <= 0
+            or offset + length > len(data)
+            or av1c.get("sha256") != sha256(data[offset : offset + length])
+        ):
+            raise RuntimeError(f"{label} track av1C hash or range is invalid")
+
+
+def stage_attach_track_samples(frames, track, data, role):
+    """Attach exact rational timing only when sample/frame counts agree."""
+    if track is None:
+        return {"status": "not_associated", "reason": "track_not_present"}
+    samples = track["samples"]
+    if len(samples) != len(frames):
+        return {
+            "status": "not_associated",
+            "reason": "sample_frame_count_mismatch",
+            "sample_count": len(samples),
+            "frame_count": len(frames),
+        }
+    timescale = track["timescale"]
+    pts_num = 0
+    for frame, sample in zip(frames, samples):
+        timing = {
+            "index": sample["index"],
+            "offset": sample["offset"],
+            "length": sample["length"],
+            "sync": sample["sync"],
+            "duration": sample["duration"],
+            "duration_num": sample["duration"],
+            "duration_den": timescale,
+            "pts_num": pts_num,
+            "pts_den": timescale,
+        }
+        frame[f"{role}_sample"] = timing
+        if role == "color":
+            frame.update(
+                {
+                    "duration_num": timing["duration_num"],
+                    "duration_den": timing["duration_den"],
+                    "pts_num": timing["pts_num"],
+                    "pts_den": timing["pts_den"],
+                }
+            )
+        pts_num += sample["duration"]
+    return {
+        "status": "associated",
+        "track_id": track["track_id"],
+        "sample_count": len(samples),
+        "frame_count": len(frames),
+    }
+
+
+def stage_container_observation(report, data, frames):
+    """Combine the independent AVIF inspector and rational frame timing."""
+    color = stage_normalize_track(report, "color")
+    alpha = stage_normalize_track(report, "alpha")
+    stage_validate_track_samples(color, data, "color")
+    stage_validate_track_samples(alpha, data, "alpha")
+    associations = {
+        "color": stage_attach_track_samples(frames, color, data, "color"),
+        "alpha": stage_attach_track_samples(frames, alpha, data, "alpha"),
+    }
+    return {
+        "inspector": json_pillow_value(report),
+        "ftyp": json_pillow_value(report.get("ftyp")),
+        "items": json_pillow_value(report.get("items")),
+        "tracks": {"color": color, "alpha": alpha},
+        "sample_association": associations,
+    }
+
+
+def stage_decode_case(stage_dir, row, specification):
+    """Run the pinned Pillow decode lifecycle for one planned AVIF asset."""
+    asset_name = row["asset"]
+    asset_path = stage_asset_path("avif", asset_name)
+    source_data = asset_path.read_bytes()
+    source = stage_source_descriptor("avif", asset_name)
+    case = stage_case_base(row, specification, "decode", source)
+    case["asset"] = asset_name
+    case["execution"] = execution_contract()
+    case["applicability"]["oracle"] = "pillow"
+
+    row["oracle_detects_format"] = oracle_detects_format("avif", source_data)
+    from inspect_avif_bitstreams import inspect as inspect_avif
+
+    inspector = inspect_avif(asset_path)
+    write_inspect_ref(row, asset_path, "avif")
+    write_verify_ref(row, asset_path)
+    lifecycle = {
+        "detect": {
+            "status": "ok" if row["oracle_detects_format"] else "error",
+            "format_detected": row["oracle_detects_format"],
+        },
+        "inspect": stage_status_detail(row, "inspect"),
+        "verify": stage_status_detail(row, "verify"),
+    }
+
+    try:
+        with pillow_open_asset(asset_path) as image:
+            initial_mode = image.mode
+            initial_size = list(image.size)
+            initial_frame_count = int(getattr(image, "n_frames", 1))
+            initial_animated = bool(getattr(image, "is_animated", False))
+            loop_count = image.info.get("loop")
+            frames = stage_collect_frames(
+                image,
+                stage_dir,
+                f"Decode.avif_{row['id']}",
+            )
+    except Exception as error:
+        error_detail = {
+            "type": f"{type(error).__module__}.{type(error).__name__}",
+            "message": stable_error_message(error),
+            "kind": decode_error_kind(row["oracle_detects_format"], error),
+        }
+        lifecycle["decode"] = {
+            "status": "error",
+            "error": error_detail,
+        }
+        case["outcome"] = {
+            "status": "error",
+            "phase": "PIL.Image.open/load",
+            "error": error_detail,
+            "lifecycle": lifecycle,
+        }
+        case["oracle_observation"] = {
+            "status": "error",
+            "phase": "PIL.Image.open/load",
+            "error": error_detail,
+        }
+        case["observations"] = {
+            "pillow": lifecycle,
+            "container": stage_container_observation(inspector, source_data, []),
+            "dav1d": {"status": "not_collected"},
+        }
+        return case
+
+    lifecycle["decode"] = {"status": "ok"}
+    case["outcome"] = {
+        "status": "success",
+        "lifecycle": lifecycle,
+    }
+    case["oracle_observation"] = {"status": "success"}
+    case["observations"] = {
+        "pillow": {
+            "mode": initial_mode,
+            "crate_mode": stage_mode_name(initial_mode),
+            "size": initial_size,
+            "frame_count": initial_frame_count,
+            "is_animated": initial_animated,
+            "loop_count": loop_count,
+            "lifecycle": lifecycle,
+        },
+        "frames": frames,
+        "container": stage_container_observation(inspector, source_data, frames),
+        "dav1d": {
+            "status": "not_collected",
+            "reason": "The first-item/first-block reconstruction tool does not expose persistent per-track temporal-unit state.",
+        },
+    }
+    return case
+
+
+def stage_encode_error_case(case, row, execution, source_mode, source_frame_count, phase, error):
+    """Record one expected Pillow error without retaining byte artifacts."""
+    error_detail = {
+        "type": f"{type(error).__module__}.{type(error).__name__}",
+        "message": stable_error_message(error),
+        "kind": encode_error_kind(row, error),
+    }
+    case["execution"] = execution
+    case["outcome"] = {
+        "status": "error",
+        "phase": phase,
+        "error": error_detail,
+    }
+    case["oracle_observation"] = {
+        "status": "error",
+        "phase": phase,
+        "error": error_detail,
+    }
+    case["observations"] = {
+        "source_mode": source_mode,
+        "source_frame_count": source_frame_count,
+        "pillow": {"status": "error", "phase": phase},
+    }
+    return case
+
+
+def stage_encode_case(stage_dir, row, specification):
+    """Run one planned AVIF encoder row through the exact Pillow adapter."""
+    src_fmt = row.get("source_format") or "avif"
+    src_asset = row.get("source_asset")
+    if not src_asset:
+        raise RuntimeError(f"planned AVIF encoder row has no source asset: {row['id']}")
+    source_path = stage_asset_path(src_fmt, src_asset)
+    source = stage_source_descriptor(src_fmt, src_asset)
+    case = stage_case_base(row, specification, "encode", source)
+    case["source_format"] = src_fmt
+    case["source_asset"] = src_asset
+    case["params"] = json_pillow_value(row.get("params", {}))
+    case["applicability"].update(
+        {
+            "oracle": (
+                "defensive_model"
+                if row.get("rust_expect_error")
+                else "pillow"
+            ),
+        }
+    )
+    if row.get("rust_expect_error"):
+        case["rust_contract"] = {
+            "expected_error": True,
+            "kind": row.get("rust_error_kind"),
+            "reason": row.get("rust_error_reason"),
+        }
+        case["outcome"] = {"status": "not_applicable"}
+        case["oracle_observation"] = None
+        return case
+
+    from PIL import Image
+
+    execution = execution_contract()
+    image = None
+    source_mode = None
+    source_frame_count = None
+    try:
+        image = pillow_open_asset(source_path)
+        source_mode = mode_name(image)
+        source_frame_count = int(getattr(image, "n_frames", 1))
+    except Exception as error:
+        return stage_encode_error_case(
+            case,
+            row,
+            execution,
+            source_mode,
+            source_frame_count,
+            "source_validation",
+            error,
+        )
+
+    try:
+        validate_source_params(image, row.get("params", {}), "avif")
+    except Exception as error:
+        image.close()
+        return stage_encode_error_case(
+            case,
+            row,
+            execution,
+            source_mode,
+            source_frame_count,
+            "source_validation",
+            error,
+        )
+
+    try:
+        kwargs = encode_params("avif", dict(row.get("params", {})))
+    except Exception as error:
+        image.close()
+        return stage_encode_error_case(
+            case,
+            row,
+            execution,
+            source_mode,
+            source_frame_count,
+            "adapter",
+            error,
+        )
+
+    try:
+        if row.get("params", {}).get("detach_source"):
+            image = Image.frombytes(image.mode, image.size, image.tobytes())
+        if row.get("params", {}).get("truncate_pixels"):
+            image = Image.frombytes(image.mode, image.size, image.tobytes()[:-1])
+        if source_dimensions := row.get("params", {}).get("source_dimensions"):
+            image = Image.new(image.mode, tuple(source_dimensions))
+        if row.get("params", {}).get("oversized_palette"):
+            image.putpalette(bytes(771))
+        if row.get("params", {}).get("palette_on_nonindexed"):
+            image.putpalette(bytes(768))
+        image_to_save, kwargs = prepare_multiframe_call(image, kwargs)
+    except Exception as error:
+        image.close()
+        return stage_encode_error_case(
+            case,
+            row,
+            execution,
+            source_mode,
+            source_frame_count,
+            "prepare_multiframe",
+            error,
+        )
+
+    try:
+        buffer = io.BytesIO()
+        image_to_save.save(buffer, format=fmt_pil("avif"), **kwargs)
+        encoded = buffer.getvalue()
+        if row.get("params", {}).get("sequence_time"):
+            encoded = canonicalize_avif_sequence_times(
+                encoded,
+                row["params"]["sequence_time"],
+            )
+    except Exception as error:
+        image.close()
+        return stage_encode_error_case(
+            case,
+            row,
+            execution,
+            source_mode,
+            source_frame_count,
+            "Pillow.Image.save",
+            error,
+        )
+
+    if row.get("expect_error"):
+        image.close()
+        case["execution"] = execution
+        case["outcome"] = {
+            "status": "unexpected_success",
+            "phase": "Pillow.Image.save",
+        }
+        case["oracle_observation"] = {"status": "unexpected_success"}
+        case["observations"] = {
+            "source_mode": source_mode,
+            "source_frame_count": source_frame_count,
+        }
+        return case
+
+    encoded_blob = stage_write_blob(
+        stage_dir,
+        f"encoded/Encode.avif_{row['id']}.bin",
+        encoded,
+    )
+    encoded_path = stage_dir / encoded_blob["path"]
+    from inspect_avif_bitstreams import inspect as inspect_avif
+
+    inspector = inspect_avif(encoded_path)
+    try:
+        with Image.open(io.BytesIO(encoded)) as roundtrip:
+            roundtrip_mode = roundtrip.mode
+            roundtrip_size = list(roundtrip.size)
+            roundtrip_frame_count = int(getattr(roundtrip, "n_frames", 1))
+            roundtrip_animated = bool(getattr(roundtrip, "is_animated", False))
+            roundtrip_loop = roundtrip.info.get("loop")
+            frames = stage_collect_frames(
+                roundtrip,
+                stage_dir,
+                f"Encode.avif_{row['id']}",
+            )
+    except Exception:
+        image.close()
+        raise
+    image.close()
+
+    if row.get("params", {}).get("animated"):
+        requested = row.get("params", {}).get("frames")
+        if requested is not None and roundtrip_frame_count != requested:
+            raise RuntimeError(
+                f"AVIF Pillow roundtrip has {roundtrip_frame_count} frames, expected {requested}"
+            )
+    case["execution"] = execution
+    case["outcome"] = {"status": "success", "phase": "Pillow.Image.save"}
+    case["oracle_observation"] = {"status": "success"}
+    case["observations"] = {
+        "source_mode": source_mode,
+        "source_frame_count": source_frame_count,
+        "pillow": {
+            "roundtrip_mode": roundtrip_mode,
+            "roundtrip_crate_mode": stage_mode_name(roundtrip_mode),
+            "roundtrip_size": roundtrip_size,
+            "roundtrip_frame_count": roundtrip_frame_count,
+            "roundtrip_is_animated": roundtrip_animated,
+            "roundtrip_loop_count": roundtrip_loop,
+        },
+        "encoded": encoded_blob,
+        "frames": frames,
+        "container": stage_container_observation(inspector, encoded, frames),
+    }
+    return case
+
+
+def stage_relative_path(value):
+    """Validate an index path before joining it to the temporary stage root."""
+    if not isinstance(value, str):
+        raise RuntimeError("staged artifact path is not a string")
+    path = Path(value)
+    if (
+        path.is_absolute()
+        or not path.parts
+        or any(part in {"", ".", ".."} for part in path.parts)
+    ):
+        raise RuntimeError(f"staged artifact path is not relative: {value}")
+    return path
+
+
+def stage_validate_blob(stage_dir, blob, references, label):
+    """Validate one staged blob and register its relative path."""
+    if not isinstance(blob, dict):
+        raise RuntimeError(f"{label} blob is missing")
+    path = stage_relative_path(blob.get("path"))
+    if path.as_posix() in references:
+        raise RuntimeError(f"duplicate staged artifact path: {path}")
+    references.add(path.as_posix())
+    target = stage_dir / path
+    if (
+        not target.is_file()
+        or not isinstance(blob.get("bytes"), int)
+        or blob["bytes"] < 1
+        or target.stat().st_size != blob["bytes"]
+        or blob.get("sha256") != file_sha256(target)
+    ):
+        raise RuntimeError(f"{label} blob is missing or has a stale hash")
+    return target.read_bytes()
+
+
+def stage_validate_frame(stage_dir, frame, references, label):
+    if not isinstance(frame, dict):
+        raise RuntimeError(f"{label} frame is not an object")
+    if frame.get("index") != int(frame.get("index", -1)) or frame["index"] < 0:
+        raise RuntimeError(f"{label} frame index is invalid")
+    if not isinstance(frame.get("mode"), str) or not frame["mode"]:
+        raise RuntimeError(f"{label} frame Pillow mode is missing")
+    size = frame.get("size")
+    if (
+        not isinstance(size, list)
+        or len(size) != 2
+        or any(not isinstance(value, int) or value <= 0 for value in size)
+    ):
+        raise RuntimeError(f"{label} frame size is invalid")
+    return stage_validate_blob(
+        stage_dir,
+        {
+            "path": frame.get("raw_path"),
+            "bytes": frame.get("raw_bytes"),
+            "sha256": frame.get("raw_sha256"),
+        },
+        references,
+        f"{label} raw pixels",
+    )
+
+
+def stage_validate_association(frames, tracks, associations):
+    """Validate rational timing and sample/frame association decisions."""
+    for role in ("color", "alpha"):
+        track = tracks.get(role)
+        association = associations.get(role)
+        if not isinstance(association, dict):
+            raise RuntimeError(f"{role} sample association is missing")
+        if track is None or len(track.get("samples", [])) != len(frames):
+            if association.get("status") != "not_associated":
+                raise RuntimeError(f"{role} sample association overclaims frame alignment")
+            continue
+        if association.get("status") != "associated":
+            raise RuntimeError(f"{role} sample association is missing")
+        timescale = track.get("timescale")
+        pts_num = 0
+        for frame, sample in zip(frames, track["samples"]):
+            timing = frame.get(f"{role}_sample")
+            if not isinstance(timing, dict):
+                raise RuntimeError(f"{role} timing is missing from a frame")
+            expected = {
+                "index": sample["index"],
+                "offset": sample["offset"],
+                "length": sample["length"],
+                "sync": sample["sync"],
+                "duration": sample["duration"],
+                "duration_num": sample["duration"],
+                "duration_den": timescale,
+                "pts_num": pts_num,
+                "pts_den": timescale,
+            }
+            if timing != expected:
+                raise RuntimeError(f"{role} rational timing differs from inspector samples")
+            if role == "color" and any(
+                frame.get(field) != expected[field]
+                for field in ("duration_num", "duration_den", "pts_num", "pts_den")
+            ):
+                raise RuntimeError("color frame timing fields are inconsistent")
+            pts_num += sample["duration"]
+
+
+def stage_validate_container(case, stage_dir, data, frames, label):
+    container = case.get("observations", {}).get("container")
+    if not isinstance(container, dict):
+        raise RuntimeError(f"{label} container observation is missing")
+    inspector = container.get("inspector")
+    if (
+        not isinstance(inspector, dict)
+        or inspector.get("length") != len(data)
+        or inspector.get("sha256") != sha256(data)
+    ):
+        raise RuntimeError(f"{label} inspector file hash is stale")
+    tracks = container.get("tracks")
+    if not isinstance(tracks, dict) or set(tracks) != {"color", "alpha"}:
+        raise RuntimeError(f"{label} color/alpha track observations are incomplete")
+    for role in ("color", "alpha"):
+        stage_validate_track_samples(tracks[role], data, f"{label} {role}")
+    associations = container.get("sample_association")
+    if not isinstance(associations, dict):
+        raise RuntimeError(f"{label} sample associations are missing")
+    stage_validate_association(frames, tracks, associations)
+
+
+def stage_validate_case(stage_dir, case, references):
+    """Validate one selected case and every file it references."""
+    case_references = set()
+    source = case.get("source")
+    if not isinstance(source, dict):
+        raise RuntimeError(f"{case.get('id')}: source is missing")
+    source_path = stage_relative_path(source.get("path"))
+    source_file = (ROOT / source_path).resolve()
+    if ROOT.resolve() not in source_file.parents or not source_file.is_file():
+        raise RuntimeError(f"{case.get('id')}: source path is invalid")
+    if source.get("sha256") != file_sha256(source_file):
+        raise RuntimeError(f"{case.get('id')}: source hash is stale")
+    if canonical_spec_digest(case.get("specification")) != case.get(
+        "specification_sha256"
+    ):
+        raise RuntimeError(f"{case.get('id')}: specification digest is stale")
+
+    outcome = case.get("outcome", {})
+    applicability = case.get("applicability", {})
+    operation = case.get("operation")
+    if operation not in {"decode", "encode"}:
+        raise RuntimeError(f"{case.get('id')}: operation is invalid")
+    if applicability.get("status") != "planned":
+        raise RuntimeError(f"{case.get('id')}: selected case is not planned")
+
+    if operation == "encode" and applicability.get("oracle") == "defensive_model":
+        if (
+            outcome.get("status") != "not_applicable"
+            or case.get("oracle_observation") is not None
+            or "execution" in case
+            or "observations" in case
+        ):
+            raise RuntimeError(f"{case.get('id')}: defensive row has Pillow evidence")
+        if not isinstance(case.get("params"), dict) or not isinstance(
+            case.get("rust_contract"), dict
+        ):
+            raise RuntimeError(f"{case.get('id')}: defensive contract is incomplete")
+        return
+
+    if "execution" not in case or case["execution"] != execution_contract():
+        raise RuntimeError(f"{case.get('id')}: Pillow execution contract is missing")
+    if outcome.get("status") == "error":
+        error = outcome.get("error")
+        if (
+            outcome.get("phase")
+            not in {"adapter", "source_validation", "prepare_multiframe", "Pillow.Image.save"}
+            or not isinstance(error, dict)
+            or not all(isinstance(error.get(key), str) and error[key] for key in ("type", "message", "kind"))
+        ):
+            raise RuntimeError(f"{case.get('id')}: Pillow error evidence is incomplete")
+        if case_references:
+            raise RuntimeError(f"{case.get('id')}: Pillow error retains byte evidence")
+        return
+    if outcome.get("status") != "success":
+        raise RuntimeError(f"{case.get('id')}: outcome is not a completed Pillow observation")
+
+    observations = case.get("observations")
+    if not isinstance(observations, dict) or not isinstance(observations.get("frames"), list):
+        raise RuntimeError(f"{case.get('id')}: successful case lacks frame observations")
+    frames = observations["frames"]
+    if not frames:
+        raise RuntimeError(f"{case.get('id')}: successful case has no frames")
+    for frame in frames:
+        raw = stage_validate_frame(stage_dir, frame, case_references, case["id"])
+        if len(raw) != frame["raw_bytes"]:
+            raise RuntimeError(f"{case.get('id')}: frame byte length is inconsistent")
+
+    if operation == "decode":
+        data = source_file.read_bytes()
+    else:
+        encoded = observations.get("encoded")
+        data = stage_validate_blob(
+            stage_dir,
+            encoded,
+            case_references,
+            f"{case['id']} encoded bytes",
+        )
+    stage_validate_container(case, stage_dir, data, frames, case["id"])
+    if case_references.intersection(references):
+        raise RuntimeError(f"{case.get('id')}: staged artifact path is reused")
+    references.update(case_references)
+
+
+def stage_filetree(path):
+    """Return a deterministic relative-file-to-bytes view for no-op checks."""
+    if not path.is_dir():
+        return None
+    return {
+        item.relative_to(path).as_posix(): item.read_bytes()
+        for item in sorted(path.rglob("*"))
+        if item.is_file()
+    }
+
+
+def stage_target_guard():
+    """Keep the fixed staging target disjoint from all canonical outputs."""
+    root = ROOT.resolve()
+    target = STAGING_TARGET.resolve()
+    if root not in target.parents:
+        raise RuntimeError("planned oracle staging target escapes the repository")
+    canonical_paths = (
+        MANIFEST,
+        ORACLE_LOCK,
+        MATRIX_PATH,
+        INPUT_JSONS,
+        OUTPUT_JSONS,
+        OUTPUT_RAWS,
+        OUTPUT_ENCODED,
+        ROOT / "roadmap.json",
+        ROOT / "docs",
+    )
+    for canonical in canonical_paths:
+        resolved = canonical.resolve()
+        if resolved == target or resolved in target.parents or target in resolved.parents:
+            raise RuntimeError("planned oracle staging target collides with canonical outputs")
+    if target == root:
+        raise RuntimeError("planned oracle staging target cannot be the repository root")
+    return target
+
+
+def stage_planned(target_format):
+    """Stage all planned AVIF observations without mutating canonical fixtures."""
+    if target_format != "avif":
+        raise RuntimeError("--stage-planned currently requires --format avif")
+    target = stage_target_guard()
+    manifest_bytes = MANIFEST.read_bytes()
+    manifest = yaml.safe_load(manifest_bytes)
+    lock_bytes = ORACLE_LOCK.read_bytes()
+    locked = yaml.safe_load(lock_bytes)
+    verify_primary_oracle(manifest, locked)
+
+    # Fresh descriptors preserve manifest synchronization while keeping the
+    # canonical matrix entirely out of the staging write path.
+    fresh_matrix = {"formats": {}}
+    sync_decode_rows(manifest, fresh_matrix)
+    sync_encode_rows(manifest, fresh_matrix)
+    fmt_rows = fresh_matrix["formats"].get("avif", {})
+    decode_rows = [
+        row for row in fmt_rows.get("decode", []) if row.get("status") == "planned"
+    ]
+    encode_rows = [
+        row for row in fmt_rows.get("encode", []) if row.get("status") == "planned"
+    ]
+    if not decode_rows and not encode_rows:
+        raise RuntimeError("--stage-planned found zero planned AVIF rows")
+
+    fmt_manifest = manifest["formats"]["avif"]
+    decode_specs = {}
+    for specification in fmt_manifest.get("edge_cases", []):
+        if specification.get("status") != "planned":
+            continue
+        for asset_name in specification.get("test_assets", []):
+            row_id = decode_row_id(specification, asset_name)
+            decode_specs[row_id] = specification
+    encode_specs = {
+        specification["id"]: specification
+        for specification in fmt_manifest.get("encode_edge_cases", [])
+        if specification.get("status", fmt_manifest.get("encode_status")) == "planned"
+    }
+    decode_row_ids = {row["id"] for row in decode_rows}
+    decode_spec_ids = set(decode_specs)
+    if decode_row_ids != decode_spec_ids:
+        missing = sorted(decode_spec_ids - decode_row_ids)
+        extra = sorted(decode_row_ids - decode_spec_ids)
+        raise RuntimeError(
+            "planned AVIF decode rows were not synchronized: "
+            f"missing={missing}, extra={extra}"
+        )
+    encode_row_ids = {row["id"] for row in encode_rows}
+    encode_spec_ids = set(encode_specs)
+    if encode_row_ids != encode_spec_ids:
+        missing = sorted(encode_spec_ids - encode_row_ids)
+        extra = sorted(encode_row_ids - encode_spec_ids)
+        raise RuntimeError(
+            "planned AVIF encode rows were not synchronized: "
+            f"missing={missing}, extra={extra}"
+        )
+
+    stage_parent = target.parent
+    stage_parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(
+        tempfile.mkdtemp(prefix=f".{target.name}.tmp-", dir=stage_parent)
+    )
+    try:
+        cases = []
+        for row in decode_rows:
+            cases.append(stage_decode_case(temporary, row, decode_specs[row["id"]]))
+        for row in encode_rows:
+            cases.append(stage_encode_case(temporary, row, encode_specs[row["id"]]))
+
+        from PIL import _avif, features
+
+        pillow_identity = oracle_identity(manifest)
+        pinned_avif = json_pillow_value(
+            manifest["reference_oracles"]["formats"]["avif"]
+        )
+        pillow_rows = [
+            case
+            for case in cases
+            if case["applicability"].get("oracle") == "pillow"
+        ]
+        defensive_rows = [
+            case
+            for case in cases
+            if case["applicability"].get("oracle") == "defensive_model"
+        ]
+        index = {
+            "format_version": 1,
+            "schema": "image-slash-star/planned-oracle-stage@1",
+            "format": "avif",
+            "inputs": {
+                "manifest_path": "manifest.yaml",
+                "manifest_sha256": sha256(manifest_bytes),
+                "lock_path": "pillow-oracle.lock.yaml",
+                "lock_sha256": sha256(lock_bytes),
+                "generator_path": "scripts/generate_decode_refs.py",
+                "generator_sha256": file_sha256(Path(__file__).resolve()),
+                "inspector_path": "scripts/inspect_avif_bitstreams.py",
+                "inspector_sha256": file_sha256(AVIF_INSPECTOR),
+            },
+            "oracle_identity": pillow_identity,
+            "pinned_avif": pinned_avif,
+            "actual_features_avif": features.version("avif"),
+            "actual_codec_versions": _avif.codec_versions(),
+            "selection": {
+                "decode_rows": len(decode_rows),
+                "encode_rows": len(encode_rows),
+                "total_rows": len(cases),
+                "pillow_rows": len(pillow_rows),
+                "pillow_success_rows": sum(
+                    case["outcome"].get("status") == "success"
+                    for case in pillow_rows
+                ),
+                "pillow_error_rows": sum(
+                    case["outcome"].get("status") == "error"
+                    for case in pillow_rows
+                ),
+                "defensive_model_rows": len(defensive_rows),
+            },
+            "dav1d": {
+                "status": "not_collected",
+                "reason": "This lane records the pinned Pillow oracle and independent ISO-BMFF observations; the existing dav1d tool is limited to first-item/first-block reconstruction and does not provide persistent sequence temporal-unit state.",
+            },
+            "cases": cases,
+        }
+        (temporary / "index.json").write_text(
+            json.dumps(index, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
+        )
+
+        references = set()
+        for case in cases:
+            stage_validate_case(temporary, case, references)
+        actual_files = {
+            item.relative_to(temporary).as_posix()
+            for item in temporary.rglob("*")
+            if item.is_file() and item.name != "index.json"
+        }
+        if actual_files != references:
+            raise RuntimeError(
+                "planned oracle stage contains unreferenced or missing byte artifacts"
+            )
+        selection = index["selection"]
+        if selection["total_rows"] != selection["decode_rows"] + selection["encode_rows"]:
+            raise RuntimeError("planned oracle selection counts do not partition rows")
+        if selection["pillow_rows"] != selection["pillow_success_rows"] + selection["pillow_error_rows"]:
+            raise RuntimeError("planned oracle Pillow counts do not partition outcomes")
+    except Exception:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
+
+    existing = stage_filetree(target)
+    if target.exists() and existing is None:
+        shutil.rmtree(temporary)
+        raise RuntimeError(
+            f"planned AVIF oracle stage path exists but is not a directory: {target}"
+        )
+    staged = stage_filetree(temporary)
+    if existing is not None:
+        if existing == staged:
+            shutil.rmtree(temporary)
+            print(f"Planned AVIF oracle stage already matches: {target}")
+            return
+        shutil.rmtree(temporary)
+        raise RuntimeError(
+            f"planned AVIF oracle stage differs from existing {target}; refusing replacement"
+        )
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary.replace(target)
+    except Exception:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
+    print(f"Written planned AVIF oracle stage: {target}")
+
+
 def preflight_encode_cases(matrix, target_format=None):
     """Reject false active coverage before rewriting any derived references."""
     from PIL import Image
@@ -3223,14 +4236,17 @@ def generate(target_format=None):
     print("\nAuthoritative Pillow refs generated in tests/fixtures/outputs/.")
 
 
-def verify_primary_oracle(manifest):
+def verify_primary_oracle(manifest, locked=None):
     """Refuse to rewrite references with an unpinned Pillow build."""
     import PIL
     import PIL._imaging
     from PIL import features
 
     oracle = manifest.get("reference_oracles", {}).get("primary", {})
-    locked = yaml.safe_load(ORACLE_LOCK.read_text()).get("oracle", {})
+    if locked is None:
+        locked = yaml.safe_load(ORACLE_LOCK.read_text()).get("oracle", {})
+    elif "oracle" in locked:
+        locked = locked["oracle"]
     for field in ("implementation", "version", "python", "platform", "wheel_sha256", "imaging_extension_sha256"):
         if str(oracle.get(field, "")) != str(locked.get(field, "")):
             raise RuntimeError(f"manifest and pillow-oracle.lock.yaml disagree on {field}")
@@ -3285,5 +4301,15 @@ def verify_primary_oracle(manifest):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--format", help="Specific format only")
+    p.add_argument(
+        "--stage-planned",
+        action="store_true",
+        help="Stage planned AVIF oracle observations in the ignored staging bundle",
+    )
     args = p.parse_args()
-    generate(args.format)
+    if args.stage_planned:
+        if args.format is None:
+            p.error("--stage-planned requires --format avif")
+        stage_planned(args.format)
+    else:
+        generate(args.format)

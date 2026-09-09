@@ -33,6 +33,10 @@ from inspect_avif_bitstreams import inspect as inspect_avif
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_DIR = ROOT / "tests" / "fixtures" / "input" / "images" / "avif"
 DEFAULT_OUTPUT = ROOT / "tests" / "fixtures" / "outputs" / "av1_reconstruction.json"
+# Keep each generated JSON blob comfortably below GitHub's 100 MiB limit. The
+# index remains at the historical path and the test harness joins these parts
+# back into the exact document before it compares any oracle fields.
+RECONSTRUCTION_PART_MAX_COMPACT_BYTES = 16_000_000
 DAV1D_COMMIT = "b546257f770768b2c88258c533da38b91a06f737"
 VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
     {
@@ -40,6 +44,13 @@ VERTICAL_FOLLOWING_TARGET_FIXTURES = frozenset(
         "coverage_r16x32_following_filter_intra_split_mode0_01.avif",
         "coverage_r16x32_following_filter_intra_split_mode3_01.avif",
         "coverage_vertical8x16_following_filter_intra_mode2_01.avif",
+        "coverage_vertical8x16_following_luma_smooth_01.avif",
+        "coverage_vertical8x16_following_luma_smooth_vertical_01.avif",
+        "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif",
+        "coverage_vertical8x16_following_chroma_dc_01.avif",
+        "coverage_vertical8x16_following_chroma_smooth_01.avif",
+        "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif",
+        "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif",
     }
 )
 H16X8_ORIGIN_TARGET_FIXTURES = frozenset(
@@ -137,6 +148,9 @@ SQUARE16_CFL_TARGET_FIXTURES = frozenset(
         "coverage_i444_square16_cfl_02.avif",
         "coverage_i444_square16_cfl_03.avif",
     }
+)
+I444_SQUARE8_TARGET_FIXTURES = frozenset(
+    {f"coverage_i444_square8_{index:02d}.avif" for index in range(1, 11)}
 )
 EXPECTED_FIXTURES = {
     "portable_lossless_a.avif": {
@@ -1229,6 +1243,46 @@ EXPECTED_FIXTURES = {
         "rgb_sha256": "52660ed52ff5e28a3bc05d35023875e225f70acd76a1191ecd4f72cc765b8cd7",
         "size": [32, 32],
     },
+    "coverage_entropy_mosaic_03.avif": {
+        "file_sha256": "bbf49002958d8b836d30ef5f837168a841b138e67f12ef4f6e73c072b71e65d9",
+        "rgb_sha256": "fafd75caa46a673bc0201f8cba7b6add17b09e0257301b86762c78906f94e85b",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_04.avif": {
+        "file_sha256": "233617a50cfd0a8b2dbd5976e1d4296bd9f6b26b36f416970fe812ba00f79d73",
+        "rgb_sha256": "05295c93b4b88873d843df1490b8dd6837398a179b2e46767f7d7f91f0eccf24",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_05.avif": {
+        "file_sha256": "0509df3919b43398bd7e2bf6d812796113c750094cf7a973d58aa19fbc8d2dc7",
+        "rgb_sha256": "ceeee3787ba0d828b6c43866bd97dc1f2537e1b5834ea6f467cafe2ebfd74b1f",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_06.avif": {
+        "file_sha256": "ea7d7dc634b9ef96069030b6b62b4c5c499152982dc5524f17f5dfe5b58a3028",
+        "rgb_sha256": "ff8e61edc88b2f0281c934c2f32308c262344b45043fe9449961972b47fb80b9",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_07.avif": {
+        "file_sha256": "dcb3689dd4ca134fb7c221140c4e75b13abc39f6fba611ee285f7a003f1c5f2a",
+        "rgb_sha256": "687a954539f9a9d3f1ed33fa1322faa9a955b6122838f22fcb8418aae11c94c0",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_08.avif": {
+        "file_sha256": "561dcfe17d6583e0d9051cd221ea93be152c59479074bc69ff9b038848eb5451",
+        "rgb_sha256": "26c4f0adeb8fada605676e3835ea159935ef2e828d49308833e6d8ebcf00648a",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_09.avif": {
+        "file_sha256": "6d4b2b591d77fa312ac8f98b3478364f01c80852745dae498c48692a1e3a60f8",
+        "rgb_sha256": "9ac81a8f72e3f01542e41529833ba253f8d4eca77451da4d88fb4921bd7d1c21",
+        "size": [32, 32],
+    },
+    "coverage_entropy_mosaic_10.avif": {
+        "file_sha256": "aefbe6aab6da76fe7d51bb0fb3e9d7e83fb0622da44d6b1f835e0868662d6558",
+        "rgb_sha256": "754444462592799314130431bbed2e9df516d2d32969683c2cea4d33c6b57d22",
+        "size": [32, 32],
+    },
     "coverage_v4_vertical_checker.avif": {
         "file_sha256": "b0b4dfb60657f4b87254773d6cca9fbc1ab07c742239fa2e0f3b862785163774",
         "rgb_sha256": "cfd11c3f8287b7e78ebf5da228ed44e04ccaac6cc6cb14a89e49f1bc446ab9ff",
@@ -1287,6 +1341,56 @@ EXPECTED_FIXTURES = {
     "coverage_i444_palette2_square8_four_leaves.avif": {
         "file_sha256": "7d13f753585fd646426ed1d8900c38ea95c7b06ada9c9204e4b8e6d47e1e4a56",
         "rgb_sha256": "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_01.avif": {
+        "file_sha256": "29a9a67c2719046b5d9aa6ebe9e6666377c298a1f60e2f1b4cbf56aa757d0d61",
+        "rgb_sha256": "e2d9ba964c5ec53a4032198999f2d96a6c04f764827521c4d8266dfd63183a8d",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_02.avif": {
+        "file_sha256": "c76fd9908087d9025e5eac621d2fa7dc3e5aa2cbbe902e7df9baec31934a16fe",
+        "rgb_sha256": "52cf14c15d3016015816a5097d48ed7b32210911f00e6533d65fc07aad401360",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_03.avif": {
+        "file_sha256": "bf79a86725d4e78286972e0688a6e9551850f7b476c7febe06c5c62b7d27cadc",
+        "rgb_sha256": "23e0828c4691405b5616f2d3d1ce2452c8643ef941ff888fdcdb08d9ddbae07b",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_04.avif": {
+        "file_sha256": "7fe339ea07a4efc8592250f973f37eebd91878b64b48ef5da6ff0d928b259212",
+        "rgb_sha256": "6af78ef081a21691dac3dbe080e0e74a4666df7c401975857a88d31be170c8d2",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_05.avif": {
+        "file_sha256": "88ad2e5488e80cbeba53625826b0f90a6fb96a8f9ac9f314f11ec8b4b505f2bc",
+        "rgb_sha256": "956047973e698d18fe70a45f57a797c94f38bdf12ee2c6b5dcbf706971763cbf",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_06.avif": {
+        "file_sha256": "ce43e1768fa0d92d6821c4971ea071dedb6aeaa92b054e5cfb368a2ea903af67",
+        "rgb_sha256": "69d96e28e665d2570868fce3d2e30aaa891a46afffc55146c8511fd3e2fe1f7d",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_07.avif": {
+        "file_sha256": "f7780936d03e09920e206942151ae9378abbf4100216644316da0624f5bf437e",
+        "rgb_sha256": "ed89a1e09548a12cf5953f812af87b33d7047922a81f71359a949fdad1378b9b",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_08.avif": {
+        "file_sha256": "7ea976064f08dde24c28842e3fe3d3af3d01310f896b346fe179622d0da5322c",
+        "rgb_sha256": "861d107c5e7958cf4bb38cc63f8c19d6460e16e7418f2e3fe4856c74d82910a2",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_09.avif": {
+        "file_sha256": "f1cf6c7fa5ddec16583f99e1ad5318f9c731386f9038071e1ba51f0b2d854737",
+        "rgb_sha256": "7df3e53c1af05ddc0e53f6c59a2e0b3433da621fc44f0c0f4714d66fe4876aaa",
+        "size": [16, 16],
+    },
+    "coverage_i444_square8_10.avif": {
+        "file_sha256": "a8942600752ed77d7ecbca6b726e589d1c106963bd4bca4eca6bbbb18cc9978c",
+        "rgb_sha256": "c9f06d709276d78fc43bc11d9712d4ea29faea7b0d52655175e827d15b1d3ced",
         "size": [16, 16],
     },
     "coverage_i444_full_chroma_top_left_paeth_01.avif": {
@@ -1377,6 +1481,41 @@ EXPECTED_FIXTURES = {
     "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif": {
         "file_sha256": "574d297068dae1faf5647e752afc7592f8a1107e0fcbbd9b6c262ad8705f92aa",
         "rgb_sha256": "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_luma_smooth_vertical_01.avif": {
+        "file_sha256": "6e7c4d5abba0c58777ffd3203889aae5f4a189fcdf7e0eb07fbab85436cb12d6",
+        "rgb_sha256": "f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_luma_smooth_01.avif": {
+        "file_sha256": "54fcb046a23c062c08a7a1ed75637bb43bc497bcea59a8ae10db8c093a8d8d24",
+        "rgb_sha256": "6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif": {
+        "file_sha256": "ffe831f5142199707be7f6b9596219aa646423f123f8282ae03d90aef4f2402e",
+        "rgb_sha256": "e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_dc_01.avif": {
+        "file_sha256": "7ff17319c3b2e5c7306908618ecaaa823c734391af286b81e0a68db6af01d35a",
+        "rgb_sha256": "46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_smooth_01.avif": {
+        "file_sha256": "be6f22b1988333c303f63a7dddb3d5bbade9211bbfc519c9be51db3b510d0ccd",
+        "rgb_sha256": "f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif": {
+        "file_sha256": "a29134747ab2e6cb9602b06398fa9b48f7f4bdb2e7f0193e568d0474f54a782c",
+        "rgb_sha256": "ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a",
+        "size": [8, 32],
+    },
+    "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif": {
+        "file_sha256": "c3dd3717c4c639b3558b87344532650caf7f6b4d0f8c6e030250aef7efe3ccee",
+        "rgb_sha256": "f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a",
         "size": [8, 32],
     },
 }
@@ -2205,6 +2344,7 @@ def generate(
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 or name in LUMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
+                or name in I444_SQUARE8_TARGET_FIXTURES
                 else angle_executable
                 if name in CHROMA_DIAGONAL45_TARGET_FIXTURES
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
@@ -2238,6 +2378,7 @@ def generate(
                 or name in LUMA_DIAGONAL45_TARGET_FIXTURES
                 or name in LUMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
                 or name in CHROMA_DIAGONAL67_VERTICAL_TARGET_FIXTURES
+                or name in I444_SQUARE8_TARGET_FIXTURES
                 else angle_env
                 if name in CHROMA_DIAGONAL45_TARGET_FIXTURES
                 or name in CHROMA_HORIZONTAL_TARGET_FIXTURES
@@ -2296,6 +2437,44 @@ def resolve_tool(value: str, name: str) -> Path:
     return Path(resolved).resolve()
 
 
+def write_document(output: Path, document: dict) -> None:
+    """Write the reconstruction oracle as a small index plus JSON case parts."""
+    output.parent.mkdir(parents=True, exist_ok=True)
+    cases = document["cases"]
+    index = {key: value for key, value in document.items() if key != "cases"}
+    index["cases"] = []
+    output.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n")
+
+    parts: list[list[dict]] = []
+    current: list[dict] = []
+    current_size = 0
+    for case in cases:
+        case_size = len(
+            json.dumps(
+                case,
+                ensure_ascii=True,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+        )
+        if current and current_size + case_size + 1 > RECONSTRUCTION_PART_MAX_COMPACT_BYTES:
+            parts.append(current)
+            current = []
+            current_size = 0
+        current.append(case)
+        current_size += case_size + 1
+    if current:
+        parts.append(current)
+
+    prefix = f"{output.stem}.part-"
+    for stale in output.parent.glob(f"{prefix}*{output.suffix}"):
+        stale.unlink()
+    for index, part in enumerate(parts):
+        part_path = output.with_name(f"{prefix}{index:03d}{output.suffix}")
+        part_path.write_text(json.dumps(part, indent=2, sort_keys=True) + "\n")
+    print(f"Written deterministic trace: {output} ({len(parts)} case parts)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dav1d-source", type=Path, required=True)
@@ -2325,9 +2504,7 @@ def main() -> None:
     )
     if first != second:
         raise RuntimeError("instrumented dav1d trace is not deterministic")
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(first, indent=2, sort_keys=True) + "\n")
-    print(f"Written deterministic trace: {args.output}")
+    write_document(args.output, first)
 
 
 if __name__ == "__main__":

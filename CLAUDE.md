@@ -52,9 +52,9 @@
 - When public transfer-model fields need validation, use the closest complete
   Pillow source transformation in the manifest wherever Pillow exposes one.
   Never label a model-only defensive state as Pillow behavior.
-- Use Coverage MCP for coverage runs and analysis. Always request line, branch,
-  function, and region coverage and restore all four to 100% before accepting
-  a slice.
+- Generate coverage with the repository's existing test commands. Preserve the
+  line, branch, function, and region coverage requirements and restore all four
+  to 100% before accepting a slice.
 - Run formatting and relevant manifest/feature/target tests after changes.
 
 ## Strict Clippy
