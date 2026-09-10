@@ -1,0 +1,13 @@
+{
+  "cases": [],
+  "format_version": 3,
+  "oracle": {
+    "commit": "b546257f770768b2c88258c533da38b91a06f737",
+    "implementation": "dav1d",
+    "pillow_avif": "1.4.1",
+    "pillow_codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    "pillow_libyuv": 1922,
+    "version": "1.5.3"
+  },
+  "scope": "private AV1 first-block reconstruction and closed-class AVIF materialization; not a public image-processing API"
+}
