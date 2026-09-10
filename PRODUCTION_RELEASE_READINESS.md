@@ -12,6 +12,9 @@ until the canonical roadmap and evidence say otherwise.
       state, build output, and release-only tooling.
 - [x] `make verify`, `make lint`, and the nightly coverage-harness compile pass
       on the current local release candidate.
+      The complete documented `make test` lane also passes on the current
+      checkout: all doctests, 40 coverage-matrix/contract tests, workspace
+      tests, and every native/wasm feature-matrix lane are green.
 - [ ] The full pinned nightly LLVM coverage run is green from a clean checkout.
       The maintained AV1 reconstruction index and five deterministic sidecars
       are now present, and all 45/45 coverage-matrix tests execute successfully.
