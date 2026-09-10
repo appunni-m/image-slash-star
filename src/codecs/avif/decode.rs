@@ -1597,8 +1597,9 @@ mod tests {
     fn public_multitile_decode_materializes_exact_rgb() -> CodecResult<()> {
         let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/multitile.avif");
         let (image, _) = super::decode(bytes, None)?;
-        let expected =
-            include_bytes!("../../test_support/fixtures/outputs/raws/Decode.avif_multitile_avif.bin");
+        let expected = include_bytes!(
+            "../../test_support/fixtures/outputs/raws/Decode.avif_multitile_avif.bin"
+        );
         assert_eq!(image.color, ColorType::Rgb8);
         assert_eq!(image.mode, ImageMode::Rgb8);
         assert_eq!(image.pixels.as_slice(), &expected[..]);

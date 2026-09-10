@@ -18,6 +18,10 @@ from pathlib import Path, PurePosixPath
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_NAME = "image-slash-star"
 ARTIFACT_DIR = ROOT / "target" / "release-artifacts"
+# The release archive is intentionally checked from a temporary extracted
+# directory, so Cargo cannot discover the repository's rust-toolchain.toml.
+# Keep the package and cross-target checks on the same pinned toolchain as CI.
+RELEASE_TOOLCHAIN = "1.96.1"
 
 
 class ReleaseError(RuntimeError):
@@ -33,17 +37,25 @@ def run(
 
     print("+ " + " ".join(command), flush=True)
     process_env = os.environ.copy()
+    process_env["RUSTUP_TOOLCHAIN"] = RELEASE_TOOLCHAIN
     if env:
         process_env.update(env)
     subprocess.run(command, cwd=cwd, env=process_env, check=True)
 
 
-def capture(command: list[str], cwd: Path = ROOT) -> str:
+def capture(
+    command: list[str], cwd: Path = ROOT, env: dict[str, str] | None = None
+) -> str:
     """Return stripped stdout from one read-only command."""
 
+    process_env = os.environ.copy()
+    process_env["RUSTUP_TOOLCHAIN"] = RELEASE_TOOLCHAIN
+    if env:
+        process_env.update(env)
     return subprocess.run(
         command,
         cwd=cwd,
+        env=process_env,
         check=True,
         capture_output=True,
         text=True,

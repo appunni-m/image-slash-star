@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_DIR = ROOT / "target" / "package"
 PACKAGE_COMMAND = ["cargo", "package", "--locked", "--no-verify"]
+RELEASE_TOOLCHAIN = "1.96.1"
 PNG_BYTES = """\
 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
@@ -31,7 +32,11 @@ PNG_BYTES = """\
 
 
 def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
-    result = subprocess.run(command, cwd=cwd, env=env, check=False, text=True)
+    process_env = os.environ.copy()
+    process_env["RUSTUP_TOOLCHAIN"] = RELEASE_TOOLCHAIN
+    if env:
+        process_env.update(env)
+    result = subprocess.run(command, cwd=cwd, env=process_env, check=False, text=True)
     if result.returncode:
         raise SystemExit(result.returncode)
 
@@ -58,6 +63,7 @@ def package_version() -> str:
     result = subprocess.run(
         ["cargo", "metadata", "--locked", "--no-deps", "--format-version", "1"],
         cwd=ROOT,
+        env={**os.environ, "RUSTUP_TOOLCHAIN": RELEASE_TOOLCHAIN},
         check=True,
         capture_output=True,
         text=True,
