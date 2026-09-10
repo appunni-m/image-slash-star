@@ -30,7 +30,7 @@ until the canonical roadmap and evidence say otherwise.
 - [ ] The remote `main` history contains no generated fixture blob at or above
       GitHub's 100 MB limit. The verified candidate branch
       `codex/release-image-slash-star-clean` at
-      `d60b4ae40a443a37a28379444262a3b49f0f3b93` has the required 424-byte AV1
+      `eb3fc54ca4bb2f78fce9cc1c9f1f60692832f818` has the required 424-byte AV1
       reconstruction index plus five deterministic sidecars (7.7–29.1 MB each),
       no blob at or above 100 MB, and a passing `make package-verify`. GitHub
       rejected the old `main` push because earlier history retains three
