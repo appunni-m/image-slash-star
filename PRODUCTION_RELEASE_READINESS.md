@@ -18,7 +18,7 @@ until the canonical roadmap and evidence say otherwise.
 - [ ] The full pinned nightly LLVM coverage run is green from a clean checkout.
       The maintained AV1 reconstruction index and five deterministic sidecars
       are now present, and all 45/45 coverage-matrix tests execute successfully.
-      The strict verifier still reports 95,602/161,450 lines (59.2146%),
+      The strict verifier still reports 95,603/161,451 lines (59.2149%),
       14,912/32,262 branches (46.2216%), 4,892/9,244 functions (52.9208%), and
       140,738/241,503 regions (58.2759%), so this gate remains open until the
       complete metric totals meet the repository threshold.
@@ -27,17 +27,19 @@ until the canonical roadmap and evidence say otherwise.
       check and isolated archive consumer pass. A clean worktree also passes
       the complete `make package-verify` target with the pinned Rust 1.96.1
       toolchain.
-- [ ] The pushed history contains no generated fixture blob at or above
-      GitHub's 100 MB limit. The current tree has the required 424-byte AV1
+- [ ] The remote `main` history contains no generated fixture blob at or above
+      GitHub's 100 MB limit. The verified candidate branch
+      `codex/release-image-slash-star-clean` at
+      `d60b4ae40a443a37a28379444262a3b49f0f3b93` has the required 424-byte AV1
       reconstruction index plus five deterministic sidecars (7.7–29.1 MB each),
-      all below the limit. GitHub rejected the push because earlier history
-      retains three generated `av1_reconstruction.json` blobs above the hard
-      limit (122,191,374; 113,296,026; and 105,260,021 bytes); two additional
+      no blob at or above 100 MB, and a passing `make package-verify`. GitHub
+      rejected the old `main` push because earlier history retains three
+      generated `av1_reconstruction.json` blobs above the hard limit
+      (122,191,374; 113,296,026; and 105,260,021 bytes); two additional
       historical versions of 104,403,261 and 104,072,984 bytes also trigger
       large-file warnings. These are history-only artifacts; the current
       fixture set remains required and regeneratable from the pinned dav1d
-      source. History cleanup requires an explicit coordinated rewrite before
-      the `main` branch can be pushed.
+      source. Updating `main` requires an explicit coordinated history rewrite.
 - [ ] The exact clean commit has a successful pinned CI run.
 - [ ] Managed Pillow parity and Coverage MCP receipts identify that commit.
 - [ ] The four release coverage metrics and every planned codec class remain
