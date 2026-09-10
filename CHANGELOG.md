@@ -5,6 +5,12 @@ All notable changes will be documented in this file. This project follows
 
 ## [Unreleased]
 
+- Split the AV1 reconstruction oracle into a compact index and five
+  deterministic sidecars so the maintained fixture remains below GitHub's
+  per-file limit; the coverage-only reconstruction probe now follows the
+  production still-image boundary for primary items and leaves sequence tracks
+  explicitly outside that still capability.
+
 ## [0.1.0] - 2026-09-08
 
 ### Added

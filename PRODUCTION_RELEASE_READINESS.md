@@ -13,19 +13,21 @@ until the canonical roadmap and evidence say otherwise.
 - [x] `make verify`, `make lint`, and the nightly coverage-harness compile pass
       on the current local release candidate.
 - [ ] The full pinned nightly LLVM coverage run is green from a clean checkout.
-      The corrected coverage-only AV1 state probes now pass, and the current
-      run executes 44/45 coverage-matrix tests. The remaining failure is the
-      AV1 reconstruction test, which needs the maintained index sidecars.
-      Keep this gate open until those inputs are restored in a push-safe
-      history and the complete run produces a verified report.
+      The maintained AV1 reconstruction index and five deterministic sidecars
+      are now present, and all 45/45 coverage-matrix tests execute successfully.
+      The strict verifier still reports 95,602/161,450 lines (59.2146%),
+      14,912/32,262 branches (46.2216%), 4,892/9,244 functions (52.9208%), and
+      140,738/241,503 regions (58.2759%), so this gate remains open until the
+      complete metric totals meet the repository threshold.
 - [x] The exact 208-file Cargo package list is recorded in
       `tests/fixtures/package_surface_manifest.json`; the package-surface
-      check and isolated archive consumer pass. The full `make package-verify`
-      target remains clean-source gated until the push-safe release checkout
-      is prepared.
+      check and isolated archive consumer pass. A clean worktree also passes
+      the complete `make package-verify` target with the pinned Rust 1.96.1
+      toolchain.
 - [ ] The pushed history contains no generated fixture blob at or above
-      GitHub's 100 MiB limit; the current local branch still has five older
-      oversized AV1-oracle blobs.
+      GitHub's 100 MiB limit; the current local branch's five deterministic AV1
+      oracle sidecars are push-safe, while five older oversized blobs remain in
+      earlier history and require history cleanup before publication.
 - [ ] The exact clean commit has a successful pinned CI run.
 - [ ] Managed Pillow parity and Coverage MCP receipts identify that commit.
 - [ ] The four release coverage metrics and every planned codec class remain

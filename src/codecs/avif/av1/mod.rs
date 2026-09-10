@@ -1854,7 +1854,19 @@ pub(crate) fn __coverage_reconstruction(
     input: &[u8],
 ) -> CodecResult<Option<crate::Av1ReconstructionTrace>> {
     let extracted = super::samples::validated(input)?;
-    let validated = validate(&extracted)?;
+    // This hook certifies the closed, single-still reconstruction class. A
+    // sequence track is a separate presentation contract even when its first
+    // sample happens to be independently decodable, so keep it as an explicit
+    // capability result instead of claiming the animation is a portable still.
+    if extracted.sequence.is_some() {
+        return Ok(None);
+    }
+    // Match the production still-image route for a primary item: an AVIF may
+    // carry a supported default image alongside an unsupported or malformed
+    // later sequence sample. Calling the full coverage-only validator here
+    // would inspect every movie sample and turn that boundary into an
+    // incidental temporal-reference error instead of returning `None`.
+    let validated = validate_first(&extracted)?;
     let Some(still) = validated.portable_still else {
         return Ok(None);
     };
