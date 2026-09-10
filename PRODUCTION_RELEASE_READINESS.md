@@ -25,9 +25,16 @@ until the canonical roadmap and evidence say otherwise.
       the complete `make package-verify` target with the pinned Rust 1.96.1
       toolchain.
 - [ ] The pushed history contains no generated fixture blob at or above
-      GitHub's 100 MiB limit; the current local branch's five deterministic AV1
-      oracle sidecars are push-safe, while five older oversized blobs remain in
-      earlier history and require history cleanup before publication.
+      GitHub's 100 MB limit. The current tree has the required 424-byte AV1
+      reconstruction index plus five deterministic sidecars (7.7–29.1 MB each),
+      all below the limit. GitHub rejected the push because earlier history
+      retains three generated `av1_reconstruction.json` blobs above the hard
+      limit (122,191,374; 113,296,026; and 105,260,021 bytes); two additional
+      historical versions of 104,403,261 and 104,072,984 bytes also trigger
+      large-file warnings. These are history-only artifacts; the current
+      fixture set remains required and regeneratable from the pinned dav1d
+      source. History cleanup requires an explicit coordinated rewrite before
+      the `main` branch can be pushed.
 - [ ] The exact clean commit has a successful pinned CI run.
 - [ ] Managed Pillow parity and Coverage MCP receipts identify that commit.
 - [ ] The four release coverage metrics and every planned codec class remain

@@ -48,6 +48,22 @@ describe the same tree.
 - Keep the release artifacts, benchmark receipt, and evidence identifiers
   recoverable from the release notes.
 
+## Generated AV1 oracle files
+
+The checked-in `tests/fixtures/outputs/av1_reconstruction.json` file is a small
+index. Its five `av1_reconstruction.part-*.json` sidecars contain the current
+case records consumed by the reconstruction test; they are release test inputs
+and must remain available to clean source checkouts. The sidecars are generated
+deterministically by the maintained
+`scripts/generate_av1_reconstruction_refs.py` script from the pinned dav1d
+`b546257f770768b2c88258c533da38b91a06f737` source, using the exact AVIF inputs
+and Pillow oracle described in `tests/fixtures/input/images/avif/README.md`.
+Regeneration produces the index and sidecars together and the test harness
+joins them before validation. It is appropriate to regenerate and compare
+these files during fixture maintenance; deleting them from the current tree
+would remove the reproducible oracle needed by CI. Older monolithic revisions
+remain only in Git history and are the source of the hosting-size blocker.
+
 ## First local crates.io bootstrap
 
 After the clean release gate passes, authenticate interactively and publish the
