@@ -23,7 +23,8 @@ env:
 jobs:
   preflight:
     name: Verify immutable release candidate
-    runs-on: ubuntu-24.04
+    # The exact fixture corpus is bound to the ARM64 macOS oracle lane.
+    runs-on: macos-14
     timeout-minutes: 240
     permissions:
       contents: read

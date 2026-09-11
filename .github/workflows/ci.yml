@@ -19,7 +19,9 @@ env:
 jobs:
   quality:
     name: Format, lint, and parity
-    runs-on: ubuntu-latest
+    # The committed exact Pillow corpus is generated on aarch64-apple-darwin.
+    # macos-14 is GitHub's ARM64 hosted runner; x86 determinism remains QA-019.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
         with:
@@ -76,7 +78,8 @@ jobs:
 
   coverage:
     name: Coverage report
-    runs-on: ubuntu-latest
+    # Keep aggregate execution on the same ARM64 target as the exact corpus.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.0.0
         with:

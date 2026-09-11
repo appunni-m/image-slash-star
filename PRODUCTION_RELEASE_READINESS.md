@@ -15,6 +15,9 @@ until the canonical roadmap and evidence say otherwise.
       The complete documented `make test` lane also passes on the current
       checkout: all doctests, 42 coverage-matrix/contract tests, workspace
       tests, and every native/wasm feature-matrix lane are green.
+      The exact parity and aggregate coverage jobs use GitHub's `macos-14`
+      ARM64 runner to match the pinned `aarch64-apple-darwin` fixture lane;
+      x86 determinism remains tracked as QA-019.
 - [ ] The full pinned nightly LLVM coverage run is green from a clean checkout.
       The maintained AV1 reconstruction index and five deterministic sidecars
       are now present, and all 45/45 coverage-matrix tests execute successfully.

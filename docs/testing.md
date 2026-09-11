@@ -381,11 +381,10 @@ sequence decode; an encode row separately classifies still and sequence encode
 as success, error, or not applicable.
 
 The `execution.target` value is the host triple that generated the pinned
-Pillow evidence (`aarch64-apple-darwin` for the current corpus); it is
-provenance, not a restriction on the runner that executes the pure-Rust parity
-harness. CI may therefore run the same matrix on Linux or another portable
-host. Host-specific runtime capability claims are checked by the separate
-capability-table and feature-matrix lanes.
+Pillow evidence (`aarch64-apple-darwin` for the current corpus). Exact pixel
+and encoded-byte assertions are run on that matching ARM64 lane while x86
+determinism remains an explicit QA-019 gap. Host-specific runtime capability
+claims are checked by the separate capability-table and feature-matrix lanes.
 
 ## Pinned oracle
 

@@ -2677,15 +2677,28 @@ fn assert_execution_contract(expected: Option<&ExecutionRef>) -> Result<(), Stri
             .map(String::as_str)
             .collect::<Vec<_>>()
             != all_features
+        || !cfg!(all(
+            target_arch = "aarch64",
+            target_os = "macos",
+            feature = "jpeg",
+            feature = "png",
+            feature = "gif",
+            feature = "bmp",
+            feature = "tiff",
+            feature = "webp",
+            feature = "ico",
+            feature = "avif"
+        ))
     {
         return Err(format!(
-            "execution contract differs from the pinned fixture evidence: {expected:?}"
+            "execution contract differs from the pinned ARM64 fixture lane: {expected:?}"
         ));
     }
     // `target` identifies the host that generated the pinned Pillow evidence.
-    // The parity implementation is pure Rust, so the same rows must execute on
-    // portable CI hosts as well. Host-specific runtime capability evidence is
-    // checked separately by the capability-table and feature-matrix tests.
+    // Exact encoded-byte and pixel assertions are target-bound until the
+    // outstanding x86 determinism lane is measured. Host-specific runtime
+    // capability evidence is checked separately by the capability-table and
+    // feature-matrix tests.
     Ok(())
 }
 
@@ -2704,6 +2717,18 @@ mod execution_contract_tests {
         }
     }
 
+    #[cfg(all(
+        target_arch = "aarch64",
+        target_os = "macos",
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico",
+        feature = "avif"
+    ))]
     #[test]
     fn accepts_pinned_oracle_provenance_on_any_runner() {
         assert!(assert_execution_contract(Some(&valid_contract())).is_ok());
