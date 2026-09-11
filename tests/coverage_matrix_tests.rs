@@ -2677,24 +2677,57 @@ fn assert_execution_contract(expected: Option<&ExecutionRef>) -> Result<(), Stri
             .map(String::as_str)
             .collect::<Vec<_>>()
             != all_features
-        || !cfg!(all(
-            target_arch = "aarch64",
-            target_os = "macos",
-            feature = "jpeg",
-            feature = "png",
-            feature = "gif",
-            feature = "bmp",
-            feature = "tiff",
-            feature = "webp",
-            feature = "ico",
-            feature = "avif"
-        ))
     {
         return Err(format!(
-            "execution contract differs from this test lane: {expected:?}"
+            "execution contract differs from the pinned fixture evidence: {expected:?}"
         ));
     }
+    // `target` identifies the host that generated the pinned Pillow evidence.
+    // The parity implementation is pure Rust, so the same rows must execute on
+    // portable CI hosts as well. Host-specific runtime capability evidence is
+    // checked separately by the capability-table and feature-matrix tests.
     Ok(())
+}
+
+#[cfg(test)]
+mod execution_contract_tests {
+    use super::*;
+
+    fn valid_contract() -> ExecutionRef {
+        ExecutionRef {
+            target: "aarch64-apple-darwin".to_owned(),
+            features: ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
+            suite: "native_all_features".to_owned(),
+        }
+    }
+
+    #[test]
+    fn accepts_pinned_oracle_provenance_on_any_runner() {
+        assert!(assert_execution_contract(Some(&valid_contract())).is_ok());
+    }
+
+    #[test]
+    fn rejects_missing_or_malformed_oracle_provenance() {
+        assert_eq!(
+            assert_execution_contract(None),
+            Err("execution contract is missing".to_owned())
+        );
+
+        let mut contract = valid_contract();
+        contract.target = "x86_64-unknown-linux-gnu".to_owned();
+        assert!(assert_execution_contract(Some(&contract)).is_err());
+
+        let mut contract = valid_contract();
+        contract.suite = "native_default_features".to_owned();
+        assert!(assert_execution_contract(Some(&contract)).is_err());
+
+        let mut contract = valid_contract();
+        contract.features.pop();
+        assert!(assert_execution_contract(Some(&contract)).is_err());
+    }
 }
 
 fn is_assertion_origin(origin: &str) -> bool {
