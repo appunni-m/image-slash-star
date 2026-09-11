@@ -41,7 +41,11 @@ until the canonical roadmap and evidence say otherwise.
       historical versions of 104,403,261 and 104,072,984 bytes also trigger
       large-file warnings. These are history-only artifacts; the current
       fixture set remains required and regeneratable from the pinned dav1d
-      source. Updating `main` requires an explicit coordinated history rewrite.
+      source. The historical candidate commit is
+      `8d8ecdfe8699329ae166541be8040b1bc3b253e7`, but no `v0.1.0` release tag
+      is currently pushed; creating the annotated tag remains pending until
+      the release gates pass. Updating `main` requires an explicit coordinated
+      history rewrite.
 - [ ] The exact clean commit has a successful pinned CI run.
 - [ ] Managed Pillow parity and Coverage MCP receipts identify that commit.
 - [ ] The four release coverage metrics and every planned codec class remain
