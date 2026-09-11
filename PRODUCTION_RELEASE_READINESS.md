@@ -47,6 +47,18 @@ until the canonical roadmap and evidence say otherwise.
 - [ ] The four release coverage metrics and every planned codec class remain
       visible in the release notes.
 
+## Latest local release-gate evidence
+
+On 2026-09-11, `make release-verify` ran from clean candidate commit
+`77aad12007e55a2c4b450407ab2d8d92b9b57871`. The complete test suite, doctests,
+feature matrix, strict Clippy, rustdoc, dependency audit, package verification,
+and manifest/claim/provenance checks passed. The gate then stopped at the
+required aggregate LLVM coverage check, which measured 95,603/161,451 lines
+(59.2149%), 14,912/32,262 branches (46.2216%), 4,892/9,244 functions
+(52.9208%), and 140,738/241,503 regions (58.2759%). No fixture, expected
+output, threshold, or coverage denominator was changed to turn this result
+into a pass.
+
 ## Local first publish
 
 - [ ] Run `make release-verify` from a clean checkout.
