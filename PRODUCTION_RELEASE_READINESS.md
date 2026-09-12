@@ -27,19 +27,17 @@ until the canonical roadmap and evidence say otherwise.
       check and isolated archive consumer pass. A clean worktree also passes
       the complete `make package-verify` target with the pinned Rust 1.96.1
       toolchain.
-- [ ] The remote `main` history contains no generated fixture blob at or above
-      GitHub's 100 MB limit. The verified candidate branch
-      `codex/release-image-slash-star-clean` at
-      `d60b4ae40a443a37a28379444262a3b49f0f3b93` has the required 424-byte AV1
+- [ ] The pushed history contains no generated fixture blob at or above
+      GitHub's 100 MB limit. The current tree has the required 424-byte AV1
       reconstruction index plus five deterministic sidecars (7.7–29.1 MB each),
-      no blob at or above 100 MB, and a passing `make package-verify`. GitHub
-      rejected the old `main` push because earlier history retains three
-      generated `av1_reconstruction.json` blobs above the hard limit
-      (122,191,374; 113,296,026; and 105,260,021 bytes); two additional
+      all below the limit. GitHub rejected the push because earlier history
+      retains three generated `av1_reconstruction.json` blobs above the hard
+      limit (122,191,374; 113,296,026; and 105,260,021 bytes); two additional
       historical versions of 104,403,261 and 104,072,984 bytes also trigger
       large-file warnings. These are history-only artifacts; the current
       fixture set remains required and regeneratable from the pinned dav1d
-      source. Updating `main` requires an explicit coordinated history rewrite.
+      source. History cleanup requires an explicit coordinated rewrite before
+      the `main` branch can be pushed.
 - [ ] The exact clean commit has a successful pinned CI run.
 - [ ] Managed Pillow parity and Coverage MCP receipts identify that commit.
 - [ ] The four release coverage metrics and every planned codec class remain
