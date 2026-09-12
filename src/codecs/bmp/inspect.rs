@@ -73,6 +73,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                 .at(bit_depth_offset, "bmp_dib_header"),
         );
     }
+    super::validate_compression(data, header_size, bit_depth, compression)?;
 
     let alpha_mask = bitfield_alpha(data, header_size, bit_depth, compression)?;
     let palette_start = if header_size == INFO_HEADER_SIZE && compression == BI_BITFIELDS {

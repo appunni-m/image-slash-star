@@ -3,7 +3,11 @@
 use crate::SequenceDecodeBudget;
 use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
-use crate::types::{ColorType, DecodedImage, ImageMode, SourceColor};
+use crate::types::{
+    ColorType, DecodedFrame, DecodedImage, DecodedSequence, FrameBlend, FrameDisposal,
+    FrameDuration, FrameRect, ImageMode, SequenceKind, SourceColor, SourceDescriptor,
+};
+use wide::{i32x8, u16x8};
 
 /// Decode the first AVIF frame to Pillow-observable 8-bit RGB or RGBA bytes.
 pub fn decode(
@@ -13,8 +17,21 @@ pub fn decode(
     crate::codecs::error::check_cancelled(token)?;
     let file_type = read_avif_file_type(data)?;
     let extracted = extract_av1(data)?;
-    let validated = super::av1::validate_first(&extracted)
+    let validated = super::av1::validate_first_with_token(&extracted, token)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
+    if extracted
+        .sequence
+        .as_ref()
+        .is_some_and(|sequence| sequence.color.samples.len() > 1)
+        && !validated
+            .portable_still
+            .as_ref()
+            .is_some_and(|still| still.frame_id_numbers_present)
+    {
+        return Err(CodecError::NotImplemented(
+            "AVIF multi-frame presentation is not implemented in the pure-Rust backend".to_owned(),
+        ));
+    }
     let image = decode_portable(&validated).ok_or_else(|| {
         CodecError::NotImplemented(
             "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
@@ -163,61 +180,290 @@ pub fn decode(
 
 /// Decode an AVIF sequence with the pure-Rust backend.
 ///
-/// Still-image decoding is available for the closed portable subset below,
-/// while sequence timing, track references, and multi-frame presentation are
-/// not implemented yet. A supported still is therefore exposed as a single
-/// frame, and an input outside the pure-Rust subset returns the same explicit
-/// gap rather than reaching for a foreign codec stack.
+/// Movie samples are decoded through one stateful AV1 track decoder so frame
+/// references, frame IDs, CDFs, and hidden/show-existing state remain intact.
+/// The public sequence is assembled transactionally after every displayable
+/// sample has produced a checked RGB8/RGBA8 image.
 pub fn decode_sequence(
     data: &[u8],
     budget: &mut SequenceDecodeBudget,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(crate::types::DecodedSequence, usize)> {
     crate::codecs::error::check_cancelled(token)?;
+    let file_type = read_avif_file_type(data)?;
     let extracted = extract_av1(data)?;
-    reserve_sequence_frames(data, &extracted, budget)?;
-    super::av1::validate_sequence(&extracted)
-        .map_err(|error| error.context("AVIF sequence validation failed"))?;
-    if extracted.sequence.is_some() {
+
+    let Some(sequence_payload) = extracted.sequence.as_ref() else {
+        let (mut image, consumed) = decode(data, token)?;
+        let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
+        let metadata = std::mem::take(&mut image.metadata);
+        let source_color = std::mem::take(&mut image.source_color);
+        let mut sequence = DecodedSequence::from_image(image);
+        sequence.opaque_blocks = opaque_blocks;
+        sequence.metadata = metadata;
+        sequence.source_color = source_color;
+        return Ok((sequence, consumed));
+    };
+    let loop_count = sequence_payload.loop_count;
+
+    validate_sequence_timing(sequence_payload)?;
+    let portable_frames = match super::av1::validate_sequence_frames(&extracted, token)
+        .map_err(|error| error.context("AVIF sequence validation failed"))?
+    {
+        Some(frames) => frames,
+        None => {
+            if sequence_payload.color.samples.len() > 1 {
+                let info = super::inspect::inspect(data)
+                    .map_err(|error| error.context("AVIF sequence gap inspection failed"))?;
+                reserve_gap_frames(
+                    budget,
+                    info.mode,
+                    info.width,
+                    info.height,
+                    sequence_payload.color.samples.len(),
+                )?;
+            }
+            return Err(CodecError::NotImplemented(
+                "AVIF sequence sample is outside the supported pure-Rust presentation subset"
+                    .to_owned(),
+            ));
+        }
+    };
+    if sequence_payload.color.samples.len() > 1
+        && portable_frames
+            .first()
+            .is_some_and(|frame| frame.frame_id_numbers_present)
+    {
+        let first = portable_frames.first().ok_or_else(|| {
+            CodecError::Malformed("AVIF sequence has no displayable frame".to_owned())
+        })?;
+        reserve_gap_frames(
+            budget,
+            if first.alpha_plane.is_some() {
+                ImageMode::Rgba8
+            } else {
+                ImageMode::Rgb8
+            },
+            first.width,
+            first.height,
+            sequence_payload.color.samples.len(),
+        )?;
         return Err(CodecError::NotImplemented(
-            "AVIF sequence rendering is not implemented in the pure-Rust backend".to_owned(),
+            "AVIF sequence rendering cannot present error-resilient frame references in the pure-Rust backend"
+                .to_owned(),
         ));
     }
-    let (mut image, consumed) = decode(data, token)?;
-    let opaque_blocks = std::mem::take(&mut image.opaque_blocks);
-    let metadata = std::mem::take(&mut image.metadata);
-    let source_color = std::mem::take(&mut image.source_color);
-    let mut sequence = crate::types::DecodedSequence::from_image(image);
-    sequence.opaque_blocks = opaque_blocks;
-    sequence.metadata = metadata;
-    sequence.source_color = source_color;
-    Ok((sequence, consumed))
+    if portable_frames.len() != sequence_payload.color.samples.len() {
+        // A public sequence must retain one displayable frame for every movie
+        // sample. Do not publish a silently collapsed prefix when an
+        // error-resilient or hidden-reference track falls outside the
+        // presentation subset.
+        return Err(CodecError::NotImplemented(
+            "AVIF sequence rendering cannot present every movie sample in the pure-Rust backend"
+                .to_owned(),
+        ));
+    }
+    let first = portable_frames.first().ok_or_else(|| {
+        CodecError::Malformed("AVIF sequence has no displayable frame".to_owned())
+    })?;
+    let width = first.width;
+    let height = first.height;
+    let bit_depth = first.bit_depth;
+    let color_primaries = first.color_primaries;
+    let transfer_characteristics = first.transfer_characteristics;
+    let matrix_coefficients = first.matrix_coefficients;
+    let color_range = first.color_range;
+    let subsampling_x = first.subsampling_x;
+    let subsampling_y = first.subsampling_y;
+    let mode = if first.alpha_plane.is_some() {
+        ImageMode::Rgba8
+    } else {
+        ImageMode::Rgb8
+    };
+    let source_template =
+        avif_sequence_source_template(&extracted, file_type, mode == ImageMode::Rgba8);
+    let mut frames = Vec::new();
+    frames.try_reserve(portable_frames.len()).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
+    })?;
+    for (index, portable) in portable_frames.into_iter().enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
+        if portable.width != width
+            || portable.height != height
+            || portable.alpha_plane.is_some() != (mode == ImageMode::Rgba8)
+            || portable.bit_depth != bit_depth
+            || portable.color_primaries != color_primaries
+            || portable.transfer_characteristics != transfer_characteristics
+            || portable.matrix_coefficients != matrix_coefficients
+            || portable.color_range != color_range
+            || portable.subsampling_x != subsampling_x
+            || portable.subsampling_y != subsampling_y
+        {
+            return Err(CodecError::NotImplemented(
+                "AVIF sequence changes geometry or color format between samples".to_owned(),
+            ));
+        }
+        if index != 0 {
+            budget
+                .reserve_later_frame(mode, width, height)
+                .map_err(CodecError::LimitExceeded)?;
+        }
+        let image = super::av1::ValidatedAv1 {
+            portable_still: Some(portable),
+        };
+        let image = decode_portable(&image).ok_or_else(|| {
+            CodecError::NotImplemented(
+                "AVIF sequence frame is outside the supported pure-Rust color subset".to_owned(),
+            )
+        })?;
+        let image = image.with_source_descriptor(source_template.clone());
+        let sample =
+            sequence_payload.color.samples.get(index).ok_or_else(|| {
+                CodecError::Malformed("AVIF sequence sample disappeared".to_owned())
+            })?;
+        frames.push(DecodedFrame::rendered_canvas(
+            image,
+            FrameRect {
+                left: 0,
+                top: 0,
+                width,
+                height,
+            },
+            FrameDuration {
+                numerator: u64::from(sample.duration),
+                denominator: u64::from(sequence_payload.timescale.get()),
+            },
+            FrameDisposal::Unspecified,
+            FrameBlend::Unspecified,
+        ));
+    }
+
+    let mut extracted = extracted;
+    let consumed = extracted.consumed;
+    let opaque_blocks = std::mem::take(&mut extracted.retained_boxes);
+    let metadata = std::mem::take(&mut extracted.metadata);
+    let source_color = std::mem::take(&mut extracted.source_color);
+    Ok((
+        DecodedSequence {
+            width,
+            height,
+            frames,
+            loop_count,
+            background: None,
+            kind: SequenceKind::TimedAnimation,
+            opaque_blocks,
+            metadata,
+            source_color,
+        },
+        consumed,
+    ))
+}
+
+fn reserve_gap_frames(
+    budget: &mut SequenceDecodeBudget,
+    mode: ImageMode,
+    width: u32,
+    height: u32,
+    sample_count: usize,
+) -> CodecResult<()> {
+    for _ in 1..sample_count {
+        budget
+            .reserve_later_frame(mode, width, height)
+            .map_err(CodecError::LimitExceeded)?;
+    }
+    Ok(())
+}
+
+fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> CodecResult<()> {
+    if sequence.timescale.get() == 0 {
+        return Err(CodecError::Malformed(
+            "AVIF sequence timescale is zero".to_owned(),
+        ));
+    }
+    if sequence
+        .color
+        .samples
+        .iter()
+        .any(|sample| sample.duration == 0)
+    {
+        return Err(CodecError::Malformed(
+            "AVIF sequence sample duration is zero".to_owned(),
+        ));
+    }
+    if let Some(alpha) = &sequence.alpha {
+        if alpha.samples.len() != sequence.color.samples.len() {
+            return Err(CodecError::Malformed(
+                "AVIF sequence color and alpha sample counts differ".to_owned(),
+            ));
+        }
+        for (color, alpha) in sequence.color.samples.iter().zip(&alpha.samples) {
+            if alpha.duration == 0 || color.duration != alpha.duration {
+                return Err(CodecError::Malformed(
+                    "AVIF sequence color and alpha durations differ".to_owned(),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn avif_sequence_source_template(
+    extracted: &super::samples::ExtractedAvif<'_>,
+    file_type: crate::types::AvifFileTypeProperties,
+    has_alpha: bool,
+) -> SourceDescriptor {
+    let mut source = SourceDescriptor::new();
+    if has_alpha {
+        source = source.with_alpha(crate::types::SourceAlpha::Auxiliary);
+    }
+    source = source.with_avif_file_type(file_type);
+    if let Some(transform) = extracted.transform {
+        source = source.with_avif_transform(transform);
+    }
+    if !extracted.auxiliary_relationships.is_empty() {
+        source =
+            source.with_avif_auxiliary_relationships(extracted.auxiliary_relationships.clone());
+    }
+    if let Some(relationship) = extracted.auxiliary_relationship {
+        source = source.with_avif_auxiliary_relationship(relationship);
+    }
+    if !extracted.item_relationships.is_empty() {
+        source = source.with_avif_item_relationships(extracted.item_relationships.clone());
+    }
+    if !extracted.premultiplied_relationships.is_empty() {
+        source = source
+            .with_avif_premultiplied_relationships(extracted.premultiplied_relationships.clone());
+    }
+    if !extracted.item_color_properties.is_empty() {
+        source = source.with_avif_item_color_properties(extracted.item_color_properties.clone());
+    }
+    if !extracted.item_icc_profiles.is_empty() {
+        source = source.with_avif_item_icc_profiles(extracted.item_icc_profiles.clone());
+    }
+    if !extracted.item_properties.is_empty() {
+        source = source.with_avif_item_properties(extracted.item_properties.clone());
+    }
+    if !extracted.item_plane_properties.is_empty() {
+        source = source.with_avif_item_plane_properties(extracted.item_plane_properties.clone());
+    }
+    if !extracted.item_codec_properties.is_empty() {
+        source = source.with_avif_item_codec_properties(extracted.item_codec_properties.clone());
+    }
+    if !extracted.item_locations.is_empty() {
+        source = source.with_avif_item_locations(extracted.item_locations.clone());
+    }
+    if !extracted.grid_item_ids.is_empty() {
+        source = source.with_avif_grid_item_ids(extracted.grid_item_ids.clone());
+    }
+    if let Some(properties) = extracted.grid_properties {
+        source = source.with_avif_grid_properties(properties);
+    }
+    source
 }
 
 fn extract_av1(data: &[u8]) -> CodecResult<super::samples::ExtractedAvif<'_>> {
     super::samples::validated(data)
         .map_err(|error| error.context("AVIF container validation failed"))
-}
-
-/// Reserve every later AVIF frame before validating or eventually presenting
-/// the sequence. The portable renderer is still a planned gap, but policy
-/// limits must not disappear merely because presentation is not implemented.
-fn reserve_sequence_frames(
-    data: &[u8],
-    extracted: &super::samples::ExtractedAvif<'_>,
-    budget: &mut SequenceDecodeBudget,
-) -> CodecResult<()> {
-    if extracted.sequence.is_none() {
-        return Ok(());
-    }
-    let info = super::inspect::inspect(data)?;
-    let frame_count = info.frame_count.unwrap_or(1);
-    for _ in 1..frame_count {
-        budget
-            .reserve_later_frame(info.mode, info.width, info.height)
-            .map_err(CodecError::LimitExceeded)?;
-    }
-    Ok(())
 }
 
 fn read_avif_file_type(data: &[u8]) -> CodecResult<crate::types::AvifFileTypeProperties> {
@@ -231,25 +477,35 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         .map_err(|error| error.context("AVIF container validation failed"))
 }
 
+#[derive(Clone, Copy)]
+enum PortableYuvMatrix {
+    Bt601,
+}
+
 fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
     let plane_length = width.checked_mul(height)?;
-    if !(matches!(still.bit_depth, 8 | 10 | 12)
-        && !still.monochrome
-        && still.color_primaries == 1
-        && still.transfer_characteristics == 13
-        && still.matrix_coefficients == 6
-        && still.color_range)
-    {
+    if !matches!(still.bit_depth, 8 | 10 | 12) || !still.color_range {
         return None;
+    }
+    if still.monochrome {
+        return decode_monochrome_portable(still, plane_length);
     }
     let subsampled = match (still.subsampling_x, still.subsampling_y) {
         (false, false) => false,
         (true, true) => true,
         (true, false) => false,
         (false, true) => return None,
+    };
+    let matrix = match (
+        still.color_primaries,
+        still.transfer_characteristics,
+        still.matrix_coefficients,
+    ) {
+        (1, 13, 6) => PortableYuvMatrix::Bt601,
+        _ => return None,
     };
     let mut canvas = super::av1::FrameCanvas::new(
         still.width,
@@ -274,65 +530,283 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     } else {
         width
     };
-    if still
-        .alpha_plane
-        .as_ref()
-        .is_some_and(|plane| plane.samples.len() != plane_length)
+    let chroma_height = if subsampled {
+        height.div_ceil(2)
+    } else {
+        height
+    };
+    let chroma_sample_count = chroma_width.checked_mul(chroma_height)?;
+    if y_plane.samples.len() != plane_length
+        || u_plane.samples.len() != chroma_sample_count
+        || v_plane.samples.len() != chroma_sample_count
+        || still
+            .alpha_plane
+            .as_ref()
+            .is_some_and(|plane| plane.samples.len() != plane_length)
+    {
+        return None;
+    }
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(still.bit_depth)?;
+    if y_plane
+        .samples
+        .iter()
+        .chain(&u_plane.samples)
+        .chain(&v_plane.samples)
+        .chain(
+            still
+                .alpha_plane
+                .as_ref()
+                .into_iter()
+                .flat_map(|plane| plane.samples.iter()),
+        )
+        .any(|&sample| sample_depth.validate(sample).is_none())
     {
         return None;
     }
     let has_alpha = still.alpha_plane.is_some();
+    // The high-depth subsampled alpha kernel retains filtered 10-bit chroma
+    // until the matrix stage.  Select it explicitly so ordinary RGB and
+    // 12-bit fallback paths continue to downshift before interpolation.
+    let high_depth_10bit_subsampled_alpha =
+        has_alpha && still.bit_depth == 10 && still.subsampling_x;
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
-    let mut pixels = Vec::with_capacity(pixel_capacity);
-    for (index, &y_sample) in y_plane.samples.iter().enumerate() {
-        let (u_sample, v_sample) = if subsampled {
-            #[allow(clippy::arithmetic_side_effects)]
-            let row = index.wrapping_div(width);
-            // `width` is validated nonzero; remainder matches euclidean
-            // semantics for non-negative operands without an intrinsic branch.
-            #[allow(clippy::arithmetic_side_effects)]
-            let column = index.wrapping_rem(width);
-            (
-                libyuv_420_bilinear_sample(
-                    &u_plane.samples,
-                    chroma_width,
-                    width,
-                    height,
-                    column,
-                    row,
-                ),
-                libyuv_420_bilinear_sample(
-                    &v_plane.samples,
-                    chroma_width,
-                    width,
-                    height,
-                    column,
-                    row,
-                ),
-            )
-        } else if still.subsampling_x {
-            #[allow(clippy::arithmetic_side_effects)]
-            let row = index.wrapping_div(width);
-            #[allow(clippy::arithmetic_side_effects)]
-            let column = index.wrapping_rem(width);
-            (
-                libavif_422_bilinear_sample(&u_plane.samples, chroma_width, width, column, row),
-                libavif_422_bilinear_sample(&v_plane.samples, chroma_width, width, column, row),
-            )
+    let pixels = if !still.subsampling_x && !still.subsampling_y {
+        if has_alpha && still.bit_depth == 10 {
+            convert_full_resolution_rgb_10bit_alpha(
+                &y_plane.samples,
+                &u_plane.samples,
+                &v_plane.samples,
+                still.alpha_plane.as_ref()?.samples.as_slice(),
+                matrix,
+            )?
         } else {
-            (u_plane.samples[index], v_plane.samples[index])
-        };
-        let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
-        let u = super::av1::truncate_to_u8(u_sample, still.bit_depth)?;
-        let v = super::av1::truncate_to_u8(v_sample, still.bit_depth)?;
-        pixels.extend_from_slice(&libyuv_bt601_full_range_rgb(y, u, v));
-        if let Some(alpha_plane) = &still.alpha_plane {
-            pixels.push(super::av1::truncate_to_u8(
-                alpha_plane.samples[index],
+            convert_full_resolution_rgb(
+                &y_plane.samples,
+                &u_plane.samples,
+                &v_plane.samples,
+                still
+                    .alpha_plane
+                    .as_ref()
+                    .map(|plane| plane.samples.as_slice()),
                 still.bit_depth,
-            )?);
+                matrix,
+            )?
         }
+    } else {
+        let shift = sample_depth.bits().checked_sub(8)?;
+        let mut pixels = Vec::new();
+        pixels.try_reserve_exact(pixel_capacity).ok()?;
+        for (index, &y_sample) in y_plane.samples.iter().enumerate() {
+            let (u_sample, v_sample) = if subsampled {
+                #[allow(clippy::arithmetic_side_effects)]
+                let row = index.wrapping_div(width);
+                // `width` is validated nonzero; remainder matches euclidean
+                // semantics for non-negative operands without an intrinsic branch.
+                #[allow(clippy::arithmetic_side_effects)]
+                let column = index.wrapping_rem(width);
+                (
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
+                        libyuv_420_bilinear_sample(
+                            &u_plane.samples,
+                            chroma_width,
+                            width,
+                            height,
+                            column,
+                            row,
+                        )
+                    } else {
+                        libyuv_420_bilinear_sample_at_depth(
+                            &u_plane.samples,
+                            chroma_width,
+                            width,
+                            height,
+                            column,
+                            row,
+                            shift,
+                        )
+                    },
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
+                        libyuv_420_bilinear_sample(
+                            &v_plane.samples,
+                            chroma_width,
+                            width,
+                            height,
+                            column,
+                            row,
+                        )
+                    } else {
+                        libyuv_420_bilinear_sample_at_depth(
+                            &v_plane.samples,
+                            chroma_width,
+                            width,
+                            height,
+                            column,
+                            row,
+                            shift,
+                        )
+                    },
+                )
+            } else {
+                #[allow(clippy::arithmetic_side_effects)]
+                let row = index.wrapping_div(width);
+                #[allow(clippy::arithmetic_side_effects)]
+                let column = index.wrapping_rem(width);
+                (
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
+                        libavif_422_bilinear_sample(
+                            &u_plane.samples,
+                            chroma_width,
+                            width,
+                            column,
+                            row,
+                        )
+                    } else {
+                        libavif_422_bilinear_sample_at_depth(
+                            &u_plane.samples,
+                            chroma_width,
+                            width,
+                            column,
+                            row,
+                            shift,
+                        )
+                    },
+                    if high_depth_10bit_subsampled_alpha || shift == 0 {
+                        libavif_422_bilinear_sample(
+                            &v_plane.samples,
+                            chroma_width,
+                            width,
+                            column,
+                            row,
+                        )
+                    } else {
+                        libavif_422_bilinear_sample_at_depth(
+                            &v_plane.samples,
+                            chroma_width,
+                            width,
+                            column,
+                            row,
+                            shift,
+                        )
+                    },
+                )
+            };
+            let rgb = if high_depth_10bit_subsampled_alpha {
+                libyuv_full_range_rgb_10bit(y_sample, u_sample, v_sample, matrix)?
+            } else {
+                let y = super::av1::truncate_to_u8(y_sample, still.bit_depth)?;
+                // The depth-aware samplers already performed the source-plane
+                // downshift before interpolation; truncating these filtered
+                // values a second time would incorrectly divide high-depth
+                // chroma by another factor of four or sixteen.
+                let u = u8::try_from(u_sample).ok()?;
+                let v = u8::try_from(v_sample).ok()?;
+                match matrix {
+                    PortableYuvMatrix::Bt601 => libyuv_bt601_full_range_rgb(y, u, v),
+                }
+            };
+            pixels.extend_from_slice(&rgb);
+            if let Some(alpha_plane) = &still.alpha_plane {
+                pixels.push(super::av1::truncate_to_u8(
+                    alpha_plane.samples[index],
+                    still.bit_depth,
+                )?);
+            }
+        }
+        pixels
+    };
+    Some(DecodedImage {
+        width: still.width,
+        height: still.height,
+        pixels,
+        color: if has_alpha {
+            ColorType::Rgba8
+        } else {
+            ColorType::Rgb8
+        },
+        mode: if has_alpha {
+            ImageMode::Rgba8
+        } else {
+            ImageMode::Rgb8
+        },
+        palette: None,
+        cursor_hotspot: None,
+        source: if has_alpha {
+            crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::Auxiliary)
+        } else {
+            crate::types::SourceDescriptor::new()
+        },
+        opaque_blocks: Vec::new(),
+        metadata: Vec::new(),
+        source_color: SourceColor::new(),
+    })
+}
+
+fn decode_monochrome_portable(
+    still: &super::av1::PortableStill,
+    sample_count: usize,
+) -> Option<DecodedImage> {
+    if !still.subsampling_x
+        || !still.subsampling_y
+        || !still.planes[1].samples.is_empty()
+        || !still.planes[2].samples.is_empty()
+        || still.planes[0].samples.len() != sample_count
+        || still
+            .alpha_plane
+            .as_ref()
+            .is_some_and(|plane| plane.samples.len() != sample_count)
+    {
+        return None;
+    }
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(still.bit_depth)?;
+    let alpha_plane = still
+        .alpha_plane
+        .as_ref()
+        .map(|plane| plane.samples.as_slice());
+    // Preserve the scalar truncation boundary before shifting any SIMD lanes:
+    // a sample above the declared nominal depth must reject the whole image.
+    if still.planes[0]
+        .samples
+        .iter()
+        .any(|&sample| sample_depth.truncate_to_u8(sample).is_none())
+        || alpha_plane.is_some_and(|plane| {
+            plane
+                .iter()
+                .any(|&sample| sample_depth.truncate_to_u8(sample).is_none())
+        })
+    {
+        return None;
+    }
+    let has_alpha = still.alpha_plane.is_some();
+    let channels = if has_alpha { 4 } else { 3 };
+    let pixel_capacity = sample_count.checked_mul(channels)?;
+    let shift = sample_depth.bits().checked_sub(8)?;
+    let mut pixels = Vec::new();
+    pixels.try_reserve_exact(pixel_capacity).ok()?;
+    let remainder = sample_count.checked_rem(8)?;
+    let vectorized = sample_count.checked_sub(remainder)?;
+    for offset in (0..vectorized).step_by(8) {
+        let gray = truncate_u16_lanes(&still.planes[0].samples, offset, shift)?;
+        let alpha = match alpha_plane {
+            Some(plane) => Some(truncate_u16_lanes(plane, offset, shift)?),
+            None => None,
+        };
+        for lane in 0..8 {
+            pixels.extend_from_slice(&[gray[lane], gray[lane], gray[lane]]);
+            if let Some(alpha) = alpha.as_ref() {
+                pixels.push(alpha[lane]);
+            }
+        }
+    }
+    for index in vectorized..sample_count {
+        let gray = sample_depth.truncate_to_u8(still.planes[0].samples[index])?;
+        pixels.extend_from_slice(&[gray, gray, gray]);
+        if let Some(alpha_plane) = alpha_plane {
+            pixels.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
+        }
+    }
+    if pixels.len() != pixel_capacity {
+        return None;
     }
     Some(DecodedImage {
         width: still.width,
@@ -361,6 +835,220 @@ fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage>
     })
 }
 
+/// Convert contiguous I444 planes with matrix dispatch hoisted out of the
+/// sample loop. Complete eight-sample batches use the same fixed-point
+/// equations as the scalar libyuv-compatible tail, with checked lane loading
+/// and interleaving so malformed samples still fail before any output escapes.
+fn convert_full_resolution_rgb(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    alpha_plane: Option<&[u16]>,
+    bit_depth: u32,
+    matrix: PortableYuvMatrix,
+) -> Option<Vec<u8>> {
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(bit_depth)?;
+    let sample_count = y_plane.len();
+    if u_plane.len() != sample_count
+        || v_plane.len() != sample_count
+        || alpha_plane.is_some_and(|alpha| alpha.len() != sample_count)
+    {
+        return None;
+    }
+    let channels = if alpha_plane.is_some() { 4 } else { 3 };
+    let output_length = sample_count.checked_mul(channels)?;
+    // Validate the complete input domain before allocating or shifting lanes.
+    // This preserves `SampleDepth::truncate_to_u8`'s rejection of any sample
+    // outside the declared nominal depth, including values that would shift
+    // into an apparently valid byte.
+    if y_plane
+        .iter()
+        .chain(u_plane)
+        .chain(v_plane)
+        .chain(alpha_plane.into_iter().flatten())
+        .any(|&sample| sample_depth.validate(sample).is_none())
+    {
+        return None;
+    }
+    let mut output = Vec::new();
+    output.try_reserve_exact(output_length).ok()?;
+    output.resize(output_length, 0);
+
+    let shift = bit_depth.checked_sub(8)?;
+    let remainder = sample_count.checked_rem(8)?;
+    let vectorized = sample_count.checked_sub(remainder)?;
+    for offset in (0..vectorized).step_by(8) {
+        let [red, green, blue] =
+            convert_i444_rgb_lanes(y_plane, u_plane, v_plane, offset, shift, matrix)?;
+        let alpha = if let Some(plane) = alpha_plane {
+            Some(truncate_u16_lanes(plane, offset, shift)?)
+        } else {
+            None
+        };
+        let output_start = offset.checked_mul(channels)?;
+        let output_end = output_start.checked_add(8_usize.checked_mul(channels)?)?;
+        let batch = output.get_mut(output_start..output_end)?;
+        for (lane, pixel) in batch.chunks_exact_mut(channels).enumerate() {
+            pixel[..3].copy_from_slice(&[red[lane], green[lane], blue[lane]]);
+            if let Some(alpha) = alpha.as_ref() {
+                pixel[3] = alpha[lane];
+            }
+        }
+    }
+    for index in vectorized..sample_count {
+        let y = sample_depth.truncate_to_u8(y_plane[index])?;
+        let u = sample_depth.truncate_to_u8(u_plane[index])?;
+        let v = sample_depth.truncate_to_u8(v_plane[index])?;
+        let rgb = match matrix {
+            PortableYuvMatrix::Bt601 => libyuv_bt601_full_range_rgb(y, u, v),
+        };
+        let output_start = index.checked_mul(channels)?;
+        let output_end = output_start.checked_add(channels)?;
+        let pixel = output.get_mut(output_start..output_end)?;
+        pixel[..3].copy_from_slice(&rgb);
+        if let Some(alpha_plane) = alpha_plane {
+            pixel[3] = sample_depth.truncate_to_u8(alpha_plane[index])?;
+        }
+    }
+    Some(output)
+}
+
+/// Convert a validated 10-bit I444 color plane with auxiliary alpha through
+/// libyuv's raw high-depth ARGB kernel. The RGB24 path deliberately remains a
+/// separate downshifted conversion for 10-bit images without alpha.
+fn convert_full_resolution_rgb_10bit_alpha(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    alpha_plane: &[u16],
+    matrix: PortableYuvMatrix,
+) -> Option<Vec<u8>> {
+    let sample_count = y_plane.len();
+    if u_plane.len() != sample_count
+        || v_plane.len() != sample_count
+        || alpha_plane.len() != sample_count
+    {
+        return None;
+    }
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(10)?;
+    if y_plane
+        .iter()
+        .chain(u_plane)
+        .chain(v_plane)
+        .chain(alpha_plane)
+        .any(|&sample| sample_depth.validate(sample).is_none())
+    {
+        return None;
+    }
+    let output_length = sample_count.checked_mul(4)?;
+    let mut output = Vec::new();
+    output.try_reserve_exact(output_length).ok()?;
+    for index in 0..sample_count {
+        let rgb =
+            libyuv_full_range_rgb_10bit(y_plane[index], u_plane[index], v_plane[index], matrix)?;
+        output.extend_from_slice(&rgb);
+        output.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
+    }
+    if output.len() != output_length {
+        return None;
+    }
+    Some(output)
+}
+
+// `convert_full_resolution_rgb` validates every plane against the declared
+// sample depth before allocating or reaching this helper. After the checked
+// 0/2/4-bit shift, every Y/U/V lane is therefore in 0..=255. The fixed-point
+// intermediates remain in the i32 domain: y * 257 <= 65_535,
+// (y * 257) * 16_320 <= 1_069_531_200, and y_scaled <= 16_319. The BT.601
+// lane bounds are R[-11_488, 27_781], G[-8_604, 25_055], and
+// B[-14_432, 30_702].
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated 0..=255 lanes and bounded libyuv fixed-point coefficients remain within i32"
+)]
+#[inline(always)]
+fn convert_i444_rgb_lanes(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    offset: usize,
+    shift: u32,
+    matrix: PortableYuvMatrix,
+) -> Option<[[u8; 8]; 3]> {
+    let y = truncate_u16x8(y_plane, offset, shift)?;
+    let u = truncate_u16x8(u_plane, offset, shift)?;
+    let v = truncate_u16x8(v_plane, offset, shift)?;
+    let y_scaled = ((y * i32x8::splat(257)) * i32x8::splat(16_320)) >> 16;
+    let (red, green, blue) = match matrix {
+        PortableYuvMatrix::Bt601 => (
+            y_scaled + v * i32x8::splat(90) - i32x8::splat(11_488),
+            y_scaled + i32x8::splat(8_736) - (u * i32x8::splat(22) + v * i32x8::splat(46)),
+            y_scaled + u * i32x8::splat(113) - i32x8::splat(14_432),
+        ),
+    };
+    Some([
+        narrow_rgb_lanes(red),
+        narrow_rgb_lanes(green),
+        narrow_rgb_lanes(blue),
+    ])
+}
+
+// Callers validate the complete nominal sample domain before allocation.
+// Supported AVIF depths here are 8, 10, and 12 bits, so the supplied shifts
+// are 0, 2, or 4 and all remain below the 16-bit lane width.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "callers validate 8/10/12-bit samples and shifts 0/2/4 are below the u16 lane width"
+)]
+#[inline(always)]
+fn truncate_u16x8(samples: &[u16], offset: usize, shift: u32) -> Option<i32x8> {
+    let values = samples
+        .get(offset..offset.checked_add(8)?)?
+        .try_into()
+        .ok()?;
+    Some(i32x8::from_u16x8(u16x8::new(values) >> shift))
+}
+
+// Callers validate the complete nominal sample domain before allocation.
+// Supported AVIF depths here are 8, 10, and 12 bits, so the supplied shifts
+// are 0, 2, or 4 and all remain below the 16-bit lane width.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "callers validate 8/10/12-bit samples and shifts 0/2/4 are below the u16 lane width"
+)]
+#[inline(always)]
+fn truncate_u16_lanes(samples: &[u16], offset: usize, shift: u32) -> Option<[u8; 8]> {
+    let values = u16x8::new(
+        samples
+            .get(offset..offset.checked_add(8)?)?
+            .try_into()
+            .ok()?,
+    ) >> shift;
+    let values = values.to_array();
+    let mut lanes = [0_u8; 8];
+    for (lane, value) in lanes.iter_mut().zip(values) {
+        *lane = u8::try_from(value).ok()?;
+    }
+    Some(lanes)
+}
+
+// The conversion helper proves every lane lies in [-15_328, 31_591]. The
+// constant right shift is 6 (<32), then clamping to 0..=255 makes the final
+// checked narrowing total even if a future caller supplies an out-of-range
+// lane.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "validated conversion lanes are bounded in i32; constant shift 6 is below the width and clamp precedes narrowing"
+)]
+#[inline(always)]
+fn narrow_rgb_lanes(values: i32x8) -> [u8; 8] {
+    let values = (values >> 6_u32)
+        .max(i32x8::ZERO)
+        .min(i32x8::splat(255))
+        .to_array();
+    std::array::from_fn(|lane| u8::try_from(values[lane]).unwrap_or(0))
+}
+
 // ✅ VERIFIED: libavif 1.4.1 `src/reformat.c`'s bilinear YUV422 branch. The
 // closest chroma sample receives 3/4 weight and its horizontal neighbor 1/4;
 // even output columns use the left neighbor and odd columns the right. 4:2:2
@@ -371,6 +1059,20 @@ fn libavif_422_bilinear_sample(
     width: usize,
     column: usize,
     row: usize,
+) -> u16 {
+    libavif_422_bilinear_sample_at_depth(plane, chroma_width, width, column, row, 0)
+}
+
+/// Downshift source samples before the 4:2:2 filter, matching libavif's
+/// high-depth RGB8 fallback.  The public wrapper above keeps the established
+/// 8-bit helper contract used by focused parity tests.
+fn libavif_422_bilinear_sample_at_depth(
+    plane: &[u16],
+    chroma_width: usize,
+    width: usize,
+    column: usize,
+    row: usize,
+    shift: u32,
 ) -> u16 {
     if plane.is_empty() || chroma_width == 0 || width == 0 {
         return 0;
@@ -388,6 +1090,7 @@ fn libavif_422_bilinear_sample(
                     .saturating_add(source_column.min(chroma_width.saturating_sub(1))),
             )
             .copied()
+            .map(|sample| sample.wrapping_shr(shift))
             .unwrap_or_default()
     };
     let weighted = u32::from(sample(source_column))
@@ -409,6 +1112,21 @@ fn libyuv_420_bilinear_sample(
     column: usize,
     row: usize,
 ) -> u16 {
+    libyuv_420_bilinear_sample_at_depth(plane, chroma_width, width, height, column, row, 0)
+}
+
+/// Downshift source samples before the 4:2:0 filter.  This is observable for
+/// nonzero discarded low bits and is required by libavif's 10/12-bit RGB8
+/// fallback; applying the shift after interpolation can differ by one byte.
+fn libyuv_420_bilinear_sample_at_depth(
+    plane: &[u16],
+    chroma_width: usize,
+    width: usize,
+    height: usize,
+    column: usize,
+    row: usize,
+    shift: u32,
+) -> u16 {
     let chroma_height = height.div_ceil(2);
     if plane.is_empty() || chroma_width == 0 || chroma_height == 0 || width == 0 {
         return 0;
@@ -424,6 +1142,7 @@ fn libyuv_420_bilinear_sample(
                     .saturating_add(source_column),
             )
             .copied()
+            .map(|sample| sample.wrapping_shr(shift))
             .unwrap_or_default()
     };
     let source_column = column.saturating_sub(1).div_euclid(2);
@@ -518,6 +1237,38 @@ fn libyuv_bt601_full_range_rgb(y: u8, u: u8, v: u8) -> [u8; 3] {
         .wrapping_add(i32::from(v).wrapping_mul(90))
         .wrapping_sub(11_488);
     [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
+}
+
+/// Match libyuv's `YuvPixel10` arithmetic for the I010/I210 alpha conversion
+/// family. Unlike the RGB24 fallback, chroma remains in the filtered 10-bit
+/// domain until the `>> 2` boundary, and luma uses libyuv's high-depth
+/// expansion before the fixed-point matrix.
+fn libyuv_full_range_rgb_10bit(
+    y: u16,
+    u: u16,
+    v: u16,
+    matrix: PortableYuvMatrix,
+) -> Option<[u8; 3]> {
+    let y = u32::from(y);
+    let y32 = y.checked_shl(6)? | (y >> 4);
+    let ybase = i32::try_from(y32.checked_mul(16_320)?.checked_shr(16)?).ok()?;
+    let u = u8::try_from(u.checked_shr(2)?).ok()?;
+    let v = u8::try_from(v.checked_shr(2)?).ok()?;
+    let (blue_u, green_bias, green_u, green_v, red_v, blue_bias, red_bias) = match matrix {
+        PortableYuvMatrix::Bt601 => (113, 8_736, 22, 46, 90, 14_432, 11_488),
+    };
+    let blue = ybase
+        .checked_add(i32::from(u).checked_mul(blue_u)?)?
+        .checked_sub(blue_bias)?;
+    let green = ybase.checked_add(green_bias)?.checked_sub(
+        i32::from(u)
+            .checked_mul(green_u)?
+            .checked_add(i32::from(v).checked_mul(green_v)?)?,
+    )?;
+    let red = ybase
+        .checked_add(i32::from(v).checked_mul(red_v)?)?
+        .checked_sub(red_bias)?;
+    Some([libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)])
 }
 
 fn libyuv_rgb8(value: i32) -> u8 {
@@ -627,8 +1378,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0,
         None,
     );
-    let baseline = include_bytes!("../../../tests/fixtures/input/images/avif/baseline.avif");
-    let animated = include_bytes!("../../../tests/fixtures/input/images/avif/animated.avif");
+    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
+    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let mut malformed_file_type = baseline.to_vec();
     malformed_file_type[8..12].copy_from_slice(b"free");
     for offset in (16..32).step_by(4) {
@@ -661,7 +1412,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 #[cfg(test)]
 mod tests {
     mod sha256 {
-        include!("../../../tests/support/sha256.rs");
+        include!("../../test_support/sha256.rs");
     }
 
     use super::{decode_portable, libavif_422_bilinear_sample};
@@ -681,6 +1432,7 @@ mod tests {
             color_range: true,
             subsampling_x: false,
             subsampling_y: false,
+            frame_id_numbers_present: false,
             planes: std::array::from_fn(|_| ReconstructedPlane {
                 samples: vec![128; 16],
             }),
@@ -744,7 +1496,7 @@ mod tests {
 
     #[test]
     fn alpha_fixture_decodes_to_pure_rust_rgba() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/alpha.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let validated = super::super::av1::validate_first(&extracted)?;
         let still = validated
@@ -778,7 +1530,7 @@ mod tests {
 
     #[test]
     fn grid_fixture_decodes_to_pure_rust_rgba() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/grid.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let validated = super::super::av1::validate_first(&extracted)?;
         let still = validated
@@ -799,7 +1551,7 @@ mod tests {
             plane.samples.len() == 80 * 80 && plane.samples.iter().any(|&sample| sample != 0)
         }));
         let expected_raw =
-            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
+            include_bytes!("../../test_support/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
         let alpha = still
             .alpha_plane
             .as_ref()
@@ -827,10 +1579,10 @@ mod tests {
 
     #[test]
     fn public_grid_decode_preserves_validation_inputs() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/grid.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/grid.avif");
         let (image, _) = super::decode(bytes, None)?;
         let expected =
-            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
+            include_bytes!("../../test_support/fixtures/outputs/raws/Decode.avif_grid_avif.bin");
         assert_eq!(image.color, ColorType::Rgba8);
         assert_eq!(image.mode, ImageMode::Rgba8);
         assert_eq!(image.pixels.as_slice(), &expected[..]);
@@ -843,10 +1595,11 @@ mod tests {
 
     #[test]
     fn public_multitile_decode_materializes_exact_rgb() -> CodecResult<()> {
-        let bytes = include_bytes!("../../../tests/fixtures/input/images/avif/multitile.avif");
+        let bytes = include_bytes!("../../test_support/fixtures/input/images/avif/multitile.avif");
         let (image, _) = super::decode(bytes, None)?;
-        let expected =
-            include_bytes!("../../../tests/fixtures/outputs/raws/Decode.avif_multitile_avif.bin");
+        let expected = include_bytes!(
+            "../../test_support/fixtures/outputs/raws/Decode.avif_multitile_avif.bin"
+        );
         assert_eq!(image.color, ColorType::Rgb8);
         assert_eq!(image.mode, ImageMode::Rgb8);
         assert_eq!(image.pixels.as_slice(), &expected[..]);

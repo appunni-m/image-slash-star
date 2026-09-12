@@ -1,14 +1,18 @@
 //! Common animation-loop semantics and target-conversion contracts.
 
+use image_slash_star::AnimationLoop;
+
+#[cfg(any(feature = "gif", feature = "tiff", feature = "webp"))]
 use image_slash_star::{
-    AnimationLoop, ColorType, DecodedFrame, DecodedImage, DecodedSequence, EncodeOptions,
-    FrameBlend, FrameDisposal, FrameDuration, FrameRect, ImageFormat, SequenceKind, SourceColor,
+    ColorType, DecodedFrame, DecodedImage, DecodedSequence, EncodeOptions, FrameBlend,
+    FrameDisposal, FrameDuration, FrameRect, ImageFormat, SequenceKind, SourceColor,
 };
 
 use bytemuck as _;
-#[cfg(feature = "jpeg")]
+#[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
+#[cfg(any(feature = "gif", feature = "tiff", feature = "webp"))]
 fn two_frame_sequence(loop_count: AnimationLoop) -> DecodedSequence {
     let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
     let frame = || {

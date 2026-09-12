@@ -17,7 +17,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `cf965d29beff5aceaf8517d8ea0203164358359b754b71a0a09f82887d8e5793`; generated matrix SHA-256: `54671e48b30ab905003be6db3684c912a76ece15bb007b7fab46bf136cb024ae`.
+- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `002f1a6293a0913d6a010f325db64a82258d5b5f7ae8e778e37b008af22ecc71`.
 <!-- current-claim-ledger:end -->
 The compact snapshot retains metadata commit
 `3272b3ef49a87c2947c08b46596b442195c6a8db` as a provenance caveat. The
@@ -32,7 +32,7 @@ attribution is unavailable; bounded source review marks all seven rectangular
 transform wrappers green.
 The managed Pillow parity identifier below is the accepted claim-ledger result
 at its own recorded revision; the local all-feature matrix integration target
-currently passes 44/44 under the coverage build.
+currently passes 45/45 under the coverage build.
 The docs-clean revision `33f8f85dd7860f95a6bd2b4beafcd2e010e0f0e9` also has a
 final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
 1,449/1,449 passed and no skips. The latest local feature-matrix run completed
@@ -104,11 +104,27 @@ same arguments to its registered LLVM command, for example:
 ```
 
 With no AV1 fixture selector, the existing reconstruction test still validates
-all 246 oracle cases and all other coverage helpers retain their full-run
+all 273 oracle cases and all other coverage helpers retain their full-run
 behavior. With a selector, matrix dispatch and unrelated AV1 coverage helpers
 return before doing fixture work; the reconstruction test validates only the
 requested cases and asserts that every requested name ran exactly once. The
 selector is coverage-harness infrastructure, not a new decoder capability.
+
+The current managed AV1 batch run
+`792e4884-8f4a-4c67-92e6-65eaa0e11a13` selected exactly
+`coverage_i444_square8_01.avif` through `_10.avif`, passed the one
+reconstruction dispatcher with 1 passed, 0 failed, and 44 filtered out in
+44,901 ms at committed tree `2c59a53c4602e585c34f1b41c9d13b2813e9c9d5`,
+and ingested snapshot `44d4499a-77fd-4c6a-a764-e138ec57c9d5` against explicit
+baseline `e775c345-999e-47e7-a260-996b27f9d54c`. Standalone incremental review
+reports a supported additive union of +1,297 covered lines, +213 branches,
++106 functions, and +1,896 regions; denominator changes are +6 lines, +0
+branches, +1 function, and +9 regions. The selected projection reports 2,238
+newly covered line identities. The replacement-style diff is limited to the
+selected subset: it reports 2,291 newly covered identities and 4,744 baseline
+observations not observed, so the latter are not regressions. Merge exactness
+is false, named-test attribution is unavailable, and this run does not replace
+the complete four-metric release measurement.
 
 The newest managed one-fixture reconstruction run
 `6b78c91c-d417-4ad0-af44-96d3623e3f64` passed in 32,449 ms at exact

@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use bytemuck as _;
 use image_slash_star as img;
-#[cfg(feature = "jpeg")]
+#[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
 #[path = "support/sha256.rs"]
@@ -1368,6 +1368,7 @@ struct Av1ReconstructionPlane {
     name: String,
     width: u32,
     height: u32,
+    sha256: String,
     row_bytes: Vec<String>,
 }
 
@@ -1665,6 +1666,7 @@ json_object!(Av1ReconstructionPlane {
     name,
     width,
     height,
+    sha256,
     row_bytes,
 });
 #[cfg(coverage)]
@@ -1719,15 +1721,41 @@ static AV1_FIXTURE_SELECTION_REPORT: OnceLock<()> = OnceLock::new();
 #[cfg(coverage)]
 fn av1_reconstruction_document() -> Result<&'static Av1ReconstructionDocument, &'static str> {
     let result = AV1_RECONSTRUCTION_DOCUMENT.get_or_init(|| {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let path = root
             .join("tests")
             .join("fixtures")
             .join("outputs")
             .join("av1_reconstruction.json");
         let contents = fs::read_to_string(&path)
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-        let document: Av1ReconstructionDocument = json::from_str(&contents)
+        let mut document: Av1ReconstructionDocument = json::from_str(&contents)
             .map_err(|error| format!("cannot parse {}: {error:?}", path.display()))?;
+        let mut part_count = 0;
+        loop {
+            let part_path = root
+                .join("tests")
+                .join("fixtures")
+                .join("outputs")
+                .join(format!("av1_reconstruction.part-{part_count:03}.json"));
+            let part_contents = match fs::read_to_string(&part_path) {
+                Ok(contents) => contents,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+                Err(error) => {
+                    return Err(format!("cannot read {}: {error}", part_path.display()));
+                }
+            };
+            let mut cases: Vec<Av1ReconstructionCase> = json::from_str(&part_contents)
+                .map_err(|error| format!("cannot parse {}: {error:?}", part_path.display()))?;
+            document.cases.append(&mut cases);
+            part_count += 1;
+        }
+        if part_count == 0 {
+            return Err(format!(
+                "AV1 reconstruction index has no case parts next to {}",
+                path.display()
+            ));
+        }
         let mut names = BTreeSet::new();
         for case in &document.cases {
             if !names.insert(case.fixture.as_str()) {
@@ -5943,26 +5971,588 @@ fn test_partitioned_square_444_fixtures_materialize() {
 }
 
 #[cfg(coverage)]
-fn assert_entropy_mosaic_candidate(fixture: &str) {
+fn assert_av1_reconstruction_candidate(fixture: &str) {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/input/images/avif");
-    let input = require_ok(fs::read(root.join(fixture)), "entropy mosaic candidate");
+    let input = require_ok(fs::read(root.join(fixture)), "AV1 reconstruction candidate");
     let actual = require_ok(
         img::__coverage_av1_reconstruction(&input),
-        "entropy mosaic candidate reconstruction",
+        "AV1 reconstruction candidate reconstruction",
     );
     assert!(
         actual.is_some(),
-        "entropy mosaic candidate must materialize: {fixture}"
+        "AV1 reconstruction candidate must materialize: {fixture}"
     );
 }
 
 #[cfg(coverage)]
+#[derive(Clone, Copy)]
+struct EntropyMosaicExpectation {
+    fixture: &'static str,
+    screen_content_tools: bool,
+    operations: usize,
+    eob: [u32; 3],
+    final_range: [u32; 3],
+}
+
+#[cfg(coverage)]
+const ENTROPY_MOSAIC_EXPECTATIONS: [EntropyMosaicExpectation; 8] = [
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_03.avif",
+        screen_content_tools: true,
+        operations: 1_105,
+        eob: [436, 149, 174],
+        final_range: [57_864, 59_656, 40_712],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_04.avif",
+        screen_content_tools: false,
+        operations: 1_012,
+        eob: [297, 152, 179],
+        final_range: [40_200, 41_224, 41_736],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_05.avif",
+        screen_content_tools: false,
+        operations: 1_007,
+        eob: [278, 188, 188],
+        final_range: [49_672, 34_824, 56_840],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_06.avif",
+        screen_content_tools: true,
+        operations: 1_201,
+        eob: [526, 163, 188],
+        final_range: [62_472, 45_064, 55_304],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_07.avif",
+        screen_content_tools: true,
+        operations: 1_172,
+        eob: [467, 176, 214],
+        final_range: [57_608, 40_712, 52_744],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_08.avif",
+        screen_content_tools: true,
+        operations: 958,
+        eob: [250, 152, 179],
+        final_range: [37_640, 35_592, 41_736],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_09.avif",
+        screen_content_tools: true,
+        operations: 789,
+        eob: [156, 162, 176],
+        final_range: [50_440, 45_576, 35_080],
+    },
+    EntropyMosaicExpectation {
+        fixture: "coverage_entropy_mosaic_10.avif",
+        screen_content_tools: true,
+        operations: 916,
+        eob: [250, 148, 175],
+        final_range: [49_160, 58_120, 39_944],
+    },
+];
+
+#[cfg(coverage)]
+#[derive(Clone, Copy)]
+struct I444Square8Expectation {
+    fixture: &'static str,
+    screen_content_tools: bool,
+    operations: usize,
+    partition_ranges: [u32; 5],
+    ymode: [i16; 4],
+    resolved_angle: [i16; 4],
+    y_palette_mask: u8,
+    filter_intra_mask: u8,
+    eob: [[i16; 3]; 4],
+    final_range: [[u32; 3]; 4],
+    plane_sha256: [&'static str; 3],
+    rgb_sha256: &'static str,
+}
+
+#[cfg(coverage)]
+const I444_SQUARE8_EXPECTATIONS: [I444Square8Expectation; 10] = [
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_01.avif",
+        screen_content_tools: false,
+        operations: 468,
+        partition_ranges: [34_880, 40_768, 55_378, 43_500, 62_836],
+        ymode: [1, 0, 1, 1],
+        resolved_angle: [90, -1, 90, 90],
+        y_palette_mask: 0,
+        filter_intra_mask: 0b0010,
+        eob: [[27, 15, 6], [14, 6, 6], [-1, 15, 6], [-1, 14, 6]],
+        final_range: [
+            [46_344, 61_192, 46_344],
+            [35_592, 57_096, 35_592],
+            [63_360, 46_088, 50_440],
+            [48_944, 46_856, 35_848],
+        ],
+        plane_sha256: [
+            "51d548d14afc3222374c9b5fce285d12a27ade1341655b55c58417f9fc1f12eb",
+            "e0268d9e7dd77f761636c438c9ce2e45a9ca77674ed1bf9ccf436ba40fd130e9",
+            "5c39c3532fe244e39b66c1b73e512bc9b682da6ce2ac2beee1bc5e249f486265",
+        ],
+        rgb_sha256: "e2d9ba964c5ec53a4032198999f2d96a6c04f764827521c4d8266dfd63183a8d",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_02.avif",
+        screen_content_tools: false,
+        operations: 580,
+        partition_ranges: [34_880, 40_768, 43_444, 59_776, 55_818],
+        ymode: [1, 2, 0, 2],
+        resolved_angle: [90, 180, -1, 180],
+        y_palette_mask: 0,
+        filter_intra_mask: 0b0100,
+        eob: [[20, 10, 20], [-1, 10, 20], [21, 20, 10], [-1, 20, 10]],
+        final_range: [
+            [45_064, 33_288, 36_360],
+            [35_488, 36_616, 48_904],
+            [54_024, 38_408, 44_808],
+            [51_184, 52_744, 37_128],
+        ],
+        plane_sha256: [
+            "b04228ceb02123011e5a17c735d664d9cfdd87542a5427b91248eeddbc2c9a3c",
+            "4d313f3582e9be8d855d1ce10c54ab9c5d55d2b11a2c3989a62bfa2766249090",
+            "448239a11cac7c61a7a3cb06b45fa5fcdf311dcdc9e7c1ae1fe5cd3431bb767f",
+        ],
+        rgb_sha256: "52cf14c15d3016015816a5097d48ed7b32210911f00e6533d65fc07aad401360",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_03.avif",
+        screen_content_tools: false,
+        operations: 550,
+        partition_ranges: [34_880, 40_768, 55_990, 44_478, 47_620],
+        ymode: [1, 0, 0, 0],
+        resolved_angle: [90, -1, -1, -1],
+        y_palette_mask: 0,
+        filter_intra_mask: 0b1110,
+        eob: [[32, 9, 18], [24, 9, 12], [24, 9, 12], [32, 9, 18]],
+        final_range: [
+            [55_560, 61_192, 46_856],
+            [36_872, 62_472, 36_280],
+            [52_488, 43_784, 38_200],
+            [34_312, 61_960, 65_288],
+        ],
+        plane_sha256: [
+            "140212cb9da212fa196a3f0884ade907cb0123ba847e05ab6c1ad5670bdac4d2",
+            "7f3bc6cc9782a8d5f53ce5c6868b8706bcb878e6c20d7a4596c5650f4c8663b3",
+            "be6527798996d2029f1ebd439963ecb59d932f1d345542109255e285493a7cd0",
+        ],
+        rgb_sha256: "23e0828c4691405b5616f2d3d1ce2452c8643ef941ff888fdcdb08d9ddbae07b",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_04.avif",
+        screen_content_tools: false,
+        operations: 524,
+        partition_ranges: [34_880, 40_768, 49_258, 40_056, 33_651],
+        ymode: [1, 1, 2, 9],
+        resolved_angle: [90, 90, 180, -1],
+        y_palette_mask: 0,
+        filter_intra_mask: 0,
+        eob: [[9, 2, 9], [12, 2, 12], [9, 2, 9], [59, 2, 9]],
+        final_range: [
+            [33_032, 36_872, 41_224],
+            [35_336, 59_400, 32_776],
+            [45_064, 48_136, 54_024],
+            [33_288, 55_560, 34_312],
+        ],
+        plane_sha256: [
+            "c350109b95732e07d5a6d72bc2195002e56a14ab5acd689f26c6f77bccb80bee",
+            "70fb6b8c47227572693eaa25e470ad56eee3d0d376ea10f3691d90fcd8c1510a",
+            "fa4ec0de5e2933385c6bd51dec605d3d3e920c82ba46f30b6824b1bf41aa52d4",
+        ],
+        rgb_sha256: "6af78ef081a21691dac3dbe080e0e74a4666df7c401975857a88d31be170c8d2",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_05.avif",
+        screen_content_tools: true,
+        operations: 1_704,
+        partition_ranges: [34_880, 40_768, 54_766, 51_012, 61_240],
+        ymode: [0, 0, 0, 0],
+        resolved_angle: [-1; 4],
+        y_palette_mask: 0b1111,
+        filter_intra_mask: 0b1111,
+        eob: [[63, 63, 63]; 4],
+        final_range: [
+            [54_280, 39_432, 45_832],
+            [47_112, 33_800, 41_736],
+            [35_336, 38_664, 49_160],
+            [65_288, 50_696, 45_832],
+        ],
+        plane_sha256: [
+            "ed11c0eb1d80aa45a757141d0051bfac7e6580d3a7e37622b1e7b46ee2baf5c7",
+            "0c4afb0f4f16bbf94eb1d7a293be733000f2d00daae92fc7e4d0eb8019535bd1",
+            "34214779ea841bb722fb37acd04fb8b5bd01f51dfa6bcfcf0c4d4072459207c8",
+        ],
+        rgb_sha256: "956047973e698d18fe70a45f57a797c94f38bdf12ee2c6b5dcbf706971763cbf",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_06.avif",
+        screen_content_tools: true,
+        operations: 1_720,
+        partition_ranges: [34_880, 40_768, 54_154, 42_248, 41_144],
+        ymode: [1, 9, 9, 9],
+        resolved_angle: [90, -1, -1, -1],
+        y_palette_mask: 0,
+        filter_intra_mask: 0,
+        eob: [[53, 42, 60], [53, 42, 60], [53, 42, 60], [60, 42, 60]],
+        final_range: [
+            [53_512, 33_288, 45_320],
+            [45_576, 60_424, 34_568],
+            [38_408, 43_272, 33_032],
+            [50_440, 36_616, 64_264],
+        ],
+        plane_sha256: [
+            "f244ca7410a29e8d2c06e78908ba848558ab954d630cb56f449e7521c88c6749",
+            "d88b11b4ca90910e81104eabb5698e14047f36d39ce7e19d98aeaef74768bbc2",
+            "937e6a2772f38ae6b6df488c048218539376dcb7a2dcc6e9f60aa7061608bd38",
+        ],
+        rgb_sha256: "69d96e28e665d2570868fce3d2e30aaa891a46afffc55146c8511fd3e2fe1f7d",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_07.avif",
+        screen_content_tools: true,
+        operations: 476,
+        partition_ranges: [34_880, 40_768, 35_645, 49_446, 43_952],
+        ymode: [0, 2, 0, 0],
+        resolved_angle: [-1, 180, -1, -1],
+        y_palette_mask: 0b1101,
+        filter_intra_mask: 0b1101,
+        eob: [[35, 35, 35], [-1, 35, 35], [-1, -1, -1], [-1, -1, -1]],
+        final_range: [
+            [40_200, 47_112, 59_656],
+            [46_368, 56_072, 40_456],
+            [52_288, 41_012, 35_208],
+            [37_284, 34_662, 34_568],
+        ],
+        plane_sha256: [
+            "ff991c23c425c5f18e6a259ce2d056100b60f05b4c62823009b8277247c5c786",
+            "dbc75f121e846552390da74b8f88634e64dade898861f0562a43ff2080a0fb68",
+            "c50e87848a94cd23493699375f56f0cc5ad67e93347926b0d9a3f7a382c10bc5",
+        ],
+        rgb_sha256: "ed89a1e09548a12cf5953f812af87b33d7047922a81f71359a949fdad1378b9b",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_08.avif",
+        screen_content_tools: true,
+        operations: 458,
+        partition_ranges: [34_880, 40_768, 63_028, 50_902, 38_755],
+        ymode: [0, 0, 1, 0],
+        resolved_angle: [-1, -1, 90, -1],
+        y_palette_mask: 0b1011,
+        filter_intra_mask: 0b1011,
+        eob: [[28, 28, 28], [-1, -1, -1], [-1, 28, 28], [-1, -1, -1]],
+        final_range: [
+            [54_024, 51_976, 52_744],
+            [48_544, 43_288, 41_582],
+            [49_216, 64_008, 62_216],
+            [62_248, 56_140, 54_538],
+        ],
+        plane_sha256: [
+            "2b54ec50030a530ff9a1da00b4cc4c395bad4a0269fddb76ea809cda48cfbb30",
+            "8b8c636b56ade1ebb257efd0304eb5c733625ecfa532f79fde1ac27a7314a340",
+            "7ad81f2daeea69eb8a9486a6e756db249f432b9e83e1c88e30ff7356ad1bc918",
+        ],
+        rgb_sha256: "861d107c5e7958cf4bb38cc63f8c19d6460e16e7418f2e3fe4856c74d82910a2",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_09.avif",
+        screen_content_tools: true,
+        operations: 2_858,
+        partition_ranges: [34_880, 40_768, 33_197, 45_064, 42_420],
+        ymode: [0; 4],
+        resolved_angle: [-1; 4],
+        y_palette_mask: 0b1111,
+        filter_intra_mask: 0b1111,
+        eob: [[48, 59, 62]; 4],
+        final_range: [
+            [61_960, 37_384, 55_560],
+            [43_528, 35_592, 36_872],
+            [39_432, 45_576, 34_056],
+            [49_672, 55_560, 45_320],
+        ],
+        plane_sha256: [
+            "23af64415b339d75e1552184b8f175a21736fb0768cf5d1e896ca0896a32bfe3",
+            "2bbfe5d5a55e7bc053f4c9a15bfda43e8f1707be9467de901f1dad705d011c52",
+            "379748ee84ff3ea1130d5702138dd7a5a9fe7e2611462c1fea87ee9e2295fd0a",
+        ],
+        rgb_sha256: "7df3e53c1af05ddc0e53f6c59a2e0b3433da621fc44f0c0f4714d66fe4876aaa",
+    },
+    I444Square8Expectation {
+        fixture: "coverage_i444_square8_10.avif",
+        screen_content_tools: true,
+        operations: 320,
+        partition_ranges: [34_880, 40_768, 47_728, 37_400, 57_732],
+        ymode: [1, 0, 0, 2],
+        resolved_angle: [90, -1, -1, 180],
+        y_palette_mask: 0b0110,
+        filter_intra_mask: 0b0110,
+        eob: [[0, 0, 0]; 4],
+        final_range: [
+            [39_688, 55_816, 39_944],
+            [56_072, 39_432, 61_192],
+            [33_800, 33_544, 46_344],
+            [33_800, 58_888, 35_592],
+        ],
+        plane_sha256: [
+            "541e6831d767cbe8276d96577ab205e4df009aaa5281d7c594dba42e617f0f46",
+            "32bf3f2a8d52cecc27bf08340f7f0f6ac247b36d769360fff90b184c22666759",
+            "3cea9e5214e81673cf32755d714c09453c11fe75d48e23f90f09b7be5bf0b06f",
+        ],
+        rgb_sha256: "c9f06d709276d78fc43bc11d9712d4ea29faea7b0d52655175e827d15b1d3ced",
+    },
+];
+
+#[cfg(coverage)]
+fn assert_i444_square8_case(
+    case: &Av1ReconstructionCase,
+    expectation: &I444Square8Expectation,
+    case_index: usize,
+) {
+    assert_eq!(
+        (
+            case.portable_color.width,
+            case.portable_color.height,
+            case.portable_color.bit_depth,
+            case.portable_color.monochrome,
+            case.portable_color.color_primaries,
+            case.portable_color.transfer_characteristics,
+            case.portable_color.matrix_coefficients,
+            case.portable_color.color_range,
+            case.portable_color.subsampling_x,
+            case.portable_color.subsampling_y,
+        ),
+        (16, 16, 8, false, 1, 13, 6, true, false, false),
+        "AV1 I444 Square8 portable color state case {case_index}"
+    );
+    assert_eq!(
+        case.entropy_operations.len(),
+        expectation.operations,
+        "AV1 I444 Square8 entropy operation count: {}",
+        case.fixture
+    );
+    let [root, first, second, third, fourth] = expectation.partition_ranges;
+    assert_eq!(
+        case.partition_blocks,
+        [
+            Av1PartitionBlock {
+                poc: 0,
+                x: 0,
+                y: 0,
+                level: 3,
+                context: 0,
+                partition: 3,
+                range: root,
+            },
+            Av1PartitionBlock {
+                poc: 0,
+                x: 0,
+                y: 0,
+                level: 4,
+                context: 0,
+                partition: 0,
+                range: first,
+            },
+            Av1PartitionBlock {
+                poc: 0,
+                x: 2,
+                y: 0,
+                level: 4,
+                context: 0,
+                partition: 0,
+                range: second,
+            },
+            Av1PartitionBlock {
+                poc: 0,
+                x: 0,
+                y: 2,
+                level: 4,
+                context: 0,
+                partition: 0,
+                range: third,
+            },
+            Av1PartitionBlock {
+                poc: 0,
+                x: 2,
+                y: 2,
+                level: 4,
+                context: 0,
+                partition: 0,
+                range: fourth,
+            },
+        ],
+        "AV1 I444 Square8 row-major partition and neighbor topology: {}",
+        case.fixture
+    );
+    assert_eq!(
+        case.decoded_planes
+            .iter()
+            .map(|plane| plane.sha256.as_str())
+            .collect::<Vec<_>>(),
+        expectation.plane_sha256,
+        "AV1 I444 Square8 plane hashes: {}",
+        case.fixture
+    );
+    assert_eq!(case.pillow.sha256, expectation.rgb_sha256);
+
+    let event_lines = case
+        .decoder_events
+        .iter()
+        .filter_map(|event| event.as_object()?.get("line")?.as_str())
+        .collect::<Vec<_>>();
+    let skip_positions = event_lines
+        .iter()
+        .enumerate()
+        .filter_map(|(index, line)| line.starts_with("Post-skip[").then_some(index))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        skip_positions.len(),
+        4,
+        "AV1 I444 Square8 must contain four row-major leaves: {}",
+        case.fixture
+    );
+
+    for leaf_index in 0..4 {
+        let leaf_end = skip_positions
+            .get(leaf_index + 1)
+            .copied()
+            .unwrap_or(event_lines.len());
+        let leaf_lines = &event_lines[skip_positions[leaf_index]..leaf_end];
+        let expects_y_palette = expectation.y_palette_mask & (1_u8 << leaf_index) != 0;
+        let expects_filter = expectation.filter_intra_mask & (1_u8 << leaf_index) != 0;
+        let resolved_angle = expectation.resolved_angle[leaf_index];
+        let mut semantic_prefixes = vec!["Post-skip[0]:".to_owned()];
+        if leaf_index == 0 {
+            semantic_prefixes.extend([
+                "Post-cdef_idx[0]: r=39413".to_owned(),
+                "Post-delta_q[-2->2]: r=44296".to_owned(),
+            ]);
+        }
+        semantic_prefixes.push(format!("Post-ymode[{}]:", expectation.ymode[leaf_index]));
+        if resolved_angle >= 0 {
+            let base_angle = match expectation.ymode[leaf_index] {
+                1 => 90,
+                2 => 180,
+                mode => panic!(
+                    "unexpected angle-bearing I444 Square8 luma mode {mode}: {}",
+                    case.fixture
+                ),
+            };
+            let angle_symbol = 3_i16;
+            assert_eq!(
+                base_angle + (angle_symbol - 3) * 3,
+                resolved_angle,
+                "AV1 I444 Square8 resolved directional angle leaf {leaf_index}: {}",
+                case.fixture
+            );
+            semantic_prefixes.push("Post-yangle-symbol[3]:".to_owned());
+        }
+        semantic_prefixes.push("Post-uvmode[0]:".to_owned());
+        if expects_y_palette {
+            semantic_prefixes.push("Post-y_pal[0]:".to_owned());
+        }
+        if expectation.screen_content_tools {
+            semantic_prefixes.push("Post-uv_pal[0]:".to_owned());
+        }
+        if expects_filter {
+            semantic_prefixes.push("Post-filterintramode[0/0]:".to_owned());
+        }
+        semantic_prefixes.push("Post-tx[1]:".to_owned());
+        semantic_prefixes.extend([
+            format!(
+                "Post-y-cf-blk[tx=1,txtp=0,eob={}]: r={}",
+                expectation.eob[leaf_index][0], expectation.final_range[leaf_index][0]
+            ),
+            format!(
+                "Post-uv-cf-blk[pl=0,tx=1,txtp=0,eob={}]: r={}",
+                expectation.eob[leaf_index][1], expectation.final_range[leaf_index][1]
+            ),
+            format!(
+                "Post-uv-cf-blk[pl=1,tx=1,txtp=0,eob={}]: r={}",
+                expectation.eob[leaf_index][2], expectation.final_range[leaf_index][2]
+            ),
+        ]);
+        let semantic_positions = semantic_prefixes
+            .iter()
+            .map(|prefix| {
+                leaf_lines
+                    .iter()
+                    .position(|line| line.starts_with(prefix))
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "missing I444 Square8 semantic prefix `{prefix}` in leaf {leaf_index}: {}",
+                            case.fixture
+                        )
+                    })
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            semantic_positions.windows(2).all(|pair| pair[0] < pair[1]),
+            "AV1 I444 Square8 semantic order leaf {leaf_index}: {}",
+            case.fixture
+        );
+        assert_eq!(
+            leaf_lines
+                .iter()
+                .filter(|line| line.starts_with("Post-yangle-symbol["))
+                .count(),
+            usize::from(resolved_angle >= 0),
+            "AV1 I444 Square8 angle ownership leaf {leaf_index}: {}",
+            case.fixture
+        );
+        assert_eq!(
+            leaf_lines
+                .iter()
+                .filter(|line| line.starts_with("Post-y_pal["))
+                .count(),
+            usize::from(expects_y_palette),
+            "AV1 I444 Square8 luma palette-use ownership leaf {leaf_index}: {}",
+            case.fixture
+        );
+        assert_eq!(
+            leaf_lines
+                .iter()
+                .filter(|line| line.starts_with("Post-uv_pal["))
+                .count(),
+            usize::from(expectation.screen_content_tools),
+            "AV1 I444 Square8 chroma palette-use ownership leaf {leaf_index}: {}",
+            case.fixture
+        );
+        assert_eq!(
+            leaf_lines
+                .iter()
+                .filter(|line| line.starts_with("Post-filterintramode["))
+                .count(),
+            usize::from(expects_filter),
+            "AV1 I444 Square8 filter-intra ownership leaf {leaf_index}: {}",
+            case.fixture
+        );
+        assert!(
+            leaf_lines
+                .iter()
+                .filter(|line| line.starts_with("Post-y_pal[") || line.starts_with("Post-uv_pal["))
+                .all(|line| line.starts_with("Post-y_pal[0]:")
+                    || line.starts_with("Post-uv_pal[0]:")),
+            "AV1 I444 Square8 must not claim a nonzero palette: {}",
+            case.fixture
+        );
+    }
+}
+
+#[cfg(coverage)]
 #[test]
-fn test_av1_entropy_mosaic_01_materializes() {
+fn test_av1_reconstruction_candidates_materialize() {
     if matrix_selection_is_filtered() {
         return;
     }
-    assert_entropy_mosaic_candidate("coverage_entropy_mosaic_01.avif");
+    for candidate in 1..=10 {
+        assert_av1_reconstruction_candidate(&format!(
+            "coverage_entropy_mosaic_{candidate:02}.avif"
+        ));
+        assert_av1_reconstruction_candidate(&format!("coverage_i444_square8_{candidate:02}.avif"));
+    }
 }
 
 #[cfg(coverage)]
@@ -5997,7 +6587,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 248);
+    assert_eq!(expected.cases.len(), 273);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -6109,6 +6699,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             ),
             "AV1 portable color state case {case_index}"
         );
+        if let Some(expectation) = I444_SQUARE8_EXPECTATIONS
+            .iter()
+            .find(|expectation| expectation.fixture == case.fixture)
+        {
+            assert_i444_square8_case(case, expectation, case_index);
+        }
         let recursive_ranges = match case.fixture.as_str() {
             "partitioned_12x4_a.avif" => Some([37_392, 43_662, 53_296]),
             "partitioned_12x4_gray_32.avif" => Some([37_392, 43_662, 58_282]),
@@ -6193,7 +6789,10 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             "coverage_i444_rect_01.avif" => Some([34_880, 40_768, 38_246, 37_243, 36_522]),
             "coverage_i444_rect_02.avif" => Some([34_880, 40_768, 42_220, 40_682, 60_922]),
             "coverage_adst_public_09.avif" => Some([34_880, 40_768, 33_809, 44_126, 55_818]),
-            _ => None,
+            fixture => I444_SQUARE8_EXPECTATIONS
+                .iter()
+                .find(|expectation| expectation.fixture == fixture)
+                .map(|expectation| expectation.partition_ranges),
         };
         if let Some(ranges) = recursive_ranges {
             let horizontal = case.portable_color.width > case.portable_color.height;
@@ -7193,6 +7792,416 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 );
                 assert_eq!(pair[1].value, 1, "chroma plane {plane_index} skip value");
             }
+        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: 59_240,
+                    },
+                ],
+                "AV1 following Vertical8x16 Smooth witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                155,
+                "AV1 following Vertical8x16 Smooth entropy operation count"
+            );
+        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_vertical_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: 36_016,
+                    },
+                ],
+                "AV1 following Vertical8x16 SmoothVertical witness partition topology"
+            );
+        } else if case.fixture == "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: 59_240,
+                    },
+                ],
+                "AV1 following Vertical8x16 SmoothHorizontal witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                154,
+                "AV1 following Vertical8x16 SmoothHorizontal entropy operation count"
+            );
+        } else if matches!(
+            case.fixture.as_str(),
+            "coverage_vertical8x16_following_chroma_dc_01.avif"
+                | "coverage_vertical8x16_following_chroma_smooth_01.avif"
+                | "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif"
+                | "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif"
+        ) {
+            let (last_range, entropy_count, expected_lines, u_top_edge, v_top_edge) =
+                match case.fixture.as_str() {
+                    "coverage_vertical8x16_following_chroma_dc_01.avif" => (
+                        45_560,
+                        214,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=3]: r=37384 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=9]: r=39944 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=44140",
+                            "Post-ymode[0]: r=43464",
+                            "Post-uvmode[0]: r=59404",
+                            "Post-tx[1]: r=64968",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=61989",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=59536",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=28]: r=41224 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=30]: r=49416 [x=0,cbx4=0]",
+                        ],
+                        "6f778085",
+                        "89837970",
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_01.avif" => (
+                        40_304,
+                        211,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=9]: r=62472 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=3]: r=35336 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=39044",
+                            "Post-ymode[0]: r=38472",
+                            "Post-uvmode[9]: r=37832",
+                            "Post-tx[1]: r=41168",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=39204",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=37642",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=3,eob=31]: r=50696 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=3,eob=28]: r=46344 [x=0,cbx4=0]",
+                        ],
+                        "71798287",
+                        "8a847a71",
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif" => (
+                        40_304,
+                        206,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=9]: r=62472 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=3]: r=35336 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=39044",
+                            "Post-ymode[0]: r=38472",
+                            "Post-uvmode[10]: r=62656",
+                            "Post-tx[1]: r=34164",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=65178",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=62488",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=1,eob=28]: r=61704 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=1,eob=28]: r=43528 [x=0,cbx4=0]",
+                        ],
+                        "71798287",
+                        "8a847a71",
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif" => (
+                        40_304,
+                        211,
+                        vec![
+                            "Post-skip[0]: r=50748",
+                            "Post-cdef_idx[0]: r=50748",
+                            "Post-ymode[0]: r=48336",
+                            "Post-uvmode[0]: r=61912",
+                            "Post-tx[1]: r=33744",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=63804",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=60884",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=0,eob=9]: r=62472 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=0,eob=3]: r=35336 [x=0,cbx4=0]",
+                            "Post-skip[0]: r=39044",
+                            "Post-ymode[0]: r=38472",
+                            "Post-uvmode[11]: r=52928",
+                            "Post-tx[1]: r=57688",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=55129",
+                            "Post-y-cf-blk[tx=1,txtp=0,eob=-1]: r=52894",
+                            "Post-uv-cf-blk[pl=0,tx=5,txtp=2,eob=28]: r=38664 [x=0,cbx4=0]",
+                            "Post-uv-cf-blk[pl=1,tx=5,txtp=2,eob=28]: r=44040 [x=0,cbx4=0]",
+                        ],
+                        "71798287",
+                        "8a847a71",
+                    ),
+                    _ => unreachable!("guarded following chroma fixture"),
+                };
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 40_720,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 2,
+                        range: 52_494,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 4,
+                        level: 3,
+                        context: 1,
+                        partition: 2,
+                        range: last_range,
+                    },
+                ],
+                "AV1 following Vertical8x16 chroma witness partition topology"
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                entropy_count,
+                "AV1 following Vertical8x16 chroma witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines, expected_lines,
+                "AV1 following Vertical8x16 chroma witness leaf states"
+            );
+            assert_eq!(
+                case.decoded_planes[1].row_bytes[7], u_top_edge,
+                "AV1 following Vertical8x16 U predictor must use the true upper row-seven edge"
+            );
+            assert_eq!(
+                case.decoded_planes[2].row_bytes[7], v_top_edge,
+                "AV1 following Vertical8x16 V predictor must use its independent true upper row-seven edge"
+            );
+            let (u_left_edge, v_left_edge, expected_u_prediction, expected_v_prediction) =
+                match case.fixture.as_str() {
+                    "coverage_vertical8x16_following_chroma_dc_01.avif" => (
+                        " 00 00 00 00 00 00 00 00",
+                        " 00 00 00 00 00 00 00 00",
+                        vec![" 7b 7b 7b 7b"; 8],
+                        vec![" 7d 7d 7d 7d"; 8],
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_01.avif" => (
+                        " 71 71 71 71 71 71 71 71",
+                        " 8a 8a 8a 8a 8a 8a 8a 8a",
+                        vec![
+                            " 71 7a 81 84",
+                            " 71 79 7f 82",
+                            " 71 78 7d 80",
+                            " 71 77 7c 7e",
+                            " 71 77 7b 7c",
+                            " 71 76 7a 7b",
+                            " 71 76 7a 7b",
+                            " 71 76 79 7b",
+                        ],
+                        vec![
+                            " 8a 82 7a 74",
+                            " 8a 82 7b 77",
+                            " 8a 83 7d 79",
+                            " 8a 84 7e 7b",
+                            " 8a 84 7f 7d",
+                            " 8a 84 80 7e",
+                            " 8a 84 80 7f",
+                            " 8a 84 81 7f",
+                        ],
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif" => (
+                        " 71 71 71 71 71 71 71 71",
+                        " 8a 8a 8a 8a 8a 8a 8a 8a",
+                        vec![
+                            " 71 79 82 87",
+                            " 71 77 7e 82",
+                            " 71 76 7b 7e",
+                            " 71 74 78 7a",
+                            " 71 73 76 77",
+                            " 71 73 74 75",
+                            " 71 72 73 74",
+                            " 71 72 73 74",
+                        ],
+                        vec![
+                            " 8a 84 7a 71",
+                            " 8a 85 7e 77",
+                            " 8a 87 81 7c",
+                            " 8a 88 83 80",
+                            " 8a 88 85 83",
+                            " 8a 89 87 85",
+                            " 8a 89 88 86",
+                            " 8a 89 88 87",
+                        ],
+                    ),
+                    "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif" => (
+                        " 71 71 71 71 71 71 71 71",
+                        " 8a 8a 8a 8a 8a 8a 8a 8a",
+                        vec![" 71 7a 80 82"; 8],
+                        vec![" 8a 80 79 77"; 8],
+                    ),
+                    _ => unreachable!("guarded following chroma fixture"),
+                };
+            let event_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let u_prediction_index = event_lines
+                .iter()
+                .rposition(|line| *line == "u-intra-pred")
+                .expect("following Vertical8x16 U predictor trace");
+            let v_prediction_index = event_lines
+                .iter()
+                .rposition(|line| *line == "v-intra-pred")
+                .expect("following Vertical8x16 V predictor trace");
+            assert_eq!(
+                &event_lines[u_prediction_index + 1..u_prediction_index + 9],
+                expected_u_prediction.as_slice(),
+                "AV1 following Vertical8x16 U predictor samples"
+            );
+            assert_eq!(
+                &event_lines[v_prediction_index + 1..v_prediction_index + 9],
+                expected_v_prediction.as_slice(),
+                "AV1 following Vertical8x16 V predictor samples"
+            );
+            for (prediction_index, expected_left, expected_top, plane_name) in [
+                (u_prediction_index, u_left_edge, u_top_edge, "U"),
+                (v_prediction_index, v_left_edge, v_top_edge, "V"),
+            ] {
+                let left_index = event_lines[..prediction_index]
+                    .iter()
+                    .rposition(|line| *line == "l")
+                    .expect("following Vertical8x16 prepared left edge");
+                let top_index = event_lines[..prediction_index]
+                    .iter()
+                    .rposition(|line| *line == "t")
+                    .expect("following Vertical8x16 prepared top edge");
+                assert_eq!(
+                    event_lines[left_index + 1],
+                    expected_left,
+                    "AV1 following Vertical8x16 {plane_name} prepared left edge"
+                );
+                assert_eq!(
+                    event_lines[top_index + 1].replace(' ', ""),
+                    expected_top,
+                    "AV1 following Vertical8x16 {plane_name} prepared top edge"
+                );
+            }
+            if case.fixture == "coverage_vertical8x16_following_chroma_dc_01.avif" {
+                assert_eq!(case.decoded_planes[2].row_bytes[6], "8781776e");
+                assert_ne!(
+                    case.decoded_planes[2].row_bytes[6], case.decoded_planes[2].row_bytes[7],
+                    "DC witness must distinguish the penultimate and true bottom V rows"
+                );
+            } else {
+                assert_eq!(case.decoded_planes[1].row_bytes[6], "6f778085");
+                assert_ne!(
+                    case.decoded_planes[1].row_bytes[6], case.decoded_planes[1].row_bytes[7],
+                    "smooth witness must distinguish the penultimate and true bottom U rows"
+                );
+            }
         } else if case.fixture == "coverage_h16x4_following_h_dct_01.avif" {
             assert_eq!(
                 case.partition_blocks,
@@ -7344,6 +8353,96 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     .count(),
                 2,
                 "AV1 TX32X32 entropy mosaic must decode both chroma planes"
+            );
+        }
+        if let Some(expectation) = ENTROPY_MOSAIC_EXPECTATIONS
+            .iter()
+            .find(|expectation| expectation.fixture == case.fixture)
+        {
+            assert_eq!(
+                case.partition_blocks,
+                vec![Av1PartitionBlock {
+                    poc: 0,
+                    x: 0,
+                    y: 0,
+                    level: 2,
+                    context: 0,
+                    partition: 0,
+                    range: 36_920,
+                }],
+                "AV1 entropy mosaic Square32 partition topology: {}",
+                case.fixture
+            );
+            assert_eq!(
+                case.entropy_operations.len(),
+                expectation.operations,
+                "AV1 entropy mosaic operation count: {}",
+                case.fixture
+            );
+            let event_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .collect::<Vec<_>>();
+            let filter_range = if expectation.screen_content_tools {
+                65_174
+            } else {
+                33_310
+            };
+            let mut required_lines = vec![
+                "Post-delta_q[-2->2]: r=40200".to_owned(),
+                "Post-ymode[0]: r=38228".to_owned(),
+                "Post-uvmode[0]: r=48704".to_owned(),
+            ];
+            if expectation.screen_content_tools {
+                required_lines.extend([
+                    "Post-y_pal[0]: r=48035".to_owned(),
+                    "Post-uv_pal[0]: r=47657".to_owned(),
+                ]);
+            } else {
+                assert!(
+                    !event_lines
+                        .iter()
+                        .any(|line| line.starts_with("Post-y_pal[")
+                            || line.starts_with("Post-uv_pal[")),
+                    "screen-content-disabled entropy mosaic must not consume palette symbols: {}",
+                    case.fixture
+                );
+            }
+            required_lines.extend([
+                format!("Post-filterintramode[0/0]: r={filter_range}"),
+                format!("Post-tx[3]: r={filter_range}"),
+                format!(
+                    "Post-y-cf-blk[tx=3,txtp=0,eob={}]: r={}",
+                    expectation.eob[0], expectation.final_range[0]
+                ),
+                format!(
+                    "Post-uv-cf-blk[pl=0,tx=2,txtp=0,eob={}]: r={} [x=0,cbx4=0]",
+                    expectation.eob[1], expectation.final_range[1]
+                ),
+                format!(
+                    "Post-uv-cf-blk[pl=1,tx=2,txtp=0,eob={}]: r={} [x=0,cbx4=0]",
+                    expectation.eob[2], expectation.final_range[2]
+                ),
+            ]);
+            let semantic_positions = required_lines
+                .iter()
+                .map(|required| {
+                    event_lines
+                        .iter()
+                        .position(|line| *line == required)
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "missing pinned AV1 entropy line `{required}`: {}",
+                                case.fixture
+                            )
+                        })
+                })
+                .collect::<Vec<_>>();
+            assert!(
+                semantic_positions.windows(2).all(|pair| pair[0] < pair[1]),
+                "AV1 entropy mosaic semantic sentence order: {}",
+                case.fixture
             );
         }
         if case.fixture == "coverage_square32_origin_tx16x16_split_01.avif" {
@@ -10839,6 +11938,11 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     })
                 })
                 .collect::<Vec<_>>();
+            assert_eq!(
+                sha256::digest_hex(&expected_bytes),
+                expected.sha256,
+                "AV1 oracle plane hash case {case_index} plane {plane_index}"
+            );
             let actual_bytes = actual
                 .iter()
                 .map(|sample| u8::try_from(*sample).expect("eight-bit AV1 sample"))
@@ -10900,623 +12004,678 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             )
             .expect("Pillow RGB byte count")
         );
-        let expected_pillow_sha256 = match case.fixture.as_str() {
-            "portable_lossless_a.avif" => {
-                "0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b"
+        let expected_pillow_sha256 = if let Some(expectation) = I444_SQUARE8_EXPECTATIONS
+            .iter()
+            .find(|expectation| expectation.fixture == case.fixture)
+        {
+            expectation.rgb_sha256
+        } else {
+            match case.fixture.as_str() {
+                "portable_lossless_a.avif" => {
+                    "0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b"
+                }
+                "portable_lossless_b.avif" => {
+                    "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5"
+                }
+                "portable_lossless_420_a.avif" => {
+                    "0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b"
+                }
+                "portable_lossless_420_b.avif" => {
+                    "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5"
+                }
+                "portable_lossless_420_8x8_a.avif" => {
+                    "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+                }
+                "portable_lossless_420_8x8_b.avif" => {
+                    "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008"
+                }
+                "portable_lossy_420_q99_gray_0.avif" => {
+                    "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"
+                }
+                "portable_lossy_420_q99_8x8_gray_0.avif" => {
+                    "5d89f056865052bcb89c910d2d62872e029fb273c3db03f8968a52a41593c1b5"
+                }
+                "portable_lossy_420_q99_gray_64.avif" => {
+                    "30c8d471cc44e88da2fec08638a4215ed2ce34c899f330115a604b80d19f2831"
+                }
+                "portable_lossy_420_q99_8x8_gray_64.avif" => {
+                    "557f22c418e6f4fcd4d4c1df7eb2b46180b67956794483587205e2e82163b395"
+                }
+                "portable_lossy_420_q99_gray_122_control.avif" => {
+                    "ad287d41398b2bc6aae343d24767bded9795b882f382b5abf480a6fc0bbddfdf"
+                }
+                "portable_lossy_420_q99_8x8_gray_122_control.avif" => {
+                    "9e96fe6320d50c09026df65c9676a19e57fe86b26652cf513c2cc03015711df0"
+                }
+                "portable_lossy_420_q99_gray_123_control.avif" => {
+                    "819d474948483b42b8e875e2bb3446526e0a5f1f090d012b993d6a12fcf0e4da"
+                }
+                "portable_lossy_420_q99_8x8_gray_123_control.avif" => {
+                    "d9bced69730dcb4567fcd0eac9073a83993278a18aebf3c03544b49d5660576d"
+                }
+                "portable_lossy_420_q99_gray_124_control.avif" => {
+                    "5acbd8048d53d1aa8fcbaacb57506e7eb6a1f570d93c899bd97f899f535f7ce9"
+                }
+                "portable_lossy_420_q99_8x8_gray_124_control.avif" => {
+                    "25c65b22ccf260aff6e521fbce082a40fd940968592a3c2e5272768c362481da"
+                }
+                "portable_lossy_420_q99_gray_125_control.avif" => {
+                    "e82feb502523b0e30e96c557012bbc79208f186e3fcb858916b2972db760aac1"
+                }
+                "portable_lossy_420_q99_8x8_gray_125_control.avif" => {
+                    "4d11382e9da0a7e9facadaf22c7d9036b341797376ecc5a77c2779e1884e1ec5"
+                }
+                "portable_lossy_420_q99_gray_126.avif" => {
+                    "0bc6b6903ab77a6d1706777bb507e076f01290f57cb975508aec1cd5cf589810"
+                }
+                "portable_lossy_420_q99_8x8_gray_126.avif" => {
+                    "9a5f0b79fce197304a6aa5a89af73862b128be0db6e93117a67d3ddd07e28edd"
+                }
+                "portable_lossy_420_q99_gray_127.avif" => {
+                    "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
+                }
+                "portable_lossy_420_q99_luma_eob_bin2_eob3.avif" => {
+                    "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
+                }
+                "portable_lossy_420_q99_8x8_gray_127.avif" => {
+                    "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+                }
+                "portable_lossy_420_q99_gray_129.avif" => {
+                    "b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57"
+                }
+                "portable_lossy_420_q99_8x8_gray_129.avif" => {
+                    "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
+                }
+                "portable_lossy_420_q99_gray_130.avif" => {
+                    "2c28ec0de076c8c2e7d6d8222ada07a0da8ec45ea53160a39b5dd64b79d7bcc8"
+                }
+                "portable_lossy_420_q99_8x8_gray_130.avif" => {
+                    "4371170b5239419060ed559afe13157740d69ef2aee0592cf4fc71c47dff58a5"
+                }
+                "portable_lossy_420_q99_gray_131_control.avif" => {
+                    "d8044c92ef2a961ebee78d49908caae12338872a8cb36675ef6dbfb0f244e2e9"
+                }
+                "portable_lossy_420_q99_8x8_gray_131_control.avif" => {
+                    "831ca0567d6d09bf16b7c76da27026347d9000d12ca92f486dd9c56b4226055e"
+                }
+                "portable_lossy_420_q99_gray_132_control.avif" => {
+                    "03a471cd2fdf8af4107b02673eec688e6c7bc946d184af0c514af6a206e51681"
+                }
+                "portable_lossy_420_q99_8x8_gray_132_control.avif" => {
+                    "603bfc293271617bfea86708fcd2820aa7246d3d73a47fd2c0184de328c68ab3"
+                }
+                "portable_lossy_420_q99_gray_133_control.avif" => {
+                    "7f0d7099d13d4903645f8fc327e2f0fe46fd9655a948fbc375024f82acc50fc2"
+                }
+                "portable_lossy_420_q99_8x8_gray_133_control.avif" => {
+                    "108f70bd32bd6aa8f4d1a6ee9450a6505f16158b350b293f7e37ca87724ae29a"
+                }
+                "portable_lossy_420_q99_gray_134_control.avif" => {
+                    "96a0187338028cdac12765e42d24b4cf369039db628878c674d273bdb0af4324"
+                }
+                "portable_lossy_420_q99_8x8_gray_134_control.avif" => {
+                    "d4ea4542b1b805cc3f636afb8bf16a483cc0fe47a40b4fba4c876ebb26432b2a"
+                }
+                "portable_lossy_420_q99_gray_192.avif" => {
+                    "af14d74c13f430d78f29de7246b5cbdf0937adbeb872ffe6dcf68282860d7cba"
+                }
+                "portable_lossy_420_q99_8x8_gray_192.avif" => {
+                    "6845b27f00c23448c01b082d69fdf01aae50f11e3f0b29b073dfe5e6b864c36b"
+                }
+                "portable_lossy_420_q99_gray_255.avif" => {
+                    "80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2"
+                }
+                "portable_lossy_420_q99_8x8_gray_255.avif" => {
+                    "8f62c344eff1568474fb693b8c18526629db443b9653a84264189c97693605de"
+                }
+                "portable_lossy_420_q99_token_1048_control.avif"
+                | "portable_lossy_420_q99_token_7764.avif" => {
+                    "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"
+                }
+                "portable_lossy_420_q99_token_2061.avif"
+                | "portable_lossy_420_q99_token_2988.avif"
+                | "portable_lossy_420_q99_token_7940.avif" => {
+                    "80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2"
+                }
+                "portable_lossless_gray_32.avif" => {
+                    "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
+                }
+                "portable_lossless_gray_127.avif" => {
+                    "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
+                }
+                "portable_probe_gray_128.avif" => {
+                    "2ac4dd6f486e2f061ebe8ce8b651dbdf25d71b88184d0bf308608cdcaae05309"
+                }
+                "portable_probe_gray_129.avif" => {
+                    "b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57"
+                }
+                "portable_lossless_8x8_a.avif" => {
+                    "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+                }
+                "portable_lossless_8x8_gray_127.avif" => {
+                    "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+                }
+                "portable_probe_8x8_gray_128.avif" => {
+                    "fa7b78cc215df21d7ce54d8c3c6637c326dab95c10fbc12263101365973f4268"
+                }
+                "portable_probe_8x8_gray_129.avif" => {
+                    "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
+                }
+                "portable_lossless_4x8_a.avif" | "portable_lossless_8x4_a.avif" => {
+                    "116d1d3509d9d2a7558a2fad832f923fc1193f04b8e0e57946f49e57fa045475"
+                }
+                "portable_lossless_4x8_gray_127.avif" | "portable_lossless_8x4_gray_127.avif" => {
+                    "faa8c27b41b2603cd12911cd93ee3953ff1f98c9fba83fdeef738cc8406c4b3f"
+                }
+                "portable_probe_4x8_gray_128.avif" | "portable_probe_8x4_gray_128.avif" => {
+                    "1b34669db94decae583e183ee2ffeb07cf504b9f52fae0056c5cf343325157e4"
+                }
+                "portable_probe_4x8_gray_129.avif" | "portable_probe_8x4_gray_129.avif" => {
+                    "780832a7ab39814257a857d37a67ab541a1152afbcf6a1883a16ad32c264ff4e"
+                }
+                "portable_lossless_12x12_a.avif" => {
+                    "cbc97cf0c2652e60e6e36611be9869444f603abf5f48b292a03d340f501320f8"
+                }
+                "portable_lossless_12x12_gray_127.avif" => {
+                    "cb4987527501d0915664b8e624e5f51ebbf5f48b52917058615c1f3b96764076"
+                }
+                "portable_probe_12x12_gray_128.avif" => {
+                    "cc0fcf371bdd305ff6099895e60aac93968bf0358724de1678979a37a9bd7a17"
+                }
+                "portable_probe_12x12_gray_129.avif" => {
+                    "143efd9552ea35a74333bbfc58d10ae5a0eccfe76d2283c05b2b4a9391c346cd"
+                }
+                "portable_lossless_16x16_a.avif" => {
+                    "8bdcc97ae19b09ec3d6b76a7d59f13d4aa3dd7a06d21db706f2a1d15caaa0431"
+                }
+                "portable_lossless_16x16_gray_127.avif" => {
+                    "cbab715ff6cfaa81c9b09e014dc1406ceff24034caa265de65f9f948c5434807"
+                }
+                "portable_probe_16x16_gray_128.avif" => {
+                    "7f3e5e4e65eca4390e9242558012bc9bdad133d7ac9f6aed53fa156a2288f73b"
+                }
+                "portable_probe_16x16_gray_129.avif" => {
+                    "15dc2c3b0ea25a84b4994b9a73dbcf65eef174bad152c689cc1945843b543657"
+                }
+                "partitioned_square_16x16_g64.avif" => {
+                    "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe"
+                }
+                "partitioned_square_12x12_g96_direct_tokens.avif" => {
+                    "8fd169458756409edfaf3380195c6ab881e3d7043d5c3b158a82feaaa82b993f"
+                }
+                "partitioned_square_12x12_top_left_luma_eob4.avif" => {
+                    "fcfe3605207a28cd1596ae0cb2b9b4ad1b8b356f7457cd2e60276b8d6530a691"
+                }
+                "partitioned_square_12x12_top_left_luma_eob12_control.avif" => {
+                    "16195f9646d15f2857da1864cbffdd3f12a965bbd287ca888b7dde113c2d7ec7"
+                }
+                "partitioned_square_12x12_midpoint_g96_ac.avif" => {
+                    "1d316f3236ecba0ebb2e4483622a7dbaa736686fc6ce609a44c3e7c7380a0ff4"
+                }
+                "partitioned_square_12x12_luma_eob1.avif" => {
+                    "d8ddfb34c1d4da25851a33b0515d025bd092a6bfd942eeda21683b9e564d6691"
+                }
+                "partitioned_square_12x12_luma_eob2_control.avif" => {
+                    "13878ffdf1168508a15759ff58c897370e8428fe522422d52149126a9cc42ef4"
+                }
+                "partitioned_square_12x12_luma_eob4_control.avif" => {
+                    "299dc7d8cf7b620bb3cc3a56ab17da5414d8377e0b79196fce64cae0e05ca7f3"
+                }
+                "partitioned_square_12x12_luma_eob6_control.avif" => {
+                    "84c006c2c0f8e322453101374baeb3c0f1e30653b7960fb1068cfc8f33c96e68"
+                }
+                "partitioned_square_12x12_luma_eob9_control.avif" => {
+                    "7b69d30ebe2894d11aa6d4f7c3385c8675a4cf8daf702d5b6cd709a6001ce506"
+                }
+                "partitioned_square_12x12_luma_eob10_control.avif" => {
+                    "edb3552022d80b01938371e9e0d78ea4544d2b1bab41cfe67253a89458774264"
+                }
+                "partitioned_square_12x12_luma_eob12_control.avif" => {
+                    "a98fa8dc8ff3ed903815016c02089c888bee48bfb8774903c8bf70d57aed2735"
+                }
+                "partitioned_square_12x12_luma_eob15_control.avif" => {
+                    "2d41c17b74e78417fd7ab3fdb5da3225f52c4035e39133275ee01496cc21a77a"
+                }
+                "partitioned_square_16x16_g96_direct_tokens.avif" => {
+                    "87cf9f38f5bc4a0a75c3284ff3b5826e0c0734066e863bcf416f2296623b890f"
+                }
+                "partitioned_square_16x16_r64.avif" => {
+                    "6492bb904bafc0a5c8acedff1fd7cd70965e3be844e8fd19d0e04a6bd63e2017"
+                }
+                "partitioned_square_16x16_g127.avif" => {
+                    "d1ce3617b6228d74d2b208847c20486f1a6301cf8b0708242c0019894eeb055e"
+                }
+                "portable_lossless_12x16_a.avif" | "portable_lossless_16x12_a.avif" => {
+                    "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874"
+                }
+                "portable_lossless_12x16_gray_127.avif"
+                | "portable_lossless_16x12_gray_127.avif" => {
+                    "1b9924ee11c55d5fd4d944003b8b272c1f4ce12ea8e800c33563bed483fa406d"
+                }
+                "portable_probe_12x16_gray_128.avif" | "portable_probe_16x12_gray_128.avif" => {
+                    "af1857bf5516aa3e2e39b6842559746fa7b45daa8dc4cc6675ad86e0cfe425b9"
+                }
+                "portable_probe_12x16_gray_129.avif" | "portable_probe_16x12_gray_129.avif" => {
+                    "5269c00892aff8abcc6a4da60b82b890936aef6b1aa24c6b713c5a80a831c0b9"
+                }
+                "partitioned_12x4_gray_127.avif" | "partitioned_4x12_gray_127.avif" => {
+                    "35fc07c937c1c3d13641f32cdc94ce1315ec420dd26e12b81a4651cfc1786ee3"
+                }
+                "portable_rect_12x4_gray_128.avif" | "portable_rect_4x12_gray_128.avif" => {
+                    "7053108d4e37b600ae17d35890c69102ee6484d79a3a5cd622afca6f5606c543"
+                }
+                "portable_rect_12x4_gray_129.avif" | "portable_rect_4x12_gray_129.avif" => {
+                    "c60b05f1911c0ccc80c5af2cd922c7cf1836279d44a17682c918cdaa5c7747e6"
+                }
+                "portable_rect_12x8_gray_127.avif" | "portable_rect_8x12_gray_127.avif" => {
+                    "cf8691a9b8c6c8e329b94f40345d822ef7d4f6e8e5c2343d74b12aa16e84838a"
+                }
+                "portable_rect_12x8_gray_128.avif" | "portable_rect_8x12_gray_128.avif" => {
+                    "88f2f6050a4ef8c9fd8bd69d3e51689155f6aa570f0ac0da6d3c0ee794bf3867"
+                }
+                "portable_rect_12x8_gray_129.avif" | "portable_rect_8x12_gray_129.avif" => {
+                    "fe124f63ee1300955e9b2ffbed15cf383e9f4ae7c5cf60a09b074e4b0d73947f"
+                }
+                "portable_rect_16x4_gray_127.avif" | "portable_rect_4x16_gray_127.avif" => {
+                    "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+                }
+                "portable_rect_16x4_gray_128.avif" | "portable_rect_4x16_gray_128.avif" => {
+                    "fa7b78cc215df21d7ce54d8c3c6637c326dab95c10fbc12263101365973f4268"
+                }
+                "portable_rect_16x4_gray_129.avif" | "portable_rect_4x16_gray_129.avif" => {
+                    "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
+                }
+                "portable_rect_16x8_gray_127.avif" | "portable_rect_8x16_gray_127.avif" => {
+                    "7e18f1b2ca4e075b955848b4deafd56e47eeda83cc15b3ecdeb71d7ff58a5f57"
+                }
+                "portable_rect_16x8_gray_128.avif" | "portable_rect_8x16_gray_128.avif" => {
+                    "f83545d43c6939ec393b6b8310959b6174fd764b08a12fc22d908408a7e6a43e"
+                }
+                "portable_rect_16x8_gray_129.avif" | "portable_rect_8x16_gray_129.avif" => {
+                    "7d965db8cbcf57e71b10b16973c9c2439222485594191da31460986a000f497c"
+                }
+                "portable_rect_12x4_a_speed0.avif" | "portable_rect_4x12_a_speed0.avif" => {
+                    "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
+                }
+                "portable_rect_12x4_gray_32_speed0.avif"
+                | "portable_rect_4x12_gray_32_speed0.avif" => {
+                    "31178565d9d883446d9e273ee881220f43cb4c5de74e237f590f845e25659f38"
+                }
+                "partitioned_12x4_a.avif" | "partitioned_4x12_a.avif" => {
+                    "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
+                }
+                "partitioned_12x4_gray_32.avif" | "partitioned_4x12_gray_32.avif" => {
+                    "31178565d9d883446d9e273ee881220f43cb4c5de74e237f590f845e25659f38"
+                }
+                "partitioned_12x4_green.avif" | "partitioned_4x12_green.avif" => {
+                    "7f5e545c140df34ec243d4449ab8c4c0e476f532d3f6472ce956e7060b271e1c"
+                }
+                "partitioned_16x4_a.avif" | "partitioned_4x16_a.avif" => {
+                    "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+                }
+                "partitioned_16x4_gray_32.avif" | "partitioned_4x16_gray_32.avif" => {
+                    "1d3659ada1bf4b80ae974a7b544090591793cb954ac3f9ad13d3af3f09c21967"
+                }
+                "partitioned_16x4_green.avif" | "partitioned_4x16_green.avif" => {
+                    "32e7c45e59200de4c1012eac0ef31f3fa35d02b40d563f4602644bca9266f7fc"
+                }
+                "partitioned_12x8_a.avif" | "partitioned_8x12_a.avif" => {
+                    "47c4a5d65d8ac82aa68f04754b38e5bf00438aeb64b2e48c2bb54a9268e6e4e7"
+                }
+                "partitioned_12x8_gray_32.avif" | "partitioned_8x12_gray_32.avif" => {
+                    "a80ec409692fd6c32b82fa895a118a06751d63671cd6da6ed14ef5bb59f41541"
+                }
+                "partitioned_12x8_green.avif" | "partitioned_8x12_green.avif" => {
+                    "c1046797ae8db85c1b32d232085bdc2251d6e94567771f20ce9f86b6a2cc5cbc"
+                }
+                "partitioned_16x8_a.avif" | "partitioned_8x16_a.avif" => {
+                    "983aef668db1ea0d5801725fdf2b49d32232fc7f1d9ae578a03ffad6aebc4fc2"
+                }
+                "partitioned_16x8_gray_32.avif" | "partitioned_8x16_gray_32.avif" => {
+                    "f89d41f00d89e8b0bf8cb8cff89f9f23e9fa1e5113473dda8d16098575db7388"
+                }
+                "partitioned_16x8_green.avif" | "partitioned_8x16_green.avif" => {
+                    "ff87dfd10bc6c01f8e9dac23bb518192e6579a383b2ff1bbd8b8c80a58e677b4"
+                }
+                "portable_lossless_420_leaf_4x8_a.avif"
+                | "portable_lossless_420_leaf_8x4_a.avif" => {
+                    "116d1d3509d9d2a7558a2fad832f923fc1193f04b8e0e57946f49e57fa045475"
+                }
+                "portable_lossless_420_rect_12x4_gray_127.avif"
+                | "portable_lossless_420_rect_4x12_gray_127.avif" => {
+                    "35fc07c937c1c3d13641f32cdc94ce1315ec420dd26e12b81a4651cfc1786ee3"
+                }
+                "portable_lossless_420_rect_16x4_gray_127.avif"
+                | "portable_lossless_420_rect_4x16_gray_127.avif" => {
+                    "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
+                }
+                "portable_lossless_420_rect_12x8_gray_127.avif"
+                | "portable_lossless_420_rect_8x12_gray_127.avif" => {
+                    "cf8691a9b8c6c8e329b94f40345d822ef7d4f6e8e5c2343d74b12aa16e84838a"
+                }
+                "portable_lossless_420_rect_16x8_gray_127.avif"
+                | "portable_lossless_420_rect_8x16_gray_127.avif" => {
+                    "7e18f1b2ca4e075b955848b4deafd56e47eeda83cc15b3ecdeb71d7ff58a5f57"
+                }
+                "portable_lossless_420_split_12x4_a.avif"
+                | "portable_lossless_420_split_4x12_a.avif" => {
+                    "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
+                }
+                "portable_lossless_420_split_16x4_a.avif"
+                | "portable_lossless_420_split_4x16_a.avif" => {
+                    "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
+                }
+                "portable_lossless_420_split_12x8_a.avif"
+                | "portable_lossless_420_split_8x12_a.avif" => {
+                    "47c4a5d65d8ac82aa68f04754b38e5bf00438aeb64b2e48c2bb54a9268e6e4e7"
+                }
+                "portable_lossless_420_split_16x8_a.avif"
+                | "portable_lossless_420_split_8x16_a.avif" => {
+                    "983aef668db1ea0d5801725fdf2b49d32232fc7f1d9ae578a03ffad6aebc4fc2"
+                }
+                "portable_lossless_420_square_12x12_a.avif" => {
+                    "cbc97cf0c2652e60e6e36611be9869444f603abf5f48b292a03d340f501320f8"
+                }
+                "portable_lossless_420_square_12x16_a.avif"
+                | "portable_lossless_420_square_16x12_a.avif" => {
+                    "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874"
+                }
+                "portable_lossless_420_square_16x16_a.avif" => {
+                    "8bdcc97ae19b09ec3d6b76a7d59f13d4aa3dd7a06d21db706f2a1d15caaa0431"
+                }
+                "partitioned_square_420_16x16_rgb_delta.avif" => {
+                    "33170bbddccc8cf1c2ce5dada1ab0dc1c510fc9b059ede87dff076f9df47e18d"
+                }
+                "partitioned_square_420_16x16_g96.avif" => {
+                    "1773a465660162ba2a563e2b05acb59d0ccd578de177210f9252a9abd2013bcf"
+                }
+                "coverage_r8x16_band_05.avif" => {
+                    "c11a94094afc690f85b60f373368af7995dca863a978e1835386df16567d5840"
+                }
+                "coverage_r8x16_band_06.avif" => {
+                    "70a7a0107bec2a81f759155aaf760088704eff6de4c628616a5173a3fb0df610"
+                }
+                "coverage_r16x32_grid_01.avif" => {
+                    "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac"
+                }
+                "coverage_r32x16_origin_01.avif" => {
+                    "0269cf259d6753f2ed578b701877c2fe4de42b3f2d812c168a079fc43b9d3328"
+                }
+                "coverage_h16x8_origin_dct_dct_01.avif" => {
+                    "2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab"
+                }
+                "coverage_h16x8_following_dct_dct_01.avif" => {
+                    "f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f"
+                }
+                "coverage_r32x32_following_01.avif" => {
+                    "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7"
+                }
+                "coverage_square32_origin_tx16x16_split_01.avif" => {
+                    "6f55403182b74ed6bb0f581ebb3e53b6857d0a1934c0650923feac0a0e52b88b"
+                }
+                "coverage_r32x32_filter_intra_probe_01.avif" => {
+                    "979a9de4159e978b1fdbf2fb33f240da857c8a69107d635ca0a00550e459299b"
+                }
+                "coverage_r32x32_filter_intra_mode3_01.avif" => {
+                    "8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495"
+                }
+                "coverage_r32x32_following_filter_intra_split_mode0_01.avif" => {
+                    "ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16"
+                }
+                "coverage_r16x32_following_filter_intra_split_mode3_01.avif" => {
+                    "d135a06efafa72998c7c55dfa25f7ec0603cf9fa2231fd874ea10074234ea186"
+                }
+                "coverage_r16x32_following_filter_intra_split_mode0_01.avif" => {
+                    "cac42b39973f40158ad8fec42946726538adddb9a0d113ed0a16b054a9189272"
+                }
+                "coverage_square16_filter_intra_mode0_01.avif" => {
+                    "4090aed7681e287536328b3ec8ee9235c8e32979b8a249824d258fd57145b008"
+                }
+                "coverage_422_square16_vertical_halves_01.avif" => {
+                    "bf1af25691e0092747fa281f45b6023dfeab8d34946e10e20f4500674e7931d7"
+                }
+                "coverage_square16_chroma_smooth_horizontal_01.avif" => {
+                    "cbca1ceee34545f791090f42e152e5bfd495f4ab0cefcce6d943c57ec8edc144"
+                }
+                "coverage_square16_chroma_smooth_vertical_01.avif" => {
+                    "76390242834678d6b4ecd14ec7b291b7fbec921a8c96f4c269ca5a67228ac258"
+                }
+                "coverage_square16_chroma_smooth_01.avif" => {
+                    "04aa5e9f6facb7895149696ada7e559de9e44a50c13ac7be2db57d9fd1f273b6"
+                }
+                "coverage_vertical8x16_filter_intra_mode0_01.avif" => {
+                    "82b2100ac5f6f02e88ea931a90b2abab261b7486209ee4f63c538464c52b5c30"
+                }
+                "coverage_vertical8x16_filter_intra_mode1_01.avif" => {
+                    "6051c012bac9735f10fb18bfe680fc9e3582ef6acfaa295a028f02ead7a642fe"
+                }
+                "coverage_vertical8x16_filter_intra_mode2_01.avif" => {
+                    "5bf4eb2849056ecbba6885bbab1852d39449dec94909f05f6b26657b74104b8d"
+                }
+                "coverage_vertical8x16_filter_intra_mode3_01.avif" => {
+                    "a900cd81f92250ea4b1057109066cb0d0ebbbcdb4d8568e4675e2816ff549777"
+                }
+                "coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif" => {
+                    "4e246340bdbe95175760098f3beb1cd22df27f0dfa4dfc4b4c0587e9913448a3"
+                }
+                "coverage_vertical8x16_chroma_diagonal157_01.avif" => {
+                    "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8"
+                }
+                "coverage_vertical8x16_chroma_horizontal_01.avif" => {
+                    "fe06a9e4a35a7a479f62725e4c0716a0f5133849e8d1e351c866506fdbae680f"
+                }
+                "coverage_vertical8x16_chroma_vertical_01.avif" => {
+                    "56c7822ea3a4ea606bd563b91d17a96a25fb54afa85aea7ce57d3b75f60fa794"
+                }
+                "coverage_vertical8x16_chroma_paeth_01.avif" => {
+                    "0a05b452b8f1d623db4a663260696241fb183938c8718f7bc4eb1bc5d019914b"
+                }
+                "coverage_vertical8x16_chroma_paeth_02.avif" => {
+                    "9edeaf44a0e8ef22777109c1228a491ea1d879d9bb75051d2c5200675e20c9ca"
+                }
+                "coverage_vertical8x16_chroma_paeth_03.avif" => {
+                    "bdb2eefd28dbe8a00d21d18a45cfed874e635ea82fa138dcef67247bc84400fb"
+                }
+                "coverage_square8_chroma_diagonal113_01.avif" => {
+                    "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462"
+                }
+                "coverage_square8_chroma_diagonal45_angle51_01.avif" => {
+                    "2b09c1b7c72c153a4ad6456a06bf63a6cd31b2b8952dcb8a78a714d0d6b0d08a"
+                }
+                "coverage_square8_chroma_diagonal67_vertical_01.avif" => {
+                    "2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae"
+                }
+                "coverage_square8_luma_diagonal67_vertical_01.avif" => {
+                    "1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0"
+                }
+                "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif" => {
+                    "eb2bebe4dbb452c932c1334ec8420fd5b3ca8589641254938dc52d7d41365a2a"
+                }
+                "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif" => {
+                    "7ba0cab00dbb9d6b9c65788839e471bfe4df2008e47a61ad5bc82ebd5101dce6"
+                }
+                "coverage_square8_luma_diagonal_down_right_01.avif" => {
+                    "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b"
+                }
+                "coverage_square8_luma_diagonal45_01.avif" => {
+                    "86bf348ca94bf0609609d58aaff66a92b66834caf9c4261e697a6cb57863c01a"
+                }
+                "coverage_square8_luma_smooth_01.avif" => {
+                    "26372cd592790e77ea2738edb81af446a8ba366533779673d2031f4c3b7aa530"
+                }
+                "coverage_square8_luma_smooth_horizontal_01.avif" => {
+                    "db4447d10c5a73b65b8d7a5fba0331e9a457722c42171658c45c123101759e25"
+                }
+                "coverage_square8_luma_smooth_vertical_01.avif" => {
+                    "9ff23d9ce13531af06b602347ba92e3e5797415b48d25ecdcf94f7301b8dfd91"
+                }
+                "coverage_r32x16_filter_intra_tx8x8_01.avif" => {
+                    "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8"
+                }
+                "coverage_r16x64_grid_01.avif" => {
+                    "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"
+                }
+                "coverage_entropy_mosaic_02.avif" => {
+                    "89ca340e1520088f629bb46bdb0c07e08b630e2b13163ae869aca49ae0c72028"
+                }
+                "coverage_entropy_mosaic_01.avif" => {
+                    "52660ed52ff5e28a3bc05d35023875e225f70acd76a1191ecd4f72cc765b8cd7"
+                }
+                "coverage_entropy_mosaic_03.avif" => {
+                    "fafd75caa46a673bc0201f8cba7b6add17b09e0257301b86762c78906f94e85b"
+                }
+                "coverage_entropy_mosaic_04.avif" => {
+                    "05295c93b4b88873d843df1490b8dd6837398a179b2e46767f7d7f91f0eccf24"
+                }
+                "coverage_entropy_mosaic_05.avif" => {
+                    "ceeee3787ba0d828b6c43866bd97dc1f2537e1b5834ea6f467cafe2ebfd74b1f"
+                }
+                "coverage_entropy_mosaic_06.avif" => {
+                    "ff8e61edc88b2f0281c934c2f32308c262344b45043fe9449961972b47fb80b9"
+                }
+                "coverage_entropy_mosaic_07.avif" => {
+                    "687a954539f9a9d3f1ed33fa1322faa9a955b6122838f22fcb8418aae11c94c0"
+                }
+                "coverage_entropy_mosaic_08.avif" => {
+                    "26c4f0adeb8fada605676e3835ea159935ef2e828d49308833e6d8ebcf00648a"
+                }
+                "coverage_entropy_mosaic_09.avif" => {
+                    "9ac81a8f72e3f01542e41529833ba253f8d4eca77451da4d88fb4921bd7d1c21"
+                }
+                "coverage_entropy_mosaic_10.avif" => {
+                    "754444462592799314130431bbed2e9df516d2d32969683c2cea4d33c6b57d22"
+                }
+                "coverage_adst_public_02.avif" => {
+                    "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"
+                }
+                "coverage_adst_public_03.avif" => {
+                    "c4cbd418d7f72de0fd778268c0a4c40ac6c30b982987a3a4bfa84372c3c102e9"
+                }
+                "coverage_adst_public_04.avif" => {
+                    "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8"
+                }
+                "coverage_adst_public_05.avif" => {
+                    "ccf631ee65a05977a2020995f5dc442905ad0c21450f3e3e0df3bd0f0d2b8e11"
+                }
+                "coverage_adst_public_06.avif" => {
+                    "988aef43dcf1c4eeaa0cffee66f3ba32e9c127c0b07996830900b4a79ed07cd6"
+                }
+                "coverage_adst_public_07.avif" => {
+                    "a40858233036b25f36900bd39be40e6eda843493ac27b767448b891ac8437492"
+                }
+                "coverage_adst_public_08.avif" => {
+                    "8b308e80e0a1a904072657a1f8b3472b5b89e37dc01238c8dc6066689a9ebf6a"
+                }
+                "coverage_adst_public_09.avif" => {
+                    "e0e5a1ae7b7aef892258e7f7f2332f13f959b419ba0f9b14c8edcc9a298e487d"
+                }
+                "coverage_adst_public_10.avif" => {
+                    "93047df7e452ceca5c0cf243100db0b2e1508e7db35d86dc00ad34b70069db4e"
+                }
+                "coverage_i444_rect_01.avif" => {
+                    "df91c9d9099a10d439672ff73982db4ed13e6aeb0b3ee9db48f791a9964fcb54"
+                }
+                "coverage_i444_rect_02.avif" => {
+                    "81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb"
+                }
+                "coverage_i444_square16_cfl_01.avif" => {
+                    "937289169b35c042aa7000bcac5896cc781979f96867c872176a19cd08763d20"
+                }
+                "coverage_i444_square16_cfl_02.avif" => {
+                    "c5672465e10df70e92f05c07e8ad290410ff778f748c70abd564c59766ec5b44"
+                }
+                "coverage_i444_square16_cfl_03.avif" => {
+                    "3b0bdcbaa2f2b1495939a79b77c4ec273ecc5cb9cc5770ca2fe6947b86763128"
+                }
+                "coverage_i444_full_chroma_top_left_paeth_01.avif" => {
+                    "41fed0113dd24525e6c094748beb78a75b94f2825bacdf7dc5d009375f32dd89"
+                }
+                "coverage_i444_v16x32_following_filter_intra_mode3_01.avif" => {
+                    "968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4"
+                }
+                "coverage_i444_palette2_square8_four_leaves.avif" => {
+                    "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b"
+                }
+                "coverage_v4_vertical_checker.avif" => {
+                    "cfd11c3f8287b7e78ebf5da228ed44e04ccaac6cc6cb14a89e49f1bc446ab9ff"
+                }
+                "coverage_h4_horizontal_bands.avif" => {
+                    "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7"
+                }
+                "coverage_h16x4_predictor_adst_dct_01.avif" => {
+                    "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167"
+                }
+                "coverage_h16x4_predictor_adst_dct_f02_n08.avif" => {
+                    "3881e6c66c26ad39ae3f08c5f4391a3db0d2cdaa95895fb25cb57c557e48f46d"
+                }
+                "coverage_h16x4_h_dct_cfl_01.avif" => {
+                    "8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e"
+                }
+                "coverage_h16x4_following_h_dct_01.avif" => {
+                    "85977d9e8beab45b30906bbe60c7918b332d5e6fa4c4719177e203f92ce82356"
+                }
+                "coverage_h16x4_filter_intra_tx8x4_split_01.avif" => {
+                    "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3"
+                }
+                "coverage_h16x4_filter_intra_cdf14_false_01.avif" => {
+                    "d59a569d0d1c93fb9b2537196cc6a5453691d959e7e67bc6417c9a9a1f7b4fc4"
+                }
+                "coverage_v4x16_filter_intra_cdf19_false_01.avif" => {
+                    "a93370d52a860f2b22bc1730ffe1a8bc38d376f678fc32b3c6328555e0bebb11"
+                }
+                "coverage_v4x16_predictor_adst_adst_01.avif" => {
+                    "66d1531446de70283fcb048f1f82f7c0a5e454eaf8e2bee70afa8efecf683994"
+                }
+                "coverage_r32x8_h4_ripple_01.avif" => {
+                    "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53"
+                }
+                "coverage_r32x8_filter_intra_cdf9_false_01.avif" => {
+                    "8d7376ab37f3483ecafd2a47bcb0473ff4ff3ce25fdfac4bf1047fa61911ecfc"
+                }
+                "coverage_h64x16_horizontal_ramp_01.avif" => {
+                    "cb9f9717f9c796f868918297787c1ee8d1db3b43df3556bafde101d4d8b388c3"
+                }
+                "coverage_square64_origin_tx32x32_split_01.avif" => {
+                    "be7eab35fabf3bd1032e7f1da118d4d4010584789051da47d0ae9500e8aeaa2c"
+                }
+                "coverage_vertical8x16_following_filter_intra_mode2_01.avif" => {
+                    "403dfa0053c7a79267a72b0c4b8aad0462efb45e9baac12dd488468b3d3d924b"
+                }
+                "coverage_vertical8x16_following_luma_diagonal67_01.avif" => {
+                    "62169489fa9dc810e702da26d7ea8309def5ecf07ccf87c0f64b87e8b090813b"
+                }
+                "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif" => {
+                    "55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f"
+                }
+                "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif" => {
+                    "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731"
+                }
+                "coverage_vertical8x16_following_luma_smooth_01.avif" => {
+                    "6a6ed4c75f6257de2ae215a5fa812f323ad28391de8dfba0627e2a45ac1cece5"
+                }
+                "coverage_vertical8x16_following_luma_smooth_vertical_01.avif" => {
+                    "f1abc727013b268d1ba37d61091868c50889462a8c43c769117ae92931992f46"
+                }
+                "coverage_vertical8x16_following_luma_smooth_horizontal_01.avif" => {
+                    "e443dfd18a60122c283ea8bf277d64527380a63e2742eff4c7bf19fa037214b6"
+                }
+                "coverage_vertical8x16_following_chroma_dc_01.avif" => {
+                    "46cd23709b17164ec6ae3017f5f9c5f5f499fd8d1584a7ad0221f4b957ed8bb6"
+                }
+                "coverage_vertical8x16_following_chroma_smooth_01.avif" => {
+                    "f8185c7fbfe11910c203c94003e30a02dc976320bd820c75a1e0708d1a82eb18"
+                }
+                "coverage_vertical8x16_following_chroma_smooth_vertical_01.avif" => {
+                    "ff8af413ad18331674a069195872a5e25a2545a05459332312c156d6c681248a"
+                }
+                "coverage_vertical8x16_following_chroma_smooth_horizontal_01.avif" => {
+                    "f07fc781bd26776947d6d73abc5d4f1b50d9c3cdac661de79efecc56c9b5271a"
+                }
+                "coverage_r16x8_neighbor_01.avif" => {
+                    "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"
+                }
+                fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
             }
-            "portable_lossless_b.avif" => {
-                "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5"
-            }
-            "portable_lossless_420_a.avif" => {
-                "0fdfb2ec7d6741b65177c1343d0e510798f3177b75018fdbc8da541ea2d32a0b"
-            }
-            "portable_lossless_420_b.avif" => {
-                "34a99c606d95db58868b24c3ce3ade1c502adcf213130c403486cbd50bc4fad5"
-            }
-            "portable_lossless_420_8x8_a.avif" => {
-                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
-            }
-            "portable_lossless_420_8x8_b.avif" => {
-                "1217b329eae17189460716ba186b4d01617aa8648cd5c03aee2e8905cc20e008"
-            }
-            "portable_lossy_420_q99_gray_0.avif" => {
-                "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"
-            }
-            "portable_lossy_420_q99_8x8_gray_0.avif" => {
-                "5d89f056865052bcb89c910d2d62872e029fb273c3db03f8968a52a41593c1b5"
-            }
-            "portable_lossy_420_q99_gray_64.avif" => {
-                "30c8d471cc44e88da2fec08638a4215ed2ce34c899f330115a604b80d19f2831"
-            }
-            "portable_lossy_420_q99_8x8_gray_64.avif" => {
-                "557f22c418e6f4fcd4d4c1df7eb2b46180b67956794483587205e2e82163b395"
-            }
-            "portable_lossy_420_q99_gray_122_control.avif" => {
-                "ad287d41398b2bc6aae343d24767bded9795b882f382b5abf480a6fc0bbddfdf"
-            }
-            "portable_lossy_420_q99_8x8_gray_122_control.avif" => {
-                "9e96fe6320d50c09026df65c9676a19e57fe86b26652cf513c2cc03015711df0"
-            }
-            "portable_lossy_420_q99_gray_123_control.avif" => {
-                "819d474948483b42b8e875e2bb3446526e0a5f1f090d012b993d6a12fcf0e4da"
-            }
-            "portable_lossy_420_q99_8x8_gray_123_control.avif" => {
-                "d9bced69730dcb4567fcd0eac9073a83993278a18aebf3c03544b49d5660576d"
-            }
-            "portable_lossy_420_q99_gray_124_control.avif" => {
-                "5acbd8048d53d1aa8fcbaacb57506e7eb6a1f570d93c899bd97f899f535f7ce9"
-            }
-            "portable_lossy_420_q99_8x8_gray_124_control.avif" => {
-                "25c65b22ccf260aff6e521fbce082a40fd940968592a3c2e5272768c362481da"
-            }
-            "portable_lossy_420_q99_gray_125_control.avif" => {
-                "e82feb502523b0e30e96c557012bbc79208f186e3fcb858916b2972db760aac1"
-            }
-            "portable_lossy_420_q99_8x8_gray_125_control.avif" => {
-                "4d11382e9da0a7e9facadaf22c7d9036b341797376ecc5a77c2779e1884e1ec5"
-            }
-            "portable_lossy_420_q99_gray_126.avif" => {
-                "0bc6b6903ab77a6d1706777bb507e076f01290f57cb975508aec1cd5cf589810"
-            }
-            "portable_lossy_420_q99_8x8_gray_126.avif" => {
-                "9a5f0b79fce197304a6aa5a89af73862b128be0db6e93117a67d3ddd07e28edd"
-            }
-            "portable_lossy_420_q99_gray_127.avif" => {
-                "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
-            }
-            "portable_lossy_420_q99_luma_eob_bin2_eob3.avif" => {
-                "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
-            }
-            "portable_lossy_420_q99_8x8_gray_127.avif" => {
-                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
-            }
-            "portable_lossy_420_q99_gray_129.avif" => {
-                "b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57"
-            }
-            "portable_lossy_420_q99_8x8_gray_129.avif" => {
-                "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
-            }
-            "portable_lossy_420_q99_gray_130.avif" => {
-                "2c28ec0de076c8c2e7d6d8222ada07a0da8ec45ea53160a39b5dd64b79d7bcc8"
-            }
-            "portable_lossy_420_q99_8x8_gray_130.avif" => {
-                "4371170b5239419060ed559afe13157740d69ef2aee0592cf4fc71c47dff58a5"
-            }
-            "portable_lossy_420_q99_gray_131_control.avif" => {
-                "d8044c92ef2a961ebee78d49908caae12338872a8cb36675ef6dbfb0f244e2e9"
-            }
-            "portable_lossy_420_q99_8x8_gray_131_control.avif" => {
-                "831ca0567d6d09bf16b7c76da27026347d9000d12ca92f486dd9c56b4226055e"
-            }
-            "portable_lossy_420_q99_gray_132_control.avif" => {
-                "03a471cd2fdf8af4107b02673eec688e6c7bc946d184af0c514af6a206e51681"
-            }
-            "portable_lossy_420_q99_8x8_gray_132_control.avif" => {
-                "603bfc293271617bfea86708fcd2820aa7246d3d73a47fd2c0184de328c68ab3"
-            }
-            "portable_lossy_420_q99_gray_133_control.avif" => {
-                "7f0d7099d13d4903645f8fc327e2f0fe46fd9655a948fbc375024f82acc50fc2"
-            }
-            "portable_lossy_420_q99_8x8_gray_133_control.avif" => {
-                "108f70bd32bd6aa8f4d1a6ee9450a6505f16158b350b293f7e37ca87724ae29a"
-            }
-            "portable_lossy_420_q99_gray_134_control.avif" => {
-                "96a0187338028cdac12765e42d24b4cf369039db628878c674d273bdb0af4324"
-            }
-            "portable_lossy_420_q99_8x8_gray_134_control.avif" => {
-                "d4ea4542b1b805cc3f636afb8bf16a483cc0fe47a40b4fba4c876ebb26432b2a"
-            }
-            "portable_lossy_420_q99_gray_192.avif" => {
-                "af14d74c13f430d78f29de7246b5cbdf0937adbeb872ffe6dcf68282860d7cba"
-            }
-            "portable_lossy_420_q99_8x8_gray_192.avif" => {
-                "6845b27f00c23448c01b082d69fdf01aae50f11e3f0b29b073dfe5e6b864c36b"
-            }
-            "portable_lossy_420_q99_gray_255.avif" => {
-                "80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2"
-            }
-            "portable_lossy_420_q99_8x8_gray_255.avif" => {
-                "8f62c344eff1568474fb693b8c18526629db443b9653a84264189c97693605de"
-            }
-            "portable_lossy_420_q99_token_1048_control.avif"
-            | "portable_lossy_420_q99_token_7764.avif" => {
-                "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"
-            }
-            "portable_lossy_420_q99_token_2061.avif"
-            | "portable_lossy_420_q99_token_2988.avif"
-            | "portable_lossy_420_q99_token_7940.avif" => {
-                "80a76a18acf8cb64fec3a659ffc4bab4a87cd9a6fde4dab2161a8751d136c9d2"
-            }
-            "portable_lossless_gray_32.avif" => {
-                "b4a53f2b248b5701814756a08eb3435e49117eda791610ff85dd22e8a6a86df3"
-            }
-            "portable_lossless_gray_127.avif" => {
-                "a1fa26e9a041c510e9f8412accef2e5e0cda5eddd97fa6db80b30400b7964d42"
-            }
-            "portable_probe_gray_128.avif" => {
-                "2ac4dd6f486e2f061ebe8ce8b651dbdf25d71b88184d0bf308608cdcaae05309"
-            }
-            "portable_probe_gray_129.avif" => {
-                "b34e1e1e7cd63c9fb7069154ccd855d827a3dd3eca076232b4217745a2b6db57"
-            }
-            "portable_lossless_8x8_a.avif" => {
-                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
-            }
-            "portable_lossless_8x8_gray_127.avif" => {
-                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
-            }
-            "portable_probe_8x8_gray_128.avif" => {
-                "fa7b78cc215df21d7ce54d8c3c6637c326dab95c10fbc12263101365973f4268"
-            }
-            "portable_probe_8x8_gray_129.avif" => {
-                "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
-            }
-            "portable_lossless_4x8_a.avif" | "portable_lossless_8x4_a.avif" => {
-                "116d1d3509d9d2a7558a2fad832f923fc1193f04b8e0e57946f49e57fa045475"
-            }
-            "portable_lossless_4x8_gray_127.avif" | "portable_lossless_8x4_gray_127.avif" => {
-                "faa8c27b41b2603cd12911cd93ee3953ff1f98c9fba83fdeef738cc8406c4b3f"
-            }
-            "portable_probe_4x8_gray_128.avif" | "portable_probe_8x4_gray_128.avif" => {
-                "1b34669db94decae583e183ee2ffeb07cf504b9f52fae0056c5cf343325157e4"
-            }
-            "portable_probe_4x8_gray_129.avif" | "portable_probe_8x4_gray_129.avif" => {
-                "780832a7ab39814257a857d37a67ab541a1152afbcf6a1883a16ad32c264ff4e"
-            }
-            "portable_lossless_12x12_a.avif" => {
-                "cbc97cf0c2652e60e6e36611be9869444f603abf5f48b292a03d340f501320f8"
-            }
-            "portable_lossless_12x12_gray_127.avif" => {
-                "cb4987527501d0915664b8e624e5f51ebbf5f48b52917058615c1f3b96764076"
-            }
-            "portable_probe_12x12_gray_128.avif" => {
-                "cc0fcf371bdd305ff6099895e60aac93968bf0358724de1678979a37a9bd7a17"
-            }
-            "portable_probe_12x12_gray_129.avif" => {
-                "143efd9552ea35a74333bbfc58d10ae5a0eccfe76d2283c05b2b4a9391c346cd"
-            }
-            "portable_lossless_16x16_a.avif" => {
-                "8bdcc97ae19b09ec3d6b76a7d59f13d4aa3dd7a06d21db706f2a1d15caaa0431"
-            }
-            "portable_lossless_16x16_gray_127.avif" => {
-                "cbab715ff6cfaa81c9b09e014dc1406ceff24034caa265de65f9f948c5434807"
-            }
-            "portable_probe_16x16_gray_128.avif" => {
-                "7f3e5e4e65eca4390e9242558012bc9bdad133d7ac9f6aed53fa156a2288f73b"
-            }
-            "portable_probe_16x16_gray_129.avif" => {
-                "15dc2c3b0ea25a84b4994b9a73dbcf65eef174bad152c689cc1945843b543657"
-            }
-            "partitioned_square_16x16_g64.avif" => {
-                "d7efc58f710522b0c6e2609ab53339cf9aa4c3c419b4023593bffd94fcb883fe"
-            }
-            "partitioned_square_12x12_g96_direct_tokens.avif" => {
-                "8fd169458756409edfaf3380195c6ab881e3d7043d5c3b158a82feaaa82b993f"
-            }
-            "partitioned_square_12x12_top_left_luma_eob4.avif" => {
-                "fcfe3605207a28cd1596ae0cb2b9b4ad1b8b356f7457cd2e60276b8d6530a691"
-            }
-            "partitioned_square_12x12_top_left_luma_eob12_control.avif" => {
-                "16195f9646d15f2857da1864cbffdd3f12a965bbd287ca888b7dde113c2d7ec7"
-            }
-            "partitioned_square_12x12_midpoint_g96_ac.avif" => {
-                "1d316f3236ecba0ebb2e4483622a7dbaa736686fc6ce609a44c3e7c7380a0ff4"
-            }
-            "partitioned_square_12x12_luma_eob1.avif" => {
-                "d8ddfb34c1d4da25851a33b0515d025bd092a6bfd942eeda21683b9e564d6691"
-            }
-            "partitioned_square_12x12_luma_eob2_control.avif" => {
-                "13878ffdf1168508a15759ff58c897370e8428fe522422d52149126a9cc42ef4"
-            }
-            "partitioned_square_12x12_luma_eob4_control.avif" => {
-                "299dc7d8cf7b620bb3cc3a56ab17da5414d8377e0b79196fce64cae0e05ca7f3"
-            }
-            "partitioned_square_12x12_luma_eob6_control.avif" => {
-                "84c006c2c0f8e322453101374baeb3c0f1e30653b7960fb1068cfc8f33c96e68"
-            }
-            "partitioned_square_12x12_luma_eob9_control.avif" => {
-                "7b69d30ebe2894d11aa6d4f7c3385c8675a4cf8daf702d5b6cd709a6001ce506"
-            }
-            "partitioned_square_12x12_luma_eob10_control.avif" => {
-                "edb3552022d80b01938371e9e0d78ea4544d2b1bab41cfe67253a89458774264"
-            }
-            "partitioned_square_12x12_luma_eob12_control.avif" => {
-                "a98fa8dc8ff3ed903815016c02089c888bee48bfb8774903c8bf70d57aed2735"
-            }
-            "partitioned_square_12x12_luma_eob15_control.avif" => {
-                "2d41c17b74e78417fd7ab3fdb5da3225f52c4035e39133275ee01496cc21a77a"
-            }
-            "partitioned_square_16x16_g96_direct_tokens.avif" => {
-                "87cf9f38f5bc4a0a75c3284ff3b5826e0c0734066e863bcf416f2296623b890f"
-            }
-            "partitioned_square_16x16_r64.avif" => {
-                "6492bb904bafc0a5c8acedff1fd7cd70965e3be844e8fd19d0e04a6bd63e2017"
-            }
-            "partitioned_square_16x16_g127.avif" => {
-                "d1ce3617b6228d74d2b208847c20486f1a6301cf8b0708242c0019894eeb055e"
-            }
-            "portable_lossless_12x16_a.avif" | "portable_lossless_16x12_a.avif" => {
-                "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874"
-            }
-            "portable_lossless_12x16_gray_127.avif" | "portable_lossless_16x12_gray_127.avif" => {
-                "1b9924ee11c55d5fd4d944003b8b272c1f4ce12ea8e800c33563bed483fa406d"
-            }
-            "portable_probe_12x16_gray_128.avif" | "portable_probe_16x12_gray_128.avif" => {
-                "af1857bf5516aa3e2e39b6842559746fa7b45daa8dc4cc6675ad86e0cfe425b9"
-            }
-            "portable_probe_12x16_gray_129.avif" | "portable_probe_16x12_gray_129.avif" => {
-                "5269c00892aff8abcc6a4da60b82b890936aef6b1aa24c6b713c5a80a831c0b9"
-            }
-            "partitioned_12x4_gray_127.avif" | "partitioned_4x12_gray_127.avif" => {
-                "35fc07c937c1c3d13641f32cdc94ce1315ec420dd26e12b81a4651cfc1786ee3"
-            }
-            "portable_rect_12x4_gray_128.avif" | "portable_rect_4x12_gray_128.avif" => {
-                "7053108d4e37b600ae17d35890c69102ee6484d79a3a5cd622afca6f5606c543"
-            }
-            "portable_rect_12x4_gray_129.avif" | "portable_rect_4x12_gray_129.avif" => {
-                "c60b05f1911c0ccc80c5af2cd922c7cf1836279d44a17682c918cdaa5c7747e6"
-            }
-            "portable_rect_12x8_gray_127.avif" | "portable_rect_8x12_gray_127.avif" => {
-                "cf8691a9b8c6c8e329b94f40345d822ef7d4f6e8e5c2343d74b12aa16e84838a"
-            }
-            "portable_rect_12x8_gray_128.avif" | "portable_rect_8x12_gray_128.avif" => {
-                "88f2f6050a4ef8c9fd8bd69d3e51689155f6aa570f0ac0da6d3c0ee794bf3867"
-            }
-            "portable_rect_12x8_gray_129.avif" | "portable_rect_8x12_gray_129.avif" => {
-                "fe124f63ee1300955e9b2ffbed15cf383e9f4ae7c5cf60a09b074e4b0d73947f"
-            }
-            "portable_rect_16x4_gray_127.avif" | "portable_rect_4x16_gray_127.avif" => {
-                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
-            }
-            "portable_rect_16x4_gray_128.avif" | "portable_rect_4x16_gray_128.avif" => {
-                "fa7b78cc215df21d7ce54d8c3c6637c326dab95c10fbc12263101365973f4268"
-            }
-            "portable_rect_16x4_gray_129.avif" | "portable_rect_4x16_gray_129.avif" => {
-                "fca06fef259b9ebb452449c7feda724ccec06a4a76b2b4fb1e6420a0beac435e"
-            }
-            "portable_rect_16x8_gray_127.avif" | "portable_rect_8x16_gray_127.avif" => {
-                "7e18f1b2ca4e075b955848b4deafd56e47eeda83cc15b3ecdeb71d7ff58a5f57"
-            }
-            "portable_rect_16x8_gray_128.avif" | "portable_rect_8x16_gray_128.avif" => {
-                "f83545d43c6939ec393b6b8310959b6174fd764b08a12fc22d908408a7e6a43e"
-            }
-            "portable_rect_16x8_gray_129.avif" | "portable_rect_8x16_gray_129.avif" => {
-                "7d965db8cbcf57e71b10b16973c9c2439222485594191da31460986a000f497c"
-            }
-            "portable_rect_12x4_a_speed0.avif" | "portable_rect_4x12_a_speed0.avif" => {
-                "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
-            }
-            "portable_rect_12x4_gray_32_speed0.avif" | "portable_rect_4x12_gray_32_speed0.avif" => {
-                "31178565d9d883446d9e273ee881220f43cb4c5de74e237f590f845e25659f38"
-            }
-            "partitioned_12x4_a.avif" | "partitioned_4x12_a.avif" => {
-                "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
-            }
-            "partitioned_12x4_gray_32.avif" | "partitioned_4x12_gray_32.avif" => {
-                "31178565d9d883446d9e273ee881220f43cb4c5de74e237f590f845e25659f38"
-            }
-            "partitioned_12x4_green.avif" | "partitioned_4x12_green.avif" => {
-                "7f5e545c140df34ec243d4449ab8c4c0e476f532d3f6472ce956e7060b271e1c"
-            }
-            "partitioned_16x4_a.avif" | "partitioned_4x16_a.avif" => {
-                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
-            }
-            "partitioned_16x4_gray_32.avif" | "partitioned_4x16_gray_32.avif" => {
-                "1d3659ada1bf4b80ae974a7b544090591793cb954ac3f9ad13d3af3f09c21967"
-            }
-            "partitioned_16x4_green.avif" | "partitioned_4x16_green.avif" => {
-                "32e7c45e59200de4c1012eac0ef31f3fa35d02b40d563f4602644bca9266f7fc"
-            }
-            "partitioned_12x8_a.avif" | "partitioned_8x12_a.avif" => {
-                "47c4a5d65d8ac82aa68f04754b38e5bf00438aeb64b2e48c2bb54a9268e6e4e7"
-            }
-            "partitioned_12x8_gray_32.avif" | "partitioned_8x12_gray_32.avif" => {
-                "a80ec409692fd6c32b82fa895a118a06751d63671cd6da6ed14ef5bb59f41541"
-            }
-            "partitioned_12x8_green.avif" | "partitioned_8x12_green.avif" => {
-                "c1046797ae8db85c1b32d232085bdc2251d6e94567771f20ce9f86b6a2cc5cbc"
-            }
-            "partitioned_16x8_a.avif" | "partitioned_8x16_a.avif" => {
-                "983aef668db1ea0d5801725fdf2b49d32232fc7f1d9ae578a03ffad6aebc4fc2"
-            }
-            "partitioned_16x8_gray_32.avif" | "partitioned_8x16_gray_32.avif" => {
-                "f89d41f00d89e8b0bf8cb8cff89f9f23e9fa1e5113473dda8d16098575db7388"
-            }
-            "partitioned_16x8_green.avif" | "partitioned_8x16_green.avif" => {
-                "ff87dfd10bc6c01f8e9dac23bb518192e6579a383b2ff1bbd8b8c80a58e677b4"
-            }
-            "portable_lossless_420_leaf_4x8_a.avif" | "portable_lossless_420_leaf_8x4_a.avif" => {
-                "116d1d3509d9d2a7558a2fad832f923fc1193f04b8e0e57946f49e57fa045475"
-            }
-            "portable_lossless_420_rect_12x4_gray_127.avif"
-            | "portable_lossless_420_rect_4x12_gray_127.avif" => {
-                "35fc07c937c1c3d13641f32cdc94ce1315ec420dd26e12b81a4651cfc1786ee3"
-            }
-            "portable_lossless_420_rect_16x4_gray_127.avif"
-            | "portable_lossless_420_rect_4x16_gray_127.avif" => {
-                "c24e73f000a4255a612416ecc4df81c9313e4c099877384712e4d8530dd7acbd"
-            }
-            "portable_lossless_420_rect_12x8_gray_127.avif"
-            | "portable_lossless_420_rect_8x12_gray_127.avif" => {
-                "cf8691a9b8c6c8e329b94f40345d822ef7d4f6e8e5c2343d74b12aa16e84838a"
-            }
-            "portable_lossless_420_rect_16x8_gray_127.avif"
-            | "portable_lossless_420_rect_8x16_gray_127.avif" => {
-                "7e18f1b2ca4e075b955848b4deafd56e47eeda83cc15b3ecdeb71d7ff58a5f57"
-            }
-            "portable_lossless_420_split_12x4_a.avif"
-            | "portable_lossless_420_split_4x12_a.avif" => {
-                "09fddd84398ad9a9d3ce8b981fea278a82e6b1fa62483fa0ef3c45cd484ae29e"
-            }
-            "portable_lossless_420_split_16x4_a.avif"
-            | "portable_lossless_420_split_4x16_a.avif" => {
-                "1f403e7f414473b888fcba438d60d269e54fc1d04c802dd32f96fa657932b2ac"
-            }
-            "portable_lossless_420_split_12x8_a.avif"
-            | "portable_lossless_420_split_8x12_a.avif" => {
-                "47c4a5d65d8ac82aa68f04754b38e5bf00438aeb64b2e48c2bb54a9268e6e4e7"
-            }
-            "portable_lossless_420_split_16x8_a.avif"
-            | "portable_lossless_420_split_8x16_a.avif" => {
-                "983aef668db1ea0d5801725fdf2b49d32232fc7f1d9ae578a03ffad6aebc4fc2"
-            }
-            "portable_lossless_420_square_12x12_a.avif" => {
-                "cbc97cf0c2652e60e6e36611be9869444f603abf5f48b292a03d340f501320f8"
-            }
-            "portable_lossless_420_square_12x16_a.avif"
-            | "portable_lossless_420_square_16x12_a.avif" => {
-                "f6b42085d682a064da2a9956545f33ae7595b288f7589e8e498c62e6bc26e874"
-            }
-            "portable_lossless_420_square_16x16_a.avif" => {
-                "8bdcc97ae19b09ec3d6b76a7d59f13d4aa3dd7a06d21db706f2a1d15caaa0431"
-            }
-            "partitioned_square_420_16x16_rgb_delta.avif" => {
-                "33170bbddccc8cf1c2ce5dada1ab0dc1c510fc9b059ede87dff076f9df47e18d"
-            }
-            "partitioned_square_420_16x16_g96.avif" => {
-                "1773a465660162ba2a563e2b05acb59d0ccd578de177210f9252a9abd2013bcf"
-            }
-            "coverage_r8x16_band_05.avif" => {
-                "c11a94094afc690f85b60f373368af7995dca863a978e1835386df16567d5840"
-            }
-            "coverage_r8x16_band_06.avif" => {
-                "70a7a0107bec2a81f759155aaf760088704eff6de4c628616a5173a3fb0df610"
-            }
-            "coverage_r16x32_grid_01.avif" => {
-                "8a72d87e179a92b6fb293008f6fbfabc4df0ead6cd96311b1345f6f706c8eeac"
-            }
-            "coverage_r32x16_origin_01.avif" => {
-                "0269cf259d6753f2ed578b701877c2fe4de42b3f2d812c168a079fc43b9d3328"
-            }
-            "coverage_h16x8_origin_dct_dct_01.avif" => {
-                "2252e089ce514157ab53e4e99f73bab1840ae1b78dab2dab4d52cf78c372f0ab"
-            }
-            "coverage_h16x8_following_dct_dct_01.avif" => {
-                "f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f"
-            }
-            "coverage_r32x32_following_01.avif" => {
-                "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7"
-            }
-            "coverage_square32_origin_tx16x16_split_01.avif" => {
-                "6f55403182b74ed6bb0f581ebb3e53b6857d0a1934c0650923feac0a0e52b88b"
-            }
-            "coverage_r32x32_filter_intra_probe_01.avif" => {
-                "979a9de4159e978b1fdbf2fb33f240da857c8a69107d635ca0a00550e459299b"
-            }
-            "coverage_r32x32_filter_intra_mode3_01.avif" => {
-                "8593fcb0b09a3d12243a6600505f3c77262e8103d453604099a29c500c1f9495"
-            }
-            "coverage_r32x32_following_filter_intra_split_mode0_01.avif" => {
-                "ea277bdded250f326c4dd7da3cd87e6ab514db4e14870857f5e79b5276a43e16"
-            }
-            "coverage_r16x32_following_filter_intra_split_mode3_01.avif" => {
-                "d135a06efafa72998c7c55dfa25f7ec0603cf9fa2231fd874ea10074234ea186"
-            }
-            "coverage_r16x32_following_filter_intra_split_mode0_01.avif" => {
-                "cac42b39973f40158ad8fec42946726538adddb9a0d113ed0a16b054a9189272"
-            }
-            "coverage_square16_filter_intra_mode0_01.avif" => {
-                "4090aed7681e287536328b3ec8ee9235c8e32979b8a249824d258fd57145b008"
-            }
-            "coverage_422_square16_vertical_halves_01.avif" => {
-                "bf1af25691e0092747fa281f45b6023dfeab8d34946e10e20f4500674e7931d7"
-            }
-            "coverage_square16_chroma_smooth_horizontal_01.avif" => {
-                "cbca1ceee34545f791090f42e152e5bfd495f4ab0cefcce6d943c57ec8edc144"
-            }
-            "coverage_square16_chroma_smooth_vertical_01.avif" => {
-                "76390242834678d6b4ecd14ec7b291b7fbec921a8c96f4c269ca5a67228ac258"
-            }
-            "coverage_square16_chroma_smooth_01.avif" => {
-                "04aa5e9f6facb7895149696ada7e559de9e44a50c13ac7be2db57d9fd1f273b6"
-            }
-            "coverage_vertical8x16_filter_intra_mode0_01.avif" => {
-                "82b2100ac5f6f02e88ea931a90b2abab261b7486209ee4f63c538464c52b5c30"
-            }
-            "coverage_vertical8x16_filter_intra_mode1_01.avif" => {
-                "6051c012bac9735f10fb18bfe680fc9e3582ef6acfaa295a028f02ead7a642fe"
-            }
-            "coverage_vertical8x16_filter_intra_mode2_01.avif" => {
-                "5bf4eb2849056ecbba6885bbab1852d39449dec94909f05f6b26657b74104b8d"
-            }
-            "coverage_vertical8x16_filter_intra_mode3_01.avif" => {
-                "a900cd81f92250ea4b1057109066cb0d0ebbbcdb4d8568e4675e2816ff549777"
-            }
-            "coverage_vertical8x16_filter_intra_mode4_tx4x4_grid_01.avif" => {
-                "4e246340bdbe95175760098f3beb1cd22df27f0dfa4dfc4b4c0587e9913448a3"
-            }
-            "coverage_vertical8x16_chroma_diagonal157_01.avif" => {
-                "fbd17283709360e2d26a968e2a0781d6dd3e59401a574b3adbb4cd06a8820fa8"
-            }
-            "coverage_vertical8x16_chroma_horizontal_01.avif" => {
-                "fe06a9e4a35a7a479f62725e4c0716a0f5133849e8d1e351c866506fdbae680f"
-            }
-            "coverage_vertical8x16_chroma_vertical_01.avif" => {
-                "56c7822ea3a4ea606bd563b91d17a96a25fb54afa85aea7ce57d3b75f60fa794"
-            }
-            "coverage_vertical8x16_chroma_paeth_01.avif" => {
-                "0a05b452b8f1d623db4a663260696241fb183938c8718f7bc4eb1bc5d019914b"
-            }
-            "coverage_vertical8x16_chroma_paeth_02.avif" => {
-                "9edeaf44a0e8ef22777109c1228a491ea1d879d9bb75051d2c5200675e20c9ca"
-            }
-            "coverage_vertical8x16_chroma_paeth_03.avif" => {
-                "bdb2eefd28dbe8a00d21d18a45cfed874e635ea82fa138dcef67247bc84400fb"
-            }
-            "coverage_square8_chroma_diagonal113_01.avif" => {
-                "05f6f725de2e882646a7bf059b444ffc26e2a7b048ad09f573890222bd029462"
-            }
-            "coverage_square8_chroma_diagonal45_angle51_01.avif" => {
-                "2b09c1b7c72c153a4ad6456a06bf63a6cd31b2b8952dcb8a78a714d0d6b0d08a"
-            }
-            "coverage_square8_chroma_diagonal67_vertical_01.avif" => {
-                "2c5534101754f03cecccf894872055062fba481fd0886fb68eb853a55b2cf2ae"
-            }
-            "coverage_square8_luma_diagonal67_vertical_01.avif" => {
-                "1cf4c24d43bdfe42d79fb4f7da0104382359801ee158029e523c8201d810b5c0"
-            }
-            "coverage_square8_luma_diagonal67_vertical_split_tx4x4_01.avif" => {
-                "eb2bebe4dbb452c932c1334ec8420fd5b3ca8589641254938dc52d7d41365a2a"
-            }
-            "coverage_square8_luma_diagonal67_vertical_split_tx4x4_angle70_01.avif" => {
-                "7ba0cab00dbb9d6b9c65788839e471bfe4df2008e47a61ad5bc82ebd5101dce6"
-            }
-            "coverage_square8_luma_diagonal_down_right_01.avif" => {
-                "44a7d5e7b2c778b65ee4dbd1379b87a2fc33cca36b2a180519d68cfc34eea01b"
-            }
-            "coverage_square8_luma_diagonal45_01.avif" => {
-                "86bf348ca94bf0609609d58aaff66a92b66834caf9c4261e697a6cb57863c01a"
-            }
-            "coverage_square8_luma_smooth_01.avif" => {
-                "26372cd592790e77ea2738edb81af446a8ba366533779673d2031f4c3b7aa530"
-            }
-            "coverage_square8_luma_smooth_horizontal_01.avif" => {
-                "db4447d10c5a73b65b8d7a5fba0331e9a457722c42171658c45c123101759e25"
-            }
-            "coverage_square8_luma_smooth_vertical_01.avif" => {
-                "9ff23d9ce13531af06b602347ba92e3e5797415b48d25ecdcf94f7301b8dfd91"
-            }
-            "coverage_r32x16_filter_intra_tx8x8_01.avif" => {
-                "fe39183daabbf77ecbc191b4cb9b3fea01486b1fa28ccfef651372763ac975b8"
-            }
-            "coverage_r16x64_grid_01.avif" => {
-                "f17df57e0946031d2b81ad5316e801aea9c27fe94422f360b1e328013b71ea15"
-            }
-            "coverage_entropy_mosaic_02.avif" => {
-                "89ca340e1520088f629bb46bdb0c07e08b630e2b13163ae869aca49ae0c72028"
-            }
-            "coverage_entropy_mosaic_01.avif" => {
-                "52660ed52ff5e28a3bc05d35023875e225f70acd76a1191ecd4f72cc765b8cd7"
-            }
-            "coverage_adst_public_02.avif" => {
-                "d872557591a66de992c9ecb7af416ac0c5d8dd364c0c26f1acc2ec530b75375f"
-            }
-            "coverage_adst_public_03.avif" => {
-                "c4cbd418d7f72de0fd778268c0a4c40ac6c30b982987a3a4bfa84372c3c102e9"
-            }
-            "coverage_adst_public_04.avif" => {
-                "8bf5648d07e20627c47a5909233a14efdeba2d9bb30ac51c2f1d0e9c3dc568f8"
-            }
-            "coverage_adst_public_05.avif" => {
-                "ccf631ee65a05977a2020995f5dc442905ad0c21450f3e3e0df3bd0f0d2b8e11"
-            }
-            "coverage_adst_public_06.avif" => {
-                "988aef43dcf1c4eeaa0cffee66f3ba32e9c127c0b07996830900b4a79ed07cd6"
-            }
-            "coverage_adst_public_07.avif" => {
-                "a40858233036b25f36900bd39be40e6eda843493ac27b767448b891ac8437492"
-            }
-            "coverage_adst_public_08.avif" => {
-                "8b308e80e0a1a904072657a1f8b3472b5b89e37dc01238c8dc6066689a9ebf6a"
-            }
-            "coverage_adst_public_09.avif" => {
-                "e0e5a1ae7b7aef892258e7f7f2332f13f959b419ba0f9b14c8edcc9a298e487d"
-            }
-            "coverage_adst_public_10.avif" => {
-                "93047df7e452ceca5c0cf243100db0b2e1508e7db35d86dc00ad34b70069db4e"
-            }
-            "coverage_i444_rect_01.avif" => {
-                "df91c9d9099a10d439672ff73982db4ed13e6aeb0b3ee9db48f791a9964fcb54"
-            }
-            "coverage_i444_rect_02.avif" => {
-                "81b867c7a1081b13395b3a37a7dd79d41f43542f095f048ab71693fb471c8bbb"
-            }
-            "coverage_i444_square16_cfl_01.avif" => {
-                "937289169b35c042aa7000bcac5896cc781979f96867c872176a19cd08763d20"
-            }
-            "coverage_i444_square16_cfl_02.avif" => {
-                "c5672465e10df70e92f05c07e8ad290410ff778f748c70abd564c59766ec5b44"
-            }
-            "coverage_i444_square16_cfl_03.avif" => {
-                "3b0bdcbaa2f2b1495939a79b77c4ec273ecc5cb9cc5770ca2fe6947b86763128"
-            }
-            "coverage_i444_full_chroma_top_left_paeth_01.avif" => {
-                "41fed0113dd24525e6c094748beb78a75b94f2825bacdf7dc5d009375f32dd89"
-            }
-            "coverage_i444_v16x32_following_filter_intra_mode3_01.avif" => {
-                "968e7f9616cf2236f5f94d18c48ef532319d3b338d5fab45d2dfef76a74eb2f4"
-            }
-            "coverage_i444_palette2_square8_four_leaves.avif" => {
-                "ae90d60419a44e909e312e762e05d6f73d70d32c43366eb8885aabe4d2c7725b"
-            }
-            "coverage_v4_vertical_checker.avif" => {
-                "cfd11c3f8287b7e78ebf5da228ed44e04ccaac6cc6cb14a89e49f1bc446ab9ff"
-            }
-            "coverage_h4_horizontal_bands.avif" => {
-                "c83e86163bf5e8b7121c05a41d8cdb8ae73a27d544565bc717464875b3f459c7"
-            }
-            "coverage_h16x4_predictor_adst_dct_01.avif" => {
-                "84fdaf2915f3f338bb4620a89640a7a44b2eb13099b31f5ff1437e6a05f08167"
-            }
-            "coverage_h16x4_predictor_adst_dct_f02_n08.avif" => {
-                "3881e6c66c26ad39ae3f08c5f4391a3db0d2cdaa95895fb25cb57c557e48f46d"
-            }
-            "coverage_h16x4_h_dct_cfl_01.avif" => {
-                "8b61bc973b7dadbed03b497390a1cef5640cce91d9d09196cd9bf212bebc267e"
-            }
-            "coverage_h16x4_following_h_dct_01.avif" => {
-                "85977d9e8beab45b30906bbe60c7918b332d5e6fa4c4719177e203f92ce82356"
-            }
-            "coverage_h16x4_filter_intra_tx8x4_split_01.avif" => {
-                "bdc12de89d8516533e6678fe9f3eb3639b45dff2f7e91402003a3a7ff4d2bdc3"
-            }
-            "coverage_h16x4_filter_intra_cdf14_false_01.avif" => {
-                "d59a569d0d1c93fb9b2537196cc6a5453691d959e7e67bc6417c9a9a1f7b4fc4"
-            }
-            "coverage_v4x16_filter_intra_cdf19_false_01.avif" => {
-                "a93370d52a860f2b22bc1730ffe1a8bc38d376f678fc32b3c6328555e0bebb11"
-            }
-            "coverage_v4x16_predictor_adst_adst_01.avif" => {
-                "66d1531446de70283fcb048f1f82f7c0a5e454eaf8e2bee70afa8efecf683994"
-            }
-            "coverage_r32x8_h4_ripple_01.avif" => {
-                "ffb5ecf24ee59d59852e8c11713e54488b151afdf4c4c66ac027b1332d0eab53"
-            }
-            "coverage_r32x8_filter_intra_cdf9_false_01.avif" => {
-                "8d7376ab37f3483ecafd2a47bcb0473ff4ff3ce25fdfac4bf1047fa61911ecfc"
-            }
-            "coverage_h64x16_horizontal_ramp_01.avif" => {
-                "cb9f9717f9c796f868918297787c1ee8d1db3b43df3556bafde101d4d8b388c3"
-            }
-            "coverage_square64_origin_tx32x32_split_01.avif" => {
-                "be7eab35fabf3bd1032e7f1da118d4d4010584789051da47d0ae9500e8aeaa2c"
-            }
-            "coverage_vertical8x16_following_filter_intra_mode2_01.avif" => {
-                "403dfa0053c7a79267a72b0c4b8aad0462efb45e9baac12dd488468b3d3d924b"
-            }
-            "coverage_vertical8x16_following_luma_diagonal67_01.avif" => {
-                "62169489fa9dc810e702da26d7ea8309def5ecf07ccf87c0f64b87e8b090813b"
-            }
-            "coverage_vertical8x16_following_luma_diagonal67_angle64_01.avif" => {
-                "55f06b3adaa65ec123e55a2ead4bbf46f1c66c3d13a13fc6845e0e90ae685d8f"
-            }
-            "coverage_vertical8x16_following_luma_diagonal67_angle64_split_tx4x4_01.avif" => {
-                "3ebdf78f08e586021aa82353895083010b6445633d37798ada174da301cf5731"
-            }
-            "coverage_r16x8_neighbor_01.avif" => {
-                "1d491d7f9084f851562b16b5f6027cfccd0077bd028dc9b914f5e86b4d890808"
-            }
-            fixture => panic!("unexpected portable AVIF fixture: {fixture}"),
         };
         assert_eq!(case.pillow.sha256, expected_pillow_sha256);
         let expected_rgb = case

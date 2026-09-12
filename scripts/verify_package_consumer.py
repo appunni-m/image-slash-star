@@ -9,6 +9,8 @@ The embedded input and assertions mirror ``examples/package_smoke.rs``.
 
 from __future__ import annotations
 
+import argparse
+import json
 import os
 import subprocess
 import tarfile
@@ -18,7 +20,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_DIR = ROOT / "target" / "package"
-PACKAGE_COMMAND = ["cargo", "package", "--allow-dirty", "--locked", "--no-verify"]
+PACKAGE_COMMAND = ["cargo", "package", "--locked", "--no-verify"]
+RELEASE_TOOLCHAIN = "1.96.1"
 PNG_BYTES = """\
 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44,
 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x02, 0x00, 0x00, 0x00, 0x90,
@@ -29,7 +32,11 @@ PNG_BYTES = """\
 
 
 def run(command: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
-    result = subprocess.run(command, cwd=cwd, env=env, check=False, text=True)
+    process_env = os.environ.copy()
+    process_env["RUSTUP_TOOLCHAIN"] = RELEASE_TOOLCHAIN
+    if env:
+        process_env.update(env)
+    result = subprocess.run(command, cwd=cwd, env=process_env, check=False, text=True)
     if result.returncode:
         raise SystemExit(result.returncode)
 
@@ -40,21 +47,65 @@ def extract_package(archive_path: Path, destination: Path) -> None:
     root = destination.resolve()
     with tarfile.open(archive_path, "r:gz") as archive:
         for member in archive.getmembers():
+            if not (member.isfile() or member.isdir()):
+                raise RuntimeError(
+                    f"package archive contains unsupported link or special entry: {member.name}"
+                )
             member_path = (root / member.name).resolve()
             if member_path != root and root not in member_path.parents:
                 raise RuntimeError(f"package archive escapes its extraction root: {member.name}")
         archive.extractall(root)
 
 
+def package_version() -> str:
+    """Return the release version from Cargo's normalized metadata."""
+
+    result = subprocess.run(
+        ["cargo", "metadata", "--locked", "--no-deps", "--format-version", "1"],
+        cwd=ROOT,
+        env={**os.environ, "RUSTUP_TOOLCHAIN": RELEASE_TOOLCHAIN},
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    document = json.loads(result.stdout)
+    packages = [
+        package
+        for package in document["packages"]
+        if package["name"] == "image-slash-star"
+    ]
+    if len(packages) != 1:
+        raise RuntimeError(f"expected one image-slash-star package, found {packages}")
+    return str(packages[0]["version"])
+
+
+def arguments() -> argparse.Namespace:
+    """Parse an optional exact archive supplied by release verification."""
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--archive",
+        type=Path,
+        help="verify this exact .crate archive instead of building one",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
-    run(PACKAGE_COMMAND, ROOT)
-    archives = sorted(PACKAGE_DIR.glob("image-slash-star-*.crate"), key=lambda path: path.stat().st_mtime)
-    if not archives:
-        raise RuntimeError(f"Cargo did not create an archive in {PACKAGE_DIR}")
+    args = arguments()
+    version = package_version()
+    expected_name = f"image-slash-star-{version}.crate"
+    if args.archive is None:
+        run(PACKAGE_COMMAND, ROOT)
+        archive_path = PACKAGE_DIR / expected_name
+    else:
+        archive_path = args.archive.resolve()
+    if archive_path.name != expected_name or not archive_path.is_file():
+        raise RuntimeError(f"expected exact release archive {expected_name}: {archive_path}")
 
     with tempfile.TemporaryDirectory(prefix="image-slash-star-package-") as temporary:
         temporary_root = Path(temporary)
-        extract_package(archives[-1], temporary_root)
+        extract_package(archive_path, temporary_root)
         package_roots = [path for path in temporary_root.iterdir() if path.is_dir()]
         if len(package_roots) != 1:
             raise RuntimeError(f"expected one extracted package root, found {package_roots}")
@@ -99,7 +150,10 @@ def main() -> int:
             environment,
         )
 
-    print("clean package consumer OK: packaged archive compiled and decoded PNG")
+    print(
+        "clean package consumer OK: exact packaged archive compiled and decoded PNG "
+        f"({archive_path.name})"
+    )
     return 0
 
 

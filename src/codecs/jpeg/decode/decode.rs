@@ -2524,7 +2524,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(empty_scan.segments, vec![(0, 0)]);
 
     let known_data =
-        include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_420.jpg");
+        include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_420.jpg");
     let known_info = parse_jpeg(known_data).expect("coverage baseline JPEG must parse");
     assert!(known_single_entropy_segment(&known_info, known_data).is_some());
     for mutator in [
@@ -2626,7 +2626,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let converter = YccColorConverter::shared();
         let rgb420_data =
-            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_420.jpg");
+            include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_420.jpg");
         let rgb420_info = parse_jpeg(rgb420_data).expect("coverage 4:2:0 JPEG must parse");
         let rgb420_segments =
             extract_entropy_segments(rgb420_data, rgb420_info.entropy_start, rgb420_info.eoi_pos);
@@ -2702,7 +2702,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         assert!(rgb420_none(&rgb420_info, &rgb420_segments, empty_quant));
 
         let rgb422_data =
-            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_422.jpg");
+            include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_422.jpg");
         let rgb422_info = parse_jpeg(rgb422_data).expect("coverage 4:2:2 JPEG must parse");
         let rgb422_segments =
             extract_entropy_segments(rgb422_data, rgb422_info.entropy_start, rgb422_info.eoi_pos);
@@ -2764,7 +2764,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         assert!(rgb422_none(&rgb422_info, &rgb422_segments, empty_quant));
 
         let rgb444_data =
-            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_444.jpg");
+            include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_444.jpg");
         let rgb444_info = parse_jpeg(rgb444_data).expect("coverage 4:4:4 JPEG must parse");
         let rgb444_segments =
             extract_entropy_segments(rgb444_data, rgb444_info.entropy_start, rgb444_info.eoi_pos);
@@ -2822,7 +2822,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         assert!(rgb444_none(&rgb444_info, &rgb444_segments, empty_quant));
 
         let gray_data =
-            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_gray.jpg");
+            include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_gray.jpg");
         let gray_info = parse_jpeg(gray_data).expect("coverage grayscale JPEG must parse");
         let gray_segments =
             extract_entropy_segments(gray_data, gray_info.entropy_start, gray_info.eoi_pos);
@@ -2925,7 +2925,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         guard_none!(gray_info, |_| {}, &gray_segments, empty_quant, gray_none);
 
         let cmyk_data =
-            include_bytes!("../../../../tests/fixtures/input/images/jpeg/baseline_cmyk.jpg");
+            include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_cmyk.jpg");
         let cmyk_info = parse_jpeg(cmyk_data).expect("coverage CMYK JPEG must parse");
         let cmyk_segments =
             extract_entropy_segments(cmyk_data, cmyk_info.entropy_start, cmyk_info.eoi_pos);
@@ -3360,9 +3360,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
         assert!(reconstruct_image(&generic_bad, &[0, 0, 0xff, 0xd0, 0], None).is_err());
     }
 
-    let baseline = include_bytes!("../../../../tests/fixtures/input/images/jpeg/1x1.jpg");
+    let baseline = include_bytes!("../../../test_support/fixtures/input/images/jpeg/1x1.jpg");
     let progressive =
-        include_bytes!("../../../../tests/fixtures/input/images/jpeg/progressive.jpg");
+        include_bytes!("../../../test_support/fixtures/input/images/jpeg/progressive.jpg");
     for checks in 0..=7 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);

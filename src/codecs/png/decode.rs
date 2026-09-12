@@ -2075,7 +2075,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     // Every cancellation checkpoint in the decode paths is reachable with a
     // token that fires after a fixed number of polls.
-    let apng = include_bytes!("../../../tests/fixtures/input/images/png/apng_animated.png");
+    let apng = include_bytes!("../../test_support/fixtures/input/images/png/apng_animated.png");
     let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Png);
     for checks in 0..=4 {
         let token = crate::CancellationToken::new();
@@ -2088,14 +2088,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     // Exercise cancellation while a real multi-row PNG is being
     // reconstructed and unpacked, rather than only at container boundaries.
-    let scanline_work = include_bytes!("../../../tests/fixtures/input/images/png/2x3.png");
+    let scanline_work = include_bytes!("../../test_support/fixtures/input/images/png/2x3.png");
     for checks in [0, 4, 8, 12, 32] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(scanline_work, Some(&token));
     }
     let interlaced_scanline_work =
-        include_bytes!("../../../tests/fixtures/input/images/png/adam7_2x3.png");
+        include_bytes!("../../test_support/fixtures/input/images/png/adam7_2x3.png");
     for checks in 0..=64 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);

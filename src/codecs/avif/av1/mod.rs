@@ -3,13 +3,25 @@
 mod bit_reader;
 mod block;
 mod cdef;
+mod coefficient_cdfs;
 mod entropy;
+mod film_grain;
 mod filter;
 mod frame;
+mod frame_cdfs;
+mod geometry;
+mod large_cdfs;
+mod mc;
+mod motion;
 mod quantization;
+mod quantization_matrices;
 mod raster;
+mod resize;
+mod restoration;
 pub(super) mod sample_depth;
 mod sequence;
+mod surface;
+mod tile_state;
 mod transform;
 
 pub(super) use sample_depth::truncate_to_u8;
@@ -17,7 +29,7 @@ pub(super) use sample_depth::truncate_to_u8;
 use self::bit_reader::SegmentedData;
 #[cfg(test)]
 pub(super) use self::block::ReconstructedPlane;
-use self::frame::FrameState;
+use self::frame::{DisplayGeometryProof, FrameState};
 pub(super) use self::raster::FrameCanvas;
 #[cfg(coverage)]
 use super::samples::ByteSpan;
@@ -49,6 +61,9 @@ pub(super) struct PortableStill {
     pub(super) color_range: bool,
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
+    /// AV1 frame-ID syntax is retained so first-frame APIs can distinguish
+    /// an error-resilient movie from the ordinary multi-frame gap.
+    pub(super) frame_id_numbers_present: bool,
     pub(super) planes: [block::ReconstructedPlane; 3],
     /// A validated monochrome auxiliary plane for the narrow composition
     /// class. Unsupported alpha syntax never becomes a silent RGB decode.
@@ -68,6 +83,14 @@ struct ValidatedPlane {
     complete_monochrome_plane: Option<block::ReconstructedPlane>,
     sequence: sequence::SequenceHeader,
     frame_dimensions: Option<(u32, u32)>,
+    display_geometry: Option<DisplayGeometryProof>,
+}
+
+struct MonochromeGridCell {
+    width: u32,
+    height: u32,
+    luma: block::ReconstructedPlane,
+    alpha: Option<block::ReconstructedPlane>,
 }
 
 // ✅ VERIFIED: AV1 specification sections 5.3.2-5.3.3; dav1d 1.5.3
@@ -88,6 +111,14 @@ fn read_uleb128(data: &SegmentedData<'_, '_>, offset: &mut usize) -> Av1Result<u
 // ✅ VERIFIED: AV1 specification sections 5.3.1-5.3.3 and 6.2.2; dav1d
 // 1.5.3 src/obu.c:1169-1209.
 fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState) -> Av1Result<()> {
+    validate_sample_and_return_temporal_unit(input, sample, state).map(|_| ())
+}
+
+fn validate_sample_and_return_temporal_unit(
+    input: &[u8],
+    sample: &EncodedSample,
+    state: &mut FrameState,
+) -> Av1Result<u64> {
     let data = SegmentedData::new(input, &sample.spans)?;
     // The AVIF sample extractor constructs codec-configuration spans only
     // after validating them against the immutable input buffer.
@@ -130,6 +161,19 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
             return Err(malformed("OBU payload exceeds its sample"));
         }
         let payload_end = payload_start.saturating_add(payload_size);
+        if matches!(obu_type, 1 | 2 | 8) && has_extension {
+            return Err(malformed("non-layer-specific OBU has an extension header"));
+        }
+        if matches!(obu_type, 3 | 4 | 6 | 7) {
+            frame_bearing = true;
+            if !state.admits_layer_specific_obu(has_extension, temporal_id, spatial_id)? {
+                // Membership is decided only after validating the complete
+                // OBU envelope. An ignored layer must leave decoder state
+                // exactly untouched.
+                offset = payload_end;
+                continue;
+            }
+        }
         match obu_type {
             1 => {
                 let sequence = sequence::parse(&data, payload_start, payload_end)?;
@@ -144,32 +188,42 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
             3 => {
                 state.frame_header_obu(
                     &data,
-                    payload_start,
-                    payload_end,
+                    payload_start..payload_end,
+                    has_extension,
                     temporal_id,
                     spatial_id,
                     false,
                 )?;
-                frame_bearing = true;
             }
             4 => {
-                state.tile_group_obu(&data, payload_start, payload_end)?;
-                frame_bearing = true;
+                state.tile_group_obu(
+                    &data,
+                    payload_start,
+                    payload_end,
+                    has_extension,
+                    temporal_id,
+                    spatial_id,
+                )?;
             }
             6 => {
-                state.frame_obu(&data, payload_start, payload_end, temporal_id, spatial_id)?;
-                frame_bearing = true;
+                state.frame_obu(
+                    &data,
+                    payload_start,
+                    payload_end,
+                    has_extension,
+                    temporal_id,
+                    spatial_id,
+                )?;
             }
             7 => {
                 state.frame_header_obu(
                     &data,
-                    payload_start,
-                    payload_end,
+                    payload_start..payload_end,
+                    has_extension,
                     temporal_id,
                     spatial_id,
                     true,
                 )?;
-                frame_bearing = true;
             }
             _ => {}
         }
@@ -178,28 +232,324 @@ fn validate_sample(input: &[u8], sample: &EncodedSample, state: &mut FrameState)
     if !frame_bearing {
         return Err(malformed("sample contains no frame-bearing OBU"));
     }
-    Ok(())
+    state.sample_flush()
 }
 
-fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Av1Result<ValidatedPlane> {
+fn validate_plane_state(input: &[u8], plane: &EncodedPlane) -> Av1Result<FrameState> {
     let mut state = FrameState::new();
     for sample in &plane.samples {
         validate_sample(input, sample, &mut state)?;
     }
-    let sequence = state.finish()?.clone();
-    Ok(ValidatedPlane {
-        first_leaf: if state.has_multiple_tiles() {
-            state.complete_color_leaf().cloned()
+    state.finish()?;
+    Ok(state)
+}
+
+/// Validate and materialize every displayable sample in one AVIF track.
+///
+/// A movie sample is a temporal unit, not necessarily a complete intra frame.
+/// Keeping one [`FrameState`] alive across the loop preserves reference
+/// surfaces, frame IDs, CDFs, and segmentation state while the returned
+/// displays remain owned snapshots suitable for the public sequence API.
+pub(super) fn validate_sequence_frames(
+    extracted: &ExtractedAvif<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<Option<Vec<PortableStill>>> {
+    let Some(sequence) = &extracted.sequence else {
+        return Ok(None);
+    };
+    if sequence.color.samples.is_empty() {
+        return Err(malformed("AVIF sequence has no color samples"));
+    }
+
+    let mut color_state = FrameState::new();
+    let mut color_displays = Vec::new();
+    color_displays
+        .try_reserve(sequence.color.samples.len())
+        .map_err(|_| {
+            CodecError::Dimensions("unable to reserve AVIF color sequence state".to_owned())
+        })?;
+    for (sample_index, sample) in sequence.color.samples.iter().enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
+        let temporal_unit =
+            validate_sample_and_return_temporal_unit(extracted.input, sample, &mut color_state)?;
+        let display =
+            color_state.selected_display_for_temporal_unit_with_token(temporal_unit, token)?;
+        color_displays.push(display);
+        if sample_index == 0 {
+            let first_sequence = color_state.finish()?;
+            // Reject an unsupported color profile before validating later
+            // reference samples. This keeps a known pure-Rust capability gap
+            // typed as Unsupported instead of exposing an incidental missing
+            // reference surface from the next temporal unit.
+            if !first_sequence.monochrome && !portable_color_sequence_supported(first_sequence) {
+                return Ok(None);
+            }
+            // Ordinary multi-frame AVIF presentation still lacks the
+            // reference and timing contract. Keep that gap typed even when a
+            // later sample would otherwise fail during partial validation.
+            if sequence.color.samples.len() > 1 && !first_sequence.frame_id_numbers_present {
+                return Ok(None);
+            }
+        }
+    }
+    let color_sequence = color_state.finish()?.clone();
+
+    let mut alpha_displays = None;
+    let mut alpha_sequence = None;
+    if let Some(alpha) = &sequence.alpha {
+        let mut alpha_state = FrameState::new();
+        let mut displays = Vec::new();
+        displays.try_reserve(alpha.samples.len()).map_err(|_| {
+            CodecError::Dimensions("unable to reserve AVIF alpha sequence state".to_owned())
+        })?;
+        for sample in &alpha.samples {
+            crate::codecs::error::check_cancelled(token)?;
+            let temporal_unit = validate_sample_and_return_temporal_unit(
+                extracted.input,
+                sample,
+                &mut alpha_state,
+            )?;
+            let display =
+                alpha_state.selected_display_for_temporal_unit_with_token(temporal_unit, token)?;
+            displays.push(display);
+        }
+        alpha_sequence = Some(alpha_state.finish()?.clone());
+        alpha_displays = Some(displays);
+    }
+
+    if alpha_displays
+        .as_ref()
+        .is_some_and(|displays| displays.len() != color_displays.len())
+    {
+        return Ok(None);
+    }
+    if let Some(alpha_sequence) = &alpha_sequence
+        && !monochrome_alpha_sequence_supported(alpha_sequence, color_sequence.bit_depth)
+    {
+        return Ok(None);
+    }
+
+    let mut frames = Vec::new();
+    frames.try_reserve(color_displays.len()).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
+    })?;
+    if color_sequence.monochrome {
+        if !monochrome_primary_sequence_supported(&color_sequence) {
+            return Ok(None);
+        }
+        for display in &mut color_displays {
+            let Some(mut display) = display.take() else {
+                return Ok(None);
+            };
+            let Some(dimensions) = monochrome_display_dimensions(&display) else {
+                return Ok(None);
+            };
+            let Some(color_plane) = display.monochrome_plane.take() else {
+                return Ok(None);
+            };
+            let alpha_plane = if let Some(alpha_displays) = alpha_displays.as_mut() {
+                let Some(mut alpha_display) =
+                    alpha_displays.get_mut(frames.len()).and_then(Option::take)
+                else {
+                    return Ok(None);
+                };
+                let Some(alpha_dimensions) = monochrome_display_dimensions(&alpha_display) else {
+                    return Ok(None);
+                };
+                if alpha_dimensions != dimensions {
+                    return Ok(None);
+                }
+                let Some(alpha_plane) = alpha_display.monochrome_plane.take() else {
+                    return Ok(None);
+                };
+                Some(alpha_plane)
+            } else {
+                None
+            };
+            frames.push(portable_monochrome_still(
+                color_plane,
+                dimensions,
+                color_sequence.clone(),
+                alpha_plane,
+            ));
+        }
+        return Ok(Some(frames));
+    }
+    if !portable_color_sequence_supported(&color_sequence) {
+        return Ok(None);
+    }
+    for (index, display) in color_displays.iter_mut().enumerate() {
+        let Some(display) = display.take() else {
+            return Ok(None);
+        };
+        let Some(color_leaf) = display.color_leaf else {
+            return Ok(None);
+        };
+        if display.dimensions != Some((color_leaf.width, color_leaf.height)) {
+            return Ok(None);
+        }
+        let alpha_plane = if let Some(alpha_displays) = alpha_displays.as_mut() {
+            let Some(alpha_display) = alpha_displays.get_mut(index).and_then(Option::take) else {
+                return Ok(None);
+            };
+            if monochrome_display_dimensions(&alpha_display)
+                != Some((color_leaf.width, color_leaf.height))
+            {
+                return Ok(None);
+            };
+            let Some(alpha_plane) = alpha_display.monochrome_plane else {
+                return Ok(None);
+            };
+            Some(alpha_plane)
         } else {
-            state
-                .complete_color_leaf()
-                .cloned()
-                .or_else(|| state.first_leaf().cloned())
-        },
-        complete_monochrome_plane: state.complete_monochrome_plane().cloned(),
+            None
+        };
+        frames.push(portable_still(
+            color_leaf,
+            color_sequence.clone(),
+            alpha_plane,
+        ));
+    }
+    Ok(Some(frames))
+}
+
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware production validation"
+)]
+fn validate_plane(input: &[u8], plane: &EncodedPlane) -> Av1Result<ValidatedPlane> {
+    validate_plane_with_token(input, plane, None)
+}
+
+fn validate_plane_with_token(
+    input: &[u8],
+    plane: &EncodedPlane,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<ValidatedPlane> {
+    let state = validate_plane_state(input, plane)?;
+    let sequence = state.finish()?.clone();
+    let selected = state.selected_display_with_token(token)?;
+    Ok(ValidatedPlane {
+        first_leaf: selected.color_leaf,
+        complete_monochrome_plane: selected.monochrome_plane,
         sequence,
-        frame_dimensions: state.frame_dimensions(),
+        frame_dimensions: selected.dimensions,
+        display_geometry: selected.geometry,
     })
+}
+
+fn monochrome_primary_sequence_supported(sequence: &sequence::SequenceHeader) -> bool {
+    sequence.monochrome
+        && matches!(sequence.bit_depth, 8 | 10 | 12)
+        && sequence.color_range
+        && (
+            sequence.color_primaries,
+            sequence.transfer_characteristics,
+            sequence.matrix_coefficients,
+        ) == (1, 13, 6)
+        && (sequence.subsampling_x, sequence.subsampling_y) == (true, true)
+        && !sequence.film_grain_present
+}
+
+/// Color formats that have a checked RGB8 boundary in `decode_portable`.
+///
+/// Keep this sequence-level admission in the AV1 module independent from the
+/// private decoder matrix enum. Every returned frame still goes through the
+/// final conversion gate, while this predicate prevents a stateful track from
+/// being rejected before that per-frame path can run.
+fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader) -> bool {
+    if sequence.monochrome
+        || !sequence.color_range
+        || (!sequence.subsampling_x && sequence.subsampling_y)
+    {
+        return false;
+    }
+    matches!(
+        (
+            (
+                sequence.color_primaries,
+                sequence.transfer_characteristics,
+                sequence.matrix_coefficients,
+            ),
+            sequence.bit_depth,
+        ),
+        ((1, 13, 6), 8 | 10 | 12)
+    )
+}
+
+fn monochrome_alpha_sequence_supported(
+    sequence: &sequence::SequenceHeader,
+    bit_depth: u32,
+) -> bool {
+    sequence.monochrome
+        && matches!(sequence.bit_depth, 8 | 10 | 12)
+        && sequence.color_range
+        && sequence.bit_depth == bit_depth
+        && (sequence.subsampling_x, sequence.subsampling_y) == (true, true)
+        && !sequence.film_grain_present
+}
+
+fn monochrome_plane_dimensions(
+    display_geometry: Option<DisplayGeometryProof>,
+    frame_dimensions: Option<(u32, u32)>,
+    plane: Option<&block::ReconstructedPlane>,
+) -> Option<(u32, u32)> {
+    let geometry = display_geometry?;
+    if geometry.superres_enabled {
+        return None;
+    }
+    let dimensions = frame_dimensions?;
+    if dimensions.0 == 0
+        || dimensions.1 == 0
+        || geometry.render_width != dimensions.0
+        || geometry.render_height != dimensions.1
+    {
+        return None;
+    }
+    let width = usize::try_from(dimensions.0).ok()?;
+    let height = usize::try_from(dimensions.1).ok()?;
+    let sample_count = width.checked_mul(height)?;
+    plane.filter(|plane| plane.samples.len() == sample_count)?;
+    Some(dimensions)
+}
+
+fn monochrome_display_dimensions(display: &frame::SelectedDisplay) -> Option<(u32, u32)> {
+    if display.color_leaf.is_some() {
+        return None;
+    }
+    monochrome_plane_dimensions(
+        display.geometry,
+        display.dimensions,
+        display.monochrome_plane.as_ref(),
+    )
+}
+
+fn monochrome_primary_dimensions(plane: &ValidatedPlane) -> Option<(u32, u32)> {
+    if !monochrome_primary_sequence_supported(&plane.sequence) {
+        return None;
+    }
+    monochrome_plane_dimensions(
+        plane.display_geometry,
+        plane.frame_dimensions,
+        plane.complete_monochrome_plane.as_ref(),
+    )
+}
+
+fn monochrome_alpha_matches(
+    plane: &ValidatedPlane,
+    dimensions: (u32, u32),
+    bit_depth: u32,
+) -> bool {
+    if !monochrome_alpha_sequence_supported(&plane.sequence, bit_depth)
+        || plane.frame_dimensions != Some(dimensions)
+    {
+        return false;
+    }
+    monochrome_plane_dimensions(
+        plane.display_geometry,
+        plane.frame_dimensions,
+        plane.complete_monochrome_plane.as_ref(),
+    ) == Some(dimensions)
 }
 
 fn portable_still(
@@ -218,10 +568,39 @@ fn portable_still(
         color_range: sequence.color_range,
         subsampling_x: sequence.subsampling_x,
         subsampling_y: sequence.subsampling_y,
+        frame_id_numbers_present: sequence.frame_id_numbers_present,
         planes: leaf.planes,
         alpha_plane,
         #[cfg(coverage)]
         entropy_operations: leaf.entropy_operations,
+    }
+}
+
+fn portable_monochrome_still(
+    plane: block::ReconstructedPlane,
+    dimensions: (u32, u32),
+    sequence: sequence::SequenceHeader,
+    alpha_plane: Option<block::ReconstructedPlane>,
+) -> PortableStill {
+    let empty = block::ReconstructedPlane {
+        samples: Vec::new(),
+    };
+    PortableStill {
+        width: dimensions.0,
+        height: dimensions.1,
+        bit_depth: sequence.bit_depth,
+        monochrome: true,
+        color_primaries: sequence.color_primaries,
+        transfer_characteristics: sequence.transfer_characteristics,
+        matrix_coefficients: sequence.matrix_coefficients,
+        color_range: sequence.color_range,
+        subsampling_x: sequence.subsampling_x,
+        subsampling_y: sequence.subsampling_y,
+        frame_id_numbers_present: sequence.frame_id_numbers_present,
+        planes: [plane, empty.clone(), empty],
+        alpha_plane,
+        #[cfg(coverage)]
+        entropy_operations: Vec::new(),
     }
 }
 
@@ -233,18 +612,20 @@ fn assembled_leaf(
     block::FirstLeaf {
         width,
         height,
+        block_skipped: false,
         planes,
         luma_predictor: block::LumaPredictor::Dc,
         chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
-        chroma_right_contexts: [[0x40; 8]; 2],
-        chroma_bottom_contexts: [[0x40; 8]; 2],
+        chroma_right_contexts: [[0x40; 16]; 2],
+        chroma_bottom_contexts: [[0x40; 16]; 2],
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
@@ -258,9 +639,251 @@ fn assembled_leaf(
 /// is copied into a checked output canvas. This keeps grid composition free of
 /// native state and makes malformed overlap, gaps, and auxiliary geometry
 /// explicit errors rather than partially published pixels.
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware production validation"
+)]
 fn validate_grid(
     extracted: &ExtractedAvif<'_>,
     still: &super::samples::StillPayload,
+) -> Av1Result<Option<PortableStill>> {
+    validate_grid_with_token(extracted, still, None)
+}
+
+/// Validate and assemble a grid whose cells are complete monochrome AV1
+/// displays. Grid-level cropping is performed by the checked monochrome
+/// canvases; per-cell display transforms remain unsupported by the narrow
+/// portable admission.
+fn validate_monochrome_grid_with_token(
+    extracted: &ExtractedAvif<'_>,
+    still: &super::samples::StillPayload,
+    token: Option<&crate::CancellationToken>,
+    properties: crate::types::AvifGridProperties,
+    columns: usize,
+    cell_count: usize,
+    first_color: ValidatedPlane,
+) -> Av1Result<Option<PortableStill>> {
+    if first_color.first_leaf.is_some() {
+        return Ok(None);
+    }
+    let Some(first_dimensions) = monochrome_primary_dimensions(&first_color) else {
+        return Ok(None);
+    };
+    let first_sequence = first_color.sequence.clone();
+    let first_geometry = first_color.display_geometry;
+    let mut first_color = Some(first_color);
+
+    let mut cells = Vec::new();
+    cells.try_reserve(cell_count).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF monochrome grid cells".to_owned())
+    })?;
+    for index in 0..cell_count {
+        crate::codecs::error::check_cancelled(token)?;
+        let mut color = if index == 0 {
+            first_color
+                .take()
+                .ok_or_else(|| malformed("AVIF grid first cell was consumed"))?
+        } else {
+            let sample = still
+                .color
+                .samples
+                .get(index)
+                .ok_or_else(|| malformed("AVIF grid color sample is missing"))?;
+            validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![sample.clone()],
+                },
+                token,
+            )?
+        };
+        if color.first_leaf.is_some() {
+            return Ok(None);
+        }
+        let Some(dimensions) = monochrome_primary_dimensions(&color) else {
+            return Ok(None);
+        };
+        if dimensions != first_dimensions
+            || color.display_geometry != first_geometry
+            || color.sequence.bit_depth != first_sequence.bit_depth
+            || color.sequence.monochrome != first_sequence.monochrome
+            || color.sequence.color_primaries != first_sequence.color_primaries
+            || color.sequence.transfer_characteristics != first_sequence.transfer_characteristics
+            || color.sequence.matrix_coefficients != first_sequence.matrix_coefficients
+            || color.sequence.color_range != first_sequence.color_range
+            || color.sequence.subsampling_x != first_sequence.subsampling_x
+            || color.sequence.subsampling_y != first_sequence.subsampling_y
+        {
+            return Err(malformed(
+                "AVIF grid cells disagree on decoded monochrome format",
+            ));
+        }
+        let Some(luma) = color.complete_monochrome_plane.take() else {
+            return Ok(None);
+        };
+        let alpha = if let Some(alpha_track) = &still.alpha {
+            let alpha_sample = alpha_track
+                .samples
+                .get(index)
+                .ok_or_else(|| malformed("AVIF grid alpha sample is missing"))?;
+            let mut alpha = validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![alpha_sample.clone()],
+                },
+                token,
+            )?;
+            if alpha.first_leaf.is_some()
+                || alpha.display_geometry != color.display_geometry
+                || !monochrome_alpha_matches(&alpha, dimensions, first_sequence.bit_depth)
+            {
+                return Ok(None);
+            }
+            let Some(alpha) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
+            Some(alpha)
+        } else {
+            None
+        };
+        cells.push(MonochromeGridCell {
+            width: dimensions.0,
+            height: dimensions.1,
+            luma,
+            alpha,
+        });
+    }
+
+    let first = cells
+        .first()
+        .ok_or_else(|| malformed("AVIF grid has no monochrome cells"))?;
+    let cell_width = first.width;
+    let cell_height = first.height;
+    let output_width = properties.output_width();
+    let output_height = properties.output_height();
+    if cell_width == 0 || cell_height == 0 || output_width == 0 || output_height == 0 {
+        return Err(malformed(
+            "AVIF monochrome grid has an empty cell or output canvas",
+        ));
+    }
+    let total_width = cell_width
+        .checked_mul(properties.columns())
+        .ok_or_else(|| malformed("AVIF monochrome grid width overflows"))?;
+    let total_height = cell_height
+        .checked_mul(properties.rows())
+        .ok_or_else(|| malformed("AVIF monochrome grid height overflows"))?;
+    if total_width < output_width || total_height < output_height {
+        return Err(malformed(
+            "AVIF monochrome grid cells do not cover the output canvas",
+        ));
+    }
+    let last_column = properties
+        .columns()
+        .checked_sub(1)
+        .ok_or_else(|| malformed("AVIF monochrome grid has no columns"))?;
+    let last_row = properties
+        .rows()
+        .checked_sub(1)
+        .ok_or_else(|| malformed("AVIF monochrome grid has no rows"))?;
+    if cell_width
+        .checked_mul(last_column)
+        .ok_or_else(|| malformed("AVIF monochrome grid last column overflows"))?
+        >= output_width
+        || cell_height
+            .checked_mul(last_row)
+            .ok_or_else(|| malformed("AVIF monochrome grid last row overflows"))?
+            >= output_height
+    {
+        return Err(malformed(
+            "AVIF monochrome grid has an invisible final row or column",
+        ));
+    }
+
+    let mut luma_canvas = raster::MonochromeFrameCanvas::new(output_width, output_height)?;
+    let mut alpha_canvas = if first.alpha.is_some() {
+        Some(raster::MonochromeFrameCanvas::new(
+            output_width,
+            output_height,
+        )?)
+    } else {
+        None
+    };
+    for (index, cell) in cells.iter().enumerate() {
+        #[expect(
+            clippy::arithmetic_side_effects,
+            reason = "cell_count is nonzero above, so the validated grid column count cannot be zero"
+        )]
+        let (row, column) = (index / columns, index % columns);
+        let x = u32::try_from(
+            column
+                .checked_mul(
+                    usize::try_from(cell_width)
+                        .map_err(|_| malformed("AVIF monochrome cell width exceeds usize"))?,
+                )
+                .ok_or_else(|| malformed("AVIF monochrome grid x origin overflows usize"))?,
+        )
+        .map_err(|_| malformed("AVIF monochrome grid x origin exceeds u32"))?;
+        let y = u32::try_from(
+            row.checked_mul(
+                usize::try_from(cell_height)
+                    .map_err(|_| malformed("AVIF monochrome cell height exceeds usize"))?,
+            )
+            .ok_or_else(|| malformed("AVIF monochrome grid y origin overflows usize"))?,
+        )
+        .map_err(|_| malformed("AVIF monochrome grid y origin exceeds u32"))?;
+        let visible_width = output_width
+            .checked_sub(x)
+            .ok_or_else(|| malformed("AVIF monochrome cell starts outside output width"))?
+            .min(cell.width);
+        let visible_height = output_height
+            .checked_sub(y)
+            .ok_or_else(|| malformed("AVIF monochrome cell starts outside output height"))?
+            .min(cell.height);
+        if visible_width == 0 || visible_height == 0 {
+            return Err(malformed(
+                "AVIF monochrome grid cell has no visible samples",
+            ));
+        }
+        luma_canvas.place_cropped_plane(
+            cell.width,
+            cell.height,
+            visible_width,
+            visible_height,
+            x,
+            y,
+            &cell.luma,
+        )?;
+        if let (Some(alpha_canvas), Some(alpha)) = (alpha_canvas.as_mut(), cell.alpha.as_ref()) {
+            alpha_canvas.place_cropped_plane(
+                cell.width,
+                cell.height,
+                visible_width,
+                visible_height,
+                x,
+                y,
+                alpha,
+            )?;
+        }
+    }
+
+    let sample_depth = sample_depth::SampleDepth::new(first_sequence.bit_depth)
+        .ok_or_else(|| malformed("AVIF monochrome grid sample depth is unsupported"))?;
+    let luma = luma_canvas.finish(sample_depth)?;
+    let alpha = alpha_canvas
+        .map(|canvas| canvas.finish(sample_depth))
+        .transpose()?;
+    Ok(Some(portable_monochrome_still(
+        luma,
+        (output_width, output_height),
+        first_sequence,
+        alpha,
+    )))
+}
+
+fn validate_grid_with_token(
+    extracted: &ExtractedAvif<'_>,
+    still: &super::samples::StillPayload,
+    token: Option<&crate::CancellationToken>,
 ) -> Av1Result<Option<PortableStill>> {
     let Some(properties) = extracted.grid_properties else {
         return Ok(None);
@@ -284,14 +907,50 @@ fn validate_grid(
         return Ok(None);
     }
 
+    let first_sample = still
+        .color
+        .samples
+        .first()
+        .ok_or_else(|| malformed("AVIF grid has no color samples"))?;
+    let mut first_color = Some(validate_plane_with_token(
+        extracted.input,
+        &super::samples::EncodedPlane {
+            samples: vec![first_sample.clone()],
+        },
+        token,
+    )?);
+    if first_color
+        .as_ref()
+        .is_some_and(|color| color.sequence.monochrome)
+    {
+        return validate_monochrome_grid_with_token(
+            extracted,
+            still,
+            token,
+            properties,
+            columns,
+            cell_count,
+            first_color
+                .take()
+                .ok_or_else(|| malformed("AVIF grid first cell was consumed"))?,
+        );
+    }
+
     let mut cells = Vec::with_capacity(cell_count);
     for (index, sample) in still.color.samples.iter().enumerate() {
-        let color = validate_plane(
-            extracted.input,
-            &super::samples::EncodedPlane {
-                samples: vec![sample.clone()],
-            },
-        )?;
+        let color = if index == 0 {
+            first_color
+                .take()
+                .ok_or_else(|| malformed("AVIF grid first cell was consumed"))?
+        } else {
+            validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![sample.clone()],
+                },
+                token,
+            )?
+        };
         let Some(color_leaf) = color.first_leaf else {
             return Ok(None);
         };
@@ -299,27 +958,25 @@ fn validate_grid(
             return Ok(None);
         }
         let alpha_plane = if let Some(alpha) = &still.alpha {
-            let alpha = validate_plane(
+            let mut alpha = validate_plane_with_token(
                 extracted.input,
                 &super::samples::EncodedPlane {
                     samples: vec![alpha.samples[index].clone()],
                 },
+                token,
             )?;
-            let Some(alpha_plane) = alpha.complete_monochrome_plane else {
-                return Ok(None);
-            };
-            if !(alpha.sequence.monochrome
-                && alpha.sequence.color_range
-                && alpha.sequence.bit_depth == color.sequence.bit_depth
-                && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
-                && usize::try_from(color_leaf.width).ok().and_then(|width| {
-                    usize::try_from(color_leaf.height)
-                        .ok()
-                        .and_then(|height| width.checked_mul(height))
-                }) == Some(alpha_plane.samples.len()))
+            if alpha.first_leaf.is_some()
+                || !monochrome_alpha_matches(
+                    &alpha,
+                    (color_leaf.width, color_leaf.height),
+                    color.sequence.bit_depth,
+                )
             {
                 return Ok(None);
             }
+            let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
             Some(alpha_plane)
         } else {
             None
@@ -460,8 +1117,10 @@ fn validate_grid(
     }
 
     let planes = canvas.finish()?;
+    let alpha_sample_depth = sample_depth::SampleDepth::new(first.bit_depth)
+        .ok_or_else(|| malformed("AVIF alpha sample depth is unsupported"))?;
     let alpha_plane = alpha_canvas
-        .map(raster::MonochromeFrameCanvas::finish)
+        .map(|canvas| canvas.finish(alpha_sample_depth))
         .transpose()?;
     Ok(Some(portable_still(
         assembled_leaf(output_width, output_height, planes),
@@ -512,13 +1171,56 @@ fn validate_grid(
     )))
 }
 
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware production validation"
+)]
 fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableStill>> {
+    validate_still_with_token(extracted, None)
+}
+
+fn validate_still_with_token(
+    extracted: &ExtractedAvif<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<Option<PortableStill>> {
     let mut portable = None;
     if let Some(still) = &extracted.still {
         if extracted.grid_properties.is_some() || !extracted.grid_item_ids.is_empty() {
-            return validate_grid(extracted, still);
+            return validate_grid_with_token(extracted, still, token);
         }
-        let color = validate_plane(extracted.input, &still.color)?;
+        let mut color = validate_plane_with_token(extracted.input, &still.color, token)?;
+        if color.first_leaf.is_none() {
+            if still.color.samples.len() != 1 {
+                return Ok(None);
+            }
+            let Some(dimensions) = monochrome_primary_dimensions(&color) else {
+                return Ok(None);
+            };
+            let Some(color_plane) = color.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
+            let alpha_plane = if let Some(alpha) = &still.alpha {
+                if alpha.samples.len() != 1 {
+                    return Ok(None);
+                }
+                let mut alpha = validate_plane_with_token(extracted.input, alpha, token)?;
+                if !monochrome_alpha_matches(&alpha, dimensions, color.sequence.bit_depth) {
+                    return Ok(None);
+                }
+                let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                    return Ok(None);
+                };
+                Some(alpha_plane)
+            } else {
+                None
+            };
+            return Ok(Some(portable_monochrome_still(
+                color_plane,
+                dimensions,
+                color.sequence,
+                alpha_plane,
+            )));
+        }
         let Some(color_leaf) = color.first_leaf.as_ref() else {
             return Ok(None);
         };
@@ -526,21 +1228,19 @@ fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableSti
             return Ok(None);
         }
         let alpha_plane = if let Some(alpha) = &still.alpha {
-            let alpha = validate_plane(extracted.input, alpha)?;
-            let Some(alpha_plane) = alpha.complete_monochrome_plane else {
-                return Ok(None);
-            };
-            if !(alpha.sequence.monochrome
-                && alpha.sequence.bit_depth == color.sequence.bit_depth
-                && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
-                && usize::try_from(color_leaf.width).ok().and_then(|width| {
-                    usize::try_from(color_leaf.height)
-                        .ok()
-                        .and_then(|height| width.checked_mul(height))
-                }) == Some(alpha_plane.samples.len()))
+            let mut alpha = validate_plane_with_token(extracted.input, alpha, token)?;
+            if alpha.first_leaf.is_some()
+                || !monochrome_alpha_matches(
+                    &alpha,
+                    (color_leaf.width, color_leaf.height),
+                    color.sequence.bit_depth,
+                )
             {
                 return Ok(None);
             }
+            let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
             Some(alpha_plane)
         } else {
             None
@@ -572,22 +1272,64 @@ fn validate_still(extracted: &ExtractedAvif<'_>) -> Av1Result<Option<PortableSti
 fn validate_first_sequence_sample(
     extracted: &ExtractedAvif<'_>,
     sequence: &super::samples::SequencePayload,
+    token: Option<&crate::CancellationToken>,
 ) -> Av1Result<Option<PortableStill>> {
     let color_sample = sequence
         .color
         .samples
         .first()
         .ok_or_else(|| malformed("AVIF sequence has no color samples"))?;
-    let color = validate_plane(
+    let color = validate_plane_with_token(
         extracted.input,
         &super::samples::EncodedPlane {
             samples: vec![color_sample.clone()],
         },
+        token,
     )?;
-    let Some(color_leaf) = color.first_leaf.as_ref() else {
+    if color.first_leaf.is_none() {
+        let Some(dimensions) = monochrome_primary_dimensions(&color) else {
+            return Ok(None);
+        };
+        let Some(color_plane) = color.complete_monochrome_plane else {
+            return Ok(None);
+        };
+        let alpha_plane = if let Some(alpha) = &sequence.alpha {
+            let alpha_sample = alpha
+                .samples
+                .first()
+                .ok_or_else(|| malformed("AVIF sequence has no alpha sample"))?;
+            let mut alpha = validate_plane_with_token(
+                extracted.input,
+                &super::samples::EncodedPlane {
+                    samples: vec![alpha_sample.clone()],
+                },
+                token,
+            )?;
+            if !monochrome_alpha_matches(&alpha, dimensions, color.sequence.bit_depth) {
+                return Ok(None);
+            }
+            let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+                return Ok(None);
+            };
+            Some(alpha_plane)
+        } else {
+            None
+        };
+        return Ok(Some(portable_monochrome_still(
+            color_plane,
+            dimensions,
+            color.sequence,
+            alpha_plane,
+        )));
+    }
+    let Some((color_width, color_height)) = color
+        .first_leaf
+        .as_ref()
+        .map(|leaf| (leaf.width, leaf.height))
+    else {
         return Ok(None);
     };
-    if color.frame_dimensions != Some((color_leaf.width, color_leaf.height)) {
+    if color.frame_dimensions != Some((color_width, color_height)) {
         return Ok(None);
     }
     let alpha_plane = if let Some(alpha) = &sequence.alpha {
@@ -595,64 +1337,69 @@ fn validate_first_sequence_sample(
             .samples
             .first()
             .ok_or_else(|| malformed("AVIF sequence has no alpha sample"))?;
-        let alpha = validate_plane(
+        let mut alpha = validate_plane_with_token(
             extracted.input,
             &super::samples::EncodedPlane {
                 samples: vec![alpha_sample.clone()],
             },
+            token,
         )?;
-        let Some(alpha_plane) = alpha.complete_monochrome_plane else {
-            return Ok(None);
-        };
-        if !(alpha.sequence.monochrome
-            && alpha.sequence.bit_depth == color.sequence.bit_depth
-            && alpha.frame_dimensions == Some((color_leaf.width, color_leaf.height))
-            && usize::try_from(color_leaf.width).ok().and_then(|width| {
-                usize::try_from(color_leaf.height)
-                    .ok()
-                    .and_then(|height| width.checked_mul(height))
-            }) == Some(alpha_plane.samples.len()))
+        if alpha.first_leaf.is_some()
+            || !monochrome_alpha_matches(
+                &alpha,
+                (color_width, color_height),
+                color.sequence.bit_depth,
+            )
         {
             return Ok(None);
         }
+        let Some(alpha_plane) = alpha.complete_monochrome_plane.take() else {
+            return Ok(None);
+        };
         Some(alpha_plane)
     } else {
         None
     };
+    let color_leaf = color
+        .first_leaf
+        .ok_or_else(|| malformed("validated first sequence sample lost its color surface"))?;
     Ok(Some(portable_still(
-        color_leaf.clone(),
+        color_leaf,
         color.sequence,
         alpha_plane,
     )))
 }
 
+#[allow(
+    dead_code,
+    reason = "compatibility wrapper for token-aware display materialization"
+)]
 pub(super) fn validate_first(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
+    validate_first_with_token(extracted, None)
+}
+
+pub(super) fn validate_first_with_token(
+    extracted: &ExtractedAvif<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> Av1Result<ValidatedAv1> {
     let portable_still = if extracted.still.is_some() {
-        validate_still(extracted)?
+        validate_still_with_token(extracted, token)?
     } else if let Some(sequence) = &extracted.sequence {
-        validate_first_sequence_sample(extracted, sequence)?
+        validate_first_sequence_sample(extracted, sequence, token)?
     } else {
         None
     };
     Ok(ValidatedAv1 { portable_still })
 }
 
-/// Validate every AV1 sample in a sequence without promising that the
-/// sequence can be rendered yet.
-///
-/// Keeping this separate from [`validate_first`] matters for Pillow parity:
-/// decoding the first frame of an animated AVIF may succeed even when a later
-/// frame is malformed, while sequence decoding must report that later-frame
-/// failure.  The same stateful validator is used for all samples so AV1
-/// frame-ID continuity and reference-state rules are checked across sample
-/// boundaries in safe Rust.
-pub(super) fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> {
+#[cfg(test)]
+fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> {
     let Some(sequence) = &extracted.sequence else {
         return Ok(());
     };
-    validate_plane(extracted.input, &sequence.color)?;
+    validate_plane_state(extracted.input, &sequence.color)?;
     if let Some(alpha) = &sequence.alpha {
-        validate_plane(extracted.input, alpha)?;
+        validate_plane_state(extracted.input, alpha)?;
     }
     Ok(())
 }
@@ -661,9 +1408,9 @@ pub(super) fn validate_sequence(extracted: &ExtractedAvif<'_>) -> Av1Result<()> 
 pub(super) fn validate(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1> {
     let portable_still = validate_still(extracted)?;
     if let Some(sequence) = &extracted.sequence {
-        validate_plane(extracted.input, &sequence.color)?;
+        validate_plane_state(extracted.input, &sequence.color)?;
         if let Some(alpha) = &sequence.alpha {
-            validate_plane(extracted.input, alpha)?;
+            validate_plane_state(extracted.input, alpha)?;
         }
     }
     Ok(ValidatedAv1 { portable_still })
@@ -706,6 +1453,7 @@ fn coverage_track_prefix(
         let bytes = if index == target { replacement } else { sample };
         let (input, encoded) = coverage_sample(bytes, config);
         validate_sample(&input, &encoded, &mut state)?;
+        state.__coverage_seed_missing_reference_surfaces();
     }
     Ok(())
 }
@@ -755,10 +1503,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     split.extend_from_slice(&header);
     split.extend_from_slice(&[0x22, 1, 0]);
     let (input, sample) = coverage_sample(&split, valid_config);
-    assert_eq!(
+    assert!(matches!(
         validate_sample(&input, &sample, &mut FrameState::new()),
-        Ok(())
-    );
+        Err(CodecError::Malformed(message))
+            if message == "invalid AV1 bitstream: entropy symbol coder overread the tile padding"
+    ));
     let mut pending_then_delimiter = split[..split.len() - 2].to_vec();
     pending_then_delimiter.extend_from_slice(&[0x12, 0]);
     let (input, sample) = coverage_sample(&pending_then_delimiter, valid_config);
@@ -770,10 +1519,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
     redundant.extend_from_slice(&[0x22, 1, 0]);
     let (input, sample) = coverage_sample(&redundant, valid_config);
-    assert_eq!(
+    assert!(matches!(
         validate_sample(&input, &sample, &mut FrameState::new()),
-        Ok(())
-    );
+        Err(CodecError::Malformed(message))
+            if message == "invalid AV1 bitstream: entropy symbol coder overread the tile padding"
+    ));
     let invalid_span = EncodedSample {
         spans: vec![ByteSpan { start: 0, end: 1 }],
         config: ByteSpan { start: 0, end: 0 },
@@ -799,7 +1549,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let animated: &[&[u8]] = &[
         b"\x12\x00\x0a\x0e\x00\x00\x00\x03\xbc\xac\xa9\xb5\xf2\x20\x21\xa0\xd0\x80\x32\x13\x10\x00\x83\x80\x00\x00\x80\x00\x00\x00\xeb\xc5\xa6\x2e\x0c\x0d\xd1\x51\x40",
-        b"\x12\x00\x32\x23\x28\x04\xe0\x40\x00\x00\x23\x43\x30\x00\x00\x40\x00\x04\x00\x00\x08\xe4\x66\x90\x91\x47\x7f\x6e\xcc\x05\x23\x9b\xc1\x1c\xc6\x74\xcb\x7e\xe0\x32\x23\x28\x02\xe0\x80\x00\x00\xa3\x44\xc0\x00\x00\x48\x00\x04\x00\x00\x26\x66\xc9\x49\xed\xf9\xfc\xed\x11\x20\x54\x85\xcf\x5f\x49\x98\x10\x5b\x20\x32\x23\x30\x03\xc2\x00\x00\x81\x46\x8c\x80\x00\x00\x90\x00\x08\x00\x1f\x3a\xcd\xf2\xb3\x29\xa3\x70\xb6\x44\xb1\xd9\x5a\x93\x1f\x3c\x56\x60\x14\xc4",
+        b"\x12\x00\x32\x23\x28\x04\xe0\x40\x00\x00\x23\x43\x30\x00\x00\x40\x00\x04\x00\x00\x08\xe4\x66\x90\x91\x47\x7f\x6e\xcc\x05\x23\x9b\xc1\x1c\xc6\x74\xcb\x7e\xe0",
+        b"\x32\x23\x28\x02\xe0\x80\x00\x00\xa3\x44\xc0\x00\x00\x48\x00\x04\x00\x00\x26\x66\xc9\x49\xed\xf9\xfc\xed\x11\x20\x54\x85\xcf\x5f\x49\x98\x10\x5b\x20",
+        b"\x32\x23\x30\x03\xc2\x00\x00\x81\x46\x8c\x80\x00\x00\x90\x00\x08\x00\x1f\x3a\xcd\xf2\xb3\x29\xa3\x70\xb6\x44\xb1\xd9\x5a\x93\x1f\x3c\x56\x60\x14\xc4",
         b"\x12\x00\x1a\x01\xa8",
         b"\x12\x00\x32\x1a\x30\x06\x44\x09\x80\x01\x46\x8c\x80\x00\x00\x90\x00\x08\x00\x33\xa1\xc0\x60\x46\x86\x20\x7d\xcf\xf4\xfc",
         b"\x12\x00\x32\x15\x30\x08\x00\x11\x30\x01\x46\x8c\x80\x00\x00\x90\x00\x08\x00\xb3\x2e\xde\x2e\xcf\x20",
@@ -1036,6 +1788,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 color: invalid_plane(),
                 alpha: None,
                 timescale: NonZeroU32::new(1).unwrap(),
+                loop_count: crate::types::AnimationLoop::Unspecified,
             }),
             consumed: 0,
             retained_boxes: Vec::new(),
@@ -1065,6 +1818,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 color: valid_plane(),
                 alpha: Some(invalid_plane()),
                 timescale: NonZeroU32::new(1).unwrap(),
+                loop_count: crate::types::AnimationLoop::Unspecified,
             }),
             consumed: 0,
             retained_boxes: Vec::new(),
@@ -1100,7 +1854,19 @@ pub(crate) fn __coverage_reconstruction(
     input: &[u8],
 ) -> CodecResult<Option<crate::Av1ReconstructionTrace>> {
     let extracted = super::samples::validated(input)?;
-    let validated = validate(&extracted)?;
+    // This hook certifies the closed, single-still reconstruction class. A
+    // sequence track is a separate presentation contract even when its first
+    // sample happens to be independently decodable, so keep it as an explicit
+    // capability result instead of claiming the animation is a portable still.
+    if extracted.sequence.is_some() {
+        return Ok(None);
+    }
+    // Match the production still-image route for a primary item: an AVIF may
+    // carry a supported default image alongside an unsupported or malformed
+    // later sequence sample. Calling the full coverage-only validator here
+    // would inspect every movie sample and turn that boundary into an
+    // incidental temporal-reference error instead of returning `None`.
+    let validated = validate_first(&extracted)?;
     let Some(still) = validated.portable_still else {
         return Ok(None);
     };
@@ -1134,6 +1900,7 @@ pub(super) fn __coverage_portable_still() -> PortableStill {
         color_range: true,
         subsampling_x: false,
         subsampling_y: false,
+        frame_id_numbers_present: false,
         planes: std::array::from_fn(|_| block::ReconstructedPlane {
             samples: vec![128; 16],
         }),
@@ -1185,7 +1952,7 @@ mod tests {
 
     #[test]
     fn alpha_fixture_production_validation_retains_complete_plane() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let still = extracted
             .still
@@ -1206,7 +1973,7 @@ mod tests {
 
     #[test]
     fn grid_fixture_production_validation_retains_complete_cells() -> Av1Result<()> {
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/grid.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/grid.avif");
         let extracted = super::super::samples::validated(bytes)?;
         let still = extracted
             .still
@@ -1239,7 +2006,7 @@ mod tests {
     fn primary_item_validation_is_independent_of_sequence_track() -> Av1Result<()> {
         use std::num::NonZeroU32;
 
-        let bytes = include_bytes!("../../../../tests/fixtures/input/images/avif/alpha.avif");
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
         let mut extracted = super::super::samples::validated(bytes)?;
         let still = extracted
             .still
@@ -1255,6 +2022,7 @@ mod tests {
                 }),
             timescale: NonZeroU32::new(1)
                 .ok_or_else(|| malformed("test timescale unexpectedly became zero"))?,
+            loop_count: crate::types::AnimationLoop::Unspecified,
         };
         extracted.still = Some(still);
         extracted.sequence = Some(sequence);

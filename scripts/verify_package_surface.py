@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "tests" / "fixtures" / "package_surface_manifest.json"
-PACKAGE_COMMAND = ["cargo", "package", "--allow-dirty", "--locked", "--list"]
+PACKAGE_COMMAND = ["cargo", "package", "--locked", "--list"]
 TOP_LEVEL_KEYS = {
     "format_version",
     "scope",

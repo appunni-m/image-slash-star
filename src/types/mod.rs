@@ -1039,6 +1039,26 @@ impl ImageInfo {
     pub fn transfer_layout(&self) -> ImageResult<TransferLayout> {
         TransferLayout::from_mode(self.mode, self.width, self.height)
     }
+
+    /// Exact detailed transfer layout for this inspected image.
+    ///
+    /// The descriptor retains the legacy layout and adds the transfer byte
+    /// order and the current one-plane transport description. For `F32` and
+    /// `I32`, source byte order is provenance supplied by the decoder; it is
+    /// not independently validated by this descriptor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] when the byte length overflows
+    /// `usize`.
+    pub fn detailed_transfer_layout(&self) -> ImageResult<DetailedTransferLayout> {
+        DetailedTransferLayout::from_mode(
+            self.mode,
+            self.width,
+            self.height,
+            self.source.byte_order(),
+        )
+    }
 }
 
 /// Pixel coordinate selected as the activation point of a Windows cursor.
@@ -3091,6 +3111,225 @@ impl TransferLayout {
     }
 }
 
+/// Transfer byte order of the bytes described by a detailed layout.
+///
+/// This describes the observable transfer bytes for modes whose scalar byte
+/// order is meaningful. `Little` and `Big` for `F32` and `I32` are source
+/// provenance retained by the decoder; this value does not validate the
+/// source bytes. `L16` and related 16-bit modes are always little-endian, and
+/// native floating-point RGB modes use the target's native order. `Unknown`
+/// means that no source order was retained for a source-order-preserving mode.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum TransferByteOrder {
+    /// Byte order is not applicable to this mode, such as an eight-bit mode.
+    NotApplicable,
+    /// Least-significant byte first.
+    Little,
+    /// Most-significant byte first.
+    Big,
+    /// A source byte order was not retained for a mode where it matters.
+    Unknown,
+}
+
+/// Packing of samples inside a detailed transfer plane.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum TransferPlanePacking {
+    /// Each sample occupies complete bytes in the interleaved plane.
+    ByteAligned,
+    /// `L1` samples are packed most-significant bit first in byte-aligned rows.
+    PackedL1MsbFirst,
+}
+
+/// Layout of one plane in a detailed decoded transfer description.
+///
+/// Fields are private so the crate can extend the description without exposing
+/// a public construction API. The current decoder exposes one interleaved
+/// plane for every mode; RGB channels are not split into separate planes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct TransferPlaneLayout {
+    width: u32,
+    height: u32,
+    offset: usize,
+    row_bytes: usize,
+    total_bytes: usize,
+    alignment: usize,
+    packing: TransferPlanePacking,
+}
+
+impl TransferPlaneLayout {
+    /// Width of this plane in pixels.
+    #[must_use]
+    pub const fn width(&self) -> u32 {
+        self.width
+    }
+
+    /// Height of this plane in pixels.
+    #[must_use]
+    pub const fn height(&self) -> u32 {
+        self.height
+    }
+
+    /// Byte offset of this plane in the complete transfer buffer.
+    #[must_use]
+    pub const fn offset(&self) -> usize {
+        self.offset
+    }
+
+    /// Bytes occupied by one row of this plane.
+    #[must_use]
+    pub const fn row_bytes(&self) -> usize {
+        self.row_bytes
+    }
+
+    /// Exact byte length occupied by this plane.
+    #[must_use]
+    pub const fn total_bytes(&self) -> usize {
+        self.total_bytes
+    }
+
+    /// Required destination alignment in bytes.
+    #[must_use]
+    pub const fn alignment(&self) -> usize {
+        self.alignment
+    }
+
+    /// Sample packing used within this plane.
+    #[must_use]
+    pub const fn packing(&self) -> TransferPlanePacking {
+        self.packing
+    }
+}
+
+/// Detailed transfer layout for decoded sample bytes.
+///
+/// This descriptor preserves the legacy [`TransferLayout`] and adds byte
+/// order plus a bounded list of transport planes. The current representation
+/// always contains one interleaved plane, including for RGB and RGBA modes.
+/// Source byte order is declared provenance for source-order-preserving modes
+/// and is not validated here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DetailedTransferLayout {
+    legacy: TransferLayout,
+    byte_order: TransferByteOrder,
+    planes: Vec<TransferPlaneLayout>,
+}
+
+impl DetailedTransferLayout {
+    fn from_mode(
+        mode: ImageMode,
+        width: u32,
+        height: u32,
+        source_byte_order: Option<SourceByteOrder>,
+    ) -> ImageResult<Self> {
+        let legacy = TransferLayout::from_mode(mode, width, height)?;
+        let byte_order = match mode {
+            ImageMode::L1
+            | ImageMode::P8
+            | ImageMode::L8
+            | ImageMode::La8
+            | ImageMode::Rgb8
+            | ImageMode::Rgba8
+            | ImageMode::Cmyk8 => TransferByteOrder::NotApplicable,
+            ImageMode::L16 | ImageMode::La16 | ImageMode::Rgb16 | ImageMode::Rgba16 => {
+                TransferByteOrder::Little
+            }
+            ImageMode::Rgb32F | ImageMode::Rgba32F => {
+                if cfg!(target_endian = "little") {
+                    TransferByteOrder::Little
+                } else {
+                    TransferByteOrder::Big
+                }
+            }
+            ImageMode::F32 | ImageMode::I32 => match source_byte_order {
+                Some(SourceByteOrder::Little) => TransferByteOrder::Little,
+                Some(SourceByteOrder::Big) => TransferByteOrder::Big,
+                None => TransferByteOrder::Unknown,
+            },
+        };
+        let packing = if mode == ImageMode::L1 {
+            TransferPlanePacking::PackedL1MsbFirst
+        } else {
+            TransferPlanePacking::ByteAligned
+        };
+        let planes = vec![TransferPlaneLayout {
+            width: legacy.width,
+            height: legacy.height,
+            offset: 0,
+            row_bytes: legacy.row_bytes,
+            total_bytes: legacy.total_bytes,
+            alignment: legacy.alignment,
+            packing,
+        }];
+        Ok(Self {
+            legacy,
+            byte_order,
+            planes,
+        })
+    }
+
+    /// Return the legacy layout represented by this detailed descriptor.
+    #[must_use]
+    pub const fn legacy_layout(&self) -> TransferLayout {
+        self.legacy
+    }
+
+    /// Return the canvas geometry as `(width, height)` in pixels.
+    #[must_use]
+    pub const fn geometry(&self) -> (u32, u32) {
+        (self.legacy.width, self.legacy.height)
+    }
+
+    /// Return the canvas width in pixels.
+    #[must_use]
+    pub const fn width(&self) -> u32 {
+        self.legacy.width
+    }
+
+    /// Return the canvas height in pixels.
+    #[must_use]
+    pub const fn height(&self) -> u32 {
+        self.legacy.height
+    }
+
+    /// Return the observable decoded mode.
+    #[must_use]
+    pub const fn mode(&self) -> ImageMode {
+        self.legacy.mode
+    }
+
+    /// Return the bytes occupied by one row of the interleaved transfer.
+    #[must_use]
+    pub const fn row_bytes(&self) -> usize {
+        self.legacy.row_bytes
+    }
+
+    /// Return the exact total transfer-byte length.
+    #[must_use]
+    pub const fn total_bytes(&self) -> usize {
+        self.legacy.total_bytes
+    }
+
+    /// Return the required destination alignment in bytes.
+    #[must_use]
+    pub const fn alignment(&self) -> usize {
+        self.legacy.alignment
+    }
+
+    /// Return the byte order represented by this descriptor.
+    #[must_use]
+    pub const fn byte_order(&self) -> TransferByteOrder {
+        self.byte_order
+    }
+
+    /// Return the detailed transfer planes in their buffer order.
+    #[must_use]
+    pub fn planes(&self) -> &[TransferPlaneLayout] {
+        &self.planes
+    }
+}
+
 /// RGB palette and optional per-entry alpha values for indexed images.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ImagePalette {
@@ -3321,6 +3560,26 @@ impl DecodedImage {
     /// `usize`.
     pub fn transfer_layout(&self) -> ImageResult<TransferLayout> {
         TransferLayout::from_mode(self.mode, self.width, self.height)
+    }
+
+    /// Exact detailed transfer layout for these decoded sample bytes.
+    ///
+    /// The descriptor retains the legacy layout and adds the transfer byte
+    /// order and the current one-plane transport description. For `F32` and
+    /// `I32`, source byte order is provenance supplied by the decoder; it is
+    /// not independently validated by this descriptor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ImageError::Dimensions`] when the byte length overflows
+    /// `usize`.
+    pub fn detailed_transfer_layout(&self) -> ImageResult<DetailedTransferLayout> {
+        DetailedTransferLayout::from_mode(
+            self.mode,
+            self.width,
+            self.height,
+            self.source.byte_order(),
+        )
     }
 
     /// Verify dimensions, byte layout, mode, and palette invariants.

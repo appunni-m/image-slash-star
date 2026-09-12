@@ -27,7 +27,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `cf965d29beff5aceaf8517d8ea0203164358359b754b71a0a09f82887d8e5793`; generated matrix SHA-256: `54671e48b30ab905003be6db3684c912a76ece15bb007b7fab46bf136cb024ae`.
+- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `002f1a6293a0913d6a010f325db64a82258d5b5f7ae8e778e37b008af22ecc71`.
 <!-- current-claim-ledger:end -->
 Historical run
 records elsewhere in this document retain their original revision scope.
@@ -451,6 +451,7 @@ translation cannot be bypassed.
 | `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided destination after rejecting short or oversized buffers without partial writes |
 | `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from inspection alone; zero-copy destination decode remains future work |
 | `TransferLayout` | Minimal decoded byte contract: canvas, mode, row bytes, total bytes, packed-row status, and 1-byte alignment, produced by the same arithmetic as `decode_into` |
+| `ImageInfo::detailed_transfer_layout`, `DecodedImage::detailed_transfer_layout` | Retain the legacy layout and add transfer byte order plus the current one-plane transport description |
 | `DecodedImage::try_new`, `try_with_mode`, `try_with_palette` | Validate dimensions, exact mode/color state, pixel length, and indexed palette state while reusing owned pixel buffers; unchecked constructors remain available for staged assembly |
 | `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Validate and encode one image to an explicit target |
 | `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive complete-result cap and optional cooperative checkpoint budget, returning typed `EncodedOutputBytes` or `EncodeWorkUnits` failures |
@@ -1708,6 +1709,26 @@ the first ignored byte's offset. Containers without an unambiguous extent
 | `L16`, `La16`, `Rgb16`, `Rgba16` | Interleaved little-endian 16-bit channels |
 | `F32`, `I32` | Exact Pillow-observable 32-bit luminance bytes. These are byte-preserving modes, not portable typed-scalar views: TIFF `I`/`F` can retain the file byte order. |
 | `Rgb32F`, `Rgba32F` | Native-endian 32-bit floating-point RGB(A) samples |
+
+### Detailed transfer descriptors
+
+`ImageInfo::detailed_transfer_layout()` and
+`DecodedImage::detailed_transfer_layout()` retain the corresponding
+`TransferLayout` and expose a transfer byte order plus the transport planes.
+The current decoded representation has exactly one interleaved plane for
+every mode, with offset zero, the legacy row and total byte counts, and
+one-byte alignment. RGB and RGBA channels remain interleaved rather than
+becoming separate planes.
+
+`TransferPlanePacking::PackedL1MsbFirst` identifies the `L1` bit order and
+row-byte padding; every other current mode uses
+`TransferPlanePacking::ByteAligned`. `TransferByteOrder::NotApplicable`
+covers one-byte and packed modes. `L16`, `La16`, `Rgb16`, and `Rgba16` report
+`Little`; `Rgb32F` and `Rgba32F` report the target's native order. `F32` and
+`I32` report retained TIFF source order when available, or `Unknown` when the
+decoder has no source-order provenance. That provenance is declared by the
+decoder and is not validated by the descriptor. The detailed API currently
+does not assign plane roles or expose a planar YUV representation.
 
 Code that needs numeric TIFF `I32`/`F32` values must read
 `DecodedImage::source.byte_order()` before parsing the bytes. This distinction

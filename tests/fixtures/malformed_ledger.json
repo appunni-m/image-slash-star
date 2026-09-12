@@ -701,7 +701,7 @@
             "rust_message": "non_empty"
           }
         },
-        "description": "One-byte coded-tile mutation retaining EOB-bin zero before selecting unsupported EOB-base zero",
+        "description": "One-byte coded-tile mutation retaining EOB-bin zero before an invalid EOB-base termination; independent dav1d rejects the coded tile",
         "inspect_status": "ok",
         "origins": [
           "pillow_fixture",
@@ -734,7 +734,7 @@
             "rust_message": "non_empty"
           }
         },
-        "description": "One-byte AV1 mutation preserving the Slice 35 prefix before selecting unsupported EOB-bin two",
+        "description": "One-byte AV1 mutation preserving the Slice 35 prefix before an invalid EOB-bin termination; independent dav1d rejects the coded tile",
         "inspect_status": "ok",
         "origins": [
           "pillow_fixture",

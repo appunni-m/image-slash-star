@@ -1,13 +1,24 @@
 //! Complete AV1 uncompressed-frame-header syntax and reference state.
 
-use std::ops::Range;
+use std::{ops::Range, sync::Arc};
 
 use super::bit_reader::{BitReader, SegmentedData};
 use super::entropy;
+use super::geometry::PixelLayout;
+use super::motion::{
+    GlobalMotion, GlobalMotionType, ProjectedTemporalField, ReferenceFrame, ReferencePair,
+    RetainedTemporalSample, ScaleFactors, TemporalMotionField, load_projected_temporal_field,
+    relative_distance,
+};
+use super::resize;
+use super::restoration;
+use super::sample_depth::SampleDepth;
 use super::sequence::SequenceHeader;
 #[cfg(coverage)]
 use super::sequence::{DecoderParameters, OperatingPoint, Timing};
+use super::surface::{FramePlane, FrameSurface};
 use super::{Av1Result, malformed};
+use crate::codecs::CodecError;
 #[cfg(coverage)]
 use crate::codecs::avif::samples::ByteSpan;
 
@@ -43,6 +54,7 @@ impl FrameType {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Segment {
+    features: u8,
     delta_q: i32,
     delta_lf_y_vertical: i32,
     delta_lf_y_horizontal: i32,
@@ -56,6 +68,7 @@ struct Segment {
 impl Segment {
     const fn empty() -> Self {
         Self {
+            features: 0,
             delta_q: 0,
             delta_lf_y_vertical: 0,
             delta_lf_y_horizontal: 0,
@@ -75,6 +88,8 @@ struct Segmentation {
     temporal: bool,
     update_data: bool,
     segments: [Segment; 8],
+    preskip: bool,
+    last_active_id: i32,
 }
 
 impl Segmentation {
@@ -85,9 +100,20 @@ impl Segmentation {
             temporal: false,
             update_data: false,
             segments: [Segment::empty(); 8],
+            preskip: false,
+            last_active_id: 0,
         }
     }
 }
+
+const SEG_ALT_Q: u8 = 1 << 0;
+const SEG_ALT_LF_Y_VERTICAL: u8 = 1 << 1;
+const SEG_ALT_LF_Y_HORIZONTAL: u8 = 1 << 2;
+const SEG_ALT_LF_U: u8 = 1 << 3;
+const SEG_ALT_LF_V: u8 = 1 << 4;
+const SEG_REFERENCE: u8 = 1 << 5;
+const SEG_SKIP: u8 = 1 << 6;
+const SEG_GLOBAL_MOTION: u8 = 1 << 7;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct LoopFilterDeltas {
@@ -129,48 +155,26 @@ impl LoopFilter {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum GlobalMotionType {
-    Identity,
-    Translation,
-    RotZoom,
-    Affine,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-struct GlobalMotion {
-    kind: GlobalMotionType,
-    matrix: [i32; 6],
-}
-
-impl GlobalMotion {
-    const fn identity() -> Self {
-        Self {
-            kind: GlobalMotionType::Identity,
-            matrix: [0, 0, 1 << 16, 0, 0, 1 << 16],
-        }
-    }
-}
-
 #[derive(Clone, PartialEq, Eq)]
-struct FilmGrain {
-    seed: u32,
-    update: bool,
-    reference_slot: Option<usize>,
-    y_points: Vec<[u32; 2]>,
-    chroma_scaling_from_luma: bool,
-    uv_points: [Vec<[u32; 2]>; 2],
-    scaling_shift: u32,
-    ar_coefficient_lag: u32,
-    ar_coefficients_y: Vec<i32>,
-    ar_coefficients_uv: [Vec<i32>; 2],
-    ar_coefficient_shift: u32,
-    grain_scale_shift: u32,
-    uv_multiplier: [i32; 2],
-    uv_luma_multiplier: [i32; 2],
-    uv_offset: [i32; 2],
-    overlap: bool,
-    clip_to_restricted_range: bool,
+pub(super) struct FilmGrain {
+    pub(super) seed: u32,
+    pub(super) update: bool,
+    pub(super) reference_slot: Option<usize>,
+    pub(super) y_points: Vec<[u32; 2]>,
+    pub(super) chroma_scaling_from_luma: bool,
+    pub(super) uv_points: [Vec<[u32; 2]>; 2],
+    pub(super) scaling_shift: u32,
+    pub(super) ar_coefficient_lag: u32,
+    pub(super) ar_coefficients_y: Vec<i32>,
+    pub(super) ar_coefficients_uv: [Vec<i32>; 2],
+    pub(super) ar_coefficient_shift: u32,
+    pub(super) grain_scale_shift: u32,
+    pub(super) uv_multiplier: [i32; 2],
+    pub(super) uv_luma_multiplier: [i32; 2],
+    pub(super) uv_offset: [i32; 2],
+    pub(super) overlap: bool,
+    pub(super) clip_to_restricted_range: bool,
+    pub(super) matrix_coefficients: u32,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -351,34 +355,521 @@ impl FrameHeader {
     }
 }
 
-pub(super) struct FrameState {
-    sequence: Option<SequenceHeader>,
-    references: [Option<FrameHeader>; REFERENCE_SLOTS],
-    pending: Option<FrameHeader>,
+impl FrameSurface {
+    fn validate_color_leaf(
+        leaf: &super::block::FirstLeaf,
+        header: &FrameHeader,
+        sequence: &SequenceHeader,
+    ) -> Av1Result<(SampleDepth, PixelLayout, [usize; 3])> {
+        let depth = SampleDepth::new(sequence.bit_depth)
+            .ok_or_else(|| malformed("reference surface sample depth is unsupported"))?;
+        let layout = PixelLayout::from_sequence(
+            sequence.monochrome,
+            sequence.subsampling_x,
+            sequence.subsampling_y,
+        )
+        .ok_or_else(|| malformed("reference surface layout is unsupported"))?;
+        if matches!(layout, PixelLayout::Monochrome)
+            || leaf.width != header.upscaled_width
+            || leaf.height != header.frame_height
+            || header.render_width == 0
+            || header.render_height == 0
+        {
+            return Err(malformed(
+                "decoded color surface disagrees with its frame header",
+            ));
+        }
+        let mut strides = [0_usize; 3];
+        for (plane, source) in leaf.planes.iter().enumerate() {
+            let (width, height) =
+                Self::plane_dimensions(layout, header.upscaled_width, header.frame_height, plane)
+                    .ok_or_else(|| malformed("color surface unexpectedly omits chroma"))?;
+            strides[plane] = FramePlane::validate_reconstructed(source, width, height, depth)?;
+        }
+        Ok((depth, layout, strides))
+    }
+
+    fn from_validated_color_leaf(
+        leaf: super::block::FirstLeaf,
+        header: &FrameHeader,
+        depth: SampleDepth,
+        layout: PixelLayout,
+        strides: [usize; 3],
+        motion: TemporalMotionField,
+    ) -> Self {
+        let chroma_width = if matches!(layout, PixelLayout::I420 | PixelLayout::I422) {
+            header.upscaled_width.div_ceil(2)
+        } else {
+            header.upscaled_width
+        };
+        let chroma_height = if matches!(layout, PixelLayout::I420) {
+            header.frame_height.div_ceil(2)
+        } else {
+            header.frame_height
+        };
+        #[cfg(coverage)]
+        let entropy_operations = leaf.entropy_operations;
+        let [y, u, v] = leaf.planes;
+        let [y_stride, u_stride, v_stride] = strides;
+        let planes = [
+            Some(FramePlane::from_validated(
+                y,
+                header.upscaled_width,
+                header.frame_height,
+                y_stride,
+            )),
+            Some(FramePlane::from_validated(
+                u,
+                chroma_width,
+                chroma_height,
+                u_stride,
+            )),
+            Some(FramePlane::from_validated(
+                v,
+                chroma_width,
+                chroma_height,
+                v_stride,
+            )),
+        ];
+        Self {
+            depth,
+            layout,
+            coded_width: header.frame_width,
+            upscaled_width: header.upscaled_width,
+            superres_enabled: header.superres_enabled,
+            frame_height: header.frame_height,
+            render_width: header.render_width,
+            render_height: header.render_height,
+            planes,
+            motion,
+            #[cfg(coverage)]
+            entropy_operations,
+        }
+    }
+
+    fn validate_monochrome_plane(
+        plane: &super::block::ReconstructedPlane,
+        header: &FrameHeader,
+        sequence: &SequenceHeader,
+    ) -> Av1Result<(SampleDepth, usize)> {
+        let depth = SampleDepth::new(sequence.bit_depth)
+            .ok_or_else(|| malformed("monochrome reference depth is unsupported"))?;
+        if !sequence.monochrome || header.render_width == 0 || header.render_height == 0 {
+            return Err(malformed(
+                "decoded monochrome surface disagrees with its frame header",
+            ));
+        }
+        let stride = FramePlane::validate_reconstructed(
+            plane,
+            header.upscaled_width,
+            header.frame_height,
+            depth,
+        )?;
+        Ok((depth, stride))
+    }
+
+    fn from_validated_monochrome_plane(
+        plane: super::block::ReconstructedPlane,
+        header: &FrameHeader,
+        depth: SampleDepth,
+        stride: usize,
+        motion: TemporalMotionField,
+    ) -> Self {
+        Self {
+            depth,
+            layout: PixelLayout::Monochrome,
+            coded_width: header.frame_width,
+            upscaled_width: header.upscaled_width,
+            superres_enabled: header.superres_enabled,
+            frame_height: header.frame_height,
+            render_width: header.render_width,
+            render_height: header.render_height,
+            planes: [
+                Some(FramePlane::from_validated(
+                    plane,
+                    header.upscaled_width,
+                    header.frame_height,
+                    stride,
+                )),
+                None,
+                None,
+            ],
+            motion,
+            #[cfg(coverage)]
+            entropy_operations: Vec::new(),
+        }
+    }
+
+    fn materialize(&self) -> Av1Result<SelectedDisplay> {
+        self.validate()?;
+        if matches!(self.layout, PixelLayout::Monochrome) {
+            return Ok(SelectedDisplay {
+                color_leaf: None,
+                monochrome_plane: self.planes[0]
+                    .as_ref()
+                    .map(FramePlane::reconstructed_copy)
+                    .transpose()?,
+                dimensions: Some((self.upscaled_width, self.frame_height)),
+                geometry: Some(DisplayGeometryProof {
+                    superres_enabled: self.superres_enabled,
+                    render_width: self.render_width,
+                    render_height: self.render_height,
+                }),
+            });
+        }
+        let planes = [
+            self.planes[0]
+                .as_ref()
+                .ok_or_else(|| malformed("display surface omits luma"))?
+                .reconstructed_copy()?,
+            self.planes[1]
+                .as_ref()
+                .ok_or_else(|| malformed("display surface omits first chroma"))?
+                .reconstructed_copy()?,
+            self.planes[2]
+                .as_ref()
+                .ok_or_else(|| malformed("display surface omits second chroma"))?
+                .reconstructed_copy()?,
+        ];
+        Ok(SelectedDisplay {
+            color_leaf: Some(super::block::FirstLeaf {
+                width: self.upscaled_width,
+                height: self.frame_height,
+                block_skipped: false,
+                planes,
+                luma_predictor: super::block::LumaPredictor::Dc,
+                chroma_predictor: None,
+                luma_context: 0x40,
+                chroma_contexts: [0x40; 2],
+                chroma_right_contexts: [[0x40; 16]; 2],
+                chroma_bottom_contexts: [[0x40; 16]; 2],
+                tx_context_width: 0,
+                tx_context_height: 0,
+                luma_transform_split: false,
+                luma_right_contexts: [0x40; 16],
+                luma_bottom_contexts: [0x40; 16],
+                wide_coefficient_contexts: None,
+                palette_cache: Default::default(),
+                #[cfg(coverage)]
+                entropy_operations: self.entropy_operations.clone(),
+            }),
+            monochrome_plane: None,
+            dimensions: Some((self.upscaled_width, self.frame_height)),
+            geometry: Some(DisplayGeometryProof {
+                superres_enabled: self.superres_enabled,
+                render_width: self.render_width,
+                render_height: self.render_height,
+            }),
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct DisplayGeometryProof {
+    pub(super) superres_enabled: bool,
+    pub(super) render_width: u32,
+    pub(super) render_height: u32,
+}
+
+pub(super) struct SelectedDisplay {
+    pub(super) color_leaf: Option<super::block::FirstLeaf>,
+    pub(super) monochrome_plane: Option<super::block::ReconstructedPlane>,
+    pub(super) dimensions: Option<(u32, u32)>,
+    pub(super) geometry: Option<DisplayGeometryProof>,
+}
+
+impl SelectedDisplay {
+    const fn unavailable() -> Self {
+        Self {
+            color_leaf: None,
+            monochrome_plane: None,
+            dimensions: None,
+            geometry: None,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct FrameCompletion {
+    surface: Option<Arc<FrameSurface>>,
+    temporal_unit: u64,
+    temporal_id: u32,
+    spatial_id: u32,
+    film_grain: Option<FilmGrain>,
+    show_existing: bool,
+    diagnostic_leaf: Option<super::block::FirstLeaf>,
+    diagnostic_frame_dimensions: Option<(u32, u32)>,
+}
+
+#[derive(Clone)]
+struct ReferenceDecodeState {
+    cdfs: entropy::FrameCdfs,
+    segmentation_map: Option<entropy::SegmentMap>,
+}
+
+#[derive(Clone)]
+struct ReferenceState {
+    header: FrameHeader,
+    decode: Option<Arc<ReferenceDecodeState>>,
+    surface: Option<Arc<FrameSurface>>,
+}
+
+fn new_temporal_motion_field(
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    references: &[Option<ReferenceState>; REFERENCE_SLOTS],
+) -> Av1Result<TemporalMotionField> {
+    let mut reference_order_hints = [0_u32; 7];
+    if header.frame_type.is_inter() {
+        for (logical, output) in reference_order_hints.iter_mut().enumerate() {
+            let slot = header.reference_indices[logical];
+            let reference = references
+                .get(slot)
+                .and_then(Option::as_ref)
+                .ok_or_else(|| malformed("decoded inter frame references an empty slot"))?;
+            *output = reference.header.order_hint;
+        }
+    }
+    TemporalMotionField::new(
+        header.frame_width,
+        header.frame_height,
+        header.order_hint,
+        sequence.order_hint_bits,
+        reference_order_hints,
+    )
+}
+
+fn populate_temporal_motion_field(
+    field: &mut TemporalMotionField,
+    pending_samples: &[RetainedTemporalSample],
+    current_samples: &[RetainedTemporalSample],
+    inter_frame: bool,
+) -> Av1Result<()> {
+    if !inter_frame && (!pending_samples.is_empty() || !current_samples.is_empty()) {
+        return Err(malformed("intra frame carries retained temporal MVs"));
+    }
+    for sample in pending_samples.iter().chain(current_samples) {
+        if field.get(sample.x8, sample.y8).is_some() {
+            return Err(malformed("duplicate retained temporal-MV sample"));
+        }
+        field.set(sample.x8, sample.y8, Some(sample.entry))?;
+    }
+    Ok(())
+}
+
+fn inter_frame_context<'a>(
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    references: &'a [Option<ReferenceState>; REFERENCE_SLOTS],
+    projected_temporal: Option<&'a ProjectedTemporalField>,
+) -> Av1Result<entropy::InterFrameContext<'a>> {
+    if !header.frame_type.is_inter() {
+        return Err(malformed("intra frame requested inter reference context"));
+    }
+    let mut reference_order_hints = [0_u32; 7];
+    let mut sign_bias = [false; 7];
+    let mut inter_references = [None; 7];
+    for logical in super::motion::ReferenceFrame::ALL {
+        let index = logical.index();
+        let slot = header
+            .reference_indices
+            .get(index)
+            .copied()
+            .ok_or_else(|| malformed("inter reference index exceeds seven"))?;
+        let reference = references
+            .get(slot)
+            .and_then(Option::as_ref)
+            .ok_or_else(|| malformed("decoded inter frame references an empty slot"))?;
+        let surface = reference
+            .surface
+            .as_deref()
+            .ok_or_else(|| malformed("decoded inter frame reference has no surface"))?;
+        surface.validate()?;
+        let order_hint = reference.header.order_hint;
+        reference_order_hints[index] = order_hint;
+        sign_bias[index] =
+            relative_distance(sequence.order_hint_bits, order_hint, header.order_hint) > 0;
+        let scale = ScaleFactors::new(
+            header.frame_width,
+            header.frame_height,
+            surface.upscaled_width,
+            surface.frame_height,
+        )?;
+        inter_references[index] = Some(entropy::InterReference {
+            logical,
+            surface,
+            scale,
+            order_hint,
+            global_motion: header.global_motion[index],
+            sign_bias: sign_bias[index],
+            temporal: Some(&surface.motion),
+        });
+    }
+    let references: [Av1Result<entropy::InterReference<'a>>; 7] = std::array::from_fn(|index| {
+        // Every entry is populated by the checked loop above.  The explicit
+        // match keeps this conversion non-panicking if the logical reference
+        // table is ever expanded independently of `ReferenceFrame::ALL`.
+        inter_references[index].ok_or_else(|| malformed("inter reference table is incomplete"))
+    });
+    let references = references.into_iter().collect::<Av1Result<Vec<_>>>()?;
+    let references: [entropy::InterReference<'a>; 7] = references
+        .try_into()
+        .map_err(|_| malformed("inter reference table has invalid length"))?;
+    let skip_mode_references = header
+        .skip_mode_references
+        .map(|indices| {
+            let first = ReferenceFrame::from_index(indices[0])
+                .ok_or_else(|| malformed("skip mode first reference exceeds seven"))?;
+            let second = ReferenceFrame::from_index(indices[1])
+                .ok_or_else(|| malformed("skip mode second reference exceeds seven"))?;
+            if first == second {
+                return Err(malformed("skip mode references must be distinct"));
+            }
+            Ok(ReferencePair::compound(first, second))
+        })
+        .transpose()?;
+    if header.skip_mode_enabled && skip_mode_references.is_none() {
+        return Err(malformed("skip mode is enabled without derived references"));
+    }
+    Ok(entropy::InterFrameContext {
+        references,
+        skip_mode_references,
+        projected_temporal,
+        current_order_hint: header.order_hint,
+        order_hint_bits: sequence.order_hint_bits,
+        reference_order_hints,
+        global_motion: header.global_motion,
+        sign_bias,
+        force_integer_mv: header.force_integer_mv,
+        high_precision_mv: header.allow_high_precision_mv,
+        use_ref_frame_mvs: header.use_ref_frame_mvs,
+        interpolation_filter: header.interpolation_filter,
+        dual_filter: sequence.enable_dual_filter,
+        reference_mode_select: header.reference_mode_select,
+        motion_mode_switchable: header.motion_mode_switchable,
+        allow_warped_motion: header.allow_warped_motion,
+        enable_interintra_compound: sequence.enable_interintra_compound,
+        enable_masked_compound: sequence.enable_masked_compound,
+        enable_jnt_comp: sequence.enable_jnt_comp,
+    })
+}
+
+fn projected_temporal_field(
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    references: &[Option<ReferenceState>; REFERENCE_SLOTS],
+) -> Av1Result<Option<ProjectedTemporalField>> {
+    if !header.use_ref_frame_mvs {
+        return Ok(None);
+    }
+    let mut retained = [None; 7];
+    let mut reference_order_hints = [0_u32; 7];
+    for logical in ReferenceFrame::ALL {
+        let index = logical.index();
+        let slot = header
+            .reference_indices
+            .get(index)
+            .copied()
+            .ok_or_else(|| malformed("temporal reference index exceeds seven"))?;
+        let reference = references
+            .get(slot)
+            .and_then(Option::as_ref)
+            .ok_or_else(|| malformed("temporal reference slot is empty"))?;
+        let surface = reference
+            .surface
+            .as_deref()
+            .ok_or_else(|| malformed("temporal reference has no surface"))?;
+        surface.validate()?;
+        retained[index] = Some(&surface.motion);
+        reference_order_hints[index] = reference.header.order_hint;
+    }
+    let width8 = header.frame_width.div_ceil(8);
+    let height8 = header.frame_height.div_ceil(8);
+    Ok(Some(load_projected_temporal_field(
+        super::motion::TemporalProjectionRequest {
+            current_width: header.frame_width,
+            current_height: header.frame_height,
+            current_order_hint: header.order_hint,
+            order_hint_bits: sequence.order_hint_bits,
+            reference_order_hints,
+            col_start8: 0,
+            col_end8: width8,
+            row_start8: 0,
+            row_end8: height8,
+        },
+        retained,
+    )?))
+}
+
+fn invalidate_reference_slots(
+    references: &mut [Option<ReferenceState>; REFERENCE_SLOTS],
+    frame_id: u32,
+    delta_frame_id_bits: u32,
+    frame_id_bits: u32,
+) {
+    let difference_range = 1_u32 << delta_frame_id_bits;
+    let frame_id_range = 1_u32 << frame_id_bits;
+    for reference in references {
+        let Some(retained) = reference else {
+            continue;
+        };
+        let invalid = if frame_id >= difference_range {
+            retained.header.frame_id > frame_id
+                || retained.header.frame_id < frame_id.saturating_sub(difference_range)
+        } else {
+            retained.header.frame_id > frame_id
+                && retained.header.frame_id
+                    < frame_id_range
+                        .saturating_add(frame_id)
+                        .saturating_sub(difference_range)
+        };
+        if invalid {
+            *reference = None;
+        }
+    }
+}
+
+struct PendingFrame {
+    header: FrameHeader,
+    obu_extension: bool,
+    staged_references: [Option<ReferenceState>; REFERENCE_SLOTS],
+    staged_current_frame_id: Option<u32>,
     next_tile: u32,
-    current_frame_id: Option<u32>,
-    frame_dimensions: Option<(u32, u32)>,
-    multi_tile: bool,
+    input_cdfs: Option<entropy::FrameCdfs>,
+    selected_cdfs: Option<entropy::FrameCdfs>,
+    previous_segment_map: Option<entropy::SegmentMap>,
+    segment_map: Option<entropy::SegmentMap>,
+    decode_complete: bool,
     first_leaf: Option<super::block::FirstLeaf>,
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
+    temporal_samples: Vec<RetainedTemporalSample>,
+    complete_monochrome_tiles: Vec<ReconstructedMonochromeTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+}
+
+pub(super) struct FrameState {
+    sequence: Option<SequenceHeader>,
+    operating_point_idc: u32,
+    has_nonzero_operating_point_idc: bool,
+    references: [Option<ReferenceState>; REFERENCE_SLOTS],
+    pending: Option<PendingFrame>,
+    current_frame_id: Option<u32>,
+    temporal_unit: u64,
+    completions: Vec<FrameCompletion>,
 }
 
 impl FrameState {
     pub(super) fn new() -> Self {
         Self {
             sequence: None,
+            operating_point_idc: 0,
+            has_nonzero_operating_point_idc: false,
             references: std::array::from_fn(|_| None),
             pending: None,
-            next_tile: 0,
             current_frame_id: None,
-            frame_dimensions: None,
-            multi_tile: false,
-            first_leaf: None,
-            complete_color_leaf: None,
-            complete_color_tiles: Vec::new(),
-            complete_monochrome_plane: None,
+            temporal_unit: 0,
+            completions: Vec::new(),
         }
     }
 
@@ -390,7 +881,59 @@ impl FrameState {
         {
             return Err(malformed("frame syntax validation failed"));
         }
+        self.operating_point_idc = sequence
+            .operating_points
+            .first()
+            .map_or(0, |operating_point| operating_point.idc);
+        self.has_nonzero_operating_point_idc = sequence
+            .operating_points
+            .iter()
+            .any(|operating_point| operating_point.idc != 0);
         self.sequence = Some(sequence);
+        Ok(())
+    }
+
+    /// Apply the selected operating point to one layer-specific OBU after its
+    /// header and payload bounds have already been validated.
+    pub(super) fn admits_layer_specific_obu(
+        &self,
+        has_extension: bool,
+        temporal_id: u32,
+        spatial_id: u32,
+    ) -> Av1Result<bool> {
+        if self.sequence.is_none() {
+            return Err(malformed(
+                "layer-specific OBU appears before a sequence header",
+            ));
+        }
+        if self.has_nonzero_operating_point_idc != has_extension {
+            return Err(malformed(
+                "layer OBU extension disagrees with sequence operating points",
+            ));
+        }
+        if self.operating_point_idc == 0 {
+            return Ok(true);
+        }
+        let temporal_member = self
+            .operating_point_idc
+            .checked_shr(temporal_id)
+            .is_some_and(|mask| mask & 1 != 0);
+        let spatial_bit = spatial_id.saturating_add(8);
+        let spatial_member = self
+            .operating_point_idc
+            .checked_shr(spatial_bit)
+            .is_some_and(|mask| mask & 1 != 0);
+        Ok(temporal_member && spatial_member)
+    }
+
+    fn advance_temporal_unit(&mut self, stage: &'static str) -> Av1Result<()> {
+        if self.pending.is_some() {
+            return Err(malformed(stage));
+        }
+        self.temporal_unit = self
+            .temporal_unit
+            .checked_add(1)
+            .ok_or_else(|| malformed("temporal-unit counter overflows"))?;
         Ok(())
     }
 
@@ -403,6 +946,22 @@ impl FrameState {
         Ok(())
     }
 
+    /// Finish the one temporal unit carried by an AVIF sample. A temporal
+    /// delimiter inside that sample validates placement but does not create a
+    /// second boundary.
+    pub(super) fn sample_flush(&mut self) -> Av1Result<u64> {
+        let completed_temporal_unit = self.temporal_unit;
+        self.advance_temporal_unit("AVIF sample ends during a pending frame")?;
+        if self.completions.len() > 1
+            && let Some(selected_index) = self.selected_completion_index()
+        {
+            let selected = self.completions.swap_remove(selected_index);
+            self.completions.clear();
+            self.completions.push(selected);
+        }
+        Ok(completed_temporal_unit)
+    }
+
     pub(super) fn finish(&self) -> Av1Result<&SequenceHeader> {
         if self.pending.is_some() {
             return Err(malformed("frame syntax validation failed"));
@@ -413,24 +972,156 @@ impl FrameState {
         Ok(sequence)
     }
 
-    pub(super) fn first_leaf(&self) -> Option<&super::block::FirstLeaf> {
-        self.first_leaf.as_ref()
+    fn selected_completion_index(&self) -> Option<usize> {
+        self.completions
+            .iter()
+            .enumerate()
+            .max_by_key(|(index, completion)| {
+                (
+                    completion.temporal_unit,
+                    completion.spatial_id,
+                    completion.temporal_id,
+                    *index,
+                )
+            })
+            .map(|(index, _)| index)
     }
 
-    pub(super) fn complete_color_leaf(&self) -> Option<&super::block::FirstLeaf> {
-        self.complete_color_leaf.as_ref()
+    fn selected_completion(&self) -> Option<&FrameCompletion> {
+        self.selected_completion_index()
+            .and_then(|index| self.completions.get(index))
     }
 
-    pub(super) const fn frame_dimensions(&self) -> Option<(u32, u32)> {
-        self.frame_dimensions
+    #[allow(
+        dead_code,
+        reason = "compatibility wrapper for token-aware display materialization"
+    )]
+    pub(super) fn selected_display(&self) -> Av1Result<SelectedDisplay> {
+        self.selected_display_with_token(None)
     }
 
-    pub(super) const fn has_multiple_tiles(&self) -> bool {
-        self.multi_tile
+    pub(super) fn selected_display_with_token(
+        &self,
+        token: Option<&crate::CancellationToken>,
+    ) -> Av1Result<SelectedDisplay> {
+        let Some(completion) = self.selected_completion() else {
+            return Ok(SelectedDisplay::unavailable());
+        };
+        self.materialize_completion_with_token(completion, token)
     }
 
-    pub(super) fn complete_monochrome_plane(&self) -> Option<&super::block::ReconstructedPlane> {
-        self.complete_monochrome_plane.as_ref()
+    /// Materialize only the completion produced by one AVIF sample.
+    ///
+    /// A frame state can retain an earlier shown completion while a later
+    /// sample carries only hidden reference state. Sequence presentation must
+    /// not mistake that retained completion for a newly displayed frame, so
+    /// callers identify the temporal unit returned by `sample_flush`.
+    pub(super) fn selected_display_for_temporal_unit_with_token(
+        &self,
+        temporal_unit: u64,
+        token: Option<&crate::CancellationToken>,
+    ) -> Av1Result<Option<SelectedDisplay>> {
+        let Some(completion) = self
+            .completions
+            .iter()
+            .find(|completion| completion.temporal_unit == temporal_unit)
+        else {
+            return Ok(None);
+        };
+        self.materialize_completion_with_token(completion, token)
+            .map(Some)
+    }
+
+    fn materialize_completion_with_token(
+        &self,
+        completion: &FrameCompletion,
+        token: Option<&crate::CancellationToken>,
+    ) -> Av1Result<SelectedDisplay> {
+        crate::codecs::error::check_cancelled(token)?;
+        if completion.show_existing && completion.diagnostic_leaf.is_some() {
+            return Err(malformed(
+                "show-existing completion contains diagnostic reconstruction",
+            ));
+        }
+        let mut display = if let Some(surface) = completion.surface.as_deref() {
+            surface.materialize()
+        } else {
+            Ok(SelectedDisplay {
+                color_leaf: completion.diagnostic_leaf.clone(),
+                monochrome_plane: None,
+                dimensions: completion.diagnostic_frame_dimensions,
+                geometry: None,
+            })
+        }?;
+        let Some(grain) = completion.film_grain.as_ref() else {
+            return Ok(display);
+        };
+        let Some(surface) = completion.surface.as_deref() else {
+            return Ok(SelectedDisplay::unavailable());
+        };
+        if surface.layout == PixelLayout::Monochrome {
+            if !matches!(surface.depth.bits(), 8 | 10 | 12)
+                || surface.render_width != surface.upscaled_width
+                || surface.render_height != surface.frame_height
+            {
+                return Ok(SelectedDisplay::unavailable());
+            }
+            let Some(plane) = display.monochrome_plane.take() else {
+                return Ok(SelectedDisplay::unavailable());
+            };
+            display.monochrome_plane = Some(super::film_grain::apply_monochrome(
+                plane,
+                surface.upscaled_width,
+                surface.frame_height,
+                surface.depth.bits(),
+                grain,
+                token,
+            )?);
+            return Ok(display);
+        }
+        let i444_film_grain_dimensions_supported = if surface.superres_enabled {
+            // Super-resolution I444 keeps the legacy display whitelist. The
+            // syntax marker is carried by the retained surface because width
+            // equality is allowed after AV1's minimum coded-width clamp.
+            entropy::bounded_i444_film_grain_dimensions(
+                surface.upscaled_width,
+                surface.frame_height,
+            )
+        } else {
+            super::film_grain::bounded_fullres_i444_film_grain_dimensions(
+                surface.upscaled_width,
+                surface.frame_height,
+            )
+        };
+        if !matches!(surface.depth.bits(), 8 | 10 | 12)
+            || !matches!(
+                surface.layout,
+                PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+            )
+            || surface.render_width != surface.upscaled_width
+            || surface.render_height != surface.frame_height
+            || (surface.layout == PixelLayout::I444 && !i444_film_grain_dimensions_supported)
+            || surface.planes.iter().any(Option::is_none)
+            || matches!(grain.matrix_coefficients, 0 | 3)
+        {
+            return Ok(SelectedDisplay::unavailable());
+        }
+        let Some(leaf) = display.color_leaf.take() else {
+            return Ok(SelectedDisplay::unavailable());
+        };
+        display.color_leaf = Some(match surface.layout {
+            PixelLayout::I420 => {
+                super::film_grain::apply_i420(leaf, surface.depth.bits(), grain, token)?
+            }
+            PixelLayout::I422 => {
+                super::film_grain::apply_i422(leaf, surface.depth.bits(), grain, token)?
+            }
+            PixelLayout::I444 => {
+                super::film_grain::apply_i444(leaf, surface.depth.bits(), grain, token)?
+            }
+            _ => return Ok(SelectedDisplay::unavailable()),
+        });
+        Ok(display)
     }
 
     pub(super) fn frame_obu(
@@ -438,14 +1129,22 @@ impl FrameState {
         data: &SegmentedData<'_, '_>,
         start: usize,
         end: usize,
+        has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
     ) -> Av1Result<()> {
-        let mut reader = self.begin_frame(data, start, end, temporal_id, spatial_id, false)?;
+        let mut reader = self.begin_frame(
+            data,
+            start..end,
+            has_extension,
+            temporal_id,
+            spatial_id,
+            false,
+        )?;
         if self
             .pending
             .as_ref()
-            .is_some_and(|header| header.show_existing_frame)
+            .is_some_and(|pending| pending.header.show_existing_frame)
         {
             return Err(malformed("frame syntax validation failed"));
         }
@@ -457,13 +1156,20 @@ impl FrameState {
     pub(super) fn frame_header_obu(
         &mut self,
         data: &SegmentedData<'_, '_>,
-        start: usize,
-        end: usize,
+        payload: Range<usize>,
+        has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
         redundant: bool,
     ) -> Av1Result<()> {
-        let mut reader = self.begin_frame(data, start, end, temporal_id, spatial_id, redundant)?;
+        let mut reader = self.begin_frame(
+            data,
+            payload,
+            has_extension,
+            temporal_id,
+            spatial_id,
+            redundant,
+        )?;
         reader.trailing_bits()?;
         self.complete_show_existing()
     }
@@ -473,7 +1179,11 @@ impl FrameState {
         data: &SegmentedData<'_, '_>,
         start: usize,
         end: usize,
+        has_extension: bool,
+        temporal_id: u32,
+        spatial_id: u32,
     ) -> Av1Result<()> {
+        self.validate_pending_layer(has_extension, temporal_id, spatial_id)?;
         let mut reader = BitReader::new(data, start, end)?;
         let group = self.read_tile_group(data, &mut reader, end)?;
         self.accept_tile_group(group)
@@ -482,8 +1192,8 @@ impl FrameState {
     fn begin_frame<'data, 'input, 'spans>(
         &mut self,
         data: &'data SegmentedData<'input, 'spans>,
-        start: usize,
-        end: usize,
+        payload: Range<usize>,
+        has_extension: bool,
         temporal_id: u32,
         spatial_id: u32,
         redundant: bool,
@@ -495,16 +1205,22 @@ impl FrameState {
             let Some(pending) = self.pending.as_ref() else {
                 return Err(malformed("redundant frame header has no pending frame"));
             };
+            self.validate_pending_layer(has_extension, temporal_id, spatial_id)?;
+            let references = std::array::from_fn(|index| {
+                pending.staged_references[index]
+                    .as_ref()
+                    .map(|reference| reference.header.clone())
+            });
             let (header, reader) = parse(
                 data,
-                start,
-                end,
+                payload.start,
+                payload.end,
                 sequence,
-                &self.references,
+                &references,
                 temporal_id,
                 spatial_id,
             )?;
-            if &header != pending {
+            if header != pending.header {
                 return Err(malformed("frame syntax validation failed"));
             }
             return Ok(reader);
@@ -512,18 +1228,20 @@ impl FrameState {
         if self.pending.is_some() {
             return Err(malformed("frame syntax validation failed"));
         }
+        let references = self.reference_headers();
         let (header, reader) = parse(
             data,
-            start,
-            end,
+            payload.start,
+            payload.end,
             sequence,
-            &self.references,
+            &references,
             temporal_id,
             spatial_id,
         )?;
         self.accept_parsed_header(
             sequence.frame_id_numbers_present,
             sequence.frame_id_bits,
+            has_extension,
             header,
         )?;
         Ok(reader)
@@ -533,27 +1251,124 @@ impl FrameState {
         &mut self,
         frame_id_numbers_present: bool,
         frame_id_bits: u32,
+        obu_extension: bool,
         header: FrameHeader,
     ) -> Av1Result<()> {
+        let mut references = self.references.clone();
+        let mut current_frame_id = self.current_frame_id;
         if frame_id_numbers_present && !header.show_existing_frame {
             validate_current_frame_id(frame_id_bits, self.current_frame_id, &header)?;
-            self.invalidate_old_references(header.frame_id);
-            self.current_frame_id = Some(header.frame_id);
+            let sequence = self
+                .sequence
+                .as_ref()
+                .ok_or(malformed("frame header has no sequence state"))?;
+            invalidate_reference_slots(
+                &mut references,
+                header.frame_id,
+                sequence.delta_frame_id_bits,
+                sequence.frame_id_bits,
+            );
+            current_frame_id = Some(header.frame_id);
         }
-        self.frame_dimensions = Some((header.frame_width, header.frame_height));
-        self.pending = Some(header);
-        self.next_tile = 0;
-        self.first_leaf = None;
-        self.complete_color_leaf = None;
-        self.complete_color_tiles.clear();
-        self.complete_monochrome_plane = None;
+        let block_width = header
+            .frame_width
+            .div_ceil(8)
+            .checked_mul(2)
+            .ok_or_else(|| malformed("frame block width overflows"))?;
+        let block_height = header
+            .frame_height
+            .div_ceil(8)
+            .checked_mul(2)
+            .ok_or_else(|| malformed("frame block height overflows"))?;
+        let primary_decode = if header.primary_ref_frame == PRIMARY_REF_NONE {
+            None
+        } else {
+            let slot = header.reference_indices[header.primary_ref_frame];
+            references
+                .get(slot)
+                .and_then(Option::as_ref)
+                .and_then(|reference| reference.decode.as_ref())
+        };
+        let previous_segment_map = primary_decode
+            .and_then(|decode| decode.segmentation_map.as_ref())
+            .filter(|map| map.compatible_with(block_width, block_height))
+            .cloned();
+        let segment_map = if header.segmentation.enabled {
+            if header.segmentation.update_map {
+                Some(entropy::SegmentMap::new(block_width, block_height)?)
+            } else {
+                Some(match previous_segment_map.as_ref() {
+                    Some(previous) => previous.clone(),
+                    None => entropy::SegmentMap::new(block_width, block_height)?,
+                })
+            }
+        } else {
+            None
+        };
+        let input_cdfs = if header.primary_ref_frame == PRIMARY_REF_NONE {
+            let qindex = header
+                .quantization
+                .as_ref()
+                .map_or(0, |quantization| quantization.base);
+            Some(entropy::FrameCdfs::defaults(qindex)?)
+        } else {
+            primary_decode.map(|decode| decode.cdfs.clone())
+        };
+        self.pending = Some(PendingFrame {
+            header,
+            obu_extension,
+            staged_references: references,
+            staged_current_frame_id: current_frame_id,
+            next_tile: 0,
+            input_cdfs,
+            selected_cdfs: None,
+            previous_segment_map,
+            segment_map,
+            decode_complete: true,
+            first_leaf: None,
+            complete_color_leaf: None,
+            complete_color_tiles: Vec::new(),
+            temporal_samples: Vec::new(),
+            complete_monochrome_tiles: Vec::new(),
+            complete_monochrome_plane: None,
+        });
         Ok(())
     }
 
+    fn validate_pending_layer(
+        &self,
+        has_extension: bool,
+        temporal_id: u32,
+        spatial_id: u32,
+    ) -> Av1Result<()> {
+        let pending = self
+            .pending
+            .as_ref()
+            .ok_or(malformed("layer OBU has no pending frame"))?;
+        if pending.obu_extension != has_extension
+            || pending.header.temporal_id != temporal_id
+            || pending.header.spatial_id != spatial_id
+        {
+            return Err(malformed(
+                "frame header and tile group layer identities disagree",
+            ));
+        }
+        Ok(())
+    }
+
+    fn reference_headers(&self) -> [Option<FrameHeader>; REFERENCE_SLOTS] {
+        std::array::from_fn(|index| {
+            self.references[index]
+                .as_ref()
+                .map(|reference| reference.header.clone())
+        })
+    }
+
     fn complete_show_existing(&mut self) -> Av1Result<()> {
-        let Some(header) = self.pending.as_ref() else {
+        let Some(pending) = self.pending.as_ref() else {
             return Err(malformed("show-existing completion has no pending frame"));
         };
+        let header = &pending.header;
         if !header.show_existing_frame {
             return Ok(());
         }
@@ -561,46 +1376,75 @@ impl FrameState {
             return Err(malformed("show-existing frame omits its reference slot"));
         };
         // `slot` is read from a three-bit AV1 syntax element.
-        let Some(reference) = self.references[slot].as_ref() else {
+        let Some(reference) = pending.staged_references[slot].as_ref() else {
             return Err(malformed("show-existing frame references an empty slot"));
         };
         let reference = reference.clone();
-        if !reference.showable_frame {
+        if !reference.header.showable_frame {
             return Err(malformed("frame syntax validation failed"));
         }
-        if reference.frame_type == FrameType::Key {
+        self.completions.try_reserve(1).map_err(|_| {
+            CodecError::Dimensions("unable to reserve AV1 frame completion".to_owned())
+        })?;
+        let completion = FrameCompletion {
+            surface: reference.surface.clone(),
+            temporal_unit: self.temporal_unit,
+            temporal_id: header.temporal_id,
+            spatial_id: header.spatial_id,
+            film_grain: reference.header.film_grain.clone(),
+            show_existing: true,
+            diagnostic_leaf: None,
+            diagnostic_frame_dimensions: None,
+        };
+        let pending = self
+            .pending
+            .take()
+            .ok_or(malformed("show-existing completion disappeared"))?;
+        let mut references = pending.staged_references;
+        if reference.header.frame_type == FrameType::Key {
             let mut hidden = reference;
-            hidden.showable_frame = false;
-            self.references = std::array::from_fn(|_| Some(hidden.clone()));
+            hidden.header.showable_frame = false;
+            references = std::array::from_fn(|_| Some(hidden.clone()));
         }
-        self.pending = None;
+        self.references = references;
+        self.current_frame_id = pending.staged_current_frame_id;
+        self.completions.push(completion);
         Ok(())
     }
 
+    #[cfg(coverage)]
     fn invalidate_old_references(&mut self, frame_id: u32) {
         // This method is called only after `begin_frame` has obtained the
         // active sequence header.
         let Some(sequence) = self.sequence.as_ref() else {
             return;
         };
-        let difference_range = 1_u32 << sequence.delta_frame_id_bits;
-        let frame_id_range = 1_u32 << sequence.frame_id_bits;
+        invalidate_reference_slots(
+            &mut self.references,
+            frame_id,
+            sequence.delta_frame_id_bits,
+            sequence.frame_id_bits,
+        );
+    }
+
+    #[cfg(coverage)]
+    #[coverage(off)]
+    pub(super) fn __coverage_seed_missing_reference_surfaces(&mut self) {
+        // The compact parser probes intentionally omit full reconstruction for
+        // later inter frames. Reuse the validated key surface only to keep the
+        // synthetic state machine on the same precondition as production.
+        let Some(surface) = self
+            .references
+            .iter()
+            .find_map(|reference| reference.as_ref().and_then(|value| value.surface.clone()))
+        else {
+            return;
+        };
         for reference in &mut self.references {
-            let Some(retained) = reference else {
-                continue;
-            };
-            let invalid = if frame_id >= difference_range {
-                retained.frame_id > frame_id
-                    || retained.frame_id < frame_id.saturating_sub(difference_range)
-            } else {
-                retained.frame_id > frame_id
-                    && retained.frame_id
-                        < frame_id_range
-                            .saturating_add(frame_id)
-                            .saturating_sub(difference_range)
-            };
-            if invalid {
-                *reference = None;
+            if let Some(reference) = reference.as_mut() {
+                if reference.surface.is_none() {
+                    reference.surface = Some(surface.clone());
+                }
             }
         }
     }
@@ -616,9 +1460,10 @@ impl FrameState {
         let Some(sequence) = self.sequence.as_ref() else {
             return Err(malformed("tile group appears before a sequence header"));
         };
-        let Some(header) = self.pending.as_ref() else {
+        let Some(pending) = self.pending.as_ref() else {
             return Err(malformed("tile group appears without a pending frame"));
         };
+        let header = &pending.header;
         let Some(tiling) = header.tiling.as_ref() else {
             return Err(malformed("pending frame has no tile layout"));
         };
@@ -635,7 +1480,25 @@ impl FrameState {
         if end >= tile_count {
             return Err(malformed("frame syntax validation failed"));
         }
+        if start != pending.next_tile {
+            return Err(malformed("frame syntax validation failed"));
+        }
         bits.byte_align()?;
+        let projected_temporal = if header.frame_type.is_inter() {
+            projected_temporal_field(header, sequence, &pending.staged_references)?
+        } else {
+            None
+        };
+        let inter_context = if header.frame_type.is_inter() {
+            Some(inter_frame_context(
+                header,
+                sequence,
+                &pending.staged_references,
+                projected_temporal.as_ref(),
+            )?)
+        } else {
+            None
+        };
         let tile_ranges = split_tile_payloads(
             data,
             bits.position() / 8,
@@ -644,67 +1507,347 @@ impl FrameState {
             end,
             tiling.tile_size_bytes,
         )?;
-        let validation =
-            validate_tile_entropy_prefixes(data, &tile_ranges, start, header, sequence, tiling)?;
+        let validation = validate_tile_entropy_prefixes(
+            data,
+            &tile_ranges,
+            start,
+            header,
+            sequence,
+            tiling,
+            TileEntropyInputs {
+                input_cdfs: pending.input_cdfs.as_ref(),
+                current_segment_map: pending.segment_map.as_ref(),
+                previous_segment_map: pending.previous_segment_map.as_ref(),
+                inter_context: inter_context.as_ref(),
+            },
+        )?;
         Ok(TileGroup {
             start,
             end,
             first_leaf: validation.first_leaf,
             complete_color_leaf: validation.complete_color_leaf,
             complete_color_tiles: validation.complete_color_tiles,
+            temporal_samples: validation.temporal_samples,
+            complete_monochrome_tiles: validation.complete_monochrome_tiles,
             complete_monochrome_plane: validation.complete_monochrome_plane,
+            selected_cdfs: validation.selected_cdfs,
+            segment_map: validation.segment_map,
+            decode_complete: validation.decode_complete,
         })
     }
 
     fn accept_tile_group(&mut self, group: TileGroup) -> Av1Result<()> {
-        let header = self
+        let pending = self
             .pending
             .as_ref()
             .ok_or(malformed("accepted tile group has no pending frame"))?;
-        if group.start != self.next_tile {
+        if group.start != pending.next_tile {
             return Err(malformed("frame syntax validation failed"));
         }
-        let tile_count = header
+        let tile_count = pending
+            .header
             .tiling
             .as_ref()
             .ok_or(malformed("pending frame has no tile layout"))?
             .tile_count();
-        self.multi_tile |= tile_count > 1;
-        self.next_tile = group.end.saturating_add(1);
-        self.first_leaf = self.first_leaf.take().or(group.first_leaf);
-        self.complete_color_leaf = self
-            .complete_color_leaf
-            .take()
-            .or(group.complete_color_leaf);
-        self.complete_color_tiles.extend(group.complete_color_tiles);
-        self.complete_monochrome_plane = self
-            .complete_monochrome_plane
-            .take()
-            .or(group.complete_monochrome_plane);
-        if self.next_tile == tile_count {
-            if tile_count > 1
-                && self.complete_color_tiles.len() == usize::try_from(tile_count).unwrap_or(0)
-            {
-                let sequence = self
-                    .sequence
-                    .as_ref()
-                    .ok_or(malformed("assembled tile frame has no sequence"))?;
-                self.complete_color_leaf =
-                    assemble_color_tiles(&self.complete_color_tiles, header, sequence)?;
+        let next_tile = group.end.saturating_add(1);
+        if next_tile != tile_count {
+            let pending = self
+                .pending
+                .as_mut()
+                .ok_or(malformed("accepted tile group disappeared"))?;
+            pending
+                .complete_color_tiles
+                .try_reserve(group.complete_color_tiles.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to reserve reconstructed AV1 tile state".to_owned(),
+                    )
+                })?;
+            pending
+                .temporal_samples
+                .try_reserve(group.temporal_samples.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to reserve retained AV1 temporal-MV samples".to_owned(),
+                    )
+                })?;
+            pending
+                .complete_monochrome_tiles
+                .try_reserve(group.complete_monochrome_tiles.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to reserve reconstructed AV1 monochrome tiles".to_owned(),
+                    )
+                })?;
+            pending.next_tile = next_tile;
+            pending.first_leaf = pending.first_leaf.take().or(group.first_leaf);
+            pending.complete_color_leaf = pending
+                .complete_color_leaf
+                .take()
+                .or(group.complete_color_leaf);
+            pending
+                .complete_color_tiles
+                .extend(group.complete_color_tiles);
+            pending.temporal_samples.extend(group.temporal_samples);
+            pending
+                .complete_monochrome_tiles
+                .extend(group.complete_monochrome_tiles);
+            pending.complete_monochrome_plane = pending
+                .complete_monochrome_plane
+                .take()
+                .or(group.complete_monochrome_plane);
+            pending.selected_cdfs = pending.selected_cdfs.take().or(group.selected_cdfs);
+            let previous_segment_map = pending.segment_map.take();
+            pending.segment_map = group.segment_map.or(previous_segment_map);
+            pending.decode_complete &= group.decode_complete;
+            return Ok(());
+        }
+
+        let monochrome_tile_count = pending
+            .complete_monochrome_tiles
+            .len()
+            .saturating_add(group.complete_monochrome_tiles.len());
+        let color_tile_count = pending
+            .complete_color_tiles
+            .len()
+            .saturating_add(group.complete_color_tiles.len());
+        if monochrome_tile_count != 0
+            && (color_tile_count != 0
+                || pending.complete_color_leaf.is_some()
+                || group.complete_color_leaf.is_some())
+        {
+            return Err(malformed(
+                "assembled frame mixes monochrome and color tiles",
+            ));
+        }
+        let mut assembled_color_leaf = None;
+        let mut assembled_monochrome_plane = None;
+        if tile_count > 1
+            && pending
+                .complete_color_tiles
+                .len()
+                .saturating_add(group.complete_color_tiles.len())
+                == usize::try_from(tile_count).unwrap_or(0)
+        {
+            let sequence = self
+                .sequence
+                .as_ref()
+                .ok_or(malformed("assembled tile frame has no sequence"))?;
+            assembled_color_leaf = assemble_color_tiles(
+                &pending.complete_color_tiles,
+                &group.complete_color_tiles,
+                &pending.header,
+                sequence,
+            )?;
+            if pending.header.superres_enabled {
+                let depth = SampleDepth::new(sequence.bit_depth)
+                    .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
+                assembled_color_leaf = assembled_color_leaf
+                    .map(|leaf| {
+                        upscale_color_leaf_for_superres(leaf, &pending.header, sequence, depth)
+                    })
+                    .transpose()?;
             }
-            // `header` was borrowed from `pending` above, so the value cannot
-            // disappear before this synchronous completion step.
-            let completed = header.clone();
-            self.pending = None;
-            for (slot, reference) in self.references.iter_mut().enumerate() {
+        }
+        if tile_count > 1
+            && pending
+                .complete_monochrome_tiles
+                .len()
+                .saturating_add(group.complete_monochrome_tiles.len())
+                == usize::try_from(tile_count).unwrap_or(0)
+        {
+            let sequence = self
+                .sequence
+                .as_ref()
+                .ok_or(malformed("assembled monochrome frame has no sequence"))?;
+            assembled_monochrome_plane = assemble_monochrome_tiles(
+                &pending.complete_monochrome_tiles,
+                &group.complete_monochrome_tiles,
+                &pending.header,
+                sequence,
+            )?;
+            if pending.header.superres_enabled {
+                let depth = SampleDepth::new(sequence.bit_depth)
+                    .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
+                assembled_monochrome_plane = assembled_monochrome_plane
+                    .map(|plane| {
+                        resize::upscale_monochrome_plane(
+                            plane,
+                            pending.header.frame_width,
+                            pending.header.upscaled_width,
+                            pending.header.frame_height,
+                            pending.header.superres_denominator,
+                            depth,
+                        )
+                    })
+                    .transpose()?;
+            }
+        }
+        enum SurfacePlan {
+            Color {
+                depth: SampleDepth,
+                layout: PixelLayout,
+                strides: [usize; 3],
+                motion: TemporalMotionField,
+            },
+            Monochrome {
+                depth: SampleDepth,
+                stride: usize,
+                motion: TemporalMotionField,
+            },
+            None,
+        }
+        let sequence = self
+            .sequence
+            .as_ref()
+            .ok_or(malformed("completed frame has no sequence"))?;
+        let color_leaf = assembled_color_leaf
+            .as_ref()
+            .or(pending.complete_color_leaf.as_ref())
+            .or(group.complete_color_leaf.as_ref());
+        let monochrome_plane = assembled_monochrome_plane.as_ref().or(pending
+            .complete_monochrome_plane
+            .as_ref()
+            .or(group.complete_monochrome_plane.as_ref()));
+        let surface_plan = if let Some(leaf) = color_leaf {
+            let (depth, layout, strides) =
+                FrameSurface::validate_color_leaf(leaf, &pending.header, sequence)?;
+            let mut motion =
+                new_temporal_motion_field(&pending.header, sequence, &pending.staged_references)?;
+            populate_temporal_motion_field(
+                &mut motion,
+                &pending.temporal_samples,
+                &group.temporal_samples,
+                pending.header.frame_type.is_inter(),
+            )?;
+            SurfacePlan::Color {
+                depth,
+                layout,
+                strides,
+                motion,
+            }
+        } else if let Some(plane) = monochrome_plane {
+            let (depth, stride) =
+                FrameSurface::validate_monochrome_plane(plane, &pending.header, sequence)?;
+            let mut motion =
+                new_temporal_motion_field(&pending.header, sequence, &pending.staged_references)?;
+            populate_temporal_motion_field(
+                &mut motion,
+                &pending.temporal_samples,
+                &group.temporal_samples,
+                pending.header.frame_type.is_inter(),
+            )?;
+            SurfacePlan::Monochrome {
+                depth,
+                stride,
+                motion,
+            }
+        } else {
+            SurfacePlan::None
+        };
+        let has_first_leaf = pending.first_leaf.is_some() || group.first_leaf.is_some();
+        let diagnostic_fallback = matches!(surface_plan, SurfacePlan::None)
+            && has_first_leaf
+            && tile_count == 1
+            && pending.header.loop_filter.level_y == [0; 2]
+            && pending.header.loop_filter.level_u == 0
+            && pending.header.loop_filter.level_v == 0
+            && pending.header.cdef.is_none()
+            && !pending.header.superres_enabled
+            && pending.header.restoration.is_none()
+            && pending.header.film_grain.is_none();
+        if pending.header.show_frame {
+            self.completions.try_reserve(1).map_err(|_| {
+                CodecError::Dimensions("unable to reserve AV1 frame completion".to_owned())
+            })?;
+        }
+
+        // Assembly, surface validation, and completion reservation are all
+        // fallible. Ownership moves only after they succeed, making the state
+        // mutation below a single non-fallible commit.
+        let pending = self
+            .pending
+            .take()
+            .ok_or(malformed("completed frame disappeared"))?;
+        let first_leaf = pending.first_leaf.or(group.first_leaf);
+        let complete_color_leaf = assembled_color_leaf
+            .or(pending.complete_color_leaf)
+            .or(group.complete_color_leaf);
+        let complete_monochrome_plane = assembled_monochrome_plane.or(pending
+            .complete_monochrome_plane
+            .or(group.complete_monochrome_plane));
+        let selected_cdfs = pending.selected_cdfs.or(group.selected_cdfs);
+        let segment_map = group.segment_map.or(pending.segment_map);
+        let decode_complete = pending.decode_complete && group.decode_complete;
+        let completed = pending.header;
+        let surface = match surface_plan {
+            SurfacePlan::Color {
+                depth,
+                layout,
+                strides,
+                motion,
+            } => complete_color_leaf.map(|leaf| {
+                Arc::new(FrameSurface::from_validated_color_leaf(
+                    leaf, &completed, depth, layout, strides, motion,
+                ))
+            }),
+            SurfacePlan::Monochrome {
+                depth,
+                stride,
+                motion,
+            } => complete_monochrome_plane.map(|plane| {
+                Arc::new(FrameSurface::from_validated_monochrome_plane(
+                    plane, &completed, depth, stride, motion,
+                ))
+            }),
+            SurfacePlan::None => None,
+        };
+        let mut references = pending.staged_references;
+        if completed.refresh_frame_flags != 0 {
+            let retained_cdfs = if completed.refresh_frame_context {
+                selected_cdfs
+            } else {
+                pending.input_cdfs
+            };
+            let decode = if decode_complete {
+                retained_cdfs.map(|cdfs| {
+                    Arc::new(ReferenceDecodeState {
+                        cdfs,
+                        segmentation_map: segment_map,
+                    })
+                })
+            } else {
+                None
+            };
+            let reference = ReferenceState {
+                header: completed.clone(),
+                decode,
+                surface: surface.clone(),
+            };
+            for (slot, retained) in references.iter_mut().enumerate() {
                 let mask = 1_u8 << slot;
                 if completed.refresh_frame_flags & mask != 0 {
-                    *reference = Some(completed.clone());
+                    *retained = Some(reference.clone());
                 }
             }
-            self.next_tile = 0;
-            self.complete_color_tiles.clear();
         }
+        if completed.show_frame {
+            let diagnostic_leaf = diagnostic_fallback.then_some(first_leaf).flatten();
+            self.completions.push(FrameCompletion {
+                surface,
+                temporal_unit: self.temporal_unit,
+                temporal_id: completed.temporal_id,
+                spatial_id: completed.spatial_id,
+                film_grain: completed.film_grain.clone(),
+                show_existing: false,
+                diagnostic_leaf,
+                diagnostic_frame_dimensions: diagnostic_fallback
+                    .then_some((completed.upscaled_width, completed.frame_height)),
+            });
+        }
+        self.references = references;
+        self.current_frame_id = pending.staged_current_frame_id;
         Ok(())
     }
 }
@@ -715,14 +1858,24 @@ struct TileGroup {
     first_leaf: Option<super::block::FirstLeaf>,
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
+    temporal_samples: Vec<RetainedTemporalSample>,
+    complete_monochrome_tiles: Vec<ReconstructedMonochromeTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+    selected_cdfs: Option<entropy::FrameCdfs>,
+    segment_map: Option<entropy::SegmentMap>,
+    decode_complete: bool,
 }
 
 struct TileValidation {
     first_leaf: Option<super::block::FirstLeaf>,
     complete_color_leaf: Option<super::block::FirstLeaf>,
     complete_color_tiles: Vec<ReconstructedColorTile>,
+    temporal_samples: Vec<RetainedTemporalSample>,
+    complete_monochrome_tiles: Vec<ReconstructedMonochromeTile>,
     complete_monochrome_plane: Option<super::block::ReconstructedPlane>,
+    selected_cdfs: Option<entropy::FrameCdfs>,
+    segment_map: Option<entropy::SegmentMap>,
+    decode_complete: bool,
 }
 
 struct ReconstructedColorTile {
@@ -733,12 +1886,26 @@ struct ReconstructedColorTile {
     reconstruction: entropy::Lossy420Reconstruction,
 }
 
+struct ReconstructedMonochromeTile {
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    plane: super::block::ReconstructedPlane,
+    cdef_parameters: Option<super::cdef::FrameParameters>,
+    cdef_indices: Vec<Option<usize>>,
+    cdef_active: Vec<bool>,
+    loop_parameters: Option<super::filter::Parameters>,
+    filter_blocks: Vec<super::filter::Block>,
+}
+
 fn assemble_color_tiles(
     tiles: &[ReconstructedColorTile],
+    trailing_tiles: &[ReconstructedColorTile],
     header: &FrameHeader,
     sequence: &SequenceHeader,
 ) -> Av1Result<Option<super::block::FirstLeaf>> {
-    if tiles.is_empty() {
+    if tiles.is_empty() && trailing_tiles.is_empty() {
         return Ok(None);
     }
     let frame_width = usize::try_from(header.frame_width)
@@ -755,12 +1922,43 @@ fn assemble_color_tiles(
         sequence.subsampling_x,
         sequence.subsampling_y,
     )?;
+    let filter_block_count = tiles
+        .iter()
+        .chain(trailing_tiles)
+        .try_fold(0_usize, |count, tile| {
+            count.checked_add(tile.reconstruction.filter_blocks.len())
+        })
+        .ok_or_else(|| malformed("assembled loop-filter block count overflows"))?;
     let mut filter_blocks = Vec::new();
-    let mut cdef_indices = vec![None; region_width.saturating_mul(region_height)];
-    let mut cdef_active = vec![false; active_width.saturating_mul(active_height)];
+    filter_blocks
+        .try_reserve_exact(filter_block_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
+        })?;
+    let cdef_region_count = region_width
+        .checked_mul(region_height)
+        .ok_or_else(|| malformed("assembled CDEF region map allocation overflows"))?;
+    let cdef_active_count = active_width
+        .checked_mul(active_height)
+        .ok_or_else(|| malformed("assembled CDEF active map allocation overflows"))?;
+    let mut cdef_indices = Vec::new();
+    cdef_indices
+        .try_reserve_exact(cdef_region_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate assembled AV1 CDEF region map".to_owned())
+        })?;
+    cdef_indices.resize(cdef_region_count, None);
+    let mut cdef_active = Vec::new();
+    cdef_active
+        .try_reserve_exact(cdef_active_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate assembled AV1 CDEF active map".to_owned())
+        })?;
+    cdef_active.resize(cdef_active_count, false);
     let mut loop_parameters: Option<super::filter::Parameters> = None;
     let mut cdef_parameters: Option<super::cdef::FrameParameters> = None;
-    for tile in tiles {
+    let mut filter_parameters_initialized = false;
+    for tile in tiles.iter().chain(trailing_tiles) {
         let tile_x = usize::try_from(tile.x)
             .map_err(|_| malformed("assembled tile x origin exceeds usize"))?;
         let tile_y = usize::try_from(tile.y)
@@ -769,11 +1967,20 @@ fn assemble_color_tiles(
             .map_err(|_| malformed("assembled tile width exceeds usize"))?;
         let tile_height = usize::try_from(tile.height)
             .map_err(|_| malformed("assembled tile height exceeds usize"))?;
-        if loop_parameters.is_none() {
-            loop_parameters = tile.reconstruction.loop_parameters;
+        let tile_loop_parameters = tile.reconstruction.loop_parameters;
+        let tile_cdef_parameters = tile.reconstruction.cdef_parameters;
+        if !filter_parameters_initialized {
+            loop_parameters = tile_loop_parameters;
+            cdef_parameters = tile_cdef_parameters;
+            filter_parameters_initialized = true;
+        } else if tile_loop_parameters != loop_parameters || tile_cdef_parameters != cdef_parameters
+        {
+            return Err(malformed("assembled tiles disagree on filter parameters"));
         }
-        if cdef_parameters.is_none() {
-            cdef_parameters = tile.reconstruction.cdef_parameters;
+        if tile_cdef_parameters.is_some()
+            && (!tile_x.is_multiple_of(64) || !tile_y.is_multiple_of(64))
+        {
+            return Err(malformed("CDEF tile origin is not 64-pixel aligned"));
         }
         canvas.place_planes(
             tile.width,
@@ -791,8 +1998,17 @@ fn assemble_color_tiles(
                 y: tile_y
                     .checked_add(block.y)
                     .ok_or_else(|| malformed("assembled loop-filter y overflows"))?,
-                ..*block
+                ..block.clone()
             });
+        }
+
+        if tile_cdef_parameters.is_none() {
+            if !tile.reconstruction.cdef_active.is_empty()
+                || !tile.reconstruction.cdef_indices.is_empty()
+            {
+                return Err(malformed("CDEF-disabled tile carries non-empty CDEF maps"));
+            }
+            continue;
         }
 
         let local_active_width = tile_width.div_ceil(8);
@@ -885,22 +2101,391 @@ fn assemble_color_tiles(
     Ok(Some(super::block::FirstLeaf {
         width: header.frame_width,
         height: header.frame_height,
+        block_skipped: false,
         planes,
         luma_predictor: super::block::LumaPredictor::Dc,
         chroma_predictor: None,
         luma_context: 0x40,
         chroma_contexts: [0x40; 2],
-        chroma_right_contexts: [[0x40; 8]; 2],
-        chroma_bottom_contexts: [[0x40; 8]; 2],
+        chroma_right_contexts: [[0x40; 16]; 2],
+        chroma_bottom_contexts: [[0x40; 16]; 2],
         tx_context_width: 0,
         tx_context_height: 0,
         luma_transform_split: false,
         luma_right_contexts: [0x40; 16],
         luma_bottom_contexts: [0x40; 16],
+        wide_coefficient_contexts: None,
         palette_cache: Default::default(),
         #[cfg(coverage)]
         entropy_operations: Vec::new(),
     }))
+}
+
+fn upscale_color_leaf_for_superres(
+    leaf: super::block::FirstLeaf,
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+    depth: SampleDepth,
+) -> Av1Result<super::block::FirstLeaf> {
+    match PixelLayout::from_sequence(
+        sequence.monochrome,
+        sequence.subsampling_x,
+        sequence.subsampling_y,
+    ) {
+        Some(PixelLayout::I420) => resize::upscale_i420_leaf(
+            leaf,
+            header.frame_width,
+            header.upscaled_width,
+            header.frame_height,
+            header.superres_denominator,
+            depth,
+        ),
+        Some(PixelLayout::I422) => resize::upscale_i422_leaf(
+            leaf,
+            header.frame_width,
+            header.upscaled_width,
+            header.frame_height,
+            header.superres_denominator,
+            depth,
+        ),
+        Some(PixelLayout::I444) => resize::upscale_i444_leaf(
+            leaf,
+            header.frame_width,
+            header.upscaled_width,
+            header.frame_height,
+            header.superres_denominator,
+            depth,
+        ),
+        _ => Err(malformed(
+            "super-resolution carries an unsupported chroma sampling",
+        )),
+    }
+}
+
+fn assemble_monochrome_tiles(
+    tiles: &[ReconstructedMonochromeTile],
+    trailing_tiles: &[ReconstructedMonochromeTile],
+    header: &FrameHeader,
+    sequence: &SequenceHeader,
+) -> Av1Result<Option<super::block::ReconstructedPlane>> {
+    if tiles.is_empty() && trailing_tiles.is_empty() {
+        return Ok(None);
+    }
+    let depth = SampleDepth::new(sequence.bit_depth)
+        .ok_or_else(|| malformed("monochrome tile sample depth is unsupported"))?;
+    let frame_width = usize::try_from(header.frame_width)
+        .map_err(|_| malformed("assembled monochrome frame width exceeds usize"))?;
+    let frame_height = usize::try_from(header.frame_height)
+        .map_err(|_| malformed("assembled monochrome frame height exceeds usize"))?;
+    let cdef_enabled = tiles
+        .iter()
+        .chain(trailing_tiles)
+        .any(|tile| tile.cdef_parameters.is_some());
+    let loop_filter_enabled = tiles
+        .iter()
+        .chain(trailing_tiles)
+        .any(|tile| tile.loop_parameters.is_some());
+    if cdef_enabled
+        && (frame_width < 8
+            || frame_height < 8
+            || !frame_width.is_multiple_of(8)
+            || !frame_height.is_multiple_of(8))
+    {
+        return Err(malformed(
+            "multi-tile monochrome CDEF requires an 8-pixel-aligned frame",
+        ));
+    }
+    let mut loop_parameters = None;
+    let mut filter_blocks = Vec::new();
+    if loop_filter_enabled {
+        let block_count = tiles
+            .iter()
+            .chain(trailing_tiles)
+            .try_fold(0_usize, |count, tile| {
+                count.checked_add(tile.filter_blocks.len())
+            })
+            .ok_or_else(|| malformed("assembled monochrome loop-filter count overflows"))?;
+        filter_blocks.try_reserve_exact(block_count).map_err(|_| {
+            CodecError::Dimensions(
+                "unable to allocate assembled monochrome loop-filter metadata".to_owned(),
+            )
+        })?;
+    }
+    let active_width = frame_width.div_ceil(8);
+    let active_height = frame_height.div_ceil(8);
+    let region_width = frame_width.div_ceil(64);
+    let region_height = frame_height.div_ceil(64);
+    let mut cdef_indices = Vec::new();
+    let mut cdef_active = Vec::new();
+    if cdef_enabled {
+        let region_count = region_width
+            .checked_mul(region_height)
+            .ok_or_else(|| malformed("assembled monochrome CDEF region map overflows"))?;
+        cdef_indices.try_reserve_exact(region_count).map_err(|_| {
+            CodecError::Dimensions("unable to allocate assembled monochrome CDEF map".to_owned())
+        })?;
+        cdef_indices.resize(region_count, None);
+        let active_count = active_width
+            .checked_mul(active_height)
+            .ok_or_else(|| malformed("assembled monochrome CDEF active map overflows"))?;
+        cdef_active.try_reserve_exact(active_count).map_err(|_| {
+            CodecError::Dimensions(
+                "unable to allocate assembled monochrome CDEF active map".to_owned(),
+            )
+        })?;
+        cdef_active.resize(active_count, false);
+    }
+    let mut cdef_parameters = None;
+    let mut canvas =
+        super::raster::MonochromeFrameCanvas::new(header.frame_width, header.frame_height)?;
+    for tile in tiles.iter().chain(trailing_tiles) {
+        if loop_filter_enabled {
+            let Some(tile_parameters) = tile.loop_parameters else {
+                return Err(malformed(
+                    "assembled monochrome loop-filter tile omits parameters",
+                ));
+            };
+            if let Some(existing) = loop_parameters {
+                if existing != tile_parameters {
+                    return Err(malformed(
+                        "assembled monochrome tiles disagree on loop-filter parameters",
+                    ));
+                }
+            } else {
+                loop_parameters = Some(tile_parameters);
+            }
+        } else if tile.loop_parameters.is_some() || !tile.filter_blocks.is_empty() {
+            return Err(malformed(
+                "loop-filter-disabled monochrome tile carries filter metadata",
+            ));
+        }
+        if cdef_enabled {
+            let Some(tile_parameters) = tile.cdef_parameters else {
+                return Err(malformed(
+                    "assembled monochrome CDEF tile omits frame parameters",
+                ));
+            };
+            if let Some(existing) = cdef_parameters {
+                if existing != tile_parameters {
+                    return Err(malformed(
+                        "assembled monochrome tiles disagree on CDEF parameters",
+                    ));
+                }
+            } else {
+                cdef_parameters = Some(tile_parameters);
+            }
+        } else if tile.cdef_parameters.is_some()
+            || !tile.cdef_indices.is_empty()
+            || !tile.cdef_active.is_empty()
+        {
+            return Err(malformed(
+                "CDEF-disabled monochrome tile carries CDEF metadata",
+            ));
+        }
+        canvas.place_cropped_plane(
+            tile.width,
+            tile.height,
+            tile.width,
+            tile.height,
+            tile.x,
+            tile.y,
+            &tile.plane,
+        )?;
+
+        if !cdef_enabled && !loop_filter_enabled {
+            continue;
+        }
+        let tile_x = usize::try_from(tile.x)
+            .map_err(|_| malformed("monochrome filter tile x origin exceeds usize"))?;
+        let tile_y = usize::try_from(tile.y)
+            .map_err(|_| malformed("monochrome filter tile y origin exceeds usize"))?;
+        let tile_width = usize::try_from(tile.width)
+            .map_err(|_| malformed("monochrome filter tile width exceeds usize"))?;
+        let tile_height = usize::try_from(tile.height)
+            .map_err(|_| malformed("monochrome filter tile height exceeds usize"))?;
+        if cdef_enabled {
+            if tile_x % 64 != 0 || tile_y % 64 != 0 {
+                return Err(malformed(
+                    "monochrome CDEF tile origin is not 64-pixel aligned",
+                ));
+            }
+            if tile_width < 8
+                || tile_height < 8
+                || !tile_width.is_multiple_of(8)
+                || !tile_height.is_multiple_of(8)
+            {
+                return Err(malformed(
+                    "monochrome CDEF tile extent is not 8-pixel aligned",
+                ));
+            }
+            let local_active_width = tile_width.div_ceil(8);
+            let local_active_height = tile_height.div_ceil(8);
+            let local_active_length = local_active_width
+                .checked_mul(local_active_height)
+                .ok_or_else(|| malformed("monochrome tile CDEF active map overflows"))?;
+            if tile.cdef_active.len() != local_active_length {
+                return Err(malformed(
+                    "monochrome tile CDEF active map has an invalid extent",
+                ));
+            }
+            for local_y in 0..local_active_height {
+                for local_x in 0..local_active_width {
+                    let local_index = local_y
+                        .checked_mul(local_active_width)
+                        .and_then(|row| row.checked_add(local_x))
+                        .ok_or_else(|| malformed("monochrome tile CDEF active index overflows"))?;
+                    if !tile.cdef_active[local_index] {
+                        continue;
+                    }
+                    let x = tile_x
+                        .checked_add(
+                            local_x
+                                .checked_mul(8)
+                                .ok_or_else(|| malformed("monochrome CDEF x overflows"))?,
+                        )
+                        .ok_or_else(|| malformed("monochrome CDEF x overflows"))?;
+                    let y = tile_y
+                        .checked_add(
+                            local_y
+                                .checked_mul(8)
+                                .ok_or_else(|| malformed("monochrome CDEF y overflows"))?,
+                        )
+                        .ok_or_else(|| malformed("monochrome CDEF y overflows"))?;
+                    if x >= frame_width || y >= frame_height {
+                        return Err(malformed("monochrome CDEF active block exceeds frame"));
+                    }
+                    let global_index = (y / 8)
+                        .checked_mul(active_width)
+                        .and_then(|row| row.checked_add(x / 8))
+                        .ok_or_else(|| {
+                            malformed("assembled monochrome CDEF active index overflows")
+                        })?;
+                    let Some(slot) = cdef_active.get_mut(global_index) else {
+                        return Err(malformed(
+                            "assembled monochrome CDEF active index exceeds frame",
+                        ));
+                    };
+                    *slot = true;
+                }
+            }
+
+            let local_region_width = tile_width.div_ceil(64);
+            let local_region_height = tile_height.div_ceil(64);
+            let local_region_length = local_region_width
+                .checked_mul(local_region_height)
+                .ok_or_else(|| malformed("monochrome tile CDEF index map overflows"))?;
+            if tile.cdef_indices.len() != local_region_length {
+                return Err(malformed(
+                    "monochrome tile CDEF index map has an invalid extent",
+                ));
+            }
+            for local_y in 0..local_region_height {
+                for local_x in 0..local_region_width {
+                    let local_index = local_y
+                        .checked_mul(local_region_width)
+                        .and_then(|row| row.checked_add(local_x))
+                        .ok_or_else(|| malformed("monochrome tile CDEF index overflows"))?;
+                    let Some(cdef_index) = tile.cdef_indices[local_index] else {
+                        continue;
+                    };
+                    let x = tile_x
+                        .checked_add(
+                            local_x
+                                .checked_mul(64)
+                                .ok_or_else(|| malformed("monochrome CDEF region x overflows"))?,
+                        )
+                        .ok_or_else(|| malformed("monochrome CDEF region x overflows"))?;
+                    let y = tile_y
+                        .checked_add(
+                            local_y
+                                .checked_mul(64)
+                                .ok_or_else(|| malformed("monochrome CDEF region y overflows"))?,
+                        )
+                        .ok_or_else(|| malformed("monochrome CDEF region y overflows"))?;
+                    if x >= frame_width || y >= frame_height {
+                        return Err(malformed("monochrome CDEF region exceeds frame"));
+                    }
+                    let global_index = (y / 64)
+                        .checked_mul(region_width)
+                        .and_then(|row| row.checked_add(x / 64))
+                        .ok_or_else(|| malformed("assembled monochrome CDEF region overflows"))?;
+                    let Some(slot) = cdef_indices.get_mut(global_index) else {
+                        return Err(malformed("assembled monochrome CDEF region exceeds frame"));
+                    };
+                    if let Some(existing) = *slot {
+                        if existing != cdef_index {
+                            return Err(malformed("assembled monochrome CDEF regions disagree"));
+                        }
+                    } else {
+                        *slot = Some(cdef_index);
+                    }
+                }
+            }
+        }
+        if loop_filter_enabled {
+            for block in &tile.filter_blocks {
+                if block.has_chroma || block.levels[2] != 0 || block.levels[3] != 0 {
+                    return Err(malformed(
+                        "monochrome loop-filter block carries chroma metadata",
+                    ));
+                }
+                let local_end_x = block
+                    .x
+                    .checked_add(block.width)
+                    .ok_or_else(|| malformed("monochrome loop-filter block x overflows"))?;
+                let local_end_y = block
+                    .y
+                    .checked_add(block.height)
+                    .ok_or_else(|| malformed("monochrome loop-filter block y overflows"))?;
+                if block.width == 0
+                    || block.height == 0
+                    || local_end_x > tile_width
+                    || local_end_y > tile_height
+                {
+                    return Err(malformed("monochrome loop-filter block exceeds its tile"));
+                }
+                let x = tile_x
+                    .checked_add(block.x)
+                    .ok_or_else(|| malformed("assembled monochrome loop-filter x overflows"))?;
+                let y = tile_y
+                    .checked_add(block.y)
+                    .ok_or_else(|| malformed("assembled monochrome loop-filter y overflows"))?;
+                let end_x = x
+                    .checked_add(block.width)
+                    .ok_or_else(|| malformed("assembled monochrome loop-filter x overflows"))?;
+                let end_y = y
+                    .checked_add(block.height)
+                    .ok_or_else(|| malformed("assembled monochrome loop-filter y overflows"))?;
+                if end_x > frame_width || end_y > frame_height {
+                    return Err(malformed(
+                        "assembled monochrome loop-filter block exceeds frame",
+                    ));
+                }
+                filter_blocks.push(super::filter::Block {
+                    x,
+                    y,
+                    ..block.clone()
+                });
+            }
+        }
+    }
+    let plane = if cdef_enabled && loop_filter_enabled {
+        canvas.finish_monochrome_with_loop_filter_and_cdef(
+            loop_parameters,
+            &filter_blocks,
+            cdef_parameters,
+            &cdef_indices,
+            &cdef_active,
+            depth,
+        )?
+    } else if cdef_enabled {
+        canvas.finish_monochrome_with_cdef(cdef_parameters, &cdef_indices, &cdef_active, depth)?
+    } else if loop_filter_enabled {
+        canvas.finish_monochrome_with_loop_filter(loop_parameters, &filter_blocks, depth)?
+    } else {
+        canvas.finish(depth)?
+    };
+    Ok(Some(plane))
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:3149-3181 and libaom 3.13.2
@@ -963,6 +2548,13 @@ fn split_tile_payloads(
     Ok(ranges)
 }
 
+struct TileEntropyInputs<'state, 'reference> {
+    input_cdfs: Option<&'state entropy::FrameCdfs>,
+    current_segment_map: Option<&'state entropy::SegmentMap>,
+    previous_segment_map: Option<&'state entropy::SegmentMap>,
+    inter_context: Option<&'state entropy::InterFrameContext<'reference>>,
+}
+
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:2425-2457 (`setup_tile`) and
 // src/decode.c:2117-2162 (`decode_sb`). This consumes the first actual
 // partition syntax element rather than constructing and dropping MSAC state.
@@ -973,12 +2565,28 @@ fn validate_tile_entropy_prefixes(
     header: &FrameHeader,
     sequence: &SequenceHeader,
     tiling: &Tiling,
+    inputs: TileEntropyInputs<'_, '_>,
 ) -> Av1Result<TileValidation> {
+    let TileEntropyInputs {
+        input_cdfs,
+        current_segment_map,
+        previous_segment_map,
+        inter_context,
+    } = inputs;
     let root_level = u32::from(!sequence.use_128x128_superblock);
     // Frame dimensions and superblock mode were validated while parsing the
-    // sequence/frame headers, so these private unit conversions are total.
-    let block_width = (header.frame_width.saturating_add(7) >> 3).wrapping_shl(1);
-    let block_height = (header.frame_height.saturating_add(7) >> 3).wrapping_shl(1);
+    // sequence/frame headers, so overflow is unreachable for valid AV1. Keep
+    // the private unit conversion checked independently of that invariant.
+    let block_width = header
+        .frame_width
+        .div_ceil(8)
+        .checked_mul(2)
+        .ok_or_else(|| malformed("frame block width overflows"))?;
+    let block_height = header
+        .frame_height
+        .div_ceil(8)
+        .checked_mul(2)
+        .ok_or_else(|| malformed("frame block height overflows"))?;
     let block_shift = 4_u32.wrapping_add(u32::from(sequence.use_128x128_superblock));
     let (restoration_types, restoration_unit_size_log2) = header
         .restoration
@@ -1037,22 +2645,51 @@ fn validate_tile_entropy_prefixes(
         transform_mode: header.transform_mode,
         reduced_transform_set: header.reduced_transform_set,
         film_grain_present: header.film_grain.is_some(),
+        segmentation: entropy::SegmentationContext {
+            enabled: header.segmentation.enabled,
+            update_map: header.segmentation.update_map,
+            temporal: header.segmentation.temporal,
+            preskip: header.segmentation.preskip,
+            last_active_id: header.segmentation.last_active_id,
+            segments: std::array::from_fn(|index| {
+                let segment = header.segmentation.segments[index];
+                entropy::SegmentContext {
+                    delta_q: segment.delta_q,
+                    delta_lf: [
+                        segment.delta_lf_y_vertical,
+                        segment.delta_lf_y_horizontal,
+                        segment.delta_lf_u,
+                        segment.delta_lf_v,
+                    ],
+                    reference: segment.reference,
+                    skip: segment.skip,
+                    global_motion: segment.global_motion,
+                    qindex: header.segment_qindex[index],
+                    lossless: header.segment_lossless[index],
+                }
+            }),
+        },
     };
     let mut first_leaf = None;
     let mut complete_color_leaf = None;
     let mut complete_color_tiles = Vec::new();
+    let mut temporal_samples = Vec::new();
+    let mut complete_monochrome_tiles = Vec::new();
     let mut complete_monochrome_plane = None;
+    let mut selected_cdfs = None;
+    let mut segment_map = current_segment_map.cloned();
+    let mut decode_complete = true;
     for (range_index, range) in ranges.iter().enumerate() {
         if range.is_empty() {
             return Err(malformed("tile payload is empty"));
         }
-        if header.primary_ref_frame != PRIMARY_REF_NONE {
-            // Inter tiles inherit CDF state from their primary reference.
-            // Their first syntax symbol cannot be checked until that retained
-            // state is implemented; constructing a fresh decoder here would
-            // validate the wrong model.
+        let Some(input_cdfs) = input_cdfs else {
+            // The reference header remains useful for structural validation,
+            // but an incomplete retained entropy bundle cannot be substituted
+            // with defaults without changing the bitstream grammar.
+            decode_complete = false;
             continue;
-        }
+        };
         #[expect(
             clippy::cast_possible_truncation,
             reason = "AV1 limits a frame to at most 512 tiles"
@@ -1078,11 +2715,17 @@ fn validate_tile_entropy_prefixes(
         let block_y = tiling.row_starts[row as usize].wrapping_shl(block_shift);
         let context = entropy::FirstBlockContext {
             disable_cdf_update: header.disable_cdf_update,
+            intra_frame: header.frame_type.is_intra(),
             level: root_level,
             block_width,
             block_height,
             block_x,
             block_y,
+            tile_origin_b4_x: 0,
+            tile_origin_b4_y: 0,
+            single_tile: tiling.tile_count() == 1 && ranges.len() == 1,
+            frame_block_width: block_width,
+            frame_block_height: block_height,
             frame_width: header.frame_width,
             frame_height: header.frame_height,
             upscaled_width: header.upscaled_width,
@@ -1102,8 +2745,6 @@ fn validate_tile_entropy_prefixes(
             enable_intra_edge_filter: sequence.enable_intra_edge_filter,
             frame_tools,
         };
-        let reconstructed = entropy::validate_first_partition(data, range.clone(), &context)?;
-        first_leaf = first_leaf.or(reconstructed);
         let next_column = column.saturating_add(1) as usize;
         let next_row = row.saturating_add(1) as usize;
         let tile_block_end_x = tiling
@@ -1141,14 +2782,145 @@ fn validate_tile_entropy_prefixes(
         tile_context.block_height = tile_block_height;
         tile_context.block_x = 0;
         tile_context.block_y = 0;
+        tile_context.tile_origin_b4_x = block_x;
+        tile_context.tile_origin_b4_y = block_y;
         tile_context.frame_width = tile_width;
         tile_context.frame_height = tile_height;
-        tile_context.upscaled_width = tile_width;
-        let complete =
-            entropy::validate_complete_lossy_420_partition(data, range.clone(), &tile_context)?;
-        if let Some(reconstruction) = complete {
+        // Super-resolution is a frame-wide post-filter. Keep the target
+        // display width in the entropy context so its admission gate can
+        // distinguish coded and upscaled coordinates; non-superres tiles
+        // retain the historical tile-local width used by the block walker.
+        tile_context.upscaled_width = if header.superres_enabled {
+            header.upscaled_width
+        } else {
+            tile_width
+        };
+        let complete = entropy::validate_complete_lossy_420_partition(
+            data,
+            range.clone(),
+            &tile_context,
+            input_cdfs,
+            segment_map.as_mut(),
+            previous_segment_map,
+            inter_context,
+        )?;
+        if let Some(mut reconstruction) = complete {
+            let tile_temporal_samples = std::mem::take(&mut reconstruction.temporal_samples);
+            temporal_samples
+                .try_reserve(tile_temporal_samples.len())
+                .map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to allocate AV1 tile-group temporal-MV samples".to_owned(),
+                    )
+                })?;
+            temporal_samples.extend(tile_temporal_samples);
+            let tile_cdfs = reconstruction
+                .cdfs
+                .take()
+                .ok_or_else(|| malformed("complete tile omits its entropy snapshot"))?;
+            if header.refresh_frame_context && tile == tiling.context_update_tile {
+                selected_cdfs = Some(if header.frame_type.is_inter() {
+                    entropy::FrameCdfs::publish_inter(input_cdfs, &tile_cdfs)
+                } else {
+                    entropy::FrameCdfs::publish_intra(input_cdfs, &tile_cdfs)
+                });
+            }
             if tiling.tile_count() == 1 && ranges.len() == 1 {
-                complete_color_leaf = Some(reconstruction.into_filtered_leaf()?);
+                let restoration_plan = reconstruction.restoration;
+                if sequence.monochrome {
+                    let plane = reconstruction.into_monochrome_plane()?;
+                    let plane = if header.superres_enabled {
+                        let depth = SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
+                            malformed("super-resolution sample depth is unsupported")
+                        })?;
+                        resize::upscale_monochrome_plane(
+                            plane,
+                            header.frame_width,
+                            header.upscaled_width,
+                            header.frame_height,
+                            header.superres_denominator,
+                            depth,
+                        )?
+                    } else {
+                        plane
+                    };
+                    let plane = if let Some(plan) = restoration_plan {
+                        let depth = SampleDepth::new(sequence.bit_depth)
+                            .ok_or_else(|| malformed("restoration sample depth is unsupported"))?;
+                        restoration::restore_monochrome_plane(
+                            plane,
+                            header.upscaled_width,
+                            header.frame_height,
+                            plan,
+                            depth,
+                        )?
+                    } else {
+                        plane
+                    };
+                    complete_monochrome_plane = Some(plane);
+                    continue;
+                }
+                let full_resolution =
+                    !reconstruction.subsampling_x && !reconstruction.subsampling_y;
+                let subsampled_420 = reconstruction.subsampling_x && reconstruction.subsampling_y;
+                let subsampled_422 = reconstruction.subsampling_x && !reconstruction.subsampling_y;
+                let leaf = reconstruction.into_filtered_leaf()?;
+                let leaf = if header.superres_enabled {
+                    let depth = SampleDepth::new(sequence.bit_depth)
+                        .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
+                    upscale_color_leaf_for_superres(leaf, header, sequence, depth)?
+                } else {
+                    leaf
+                };
+                let leaf = if let Some(plan) = restoration_plan {
+                    let depth = SampleDepth::new(sequence.bit_depth)
+                        .ok_or_else(|| malformed("restoration sample depth is unsupported"))?;
+                    if full_resolution {
+                        restoration::restore_i444_leaf(leaf, plan, depth)?
+                    } else if subsampled_420 {
+                        restoration::restore_i420_leaf(leaf, plan, depth)?
+                    } else if subsampled_422 {
+                        restoration::restore_i422_leaf(leaf, plan, depth)?
+                    } else {
+                        return Err(malformed(
+                            "restoration carries an unsupported chroma sampling",
+                        ));
+                    }
+                } else {
+                    leaf
+                };
+                complete_color_leaf = Some(leaf);
+            } else if sequence.monochrome {
+                if reconstruction.restoration.is_some() {
+                    return Err(malformed(
+                        "multi-tile monochrome reconstruction carries a post-filter",
+                    ));
+                }
+                let (
+                    plane,
+                    cdef_parameters,
+                    cdef_indices,
+                    cdef_active,
+                    loop_parameters,
+                    filter_blocks,
+                ) = reconstruction.into_unfiltered_monochrome_tile()?;
+                complete_monochrome_tiles.try_reserve(1).map_err(|_| {
+                    CodecError::Dimensions(
+                        "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
+                    )
+                })?;
+                complete_monochrome_tiles.push(ReconstructedMonochromeTile {
+                    x: tile_origin_x,
+                    y: tile_origin_y,
+                    width: tile_width,
+                    height: tile_height,
+                    plane,
+                    cdef_parameters,
+                    cdef_indices,
+                    cdef_active,
+                    loop_parameters,
+                    filter_blocks,
+                });
             } else {
                 complete_color_tiles.push(ReconstructedColorTile {
                     x: tile_origin_x,
@@ -1158,20 +2930,79 @@ fn validate_tile_entropy_prefixes(
                     reconstruction,
                 });
             }
-        }
-        if tiling.tile_count() == 1 && ranges.len() == 1 {
-            complete_monochrome_plane = entropy::validate_complete_monochrome_partition(
-                data,
-                range.clone(),
-                &tile_context,
-            )?;
+        } else {
+            // Unsupported complete classes still retain the earlier bounded
+            // prefix/first-leaf diagnostic. It operates on private state and
+            // must never become the reference CDF publication source.
+            if !header.segmentation.enabled {
+                first_leaf = first_leaf.or(entropy::validate_first_partition(
+                    data,
+                    range.clone(),
+                    &tile_context,
+                )?);
+            }
+            if sequence.monochrome {
+                let plane = entropy::validate_complete_monochrome_partition(
+                    data,
+                    range.clone(),
+                    &tile_context,
+                )?;
+                if tiling.tile_count() == 1 && ranges.len() == 1 {
+                    complete_monochrome_plane = plane
+                        .map(|plane| {
+                            if header.superres_enabled {
+                                let depth =
+                                    SampleDepth::new(sequence.bit_depth).ok_or_else(|| {
+                                        malformed("super-resolution sample depth is unsupported")
+                                    })?;
+                                resize::upscale_monochrome_plane(
+                                    plane,
+                                    header.frame_width,
+                                    header.upscaled_width,
+                                    header.frame_height,
+                                    header.superres_denominator,
+                                    depth,
+                                )
+                            } else {
+                                Ok(plane)
+                            }
+                        })
+                        .transpose()?;
+                } else if header.superres_enabled
+                    && let Some(plane) = plane
+                {
+                    complete_monochrome_tiles.try_reserve(1).map_err(|_| {
+                        CodecError::Dimensions(
+                            "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
+                        )
+                    })?;
+                    complete_monochrome_tiles.push(ReconstructedMonochromeTile {
+                        x: tile_origin_x,
+                        y: tile_origin_y,
+                        width: tile_width,
+                        height: tile_height,
+                        plane,
+                        cdef_parameters: None,
+                        cdef_indices: Vec::new(),
+                        cdef_active: Vec::new(),
+                        loop_parameters: None,
+                        filter_blocks: Vec::new(),
+                    });
+                }
+            }
+            decode_complete = false;
         }
     }
     Ok(TileValidation {
         first_leaf,
         complete_color_leaf,
         complete_color_tiles,
+        temporal_samples,
+        complete_monochrome_tiles,
         complete_monochrome_plane,
+        selected_cdfs,
+        segment_map,
+        decode_complete,
     })
 }
 
@@ -1662,22 +3493,6 @@ fn derive_short_references(
     Ok(result)
 }
 
-fn relative_distance(bits: u32, first: u32, second: u32) -> i32 {
-    if bits == 0 {
-        return 0;
-    }
-    let sign = 1_i64 << bits.saturating_sub(1);
-    let difference = i64::from(first).saturating_sub(i64::from(second));
-    let distance = (difference & sign.saturating_sub(1)).saturating_sub(difference & sign);
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "AV1 order hints use at most eight bits, so the signed distance fits i32"
-    )]
-    {
-        distance as i32
-    }
-}
-
 fn tile_log2(block_size: u32, target: u32) -> u32 {
     let mut value = 0_u32;
     while (block_size << value) < target {
@@ -1921,25 +3736,37 @@ fn read_segmentation(
         let mut segments = [Segment::empty(); 8];
         for segment in &mut segments {
             if bits.bit()? {
+                segment.features |= SEG_ALT_Q;
                 segment.delta_q = bits.signed(9)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_Y_VERTICAL;
                 segment.delta_lf_y_vertical = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_Y_HORIZONTAL;
                 segment.delta_lf_y_horizontal = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_U;
                 segment.delta_lf_u = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_ALT_LF_V;
                 segment.delta_lf_v = bits.signed(7)?;
             }
             if bits.bit()? {
+                segment.features |= SEG_REFERENCE;
                 segment.reference = bits.bits(3)? as i32;
             }
             segment.skip = bits.bit()?;
+            if segment.skip {
+                segment.features |= SEG_SKIP;
+            }
             segment.global_motion = bits.bit()?;
+            if segment.global_motion {
+                segment.features |= SEG_GLOBAL_MOTION;
+            }
         }
         segments
     } else {
@@ -1951,12 +3778,22 @@ fn read_segmentation(
         };
         reference.segmentation.segments
     };
+    let mut preskip = false;
+    let mut last_active_id = 0_i32;
+    for (index, segment) in segments.iter().enumerate() {
+        if segment.features != 0 {
+            last_active_id = i32::try_from(index).unwrap_or(7);
+        }
+        preskip |= segment.features & (SEG_REFERENCE | SEG_SKIP | SEG_GLOBAL_MOTION) != 0;
+    }
     Ok(Segmentation {
         enabled,
         update_map,
         temporal,
         update_data,
         segments,
+        preskip,
+        last_active_id,
     })
 }
 
@@ -2256,7 +4093,12 @@ fn read_global_motion(
 }
 
 fn read_points(bits: &mut BitReader<'_, '_, '_>, count: u32) -> Av1Result<Vec<[u32; 2]>> {
-    let mut points: Vec<[u32; 2]> = Vec::with_capacity(count as usize);
+    let count =
+        usize::try_from(count).map_err(|_| malformed("film-grain point count exceeds usize"))?;
+    let mut points: Vec<[u32; 2]> = Vec::new();
+    points
+        .try_reserve_exact(count)
+        .map_err(|_| malformed("unable to allocate film-grain points"))?;
     for _ in 0..count {
         let point = [bits.bits(8)?, bits.bits(8)?];
         if points
@@ -2336,7 +4178,11 @@ fn read_film_grain(
         .saturating_mul(2);
     let mut ar_coefficients_y = Vec::new();
     if y_count != 0 {
-        ar_coefficients_y.reserve(ar_positions as usize);
+        let ar_count = usize::try_from(ar_positions)
+            .map_err(|_| malformed("film-grain AR coefficient count exceeds usize"))?;
+        ar_coefficients_y
+            .try_reserve_exact(ar_count)
+            .map_err(|_| malformed("unable to allocate film-grain luma AR coefficients"))?;
         for _ in 0..ar_positions {
             ar_coefficients_y.push((bits.bits(8)? as i32).saturating_sub(128));
         }
@@ -2345,7 +4191,11 @@ fn read_film_grain(
     for (plane, coefficients) in ar_coefficients_uv.iter_mut().enumerate() {
         if !uv_points[plane].is_empty() || chroma_scaling_from_luma {
             let count = ar_positions.saturating_add(u32::from(y_count != 0));
-            coefficients.reserve(count as usize);
+            let count = usize::try_from(count)
+                .map_err(|_| malformed("film-grain AR coefficient count exceeds usize"))?;
+            coefficients
+                .try_reserve_exact(count)
+                .map_err(|_| malformed("unable to allocate film-grain chroma AR coefficients"))?;
             for _ in 0..count {
                 coefficients.push((bits.bits(8)? as i32).saturating_sub(128));
             }
@@ -2381,6 +4231,7 @@ fn read_film_grain(
         uv_offset,
         overlap: bits.bit()?,
         clip_to_restricted_range: bits.bit()?,
+        matrix_coefficients: sequence.matrix_coefficients,
     }))
 }
 
@@ -2528,7 +4379,12 @@ fn coverage_tile_group(start: u32, end: u32) -> TileGroup {
         first_leaf: None,
         complete_color_leaf: None,
         complete_color_tiles: Vec::new(),
+        temporal_samples: Vec::new(),
+        complete_monochrome_tiles: Vec::new(),
         complete_monochrome_plane: None,
+        selected_cdfs: None,
+        segment_map: None,
+        decode_complete: false,
     }
 }
 
@@ -2713,6 +4569,45 @@ fn coverage_references() -> [Option<FrameHeader>; 8] {
 
 #[cfg(coverage)]
 #[coverage(off)]
+fn coverage_reference_states() -> [Option<ReferenceState>; 8] {
+    coverage_references().map(|header| {
+        header.map(|header| ReferenceState {
+            header,
+            decode: None,
+            surface: None,
+        })
+    })
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
+fn coverage_pending(header: FrameHeader) -> PendingFrame {
+    let qindex = header
+        .quantization
+        .as_ref()
+        .map_or(0, |quantization| quantization.base);
+    PendingFrame {
+        header,
+        obu_extension: false,
+        staged_references: std::array::from_fn(|_| None),
+        staged_current_frame_id: None,
+        next_tile: 0,
+        input_cdfs: entropy::FrameCdfs::defaults(qindex).ok(),
+        selected_cdfs: None,
+        previous_segment_map: None,
+        segment_map: None,
+        decode_complete: true,
+        first_leaf: None,
+        complete_color_leaf: None,
+        complete_color_tiles: Vec::new(),
+        temporal_samples: Vec::new(),
+        complete_monochrome_tiles: Vec::new(),
+        complete_monochrome_plane: None,
+    }
+}
+
+#[cfg(coverage)]
+#[coverage(off)]
 fn coverage_state_paths() {
     let sequence = coverage_sequence();
     let mut state = FrameState::new();
@@ -2737,6 +4632,7 @@ fn coverage_state_paths() {
     }
     let mut entropy_header = coverage_header();
     entropy_header.primary_ref_frame = PRIMARY_REF_NONE;
+    let entropy_cdfs = entropy::FrameCdfs::defaults(1).unwrap();
     assert!(
         validate_tile_entropy_prefixes(
             &tile_data,
@@ -2745,6 +4641,12 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
+            TileEntropyInputs {
+                input_cdfs: Some(&entropy_cdfs),
+                current_segment_map: None,
+                previous_segment_map: None,
+                inter_context: None,
+            },
         )
         .is_err()
     );
@@ -2761,6 +4663,12 @@ fn coverage_state_paths() {
             &entropy_header,
             &sequence,
             entropy_header.tiling.as_ref().unwrap(),
+            TileEntropyInputs {
+                input_cdfs: Some(&entropy_cdfs),
+                current_segment_map: None,
+                previous_segment_map: None,
+                inter_context: None,
+            },
         )
         .is_ok()
     );
@@ -2768,11 +4676,22 @@ fn coverage_state_paths() {
     assert!(coverage_read_tile_group(&no_sequence, &tile_input, tile_input.len() * 8).is_err());
     let mut rejected_entropy = FrameState::new();
     rejected_entropy.sequence = Some(sequence.clone());
-    rejected_entropy.pending = Some(entropy_header);
-    assert!(coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8).is_ok());
-    let _ = state.begin_frame(&empty_data, 0, 0, 0, 0, false);
-    let _ = state.tile_group_obu(&empty_data, 0, 0);
-    let _ = state.tile_group_obu(&empty_data, 1, 0);
+    rejected_entropy.pending = Some(coverage_pending(entropy_header));
+    assert!(matches!(
+        coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8),
+        Err(CodecError::Malformed(message))
+            if message == "invalid AV1 bitstream: decoded inter frame references an empty slot"
+    ));
+    let mut accepted_entropy = FrameState::new();
+    accepted_entropy.sequence = Some(sequence.clone());
+    let mut accepted_header = coverage_header();
+    accepted_header.frame_type = FrameType::Key;
+    accepted_header.primary_ref_frame = PRIMARY_REF_NONE;
+    accepted_entropy.pending = Some(coverage_pending(accepted_header));
+    assert!(coverage_read_tile_group(&accepted_entropy, &tile_input, tile_input.len() * 8).is_ok());
+    let _ = state.begin_frame(&empty_data, 0..0, false, 0, 0, false);
+    let _ = state.tile_group_obu(&empty_data, 0, 0, false, 0, 0);
+    let _ = state.tile_group_obu(&empty_data, 1, 0, false, 0, 0);
     let _ = parse(
         &empty_data,
         1,
@@ -2792,10 +4711,16 @@ fn coverage_state_paths() {
         0,
     );
     let mut missing_sequence = FrameState::new();
-    assert_eq!(
-        missing_sequence.accept_parsed_header(true, sequence.frame_id_bits, coverage_header()),
-        Ok(())
-    );
+    assert!(matches!(
+        missing_sequence.accept_parsed_header(
+            true,
+            sequence.frame_id_bits,
+            false,
+            coverage_header(),
+        ),
+        Err(CodecError::Malformed(message))
+            if message == "invalid AV1 bitstream: frame header has no sequence state"
+    ));
     assert_eq!(state.temporal_delimiter(), Ok(()));
     assert!(state.finish().is_err());
     assert_eq!(state.accept_sequence(sequence.clone()), Ok(()));
@@ -2804,7 +4729,7 @@ fn coverage_state_paths() {
     inconsistent.max_width += 1;
     assert!(state.accept_sequence(inconsistent).is_err());
 
-    state.pending = Some(coverage_header());
+    state.pending = Some(coverage_pending(coverage_header()));
     assert!(state.temporal_delimiter().is_err());
     assert!(state.finish().is_err());
     assert_eq!(state.complete_show_existing(), Ok(()));
@@ -2814,16 +4739,25 @@ fn coverage_state_paths() {
     let mut shown = coverage_header();
     shown.show_existing_frame = true;
     shown.existing_frame_idx = Some(0);
-    state.pending = Some(shown.clone());
-    state.references[0] = Some(coverage_header());
+    state.references[0] = Some(ReferenceState {
+        header: coverage_header(),
+        decode: None,
+        surface: None,
+    });
+    let mut shown_pending = coverage_pending(shown.clone());
+    shown_pending.staged_references = state.references.clone();
+    state.pending = Some(shown_pending);
     assert_eq!(state.complete_show_existing(), Ok(()));
-    state.pending = Some(shown.clone());
-    state.references[0].as_mut().unwrap().showable_frame = false;
+    state.references[0].as_mut().unwrap().header.showable_frame = false;
+    let mut unshowable_pending = coverage_pending(shown.clone());
+    unshowable_pending.staged_references = state.references.clone();
+    state.pending = Some(unshowable_pending);
     assert!(state.complete_show_existing().is_err());
     state.references[0] = None;
+    state.pending.as_mut().unwrap().staged_references = state.references.clone();
     assert!(state.complete_show_existing().is_err());
     shown.existing_frame_idx = None;
-    state.pending = Some(shown);
+    state.pending = Some(coverage_pending(shown));
     assert!(state.complete_show_existing().is_err());
 
     let mut key = coverage_header();
@@ -2832,33 +4766,39 @@ fn coverage_state_paths() {
     let mut shown_key = key.clone();
     shown_key.show_existing_frame = true;
     shown_key.existing_frame_idx = Some(0);
-    state.references[0] = Some(key);
-    state.pending = Some(shown_key);
+    state.references[0] = Some(ReferenceState {
+        header: key,
+        decode: None,
+        surface: None,
+    });
+    let mut shown_key_pending = coverage_pending(shown_key);
+    shown_key_pending.staged_references = state.references.clone();
+    state.pending = Some(shown_key_pending);
     assert_eq!(state.complete_show_existing(), Ok(()));
     assert!(state.references.iter().all(|reference| {
         reference
             .as_ref()
-            .is_some_and(|frame| !frame.showable_frame)
+            .is_some_and(|frame| !frame.header.showable_frame)
     }));
 
     state.sequence = Some(sequence.clone());
-    state.references = coverage_references();
+    state.references = coverage_reference_states();
     state.references[0] = None;
     state.invalidate_old_references(10);
-    state.references = coverage_references();
-    state.references[0].as_mut().unwrap().frame_id = 11;
+    state.references = coverage_reference_states();
+    state.references[0].as_mut().unwrap().header.frame_id = 11;
     state.invalidate_old_references(10);
-    state.references = coverage_references();
+    state.references = coverage_reference_states();
     state.invalidate_old_references(1);
     assert_eq!(
-        state.accept_parsed_header(true, sequence.frame_id_bits, coverage_header()),
+        state.accept_parsed_header(true, sequence.frame_id_bits, false, coverage_header()),
         Ok(())
     );
     state.pending = None;
     let mut accepted_existing = coverage_header();
     accepted_existing.show_existing_frame = true;
     assert_eq!(
-        state.accept_parsed_header(true, sequence.frame_id_bits, accepted_existing),
+        state.accept_parsed_header(true, sequence.frame_id_bits, false, accepted_existing),
         Ok(())
     );
     state.pending = None;
@@ -2871,15 +4811,14 @@ fn coverage_state_paths() {
     repeated_id.frame_id = 3;
     assert!(
         invalid_id_state
-            .accept_parsed_header(true, sequence.frame_id_bits, repeated_id)
+            .accept_parsed_header(true, sequence.frame_id_bits, false, repeated_id)
             .is_err()
     );
 
     let mut tiled = coverage_header();
     tiled.tiling = Some(coverage_tiling(2, 2));
     tiled.refresh_frame_flags = 0b1000_0001;
-    state.pending = Some(tiled);
-    state.next_tile = 0;
+    state.pending = Some(coverage_pending(tiled));
     assert!(state.accept_tile_group(coverage_tile_group(1, 1)).is_err());
     assert_eq!(state.accept_tile_group(coverage_tile_group(0, 1)), Ok(()));
     assert_eq!(state.accept_tile_group(coverage_tile_group(2, 3)), Ok(()));
@@ -2890,13 +4829,13 @@ fn coverage_state_paths() {
 
     let mut missing_tiling = coverage_header();
     missing_tiling.tiling = None;
-    state.pending = Some(missing_tiling);
+    state.pending = Some(coverage_pending(missing_tiling));
     let _ = state.accept_tile_group(coverage_tile_group(0, 0));
     let _ = coverage_read_tile_group(&state, &[], 0);
 
     let mut group_header = coverage_header();
     group_header.tiling = Some(coverage_tiling(2, 2));
-    state.pending = Some(group_header);
+    state.pending = Some(coverage_pending(group_header));
     for payload in [[0b1001_1000_u8], [0b1110_0000], [0], [0x80]] {
         let _ = coverage_read_tile_group(&state, &payload, 8);
     }
@@ -2907,6 +4846,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -2915,6 +4855,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -2923,6 +4864,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -2931,6 +4873,7 @@ fn coverage_state_paths() {
         .pending
         .as_mut()
         .unwrap()
+        .header
         .tiling
         .as_mut()
         .unwrap()
@@ -3029,6 +4972,7 @@ fn coverage_state_paths() {
     animated_state
         .accept_sequence(animated_sequence.clone())
         .unwrap();
+    let mut coverage_surface: Option<Arc<FrameSurface>> = None;
     for (frame_index, frame) in [
         ANIMATED_KEY,
         ANIMATED_INTER_1,
@@ -3038,11 +4982,21 @@ fn coverage_state_paths() {
     .into_iter()
     .enumerate()
     {
-        coverage_sweep_frame(frame, &animated_sequence, &animated_state.references);
+        if let Some(surface) = coverage_surface.as_ref() {
+            for reference in &mut animated_state.references {
+                if let Some(reference) = reference.as_mut() {
+                    if reference.surface.is_none() {
+                        reference.surface = Some(surface.clone());
+                    }
+                }
+            }
+        }
+        let animated_references = animated_state.reference_headers();
+        coverage_sweep_frame(frame, &animated_sequence, &animated_references);
         if frame_index == 1 {
-            coverage_mutation_sweep_frame(frame, &animated_sequence, &animated_state.references);
+            coverage_mutation_sweep_frame(frame, &animated_sequence, &animated_references);
             for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_state.references.clone();
+                let mut missing_reference = animated_references.clone();
                 missing_reference[slot] = None;
                 coverage_sweep_frame(frame, &animated_sequence, &missing_reference);
             }
@@ -3050,9 +5004,9 @@ fn coverage_state_paths() {
         if frame_index == 3 {
             let mut select_mode = frame.to_vec();
             select_mode[107 / 8] ^= 1 << (7 - 107 % 8);
-            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_state.references);
+            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_references);
             for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_state.references.clone();
+                let mut missing_reference = animated_references.clone();
                 missing_reference[slot] = None;
                 coverage_sweep_frame(&select_mode, &animated_sequence, &missing_reference);
             }
@@ -3063,30 +5017,43 @@ fn coverage_state_paths() {
         }];
         let data = SegmentedData::new(frame, &spans).unwrap();
         assert_eq!(
-            animated_state.frame_obu(&data, 0, frame.len(), 0, 0),
+            animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
             Ok(())
         );
+        if frame_index == 0 {
+            coverage_surface = animated_state
+                .references
+                .iter()
+                .find_map(|reference| reference.as_ref().and_then(|value| value.surface.clone()));
+        }
     }
     let show_existing = [0xa8_u8];
-    coverage_sweep_frame(
-        &show_existing,
-        &animated_sequence,
-        &animated_state.references,
-    );
+    let animated_references = animated_state.reference_headers();
+    coverage_sweep_frame(&show_existing, &animated_sequence, &animated_references);
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show_existing, &show_spans).unwrap();
     assert_eq!(
-        animated_state.frame_header_obu(&show_data, 0, 1, 0, 0, false),
+        animated_state.frame_header_obu(&show_data, 0..1, false, 0, 0, false),
         Ok(())
     );
     for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
-        coverage_sweep_frame(frame, &animated_sequence, &animated_state.references);
+        if let Some(surface) = coverage_surface.as_ref() {
+            for reference in &mut animated_state.references {
+                if let Some(reference) = reference.as_mut() {
+                    if reference.surface.is_none() {
+                        reference.surface = Some(surface.clone());
+                    }
+                }
+            }
+        }
+        let animated_references = animated_state.reference_headers();
+        coverage_sweep_frame(frame, &animated_sequence, &animated_references);
         if frame_index == 0 {
             let mut select_mode = frame.to_vec();
             select_mode[107 / 8] ^= 1 << (7 - 107 % 8);
-            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_state.references);
+            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_references);
             for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_state.references.clone();
+                let mut missing_reference = animated_references.clone();
                 missing_reference[slot] = None;
                 coverage_sweep_frame(&select_mode, &animated_sequence, &missing_reference);
             }
@@ -3097,7 +5064,7 @@ fn coverage_state_paths() {
         }];
         let data = SegmentedData::new(frame, &spans).unwrap();
         assert_eq!(
-            animated_state.frame_obu(&data, 0, frame.len(), 0, 0),
+            animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
             Ok(())
         );
     }
@@ -3107,27 +5074,27 @@ fn coverage_state_paths() {
     direct.accept_sequence(parsed_sequence.clone()).unwrap();
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 0, 0, false)
+            .begin_frame(&data, frame_start..frame_end, false, 0, 0, false)
             .is_ok()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 0, 0, false)
+            .begin_frame(&data, frame_start..frame_end, false, 0, 0, false)
             .is_err()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 0, 0, true)
+            .begin_frame(&data, frame_start..frame_end, false, 0, 0, true)
             .is_ok()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_end, 1, 0, true)
+            .begin_frame(&data, frame_start..frame_end, true, 1, 0, true)
             .is_err()
     );
     assert!(
         direct
-            .begin_frame(&data, frame_start, frame_start, 0, 0, true)
+            .begin_frame(&data, frame_start..frame_start, false, 0, 0, true)
             .is_err()
     );
 
@@ -3144,9 +5111,9 @@ fn coverage_state_paths() {
     let mut frame_id_state = FrameState::new();
     frame_id_state.accept_sequence(frame_id_sequence).unwrap();
     frame_id_state.current_frame_id = Some(3);
-    let _ = frame_id_state.begin_frame(&frame_id_data, 0, frame_with_id.len(), 0, 0, false);
+    let _ = frame_id_state.begin_frame(&frame_id_data, 0..frame_with_id.len(), false, 0, 0, false);
 
-    let header_bits = direct.pending.as_ref().unwrap().header_bits;
+    let header_bits = direct.pending.as_ref().unwrap().header.header_bits;
     let header_length = header_bits.saturating_add(1).div_ceil(8);
     let mut reduced_header = REDUCED_FRAME[..header_length].to_vec();
     let trailing_byte = header_bits / 8;
@@ -3161,26 +5128,34 @@ fn coverage_state_paths() {
     let mut split = FrameState::new();
     split.accept_sequence(parsed_sequence.clone()).unwrap();
     assert_eq!(
-        split.frame_header_obu(&header_data, 0, reduced_header.len(), 0, 0, false),
+        split.frame_header_obu(&header_data, 0..reduced_header.len(), false, 0, 0, false,),
         Ok(())
     );
     assert_eq!(
-        split.frame_header_obu(&header_data, 0, reduced_header.len(), 0, 0, true),
+        split.frame_header_obu(&header_data, 0..reduced_header.len(), false, 0, 0, true,),
         Ok(())
     );
     assert!(matches!(
-        split.tile_group_obu(&header_data, 0, 0),
+        split.tile_group_obu(&header_data, 0, 0, false, 0, 0),
         Err(crate::codecs::CodecError::Malformed(message))
             if message.contains("tile payload is empty")
     ));
 
     let mut illegal_show = FrameState::new();
     illegal_show.accept_sequence(coverage_sequence()).unwrap();
-    illegal_show.references[0] = Some(coverage_header());
+    illegal_show.references[0] = Some(ReferenceState {
+        header: coverage_header(),
+        decode: None,
+        surface: None,
+    });
     let show = [0x80];
     let show_spans = [ByteSpan { start: 0, end: 1 }];
     let show_data = SegmentedData::new(&show, &show_spans).unwrap();
-    assert!(illegal_show.frame_obu(&show_data, 0, 1, 0, 0).is_err());
+    assert!(
+        illegal_show
+            .frame_obu(&show_data, 0, 1, false, 0, 0)
+            .is_err()
+    );
 
     let references = coverage_references();
     let mut show_existing = CoverageBitWriter::new();
@@ -4005,6 +5980,7 @@ fn coverage_prediction_and_grain_paths() {
         uv_offset: [0; 2],
         overlap: false,
         clip_to_restricted_range: false,
+        matrix_coefficients: 6,
     });
     let mut inherited = CoverageBitWriter::new();
     inherited.push(1, 1);

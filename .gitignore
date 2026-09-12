@@ -11,3 +11,8 @@ lcov.info
 /docs/codec-handbook/
 /target/
 benchmarks/**/target/
+
+# Codex-local worktree and Cargo settings are generated outside the source
+# package and must not make the local release gate appear dirty.
+/.cargo/
+/.codex/

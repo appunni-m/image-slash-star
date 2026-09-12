@@ -11,7 +11,7 @@ use image_slash_star::{
     EncodeOptions, EncodedImage, ImageDiagnostic, ImageError, ImageErrorStage, ImageFormat,
     ImageMode, ImagePalette, SequenceKind, SourceColor, UnsupportedReason,
 };
-#[cfg(feature = "jpeg")]
+#[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
 mod support;
@@ -8430,7 +8430,7 @@ fn decode_allowed_formats_are_a_rust_policy_contract() -> Result<(), Box<dyn std
 
 #[test]
 fn transfer_layout_matches_the_output_contract() -> Result<(), Box<dyn std::error::Error>> {
-    use image_slash_star::TransferLayout;
+    use image_slash_star::{TransferByteOrder, TransferLayout, TransferPlanePacking};
 
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let cases: &[(&str, bool, &str)] = &[
@@ -8489,12 +8489,238 @@ fn transfer_layout_matches_the_output_contract() -> Result<(), Box<dyn std::erro
         };
         assert_eq!(layout.row_bytes, expected_row_bytes, "{name} row bytes");
 
+        let detailed = info.detailed_transfer_layout()?;
+        assert_eq!(detailed.legacy_layout(), layout, "{name} legacy layout");
+        assert_eq!(
+            detailed.geometry(),
+            (info.width, info.height),
+            "{name} geometry"
+        );
+        assert_eq!(detailed.width(), info.width, "{name} detailed width");
+        assert_eq!(detailed.height(), info.height, "{name} detailed height");
+        assert_eq!(detailed.mode(), info.mode, "{name} detailed mode");
+        assert_eq!(
+            detailed.row_bytes(),
+            layout.row_bytes,
+            "{name} detailed row bytes"
+        );
+        assert_eq!(
+            detailed.total_bytes(),
+            layout.total_bytes,
+            "{name} detailed total"
+        );
+        assert_eq!(
+            detailed.alignment(),
+            layout.alignment,
+            "{name} detailed alignment"
+        );
+        assert_eq!(
+            detailed.byte_order(),
+            TransferByteOrder::NotApplicable,
+            "{name} byte order"
+        );
+        assert_eq!(detailed.planes().len(), 1, "{name} plane count");
+        let plane = &detailed.planes()[0];
+        assert_eq!(plane.width(), info.width, "{name} plane width");
+        assert_eq!(plane.height(), info.height, "{name} plane height");
+        assert_eq!(plane.offset(), 0, "{name} plane offset");
+        assert_eq!(
+            plane.row_bytes(),
+            layout.row_bytes,
+            "{name} plane row bytes"
+        );
+        assert_eq!(
+            plane.total_bytes(),
+            layout.total_bytes,
+            "{name} plane total"
+        );
+        assert_eq!(
+            plane.alignment(),
+            layout.alignment,
+            "{name} plane alignment"
+        );
+        assert_eq!(
+            plane.packing(),
+            if info.mode == ImageMode::L1 {
+                TransferPlanePacking::PackedL1MsbFirst
+            } else {
+                TransferPlanePacking::ByteAligned
+            },
+            "{name} plane packing"
+        );
+
         let decoded = image_slash_star::decode(&data)?;
         assert_eq!(decoded.content.transfer_layout()?, layout, "{name} decoded");
+        assert_eq!(
+            decoded.content.detailed_transfer_layout()?,
+            detailed,
+            "{name} decoded detailed"
+        );
         let mut buffer = vec![0xAA; layout.total_bytes];
         let _ = image_slash_star::decode_into(&data, &mut buffer)?;
         assert_eq!(buffer.len(), layout.total_bytes, "{name} destination");
     }
+    Ok(())
+}
+
+#[test]
+fn detailed_transfer_layout_preserves_tiff_scalar_source_order()
+-> Result<(), Box<dyn std::error::Error>> {
+    if !cfg!(feature = "tiff") {
+        return Ok(());
+    }
+
+    use image_slash_star::{SourceByteOrder, TransferByteOrder};
+
+    // The expected source orders are the independent Pillow fixture results
+    // recorded in tests/fixtures/outputs/jsons/Decode.tiff.json for these
+    // canonical rows: big-endian I/F retain Big, little-endian I/F retain
+    // Little, and I;16 is normalized to Little.
+    let cases: &[(&str, ImageMode, SourceByteOrder, TransferByteOrder)] = &[
+        (
+            "be_float32_predictor.tiff",
+            ImageMode::F32,
+            SourceByteOrder::Big,
+            TransferByteOrder::Big,
+        ),
+        (
+            "be_signed32_predictor.tiff",
+            ImageMode::I32,
+            SourceByteOrder::Big,
+            TransferByteOrder::Big,
+        ),
+        (
+            "float32.tiff",
+            ImageMode::F32,
+            SourceByteOrder::Little,
+            TransferByteOrder::Little,
+        ),
+        (
+            "le_unsigned32_predictor.tiff",
+            ImageMode::I32,
+            SourceByteOrder::Little,
+            TransferByteOrder::Little,
+        ),
+        (
+            "16bit.tiff",
+            ImageMode::L16,
+            SourceByteOrder::Little,
+            TransferByteOrder::Little,
+        ),
+    ];
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    for &(asset, mode, source_order, transfer_order) in cases {
+        let data = fs::read(root.join("tests/fixtures/input/images/tiff").join(asset))?;
+        let info = image_slash_star::inspect(&data)?;
+        assert_eq!(info.mode, mode, "{asset} mode");
+        assert_eq!(
+            info.source.byte_order(),
+            Some(source_order),
+            "{asset} source order"
+        );
+        let detailed = info.detailed_transfer_layout()?;
+        assert_eq!(
+            detailed.byte_order(),
+            transfer_order,
+            "{asset} transfer order"
+        );
+        assert_eq!(
+            detailed.legacy_layout(),
+            info.transfer_layout()?,
+            "{asset} legacy"
+        );
+        assert_eq!(detailed.planes().len(), 1, "{asset} plane count");
+        let plane = &detailed.planes()[0];
+        assert_eq!(plane.offset(), 0, "{asset} plane offset");
+        assert_eq!(plane.width(), info.width, "{asset} plane width");
+        assert_eq!(plane.height(), info.height, "{asset} plane height");
+        assert_eq!(
+            plane.row_bytes(),
+            detailed.row_bytes(),
+            "{asset} plane rows"
+        );
+        assert_eq!(
+            plane.total_bytes(),
+            detailed.total_bytes(),
+            "{asset} plane total"
+        );
+
+        let decoded = image_slash_star::decode(&data)?;
+        assert_eq!(
+            decoded.content.detailed_transfer_layout()?,
+            detailed,
+            "{asset} decoded descriptor"
+        );
+        assert_eq!(
+            decoded.content.detailed_transfer_layout()?.legacy_layout(),
+            decoded.content.transfer_layout()?,
+            "{asset} decoded legacy"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn detailed_transfer_layout_caller_metadata_cases_are_rust_only()
+-> Result<(), Box<dyn std::error::Error>> {
+    use image_slash_star::{SourceByteOrder, SourceDescriptor, TransferByteOrder};
+
+    // These structural cases have no Pillow operation: they exercise the
+    // public descriptor for caller-created pixels and preserve the exact
+    // legacy arithmetic/error boundary.
+    let unknown_f32 = DecodedImage::new(1, 1, vec![0; 4], ColorType::L32F);
+    assert_eq!(
+        unknown_f32.detailed_transfer_layout()?.byte_order(),
+        TransferByteOrder::Unknown
+    );
+    let unknown_i32 = DecodedImage::new(1, 1, vec![0; 4], ColorType::L32I);
+    assert_eq!(
+        unknown_i32.detailed_transfer_layout()?.byte_order(),
+        TransferByteOrder::Unknown
+    );
+
+    let native_order = if cfg!(target_endian = "little") {
+        TransferByteOrder::Little
+    } else {
+        TransferByteOrder::Big
+    };
+    for &(color, mode, bytes) in &[
+        (ColorType::Rgb32F, ImageMode::Rgb32F, 12_usize),
+        (ColorType::Rgba32F, ImageMode::Rgba32F, 16_usize),
+    ] {
+        let image = DecodedImage::new(1, 1, vec![0; bytes], color);
+        let detailed = image.detailed_transfer_layout()?;
+        assert_eq!(detailed.mode(), mode);
+        assert_eq!(detailed.byte_order(), native_order);
+    }
+
+    for &(color, mode, bytes) in &[
+        (ColorType::L16, ImageMode::L16, 2_usize),
+        (ColorType::La16, ImageMode::La16, 4_usize),
+        (ColorType::Rgb16, ImageMode::Rgb16, 6_usize),
+        (ColorType::Rgba16, ImageMode::Rgba16, 8_usize),
+    ] {
+        let image = DecodedImage::new(1, 1, vec![0; bytes], color)
+            .with_source_descriptor(SourceDescriptor::new().with_byte_order(SourceByteOrder::Big));
+        let detailed = image.detailed_transfer_layout()?;
+        assert_eq!(detailed.mode(), mode);
+        assert_eq!(detailed.byte_order(), TransferByteOrder::Little);
+    }
+
+    let zero = DecodedImage::new(0, 0, Vec::new(), ColorType::L8);
+    assert_eq!(
+        zero.detailed_transfer_layout()?.legacy_layout(),
+        zero.transfer_layout()?
+    );
+    let overflow = DecodedImage::new(u32::MAX, u32::MAX, Vec::new(), ColorType::Rgb32F);
+    assert!(matches!(
+        overflow.detailed_transfer_layout(),
+        Err(ImageError::Dimensions { .. })
+    ));
+    assert!(matches!(
+        overflow.transfer_layout(),
+        Err(ImageError::Dimensions { .. })
+    ));
     Ok(())
 }
 

@@ -784,7 +784,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     two_entries.extend_from_slice(&38u32.to_le_bytes());
     two_entries.push(0);
     assert!(decode(&two_entries, None).is_err());
-    let fixture = include_bytes!("../../../tests/fixtures/input/images/ico/16x16.ico");
+    let fixture = include_bytes!("../../test_support/fixtures/input/images/ico/16x16.ico");
     for checks in 0..=4 {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
