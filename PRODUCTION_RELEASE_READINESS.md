@@ -5,10 +5,9 @@ registry package is version `0.1.0`; it remains a bounded codec pre-release
 until the canonical roadmap and evidence say otherwise.
 
 The current clean-history release candidate is the pushed branch
-`codex/release-image-slash-star-clean-current` at commit
-`96fa1bccbcd8c87e40d99d7ade895b72d8607864`. Its package archive was rebuilt
-and verified locally with SHA-256
-`2e0be81e5453c4d22244ac665cb90ffefe861e73c9b24118a96c920f69b28138`.
+`codex/release-image-slash-star-clean-current`. The package archive and its
+checksum are authoritative only when produced by `make package-verify` from
+the reviewed branch `HEAD`; rerun that gate whenever the branch advances.
 
 ## Release identity
 
