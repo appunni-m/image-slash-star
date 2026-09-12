@@ -23,7 +23,8 @@ env:
 jobs:
   preflight:
     name: Verify immutable release candidate
-    runs-on: ubuntu-24.04
+    # The release matrix is bound to the Apple ARM64 native fixture contract.
+    runs-on: macos-14
     timeout-minutes: 240
     permissions:
       contents: read
