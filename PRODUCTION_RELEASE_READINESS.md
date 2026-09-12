@@ -4,6 +4,12 @@ This checklist is the release boundary for `image-slash-star`. The first
 registry package is version `0.1.0`; it remains a bounded codec pre-release
 until the canonical roadmap and evidence say otherwise.
 
+The current clean-history release candidate is the pushed branch
+`codex/release-image-slash-star-clean-current` at commit
+`96fa1bccbcd8c87e40d99d7ade895b72d8607864`. Its package archive was rebuilt
+and verified locally with SHA-256
+`2e0be81e5453c4d22244ac665cb90ffefe861e73c9b24118a96c920f69b28138`.
+
 ## Release identity
 
 - [x] Cargo metadata, lockfile, README, changelog, legal files, and package
@@ -27,17 +33,15 @@ until the canonical roadmap and evidence say otherwise.
       check and isolated archive consumer pass. A clean worktree also passes
       the complete `make package-verify` target with the pinned Rust 1.96.1
       toolchain.
-- [ ] The pushed history contains no generated fixture blob at or above
-      GitHub's 100 MB limit. The current tree has the required 424-byte AV1
-      reconstruction index plus five deterministic sidecars (7.7–29.1 MB each),
-      all below the limit. GitHub rejected the push because earlier history
-      retains three generated `av1_reconstruction.json` blobs above the hard
-      limit (122,191,374; 113,296,026; and 105,260,021 bytes); two additional
-      historical versions of 104,403,261 and 104,072,984 bytes also trigger
-      large-file warnings. These are history-only artifacts; the current
-      fixture set remains required and regeneratable from the pinned dav1d
-      source. History cleanup requires an explicit coordinated rewrite before
-      the `main` branch can be pushed.
+- [x] The pushed clean-history release branch contains no generated fixture
+      blob at or above GitHub's 100 MB limit. Its current tree has the required
+      424-byte AV1 reconstruction index plus five deterministic sidecars
+      (7.7–29.1 MB each), all below the limit. The default `main` branch still
+      retains three historical `av1_reconstruction.json` blobs above the hard
+      limit (122,191,374; 113,296,026; and 105,260,021 bytes), with two more
+      historical versions of 104,403,261 and 104,072,984 bytes. Those objects
+      are why a direct `main` push remains rejected; the release candidate uses
+      the clean branch and leaves `main` unchanged.
 - [ ] The exact clean commit has a successful pinned CI run.
 - [ ] Managed Pillow parity and Coverage MCP receipts identify that commit.
 - [ ] The four release coverage metrics and every planned codec class remain
