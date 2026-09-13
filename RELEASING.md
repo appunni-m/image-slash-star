@@ -70,9 +70,9 @@ The owner-authorized first upload completed on 2026-09-13 from immutable tag
 `v0.1.0` at commit `35dd72808e6b2a8488b98caf685a3d48e4c97468`. The exact
 crates.io archive is visible as `image-slash-star@0.1.0` with checksum
 `f35022079076b686716e61a8640b3e4bafb0004701486277cb95f004b769a178`.
-The current clean-history branch remains a follow-on candidate; its promotion
-to historical `main` was rejected as a non-fast-forward, so no history rewrite
-was attempted.
+The current clean-history branch was promoted to remote `main` with an exact
+`--force-with-lease` after creating and verifying a local-only Git bundle at
+`/private/tmp/image-slash-star-pre-force-backup-20260913/repository.bundle`.
 
 After the clean release gate passes, authenticate interactively and publish the
 single crate without creating a tag:
