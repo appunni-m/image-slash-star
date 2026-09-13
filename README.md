@@ -11,8 +11,9 @@ oracle for every active manifest case: success or error, format, mode,
 dimensions, metadata, frames, pixels, palettes, and deterministic encoded
 bytes.
 
-> **Pre-release status:** version 0.1.0 is not published to crates.io. The
-> compatibility guarantee is limited to committed manifest cases, not every
+> **Pre-release status:** version 0.1.0 was published to crates.io from local
+> tag `v0.1.0` at commit `35dd72808e6b2a8488b98caf685a3d48e4c97468`.
+> The compatibility guarantee is limited to committed manifest cases, not every
 > legal file in each format specification. Encoded-input bytes, inspected
 > primary-canvas dimensions/pixels/decoded bytes, the inspected frame count,
 > every later frame/page's decoded bytes, cumulative sequence bytes, and the
@@ -41,7 +42,7 @@ downstream library.
 
 ## Quick start
 
-Until the first registry release, depend on the repository:
+For source-tree development, depend on the repository:
 
 ```toml
 [dependencies.image-slash-star]

@@ -49,10 +49,12 @@ the reviewed branch `HEAD`; rerun that gate whenever the branch advances.
 ## Local first publish
 
 - [ ] Run `make release-verify` from a clean checkout.
-- [ ] Run `cargo login` interactively on the reviewed machine.
-- [ ] Run `RELEASE_APPROVED=1 RELEASE_CI_SHA="$(git rev-parse HEAD)" make release-bootstrap`.
-- [ ] Run `cargo logout` after the bootstrap and compare the public crates.io
-      archive with `target/release-artifacts/registry/`.
+- [x] Run the owner-authorized first Cargo bootstrap from immutable tag
+      `v0.1.0` (`35dd72808e6b2a8488b98caf685a3d48e4c97468`). The published
+      crates.io checksum is
+      `f35022079076b686716e61a8640b3e4bafb0004701486277cb95f004b769a178`.
+- [x] Verify `cargo info image-slash-star@0.1.0` and the downloaded registry
+      archive after the bootstrap.
 - [ ] Configure the crates.io Trusted Publisher for this repository,
       `.github/workflows/release.yml`, and environment `crates-io`.
 
