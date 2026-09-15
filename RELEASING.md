@@ -118,6 +118,11 @@ Coverage jobs retain their command log on failure and the LLVM JSON when it
 was generated. Read the failed test or the four measured totals before
 classifying a coverage failure; a skipped publishing job has not attempted OIDC.
 
-CI and release scripts use Python 3.12.11. `make release-tools-test` exercises
+CI and release scripts use Python 3.12.10. `make release-tools-test` exercises
 the coverage CLI help as well as its numeric checks, including the help-format
 regression first exposed by the runner's Python 3.14.
+
+The exact Python pin is checked against the official
+[GitHub Python build manifest](https://github.com/actions/python-versions/blob/main/versions-manifest.json).
+Python 3.12.11 and later 3.12 security releases have Linux builds in that manifest
+but no macOS ARM64 or Windows binaries; the cross-platform jobs use 3.12.10.
