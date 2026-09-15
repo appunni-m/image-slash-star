@@ -22,6 +22,8 @@ help:
 	@printf "  make package-verify   Build and consume a reproducible package\n"
 	@printf "  make ci               Run all local CI gates\n"
 	@printf "  make release-verify   Require a clean, complete release candidate\n"
+	@printf "  make release-lock-update Refresh both workspace lockfiles after a version bump\n"
+	@printf "  make release-registry-verify Compare the candidate with its published archive\n"
 	@printf "  make coverage-complete Require 100 percent coverage across all four metrics\n"
 
 .PHONY: fmt
@@ -102,6 +104,15 @@ ci-quality: fmt verify lint test package-verify
 .PHONY: release-check-version
 release-check-version:
 	$(PYTHON) scripts/verify_release_archive.py --metadata-only
+
+.PHONY: release-lock-update
+release-lock-update:
+	cargo update --workspace --offline
+	cargo update --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --workspace --offline
+
+.PHONY: release-registry-verify
+release-registry-verify:
+	$(PYTHON) scripts/publish_release.py --candidate "$(RELEASE_CRATE)" --output "$(REGISTRY_CRATE)"
 
 .PHONY: release-publish-prepare
 release-publish-prepare:

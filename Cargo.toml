@@ -1,6 +1,6 @@
 [package]
 name = "image-slash-star"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Bit-exact image codecs with Rust defaults and a portable Rust AVIF subset"
 authors = ["Appunni M"]

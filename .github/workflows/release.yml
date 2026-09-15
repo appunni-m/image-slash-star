@@ -118,11 +118,25 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
           RELEASE_CI_SHA: ${{ github.sha }}
+        shell: bash
         run: |
+          set -o pipefail
           mkdir -p target/registry-bundle
+          log_file="${RUNNER_TEMP}/image-slash-star-publish.log"
+          set +e
           make release-publish-oidc \
             VERIFIED_CRATE="target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
-            REGISTRY_OUTPUT="target/registry-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate"
+            REGISTRY_OUTPUT="target/registry-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
+            2>&1 | tee "$log_file"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            summary="$(tail -n 35 "$log_file" | tr '\n' ' ')"
+            summary="${summary//'%'/'%25'}"
+            summary="${summary//$'\r'/'%0D'}"
+            echo "::error title=crate publish or verification failure::$summary"
+            exit "$status"
+          fi
           cp target/candidate-bundle/release-notes.md target/registry-bundle/
           (cd target/registry-bundle && sha256sum image-slash-star-*.crate > SHA256SUMS)
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

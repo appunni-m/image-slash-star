@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import gzip
+import hashlib
 import io
 import json
 import os
@@ -68,6 +70,44 @@ class CoverageTests(unittest.TestCase):
 
 
 class PublishTests(unittest.TestCase):
+    def test_download_negotiates_archive_bytes_instead_of_the_json_url(self) -> None:
+        version = "0.1.1"
+        archive = gzip.compress(b"verified release archive", mtime=0)
+        digest = hashlib.sha256(archive).hexdigest()
+        metadata_url = f"{publish_release.API_ROOT}/image-slash-star/{version}"
+        download_url = metadata_url + "/download"
+
+        def serve(request, **kwargs):
+            if request.full_url == metadata_url:
+                self.assertEqual(request.get_header("Accept"), "application/json")
+                return io.BytesIO(json.dumps({"version": {
+                    "num": version, "checksum": digest,
+                }}).encode())
+            self.assertEqual(request.full_url, download_url)
+            # The real crates.io endpoint returns a URL descriptor for JSON
+            # clients, and redirects binary clients to the immutable archive.
+            if request.get_header("Accept") == "application/json":
+                return io.BytesIO(json.dumps({"url": "https://example.invalid/archive.crate"}).encode())
+            self.assertEqual(request.get_header("Accept"), "application/octet-stream")
+            return io.BytesIO(archive)
+
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "release.crate"
+            with patch.object(publish_release.urllib.request, "urlopen", side_effect=serve):
+                self.assertEqual(publish_release.download_registry_archive(version, destination), digest)
+            self.assertEqual(destination.read_bytes(), archive)
+
+    def test_download_checksum_mismatch_still_blocks_release(self) -> None:
+        metadata = {"num": "0.1.1", "checksum": hashlib.sha256(b"expected archive").hexdigest()}
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "release.crate"
+            with (
+                patch.object(publish_release, "registry_version", return_value=metadata),
+                patch.object(publish_release.urllib.request, "urlopen", return_value=io.BytesIO(b"changed archive")),
+            ):
+                with self.assertRaisesRegex(publish_release.PublishError, "differs from crates.io index"):
+                    publish_release.download_registry_archive("0.1.1", destination)
+
     def test_local_or_wrong_tag_context_cannot_publish(self) -> None:
         context = {
             "GITHUB_ACTIONS": "true",

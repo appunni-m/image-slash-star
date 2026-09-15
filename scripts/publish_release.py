@@ -64,12 +64,12 @@ def package_version() -> str:
     return str(matches[0]["version"])
 
 
-def request(url: str) -> urllib.request.Request:
-    """Build one crates.io request with a registry-identifying user agent."""
+def request(url: str, *, accept: str = "application/json") -> urllib.request.Request:
+    """Request the appropriate metadata or archive representation."""
 
     return urllib.request.Request(
         url,
-        headers={"Accept": "application/json", "User-Agent": USER_AGENT},
+        headers={"Accept": accept, "User-Agent": USER_AGENT},
     )
 
 
@@ -113,7 +113,11 @@ def download_registry_archive(version: str, destination: Path) -> str:
         raise PublishError(f"{PACKAGE_NAME} {version} is not visible on crates.io")
     url = f"{API_ROOT}/{PACKAGE_NAME}/{version}/download"
     try:
-        with urllib.request.urlopen(request(url), timeout=60) as response:
+        # crates.io returns {"url": ...} for application/json clients. Ask
+        # for binary data so the endpoint redirects to the actual .crate.
+        with urllib.request.urlopen(
+            request(url, accept="application/octet-stream"), timeout=60
+        ) as response:
             with destination.open("wb") as output:
                 shutil.copyfileobj(response, output)
     except (OSError, urllib.error.HTTPError) as error:

@@ -34,7 +34,7 @@ describe the same tree.
    metrics, and any known target-specific failure without relabeling it.
 6. Run the production JPEG comparison when JPEG code or benchmark claims
    changed. Keep the complete same-machine TurboJPEG matrix and its metadata.
-7. Build a clean package with `cargo package --locked`, inspect the archive,
+7. Build a clean package with `make package-verify`, inspect the archive,
    and confirm that the package-surface verifier passes from a clean checkout.
 
 ## Tag and publish
@@ -86,8 +86,9 @@ Configure the existing crate's Trusted Publisher with repository
 secret or local Cargo login is needed. A configured environment reviewer rule
 will pause the job until that review completes.
 
-Increment the version in Cargo metadata, both lockfiles, README, and the dated
-changelog. The next candidate is `0.1.1`. Commit and push to `main`, then wait
+Increment the version in Cargo metadata, README, and the dated changelog;
+run `make release-lock-update` to synchronize both lockfiles. The next candidate
+is `0.1.2`. Commit and push to `main`, then wait
 for successful CI on that exact revision before pushing an unused annotated
 `v<version>` tag. The workflow checks the original annotated tag object through
 a separately fetched ref, so a peeled Actions checkout cannot invalidate it.
@@ -105,6 +106,19 @@ This follows the verification/artifact/OIDC separation used by
 A skipped publishing job says nothing about publisher configuration: inspect
 its failed prerequisite first. Verify the registry checksum and GitHub assets
 after the workflow succeeds. No npm or PyPI package is defined for this repo.
+
+Version 0.1.1 was uploaded through OIDC in
+[release run 35005559487](https://github.com/appunni-m/image-slash-star/actions/runs/35005559487).
+Its subsequent download verification failed because `Accept: application/json`
+returns a JSON URL descriptor from crates.io. Version 0.1.2 requests
+`application/octet-stream` for the archive and keeps JSON for metadata. The
+release-tool regression first reproduces the former mismatch and also requires
+changed archive bytes to fail. The original 0.1.1 upload and tag remain immutable.
+
+After a version is visible, `make release-registry-verify` downloads it without
+publishing and compares the archive, crates.io index checksum, and local
+candidate. The release job uses the same verifier and records bounded failure
+details in GitHub annotations.
 
 ## If a release is wrong
 

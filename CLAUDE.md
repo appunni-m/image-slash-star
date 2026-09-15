@@ -58,6 +58,14 @@
   `make coverage-complete` retains the 100% goal; all executed tests must pass.
 - Run formatting and relevant manifest/feature/target tests after changes.
 
+## Release Workflows
+
+Use `make release-lock-update` to refresh the root and JPEG benchmark lockfiles
+after changing the package version. `make release-tools-test` covers the
+registry and coverage guards. `make release-registry-verify` is a read-only
+comparison of the local candidate with the published archive. Uploads remain
+exclusive to the tag-driven GitHub OIDC workflow documented in `RELEASING.md`.
+
 ## Strict Clippy
 
 Strict Clippy is mandatory. The acceptance command is:

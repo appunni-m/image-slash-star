@@ -11,7 +11,7 @@ oracle for every active manifest case: success or error, format, mode,
 dimensions, metadata, frames, pixels, palettes, and deterministic encoded
 bytes.
 
-> **Pre-release status:** `0.1.1` is the current GitHub OIDC release candidate.
+> **Pre-release status:** `0.1.2` is the current GitHub OIDC release candidate.
 > The bootstrap version 0.1.0 was published to crates.io from local
 > tag `v0.1.0` at commit `35dd72808e6b2a8488b98caf685a3d48e4c97468`.
 > The compatibility guarantee is limited to committed manifest cases, not every
@@ -56,7 +56,7 @@ After the first bootstrap, depend on the immutable crates.io version:
 
 ```toml
 [dependencies]
-image-slash-star = { version = "=0.1.1", default-features = false, features = ["png", "jpeg"] }
+image-slash-star = { version = "=0.1.2", default-features = false, features = ["png", "jpeg"] }
 ```
 
 Cargo package names use hyphens; Rust imports use underscores.

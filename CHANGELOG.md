@@ -5,6 +5,16 @@ All notable changes will be documented in this file. This project follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-15
+
+- Request binary content when downloading a crates.io archive for verification.
+  Version 0.1.1 uploaded successfully through GitHub OIDC, but its verification
+  request selected a JSON URL descriptor and failed the checksum comparison.
+  Metadata requests still use JSON; archive and candidate checksums remain exact.
+- Cover content negotiation and checksum rejection in the release-tool tests.
+  Expose bounded failure details in GitHub annotations and provide a read-only
+  registry verification target. Codec behavior and parity expectations are unchanged.
+
 ## [0.1.1] - 2026-09-15
 
 - Publish subsequent versions through the tag-driven GitHub OIDC workflow,
