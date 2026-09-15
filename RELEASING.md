@@ -113,3 +113,7 @@ private security report when the issue could affect confidentiality,
 integrity, or availability. Otherwise publish a corrective changelog entry,
 identify the first bad revision, and rerun the complete acceptance set before
 retagging. Never rewrite a published tag to hide a failed result.
+
+Coverage jobs retain their command log on failure and the LLVM JSON when it
+was generated. Read the failed test or the four measured totals before
+classifying a coverage failure; a skipped publishing job has not attempted OIDC.

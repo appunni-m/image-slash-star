@@ -61,7 +61,7 @@ supply-chain:
 .PHONY: coverage
 coverage:
 	mkdir -p target/release-evidence
-	cargo +"$(COVERAGE_TOOLCHAIN)" llvm-cov --all-features --branch --json \
+	cargo +"$(COVERAGE_TOOLCHAIN)" llvm-cov --all-features --branch --locked --json \
 		--output-path "$(COVERAGE_REPORT)" --no-fail-fast
 	$(MAKE) coverage-check
 
