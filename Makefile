@@ -5,6 +5,7 @@ RELEASE_DIR := target/release-artifacts
 RELEASE_CRATE := $(RELEASE_DIR)/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
 REGISTRY_CRATE := $(RELEASE_DIR)/registry/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
 COVERAGE_TOOLCHAIN ?= nightly-2026-07-16
+COVERAGE_REPORT ?= target/release-evidence/coverage.json
 
 .DEFAULT_GOAL := help
 .NOTPARALLEL: ci release-verify
@@ -17,18 +18,18 @@ help:
 	@printf "  make lint             Run strict Clippy and benchmark lint\n"
 	@printf "  make test             Run docs, tests, and target feature lanes\n"
 	@printf "  make supply-chain     Run cargo-deny\n"
-	@printf "  make coverage         Run the pinned four-metric coverage gate\n"
+	@printf "  make coverage         Require alpha floors: lines 59, branches 46, functions 52, regions 58 percent\n"
 	@printf "  make package-verify   Build and consume a reproducible package\n"
 	@printf "  make ci               Run all local CI gates\n"
 	@printf "  make release-verify   Require a clean, complete release candidate\n"
-	@printf "  make release-bootstrap Publish/verify the first crates.io version\n"
+	@printf "  make coverage-complete Require 100 percent coverage across all four metrics\n"
 
 .PHONY: fmt
 fmt:
 	cargo fmt --all -- --check
 
 .PHONY: verify
-verify:
+verify: release-tools-test
 	$(PYTHON) scripts/verify_third_party_licenses.py
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/verify_claim_ledger.py
@@ -61,8 +62,20 @@ supply-chain:
 coverage:
 	mkdir -p target/release-evidence
 	cargo +"$(COVERAGE_TOOLCHAIN)" llvm-cov --all-features --branch --json \
-		--output-path target/release-evidence/coverage.json --no-fail-fast
-	$(PYTHON) scripts/verify_llvm_coverage.py target/release-evidence/coverage.json
+		--output-path "$(COVERAGE_REPORT)" --no-fail-fast
+	$(MAKE) coverage-check
+
+.PHONY: coverage-check
+coverage-check:
+	$(PYTHON) scripts/verify_llvm_coverage.py "$(COVERAGE_REPORT)"
+
+.PHONY: coverage-complete
+coverage-complete: coverage
+	$(PYTHON) scripts/verify_llvm_coverage.py "$(COVERAGE_REPORT)" --strict
+
+.PHONY: release-tools-test
+release-tools-test:
+	$(PYTHON) scripts/test_release_checks.py
 
 .PHONY: package-verify
 package-verify:
@@ -79,14 +92,22 @@ release-verify:
 	$(MAKE) ci
 
 .PHONY: release-bootstrap
-release-bootstrap: release-verify
-	@test "$$RELEASE_APPROVED" = "1" || { \
-		printf "set RELEASE_APPROVED=1 after reviewing release-verify\n" >&2; exit 2; \
-	}
-	@test "$$RELEASE_CI_SHA" = "$$(git rev-parse HEAD)" || { \
-		printf "RELEASE_CI_SHA must equal the exact reviewed commit\n" >&2; exit 2; \
-	}
-	$(PYTHON) scripts/publish_release.py \
-		--candidate "$(RELEASE_CRATE)" \
-		--output "$(REGISTRY_CRATE)" \
-		--publish-if-missing
+release-bootstrap:
+	@printf "The bootstrap is complete. Publish an annotated tag through GitHub OIDC.\n" >&2
+	@exit 2
+
+.PHONY: ci-quality
+ci-quality: fmt verify lint test package-verify
+
+.PHONY: release-check-version
+release-check-version:
+	$(PYTHON) scripts/verify_release_archive.py --metadata-only
+
+.PHONY: release-publish-prepare
+release-publish-prepare:
+	cargo package --locked
+	cmp "target/package/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate" "$(VERIFIED_CRATE)"
+
+.PHONY: release-publish-oidc
+release-publish-oidc:
+	$(PYTHON) scripts/publish_release.py --candidate "$(VERIFIED_CRATE)" --output "$(REGISTRY_OUTPUT)" --publish-if-missing

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish the first crate idempotently and prove registry archive identity."""
+"""Publish via GitHub OIDC and prove exact registry archive identity."""
 
 from __future__ import annotations
 
@@ -128,14 +128,20 @@ def download_registry_archive(version: str, destination: Path) -> str:
 
 
 def require_publish_approval() -> None:
-    """Require explicit approval bound to the clean source commit."""
+    """Require the exact clean GitHub tag and its OIDC publishing context."""
 
     status = capture(["git", "status", "--porcelain=v1", "--untracked-files=all"])
     if status:
         raise PublishError(f"publish checkout is not clean:\n{status}")
     commit = capture(["git", "rev-parse", "HEAD"])
-    if os.environ.get("RELEASE_APPROVED") != "1":
-        raise PublishError("set RELEASE_APPROVED=1 only after reviewing release-verify")
+    if (
+        os.environ.get("GITHUB_ACTIONS") != "true"
+        or os.environ.get("GITHUB_REPOSITORY") != "appunni-m/image-slash-star"
+        or os.environ.get("GITHUB_REF") != f"refs/tags/v{package_version()}"
+        or not os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL")
+        or not os.environ.get("CARGO_REGISTRY_TOKEN")
+    ):
+        raise PublishError("publication requires the exact GitHub tag and OIDC job")
     if os.environ.get("RELEASE_CI_SHA") != commit:
         raise PublishError(
             "RELEASE_CI_SHA must equal the exact clean commit being published"
@@ -146,8 +152,9 @@ def publish(version: str) -> None:
     """Ask Cargo to publish from the clean exact source tree."""
 
     require_publish_approval()
-    print(f"+ cargo publish --locked ({PACKAGE_NAME} {version})", flush=True)
-    subprocess.run(["cargo", "publish", "--locked"], cwd=ROOT, check=True)
+    # The identical archive was compiled before OIDC authentication.
+    print(f"+ cargo publish --locked --no-verify ({PACKAGE_NAME} {version})", flush=True)
+    subprocess.run(["cargo", "publish", "--locked", "--no-verify"], cwd=ROOT, check=True)
 
 
 def wait_until_visible(version: str, timeout_seconds: int = 300) -> None:
@@ -203,6 +210,9 @@ def main() -> int:
         if not present:
             if not args.publish_if_missing:
                 raise PublishError(f"{PACKAGE_NAME} {version} is absent from crates.io")
+            local_archive = ROOT / "target" / "package" / f"{PACKAGE_NAME}-{version}.crate"
+            if not local_archive.is_file() or sha256(local_archive) != candidate_digest:
+                raise PublishError("pre-authentication Cargo archive differs from the CI candidate")
             publish(version)
             wait_until_visible(version)
         else:

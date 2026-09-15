@@ -17,15 +17,16 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: "1"
+  RUSTC_WRAPPER: ""
   RUST_TOOLCHAIN: "1.96.1"
   COVERAGE_TOOLCHAIN: "nightly-2026-07-16"
 
 jobs:
   preflight:
     name: Verify immutable release candidate
-    # The release matrix is bound to the Apple ARM64 native fixture contract.
-    runs-on: macos-14
-    timeout-minutes: 240
+    # Reuse artifacts from successful main CI on the exact tagged commit.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     permissions:
       contents: read
       actions: read
@@ -39,30 +40,35 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown, wasm32-wasip1
-      - name: Install pinned release tools
-        run: |
-          rustup toolchain install "$COVERAGE_TOOLCHAIN" --profile minimal --component llvm-tools-preview
-          cargo +"$COVERAGE_TOOLCHAIN" install cargo-llvm-cov --locked --version 0.8.7
-          cargo install cargo-deny --locked --version 0.20.2
       - name: Verify annotated tag and exact package version
         shell: bash
         run: |
-          test "$(git cat-file -t "refs/tags/${GITHUB_REF_NAME}")" = tag
-          release_commit="$(git rev-parse "refs/tags/${GITHUB_REF_NAME}^{commit}")"
-          test "$release_commit" = "$(git rev-parse HEAD)"
-          version="${GITHUB_REF_NAME#v}"
-          actual="$(cargo metadata --locked --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "image-slash-star") | .version')"
-          test "$actual" = "$version"
-      - name: Require successful CI for this commit
+          set -euo pipefail
+          # checkout may materialize a peeled tag; inspect the original object
+          # through a separate ref without moving the release tag.
+          git fetch origin "refs/tags/${GITHUB_REF_NAME}:refs/release-verification/tag"
+          test "$(git cat-file -t refs/release-verification/tag)" = tag
+          test "$(git rev-parse 'refs/release-verification/tag^{commit}')" = "$(git rev-parse HEAD)"
+          RELEASE_TAG="$GITHUB_REF_NAME" make release-check-version
+      - name: Require successful main CI for this commit
+        id: ci-run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           run_id="$(gh api \
-            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&status=success" \
-            --jq '.workflow_runs[0].id // empty')"
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${GITHUB_SHA}&per_page=50" \
+            --jq '[.workflow_runs[] | select(.event == "push" and .head_branch == "main" and .status == "completed" and .conclusion == "success")] | sort_by(.updated_at) | last | .id // empty')"
           test -n "$run_id"
-      - name: Run complete release gate
-        run: make release-verify
+          echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
+      - name: Download the candidate verified by exact main CI
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.ci-run.outputs.run-id }}
+          name: image-slash-star-candidate
+          path: target/release-artifacts
+      - name: Verify candidate bundle
+        run: (cd target/release-artifacts && sha256sum --check SHA256SUMS)
       - name: Retain verified candidate bundle
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -90,29 +96,31 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: image-slash-star-candidate-${{ github.ref_name }}
-          path: candidate-bundle
+          path: target/candidate-bundle
       - name: Verify candidate checksum
-        run: (cd candidate-bundle && sha256sum --check SHA256SUMS)
+        run: (cd target/candidate-bundle && sha256sum --check SHA256SUMS)
+      - name: Reproduce and compile the exact candidate before authentication
+        run: >-
+          make release-publish-prepare
+          VERIFIED_CRATE="target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate"
       - name: Authenticate to crates.io with OIDC
         id: crates-io-auth
         uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
       - name: Publish and compare exact candidate
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.crates-io-auth.outputs.token }}
-          RELEASE_APPROVED: "1"
           RELEASE_CI_SHA: ${{ github.sha }}
         run: |
-          mkdir -p registry-bundle
-          python3 scripts/publish_release.py \
-            --candidate "candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
-            --output "registry-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
-            --publish-if-missing
-          cp candidate-bundle/release-notes.md registry-bundle/
-          (cd registry-bundle && sha256sum image-slash-star-*.crate > SHA256SUMS)
+          mkdir -p target/registry-bundle
+          make release-publish-oidc \
+            VERIFIED_CRATE="target/candidate-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate" \
+            REGISTRY_OUTPUT="target/registry-bundle/image-slash-star-${GITHUB_REF_NAME#v}.crate"
+          cp target/candidate-bundle/release-notes.md target/registry-bundle/
+          (cd target/registry-bundle && sha256sum image-slash-star-*.crate > SHA256SUMS)
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: image-slash-star-registry-${{ github.ref_name }}
-          path: registry-bundle/
+          path: target/registry-bundle/
           if-no-files-found: error
           retention-days: 90
 
@@ -142,6 +150,7 @@ jobs:
       - name: Create GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
             --verify-tag \

@@ -5,6 +5,17 @@ All notable changes will be documented in this file. This project follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-15
+
+- Publish subsequent versions through the tag-driven GitHub OIDC workflow,
+  binding the upload to the package verified by successful CI on the same commit.
+- Set documented alpha coverage floors to 59% lines, 46% branches, 52%
+  functions, and 58% regions. Preserve all-feature collection, all parity
+  assertions, aggregate totals, and a separate 100% completeness target.
+- Verify release tags using a separate fetched reference and support new
+  semantic versions and dated changelog entries after the first bootstrap.
+
+
 - Split the AV1 reconstruction oracle into a compact index and five
   deterministic sidecars so the maintained fixture remains below GitHub's
   per-file limit; the coverage-only reconstruction probe now follows the

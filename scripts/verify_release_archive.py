@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -118,13 +119,13 @@ def verify_release_identity() -> tuple[str, str]:
 
     commit = require_clean_source()
     version = package_version()
-    if version != "0.1.0":
-        raise ReleaseError(f"unexpected first-release version: {version}")
+    if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?", version) is None:
+        raise ReleaseError(f"invalid release version: {version}")
     if lockfile_version(ROOT / "Cargo.lock") != version:
         raise ReleaseError("Cargo.lock package version differs from Cargo metadata")
-    changelog_heading = f"## [{version}] - 2026-09-08"
-    if changelog_heading not in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8"):
-        raise ReleaseError(f"CHANGELOG.md is missing {changelog_heading!r}")
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    if re.search(rf"(?m)^## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}$", changelog) is None:
+        raise ReleaseError(f"CHANGELOG.md is missing a dated entry for {version}")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     if f'version = "={version}"' not in readme:
         raise ReleaseError("README.md does not pin the exact release version")
@@ -267,7 +268,7 @@ def retain_artifacts(archive_path: Path, version: str, commit: str) -> Path:
             [
                 f"# {PACKAGE_NAME} {version}",
                 "",
-                "First registry release of the dependency-constrained Rust codec library.",
+                "Release of the dependency-constrained Rust codec library.",
                 "It is not a production-readiness claim: the documented AVIF, hostile-input,",
                 "WASM semantic-matrix, and other roadmap boundaries remain explicit.",
                 "",
@@ -287,7 +288,13 @@ def main() -> int:
     """Verify identity, reproducibility, package contents, and clean consumption."""
 
     try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--metadata-only", action="store_true")
+        args = parser.parse_args()
         version, commit = verify_release_identity()
+        if args.metadata_only:
+            print(f"release identity OK: {version} at {commit}")
+            return 0
         run(["python3", "scripts/verify_package_surface.py"])
         with tempfile.TemporaryDirectory(prefix="image-slash-star-release-") as temporary:
             temporary_root = Path(temporary)

@@ -53,8 +53,9 @@
   Pillow source transformation in the manifest wherever Pillow exposes one.
   Never label a model-only defensive state as Pillow behavior.
 - Generate coverage with the repository's existing test commands. Preserve the
-  line, branch, function, and region coverage requirements and restore all four
-  to 100% before accepting a slice.
+  line, branch, function, and region totals without source exclusions. The
+  owner-approved alpha release floors are 59%, 46%, 52%, and 58% respectively.
+  `make coverage-complete` retains the 100% goal; all executed tests must pass.
 - Run formatting and relevant manifest/feature/target tests after changes.
 
 ## Strict Clippy

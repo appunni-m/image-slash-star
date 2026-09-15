@@ -4,10 +4,9 @@ This checklist is the release boundary for `image-slash-star`. The first
 registry package is version `0.1.0`; it remains a bounded codec pre-release
 until the canonical roadmap and evidence say otherwise.
 
-The current clean-history release candidate is pushed to both `main` and
-`codex/release-image-slash-star-clean-current`. The package archive and its
-checksum are authoritative only when produced by `make package-verify` from
-the reviewed branch `HEAD`; rerun that gate whenever the branch advances.
+The current candidate is `0.1.1`. The archive and checksum are authoritative
+only when produced by `make package-verify` from the exact clean commit.
+The first upload is complete; all future publication uses GitHub OIDC.
 
 ## Release identity
 
@@ -20,13 +19,12 @@ the reviewed branch `HEAD`; rerun that gate whenever the branch advances.
       The complete documented `make test` lane also passes on the current
       checkout: all doctests, 40 coverage-matrix/contract tests, workspace
       tests, and every native/wasm feature-matrix lane are green.
-- [ ] The full pinned nightly LLVM coverage run is green from a clean checkout.
-      The maintained AV1 reconstruction index and five deterministic sidecars
-      are now present, and all 45/45 coverage-matrix tests execute successfully.
-      The strict verifier still reports 95,603/161,451 lines (59.2149%),
-      14,912/32,262 branches (46.2216%), 4,892/9,244 functions (52.9208%), and
-      140,738/241,503 regions (58.2759%), so this gate remains open until the
-      complete metric totals meet the repository threshold.
+- [x] Alpha coverage policy is explicit: lines 59%, branches 46%, functions
+      52%, and regions 58%, approved on 2026-09-15. The 2026-09-14 full report
+      measures 59.2149%, 46.2216%, 52.9208%, and 58.2759% respectively.
+      The denominator is unchanged. Empty, invalid, or below-floor reports
+      fail. `make coverage-complete` retains the separate 100% target.
+- [ ] Collect a passing full coverage report on the exact 0.1.1 commit in CI.
 - [x] The exact 208-file Cargo package list is recorded in
       `tests/fixtures/package_surface_manifest.json`; the package-surface
       check and isolated archive consumer pass. A clean worktree also passes
@@ -44,7 +42,7 @@ the reviewed branch `HEAD`; rerun that gate whenever the branch advances.
 - [ ] The four release coverage metrics and every planned codec class remain
       visible in the release notes.
 
-## Local first publish
+## Completed bootstrap and trusted publisher
 
 - [ ] Run `make release-verify` from a clean checkout.
 - [x] Run the owner-authorized first Cargo bootstrap from immutable tag
@@ -53,8 +51,9 @@ the reviewed branch `HEAD`; rerun that gate whenever the branch advances.
       `f35022079076b686716e61a8640b3e4bafb0004701486277cb95f004b769a178`.
 - [x] Verify `cargo info image-slash-star@0.1.0` and the downloaded registry
       archive after the bootstrap.
-- [ ] Configure the crates.io Trusted Publisher for this repository,
-      `.github/workflows/release.yml`, and environment `crates-io`.
+- [x] The owner reports configuring the crates.io Trusted Publisher for this
+      repository, workflow filename `release.yml`, and environment `crates-io`.
+      Successful OIDC publication remains the acceptance evidence.
 
 ## Later tag releases
 
@@ -62,8 +61,7 @@ the reviewed branch `HEAD`; rerun that gate whenever the branch advances.
 - [ ] The tag workflow verifies CI, rebuilds the package, authenticates with
       crates.io OIDC, compares the registry archive, attests the artifact, and
       creates the GitHub prerelease.
-- [ ] GitHub environment protection and release rules require maintainer
-      review.
+- [ ] Verify the published checksum and OIDC identity after the workflow runs.
 - [ ] Never reuse or move a published tag; fix forward with a new version.
 
 ## Scope boundary

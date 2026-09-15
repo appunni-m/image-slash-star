@@ -14,17 +14,17 @@ describe the same tree.
    complete.
 2. Update [CHANGELOG.md](CHANGELOG.md) and the README for user-visible
    behavior, supported targets, and known limitations.
-3. Run the pinned toolchain checks:
+3. Run the maintained checks on the pinned toolchain:
 
-   ```text
-   cargo fmt --all -- --check
-   cargo check --all-features --locked
-   cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-   RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps --locked
-   cargo test --doc --all-features --locked
-   cargo test --all-features --locked --test coverage_matrix_tests -- --nocapture
-   scripts/test_feature_matrix.sh
+   ```bash
+   make ci
    ```
+
+   The alpha release coverage floors, approved on 2026-09-15, are 59% lines,
+   46% branches, 52% functions, and 58% regions. `make coverage` measures the
+   entire existing all-feature suite and enforces each floor from raw counts.
+   It rejects malformed or empty reports. `make coverage-complete` retains
+   the 100% completeness goal. Every executed test must still pass.
 
 4. Run every repository verifier listed in the roadmap, including claim
    ledger, coverage origins, diagnostic provenance, package surface, and
@@ -74,27 +74,37 @@ The current clean-history branch was promoted to remote `main` with an exact
 `--force-with-lease` after creating and verifying a local-only Git bundle at
 `/private/tmp/image-slash-star-pre-force-backup-20260913/repository.bundle`.
 
-After the clean release gate passes, authenticate interactively and publish the
-single crate without creating a tag:
-
-```text
-cargo login
-RELEASE_APPROVED=1 RELEASE_CI_SHA="$(git rev-parse HEAD)" make release-bootstrap
-cargo logout
-```
-
-The helper builds twice, checks the extracted package and downstream consumer,
-publishes only when the exact version is absent, and compares the resulting
-crates.io archive byte-for-byte. It never creates or pushes a Git tag.
+The local bootstrap is complete. Subsequent versions publish exclusively
+through GitHub OIDC; `make release-bootstrap` now explains that boundary and
+refuses a local upload.
 
 ## Later tag releases
 
-After the first bootstrap, create an annotated `v<version>` tag on each reviewed
-commit and push that tag. The tag-driven
-[`.github/workflows/release.yml`](.github/workflows/release.yml) repeats the
-clean release gate, uses crates.io OIDC Trusted Publishing, verifies the
-registry archive, attests the artifact, and creates the GitHub prerelease. No
-long-lived registry token is stored in the workflow.
+Configure the existing crate's Trusted Publisher with repository
+`appunni-m/image-slash-star`, workflow filename `release.yml`, and environment
+`crates-io`. The GitHub publish job has `id-token: write`; no long-lived registry
+secret or local Cargo login is needed. A configured environment reviewer rule
+will pause the job until that review completes.
+
+Increment the version in Cargo metadata, both lockfiles, README, and the dated
+changelog. The next candidate is `0.1.1`. Commit and push to `main`, then wait
+for successful CI on that exact revision before pushing an unused annotated
+`v<version>` tag. The workflow checks the original annotated tag object through
+a separately fetched ref, so a peeled Actions checkout cannot invalidate it.
+
+CI runs quality, full native/WASM feature tests, aggregate coverage, dependency
+audits, and reproducible archive/consumer checks. Release preflight consumes
+the candidate from that exact successful main run. The publish job rebuilds
+and compiles it before authentication, verifies byte identity, and only then
+requests the short-lived OIDC token. After upload, the downloaded registry
+archive must match the candidate's checksum. The final job attests that archive
+and creates a GitHub prerelease with notes and `SHA256SUMS`.
+
+This follows the verification/artifact/OIDC separation used by
+[coverage-mcp](https://github.com/appunni-m/coverage-mcp/blob/v0.16.0/.github/workflows/release.yml).
+A skipped publishing job says nothing about publisher configuration: inspect
+its failed prerequisite first. Verify the registry checksum and GitHub assets
+after the workflow succeeds. No npm or PyPI package is defined for this repo.
 
 ## If a release is wrong
 

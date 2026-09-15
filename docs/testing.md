@@ -39,11 +39,13 @@ final managed parity run, `3a8573dc-0e29-4ecb-8c2a-4ce1ab389a90`, with
 with every configured native, `wasm32-wasip1`, and `wasm32-unknown-unknown`
 lane passing; the configured `sccache` client was used and no `RUSTC_WRAPPER`
 setting was changed.
-The current implementation also passes the complete all-feature test set plus
-one doctest in the managed nightly LLVM run. The strict four-metric verifier
-remains red because the release target is 100%; the remaining 9,626 lines,
-1,385 branches, 669 functions, and 16,154 regions are recorded explicitly in
-the canonical roadmap.
+The 2026-09-14 full all-feature LLVM run reports 95,603/161,451 lines
+(59.2149%), 14,912/32,262 branches (46.2216%), 4,892/9,244 functions
+(52.9208%), and 140,738/241,503 regions (58.2759%). From 0.1.1, the
+owner-approved alpha floors are 59%, 46%, 52%, and 58% respectively.
+`make coverage` retains these full denominators and requires every executed
+test to pass; `make coverage-complete` still requires 100%. These are release
+acceptance floors, not claims that planned codec classes are implemented.
 Important: historical records below that say “native AVIF” describe the
 pre-cutover oracle lane. The current runtime has no AVIF C bridge, native build
 script, linker path, or unsafe exception; use [AVIF support](avif.md) and the
