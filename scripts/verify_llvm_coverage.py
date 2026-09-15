@@ -50,7 +50,7 @@ def verify(totals: dict[str, Any], *, strict: bool = False) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path)
-    parser.add_argument("--strict", action="store_true", help="require 100% in every metric")
+    parser.add_argument("--strict", action="store_true", help="require 100 percent in every metric")
     args = parser.parse_args()
     try:
         failures = verify(load_totals(args.report), strict=args.strict)

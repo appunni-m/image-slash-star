@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -87,6 +88,15 @@ class PublishTests(unittest.TestCase):
             with patch.dict(os.environ, context, clear=True):
                 with self.assertRaises(publish_release.PublishError):
                     publish_release.require_publish_approval()
+
+
+class CoverageCliTests(unittest.TestCase):
+    def test_help_formats_percentages_on_supported_python_versions(self) -> None:
+        script = Path(__file__).with_name("verify_llvm_coverage.py")
+        result = subprocess.run([sys.executable, str(script), "--help"],
+                                capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--strict", result.stdout)
 
 
 if __name__ == "__main__":
