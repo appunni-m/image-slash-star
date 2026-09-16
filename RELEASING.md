@@ -53,9 +53,9 @@ An uploaded registry version or released tag must never be overwritten.
 Changed source, packaging, or artifact bytes require a new version and tag.
 Verify which job actually failed before changing trusted-publisher settings.
 
-Local bootstrap targets refuse publication now that package ownership is
-established. The maintainer controls releases through repository review and tag
-permissions; no maintainer-succession guarantee or support SLA is implied.
+The completed local bootstrap target has been removed. The maintainer controls
+releases through repository review and tag permissions; no maintainer-succession
+guarantee or support SLA is implied.
 
 ## Required source assets
 
