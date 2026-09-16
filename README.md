@@ -82,6 +82,9 @@ and hardware; they do not represent every codec or general image processing.
 ## Contribute and get help
 
 [Contributing](CONTRIBUTING.md) covers source builds, tests, and benchmark work.
+The contributor references include the
+[Generated capability and direct-mode tables](docs/capabilities.md) and
+[evidence guide](docs/EVIDENCE.md).
 [Support](SUPPORT.md) · [Security](SECURITY.md) ·
 [Releases](https://github.com/appunni-m/image-slash-star/releases) ·
 [Changelog](CHANGELOG.md) · [Code of conduct](CODE_OF_CONDUCT.md)
