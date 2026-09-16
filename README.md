@@ -14,6 +14,10 @@ limited to the selected manifest cases, with substantial planned API and AVIF
 work. It is not a complete implementation of every image-format specification.
 See [maturity](docs/MATURITY.md) before adopting it.
 
+The unreleased candidate is **0.1.3**. Its package dependency is
+`image-slash-star = { version = "=0.1.3" }`; use the published installation
+below until that version's release gates and tag publication complete.
+
 ## Install
 
 ```toml
