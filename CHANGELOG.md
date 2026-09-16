@@ -5,7 +5,7 @@ All notable changes will be documented in this file. This project follows
 
 ## [Unreleased]
 
-## [0.1.3] - Unreleased
+## [0.1.3] - 2026-09-16
 
 - Replace deprecated SIMD byte-swizzle calls with `wide::u8x16::shuffle` in
   JPEG encoding and decoding. The old API delegates to this same operation;
