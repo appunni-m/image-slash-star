@@ -42,7 +42,10 @@ Pages in this same repository. Configure Pages to use GitHub Actions and the
 `github-pages` environment. No separate hosting repository or registry token
 is involved. Successful main Benchmark artifacts can refresh the result page;
 only validated data is imported, while executable site code comes from main.
-The committed snapshot is the reproducible fallback for ordinary docs builds.
+Main deployments retain the latest successful main benchmark's unexpired data,
+including after later documentation pushes. Benchmark events require their exact
+run's artifact. Local/PR builds and runs with no available hosted artifact use
+the committed snapshot as an explicit fallback. API failures fail the build.
 
 Keep every public guide reachable through `documentation.json` and site
 navigation. Review the package file list before a release.
