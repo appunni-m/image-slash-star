@@ -104,11 +104,6 @@ release-verify:
 	}
 	$(MAKE) ci
 
-.PHONY: release-bootstrap
-release-bootstrap:
-	@printf "The bootstrap is complete. Publish an annotated tag through GitHub OIDC.\n" >&2
-	@exit 2
-
 .PHONY: ci-quality
 ci-quality: workflows-check fmt verify lint test package-verify
 

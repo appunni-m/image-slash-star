@@ -4,6 +4,13 @@ Version **0.1.2** is published on crates.io and GitHub. There is one Cargo crate
 and no npm or PyPI distribution. Subsequent releases use this repository's
 `release.yml` workflow and GitHub OIDC.
 
+## Next candidate
+
+The checkout prepares **0.1.3**. The published release above remains the
+installed-release evidence until the candidate passes the complete CI and
+package gates and its immutable tag is published. The codec capability map,
+AVIF limitations, and existing coverage floors remain unchanged.
+
 ## Prepare and tag
 
 1. Update the package version, changelog, documentation version, and both

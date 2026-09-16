@@ -1,6 +1,6 @@
 [package]
 name = "image-slash-star"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 description = "Bit-exact image codecs with Rust defaults and a portable Rust AVIF subset"
 authors = ["Appunni M"]
@@ -79,7 +79,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage)", "cfg(coverage_
 unsafe_code = "deny"
 unused_crate_dependencies = "warn"
 dead_code = "deny"
-deprecated = "allow"
+deprecated = "deny"
 missing_docs = "warn"
 
 [lints.clippy]

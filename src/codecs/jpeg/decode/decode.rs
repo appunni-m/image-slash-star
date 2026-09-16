@@ -499,7 +499,7 @@ fn load_eight_chroma_samples(samples: &[u8; 16]) -> u16x8 {
 #[inline(always)]
 fn interleaved_chroma_pair(even: u16x8, odd: u16x8) -> [u8; 16] {
     let packed = u8x16::narrow_i16x8(cast::<u16x8, i16x8>(even), cast::<u16x8, i16x8>(odd));
-    packed.swizzle_relaxed(INTERLEAVE_EIGHT_BYTES).to_array()
+    packed.shuffle(INTERLEAVE_EIGHT_BYTES).to_array()
 }
 
 #[cfg(target_arch = "aarch64")]
@@ -518,10 +518,10 @@ fn invert_interleave_cmyk_eight(
     let yellow_black = u8x16::unpack_low(yellow, black);
     (
         u8x16::unpack_low(cyan_magenta, yellow_black)
-            .swizzle_relaxed(CMYK_PAIR_ORDER)
+            .shuffle(CMYK_PAIR_ORDER)
             .to_array(),
         u8x16::unpack_high(cyan_magenta, yellow_black)
-            .swizzle_relaxed(CMYK_PAIR_ORDER)
+            .shuffle(CMYK_PAIR_ORDER)
             .to_array(),
     )
 }

@@ -5,6 +5,14 @@ All notable changes will be documented in this file. This project follows
 
 ## [Unreleased]
 
+## [0.1.3] - Unreleased
+
+- Replace deprecated SIMD byte-swizzle calls with `wide::u8x16::shuffle` in
+  JPEG encoding and decoding. The old API delegates to this same operation;
+  existing exact pixel, encoded-byte, and feature-matrix gates remain required.
+- Reject deprecated Rust APIs and remove the completed bootstrap target.
+- Include the reviewed dependency and GitHub Action updates from main.
+
 ## [0.1.2] - 2026-09-15
 
 - Request binary content when downloading a crates.io archive for verification.

@@ -393,9 +393,9 @@ fn convert_eight(pixels: &[u8; 24], y: &mut [u8; 8], cb: &mut [u8; 8], cr: &mut 
 fn convert_eight_values(pixels: &[u8; 24]) -> (i32x8, i32x8, i32x8) {
     let first = pod_read_unaligned::<u8x16>(&pixels[..16]);
     let second = pod_read_unaligned::<u8x16>(&pixels[8..]);
-    let red = first.swizzle_relaxed(RED_FIRST) | second.swizzle_relaxed(RED_SECOND);
-    let green = first.swizzle_relaxed(GREEN_FIRST) | second.swizzle_relaxed(GREEN_SECOND);
-    let blue = first.swizzle_relaxed(BLUE_FIRST) | second.swizzle_relaxed(BLUE_SECOND);
+    let red = first.shuffle(RED_FIRST) | second.shuffle(RED_SECOND);
+    let green = first.shuffle(GREEN_FIRST) | second.shuffle(GREEN_SECOND);
+    let blue = first.shuffle(BLUE_FIRST) | second.shuffle(BLUE_SECOND);
     // Widen as unsigned first, then reinterpret the 0..=255 lanes as signed.
     // This is mathematically identical for byte samples and maps to the native
     // AArch64 widening instruction without the scalar lane expansion used by
@@ -503,7 +503,7 @@ fn downsample_h2v2_vectors(row0: u8x16, row1: u8x16) -> [u8; 8] {
 #[cfg_attr(coverage, inline(never))]
 #[cfg_attr(not(coverage), inline(always))]
 fn widen_pair_half(samples: u8x16, mask: u8x16) -> u16x8 {
-    u16x8::from_u8x16_low(samples.swizzle_relaxed(mask))
+    u16x8::from_u8x16_low(samples.shuffle(mask))
 }
 
 #[cfg_attr(coverage, inline(never))]
@@ -645,13 +645,13 @@ fn convert_ycc_vectors_to_rgb(y_values: i16x8, cb_values: i16x8, cr_values: i16x
                 .unbounded_shr_scalar(16),
     );
 
-    let first = (red.swizzle_relaxed(YCC_RED_FIRST)
-        | green.swizzle_relaxed(YCC_GREEN_FIRST)
-        | blue.swizzle_relaxed(YCC_BLUE_FIRST))
+    let first = (red.shuffle(YCC_RED_FIRST)
+        | green.shuffle(YCC_GREEN_FIRST)
+        | blue.shuffle(YCC_BLUE_FIRST))
     .to_array();
-    let second = (red.swizzle_relaxed(YCC_RED_SECOND)
-        | green.swizzle_relaxed(YCC_GREEN_SECOND)
-        | blue.swizzle_relaxed(YCC_BLUE_SECOND))
+    let second = (red.shuffle(YCC_RED_SECOND)
+        | green.shuffle(YCC_GREEN_SECOND)
+        | blue.shuffle(YCC_BLUE_SECOND))
     .to_array();
     let mut output = [0u8; 24];
     output[..16].copy_from_slice(&first);
