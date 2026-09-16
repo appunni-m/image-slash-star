@@ -58,3 +58,15 @@ workflow YAML, expressions, action inputs, and job dependencies with actionlint
 run downloads the tool. Shell and Python lint remain separate checks. CI runs
 this gate on every commit. Benchmark harness/workflow changes on main also run
 the benchmark immediately, in addition to the weekly and manual triggers.
+
+## Dependency updates
+
+Dependabot groups Rust updates across the library and JPEG benchmark manifests.
+Both lockfiles must use the reviewed dependency versions so benchmarks measure
+the same dependency implementation as the library tests. For a manual update,
+run `make dependency-update DEPENDENCY=wide DEPENDENCY_VERSION=1.7.0` with the
+reviewed package and version, then `make ci-quality supply-chain coverage`.
+Review both lockfile diffs; Cargo may also update dependencies required by that
+package. Keep GitHub Actions pinned to full commit SHAs with matching release
+version comments. Validate their release notes and run `make workflows-check`
+after updates.

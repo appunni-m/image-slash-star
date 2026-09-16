@@ -28,6 +28,7 @@ help:
 	@printf "  make package-verify   Build and consume a reproducible package\n"
 	@printf "  make ci               Run all local CI gates\n"
 	@printf "  make release-verify   Require a clean, complete release candidate\n"
+	@printf "  make dependency-update Update one dependency in both lockfiles (DEPENDENCY, DEPENDENCY_VERSION)\n"
 	@printf "  make release-lock-update Refresh both workspace lockfiles after a version bump\n"
 	@printf "  make release-registry-verify Compare the candidate with its published archive\n"
 	@printf "  make coverage-complete Require 100 percent coverage across all four metrics\n"
@@ -114,6 +115,14 @@ ci-quality: workflows-check fmt verify lint test package-verify
 .PHONY: release-check-version
 release-check-version:
 	$(PYTHON) scripts/verify_release_archive.py --metadata-only
+
+.PHONY: dependency-update
+dependency-update:
+	@test -n "$(DEPENDENCY)" -a -n "$(DEPENDENCY_VERSION)" || { \
+		printf "Set DEPENDENCY and DEPENDENCY_VERSION to the reviewed package and exact version.\n" >&2; exit 2; \
+	}
+	cargo update --package "$(DEPENDENCY)" --precise "$(DEPENDENCY_VERSION)"
+	cargo update --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --package "$(DEPENDENCY)" --precise "$(DEPENDENCY_VERSION)"
 
 .PHONY: release-lock-update
 release-lock-update:

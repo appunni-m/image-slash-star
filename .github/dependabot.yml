@@ -1,7 +1,9 @@
 version: 2
 updates:
   - package-ecosystem: cargo
-    directory: /
+    directories:
+      - /
+      - /benchmarks/jpeg-production/rust
     schedule:
       interval: weekly
     groups:
