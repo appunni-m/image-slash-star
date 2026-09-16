@@ -1,5 +1,11 @@
 # image-slash-star
 
+[![CI](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml)
+[![Documentation](https://github.com/appunni-m/image-slash-star/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/appunni-m/image-slash-star/actions/workflows/docs.yml)
+[![Benchmarks](https://github.com/appunni-m/image-slash-star/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/appunni-m/image-slash-star/actions/workflows/benchmark.yml)
+[![Release](https://github.com/appunni-m/image-slash-star/actions/workflows/release.yml/badge.svg)](https://github.com/appunni-m/image-slash-star/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/appunni-m/image-slash-star?include_prereleases&sort=semver)](https://github.com/appunni-m/image-slash-star/releases)
+
 <!-- release:summary -->
 **Latest release: [0.1.3](https://github.com/appunni-m/image-slash-star/releases/tag/v0.1.3).**
 <!-- /release:summary -->
