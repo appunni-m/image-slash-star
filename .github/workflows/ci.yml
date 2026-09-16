@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Superseded branch/PR runs must not consume runners needed by the new commit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   RUST_TOOLCHAIN: "1.96.1"
