@@ -1,19 +1,15 @@
 # Releasing image-slash-star
 
-Version **0.1.2** is published on crates.io and GitHub. There is one Cargo crate
-and no npm or PyPI distribution. Subsequent releases use this repository's
-`release.yml` workflow and GitHub OIDC.
+<!-- release:summary -->
+**Latest release: [0.1.3](https://github.com/appunni-m/image-slash-star/releases/tag/v0.1.3).**
+<!-- /release:summary -->
 
-## Next candidate
-
-The checkout prepares **0.1.3**. The published release above remains the
-installed-release evidence until the candidate passes the complete CI and
-package gates and its immutable tag is published. The codec capability map,
-AVIF limitations, and existing coverage floors remain unchanged.
+There is one Cargo crate and no npm or PyPI distribution. Releases use this
+repository's `release.yml` workflow and GitHub OIDC.
 
 ## Prepare and tag
 
-1. Update the package version, changelog, documentation version, and both
+1. Update the package version, changelog, documentation source-version field, and both
    workspace lockfiles through `make release-lock-update`.
 2. Read [maturity](docs/MATURITY.md) and the [public roadmap](docs/roadmap-new.md).
    Keep planned or unmeasured behavior explicit.
@@ -41,9 +37,9 @@ artifact identity and creates GitHub assets only after successful publication.
 Use `make release-registry-verify` for a read-only candidate/registry comparison.
 Binary downloads must be hashed as archive bytes, not JSON redirect metadata.
 
-[Release 0.1.2](https://github.com/appunni-m/image-slash-star/actions/runs/35010129246)
+[Release 0.1.3](https://github.com/appunni-m/image-slash-star/actions/runs/35098565255)
 completed this flow. Its crate SHA-256 is
-`e53037e57d0c5cae052ba94851c8cf72a80b9dfe195cd21b166506ab7bdbeb3b`.
+`3e7755f83b15f0fc3f763276dc172ac21c6da153e9f5dc3abebbd456d91ac8b0`.
 See [Evidence](docs/EVIDENCE.md) for accepted source and test boundaries.
 
 ## Recovery and immutable artifacts
@@ -73,3 +69,17 @@ local benchmark output stay out of the package.
 
 Main documentation CI publishes GitHub Pages from this same repository,
 independently of registry versions. See [documentation maintenance](docs/DOCUMENTATION.md).
+
+## Refresh user documentation after publication
+
+Wait for every registry job and the GitHub release to succeed, then run:
+
+```sh
+make docs-release-refresh
+make docs-release-check docs-registry-examples
+```
+
+Review and commit the refreshed release record and installation blocks. The
+Documentation workflow checks freshness after a successful tag release and
+on its daily schedule. Keep source-candidate versions separate from published
+installation versions; do not send users to a version that is still building.

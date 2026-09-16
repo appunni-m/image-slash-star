@@ -1,8 +1,23 @@
 # API usage
 
+<!-- release:summary -->
+**Latest release: [0.1.3](https://github.com/appunni-m/image-slash-star/releases/tag/v0.1.3).**
+<!-- /release:summary -->
+
 The library handles codecs only. Applications provide complete byte slices or
 use the documented partial-input and sequence interfaces. Filesystem paths,
 network requests, and image editing belong outside the codec layer.
+
+## Install
+
+<!-- release:cargo -->
+```toml
+[dependencies]
+image-slash-star = "=0.1.3"
+```
+<!-- /release:cargo -->
+
+Requires Rust 1.96.1 or newer.
 
 ## Select the operation
 
@@ -16,8 +31,11 @@ network requests, and image editing belong outside the codec layer.
 | Encode with options | `encode` | Format-specific supported options |
 | Apply limits | Policy variants | Enforce documented admission and work/result limits |
 
-The [versioned Rust reference](https://docs.rs/image-slash-star/0.1.2/image_slash_star/)
-defines exact argument types, returned structures, and errors.
+<!-- release:rust-api -->
+[Rust API reference](https://docs.rs/image-slash-star/0.1.3/image_slash_star/).
+<!-- /release:rust-api -->
+
+The reference defines exact argument types, returned structures, and errors.
 [Capabilities](capabilities.md) separates still decode, sequence decode, still
 encode, sequence encode, feature lanes, modes, and target evidence.
 
@@ -28,14 +46,12 @@ and metadata where supported. Use `try_new` or `try_with_mode` to validate
 caller-built content. Unchecked constructors and direct struct literals do not
 prove valid dimensions or buffer length; encoders validate their inputs.
 
-Do not reinterpret indexed or packed pixels as RGBA. Palette absence can be
-observable for malformed inputs accepted by the pinned oracle. Preserve
+Do not reinterpret indexed or packed pixels as RGBA. Some malformed indexed inputs can have no palette. Preserve
 metadata and sequence semantics only where the selected codec operation
 documents them.
 
 The [README example](../README.md#encode-and-decode-a-png) requires no external
-files. The packaged `package_smoke` example exercises detection, inspection,
-and decoding against a complete embedded PNG.
+files.
 
 ## Error recovery
 
@@ -46,7 +62,7 @@ wording as a stable protocol.
 
 Detection only recognizes a signature. Inspection and verification have
 format-specific depths. A valid container header is not proof of decoded pixel
-parity or complete compressed-payload validation.
+correctness or complete compressed-payload validation.
 
 ## Resource policy
 

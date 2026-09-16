@@ -1,48 +1,32 @@
-# Maturity and compatibility
+# Supported formats and limitations
 
-**Version 0.1.2 is an early release.** The goal is exact observable codec
-behavior for maintained Pillow cases, with safe Rust runtime implementation.
-The goal is broader than the currently measured subset.
+<!-- release:summary -->
+**Latest release: [0.1.3](https://github.com/appunni-m/image-slash-star/releases/tag/v0.1.3).**
+<!-- /release:summary -->
 
-| Label | Interpretation |
-| --- | --- |
-| Active fixture | Executable selected input; read the operation outcomes for evidence |
-| Declared capability | Runtime table exposes the operation for that feature/target |
-| Partial | Specific format states or API behavior are supported |
-| Planned | No supported application path or completed comparison is claimed |
-| Not applicable | The operation does not apply to that row; not a passed test |
-| Unmeasured | No qualifying executed evidence for the requested combination |
+image-slash-star is an early codec library. Support depends on the format,
+pixel mode, operation, and enabled Cargo features. It does not implement every
+part of every image-format specification.
 
-The [generated capability tables](capabilities.md) preserve the runtime and
-fixture denominators. Active fixture observations are native/all-features.
-The runtime capability tables additionally describe native and WASI feature
-lanes; those declarations are not substituted for exact pixel evidence.
+| Area | Available | Limits |
+| --- | --- | --- |
+| JPEG, PNG, GIF, BMP, TIFF, WebP | Selected decode, encode, detection, and inspection paths | Modes, options, and metadata vary by codec |
+| ICO/CUR | Selected container and embedded PNG/BMP paths | Requires the `ico` feature, which enables PNG and BMP |
+| Multi-frame images | Selected sequence operations | Check frame, timing, disposal, and encoding support for the chosen format |
+| AVIF | Opt-in partial still decoder and container inspection | No supported encoder; high-bit-depth, HDR, and animation are not supported application paths |
+| Resource policies | Input, output, dimension, sequence, and cooperative work limits | Defaults unlimited; no guarantee covering every allocation or immediate cancellation |
+| Image editing | Not provided | Resize, rotate, crop, drawing, and filtering belong in a separate library |
+| JavaScript and Python packages | Not provided | This project distributes a Rust crate |
 
-## Supported and incomplete paths
+The default codec features are `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp`, and
+`ico`. AVIF must be enabled explicitly. There is no native codec fallback.
 
-Default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO/CUR paths cover selected
-detection, inspection, decode, encode, and container behavior. The supported
-mode/option/sequence combinations vary. Read the exact operation table instead
-of treating a format name as a promise of complete specification coverage.
+Start with [API usage](USAGE.md). If you need a particular mode or sequence
+operation, consult the [detailed codec reference](capabilities.md) and
+[AVIF scope](avif.md). These references include incomplete paths rather than
+assuming that a format name means every operation is supported.
 
-AVIF remains opt-in and partial: the maintained ledger has 340 active and
-three planned decode/inspect/verify rows; all 32 encoder rows are planned.
-High-bit-depth, HDR, and animation contain partial implementation work but
-remain planned in the registered application evidence. See [AVIF](avif.md).
-
-General image editing, system integration, font handling, and native codec
-fallbacks are outside scope. There is no npm or PyPI package. Browser WASM
-compilation does not imply a ready JavaScript facade.
-
-## Versioned evidence
-
-[Release 0.1.2](https://github.com/appunni-m/image-slash-star/actions/runs/35010129246)
-and [main CI](https://github.com/appunni-m/image-slash-star/actions/runs/35007807946)
-passed at `70190214a0711223302c76ab58e76c097288d80b`.
-The [evidence guide](EVIDENCE.md) distinguishes that release from older
-claim-ledger and coverage snapshots. Do not relabel either as a fresh
-measurement after editing documentation.
-
-The [public roadmap](roadmap-new.md) preserves the ledger's 244 finding rows at its recorded review.
-A package release does not close those findings or establish hardened handling
-of arbitrary hostile input.
+Try representative application inputs before adopting the crate. It is not
+advertised as hardened for arbitrary hostile files. Contributor measurements
+and implementation progress are recorded in [evidence](EVIDENCE.md) and the
+[roadmap](roadmap-new.md).

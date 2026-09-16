@@ -126,9 +126,10 @@ def verify_release_identity() -> tuple[str, str]:
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     if re.search(rf"(?m)^## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}$", changelog) is None:
         raise ReleaseError(f"CHANGELOG.md is missing a dated entry for {version}")
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    if f'version = "={version}"' not in readme:
-        raise ReleaseError("README.md does not pin the exact release version")
+    from docs_release import check_documents, check_source_version
+    documentation = json.loads((ROOT / "documentation.json").read_text())
+    check_source_version(documentation, version)
+    check_documents(ROOT, documentation)
     release_tag = os.environ.get("RELEASE_TAG")
     if release_tag and release_tag != f"v{version}":
         raise ReleaseError(

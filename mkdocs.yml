@@ -53,25 +53,26 @@ validation:
     anchors: warn
 nav:
   - Overview: index.md
-  - Use the library:
-      - API usage: usage.md
-      - Maturity: maturity.md
-      - Codec capabilities: capabilities.md
-      - AVIF scope: avif.md
-  - Evidence:
-      - Compatibility and coverage: evidence.md
-      - Benchmark results: benchmarks.md
-      - Measurement protocol: benchmarking.md
-      - Public roadmap: roadmap.md
+  - Use:
+      - Installation and API usage: usage.md
+      - Supported formats and limitations: maturity.md
+  - Benchmark results: benchmarks.md
   - Contribute:
       - Contributor guide: contributing.md
       - Development and commands: testing.md
+      - Run benchmarks: benchmarking.md
+      - Benchmark measurement details: benchmark-details.md
+      - Detailed codec reference: capabilities.md
+      - AVIF implementation scope: avif.md
+      - Compatibility evidence: evidence.md
       - Architecture: architecture.md
       - JPEG implementation: jpeg.md
+      - Implementation roadmap: roadmap.md
       - Documentation maintenance: documentation.md
+      - Release process: releasing.md
   - Project:
-      - Releases: releasing.md
+      - Releases: https://github.com/appunni-m/image-slash-star/releases
+      - Changelog: changelog.md
       - Support: support.md
       - Security: security.md
       - Code of conduct: conduct.md
-      - Changelog: changelog.md

@@ -1,33 +1,31 @@
 # image-slash-star
 
+<!-- release:summary -->
+**Latest release: [0.1.3](https://github.com/appunni-m/image-slash-star/releases/tag/v0.1.3).**
+<!-- /release:summary -->
+
 Rust codecs for detecting, inspecting, decoding, and encoding image bytes.
-The library covers selected JPEG, PNG, GIF, BMP, TIFF, WebP, ICO/CUR, and
-opt-in AVIF paths, with observable behavior compared against Pillow 12.2.0.
+Supports selected JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO/CUR operations,
+with optional partial AVIF decoding.
 
 [Documentation](https://appunni-m.github.io/image-slash-star/) ·
-[Capabilities](https://appunni-m.github.io/image-slash-star/capabilities/) ·
-[Benchmarks](https://appunni-m.github.io/image-slash-star/benchmarks/) ·
-[Rust API](https://docs.rs/image-slash-star/0.1.2/image_slash_star/)
-
-**Current release: 0.1.2.** This is an early codec release. Compatibility is
-limited to the selected manifest cases, with substantial planned API and AVIF
-work. It is not a complete implementation of every image-format specification.
-See [maturity](docs/MATURITY.md) before adopting it.
-
-The unreleased candidate is **0.1.3**. Its package dependency is
-`image-slash-star = { version = "=0.1.3" }`; use the published installation
-below until that version's release gates and tag publication complete.
+[Supported formats](https://appunni-m.github.io/image-slash-star/maturity/) ·
+[Benchmark results](https://appunni-m.github.io/image-slash-star/benchmarks/)
 
 ## Install
 
+Add the crates.io package to your application's `Cargo.toml`:
+
+<!-- release:cargo -->
 ```toml
 [dependencies]
-image-slash-star = { version = "=0.1.2", default-features = false, features = ["png", "jpeg"] }
+image-slash-star = "=0.1.3"
 ```
+<!-- /release:cargo -->
 
-Rust 1.96.1 is required. There is one Cargo package and no npm or PyPI package.
-Applications own filesystem and network I/O; the codec API consumes and returns
-bytes and Rust values.
+Requires Rust 1.96.1 or newer. There is one Cargo package and no npm or PyPI
+package. Applications own filesystem and network I/O; the API uses bytes and
+Rust values.
 
 ## Encode and decode a PNG
 
@@ -50,77 +48,47 @@ fn main() -> ImageResult<()> {
 
 The checked constructor validates dimensions and pixel layout. RGB8 data is
 tightly packed, row-major RGB bytes. `decode` detects the input format;
-encoding requires an explicit output format. Other modes, palettes, metadata,
-and sequences have their own contracts.
+encoding requires an explicit output format. Continue with [API usage](docs/USAGE.md).
 
-Continue with [API usage](docs/USAGE.md) and the
-[Generated capability and direct-mode tables](docs/capabilities.md).
+## Choose formats
 
-## Choose features and scope
-
-| Feature | Default | Scope |
+| Feature | Enabled by default | Scope |
 | --- | --- | --- |
-| `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp` | Yes | Selected decode, encode, metadata, and sequence paths; see capabilities |
-| `ico` | Yes | ICO/CUR handling; enables PNG and BMP dependencies |
-| `avif` | No | Partial safe Rust still decoder and container inspection; planned paths remain explicit |
-| `jpeg-wide-color` | No | Optional safe SIMD color candidate; enabled by deliberate choice |
+| `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp` | Yes | Selected decoding, encoding, and metadata operations |
+| `ico` | Yes | ICO/CUR; also enables PNG and BMP |
+| `avif` | No | Partial still-image decoder and container inspection; no supported encoder |
+| `jpeg-wide-color` | No | Optional SIMD JPEG color conversion |
 
-Runtime code is Rust. `bytemuck` is a utility dependency; JPEG and AVIF enable
-the optional `wide` dependency. The committed Cargo lockfile fixes CI's
-resolved graph. C codec libraries are test/benchmark oracles, not runtime
-fallbacks.
-
-This crate does not resize, crop, rotate, draw, filter, or otherwise edit images.
-Keep image processing in the consuming application or a library such as
-[pillow-rs](https://github.com/appunni-m/pillow-rs).
+Disable unused formats with `default-features = false` and an explicit Cargo
+`features` list. See [supported formats and limitations](docs/MATURITY.md).
+Resizing, drawing, filtering, and other image editing are outside this crate;
+use an image-processing library such as [pillow-rs](https://github.com/appunni-m/pillow-rs).
 
 ## Errors and resource limits
 
 <!-- image-error-policy: typed-recovery-diagnostic-prose -->
 
-Recover using typed error kinds, stages, and reasons. Diagnostic `message()`
-and `Display` wording are not a parsing or equality contract.
-`DecodePolicy` bounds the documented input/result dimensions and work;
-`EncodePolicy` includes an encoded-output length limit. These limits do not
-bound all transient allocation, wall-clock time, or recoverable out-of-memory
-behavior. Defaults are compatibility-oriented and unlimited.
+Handle typed error kinds, stages, and reasons. Diagnostic text can change.
+Decode and encode policies offer input, result, and work limits; defaults are
+unlimited. They do not bound every intermediate allocation or wall-clock time.
+Read [error recovery and limits](docs/USAGE.md) before processing untrusted files.
 
-The library is not advertised as hardened for arbitrary hostile inputs.
-Read [API usage and limits](docs/USAGE.md) and [security](SECURITY.md).
+## Performance
 
-## Evidence and performance
+[View benchmark results](https://appunni-m.github.io/image-slash-star/benchmarks/)
+for JPEG comparisons with TurboJPEG. Results identify their source revision
+and hardware; they do not represent every codec or general image processing.
 
-The [evidence guide](docs/EVIDENCE.md) separates active/planned fixture rows,
-dated coverage, and accepted release checks. A compiled feature or present
-function name does not establish every operation and target combination.
+## Contribute and get help
 
-The [benchmark site](https://appunni-m.github.io/image-slash-star/benchmarks/)
-shows the complete recorded JPEG/TurboJPEG operation matrix with source and
-host identity. It does not represent other codecs or general image processing.
-[Methodology](docs/BENCHMARKING.md) explains the timing boundary and CMYK caveat.
-
-## Contribute
-
-Start with [Contributing](CONTRIBUTING.md), the
-[command reference](docs/testing.md), and [architecture](docs/architecture.md).
-
-```sh
-make help
-make build
-make verify
-```
-
-For the public website, use `make docs-setup`, `make docs-build`, and
-`make docs-serve`. Main CI publishes GitHub Pages from this repository.
-
-## Project information
-
-[Support](SUPPORT.md) · [Releases](RELEASING.md) · [Changelog](CHANGELOG.md) ·
-[Code of conduct](CODE_OF_CONDUCT.md) · [Public roadmap](docs/roadmap-new.md)
+[Contributing](CONTRIBUTING.md) covers source builds, tests, and benchmark work.
+[Support](SUPPORT.md) · [Security](SECURITY.md) ·
+[Releases](https://github.com/appunni-m/image-slash-star/releases) ·
+[Changelog](CHANGELOG.md) · [Code of conduct](CODE_OF_CONDUCT.md)
 
 This project contains original and translated work under multiple licenses.
-Read [NOTICE.md](NOTICE.md), the retained license files, and
-[third-party attribution](third_party/README.md) before redistributing it.
+Read [NOTICE.md](NOTICE.md) and [third-party attribution](third_party/README.md)
+before redistributing it.
 
 ## Acknowledgements
 

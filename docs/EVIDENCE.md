@@ -3,7 +3,7 @@
 Fixture declarations, executed comparisons, source coverage, and release
 publication have different identities and denominators.
 
-## Accepted release
+## Historical release 0.1.2
 
 Version 0.1.2 passed [main CI](https://github.com/appunni-m/image-slash-star/actions/runs/35007807946)
 and [release CI](https://github.com/appunni-m/image-slash-star/actions/runs/35010129246)

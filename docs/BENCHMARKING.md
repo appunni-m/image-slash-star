@@ -1,5 +1,8 @@
 # Benchmark methodology
 
+This is the contributor guide for collecting and interpreting measurements.
+For comparisons, start with [benchmark results](https://appunni-m.github.io/image-slash-star/benchmarks/).
+
 The [benchmark site](https://appunni-m.github.io/image-slash-star/benchmarks/)
 compares public JPEG operations with TurboJPEG on the same host. It measures
 JPEG encode/decode, not other codecs, application I/O, or image editing.
