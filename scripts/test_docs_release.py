@@ -32,13 +32,16 @@ class ReleaseDocumentationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             output=Path(directory);(output/'assets').mkdir()
             text=render_benchmarks(repo,config,output)
-            self.assertIn('| Median µs |',text)
+            self.assertIn('class="bench-comparison"',text)
             self.assertNotIn('Source document SHA-256',text)
             self.assertNotIn('```json',text)
             self.assertIn(snapshot['source_sha256'],(output/'benchmark-details.md').read_text())
             self.assertEqual(json.loads((output/'assets/benchmark.json').read_text()),snapshot)
-            # One header, one separator, then every original result, even failures.
-            self.assertEqual(len([line for line in text.splitlines() if line.startswith('| ')]),len(snapshot['rows'])+2)
+            # Every workload gets one comparison row; raw evidence stays unchanged.
+            self.assertEqual(text.count('class="bench-workload"'),len({row['workload'] for row in snapshot['rows']}))
+            details=(output/'benchmark-details.md').read_text()
+            for row in snapshot['rows']:
+                self.assertIn(row['workload'],details)
 
     def test_latest_includes_prereleases_and_excludes_drafts(self):
         rows=[{'tag_name':'v0.9.0','published_at':'2026-09-01T00:00:00Z'},
