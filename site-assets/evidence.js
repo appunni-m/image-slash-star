@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rows = sibling ? [...sibling.querySelectorAll('tbody tr')] : [];
     const table = sibling?.tagName === 'TABLE' ? sibling : sibling?.querySelector('table');
     if (table) {
-      table.classList.add('benchmark-table');
+      table.dataset.benchmark = '';
       const headings = [...table.querySelectorAll('thead th')].map(cell => cell.textContent);
       for (const row of rows) {
         [...row.cells].forEach((cell, index) => { cell.dataset.label = headings[index]; });
