@@ -42,23 +42,9 @@ HASHED_FILES = {
     "roadmap": "roadmap.json",
 }
 
-DOCS = [
-    "README.md",
-    "roadmap.json",
-    "docs/roadmap.md",
-    "docs/roadmap-new.md",
-    "docs/testing.md",
-    "docs/architecture.md",
-    "docs/avif.md",
-]
+DOCS = ["roadmap.json", "docs/EVIDENCE.md"]
 
-CURRENT_CLAIM_DOCS = [
-    "README.md",
-    "docs/roadmap-new.md",
-    "docs/testing.md",
-    "docs/architecture.md",
-    "docs/avif.md",
-]
+CURRENT_CLAIM_DOCS = ["docs/EVIDENCE.md"]
 CURRENT_CLAIM_BEGIN = "<!-- current-claim-ledger:begin -->"
 CURRENT_CLAIM_END = "<!-- current-claim-ledger:end -->"
 
@@ -185,6 +171,9 @@ def failures() -> list[str]:
             verify_current_claim_blocks(ledger, current_coverage, measurement, errors)
         else:
             errors.append("roadmap current coverage metrics are missing")
+
+    if "[evidence guide](docs/EVIDENCE.md)" not in (ROOT / "README.md").read_text():
+        errors.append("README must link the canonical evidence guide")
 
     for doc in DOCS:
         text = (ROOT / doc).read_text()

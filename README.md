@@ -1,854 +1,127 @@
 # image-slash-star
 
-[![CI](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml/badge.svg)](https://github.com/appunni-m/image-slash-star/actions/workflows/ci.yml)
-[![License: multi-license](https://img.shields.io/badge/license-see%20NOTICE-blue.svg)](#license-and-attribution)
+Rust codecs for detecting, inspecting, decoding, and encoding image bytes.
+The library covers selected JPEG, PNG, GIF, BMP, TIFF, WebP, ICO/CUR, and
+opt-in AVIF paths, with observable behavior compared against Pillow 12.2.0.
 
-Dependency-constrained Rust codecs for detecting, inspecting, decoding, and
-encoding JPEG, PNG, GIF, BMP, TIFF, WebP, ICO/CUR, and AVIF bytes.
+[Documentation](https://appunni-m.github.io/image-slash-star/) ·
+[Capabilities](https://appunni-m.github.io/image-slash-star/capabilities/) ·
+[Benchmarks](https://appunni-m.github.io/image-slash-star/benchmarks/) ·
+[Rust API](https://docs.rs/image-slash-star/0.1.2/image_slash_star/)
 
-The crate targets exact observable compatibility with a pinned Pillow 12.2.0
-oracle for every active manifest case: success or error, format, mode,
-dimensions, metadata, frames, pixels, palettes, and deterministic encoded
-bytes.
+**Current release: 0.1.2.** This is an early codec release. Compatibility is
+limited to the selected manifest cases, with substantial planned API and AVIF
+work. It is not a complete implementation of every image-format specification.
+See [maturity](docs/MATURITY.md) before adopting it.
 
-> **Pre-release status:** `0.1.2` is the current GitHub OIDC release candidate.
-> The bootstrap version 0.1.0 was published to crates.io from local
-> tag `v0.1.0` at commit `35dd72808e6b2a8488b98caf685a3d48e4c97468`.
-> The compatibility guarantee is limited to committed manifest cases, not every
-> legal file in each format specification. Encoded-input bytes, inspected
-> primary-canvas dimensions/pixels/decoded bytes, the inspected frame count,
-> every later frame/page's decoded bytes, cumulative sequence bytes, and the
-> encoded metadata extent can be bounded. Encoded-output and internal
-> allocations remain outside the policy, with no recoverable out-of-memory
-> contract; the current crate should not be treated as hardened for arbitrary
-> hostile inputs.
-> Breaking API changes may occur before 1.0.
-
-## Why use it?
-
-- One structured `Result` API across all codecs, with auto-detecting and
-  signature-validated explicit-format still decode entry points.
-- Rust-only default JPEG, PNG, GIF, BMP, TIFF, WebP, and ICO execution.
-- `bytemuck` as the only Cargo dependency.
-- Independent per-format Cargo features.
-- Exact fixture-backed success, error, pixel, frame, and encoded-byte checks.
-- Byte-buffer APIs that work without filesystem or networking assumptions.
-- Default codec feature combinations cross-compile to
-  `wasm32-unknown-unknown`, and every feature lane executes in a real WASM
-  runtime (`wasm32-wasip1` under Node's WASI preview1).
-
-The crate deliberately does not resize, crop, rotate, draw, filter, adjust, or
-otherwise process decoded images. Applications keep image processing in a
-downstream library.
-
-## Quick start
-
-For source-tree development, depend on the repository:
-
-```toml
-[dependencies.image-slash-star]
-git = "https://github.com/appunni-m/image-slash-star"
-default-features = false
-features = ["png", "jpeg"]
-```
-
-After the first bootstrap, depend on the immutable crates.io version:
+## Install
 
 ```toml
 [dependencies]
 image-slash-star = { version = "=0.1.2", default-features = false, features = ["png", "jpeg"] }
 ```
 
-Cargo package names use hyphens; Rust imports use underscores.
+Rust 1.96.1 is required. There is one Cargo package and no npm or PyPI package.
+Applications own filesystem and network I/O; the codec API consumes and returns
+bytes and Rust values.
 
-```rust,no_run
-use image_slash_star::{
-    decode, encode_default, ImageError, ImageFormat, ImageMode, ImageResult,
-};
-
-fn opaque_rgb_png_to_jpeg(input: &[u8]) -> ImageResult<Vec<u8>> {
-    let decoded = decode(input)?;
-    if decoded.format != ImageFormat::Png {
-        return Err(ImageError::Unsupported {
-            format: Some(decoded.format),
-            message: "expected a PNG source".to_owned(),
-            reason: None,
-        });
-    }
-    if decoded.content.mode != ImageMode::Rgb8 {
-        return Err(ImageError::Unsupported {
-            format: Some(ImageFormat::Jpeg),
-            message: "JPEG example requires opaque RGB8 input".to_owned(),
-            reason: None,
-        });
-    }
-    encode_default(&decoded.content, ImageFormat::Jpeg)
-}
-```
-
-`decode` detects the source format from the complete byte slice and preserves
-that format separately from the decoded sample mode. When a caller already has
-an out-of-band format candidate, `decode_with_format` validates that the
-complete signature agrees before following the same feature and codec path;
-`decode_with_format_and_policy` additionally preserves policy precedence. A
-mismatch returns a staged `Parameter` error, while an input without a complete
-supported signature returns staged `Malformed`; partial input remains the
-`decode_prefix` contract. Encoding always requires an explicit output format.
-
-The example deliberately accepts only opaque `Rgb8` PNG pixels. RGBA, indexed,
-bilevel, and sixteen-bit PNG inputs need an explicit conversion policy in a
-downstream processing library; this codec crate does not silently discard
-alpha, expand palettes, or change sample depth. For a full program, read bytes
-with `std::fs`, call the function above, and write the returned bytes. The crate
-itself never opens paths.
-
-## Supported features
-
-Default features enable every codec except AVIF.
-
-| Feature | Default | Native behavior | `wasm32-unknown-unknown` |
-| --- | --- | --- | --- |
-| `jpeg` | yes | Rust inspect/decode/encode | Build-verified Rust path |
-| `png` | yes | Rust still/APNG sequence decode and still encode | Build-verified Rust path |
-| `gif` | yes | Rust still/sequence decode and encode | Build-verified Rust path |
-| `bmp` | yes | Rust inspect/decode/encode | Build-verified Rust path |
-| `tiff` | yes | Rust still/multipage decode and encode | Build-verified Rust path |
-| `webp` | yes | Rust still/sequence decode and still/keyframe-sequence encode | Build-verified Rust path |
-| `ico` | yes | Rust ICO/CUR inspect/decode and source-sized ICO encode | Build-verified Rust path |
-| `avif` | no | Safe Rust inspect and restricted still decode; sequence/encode gaps are explicit | Same safe Rust contract; no native fallback |
-
-The `ico` feature recognizes both ICO and CUR signatures and accepts `.ico`
-and `.cur` aliases. Inspection and decode retain the selected CUR hotspot in
-`ImageInfo::cursor_hotspot` and `DecodedImage::cursor_hotspot`; `None`
-distinguishes ordinary ICO. The feature enables PNG and BMP because an entry
-can use either representation. Encoding currently writes ICO only, with one
-entry at the supplied raster dimensions, and never resizes pixels.
-
-Feature evolution rule: format umbrella features (`jpeg`, `png`, `gif`, `bmp`,
-`tiff`, `webp`, `ico`, `avif`) are stable public Cargo API. Any future
-operation-level subfeature must be additive: it may only narrow an umbrella's
-optional surface, never disable behavior that a subset of features already
-enables, and Cargo's additive unification must compose subfeatures without
-changing umbrella semantics. This rule is committed before any split is
-accepted.
-
-WASM feature combinations are cross-compiled in CI. The feature-gate and
-capability-table suites also execute in a real WASM runtime
-(`wasm32-wasip1` under Node's WASI preview1) for no features, every isolated
-codec, default features, and all features. Executing the complete semantic
-fixture matrix in a WASM runtime remains planned.
-
-AVIF is the remaining codec-completeness boundary, not a native-linking
-boundary. The runtime uses the growing in-tree safe-Rust AV1 subset on every
-target. Pinned libavif/dav1d/libaom outputs remain fixture-oracle provenance
-only. See [AVIF support](docs/avif.md) for the exact active rows and planned
-gaps.
-
-## API and data model
-
-| API | Purpose |
-| --- | --- |
-| `detect_format(&[u8])` | Identify a supported container signature |
-| `detect_prefix(&[u8])` | Incremental detection: identify a complete signature, or report `NeedMoreData { minimum }` while the input is still an incomplete prefix |
-| `inspect(&[u8])` | Read `ImageInfo` without decoding compressed pixels |
-| `inspect_basic(&[u8])` | Read header facts without counting every frame/page; `frame_count_complete` reports whether the count is known |
-| `inspect_basic_prefix(&[u8])` | Incremental basic inspection: return header facts as soon as the detected format can prove them, or report `NeedMoreData { minimum }` while the basic header is incomplete |
-| `decode(&[u8])` | Decode the still/first-image view and retain source format |
-| `decode_with_format(&[u8], ImageFormat)` | Decode with a caller-selected format after validating the complete input signature |
-| `decode_with_format_and_policy(&[u8], ImageFormat, &DecodePolicy)` | Explicit-format still decode with the same encoded-input, format allow-list, metadata, canvas, frame, and decoded-byte limits |
-| `decode_prefix(&[u8])`, `decode_prefix_with_policy` | Incremental still decode: return the decoded image when the input is complete, or `NeedMoreData { minimum }` while structures are still incomplete |
-| `decode_with_token(&[u8], &CancellationToken)`, `decode_with_token_and_policy` | Still decode with cooperative cancellation at structural checkpoints; JPEG baseline entropy polls after each 1,024-MCU batch, progressive JPEG polls within each scan at the same cadence, uncompressed BMP polls before each 1,024-byte raw-payload chunk and scanline conversion row, embedded 24-bit and 32-bit BMP-backed ICO paths poll before each output row, and GIF LZW polls before each code read and during 1,024-link/byte dictionary expansion |
-| `decode_sequence(&[u8])` | Retain supported frames and presentation metadata |
-| `decode_sequence_prefix(&[u8])`, `decode_sequence_prefix_with_policy` | Incremental sequence decode with the same non-terminal status |
-| `decode_sequence_with_token(&[u8], &CancellationToken)`, `decode_sequence_with_token_and_policy` | Sequence decode with per-frame cancellation |
-| `CancellationToken::with_progress`, `ProgressEvent`, `ProgressDecision` | Observe accepted cooperative checkpoints synchronously; the callback receives a monotonic checkpoint number and may continue or return typed cancellation. The contract is the same on native and WASM, and callback panics are not caught |
-| `Decoded<T>::diagnostics` | Stable non-fatal recovery records returned beside successful decode |
-| `inspect_with_policy`, `decode_with_policy`, `decode_sequence_with_policy` | Apply caller-controlled format restrictions and limits before the corresponding operation |
-| `decode_into`, `decode_into_with_policy` | Decode into an exact-size caller-provided buffer, rejecting short/oversized destinations without partial writes |
-| `ImageInfo::decoded_bytes` | Preflight the exact transfer-byte length from the inspected canvas and mode without decoding |
-| `ImageInfo::transfer_layout`, `DecodedImage::transfer_layout` | Describe row bytes, total bytes, packed-row status, and alignment for the legacy decoded contract |
-| `ImageInfo::detailed_transfer_layout`, `DecodedImage::detailed_transfer_layout` | Add the transfer byte order and the current one-plane transport description while retaining the legacy layout |
-| `DecodedImage::try_new`, `try_with_mode`, `try_with_palette` | Checked zero-copy construction for validated pixels, color/mode state, and indexed palettes; the compatibility builders remain explicitly unchecked |
-| `encode(&DecodedImage, ImageFormat, &EncodeOptions)` | Encode one image with explicit options |
-| `encode_with_policy`, `encode_sequence_with_policy` | Apply an inclusive encoded-result cap and optional cooperative checkpoint budget; return typed `EncodedOutputBytes` or `EncodeWorkUnits` limit failures |
-| `encode_with_token`, `encode_with_token_and_policy` | Encode one image with cooperative cancellation; codec-specific polling includes JPEG RGB-to-YCbCr conversion after each 1,024 pixels, rows/blocks/scans, baseline entropy after each 1,024 MCUs, and 1,024-byte entropy-output intervals, PNG rows/segments, BMP row-conversion subsegments, GIF blocks and LZW input-symbol intervals, TIFF Deflate work, WebP VP8 RGB/RGBA-to-YUV conversion, required padded Y/U/V edge-replication after each 1,024 padded items, analysis and segment-assignment macroblocks after each 1,024 items, filter-edge adjustment, coefficient-statistics collection, and the first-partition segment-probability prepass after each 1,024 selected macroblocks, RGBA transparent-area cleanup after each 1,024 scanned or flattened pixels, macroblock-analysis, and mode-selection subsegments plus VP8 analysis, coefficient-probability adaptation, bitstream, and lossless VP8L 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream and 1,024-byte output stages, and each format's documented boundaries |
-| `encode_default(&DecodedImage, ImageFormat)` | Encode one image with defaults |
-| `encode_sequence(&DecodedSequence, ImageFormat, &EncodeOptions)` | Encode one frame to any enabled format or multiple frames to GIF, TIFF, or WebP; AVIF sequence encoding is planned |
-| `encode_sequence_with_token`, `encode_sequence_with_token_and_policy` | Encode a still/sequence with cancellation at retained-frame and finalization checkpoints where the target supports them |
-| `encode_to_sink_with_policy`, `encode_sequence_to_sink_with_policy` | Apply the same encoded-result cap before writing to a caller-owned sink; a rejected result leaves the sink untouched |
-| `encode_to_sink`, `encode_sequence_to_sink` | Encode into a caller-owned dependency-free `OutputSink`; write or flush rejection is reported as `ImageError::OutputWrite`; JPEG, PNG, BMP, and TIFF still plus one-frame JPEG/BMP and multi-page TIFF sequence output cross structural write boundaries |
-| `encode_to_sink_with_token`, `encode_sequence_to_sink_with_token` | Combine token-aware encoding with a caller-owned sink; structural writers can stop after an already-written prefix when cancellation fires |
-| `ImageFormat::capabilities()` | Query detection, inspection, still, and genuine multi-image support for the current feature set and target |
-| `all_capabilities()` | Return the same typed capability record for every public format |
-| `EncodedImage::new(bytes)` | Inspect an immutable source now and decode it lazily |
-| `EncodedImage::decode_sequence`, `decode_sequence_with_policy` | Lazily retain the complete decoded sequence independently from the still cache; limited policies use the policy-aware selected-format uncached path |
-| `EncodedImage::decode_state`, `sequence_decode_state`, `is_decoded`, `is_sequence_decoded` | Observe separate not-attempted, succeeded, and failed lazy-cache states without exposing synchronization details |
-| `EncodedImage::*_with_policy(...)` | Enforce the same format restrictions and limits during source construction or lazy materialization |
-| `EncodedImage::verify_with_scope(scope)` | Verify with an explicit requested strength; stronger requests fail instead of downgrading |
-| `EncodedImageView::new(&[u8])` | Borrow an immutable encoded view with no encoded-byte copy; clones share the immutable verification result while pixel decodes remain uncached |
-| `EncodedImage::decode_frame(index)`, `EncodedImageView::decode_frame(index)` | Decode exactly one retained frame/page with stable per-frame errors; TIFF uses a genuine per-page path |
-
-`Decoded::consumed_bytes` reports the encoded bytes of the container-defined
-extent when the container defines one unambiguously (JPEG after EOI, PNG after
-IEND, GIF after the trailer, WebP's RIFF size, TIFF's final IFD, and AVIF's
-last top-level box). BMP and ICO report `None` because they declare no total
-extent. Decoders ignore well-formed trailing bytes after that extent and never
-let them change the decoded result. Successful envelopes for formats with a
-defined extent also report `DiagnosticKind::TrailingDataIgnored` with the
-first ignored byte's offset. The trailing-input manifest pins the unchanged
-Pillow-observable result, while the consumed extent and diagnostic fields are
-the separate defensive-model contract for all eight formats.
-
-Incremental callers that are still receiving encoded input use `detect_prefix`
-and `inspect_basic_prefix`. Both return `ImageError::NeedMoreData { minimum }`
-when the input is an incomplete prefix: append enough bytes to reach
-`minimum` (the exact total input length the next parse needs) and retry.
-Minimums are exact for fixed signatures and progress-aware for containers
-that declare their own extent (WebP RIFF chunks and AVIF boxes). Every other
-result is terminal: an incomplete signature that can never match is
-`UnknownFormat`, and a recognized-but-truncated container remains `Malformed`
-on the complete-slice APIs. The incremental surface never turns a terminal
-result into an implicit retry loop.
-The incremental contract now extends to decoding: `decode_prefix` and
-`decode_sequence_prefix` (plus their policy variants) return the decoded
-result once the input is complete and `NeedMoreData { minimum }` while
-container structures or pixel payloads are still incomplete. Minimums are
-exact when the container declares the missing extent (PNG chunks, BMP/ICO
-pixel spans, TIFF strip/tile spans, WebP RIFF payloads, AVIF boxes) and
-progress-aware otherwise.
-`CancellationToken` adds cooperative cancellation: clones share state,
-`cancel()` fires every clone, and token-aware decodes poll at chunk, frame,
-page, strip, and tile boundaries, stopping with `ImageError::Cancelled`
-without publishing partial state. Token-aware encode APIs check before and
-after whole-buffer codecs; codec-specific checkpoints cover JPEG RGB-to-YCbCr
-conversion after each 1,024 pixels, color, sampling, quantization, baseline
-entropy after each 1,024 MCUs, entropy, 1,024-byte entropy-output intervals,
-and progressive scans, PNG rows and adaptive
-filter segments, uncompressed BMP pixel-payload chunks and scanline conversion
-rows, embedded 24-bit and 32-bit BMP-backed ICO conversion rows, BMP row-conversion
-subsegments, JPEG baseline entropy after
-each 1,024-MCU batch, GIF blocks, decode LZW code/dictionary-expansion
-intervals, and encode LZW input-symbol intervals, TIFF Deflate work,
-WebP VP8 RGB/RGBA-to-YUV conversion, required padded Y/U/V edge-replication
-after each 1,024 padded items, analysis and segment-assignment macroblocks
-after each 1,024 items, filter-edge adjustment and coefficient-statistics
-collection after each 1,024 selected macroblocks, and the first-partition
-segment-probability prepass after each 1,024 selected macroblocks, RGBA
-transparent-area cleanup after each
-1,024 scanned or flattened pixels, macroblock-analysis, and mode-selection
-subsegments plus VP8's 8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, and 262,144-bit logical and 16,384-boolean first-partition and
-8-bit, 16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical coefficient-bit intervals, lossless VP8L 8-bit,
-16-bit, 32-bit, 64-bit, 128-bit, 256-bit, 512-bit, 1,024-bit, 2,048-bit, 4,096-bit, 8,192-bit, 16,384-bit, 32,768-bit, 65,536-bit, 131,072-bit, 262,144-bit, 524,288-bit, 1,048,576-bit, and 2,097,152-bit logical bitstream intervals and 1,024-byte output intervals, and each
-writer's structural segments.
-GIF, TIFF, and WebP sequence paths poll at their
-frame/coalescing/page/finalization boundaries. AVIF sequence encoding is a
-planned pure-Rust gap. A structural sink cancellation
-may leave its delivered prefix; successful sink delivery calls the sink's
-finalization hook once, and a flush failure is reported as `OutputWrite`
-without rollback. `CancellationToken::with_progress` is the implemented progress
-surface: it reports a monotonic `ProgressEvent::checkpoint()` value after each
-accepted poll, and `ProgressDecision::Cancel` produces the existing typed
-`ImageError::Cancelled` result. The callback is synchronous and
-single-threaded on native and WASM targets; callback panics are intentionally
-not caught. Broader codec coverage and managed target evidence remain roadmap
-work. An
-`EncodePolicy::max_work_units` budget counts those documented encode
-checkpoints, including GIF LZW input-symbol intervals and progressive JPEG
-scan batches, and reports a typed
-limit error before the checkpoint that would exceed it; it is not a CPU-time
-or allocation guarantee. Legacy APIs never cancel and remain unlimited.
-
-Signature detection is feature-independent. Disabled codec operations report
-`Unavailable(FeatureDisabled)` through capability discovery and return
-`ImageError::FeatureDisabled` when attempted. Sequence capabilities mean
-genuine multi-image decode or encode; the validated one-frame fallback follows
-the corresponding still capability. On `wasm32`, AVIF inspection remains
-manifest-bounded, still decode reports the restricted portable subset, and
-encode plus sequence operations report target unavailability.
-
-`ImageFormat::from_name` accepts canonical names and extension aliases
-case-insensitively: JPEG `jpg`/`jpeg`/`jfif`/`jpe`, PNG `png`/`apng`, TIFF
-`tiff`/`tif`, ICO/CUR `ico`/`cur`, and AVIF `avif`/`avifs`. Headerless `.dib`
-remains an explicit-format scope decision, not an automatic BMP alias.
-`mime_type()`, `canonical_extension()`, and `extensions()` expose stable,
-dependency-free format metadata in canonical-first order; `from_path` uses the
-same table without touching the filesystem.
-
-`VerificationScope` orders `HeaderOnly` < `Structure` < `FullPixels`.
-`EncodedImage::verify()` runs the format's Pillow-compatible default scope;
-`verify_with_scope(requested)` fails with a format-qualified `Unsupported` when
-the codec cannot provide the requested strength, so header-only success is
-never silently reported as structural or full-pixel evidence. No codec
-currently provides `FullPixels`.
-
-The core model separates:
-
-```text
-ImageFormat                ImageMode + ColorType
-encoded container         decoded sample-byte layout
-PNG / JPEG / GIF / ...    P8 / L8 / RGB8 / RGBA8 / ...
-             \             /
-              Decoded<T>
-```
-
-`DecodedImage::pixels` is tightly packed and row-major. Indexed samples use
-`ImageMode::P8` and retain an `ImagePalette` when the source exposes one; they
-are not silently interpreted as grayscale. Caller-built images and sequences
-are validated before encoding.
-
-`DecodedImage::try_new`, `try_with_mode`, and `try_with_palette` provide checked
-zero-copy construction: successful calls reuse the supplied pixel vector, while
-`new`, `with_mode`, and `with_palette` remain available as explicitly unchecked
-builders for staged assembly. Direct `DecodedImage` field construction is also
-unchecked; every encoder and sequence validator still validates before use.
-
-`ImageInfo::source` and `DecodedImage::source` retain structural source facts
-without changing the transfer bytes. TIFF currently records its exact
-`SourceByteOrder`; `I32`/`F32` pixels preserve that order, while normalized
-modes keep their documented transfer layout. AVIF primary-item `irot`/`imir`,
-`pasp`, and `clap` properties are retained through
-`SourceDescriptor::avif_transform()` as source provenance; its
-`AvifTransformProperties::order()` accessor retains the source association
-order. Decoded pixels are never rotated, mirrored, rescaled, or cropped. Codecs without a retained
-structural fact currently return an empty descriptor. For the committed AVIF
-alpha fixtures, `SourceDescriptor::avif_auxiliary_relationship()` retains the
-direct source-local auxiliary-item relationship, while
-`SourceDescriptor::avif_auxiliary_relationships()` returns the bounded list for
-direct and supported grid-derived color-item targets. These are provenance
-only and do not alter decoded pixels. For a primary grid,
-`SourceDescriptor::avif_grid_item_ids()` returns the ordered derived color-item
-IDs, and `SourceDescriptor::avif_grid_properties()` returns the validated
-version, raw flags, row/column counts, and declared output canvas. Tile
-placement and composition remain private to decoding.
-Non-primary non-alpha `auxC`/`auxi` declarations retain their exact
-source-local kind and payload through
-`SourceDescriptor::avif_item_properties()`; this is provenance only and does
-not select or decode auxiliary payloads. Those raw records also retain the
-source `ipma` essential-association bit in source order.
-The bounded AVIF inspection and sample parsers reject an `ipco` table after
-2,048 property entries; the existing feature-gated contract exercises that
-resource boundary, which is Rust container evidence rather than Pillow parity
-because Pillow exposes no item-property table budget.
-
-`DecodedSequence::first()` returns the complete `DecodedFrame`, including its
-source and presentation metadata. `first_image()` is available when a caller
-intentionally wants only the first frame's pixels and accepts that metadata
-loss.
-
-`DecodedSequence::kind` names the container meaning: `TimedAnimation` for GIF,
-APNG, animated WebP, and AVIF sequences; `UntimedPages` for TIFF multipage
-sequences; and `SingleFrame` for still decode fallbacks and caller-built still
-sequences. TIFF pages always retain exact zero durations and are never
-described as timed animation.
-
-`SourceDescriptor::alpha()` reports the alpha association declared by the
-encoded container: straight/unassociated alpha (PNG alpha channels and palette
-tRNS, WebP VP8X/VP8L alpha, and TIFF `ExtraSamples` 2), TIFF `ExtraSamples` 1
-as premultiplied/associated, GIF transparency as a binary mask, and AVIF alpha
-items as `SourceAlpha::Auxiliary` because their samples are carried by a
-separate image. `SourceDescriptor::avif_auxiliary_relationship()` exposes the
-direct AVIF `auxl` association as source-local item IDs, while
-`SourceDescriptor::avif_auxiliary_relationships()` exposes the bounded list
-when alpha targets include supported grid-derived color items. Decoded
-transfer bytes remain the documented normalized unassociated layout; the
-descriptor records only what the source declares. AVIF `prem` relationships
-are retained separately through
-`SourceDescriptor::avif_premultiplied_relationships()` and likewise do not
-request a decoded-sample transformation.
-
-Decoded images and sequences retain `OpaqueBlock` records for container blocks
-the codec does not interpret, in original order with duplicates and the
-container's safe-to-copy flag (currently PNG unknown ancillary chunks).
-Known PNG metadata chunks (text, EXIF, time, and resolution blocks) are
-retained separately as raw, unparsed `OpaqueMetadata` records; compressed
-payloads are bounded-validated but never exposed inflated. Pillow-tolerated
-invalidly compressed `zTXt`, `iCCP`, and `iTXt` payloads are omitted and
-produce `DiagnosticKind::InvalidMetadataIgnored`; malformed field shapes stay
-raw metadata. Method-only `zTXt`/`iCCP` mutations are outside this recovery
-contract because Pillow rejects them. A static PNG stream that reaches EOF
-without `IEND` remains decodable with a Rust-only
-`DiagnosticKind::RecoveredStructure` record named `png_missing_iend` at the
-EOF offset; structural verification still rejects the missing terminator. The
-diagnostic manifest asserts this field separately from Pillow parity because
-Pillow has no equivalent structured warning field. Pillow-tolerated duplicate
-`PLTE` and `tRNS` members keep the first palette result and produce separate
-Rust-only `RecoveredStructure` identities (`png_duplicate_plte` and
-`png_duplicate_trns`) at the ignored chunk offsets.
-Pillow-tolerated bad `IEND` CRCs likewise keep still and sequence decode
-successful with `png_IEND_crc`; Rust structural verification remains strict.
-Pillow also defers CRC checks for chunks after the first `IDAT`: APNG
-`acTL`/`fcTL`/`fdAT` members produce `png_acTL_crc`, `png_fcTL_crc`, or
-`png_fdAT_crc`, and an uninterpreted late ancillary member produces
-`png_post_idat_crc`. A late declaration or ordering recovery can produce more
-than one diagnostic for the same chunk; Rust structural verification remains
-strict for every one of these CRCs.
-Pillow-tolerated indexed-palette shape damage is likewise retained with the
-first usable result and reported as `png_trns_overlong`, `png_missing_plte`,
-`png_empty_plte`, `png_partial_plte`, or `png_trns_without_plte`; a zero-frame
-APNG declaration reports `png_apng_zero_frames`, an out-of-range APNG frame
-count reports `png_apng_frame_count_out_of_range`, malformed APNG declarations
-that fall back to the default image report `png_duplicate_actl` or
-`png_actl_after_idat`; an overlong `acTL` payload reports
-`png_actl_overlong`, and valid inflated bytes past the first PNG raster report
-`png_oversized_scanline`. These are Rust-only
-defensive diagnostics: Pillow exposes the successful pixels but no equivalent
-structured warning field.
-GIF comment, plain-text, and non-NETSCAPE application extensions are retained
-the same way (label byte as kind, exact payload bytes as data), while unknown
-extension labels stay in `opaque_blocks`. The NETSCAPE loop extension remains
-interpreted into `DecodedSequence::loop_count` as `AnimationLoop`: an omitted
-extension is `Unspecified`, zero is `Infinite`, and a positive GIF repeat field
-is converted to canonical `Finite { total_plays: repeat_field + 1 }`.
-
-The same common field keeps APNG positive `num_plays` as total plays and maps
-its zero sentinel to `Infinite`; WebP uses the GIF-style additional-repeat
-conversion. `Unknown` is reserved for a valid source whose loop behavior
-cannot be determined and is rejected by encoders. A finite total-play count
-of one is omitted for GIF (one pass is representable without a loop
-extension); WebP rejects it for its animated output contract. This distinction
-prevents a format's zero sentinel from being silently mistaken for a finite
-one-play value.
-JPEG APPn and COM marker payloads are retained as ordered metadata records
-(marker byte as kind, exact payload bytes as data), including multi-segment
-ICC/EXIF fragments in stream order; the APP14 Adobe transform byte stays
-parsed for CMYK decoding.
-WebP ICCP, EXIF, and XMP chunks are retained as ordered metadata records
-(fourcc as kind, exact payload bytes as data, duplicates kept), while unknown
-RIFF chunks stay in `opaque_blocks`; truncated chunks are not retained.
-TIFF tag retention preserves every non-interpreted tag with typed identity
-(tag number in the file's byte order) and exact stored value bytes — inline
-when the value fits four bytes, otherwise at its offset — with unknown tags in
-`opaque_blocks` and known metadata tags (text, date, software, artist,
-copyright, ICC) in the metadata records, per page.
-AVIF top-level BMFF retention keeps unknown boxes and `free`/`skip` padding
-boxes as raw opaque records (fourcc as kind, full box bytes as data) while
-interpreted boxes (ftyp/meta/moov/mdat) stay out.
-Recognized AVIF `Exif` items and MIME items whose content type is exactly
-`application/rdf+xml` are retained as ordered raw `OpaqueMetadata` records on
-still and sequence decode (`Exif` and `XMP ` kinds). Their item extent bytes
-are preserved exactly; the EXIF record therefore includes the AVIF TIFF-offset
-prefix. This is source retention only: default encoding never replays it, and
-the direct alpha auxiliary relationship is retained separately through
-`SourceDescriptor::avif_auxiliary_relationship()` and the bounded plural
-relationship list also retains the committed grid fixture's alpha links
-(auxiliary items `5`→`2` and `6`→`3`); its grid item-ID list retains `[2, 3]`.
-Bounded `iref` edges, including `prem`, are retained as source provenance;
-the committed grid fixture also retains its `2 × 1`, `80 × 80`, version-`0`
-payload topology through `SourceDescriptor::avif_grid_properties()`;
-non-alpha `auxC`/`auxi` declarations retain exact source-local kind/payload
-through `SourceDescriptor::avif_item_properties()`, while track-only
-auxiliary payload selection/decoded content, richer item graphs, and grid tile
-placement/composition remain open.
-AVIF `FileTypeBox` declarations are retained through
-`SourceDescriptor::avif_file_type()` as major brand, minor version, and ordered
-compatible brands, with a 1,024-entry ceiling on inspection, still decode, and
-sequence-frame records. This is source provenance only; it does not imply
-decoder capability, and Pillow has no equivalent result, so it is not a parity
-field.
-Exact PNG color fields additionally surface through `source_color`
-(`SourceColor`): sRGB rendering intent, gamma, chromaticity values, and the
-raw ICC profile bytes. Retaining them records what the source declares; it
-never implies that color conversion was applied to decoded samples.
-AVIF primary items likewise retain `colr`/`nclx` CICP fields, the `av1C`
-chroma sample position, and the `clli` content-light-level property through
-`SourceColor` (primaries, transfer characteristics, matrix coefficients,
-range, maxCLL, and maxPALL) on
-inspection and decode. This is source provenance, not color conversion or tone
-mapping; the item-level AVIF color contract is defensive/specification
-evidence because the Pillow parity oracle does not expose an equivalent
-structured result. Chroma sample position is retained as source provenance
-only; it does not cause chroma resampling.
-Typed non-primary AVIF `colr`/`nclx` declarations are retained separately as
-source-local `AvifItemColorProperties` through
-`SourceDescriptor::avif_item_color_properties()` on inspection, still decode,
-and sequence fallback. They do not replace the primary `SourceColor`, apply
-color conversion, or change decoded pixels. Raw non-primary `prof`/`rICC`
-profiles are likewise retained as `AvifItemIccProfile` records through
-`SourceDescriptor::avif_item_icc_profiles()`, preserving each source-local item
-ID and exact profile kind/bytes without replacing primary `SourceColor`. These
-item-level fields are Rust source-provenance contracts because Pillow exposes
-no equivalent result; other item color/property forms remain open.
-Default encoding never replays retained blocks implicitly; an explicit replay
-API would have to define collisions with encoder-generated blocks first.
-
-Codec/capability vocabulary enums are non-exhaustive, including `ImageFormat`,
-`VerificationScope`, `ImageMode`, `SequenceKind`, `SourceAlpha`, and animation
-presentation enums. Downstream `match` expressions must include a fallback so
-a later format or transfer mode does not become an accidental source break.
-Closed domains such as `SourceByteOrder` remain exhaustive.
-
-### Typed encoder options
-
-`EncodeOptions` always identifies one target codec. Construct the corresponding
-record directly or use `EncodeOptions::for_format` for that format's defaults:
+## Encode and decode a PNG
 
 ```rust
 use image_slash_star::{
-    encode, EncodeOptions, ImageFormat, JpegEncodeOptions, JpegSubsampling,
+    ColorType, DecodedImage, ImageFormat, ImageResult, decode, encode_default,
 };
 
-fn example(image: &image_slash_star::DecodedImage)
-    -> image_slash_star::ImageResult<Vec<u8>> {
-let options = EncodeOptions::from(JpegEncodeOptions {
-    quality: Some(90),
-    subsampling: Some(JpegSubsampling::Cs444),
-    ..JpegEncodeOptions::default()
-});
-encode(image, ImageFormat::Jpeg, &options)
+fn main() -> ImageResult<()> {
+    let image = DecodedImage::try_new(
+        3, 2, [255, 12, 34].repeat(6), ColorType::Rgb8,
+    )?;
+    let png = encode_default(&image, ImageFormat::Png)?;
+    let decoded = decode(&png)?;
+    assert_eq!(decoded.format, ImageFormat::Png);
+    assert_eq!(decoded.content.pixels, image.pixels);
+    Ok(())
 }
 ```
 
-Passing JPEG options with a PNG target, for example, returns a
-format-qualified `Parameter` error before codec dispatch. There is no
-format-neutral `EncodeOptions::default()` because codec defaults and option
-domains are not interchangeable.
+The checked constructor validates dimensions and pixel layout. RGB8 data is
+tightly packed, row-major RGB bytes. `decode` detects the input format;
+encoding requires an explicit output format. Other modes, palettes, metadata,
+and sequences have their own contracts.
 
-`EncodeOptions::try_from_legacy_pairs` is a strict migration boundary for the
-former string-pair configuration. It rejects unknown and duplicate keys,
-validates each value, and produces a typed record; encoders never inspect
-string keys. New integrations should construct codec records directly.
+Continue with [API usage](docs/USAGE.md) and the
+[Generated capability and direct-mode tables](docs/capabilities.md).
 
-### Caller-controlled limits
+## Choose features and scope
 
-The unlimited entry points remain convenient for trusted inputs.
-`DecodePolicy` can optionally restrict detection to a caller-selected
-`DecodeFormatSet`; it provides inclusive maxima for the complete encoded byte slice,
-inspected canvas width, height, and pixel count, and the primary image's
-decoded transfer-byte length, the inspected frame/page count, every later
-frame/page's decoded byte length, and the cumulative retained sequence bytes:
+| Feature | Default | Scope |
+| --- | --- | --- |
+| `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp` | Yes | Selected decode, encode, metadata, and sequence paths; see capabilities |
+| `ico` | Yes | ICO/CUR handling; enables PNG and BMP dependencies |
+| `avif` | No | Partial safe Rust still decoder and container inspection; planned paths remain explicit |
+| `jpeg-wide-color` | No | Optional safe SIMD color candidate; enabled by deliberate choice |
 
-```rust
-use image_slash_star::{
-    decode_with_policy, DecodeFormatSet, DecodePolicy, ImageFormat, ImageResult,
-};
+Runtime code is Rust. `bytemuck` is a utility dependency; JPEG and AVIF enable
+the optional `wide` dependency. The committed Cargo lockfile fixes CI's
+resolved graph. C codec libraries are test/benchmark oracles, not runtime
+fallbacks.
 
-fn decode_at_most_one_mebibyte(
-    input: &[u8],
-) -> ImageResult<image_slash_star::Decoded<image_slash_star::DecodedImage>> {
-    let policy = DecodePolicy::new()
-        .with_allowed_formats(DecodeFormatSet::only(ImageFormat::Png))
-        .with_max_encoded_bytes(1024 * 1024)
-        .with_max_width(4096)
-        .with_max_height(4096)
-        .with_max_pixels(16_000_000)
-        .with_max_primary_decoded_bytes(64 * 1024 * 1024)
-        .with_max_frames(1000)
-        .with_max_frame_decoded_bytes(4 * 1024 * 1024)
-        .with_max_sequence_decoded_bytes(256 * 1024 * 1024)
-        .with_max_metadata_bytes(8 * 1024 * 1024);
-    decode_with_policy(input, &policy)
-}
-```
+This crate does not resize, crop, rotate, draw, filter, or otherwise edit images.
+Keep image processing in the consuming application or a library such as
+[pillow-rs](https://github.com/appunni-m/pillow-rs).
 
-An absent format set keeps the compatibility API unrestricted. An explicit
-empty set rejects every detected format. `detect_format` remains an
-independent signature query; policy-aware inspection, explicit-format decode,
-complete and prefix decode, token-aware decode, and owned/borrowed source
-operations reject a detected format outside the set with
-`ImageError::Unsupported` and `UnsupportedReason::PolicyDenied`. The policy is
-checked after signature detection, so an explicit format hint still cannot
-override signature validation.
-
-The encoded-byte check occurs before signature detection and codec parsing. An
-oversized input returns a typed `LimitExceeded` error with the operation,
-`ResourceLimit::EncodedBytes`, configured maximum, and observed length. It has
-no selected format because no format parsing occurred.
-
-Canvas limits use exact `ImageInfo` width, height, `width × height`, mode, and
-primary decoded byte length. Packed `L1` rows are byte-aligned; other modes use
-their exact transfer bytes per pixel. They run after format-qualified
-inspection and before primary pixel materialization, so their errors retain
-the selected format. Policy-aware direct decode may inspect then parse again;
-unlimited wrappers do not gain that additional pass.
-
-`max_frames` uses the exact inspected frame/page count and runs after the
-canvas checks but before sequence materialization. Inspection and sequence
-decode reject a source whose declared count exceeds the maximum; still decode
-and lazy still materialization retain exactly one frame, so only a zero frame
-maximum rejects them. Sources whose inspection cannot prove an exact count
-remain unlimited for this resource.
-
-`max_frame_decoded_bytes` and `max_sequence_decoded_bytes` apply inside every
-sequence decoder before the next frame's pixel work: the per-frame limit
-rejects any later frame/page whose transfer-byte length exceeds the maximum,
-and the cumulative limit charges the inspected primary first and rejects
-before the frame whose addition would exceed the total. Both failures retain
-the format and typed resource; the primary and still-only paths remain bounded
-by the primary-canvas limits.
-
-`max_metadata_bytes` bounds the encoded metadata extent — every encoded byte
-that is not primary pixel payload data — measured by a per-format container
-scan before inspection or pixel work on all five policy paths.
-For AVIF, the scan includes item metadata payloads stored in `mdat` and
-subtracts only sample spans referenced by the decoded primary/auxiliary planes.
-
-`EncodePolicy::max_output_bytes` is the encode-side result-admission limit. It
-is inclusive and applies to still and sequence encodes, including their sink
-wrappers: the complete encoded length must fit before it is returned or the
-first sink write, or the operation returns `LimitExceeded` with
-`ResourceLimit::EncodedOutputBytes`. Whole-buffer codecs still build their
-complete `Vec<u8>` first. The JPEG, PNG, BMP, and TIFF still sink paths, plus
-one-frame JPEG and multi-page TIFF sequence sinks, preflight their complete
-lengths, then emit validated container structures without assembling a
-second final `Vec<u8>`; PNG's filtered rows and compressed payload remain
-transient working allocations, while BMP prepares bounded palette/row segments.
-`EncodePolicy::max_work_units` is a separate inclusive bound on the documented
-cooperative encode checkpoints. It reports `ResourceLimit::EncodeWorkUnits`
-when the next checkpoint would exceed the budget; it is deterministic work
-control, not CPU-time, allocation, or recoverable-OOM accounting. Neither
-policy yet provides a transient-allocation cap, recoverable OOM behavior, or
-universal incremental encoding.
-
-`inspect_with_policy`, `decode_sequence_with_policy`,
-`EncodedImage::new_with_policy`, and `EncodedImage::decode_with_policy` use the
-same boundary. A rejected lazy decode is not cached, and an already cached
-decode cannot bypass a later stricter policy. This is not yet a complete
-hostile-input budget: transient encoded-output and other internal allocation
-behavior remain outside the policy, and no recoverable allocation-failure
-contract exists.
-
-See [architecture and public contract](docs/architecture.md) for byte layouts,
-validation invariants, lazy source lifecycle, memory behavior, feature
-dispatch, and internal boundaries. Generate declaration-level API
-documentation with:
-
-```bash
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked
-```
-
-## Errors
-
-Every canonical fallible API returns `ImageResult<T>`.
-
-| Error | Meaning |
-| --- | --- |
-| `UnknownFormat` | No supported signature matched |
-| `FeatureDisabled` | The format is recognized but its Cargo feature is off |
-| `Malformed` | The selected codec rejected the encoded bytes |
-| `Unsupported` | The requested operation or valid input class is unavailable |
-| `Dimensions` | Dimensions, frame bounds, or sample length are invalid |
-| `Parameter` | An option, palette, mode combination, or other parameter is invalid |
-| `LimitExceeded` | A caller-configured resource maximum was exceeded |
-| `NeedMoreData` | An incremental prefix is incomplete and reports the minimum total input length for retry |
-| `Cancelled` | A token-aware decode or encode stopped at a cooperative checkpoint |
-| `OutputWrite` | A caller-owned encoded-output destination rejected an emitted segment |
-
-Codec-dispatched failures additionally report the public operation that
-produced them through `ImageError::stage()` (`Inspection`, `StillDecode`,
-`StillEncode`, `SequenceDecode`, `SequenceEncode`, or `Verification`).
-Caller-built validation and option-construction errors remain stage-free;
-`UnknownFormat`, `FeatureDisabled`, and `LimitExceeded` keep their existing
-contracts (`LimitExceeded` already carries the typed operation). Sink failures
-from `encode_to_sink` and `encode_sequence_to_sink` carry the selected output
-format and encode stage through `OutputWrite`; their offset and identity are
-`None` because the failure is on the destination side. Whole-buffer codecs
-still write one complete validated buffer, while the JPEG, PNG, BMP, and TIFF
-still paths plus one-frame JPEG and multi-page TIFF sequence paths write
-validated structural segments. Every sink path calls `OutputSink::flush`
-once after complete delivery; a flush failure is also `OutputWrite` and may
-leave the delivered prefix. Short-write and rollback cleanup semantics remain
-future incremental-writer work.
-
-Where the parser can name the failing container structure, codec-dispatched
-errors also report the encoded-input byte offset (`ImageError::offset()`) and
-a stable structure identity (`ImageError::identity()`, for example
-`png_chunk`, `jpeg_marker`, or `tiff_ifd`). BMP header, palette, pixel-span,
-bitfield, and RLE failures additionally expose stable BMP identities. ICO
-header, directory, entry-range, and embedded PNG/DIB/CUR failures likewise
-expose stable ICO identities. WebP inspection/container-chunk failures expose
-stable WebP identities, and still/sequence payload-decoder failures expose
-`webp_bitstream` at the validated payload start (or current ANMF container
-offset for animation); finer decoder-internal cursors remain detail-free.
-
-`ImageError` is non-exhaustive; downstream `match` expressions need a fallback
-arm. Unchanged malformed bytes should not be retried. Feature and unsupported
-errors can usually be handled by selecting another compiled capability.
-`ImageError::unsupported_reason()` additionally distinguishes
-`TargetUnavailable` and `NotImplemented` when the failure is a capability
-boundary; it returns `None` for input-class and metadata incompatibilities.
-This Rust-only reason is not Pillow-parity evidence.
-
-Non-fatal recovery is not an error: successful `Decoded<T>` values expose
-`diagnostics` with stable kind, stage, offset, and structure identity fields.
-The diagnostic fixture contract is intentionally separate from Pillow parity,
-because Pillow has no equivalent structured warning field.
+## Errors and resource limits
 
 <!-- image-error-policy: typed-recovery-diagnostic-prose -->
-Use `error.kind()` and applicable typed fields for stable recovery policy, and
-`error.format()` for the selected input/output format when one is known.
-Neither `error.message()` nor `Display` is a parsing or equality surface:
-their exact wording may change and must not be compared with Pillow or other
-external decoder text. For library-produced failures, `message()` is
-non-empty for `Malformed`, `Unsupported`, `Dimensions`, `Parameter`, and
-`OutputWrite`; it is absent for `UnknownFormat`, `FeatureDisabled`,
-`LimitExceeded`, `NeedMoreData`, and `Cancelled`. `LimitExceeded` instead
-exposes typed fields directly. In particular, `Dimensions` and `Parameter`
-retain both optional format and diagnostic context; callers do not need to
-parse `Display` output.
 
-## Correctness evidence
+Recover using typed error kinds, stages, and reasons. Diagnostic `message()`
+and `Display` wording are not a parsing or equality contract.
+`DecodePolicy` bounds the documented input/result dimensions and work;
+`EncodePolicy` includes an encoded-output length limit. These limits do not
+bound all transient allocation, wall-clock time, or recoverable out-of-memory
+behavior. Defaults are compatibility-oriented and unlimited.
 
-<!-- current-claim-ledger:begin -->
-Current claim-ledger baseline (not current `HEAD`):
-- Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
-- Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
-- Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `002f1a6293a0913d6a010f325db64a82258d5b5f7ae8e778e37b008af22ecc71`.
-<!-- current-claim-ledger:end -->
+The library is not advertised as hardened for arbitrary hostile inputs.
+Read [API usage and limits](docs/USAGE.md) and [security](SECURITY.md).
 
-The generated matrix in this tree contains 1,567 total rows: 1,170 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,167 decode rows and
-365 encode rows are active; 3 AVIF decode rows and all 32 AVIF encode rows
-are explicit planned pure-Rust gaps. Expected errors that remain active are
-fixture outcomes, and every decode-error class is catalogued in the generated,
-CI-checked malformed-class ledger with Pillow outcome, Rust error contract,
-evidence origin, and specification status.
+## Evidence and performance
 
-Runtime capability tables for every feature lane are emitted per target and
-committed as `tests/fixtures/capability_tables.json`; CI regenerates them in
-memory and rejects drift between the native host and `wasm32-wasip1` tables
-and the committed fixture. The packaged [Generated capability and direct-mode tables](docs/capabilities.md) render that runtime evidence alongside the
-observed active fixture contracts; they are generated from the committed
-runtime/cfg and matrix sources rather than maintained as a second prose
-matrix.
-Encoded bytes and decoded pixels for a fixed encoder/decoder subset are also
-SHA-256-pinned in `tests/fixtures/determinism.json`, and the same test runs
-natively and in the WASM runtime so cross-target output stays byte-identical.
+The [evidence guide](docs/EVIDENCE.md) separates active/planned fixture rows,
+dated coverage, and accepted release checks. A compiled feature or present
+function name does not establish every operation and target combination.
 
-The current accepted Coverage MCP snapshot is recorded in
-[oracle, fixtures, tests, and coverage](docs/testing.md) with aggregate line,
-branch, function, and region counts. Coverage proves execution under the
-retained suite; it does not prove complete format support or security.
+The [benchmark site](https://appunni-m.github.io/image-slash-star/benchmarks/)
+shows the complete recorded JPEG/TurboJPEG operation matrix with source and
+host identity. It does not represent other codecs or general image processing.
+[Methodology](docs/BENCHMARKING.md) explains the timing boundary and CMYK caveat.
 
-The newest bounded AVIF reconstruction evidence activates
-`coverage_i444_square8_01.avif` through `_10.avif` at implementation commit
-`2c59a53c4602e585c34f1b41c9d13b2813e9c9d5`. All ten are exact 16x16,
-8-bit, full-range 4:4:4 frames with a split root, four row-major Square8
-leaves, effective qindex 2, matrix 10, and unsplit TX8x8 DCT-DCT Y/U/V
-transforms. The corpus covers DC, Vertical, Horizontal, and Smooth luma modes,
-directional-angle ownership, skipped and coded residuals, and serial
-palette-use-false adaptation when screen-content tools are enabled. Case 04
-also proves the generic missing-top rule for a horizontally following Vertical
-leaf: the first left sample is repeated across the unavailable top edge. The
-273-case pinned dav1d oracle checks every partition, entropy operation, EOB,
-and Y/U/V plane, while the public matrix checks exact Pillow RGB bytes.
-Managed Coverage MCP run `792e4884-8f4a-4c67-92e6-65eaa0e11a13` selected
-exactly all ten fixtures and ingested snapshot
-`44d4499a-77fd-4c6a-a764-e138ec57c9d5` against explicit baseline
-`e775c345-999e-47e7-a260-996b27f9d54c`. Its supported additive union adds
-1,297 covered lines, 213 branches, 106 functions, and 1,896 regions;
-denominators change by +6 lines, +0 branches, +1 function, and +9 regions.
-The limited selected-subset diff records 2,291 newly covered line identities
-and 4,744 baseline observations not observed; those absences are not
-regressions. Merge exactness is false and named-test attribution is
-unavailable. This is bounded evidence, not general AV1 completion or a speed
-claim.
+## Contribute
 
-The preceding bounded AVIF reconstruction evidence activates
-`coverage_entropy_mosaic_03.avif` through `_10.avif` at implementation commit
-`05ec80ad12312a782184f83b9fa6dbc8325442c8`. All eight are exact 32x32,
-8-bit, full-range 4:2:0 origin-Square32 DC/DC witnesses at effective qindex 2
-and matrix 10, with TX32x32 luma and TX16x16 chroma DCT-DCT residuals. Cases
-03 and 06-10 additionally prove the screen-content-enabled `y_pal=0` then
-`uv_pal=0` syntax path; 04-05 are screen-content-disabled controls. The
-263-case pinned dav1d oracle checks every partition, entropy operation, EOB,
-and Y/U/V plane, while the public matrix checks exact Pillow RGB bytes. This
-does not admit nonzero palettes, palette colors/index maps, palette-neighbor
-contexts, multi-block adaptation, or intrabc. Arithmetic range decoding is
-serial and adaptive; the appropriate measured vectorization targets remain
-the shared inverse-transform, filtering, upsampling, and color-conversion
-kernels. Managed Coverage MCP run
-`11a453ea-e11d-4857-9c9d-aa255fcfd13f` selected exactly all eight fixtures,
-passed at committed tree `ded00aae53e223fd4a6dff2bc2bac9cde692dca1`, and
-ingested snapshot `066a1865-082d-43f8-95d7-f06e7802335d` against explicit
-baseline `e775c345-999e-47e7-a260-996b27f9d54c`. Its supported additive
-union adds 334 covered lines, 34 branches, 11 functions, and 1,060 regions.
-The limited selected-subset diff records 1,329 baseline observations as not
-observed, not as regressions; merge exactness is false and named-test
-attribution is unavailable.
+Start with [Contributing](CONTRIBUTING.md), the
+[command reference](docs/testing.md), and [architecture](docs/architecture.md).
 
-The preceding bounded AVIF reconstruction evidence covers four exact
-following-Vertical8x16 chroma fixtures at implementation commit
-`98824dd14ab25034017f11ffe5e5ebb5761a5ecb`. Managed Coverage MCP runs
-`9bad79a3-a1a1-4d9c-bfe1-38cd7b0a9a66`,
-`2014be25-81a9-4e23-9ea8-39a39e383f8e`,
-`ee823300-1126-443b-aa05-ac7b0e380f9b`, and
-`6191b1e2-730f-41a2-a7bd-95d2e9a2fd03` passed their exact DC, Smooth,
-SmoothVertical, and SmoothHorizontal selectors and ingested snapshots
-`4660b226-6e92-43bc-a904-98c74805f5a8`,
-`59cbbf2f-72e2-4496-a1ec-5c1388e79b38`,
-`f2906a05-336b-440e-99f7-468be3bca9a3`, and
-`e775c345-999e-47e7-a260-996b27f9d54c` against baseline
-`7665cda3-f4a7-4568-b871-a9d34afaa92c`. Each additive review reports
-+8 lines, +10 branches, +0 functions, +938 regions, and no reported
-regressions. These selected subsets are bounded evidence, not replacements
-for the complete release measurement or claims of general AV1 completion.
-
-The oracle identity, regeneration workflow, exact comparison contract, test
-tiers, current run identifiers, and troubleshooting are in
-[oracle, fixtures, tests, and coverage](docs/testing.md).
-
-## Build from source
-
-The Rust version and WASM target are pinned in `rust-toolchain.toml`.
-
-```bash
-git clone https://github.com/appunni-m/image-slash-star.git
-cd image-slash-star
-cargo check --locked
+```sh
+make help
+make build
+make verify
 ```
 
-Native builds using default features need no external codec library. Enabling
-`avif` also uses only the in-tree safe-Rust implementation; unsupported AVIF
-classes return the documented typed gap until their Rust implementation lands.
+For the public website, use `make docs-setup`, `make docs-build`, and
+`make docs-serve`. Main CI publishes GitHub Pages from this repository.
 
-## Documentation
+## Project information
 
-- [Architecture and public contract](docs/architecture.md)
-- [Oracle, fixtures, tests, and coverage](docs/testing.md)
-- [AVIF support and portability boundary](docs/avif.md)
-- [Canonical roadmap data](roadmap.json)
-- [Human-readable roadmap](docs/roadmap-new.md)
-- [Historical roadmap audit](docs/roadmap.md)
-- [Changelog](CHANGELOG.md)
-- [Contributing](CONTRIBUTING.md)
-- [Support](SUPPORT.md)
-- [Release checklist](RELEASING.md)
-- [Production release readiness](PRODUCTION_RELEASE_READINESS.md)
-- [Security policy](SECURITY.md)
-- [Third-party provenance](third_party/README.md)
+[Support](SUPPORT.md) · [Releases](RELEASING.md) · [Changelog](CHANGELOG.md) ·
+[Code of conduct](CODE_OF_CONDUCT.md) · [Public roadmap](docs/roadmap-new.md)
 
-Current behavior belongs in the README, architecture reference, rustdoc, and
-testing contract. Planned work is tracked in the [canonical roadmap data](roadmap.json)
-and its [human rendering](docs/roadmap-new.md).
-Historical investigation logs remain available through Git history rather than
-the active documentation tree.
+This project contains original and translated work under multiple licenses.
+Read [NOTICE.md](NOTICE.md), the retained license files, and
+[third-party attribution](third_party/README.md) before redistributing it.
 
-## Support, contributing, and security
+## Acknowledgements
 
-Use [GitHub issues](https://github.com/appunni-m/image-slash-star/issues) for
-questions, non-sensitive bugs, and feature proposals. Include the commit,
-target, enabled features, smallest non-sensitive fixture, expected Pillow
-result, and actual Rust result.
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing codecs, fixtures, or
-ported code. The repository requires strict Clippy, exact manifest parity,
-feature/target checks, complete retained coverage, and provenance updates.
-
-Report vulnerabilities privately as described in
-[SECURITY.md](SECURITY.md). Do not publish exploit details or malicious
-fixtures in an issue.
-
-## License and attribution
-
-Original project code is available under your choice of Apache-2.0 or MIT.
-The combined distribution also includes source-derived portions under
-BSD-2-Clause, BSD-3-Clause, Zlib, IJG, and MIT-CMU terms.
-
-[NOTICE.md](NOTICE.md) maps repository paths to applicable terms.
-[third_party/README.md](third_party/README.md) records exact upstream versions,
-revisions, hashes, roles, and retained texts. The root [PATENTS](PATENTS) file
-contains the Alliance for Open Media patent license required for AV1
-distribution.
-
-This software is based in part on the work of the Independent JPEG Group.
+Thank you to [Pillow](https://python-pillow.org/) and its contributors for the
+reference codec behavior, and [Puhu](https://github.com/bgunebakan/puhu) for the
+Rust/Python image-processing work that informed the parent project's early
+exploration. Thank you also to the codec authors credited in
+[NOTICE.md](NOTICE.md) for their implementations, research, and test material.

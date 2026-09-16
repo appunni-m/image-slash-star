@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "tests" / "fixtures" / "unreachable_contract_manifest.json"
-DOCUMENT = ROOT / "docs" / "roadmap-new.md"
+DOCUMENT = ROOT / "docs" / "EVIDENCE.md"
 
 TOP_LEVEL_KEYS = {"format_version", "scope", "pillow_parity", "categories"}
 PARITY_KEYS = {"status", "matrix", "reason"}
@@ -237,7 +237,7 @@ def verify_catalog_table(document_text: str, categories: list[dict]) -> None:
 def verify_document(document_text: str, categories: list[dict]) -> None:
     required = (
         "tests/fixtures/unreachable_contract_manifest.json",
-        "python3 scripts/verify_unreachable_contracts.py",
+        "make verify",
         "Pillow parity",
         "excluded",
     )

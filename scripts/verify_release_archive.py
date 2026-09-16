@@ -274,7 +274,7 @@ def retain_artifacts(archive_path: Path, version: str, commit: str) -> Path:
                 "",
                 f"Source commit: `{commit}`",
                 "",
-                "See `CHANGELOG.md`, `README.md`, and `PRODUCTION_RELEASE_READINESS.md`",
+                "See `CHANGELOG.md`, `README.md`, and `docs/MATURITY.md`",
                 "in the tagged source for the complete scope and post-release checks.",
                 "",
             ]

@@ -16,3 +16,5 @@ benchmarks/**/target/
 # package and must not make the local release gate appear dirty.
 /.cargo/
 /.codex/
+
+/.venv-docs/

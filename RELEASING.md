@@ -1,142 +1,68 @@
-# Release checklist
+# Releasing image-slash-star
 
-This project is pre-release. The complete go/no-go checklist is in
-[PRODUCTION_RELEASE_READINESS.md](PRODUCTION_RELEASE_READINESS.md). A release is
-allowed only when the version,
-source revision, generated fixtures, legal notices, and published claims all
-describe the same tree.
+Version **0.1.2** is published on crates.io and GitHub. There is one Cargo crate
+and no npm or PyPI distribution. Subsequent releases use this repository's
+`release.yml` workflow and GitHub OIDC.
 
-## Before tagging
+## Prepare and tag
 
-1. Read the open inventory and dependency order in
-   [roadmap.json](roadmap.json); use [docs/roadmap-new.md](docs/roadmap-new.md)
-   as its human rendering. Do not call a planned or evidence-pending slice
-   complete.
-2. Update [CHANGELOG.md](CHANGELOG.md) and the README for user-visible
-   behavior, supported targets, and known limitations.
-3. Run the maintained checks on the pinned toolchain:
+1. Update the package version, changelog, documentation version, and both
+   workspace lockfiles through `make release-lock-update`.
+2. Read [maturity](docs/MATURITY.md) and the [public roadmap](docs/roadmap-new.md).
+   Keep planned or unmeasured behavior explicit.
+3. Run `make ci`, including strict lint, contract checks, feature/target tests,
+   source coverage, package extraction, rustdoc, and isolated consumers.
+4. Inspect the distributable archive and its licenses. Use
+   `make release-verify` from a clean checkout for release acceptance.
+5. Commit and push to main. Require successful CI for that exact commit.
+6. Push a new annotated `v<version>` tag on the validated commit.
 
-   ```bash
-   make ci
-   ```
+The alpha source-coverage floors are 59% lines, 46% branches, 52% functions,
+and 58% regions. Every executed test must pass. Full completion still requires
+`make coverage-complete`; neither a package release nor a floor pass closes
+the coverage goal.
 
-   The alpha release coverage floors, approved on 2026-09-15, are 59% lines,
-   46% branches, 52% functions, and 58% regions. `make coverage` measures the
-   entire existing all-feature suite and enforces each floor from raw counts.
-   It rejects malformed or empty reports. `make coverage-complete` retains
-   the 100% completeness goal. Every executed test must still pass.
+## Publish and verify
 
-4. Run every repository verifier listed in the roadmap, including claim
-   ledger, coverage origins, diagnostic provenance, package surface, and
-   third-party licenses.
-5. Run the managed Pillow parity and Coverage MCP workflows at the exact
-   source revision. Record run IDs, snapshot ID, all four aggregate coverage
-   metrics, and any known target-specific failure without relabeling it.
-6. Run the production JPEG comparison when JPEG code or benchmark claims
-   changed. Keep the complete same-machine TurboJPEG matrix and its metadata.
-7. Build a clean package with `make package-verify`, inspect the archive,
-   and confirm that the package-surface verifier passes from a clean checkout.
-
-## Tag and publish
-
-- Tag only the reviewed commit after the checks above are complete.
-- Publish the generated package and source release together with the matching
-  changelog entry and legal notices.
-- Do not publish stale native AVIF binaries or build instructions. The
-  dependency-free Rust/WASM artifact contains the only AVIF runtime path;
-  pinned native projects are documented as oracle/provenance material only.
-- Keep the release artifacts, benchmark receipt, and evidence identifiers
-  recoverable from the release notes.
-
-## Generated AV1 oracle files
-
-The checked-in `tests/fixtures/outputs/av1_reconstruction.json` file is a small
-index. Its five `av1_reconstruction.part-*.json` sidecars contain the current
-case records consumed by the reconstruction test; they are release test inputs
-and must remain available to clean source checkouts. The sidecars are generated
-deterministically by the maintained
-`scripts/generate_av1_reconstruction_refs.py` script from the pinned dav1d
-`b546257f770768b2c88258c533da38b91a06f737` source, using the exact AVIF inputs
-and Pillow oracle described in `tests/fixtures/input/images/avif/README.md`.
-Regeneration produces the index and sidecars together and the test harness
-joins them before validation. It is appropriate to regenerate and compare
-these files during fixture maintenance; deleting them from the current tree
-would remove the reproducible oracle needed by CI. Older monolithic revisions
-remain only in Git history and are the source of the hosting-size blocker.
-
-## First local crates.io bootstrap
-
-The owner-authorized first upload completed on 2026-09-13 from immutable tag
-`v0.1.0` at commit `35dd72808e6b2a8488b98caf685a3d48e4c97468`. The exact
-crates.io archive is visible as `image-slash-star@0.1.0` with checksum
-`f35022079076b686716e61a8640b3e4bafb0004701486277cb95f004b769a178`.
-The current clean-history branch was promoted to remote `main` with an exact
-`--force-with-lease` after creating and verifying a local-only Git bundle at
-`/private/tmp/image-slash-star-pre-force-backup-20260913/repository.bundle`.
-
-The local bootstrap is complete. Subsequent versions publish exclusively
-through GitHub OIDC; `make release-bootstrap` now explains that boundary and
-refuses a local upload.
-
-## Later tag releases
-
-Configure the existing crate's Trusted Publisher with repository
+The crates.io trusted publisher identifies repository
 `appunni-m/image-slash-star`, workflow filename `release.yml`, and environment
-`crates-io`. The GitHub publish job has `id-token: write`; no long-lived registry
-secret or local Cargo login is needed. A configured environment reviewer rule
-will pause the job until that review completes.
+`crates-io`. Only the publishing job receives OIDC permission. No local login
+or long-lived registry token is used by subsequent releases.
 
-Increment the version in Cargo metadata, README, and the dated changelog;
-run `make release-lock-update` to synchronize both lockfiles. The next candidate
-is `0.1.2`. Commit and push to `main`, then wait
-for successful CI on that exact revision before pushing an unused annotated
-`v<version>` tag. The workflow checks the original annotated tag object through
-a separately fetched ref, so a peeled Actions checkout cannot invalidate it.
+The workflow builds and validates before publishing. It checks registry
+artifact identity and creates GitHub assets only after successful publication.
+Use `make release-registry-verify` for a read-only candidate/registry comparison.
+Binary downloads must be hashed as archive bytes, not JSON redirect metadata.
 
-CI runs quality, full native/WASM feature tests, aggregate coverage, dependency
-audits, and reproducible archive/consumer checks. Release preflight consumes
-the candidate from that exact successful main run. The publish job rebuilds
-and compiles it before authentication, verifies byte identity, and only then
-requests the short-lived OIDC token. After upload, the downloaded registry
-archive must match the candidate's checksum. The final job attests that archive
-and creates a GitHub prerelease with notes and `SHA256SUMS`.
+[Release 0.1.2](https://github.com/appunni-m/image-slash-star/actions/runs/35010129246)
+completed this flow. Its crate SHA-256 is
+`e53037e57d0c5cae052ba94851c8cf72a80b9dfe195cd21b166506ab7bdbeb3b`.
+See [Evidence](docs/EVIDENCE.md) for accepted source and test boundaries.
 
-This follows the verification/artifact/OIDC separation used by
-[coverage-mcp](https://github.com/appunni-m/coverage-mcp/blob/v0.16.0/.github/workflows/release.yml).
-A skipped publishing job says nothing about publisher configuration: inspect
-its failed prerequisite first. Verify the registry checksum and GitHub assets
-after the workflow succeeds. No npm or PyPI package is defined for this repo.
+## Recovery and immutable artifacts
 
-Version 0.1.1 was uploaded through OIDC in
-[release run 35005559487](https://github.com/appunni-m/image-slash-star/actions/runs/35005559487).
-Its subsequent download verification failed because `Accept: application/json`
-returns a JSON URL descriptor from crates.io. Version 0.1.2 requests
-`application/octet-stream` for the archive and keeps JSON for metadata. The
-release-tool regression first reproduces the former mismatch and also requires
-changed archive bytes to fail. The original 0.1.1 upload and tag remain immutable.
+Retry only the same source and unchanged artifacts after a transient failure.
+An uploaded registry version or released tag must never be overwritten.
+Changed source, packaging, or artifact bytes require a new version and tag.
+Verify which job actually failed before changing trusted-publisher settings.
 
-After a version is visible, `make release-registry-verify` downloads it without
-publishing and compares the archive, crates.io index checksum, and local
-candidate. The release job uses the same verifier and records bounded failure
-details in GitHub annotations.
+Local bootstrap targets refuse publication now that package ownership is
+established. The maintainer controls releases through repository review and tag
+permissions; no maintainer-succession guarantee or support SLA is implied.
 
-## If a release is wrong
+## Required source assets
 
-Pause further publication, mark the affected version clearly, and open a
-private security report when the issue could affect confidentiality,
-integrity, or availability. Otherwise publish a corrective changelog entry,
-identify the first bad revision, and rerun the complete acceptance set before
-retagging. Never rewrite a published tag to hide a failed result.
+AV1's reconstruction index and its five sidecars form a reproducible oracle
+set consumed by clean test checkouts. They can be regenerated from the exact
+licensed inputs and pinned dav1d/Pillow tools described in
+[fixture provenance](tests/fixtures/input/images/avif/README.md). Do not delete
+required oracle outputs while retaining tests that consume them.
 
-Coverage jobs retain their command log on failure and the LLVM JSON when it
-was generated. Read the failed test or the four measured totals before
-classifying a coverage failure; a skipped publishing job has not attempted OIDC.
+The crate keeps public guides, generated capability tables, package examples,
+licenses, notices, and source needed by consumers. Internal release diaries and
+local benchmark output stay out of the package.
 
-CI and release scripts use Python 3.12.10. `make release-tools-test` exercises
-the coverage CLI help as well as its numeric checks, including the help-format
-regression first exposed by the runner's Python 3.14.
+## Documentation publication
 
-The exact Python pin is checked against the official
-[GitHub Python build manifest](https://github.com/actions/python-versions/blob/main/versions-manifest.json).
-Python 3.12.11 and later 3.12 security releases have Linux builds in that manifest
-but no macOS ARM64 or Windows binaries; the cross-platform jobs use 3.12.10.
+Main documentation CI publishes GitHub Pages from this same repository,
+independently of registry versions. See [documentation maintenance](docs/DOCUMENTATION.md).

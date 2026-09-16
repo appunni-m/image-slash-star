@@ -1,9 +1,9 @@
 PYTHON ?= python3
 PACKAGE_NAME := image-slash-star
-PACKAGE_VERSION := $(shell cargo metadata --locked --no-deps --format-version 1 | $(PYTHON) -c 'import json,sys; d=json.load(sys.stdin); print(next(p["version"] for p in d["packages"] if p["name"]=="image-slash-star"))')
+PACKAGE_VERSION = $(shell cargo metadata --locked --no-deps --format-version 1 | $(PYTHON) -c 'import json,sys; d=json.load(sys.stdin); print(next(p["version"] for p in d["packages"] if p["name"]=="image-slash-star"))')
 RELEASE_DIR := target/release-artifacts
-RELEASE_CRATE := $(RELEASE_DIR)/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
-REGISTRY_CRATE := $(RELEASE_DIR)/registry/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
+RELEASE_CRATE = $(RELEASE_DIR)/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
+REGISTRY_CRATE = $(RELEASE_DIR)/registry/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
 COVERAGE_TOOLCHAIN ?= nightly-2026-07-16
 COVERAGE_REPORT ?= target/release-evidence/coverage.json
 
@@ -13,6 +13,12 @@ COVERAGE_REPORT ?= target/release-evidence/coverage.json
 .PHONY: help
 help:
 	@printf "image-slash-star\n\n"
+	@printf "  make build            Compile the locked default-feature crate\n"
+	@printf "  make docs-setup       Install hash-locked documentation tools\n"
+	@printf "  make docs-build       Build and validate the Pages site\n"
+	@printf "  make docs-serve       Preview the site at localhost:8000\n"
+	@printf "  make bench-setup      Build the pinned TurboJPEG benchmark oracle\n"
+	@printf "  make bench            Run the complete JPEG comparison\n"
 	@printf "  make fmt              Check formatting\n"
 	@printf "  make verify           Run generated, claim, roadmap, and legal checks\n"
 	@printf "  make lint             Run strict Clippy and benchmark lint\n"
@@ -31,7 +37,7 @@ fmt:
 	cargo fmt --all -- --check
 
 .PHONY: verify
-verify: release-tools-test
+verify: release-tools-test docs-lint docs-test
 	$(PYTHON) scripts/verify_third_party_licenses.py
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/verify_claim_ledger.py
@@ -54,6 +60,10 @@ test:
 	RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
 	cargo test --doc --all-features --locked
 	cargo test --workspace --all-features --locked
+	$(MAKE) test-feature-matrix
+
+.PHONY: test-feature-matrix
+test-feature-matrix: ## Run the complete native, WASI, and WASM feature lanes
 	scripts/test_feature_matrix.sh
 
 .PHONY: supply-chain
@@ -99,7 +109,7 @@ release-bootstrap:
 	@exit 2
 
 .PHONY: ci-quality
-ci-quality: fmt verify lint test package-verify
+ci-quality: workflows-check fmt verify lint test package-verify
 
 .PHONY: release-check-version
 release-check-version:
@@ -122,3 +132,33 @@ release-publish-prepare:
 .PHONY: release-publish-oidc
 release-publish-oidc:
 	$(PYTHON) scripts/publish_release.py --candidate "$(VERIFIED_CRATE)" --output "$(REGISTRY_OUTPUT)" --publish-if-missing
+
+.PHONY: build fmt-fix example bench bench-setup
+build:
+	cargo build --locked
+
+fmt-fix:
+	cargo fmt --all
+
+example:
+	cargo run --locked --example package_smoke
+
+BENCH_OUTPUT ?= target/benchmarks/jpeg/latest
+BENCH_ROUNDS ?= 5
+TURBOJPEG_PREFIX ?= $(CURDIR)/target/benchmark-oracle/3.2.0/install
+bench-setup:
+	$(PYTHON) scripts/setup_benchmark_oracle.py
+
+bench:
+	$(PYTHON) benchmarks/jpeg-production/run_matrix.py --rounds "$(BENCH_ROUNDS)" \
+	  --output "$(BENCH_OUTPUT)" --turbojpeg-prefix "$(TURBOJPEG_PREFIX)"
+
+include docs.mk
+
+.PHONY: package-surface-check
+package-surface-check: ## Check the exact declared Cargo archive file list
+	$(PYTHON) scripts/verify_package_surface.py
+
+.PHONY: workflows-check
+workflows-check: ## Validate Actions workflows with checksum-pinned actionlint
+	$(PYTHON) scripts/check_workflows.py

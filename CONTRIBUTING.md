@@ -1,90 +1,60 @@
 # Contributing
 
-Thank you for helping make `image-slash-star` accurate, portable, and easy to
-audit.
+Small reproductions, documentation corrections, portability fixes, and
+fixture-backed codec work are welcome. Follow the [code of conduct](CODE_OF_CONDUCT.md)
+and report vulnerabilities through [security](SECURITY.md).
 
-By submitting a contribution, you agree that it may be distributed under the
-repository's licensing terms. Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-in project spaces.
+Start with [maturity](docs/MATURITY.md), [architecture](docs/architecture.md),
+and the [command reference](docs/testing.md). Discuss large API or dependency
+changes in an issue before implementing them.
 
-## Before opening a change
+## Prepare and verify
 
-- Discuss large API or parity changes in an issue first.
-- Keep runtime code safe Rust and free of native-library dependencies. AVIF
-  changes must extend the in-tree pure-Rust implementation and document the
-  planned-gap or completed capability they change. Do not add an FFI bridge or
-  an unsafe exception.
-- Preserve `bytemuck` as the only runtime utility dependency unless a proposal
-  explains why a new dependency is necessary.
-- Keep format-specific code under `src/codecs/<format>/` and gate it with the
-  matching Cargo feature.
-- Record copied or translated code in `NOTICE.md`, retain its license text, and
-  identify the exact upstream version in the source comments.
-- Read the current boundaries in
-  [docs/architecture.md](docs/architecture.md) and planned work in
-  [roadmap.json](roadmap.json), using
-  [docs/roadmap-new.md](docs/roadmap-new.md) as the human rendering. The older
-  [roadmap audit](docs/roadmap.md) is historical context, not the work queue.
-
-## Set up the repository
-
-The exact Rust toolchain, formatter, Clippy component, and WASM target are
-declared in `rust-toolchain.toml`.
-
-```bash
-git clone https://github.com/appunni-m/image-slash-star.git
-cd image-slash-star
-cargo check --locked
+```sh
+make help
+make build
+make verify
+make fmt
+make lint
 ```
 
-All codecs, including the opt-in `avif` feature, build without a native codec
-library. AVIF's pinned upstream projects are oracle/provenance references;
-see [docs/avif.md](docs/avif.md) for the safe-Rust plan.
+For documentation-only changes, also run `make docs-setup`,
+`make docs-test docs-lint`, and `make docs-build`. For codec or feature
+changes, run `make test` and the matching source-bound coverage flow.
+JPEG performance changes require the complete [benchmark matrix](docs/BENCHMARKING.md).
 
-## Verification
+## Implementation rules
 
-For documentation or API-comment changes, run:
+Keep runtime code safe Rust and codec-only. Do not add public image editing,
+native fallback libraries, or unsafe exceptions. Use the existing
+`bytemuck`/`wide` feature policy and explain any proposed new dependency.
+Gate each format and keep algorithms under its private codec module.
 
-```bash
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-RUSTDOCFLAGS="-D warnings" cargo doc --all-features --no-deps --locked
-cargo test --doc --all-features --locked
-python3 scripts/verify_third_party_licenses.py
-python3 scripts/verify_roadmap.py
-```
+Preserve structured failures and the earliest meaningful error cause. A mode,
+palette, frame, policy, or error-path change needs a corresponding complete
+public manifest input. Diagnose the first C/Pillow-versus-Rust divergence before
+changing arithmetic or output handling.
 
-Codec, feature, or error behavior additionally requires:
-
-```bash
-cargo test --locked --all-features --test coverage_matrix_tests
-scripts/test_feature_matrix.sh
-```
-
-JPEG performance changes additionally require the fixed, same-machine
-production comparison in
-[`benchmarks/jpeg-production/README.md`](benchmarks/jpeg-production/README.md).
-Report the complete matrix, not a selected image size or a kernel-only timing.
-
-Repository agents run coverage only through Coverage MCP. Every accepted codec
-slice must retain 100% line, branch, function, and region coverage.
-
-The integration suite is manifest-driven. Add or update a complete row in
-`manifest.yaml`, generate the exact Pillow reference, and compare actual bytes
-rather than adding isolated unit tests, prefix-only probes, or file-size
-assertions. Use the pinned macOS arm64 oracle described in
-[docs/testing.md](docs/testing.md) when regenerating fixtures.
-
-Update current documentation in the same change when a public API, feature,
-target, option, error, package, or scope contract moves. Do not create
-per-sweep progress logs under `docs/`.
+Never remove a failing input, change expected output, or weaken a threshold to
+obtain a pass. Generated outputs remain reproducible evidence and some are
+required by clean CI checkouts. Follow the fixture provenance and generator
+instructions before changing them.
 
 ## Pull requests
 
-Keep each pull request focused. Explain the Pillow behavior being matched,
-identify the first divergent pipeline stage when fixing parity, and include
-the exact verification commands and results. Identify copied or translated
-source and its license, or state that the change is original.
+Explain the observable problem, resulting behavior, exact case IDs, commands
+run, results, and remaining limits. Record subtle reference behavior beside the
+implementation. Retain authorship and license notices for translated code.
 
-Do not include sensitive or malicious fixtures in a public pull request.
-Follow [SECURITY.md](SECURITY.md) for private vulnerability reports.
+Keep public guides current in the same change. Superseded session diaries
+belong in Git history. Package releases use the separate
+[maintainer process](RELEASING.md).
+
+## Workflow validation
+
+Run `make workflows-check` before changing GitHub Actions. This validates all
+workflow YAML, expressions, action inputs, and job dependencies with actionlint
+1.7.12; its archive is checksum-verified and cached under `target/`. The first
+run downloads the tool. Shell and Python lint remain separate checks. CI runs
+this gate on every commit. Benchmark harness/workflow changes on main also run
+the benchmark immediately, in addition to the weekly and manual triggers.

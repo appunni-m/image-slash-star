@@ -18,9 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DIAGNOSTIC_MANIFEST = ROOT / "tests/fixtures/diagnostic_manifest.json"
 COVERAGE_MATRIX = ROOT / "tests/fixtures/coverage_matrix.json"
 MAINTAINED_DOCS = (
-    ROOT / "docs/testing.md",
-    ROOT / "docs/roadmap.md",
-    ROOT / "docs/roadmap-new.md",
+    ROOT / "docs/EVIDENCE.md",
 )
 FORBIDDEN_MATRIX_FIELDS = {
     "diagnostic",

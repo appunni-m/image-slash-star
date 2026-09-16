@@ -1,0 +1,2425 @@
+{
+  "revision": "70190214a0711223302c76ab58e76c097288d80b",
+  "measured_at": "2026-09-16T06:18:12.066583+00:00",
+  "clean": false,
+  "status": "completed",
+  "run_id": "2026-09-16T06:18:12.066583+00:00",
+  "environment": {
+    "platform": "macOS-15.7.7-arm64-arm-64bit",
+    "machine": "arm64",
+    "rustc": "rustc 1.96.1 (31fca3adb 2026-06-26)\nbinary: rustc\ncommit-hash: 31fca3adb283cc9dfd56b49cdee9a96eb9c96ffd\ncommit-date: 2026-06-26\nhost: aarch64-apple-darwin\nrelease: 1.96.1\nLLVM version: 22.1.2",
+    "cc": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+    "python": "3.12.13 (main, Jun 23 2026, 15:44:24) [Clang 22.1.3 ]"
+  },
+  "policy_status": "Observational codec comparison; no cross-machine regression budget.",
+  "notes": [
+    "JPEG only. This does not measure other image codecs or general image processing.",
+    "CMYK uses different public sample conventions in Pillow and TurboJPEG; unequal output hashes are not automatically codec errors.",
+    "Spread is not present in the summary CSV. It is unavailable here rather than inferred from the medians."
+  ],
+  "rows": [
+    {
+      "workload": "encode.rgb-8-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 2.5,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 20000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "8",
+        "height": "8",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-8-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 4.167,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 20000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "8",
+        "height": "8",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-32-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 4.417,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 15000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "32",
+        "height": "32",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-32-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 6.0840000000000005,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 15000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "32",
+        "height": "32",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-63x65-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 17.875,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 8000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "63",
+        "height": "65",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-63x65-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 15.209,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 8000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "63",
+        "height": "65",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q10-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 38.667,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q10-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 24.917,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q50-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 49.958,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "50",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q50-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 34.791000000000004,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "50",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 56.458,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 45.916000000000004,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q100-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 65.125,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "100",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q100-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 54.208,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "100",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-512-q10-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 687.542,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-512-q10-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 368.41700000000003,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-512-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 1463.333,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 200,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-512-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 837.4590000000001,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 200,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-1024-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 6498.875,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 50,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "1024",
+        "height": "1024",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-1024-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 3479.708,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 50,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "1024",
+        "height": "1024",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-422",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 73.375,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "422",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-422",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 61.125,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "422",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-444",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 98.834,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 2000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-444",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 93.458,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 2000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-optimized",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 110.375,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "1",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-optimized",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 97.625,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "1",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-progressive",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 482.66700000000003,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "1",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-progressive",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 496.208,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "1",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-restart4",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 56.208,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "4"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-128-q85-restart4",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 46.75,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "4"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.gray-128-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 30.416,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.gray-128-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 37.75,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.gray-512-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 652.75,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.gray-512-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 685.792,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.cmyk-128-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 164.083,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: False",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.cmyk-128-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 128.958,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: False",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.cmyk-512-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 3792.667,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 100,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: False",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.cmyk-512-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 2392.417,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 100,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: False",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-127x129-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 63.0,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "127",
+        "height": "129",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "encode.rgb-127x129-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 49.042,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "127",
+        "height": "129",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-8-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 1.875,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 20000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "8",
+        "height": "8",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-8-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 3.666,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 20000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "8",
+        "height": "8",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-32-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 5.916,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 15000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "32",
+        "height": "32",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-32-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 8.208,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 15000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "32",
+        "height": "32",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-63x65-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 20.625,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 8000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "63",
+        "height": "65",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-63x65-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 23.833000000000002,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 8000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "63",
+        "height": "65",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q10-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 31.584,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q10-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 22.958000000000002,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q50-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 51.333,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "50",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q50-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 50.917,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "50",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 73.25,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 79.333,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 4000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q100-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 114.958,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "100",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q100-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 93.375,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "100",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-512-q10-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 470.16700000000003,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-512-q10-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 328.5,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "10",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-512-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 1472.208,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 200,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-512-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 1321.917,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 200,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-1024-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 6481.9580000000005,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 50,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "1024",
+        "height": "1024",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-1024-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 5564.084,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 50,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "1024",
+        "height": "1024",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-422",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 88.125,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "422",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-422",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 98.667,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "422",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-444",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 177.333,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 2000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-444",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 152.042,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 2000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-optimized",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 89.417,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "1",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-optimized",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 76.208,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "1",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-progressive",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 185.25,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "1",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-progressive",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 165.209,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 500,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "1",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-restart4",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 78.666,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "4"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-128-q85-restart4",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 84.708,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "4"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.gray-128-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 47.834,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.gray-128-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 55.417,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.gray-512-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 1098.416,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.gray-512-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 966.167,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 300,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "gray",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.cmyk-128-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 278.25,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.cmyk-128-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 219.417,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 1000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "128",
+        "height": "128",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.cmyk-512-q85",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 6175.292,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 100,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.cmyk-512-q85",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 4041.75,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 100,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "512",
+        "height": "512",
+        "mode": "cmyk",
+        "quality": "85",
+        "subsampling": "444",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: False; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-127x129-q85-420",
+      "subject": "image-slash-star",
+      "status": "completed",
+      "median_us": 73.416,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "127",
+        "height": "129",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    },
+    {
+      "workload": "decode.rgb-127x129-q85-420",
+      "subject": "libjpeg-turbo",
+      "status": "completed",
+      "median_us": 78.875,
+      "p90_us": null,
+      "p95_us": null,
+      "sample_count": 5,
+      "sample_unit": "round median",
+      "policy": {
+        "boundary": "public codec operation including context/output lifetime",
+        "iterations_per_round": 3000,
+        "aggregation": "median of round medians"
+      },
+      "context": {
+        "width": "127",
+        "height": "129",
+        "mode": "rgb",
+        "quality": "85",
+        "subsampling": "420",
+        "progressive": "0",
+        "optimize": "0",
+        "restart_rows": "0"
+      },
+      "correctness": "output hash match: True; byte length match: True",
+      "requested_backend": "native",
+      "actual_backend": "native",
+      "terminal_complete": null,
+      "fallback_reasons": {}
+    }
+  ],
+  "schema": "public-docs/benchmark-snapshot@1",
+  "repository": "appunni-m/image-slash-star",
+  "source_sha256": "a27cdd35082184ceb8f236a797e2dbb61eaf6017434e17967c5ac67ff9d8c881"
+}

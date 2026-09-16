@@ -1,0 +1,77 @@
+site_name: image-slash-star
+site_description: Rust image codecs with explicit capability and benchmark evidence.
+site_url: https://appunni-m.github.io/image-slash-star/
+repo_url: https://github.com/appunni-m/image-slash-star
+repo_name: appunni-m/image-slash-star
+docs_dir: target/docs-source
+site_dir: target/site
+use_directory_urls: true
+strict: true
+theme:
+  name: material
+  font: false
+  language: en
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+extra_css:
+  - assets/docs.css
+extra_javascript:
+  - assets/evidence.js
+validation:
+  nav:
+    omitted_files: warn
+  links:
+    not_found: warn
+    anchors: warn
+nav:
+  - Overview: index.md
+  - Use the library:
+      - API usage: usage.md
+      - Maturity: maturity.md
+      - Codec capabilities: capabilities.md
+      - AVIF scope: avif.md
+  - Evidence:
+      - Compatibility and coverage: evidence.md
+      - Benchmark results: benchmarks.md
+      - Measurement protocol: benchmarking.md
+      - Public roadmap: roadmap.md
+  - Contribute:
+      - Contributor guide: contributing.md
+      - Development and commands: testing.md
+      - Architecture: architecture.md
+      - JPEG implementation: jpeg.md
+      - Documentation maintenance: documentation.md
+  - Project:
+      - Releases: releasing.md
+      - Support: support.md
+      - Security: security.md
+      - Code of conduct: conduct.md
+      - Changelog: changelog.md

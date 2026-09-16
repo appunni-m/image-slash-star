@@ -1,0 +1,89 @@
+{
+  "project": "image-slash-star",
+  "version": "0.1.2",
+  "release_revision": "70190214a0711223302c76ab58e76c097288d80b",
+  "repository": "appunni-m/image-slash-star",
+  "site_url": "https://appunni-m.github.io/image-slash-star/",
+  "pages": [
+    {
+      "source": "README.md",
+      "output": "index.md"
+    },
+    {
+      "source": "docs/USAGE.md",
+      "output": "usage.md"
+    },
+    {
+      "source": "docs/MATURITY.md",
+      "output": "maturity.md"
+    },
+    {
+      "source": "docs/capabilities.md",
+      "output": "capabilities.md"
+    },
+    {
+      "source": "docs/avif.md",
+      "output": "avif.md"
+    },
+    {
+      "source": "docs/EVIDENCE.md",
+      "output": "evidence.md"
+    },
+    {
+      "source": "docs/BENCHMARKING.md",
+      "output": "benchmarking.md"
+    },
+    {
+      "source": "CONTRIBUTING.md",
+      "output": "contributing.md"
+    },
+    {
+      "source": "docs/testing.md",
+      "output": "testing.md"
+    },
+    {
+      "source": "docs/architecture.md",
+      "output": "architecture.md"
+    },
+    {
+      "source": "docs/jpeg-safe-vectorization.md",
+      "output": "jpeg.md"
+    },
+    {
+      "source": "docs/roadmap-new.md",
+      "output": "roadmap.md"
+    },
+    {
+      "source": "docs/DOCUMENTATION.md",
+      "output": "documentation.md"
+    },
+    {
+      "source": "RELEASING.md",
+      "output": "releasing.md"
+    },
+    {
+      "source": "SUPPORT.md",
+      "output": "support.md"
+    },
+    {
+      "source": "SECURITY.md",
+      "output": "security.md"
+    },
+    {
+      "source": "CODE_OF_CONDUCT.md",
+      "output": "conduct.md"
+    },
+    {
+      "source": "CHANGELOG.md",
+      "output": "changelog.md"
+    }
+  ],
+  "benchmark": {
+    "kind": "jpeg",
+    "source": "site-assets/benchmark.json"
+  },
+  "rust_example": {
+    "source": "README.md",
+    "crate": "."
+  }
+}
