@@ -1,0 +1,497 @@
+{
+  "artifacts": [
+    {
+      "bytes": 16384,
+      "path": "frame_0.rgba",
+      "sha256": "cef05e2501d6fe214a10be9acd4aeef15db8263529bcfb0111bf2cdc98285b57"
+    },
+    {
+      "bytes": 24576,
+      "path": "frame_0.yuva",
+      "sha256": "e8f47b4d62868be77dfa385ada07f7b45e715a76700779cee65f99b2e4bbdc77"
+    },
+    {
+      "bytes": 16384,
+      "path": "frame_1.rgba",
+      "sha256": "a526b8f55554f37e72a092738c1ea964ea3b6d529a0fc24f036fabed3c8cb51f"
+    },
+    {
+      "bytes": 24576,
+      "path": "frame_1.yuva",
+      "sha256": "f7178003382e8938bc696149ccd2e7b8eaeb53b15b4dffe93a5e31e12dad4256"
+    },
+    {
+      "bytes": 16384,
+      "path": "frame_2.rgba",
+      "sha256": "e5adf69a2e6c5e5912b0083b87dc2b12b9113c36653483da3461bfb64db51061"
+    },
+    {
+      "bytes": 24576,
+      "path": "frame_2.yuva",
+      "sha256": "3f4521b7a005aedf7082e07f0863f6e219231dcced9d8e0ff9033a7727e18153"
+    },
+    {
+      "bytes": 16384,
+      "path": "frame_3.rgba",
+      "sha256": "2de187c245387de0486104c8e51653d6277268dacf32ee0e3f7f888d521b2e55"
+    },
+    {
+      "bytes": 24576,
+      "path": "frame_3.yuva",
+      "sha256": "9404f4f193638bdd8ce4f7f3f29c869a78fe894fa643c7f66029c071439cc9bb"
+    },
+    {
+      "bytes": 16384,
+      "path": "frame_4.rgba",
+      "sha256": "97baa972654b05a76b3e53bf221106a6cd7f85394b8e4f918066466b08b4b89f"
+    },
+    {
+      "bytes": 24576,
+      "path": "frame_4.yuva",
+      "sha256": "395890d6abc95762f093365e95b65cb3fb74300913a9f2d5e632e5d9a46970ea"
+    },
+    {
+      "bytes": 4321,
+      "path": "observer.cc",
+      "sha256": "c4b7f2deb59c8b62e4841bb6b43363104d6ad96f313d7d48024655183a02602f"
+    }
+  ],
+  "checks": {
+    "dav1d_libavif_color_alpha_equal": true,
+    "native_repeat_equal": true,
+    "pillow_libavif_rgba_equal": true,
+    "rust_executed": false,
+    "scalar_libyuv_libavif_rgba_equal": true
+  },
+  "declaration": {
+    "alpha": true,
+    "bit_depth": 12,
+    "color_primaries": 2,
+    "color_range": false,
+    "height": 64,
+    "matrix_coefficients": 2,
+    "monochrome": false,
+    "subsampling_x": true,
+    "subsampling_y": false,
+    "transfer_characteristics": 2,
+    "width": 64
+  },
+  "fixture": {
+    "bytes": 2267,
+    "path": "tests/fixtures/input/images/avif/10bit.avif",
+    "sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
+  },
+  "frames": [
+    {
+      "duration": 1,
+      "index": 0,
+      "pillow_duration_ms": 1000,
+      "pillow_loop": null,
+      "pts": 0,
+      "repetition_count": -1,
+      "sample_ranges": [
+        [
+          3760,
+          3760
+        ],
+        [
+          3840,
+          3840
+        ],
+        [
+          3840,
+          3840
+        ],
+        [
+          4094,
+          4094
+        ]
+      ],
+      "timescale": 1
+    },
+    {
+      "duration": 1,
+      "index": 1,
+      "pillow_duration_ms": 1000,
+      "pillow_loop": null,
+      "pts": 1,
+      "repetition_count": -1,
+      "sample_ranges": [
+        [
+          3746,
+          3758
+        ],
+        [
+          256,
+          269
+        ],
+        [
+          256,
+          269
+        ],
+        [
+          4094,
+          4094
+        ]
+      ],
+      "timescale": 1
+    },
+    {
+      "duration": 1,
+      "index": 2,
+      "pillow_duration_ms": 1000,
+      "pillow_loop": null,
+      "pts": 2,
+      "repetition_count": -1,
+      "sample_ranges": [
+        [
+          272,
+          272
+        ],
+        [
+          256,
+          272
+        ],
+        [
+          256,
+          272
+        ],
+        [
+          2003,
+          2003
+        ]
+      ],
+      "timescale": 1
+    },
+    {
+      "duration": 1,
+      "index": 3,
+      "pillow_duration_ms": 1000,
+      "pillow_loop": null,
+      "pts": 3,
+      "repetition_count": -1,
+      "sample_ranges": [
+        [
+          298,
+          3461
+        ],
+        [
+          43,
+          3545
+        ],
+        [
+          43,
+          3545
+        ],
+        [
+          65,
+          4031
+        ]
+      ],
+      "timescale": 1
+    },
+    {
+      "duration": 1,
+      "index": 4,
+      "pillow_duration_ms": 1000,
+      "pillow_loop": null,
+      "pts": 4,
+      "repetition_count": -1,
+      "sample_ranges": [
+        [
+          280,
+          3479
+        ],
+        [
+          31,
+          3546
+        ],
+        [
+          31,
+          3546
+        ],
+        [
+          37,
+          4053
+        ]
+      ],
+      "timescale": 1
+    }
+  ],
+  "layout": {
+    "cpu_dispatch": "Pillow/libavif default; standalone dav1d cpumask=0; standalone libyuv scalar C primitives, NEON/X86 disabled",
+    "rgba": "interleaved RGBA8; straight alpha",
+    "yuva": "little-endian u16 planes Y64x64, U32x64, V32x64, A64x64; no padding"
+  },
+  "limitations": [
+    "Native color/alpha and timing evidence only; Rust reconstruction, sequence presentation and color execution are unverified.",
+    "Only the existing 12-bit limited-range I422 CICP2/2/2 auxiliary-alpha declaration is witnessed.",
+    "Partial alpha distinguishes straight from premultiplied output; the fixture contains no zero-alpha pixels."
+  ],
+  "oracle": {
+    "codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    "compile_argv": [
+      "/usr/bin/clang++",
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-shared",
+      "-fPIC",
+      "-DLIBYUV_DISABLE_NEON",
+      "-DLIBYUV_DISABLE_X86",
+      "-I<libavif-source>/include",
+      "-I<libyuv-source>/include",
+      "<work>/observer.cc",
+      "<libyuv-source>/source/row_common.cc",
+      "<libyuv-source>/source/scale_common.cc",
+      "<libyuv-source>/source/cpu_id.cc",
+      "-o",
+      "<work>/observer.so"
+    ],
+    "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+    "dav1d_binary_sha256": "19f982aa0e808448bd8aed91caefe09fcfc36e4e09a57663fabee12d385e6b4b",
+    "dav1d_build": {
+      "compile_argv": [
+        "meson",
+        "compile",
+        "-C",
+        "<build>",
+        "tools/dav1d"
+      ],
+      "configure_argv": [
+        "meson",
+        "setup",
+        "<build>",
+        "<source-copy>",
+        "--buildtype=debug",
+        "-Denable_tools=true",
+        "-Denable_tests=false",
+        "-Denable_examples=false",
+        "-Dtestdata_tests=false",
+        "-Denable_asm=false"
+      ],
+      "meson_version": "1.12.0",
+      "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+      "ninja_version": "1.13.2",
+      "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+      "tool_version": "1.5.3-0-gb546257f",
+      "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+    },
+    "dav1d_compilers": {
+      "build": {
+        "c": {
+          "default_suffix": "c",
+          "exelist": [
+            "/usr/bin/clang"
+          ],
+          "file_suffixes": [
+            "c"
+          ],
+          "full_version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+          "id": "clang",
+          "linker_exelist": [
+            "/usr/bin/clang"
+          ],
+          "linker_id": "ld64",
+          "version": "17.0.0"
+        }
+      },
+      "host": {
+        "c": {
+          "default_suffix": "c",
+          "exelist": [
+            "/usr/bin/clang"
+          ],
+          "file_suffixes": [
+            "c"
+          ],
+          "full_version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+          "id": "clang",
+          "linker_exelist": [
+            "/usr/bin/clang"
+          ],
+          "linker_id": "ld64",
+          "version": "17.0.0"
+        }
+      }
+    },
+    "libavif": "1.4.1",
+    "libyuv": 1922,
+    "libyuv_unlimited_bt601": false,
+    "libyuv_unlimited_data": false,
+    "observer_sha256": "ba79614aa015dfc652a10b7117a6590be8dc465e52de756f1e1e56560715779c",
+    "pillow": "12.2.0",
+    "pillow_avif_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+    "pillow_imaging_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+    "platform": "macOS-15.7.7-arm64-arm-64bit"
+  },
+  "schema": "image-slash-star/avif-sequence-color-oracle@1",
+  "sources": {
+    "dav1d": {
+      "commit": "b546257f770768b2c88258c533da38b91a06f737",
+      "files": [
+        {
+          "path": "COPYING",
+          "sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5"
+        }
+      ],
+      "tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6"
+    },
+    "libavif": {
+      "commit": "6543b22b5bc706c53f038a16fe515f921556d9b3",
+      "files": [
+        {
+          "path": "include/avif/avif.h",
+          "sha256": "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e"
+        },
+        {
+          "path": "src/reformat_libyuv.c",
+          "sha256": "596078eeb883e9c48048de54b5fbd42ed070cf84e8ec206e0c6ebdafa6dcf79e"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "165abf92cc04b39e80d29cadea7a6a7e8fddf59407d4ad2616507a7ebe8216f9"
+        }
+      ],
+      "tree_sha256": "9a4323fe85047fecdc1822ce82e447fba7e329bf1f0dd9bbd9e5fb09fc5f5454"
+    },
+    "libyuv": {
+      "commit": "6067afde563c3946eebd94f146b3824ab7a97a9c",
+      "files": [
+        {
+          "path": "source/row_common.cc",
+          "sha256": "ee4516b79480b131b1a013c8bbc6aaf65a4febd3a2422aa361206296702bb3ca"
+        },
+        {
+          "path": "source/scale_common.cc",
+          "sha256": "4b9848f06aa3a4e9fd75dceccb79bf9e35fec299be2bc672b104d6bdc702f2d4"
+        },
+        {
+          "path": "source/scale_any.cc",
+          "sha256": "8a502edba3f84d778a90554c6569dcbff456a9071789b80934d0bf35cc46ddc7"
+        },
+        {
+          "path": "source/cpu_id.cc",
+          "sha256": "fd3fdee4b003052f09d37965aad16334b2d0e362b6dede64aded2134961767f6"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "2b2cc1180c7e6988328ad2033b04b80117419db9c4c584918bbb3cfec7e9364f"
+        }
+      ],
+      "tree_sha256": "9b28b6095c6b5f97dbb379edae8b329462fef94c686e6fc5d8a37b1f3bdc1f9d"
+    }
+  },
+  "tracks": {
+    "alpha": {
+      "bytes": 262,
+      "codec": "AV01",
+      "height": 64,
+      "path": "alpha.ivf",
+      "rate_den": 1,
+      "rate_num": 30,
+      "samples": [
+        {
+          "length": 29,
+          "offset": 1852,
+          "pts": 0,
+          "sample_index": 0,
+          "sha256": "3864ca8289696be458cc3d807cf68f036eea460f55310ed65f6ed062ee180f1f"
+        },
+        {
+          "length": 20,
+          "offset": 1881,
+          "pts": 1,
+          "sample_index": 1,
+          "sha256": "147ead8dd7ba93146d730d077b288c81a01fbbaa02caed1af747867d87aad997"
+        },
+        {
+          "length": 26,
+          "offset": 1901,
+          "pts": 2,
+          "sample_index": 2,
+          "sha256": "1a1ef2a1721db3891cea023de75d0baf8bb9ce55e2723bf0c05c5740f0e8724b"
+        },
+        {
+          "length": 44,
+          "offset": 1927,
+          "pts": 3,
+          "sample_index": 3,
+          "sha256": "f887b3e4e3459a8a71691dba043758d5e0c0d951617ec92d44753576052b5274"
+        },
+        {
+          "length": 51,
+          "offset": 1971,
+          "pts": 4,
+          "sample_index": 4,
+          "sha256": "32c510176873723bbe0920369f0890d147904079990d24b9fa3a754441ec20e4"
+        }
+      ],
+      "sha256": "e4a732294fe2fc3d268e53f3e3f082d7b63286d1797cb4f298999561133ab584",
+      "timestamps": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "width": 64
+    },
+    "color": {
+      "bytes": 337,
+      "codec": "AV01",
+      "height": 64,
+      "path": "color.ivf",
+      "rate_den": 1,
+      "rate_num": 30,
+      "samples": [
+        {
+          "length": 39,
+          "offset": 2022,
+          "pts": 0,
+          "sample_index": 0,
+          "sha256": "ff737aa321c2a7e5b458ca833be7cceffb19e06baafbc42cf76d649ec879611c"
+        },
+        {
+          "length": 36,
+          "offset": 2061,
+          "pts": 1,
+          "sample_index": 1,
+          "sha256": "9e2b5e2e757650a2ec2be0e59d0d69b86eb3b90864455ebfe3e1eba878026312"
+        },
+        {
+          "length": 38,
+          "offset": 2097,
+          "pts": 2,
+          "sample_index": 2,
+          "sha256": "e794df340052ea3cc216a4fe4570124709ee51cf69ab7861056ed4053e8b385c"
+        },
+        {
+          "length": 103,
+          "offset": 2135,
+          "pts": 3,
+          "sample_index": 3,
+          "sha256": "ec667405796e815656e28f44c6ffe547530945f65ccc062eb2ae3b5a5df6f391"
+        },
+        {
+          "length": 29,
+          "offset": 2238,
+          "pts": 4,
+          "sample_index": 4,
+          "sha256": "fa2e49efd8ed07385a4e5cda0e334a799e3fee83151410167138a066ac0d03b1"
+        }
+      ],
+      "sha256": "7095a137283c3641874df540ec72cbd639e4a26ce7fbe185f594299bd266f3f8",
+      "timestamps": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "width": 64
+    }
+  }
+}

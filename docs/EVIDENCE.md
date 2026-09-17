@@ -81,6 +81,25 @@ checks compile the library. Warnings-as-errors rustdoc, formatting and static
 provenance/roadmap checks also pass.
 The HDR public row remains planned and historical coverage is unchanged.
 
+The 2026-09-17 high-depth color candidate adds the exact 12-bit limited-range
+I422 CICP 2/2/2 declaration with auxiliary alpha from `10bit.avif`. Independent
+scalar dav1d and libavif agree on 81,920 color-plane bytes and 40,960 alpha-plane
+bytes across all five frames. Pinned scalar libyuv, libavif and Pillow agree on
+81,920 RGBA bytes, with repeatable native planes, pixels and timing. Source,
+compiler, default I601 build flags and artifact hashes are retained in the
+[native index](../tests/fixtures/outputs/avif_sequence_color/high_bitdepth/index.json).
+Partial-alpha pixels witness straight output; zero-alpha pixels are absent.
+
+The shared declaration selector and Rust color conversion are implemented,
+with deferred regressions for every native frame, 25 full-row slices and
+separate internal admission/sample-buffer checks. Strict Clippy passes all
+12 native/WASM, AVIF-only/all-feature, ordinary/coverage lanes used for the
+HDR candidate, and warnings-as-errors rustdoc, formatting and static checks
+pass. This is compile-only Rust verification. Public reconstruction, sequence
+presentation, Rust pixel execution and managed coverage remain unverified;
+the existing sequence gates, planned matrix rows and historical coverage
+totals are retained.
+
 ## Diagnostic provenance
 
 The separate defensive-model contract has 61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row;

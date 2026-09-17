@@ -11,7 +11,7 @@ is not evidence that a later fix failed. No entry is silently removed here.
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 Its recorded baseline test counts are 45/45 matrix tests and 66/66 feature-gate tests.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The coverage-origin verifier passes for 538 exact `cfg(coverage)` guards across 88 files.
+The coverage-origin verifier passes for 539 exact `cfg(coverage)` guards across 88 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -74,6 +74,21 @@ separate this color boundary from AV1 reconstruction. The Rust regression
 compares the complete native planes and 48 real-pixel slices; behavioral
 execution remains deferred. HDR, high-depth sequences, the encoder rows and
 all finding counts retain their open statuses.
+
+## High-depth color implementation in progress — 2026-09-17
+
+The converter now includes the exact 12-bit limited-range I422 CICP 2/2/2
+declaration with auxiliary alpha from `10bit.avif`. Independent dav1d and
+libavif agree on all five frames' color and alpha planes; scalar libyuv,
+libavif and Pillow agree on every RGBA byte. Both color and alpha downshift
+before the 8-bit conversion. The fixture witnesses partial transparency and
+RGB clipping, but contains no zero-alpha pixels.
+
+The [native record](../tests/fixtures/outputs/avif_sequence_color/high_bitdepth/index.json)
+and [regeneration notes](../tests/fixtures/outputs/avif_sequence_color/README.md)
+bound this evidence to color conversion. The Rust regressions compare five
+complete frames and 25 row slices; execution and managed coverage remain
+deferred. Sequence admission and all open matrix/finding statuses are retained.
 
 ## Complete open-task inventory
 

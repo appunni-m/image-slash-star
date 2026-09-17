@@ -29,6 +29,10 @@ mod av1_temporal;
 #[path = "support/avif_hdr_color.rs"]
 mod avif_hdr_color;
 
+#[cfg(coverage)]
+#[path = "support/avif_highdepth_color.rs"]
+mod avif_highdepth_color;
+
 use support::json::{self, FromJson, Object, Value};
 
 #[cfg(coverage)]

@@ -1234,7 +1234,7 @@
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 538,
+        "guards": 539,
         "files": 88
       },
       "status": "open_until_all_four_metrics_are_100_percent"
@@ -6697,6 +6697,35 @@
             "the existing 12-bit animated 10bit.avif row",
             "HDR transfer/primaries conversion",
             "high-depth alpha, grids, sequences, 4:2:0, 4:2:2, restoration, or encoding"
+          ]
+        },
+        "current_slice_update_2026_09_17_limited_color": {
+          "status": "implemented_unverified",
+          "scope": "12-bit limited-range I422, CICP 2/2/2 with full-range auxiliary alpha: shared exact declaration admission, pre-filter color/alpha downshift, default libyuv I601 fixed-point conversion and straight RGBA8 output. Ordinary multi-frame presentation remains gated.",
+          "fixture": "tests/fixtures/input/images/avif/10bit.avif",
+          "fixture_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576",
+          "oracle_index": "tests/fixtures/outputs/avif_sequence_color/high_bitdepth/index.json",
+          "generator": "scripts/generate_avif_sequence_color_refs.py",
+          "regression": "tests/support/avif_highdepth_color.rs",
+          "native_evidence": {
+            "frames": 5,
+            "width": 64,
+            "height": 64,
+            "color_yuv_bytes": 81920,
+            "color_yuv_sha256": "d0e56c16f49124efb55197ab30708a97f9f9549cd40f81c3dd969573da2adcbf",
+            "alpha_yuv_bytes": 40960,
+            "alpha_yuv_sha256": "2ac42a90e80031898b5c6740e75296e42b49cfecf3cfbea2d98358930dfbdc51",
+            "rgba_bytes": 81920,
+            "checks": "Unmodified standalone scalar dav1d and Pillow libavif color/alpha planes agree for all five frames. Separately compiled unmodified libyuv scalar conversion, libavif and Pillow RGBA agree exactly; repeated native planes/pixels/timing observations match. Libyuv unlimited-data and unlimited-BT601 flags are absent."
+          },
+          "validation_policy": "Rust behavioral tests and Coverage MCP remain deferred until implementation is complete. Native oracle generation and compile-only/static checks are allowed. No matrix, finding or workstream promotion.",
+          "compile_verification": "Strict Clippy passes in 12 lanes: native, wasm32-unknown-unknown and wasm32-wasip1; AVIF-only and all features; ordinary and cfg(coverage). Native and coverage unknown-WASM checks include all targets; WASI checks the library. Warnings-as-errors all-feature rustdoc, fmt, diff, roadmap, claim-ledger, coverage-origin, diagnostic, unreachable-contract, license, WebP-property and capability-document checks pass. No Rust behavioral test was executed for this slice.",
+          "option_review": "The new portable_yuv_matrix selector returns Option only for genuine capability absence and performs no decoding or fallible sample operation. Existing decode_portable Option semantics are retained; the test adapter maps absent conversion to structured Unsupported. Shared declaration selection retains existing full-range BT.601 and primary-only HDR restrictions.",
+          "limitations": [
+            "Rust runtime, public AV1 reconstruction, sequence presentation, timing, limits and cancellation parity are not claimed.",
+            "Only the observed 12-bit limited-range I422 CICP 2/2/2 auxiliary-alpha declaration is newly admitted; other declarations require independent evidence.",
+            "Partial alpha witnesses straight output and the source includes RGB clipping; zero-alpha pixels and complete nominal sample coverage are absent.",
+            "Historical Coverage MCP totals are not measurements of this candidate."
           ]
         }
       },

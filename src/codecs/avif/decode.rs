@@ -1,5 +1,6 @@
 //! Pillow-compatible AVIF decoding with a portable closed-class fast path.
 
+use super::PortableYuvMatrix;
 use crate::SequenceDecodeBudget;
 use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
@@ -477,21 +478,18 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         .map_err(|error| error.context("AVIF container validation failed"))
 }
 
-#[derive(Clone, Copy)]
-enum PortableYuvMatrix {
-    Bt601,
-    Bt2020NonConstant,
-}
-
 pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<DecodedImage> {
     let still = validated.portable_still.as_ref()?;
     let width = usize::try_from(still.width).ok()?;
     let height = usize::try_from(still.height).ok()?;
     let plane_length = width.checked_mul(height)?;
-    if !matches!(still.bit_depth, 8 | 10 | 12) || !still.color_range {
+    if !matches!(still.bit_depth, 8 | 10 | 12) {
         return None;
     }
     if still.monochrome {
+        if !still.color_range {
+            return None;
+        }
         return decode_monochrome_portable(still, plane_length);
     }
     let subsampled = match (still.subsampling_x, still.subsampling_y) {
@@ -500,25 +498,17 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
         (true, false) => false,
         (false, true) => return None,
     };
-    let matrix = match (
-        still.color_primaries,
-        still.transfer_characteristics,
-        still.matrix_coefficients,
-    ) {
-        (1, 13, 6) => PortableYuvMatrix::Bt601,
-        // Independent full-file hdr.avif evidence covers exactly this RGB24
-        // declaration. Other depths, alpha, and subsampling use different
-        // native paths and require their own witnesses before admission.
-        (9, 16, 9)
-            if still.bit_depth == 10
-                && !still.subsampling_x
-                && !still.subsampling_y
-                && still.alpha_plane.is_none() =>
-        {
-            PortableYuvMatrix::Bt2020NonConstant
-        }
-        _ => return None,
-    };
+    let matrix = super::portable_yuv_matrix(
+        [
+            still.color_primaries,
+            still.transfer_characteristics,
+            still.matrix_coefficients,
+        ],
+        still.bit_depth,
+        still.color_range,
+        (still.subsampling_x, still.subsampling_y),
+        still.alpha_plane.is_some(),
+    )?;
     let mut canvas = super::av1::FrameCanvas::new(
         still.width,
         still.height,
@@ -712,7 +702,7 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
                 // chroma by another factor of four or sixteen.
                 let u = u8::try_from(u_sample).ok()?;
                 let v = u8::try_from(v_sample).ok()?;
-                libyuv_full_range_rgb(y, u, v, matrix)
+                libyuv_rgb(y, u, v, matrix)
             };
             pixels.extend_from_slice(&rgb);
             if let Some(alpha_plane) = &still.alpha_plane {
@@ -908,7 +898,7 @@ fn convert_full_resolution_rgb(
         let y = sample_depth.truncate_to_u8(y_plane[index])?;
         let u = sample_depth.truncate_to_u8(u_plane[index])?;
         let v = sample_depth.truncate_to_u8(v_plane[index])?;
-        let rgb = libyuv_full_range_rgb(y, u, v, matrix);
+        let rgb = libyuv_rgb(y, u, v, matrix);
         let output_start = index.checked_mul(channels)?;
         let output_end = output_start.checked_add(channels)?;
         let pixel = output.get_mut(output_start..output_end)?;
@@ -965,10 +955,13 @@ fn convert_full_resolution_rgb_10bit_alpha(
 // sample depth before allocating or reaching this helper. After the checked
 // 0/2/4-bit shift, every Y/U/V lane is therefore in 0..=255. The fixed-point
 // intermediates remain in the i32 domain: y * 257 <= 65_535,
-// (y * 257) * 16_320 <= 1_069_531_200, and y_scaled <= 16_319. The BT.601
+// (y * 257) * 18_997 <= 1_244_968_395, and y_scaled <= 18_996.
+// Full-range BT.601 uses scale 16_320 and y_scaled <= 16_319. Its
 // lane bounds are R[-11_488, 27_781], G[-8_604, 25_055], and
 // B[-14_432, 30_702]. The BT.2020-NCL bounds are
 // R[-12_000, 28_289], G[-6_064, 22_495], B[-15_328, 31_591].
+// Limited-range BT.601 bounds are R[-14_216, 30_790],
+// G[-10_939, 27_692], B[-17_544, 34_092].
 #[expect(
     clippy::arithmetic_side_effects,
     reason = "validated 0..=255 lanes and bounded libyuv fixed-point coefficients remain within i32"
@@ -985,19 +978,13 @@ fn convert_i444_rgb_lanes(
     let y = truncate_u16x8(y_plane, offset, shift)?;
     let u = truncate_u16x8(u_plane, offset, shift)?;
     let v = truncate_u16x8(v_plane, offset, shift)?;
-    let y_scaled = ((y * i32x8::splat(257)) * i32x8::splat(16_320)) >> 16;
-    let (red, green, blue) = match matrix {
-        PortableYuvMatrix::Bt601 => (
-            y_scaled + v * i32x8::splat(90) - i32x8::splat(11_488),
-            y_scaled + i32x8::splat(8_736) - (u * i32x8::splat(22) + v * i32x8::splat(46)),
-            y_scaled + u * i32x8::splat(113) - i32x8::splat(14_432),
-        ),
-        PortableYuvMatrix::Bt2020NonConstant => (
-            y_scaled + v * i32x8::splat(94) - i32x8::splat(12_000),
-            y_scaled + i32x8::splat(6_176) - (u * i32x8::splat(11) + v * i32x8::splat(37)),
-            y_scaled + u * i32x8::splat(120) - i32x8::splat(15_328),
-        ),
-    };
+    let coefficients = yuv_coefficients(matrix);
+    let y_scaled = ((y * i32x8::splat(257)) * i32x8::splat(coefficients.y_scale)) >> 16;
+    let red = y_scaled + v * i32x8::splat(coefficients.red_v) - i32x8::splat(coefficients.red_bias);
+    let green = y_scaled + i32x8::splat(coefficients.green_bias)
+        - (u * i32x8::splat(coefficients.green_u) + v * i32x8::splat(coefficients.green_v));
+    let blue =
+        y_scaled + u * i32x8::splat(coefficients.blue_u) - i32x8::splat(coefficients.blue_bias);
     Some([
         narrow_rgb_lanes(red),
         narrow_rgb_lanes(green),
@@ -1044,7 +1031,7 @@ fn truncate_u16_lanes(samples: &[u16], offset: usize, shift: u32) -> Option<[u8;
     Some(lanes)
 }
 
-// The conversion helper proves every lane lies in [-15_328, 31_591]. The
+// The conversion helper proves every lane lies in [-17_544, 34_092]. The
 // constant right shift is 6 (<32), then clamping to 0..=255 makes the final
 // checked narrowing total even if a future caller supplies an out-of-range
 // lane.
@@ -1225,35 +1212,60 @@ fn libyuv_420_bilinear_sample_at_depth(
     u16::try_from(weighted.saturating_add(8).wrapping_shr(4)).unwrap_or(u16::MAX)
 }
 
-// libavif 1.4.1 / libyuv 1922 RGB24 constants: JPEG for BT.601 and
-// V2020 for BT.2020 non-constant luminance. Native hdr.avif evidence records
+struct YuvCoefficients {
+    y_scale: i32,
+    blue_u: i32,
+    green_u: i32,
+    green_v: i32,
+    red_v: i32,
+    blue_bias: i32,
+    green_bias: i32,
+    red_bias: i32,
+}
+
+const fn yuv_coefficients(matrix: PortableYuvMatrix) -> YuvCoefficients {
+    let (y_scale, blue_u, green_u, green_v, red_v, blue_bias, green_bias, red_bias) = match matrix {
+        PortableYuvMatrix::Bt601 => (16_320, 113, 22, 46, 90, 14_432, 8_736, 11_488),
+        PortableYuvMatrix::Bt2020NonConstant => (16_320, 120, 11, 37, 94, 15_328, 6_176, 12_000),
+        // Default libyuv I601 uses UB=128; the unlimited-data build option
+        // changes that coefficient and is not enabled in the scalar oracle.
+        PortableYuvMatrix::Bt601Limited => (18_997, 128, 25, 52, 102, 17_544, 8_696, 14_216),
+    };
+    YuvCoefficients {
+        y_scale,
+        blue_u,
+        green_u,
+        green_v,
+        red_v,
+        blue_bias,
+        green_bias,
+        red_bias,
+    }
+}
+
+// libavif 1.4.1 / libyuv 1922 constants: JPEG and I601 for full/limited
+// BT.601, V2020 for BT.2020 non-constant luminance. HDR evidence records
 // the high-depth downshift before this kernel; PQ values remain encoded,
 // without an extra transfer, gamut, or tone mapping step.
-fn libyuv_full_range_rgb(y: u8, u: u8, v: u8, matrix: PortableYuvMatrix) -> [u8; 3] {
-    let (blue_u, green_bias, green_u, green_v, red_v, blue_bias, red_bias) = match matrix {
-        PortableYuvMatrix::Bt601 => (113, 8_736, 22, 46, 90, 14_432, 11_488),
-        PortableYuvMatrix::Bt2020NonConstant => (120, 6_176, 11, 37, 94, 15_328, 12_000),
-    };
-    let y_scaled = u32::from(y)
+fn libyuv_rgb(y: u8, u: u8, v: u8, matrix: PortableYuvMatrix) -> [u8; 3] {
+    let coefficients = yuv_coefficients(matrix);
+    // The same validated-byte bound as the SIMD kernel proves this signed
+    // product is nonnegative and below i32::MAX for every admitted matrix.
+    let y_scaled = i32::from(y)
         .wrapping_mul(0x0101)
-        .wrapping_mul(16_320)
+        .wrapping_mul(coefficients.y_scale)
         .wrapping_shr(16);
-    #[expect(
-        clippy::cast_possible_wrap,
-        reason = "eight-bit input bounds the libyuv fixed-point luma value below i32::MAX"
-    )]
-    let y_scaled = y_scaled as i32;
     let blue = y_scaled
-        .wrapping_add(i32::from(u).wrapping_mul(blue_u))
-        .wrapping_sub(blue_bias);
-    let green = y_scaled.wrapping_add(green_bias).wrapping_sub(
+        .wrapping_add(i32::from(u).wrapping_mul(coefficients.blue_u))
+        .wrapping_sub(coefficients.blue_bias);
+    let green = y_scaled.wrapping_add(coefficients.green_bias).wrapping_sub(
         i32::from(u)
-            .wrapping_mul(green_u)
-            .wrapping_add(i32::from(v).wrapping_mul(green_v)),
+            .wrapping_mul(coefficients.green_u)
+            .wrapping_add(i32::from(v).wrapping_mul(coefficients.green_v)),
     );
     let red = y_scaled
-        .wrapping_add(i32::from(v).wrapping_mul(red_v))
-        .wrapping_sub(red_bias);
+        .wrapping_add(i32::from(v).wrapping_mul(coefficients.red_v))
+        .wrapping_sub(coefficients.red_bias);
     [libyuv_rgb8(red), libyuv_rgb8(green), libyuv_rgb8(blue)]
 }
 

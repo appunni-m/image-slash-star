@@ -284,7 +284,9 @@ pub(super) fn validate_sequence_frames(
             // reference samples. This keeps a known pure-Rust capability gap
             // typed as Unsupported instead of exposing an incidental missing
             // reference surface from the next temporal unit.
-            if !first_sequence.monochrome && !portable_color_sequence_supported(first_sequence) {
+            if !first_sequence.monochrome
+                && !portable_color_sequence_supported(first_sequence, sequence.alpha.is_some())
+            {
                 return Ok(None);
             }
             // Ordinary multi-frame AVIF presentation still lacks the
@@ -378,7 +380,7 @@ pub(super) fn validate_sequence_frames(
         }
         return Ok(Some(frames));
     }
-    if !portable_color_sequence_supported(&color_sequence) {
+    if !portable_color_sequence_supported(&color_sequence, sequence.alpha.is_some()) {
         return Ok(None);
     }
     for (index, display) in color_displays.iter_mut().enumerate() {
@@ -456,27 +458,26 @@ fn monochrome_primary_sequence_supported(sequence: &sequence::SequenceHeader) ->
 
 /// Color formats that have a checked RGB8 boundary in `decode_portable`.
 ///
-/// Keep this sequence-level admission in the AV1 module independent from the
-/// private decoder matrix enum. Every returned frame still goes through the
-/// final conversion gate, while this predicate prevents a stateful track from
-/// being rejected before that per-frame path can run.
-fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader) -> bool {
-    if sequence.monochrome
-        || !sequence.color_range
-        || (!sequence.subsampling_x && sequence.subsampling_y)
-    {
+/// Share color admission with the final converter, including auxiliary alpha.
+/// HDR is currently witnessed only for primary stills, so it retains its
+/// previous sequence restriction independently of the color kernel.
+fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader, alpha: bool) -> bool {
+    if sequence.monochrome {
         return false;
     }
     matches!(
-        (
-            (
+        super::portable_yuv_matrix(
+            [
                 sequence.color_primaries,
                 sequence.transfer_characteristics,
                 sequence.matrix_coefficients,
-            ),
+            ],
             sequence.bit_depth,
+            sequence.color_range,
+            (sequence.subsampling_x, sequence.subsampling_y),
+            alpha,
         ),
-        ((1, 13, 6), 8 | 10 | 12)
+        Some(super::PortableYuvMatrix::Bt601 | super::PortableYuvMatrix::Bt601Limited)
     )
 }
 
