@@ -499,8 +499,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let predictor_probe_source = (0..2_048)
         .map(|index| {
-            let value = index as u32;
-            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value
+            let value = crate::coverage_support::require_ok(
+                u32::try_from(index),
+                "fixture value must fit u32",
+            );
+            0xff00_0000
+                | ((value & 0xff) << 16)
+                | ((crate::coverage_support::require_some(
+                    (value).checked_mul(3),
+                    "coverage fixture arithmetic",
+                ) & 0xff)
+                    << 8)
+                | value
         })
         .collect::<Vec<_>>();
 

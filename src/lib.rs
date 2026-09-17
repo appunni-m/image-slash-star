@@ -88,6 +88,8 @@ use bytemuck as _;
 mod cancel;
 pub mod capabilities;
 mod codecs;
+#[cfg(coverage)]
+mod coverage_support;
 pub mod decode_policy;
 mod diagnostic;
 pub mod encode_options;

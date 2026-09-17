@@ -92,7 +92,7 @@
     {"path": "src/codecs/webp/native/vp8.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/decode_policy.rs", "guard_count": 1, "origin": "defensive_model"},
     {"path": "src/encode_options.rs", "guard_count": 10, "origin": "defensive_model"},
-    {"path": "src/lib.rs", "guard_count": 1, "origin": "defensive_model"},
+    {"path": "src/lib.rs", "guard_count": 2, "origin": "defensive_model"},
     {"path": "src/types/mod.rs", "guard_count": 1, "origin": "defensive_model"},
     {
       "path": "tests/coverage_matrix_tests.rs",
@@ -128,20 +128,20 @@
         {"line": 1720, "origin": "independent_implementation"},
         {"line": 1722, "origin": "independent_implementation"},
         {"line": 1725, "origin": "independent_implementation"},
-        {"line": 1780, "origin": "independent_implementation"},
-        {"line": 1819, "origin": "independent_implementation"},
-        {"line": 5834, "origin": "defensive_model"},
-        {"line": 5843, "origin": "independent_implementation"},
-        {"line": 5931, "origin": "independent_implementation"},
-        {"line": 5943, "origin": "independent_implementation"},
-        {"line": 5977, "origin": "independent_implementation"},
-        {"line": 5991, "origin": "independent_implementation"},
-        {"line": 6001, "origin": "independent_implementation"},
-        {"line": 6061, "origin": "independent_implementation"},
-        {"line": 6078, "origin": "independent_implementation"},
-        {"line": 6312, "origin": "independent_implementation"},
-        {"line": 6548, "origin": "independent_implementation"},
-        {"line": 6562, "origin": "independent_implementation"}
+        {"line": 1782, "origin": "independent_implementation"},
+        {"line": 1821, "origin": "independent_implementation"},
+        {"line": 5836, "origin": "defensive_model"},
+        {"line": 5845, "origin": "independent_implementation"},
+        {"line": 5933, "origin": "independent_implementation"},
+        {"line": 5945, "origin": "independent_implementation"},
+        {"line": 5979, "origin": "independent_implementation"},
+        {"line": 5993, "origin": "independent_implementation"},
+        {"line": 6003, "origin": "independent_implementation"},
+        {"line": 6063, "origin": "independent_implementation"},
+        {"line": 6080, "origin": "independent_implementation"},
+        {"line": 6314, "origin": "independent_implementation"},
+        {"line": 6559, "origin": "independent_implementation"},
+        {"line": 6573, "origin": "independent_implementation"}
       ]
     }
   ]

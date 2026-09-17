@@ -1038,7 +1038,7 @@ fn coverage_run_stochastic_update_pair(token: &crate::CancellationToken) -> Chec
         let mut histogram = Histogram::new(0);
         for offset in 0..64_u32 {
             histogram.add_token(
-                Token::Literal(0xff00_0000 | index.wrapping_mul(0x45d9_f3b) | offset),
+                Token::Literal(0xff00_0000 | index.wrapping_mul(0x045d_9f3b) | offset),
                 1,
             );
         }
@@ -1251,7 +1251,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let many_distinct = (0..(4 * BIN_SIZE))
         .map(|index| {
-            Token::Literal(0xff00_0000 | (((index as u32).wrapping_mul(0x45d9_f3b)) & 0x00ff_ffff))
+            Token::Literal(0xff00_0000 | (((index as u32).wrapping_mul(0x045d_9f3b)) & 0x00ff_ffff))
         })
         .collect::<Vec<_>>();
     let _ = cluster(

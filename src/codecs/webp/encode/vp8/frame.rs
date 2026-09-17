@@ -39,10 +39,10 @@ static FORCE_SELECTION_CHECKPOINT_ERROR: AtomicBool = AtomicBool::new(false);
 #[cfg(coverage)]
 #[coverage(off)]
 fn coverage_cancel_selection_checkpoint(token: Option<&crate::CancellationToken>) {
-    if FORCE_SELECTION_CHECKPOINT_ERROR.swap(false, Ordering::Relaxed) {
-        if let Some(token) = token {
-            token.cancel();
-        }
+    if FORCE_SELECTION_CHECKPOINT_ERROR.swap(false, Ordering::Relaxed)
+        && let Some(token) = token
+    {
+        token.cancel();
     }
 }
 
@@ -460,7 +460,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let width = 16 * SELECTION_CHECKPOINT_MACROBLOCKS;
     let height = 16;
     let y_plane = vec![0_u8; width * height];
-    let u_plane = vec![128_u8; (width / 2) * (height / 2)];
+    let u_plane = vec![
+        128_u8;
+        crate::coverage_support::require_some(
+            (width / 2).checked_mul(height / 2),
+            "coverage fixture arithmetic"
+        )
+    ];
     let v_plane = u_plane.clone();
     let analysis = FrameAnalysis {
         alpha: 0,

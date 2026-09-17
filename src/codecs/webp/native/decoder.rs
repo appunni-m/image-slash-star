@@ -814,11 +814,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
 
     fn chunk(fourcc: &[u8; 4], payload: &[u8]) -> Vec<u8> {
-        let mut out = Vec::with_capacity(8 + payload.len() + usize::from(payload.len() % 2 != 0));
+        let mut out =
+            Vec::with_capacity(8 + payload.len() + usize::from(!payload.len().is_multiple_of(2)));
         out.extend_from_slice(fourcc);
         out.extend_from_slice(&(payload.len() as u32).to_le_bytes());
         out.extend_from_slice(payload);
-        if payload.len() % 2 != 0 {
+        if !payload.len().is_multiple_of(2) {
             out.push(0);
         }
         out
@@ -875,14 +876,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     fn exercise_animation_data(
         stream: Vec<u8>,
-        width: u32,
-        height: u32,
+        dimensions: (u32, u32),
         has_alpha: bool,
         num_frames: u32,
         next_frame: u32,
         dispose_next_frame: bool,
         read_count: usize,
     ) {
+        let (width, height) = dimensions;
+
         let mut decoder = WebPDecoder {
             r: Cursor::new(stream.as_slice()),
             width,
@@ -922,8 +924,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ) {
         exercise_animation_data(
             chunk(b"ANMF", &anmf),
-            width,
-            height,
+            (width, height),
             has_alpha,
             1,
             next_frame,
@@ -1045,11 +1046,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
     no_trailing_chunks[4..8].copy_from_slice(&10u32.to_le_bytes());
     exercise_new(no_trailing_chunks);
 
-    exercise_animation_data(chunk_declared(b"ANMF", 32, &[]), 1, 1, true, 1, 0, false, 1);
+    exercise_animation_data(
+        chunk_declared(b"ANMF", 32, &[]),
+        (1, 1),
+        true,
+        1,
+        0,
+        false,
+        1,
+    );
     exercise_animation_data(
         chunk_declared(b"ANMF", 32, &[0; 3]),
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1058,8 +1066,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     exercise_animation_data(
         chunk_declared(b"ANMF", 32, &[0; 8]),
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1068,8 +1075,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     exercise_animation_data(
         chunk_declared(b"ANMF", 32, &[0; 9]),
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1078,8 +1084,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     exercise_animation_data(
         chunk_declared(b"ANMF", 32, &[0; 14]),
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1088,8 +1093,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     exercise_animation_data(
         chunk_declared(b"ANMF", 32, &[0; 15]),
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1098,8 +1102,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     exercise_animation_data(
         chunk_declared(b"ANMF", 32, &[0; 16]),
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1116,8 +1119,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"VP8L"));
     exercise_animation_data(
         public_reader_vp8l_width_too_large,
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1133,8 +1135,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"ALPH"));
     exercise_animation_data(
         public_reader_alpha_width_too_large,
-        1,
-        1,
+        (1, 1),
         true,
         1,
         0,
@@ -1184,7 +1185,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut vp8l_solid_y_outside = vp8l_solid_64.clone();
     vp8l_solid_y_outside[3..6].copy_from_slice(&1u32.to_le_bytes()[..3]);
     let public_reader_y_outside = chunk(b"ANMF", &vp8l_solid_y_outside);
-    exercise_animation_data(public_reader_y_outside, 64, 64, true, 1, 0, false, 1);
+    exercise_animation_data(public_reader_y_outside, (64, 64), true, 1, 0, false, 1);
 
     exercise_animation(vp8l_solid_64.clone(), 64, 64, true);
     super::lossless::FORCE_DECODE_FRAME_RGB_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -1199,7 +1200,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let first_frame = chunk(b"ANMF", &vp8l_solid_64);
     let mut two_frames = first_frame.clone();
     two_frames.extend_from_slice(&first_frame);
-    exercise_animation_data(two_frames, 64, 64, true, 2, 0, false, 2);
+    exercise_animation_data(two_frames, (64, 64), true, 2, 0, false, 2);
 
     exercise_animation(anmf_payload(0, 0, 0, 0, b"JUNK"), 1, 1, false);
     exercise_animation_state(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true, 1, false, 1);

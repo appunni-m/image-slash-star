@@ -333,8 +333,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         [0; 4],
         0,
         &matrices,
-        matrices.lambda_i16 as u32,
-        matrices.texture_lambda as u32,
+        crate::coverage_support::require_ok(
+            u32::try_from(matrices.lambda_i16),
+            "fixture value must fit u32",
+        ),
+        crate::coverage_support::require_ok(
+            u32::try_from(matrices.texture_lambda),
+            "fixture value must fit u32",
+        ),
         Some(Intra16Mode::Dc),
         false,
         &probabilities,

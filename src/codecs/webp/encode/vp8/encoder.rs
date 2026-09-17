@@ -459,7 +459,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         chroma_ac_delta: 0,
     };
     params.num_segments = 3;
-    params.segments[1] = params.segments[0].clone();
+    params.segments[1] = params.segments[0];
     params.segments[2].quantizer = params.segments[0].quantizer.saturating_add(1);
     let map = simplify_segments(&mut params);
     assert_eq!(map[2], 1);
@@ -655,17 +655,53 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // dimensions. The token sweep drives each nested `?` boundary.
     let width = 65usize;
     let height = 65usize;
-    let mut mixed_rgba = vec![0u8; width * height * 4];
+    let mut mixed_rgba = vec![
+        0u8;
+        crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                width.checked_mul(height),
+                "fixture pixel count"
+            ))
+            .checked_mul(4),
+            "coverage fixture arithmetic"
+        )
+    ];
     for y in 0..height {
         for x in 0..width {
             let offset = pixel_offset(y, width, x, 4);
-            mixed_rgba[offset..offset + 3].copy_from_slice(&[32, 64, 96]);
-            mixed_rgba[offset + 3] = u8::from((x + y) % 3 == 0);
+            mixed_rgba[offset
+                ..crate::coverage_support::require_some(
+                    (offset).checked_add(3),
+                    "coverage fixture arithmetic",
+                )]
+                .copy_from_slice(&[32, 64, 96]);
+            mixed_rgba[crate::coverage_support::require_some(
+                (offset).checked_add(3),
+                "coverage fixture arithmetic",
+            )] = u8::from(
+                crate::coverage_support::require_some(
+                    (x).checked_add(y),
+                    "coverage fixture arithmetic",
+                ) % 3
+                    == 0,
+            );
         }
     }
     let mut mixed_y = vec![64u8; width * height];
-    let mut mixed_u = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-    let mut mixed_v = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut mixed_u = vec![
+        96u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
+    let mut mixed_v = vec![
+        128u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
     let _ = cleanup_transparent_area(
         &mixed_rgba,
         width,
@@ -679,8 +715,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut y_plane = vec![64u8; width * height];
-        let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-        let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+        let mut u_plane = vec![
+            96u8;
+            crate::coverage_support::require_some(
+                (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut v_plane = vec![
+            128u8;
+            crate::coverage_support::require_some(
+                (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
         let _ = cleanup_transparent_area(
             &mixed_rgba,
             width,
@@ -699,8 +747,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for y in 0..8 {
         for x in 0..8 {
             let offset = pixel_offset(y, 8, x, 4);
-            small_mixed_rgba[offset..offset + 3].copy_from_slice(&[32, 64, 96]);
-            small_mixed_rgba[offset + 3] = u8::from((x + y) % 3 == 0);
+            small_mixed_rgba[offset
+                ..crate::coverage_support::require_some(
+                    (offset).checked_add(3),
+                    "coverage fixture arithmetic",
+                )]
+                .copy_from_slice(&[32, 64, 96]);
+            small_mixed_rgba[crate::coverage_support::require_some(
+                (offset).checked_add(3),
+                "coverage fixture arithmetic",
+            )] = u8::from(
+                crate::coverage_support::require_some(
+                    (x).checked_add(y),
+                    "coverage fixture arithmetic",
+                ) % 3
+                    == 0,
+            );
         }
     }
     let mut small_y = vec![64u8; 8 * 8];
@@ -796,10 +858,38 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
 
     for (edge_width, edge_height) in [(1usize, 8usize), (8, 1), (1, 1)] {
-        let edge_rgba = vec![0u8; edge_width * edge_height * 4];
-        let mut y_plane = vec![64u8; edge_width * edge_height];
-        let mut u_plane = vec![96u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
-        let mut v_plane = vec![128u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
+        let edge_rgba = vec![
+            0u8;
+            crate::coverage_support::require_some(
+                (crate::coverage_support::require_some(
+                    edge_width.checked_mul(edge_height),
+                    "fixture pixel count"
+                ))
+                .checked_mul(4),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut y_plane = vec![
+            64u8;
+            crate::coverage_support::require_some(
+                (edge_width).checked_mul(edge_height),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut u_plane = vec![
+            96u8;
+            crate::coverage_support::require_some(
+                (edge_width.div_ceil(2)).checked_mul(edge_height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut v_plane = vec![
+            128u8;
+            crate::coverage_support::require_some(
+                (edge_width.div_ceil(2)).checked_mul(edge_height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
         let mut noop = NoopTransparentAreaCheckpoint::new();
         let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
             &edge_rgba,
@@ -852,13 +942,35 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ));
     }
 
-    let transparent_rgba = vec![0u8; width * height * 4];
+    let transparent_rgba = vec![
+        0u8;
+        crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                width.checked_mul(height),
+                "fixture pixel count"
+            ))
+            .checked_mul(4),
+            "coverage fixture arithmetic"
+        )
+    ];
     for checks in [0, 1, 2, 8, 16] {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let mut y_plane = vec![64u8; width * height];
-        let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-        let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+        let mut u_plane = vec![
+            96u8;
+            crate::coverage_support::require_some(
+                (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut v_plane = vec![
+            128u8;
+            crate::coverage_support::require_some(
+                (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
         let _ = cleanup_transparent_area(
             &transparent_rgba,
             width,
@@ -874,11 +986,39 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // dimensions skip the preceding full-block loop, so each `?` edge is
     // reached on its first checkpoint instead of relying on a counter guess.
     for (edge_width, edge_height) in [(1usize, 8usize), (8, 1), (1, 1)] {
-        let edge_rgba = vec![0u8; edge_width * edge_height * 4];
+        let edge_rgba = vec![
+            0u8;
+            crate::coverage_support::require_some(
+                (crate::coverage_support::require_some(
+                    edge_width.checked_mul(edge_height),
+                    "fixture pixel count"
+                ))
+                .checked_mul(4),
+                "coverage fixture arithmetic"
+            )
+        ];
         let mut checkpoint = CoverageFailingTransparentAreaCheckpoint::observe_at(0);
-        let mut y_plane = vec![64u8; edge_width * edge_height];
-        let mut u_plane = vec![96u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
-        let mut v_plane = vec![128u8; edge_width.div_ceil(2) * edge_height.div_ceil(2)];
+        let mut y_plane = vec![
+            64u8;
+            crate::coverage_support::require_some(
+                (edge_width).checked_mul(edge_height),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut u_plane = vec![
+            96u8;
+            crate::coverage_support::require_some(
+                (edge_width.div_ceil(2)).checked_mul(edge_height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut v_plane = vec![
+            128u8;
+            crate::coverage_support::require_some(
+                (edge_width.div_ceil(2)).checked_mul(edge_height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
         let _ = cleanup_transparent_area_with_checkpoint(
             &edge_rgba,
             edge_width,
@@ -900,8 +1040,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         fills: 0,
     };
     let mut mixed_y = vec![64u8; width * height];
-    let mut mixed_u = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-    let mut mixed_v = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut mixed_u = vec![
+        96u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
+    let mut mixed_v = vec![
+        128u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
     let _ = cleanup_transparent_area_with_checkpoint(
         &mixed_rgba,
         width,
@@ -911,12 +1063,30 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut mixed_v,
         &mut checkpoint,
     );
-    let mut fill_rgba = vec![0u8; width * height * 4];
+    let mut fill_rgba = vec![
+        0u8;
+        crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                width.checked_mul(height),
+                "fixture pixel count"
+            ))
+            .checked_mul(4),
+            "coverage fixture arithmetic"
+        )
+    ];
     for y in 0..height {
         for x in 0..width {
             let offset = pixel_offset(y, width, x, 4);
-            fill_rgba[offset..offset + 3].copy_from_slice(&[32, 64, 96]);
-            fill_rgba[offset + 3] = u8::from(x < 8);
+            fill_rgba[offset
+                ..crate::coverage_support::require_some(
+                    (offset).checked_add(3),
+                    "coverage fixture arithmetic",
+                )]
+                .copy_from_slice(&[32, 64, 96]);
+            fill_rgba[crate::coverage_support::require_some(
+                (offset).checked_add(3),
+                "coverage fixture arithmetic",
+            )] = u8::from(x < 8);
         }
     }
     let mut checkpoint = CoverageFailingTransparentAreaCheckpoint {
@@ -926,8 +1096,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         fills: 0,
     };
     let mut fill_y = vec![64u8; width * height];
-    let mut fill_u = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-    let mut fill_v = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut fill_u = vec![
+        96u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
+    let mut fill_v = vec![
+        128u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
     let _ = cleanup_transparent_area_with_checkpoint(
         &fill_rgba,
         width,
@@ -939,8 +1121,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let mut checkpoint = CoverageFailingTransparentAreaCheckpoint::fill_at(2);
     let mut y_plane = vec![64u8; width * height];
-    let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-    let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut u_plane = vec![
+        96u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
+    let mut v_plane = vec![
+        128u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
     let _ = cleanup_transparent_area_with_checkpoint(
         &transparent_rgba,
         width,
@@ -952,8 +1146,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let mut checkpoint = CoverageFailingTransparentAreaCheckpoint::fill_at(1);
     let mut y_plane = vec![64u8; width * height];
-    let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-    let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+    let mut u_plane = vec![
+        96u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
+    let mut v_plane = vec![
+        128u8;
+        crate::coverage_support::require_some(
+            (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+            "coverage fixture arithmetic"
+        )
+    ];
     let _ = cleanup_transparent_area_with_checkpoint(
         &transparent_rgba,
         width,
@@ -966,8 +1172,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     for fail_after in [0, 1, 2, 64, 256] {
         let mut checkpoint = NoopTransparentAreaCheckpoint { fail_after };
         let mut y_plane = vec![64u8; width * height];
-        let mut u_plane = vec![96u8; width.div_ceil(2) * height.div_ceil(2)];
-        let mut v_plane = vec![128u8; width.div_ceil(2) * height.div_ceil(2)];
+        let mut u_plane = vec![
+            96u8;
+            crate::coverage_support::require_some(
+                (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
+        let mut v_plane = vec![
+            128u8;
+            crate::coverage_support::require_some(
+                (width.div_ceil(2)).checked_mul(height.div_ceil(2)),
+                "coverage fixture arithmetic"
+            )
+        ];
         let _ = std::hint::black_box(cleanup_transparent_area_with_checkpoint(
             &transparent_rgba,
             width,

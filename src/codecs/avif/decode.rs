@@ -1382,8 +1382,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let mut malformed_file_type = baseline.to_vec();
     malformed_file_type[8..12].copy_from_slice(b"free");
-    for offset in (16..32).step_by(4) {
-        malformed_file_type[offset..offset + 4].copy_from_slice(b"free");
+    for offset in (16usize..32).step_by(4) {
+        malformed_file_type[offset
+            ..crate::coverage_support::require_some(
+                (offset).checked_add(4),
+                "coverage fixture arithmetic",
+            )]
+            .copy_from_slice(b"free");
     }
     let _ = decode(&malformed_file_type, None);
     let _ = decode_sequence(

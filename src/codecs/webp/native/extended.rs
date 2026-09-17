@@ -235,7 +235,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = read_extended_header(&mut Cursor::new(vec![
         0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     ]));
-    let info = read_extended_header(&mut Cursor::new(vec![0u8; 10])).unwrap();
+    let info = crate::coverage_support::require_ok(
+        read_extended_header(&mut Cursor::new(vec![0u8; 10])),
+        "coverage fixture: read_extended_header(&mut Cursor::new(vec![0u8; 10]))",
+    );
     assert_eq!(info.canvas_width, 1);
     assert_eq!(info.canvas_height, 1);
     let _ = read_3_bytes(&mut Cursor::new(vec![1u8, 2]));
@@ -247,14 +250,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0000_0010u8]), 1, 1);
     let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8]), 1, 1);
     let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8, 7]), 1, 1);
-    let alpha = super::encoder::encode_alpha(&[7], 1, 1, None).unwrap();
-    let chunk = read_alpha_chunk(&mut Cursor::new(alpha), 1, 1).unwrap();
+    let alpha = crate::coverage_support::require_ok(
+        super::encoder::encode_alpha(&[7], 1, 1, None),
+        "coverage fixture: super::encoder::encode_alpha(&[7], 1, 1, None)",
+    );
+    let chunk = crate::coverage_support::require_ok(
+        read_alpha_chunk(&mut Cursor::new(alpha), 1, 1),
+        "coverage fixture: read_alpha_chunk(&mut Cursor::new(alpha), 1, 1)",
+    );
     assert_eq!(chunk.data, vec![7]);
 
     let repeated_alpha = [7; 64];
-    let alpha = super::encoder::encode_alpha(&repeated_alpha, 8, 8, None).unwrap();
+    let alpha = crate::coverage_support::require_ok(
+        super::encoder::encode_alpha(&repeated_alpha, 8, 8, None),
+        "coverage fixture: super::encoder::encode_alpha(&repeated_alpha, 8, 8, None)",
+    );
     assert_eq!(alpha.first(), Some(&1));
-    let chunk = read_alpha_chunk(&mut Cursor::new(alpha), 8, 8).unwrap();
+    let chunk = crate::coverage_support::require_ok(
+        read_alpha_chunk(&mut Cursor::new(alpha), 8, 8),
+        "coverage fixture: read_alpha_chunk(&mut Cursor::new(alpha), 8, 8)",
+    );
     assert_eq!(chunk.data, repeated_alpha);
 }
 

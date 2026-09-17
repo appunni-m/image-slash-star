@@ -1502,7 +1502,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     );
     let header = frame::__coverage_reduced_header_payload();
     let mut split = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0".to_vec();
-    split.extend_from_slice(&[0x1a, u8::try_from(header.len()).unwrap()]);
+    split.extend_from_slice(&[
+        0x1a,
+        crate::coverage_support::require_ok(
+            u8::try_from(header.len()),
+            "coverage fixture: u8::try_from(header.len())",
+        ),
+    ]);
     split.extend_from_slice(&header);
     split.extend_from_slice(&[0x22, 1, 0]);
     let (input, sample) = coverage_sample(&split, valid_config);
@@ -1511,13 +1517,23 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Err(CodecError::Malformed(message))
             if message == "invalid AV1 bitstream: entropy symbol coder overread the tile padding"
     ));
-    let mut pending_then_delimiter = split[..split.len() - 2].to_vec();
+    let mut pending_then_delimiter = split[..crate::coverage_support::require_some(
+        (split.len()).checked_sub(2),
+        "coverage fixture arithmetic",
+    )]
+        .to_vec();
     pending_then_delimiter.extend_from_slice(&[0x12, 0]);
     let (input, sample) = coverage_sample(&pending_then_delimiter, valid_config);
     assert!(validate_sample(&input, &sample, &mut FrameState::new()).is_err());
     let mut redundant = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0".to_vec();
     for obu_type in [0x1a, 0x3a] {
-        redundant.extend_from_slice(&[obu_type, u8::try_from(header.len()).unwrap()]);
+        redundant.extend_from_slice(&[
+            obu_type,
+            crate::coverage_support::require_ok(
+                u8::try_from(header.len()),
+                "coverage fixture: u8::try_from(header.len())",
+            ),
+        ]);
         redundant.extend_from_slice(&header);
     }
     redundant.extend_from_slice(&[0x22, 1, 0]);
@@ -1605,14 +1621,26 @@ pub(crate) fn __coverage_exercise_private_branches() {
         start: 0,
         end: baseline_payload.len(),
     }];
-    let baseline_data = SegmentedData::new(baseline_payload, &baseline_spans).unwrap();
-    let baseline_header = sequence::parse(&baseline_data, 0, baseline_payload.len()).unwrap();
+    let baseline_data = crate::coverage_support::require_ok(
+        SegmentedData::new(baseline_payload, &baseline_spans),
+        "coverage fixture: SegmentedData::new(baseline_payload, &baseline_spans)",
+    );
+    let baseline_header = crate::coverage_support::require_ok(
+        sequence::parse(&baseline_data, 0, baseline_payload.len()),
+        "coverage fixture: sequence::parse(&baseline_data, 0, baseline_payload.len())",
+    );
     let animated_spans = [ByteSpan {
         start: 0,
         end: animated_payload.len(),
     }];
-    let animated_data = SegmentedData::new(animated_payload, &animated_spans).unwrap();
-    let animated_header = sequence::parse(&animated_data, 0, animated_payload.len()).unwrap();
+    let animated_data = crate::coverage_support::require_ok(
+        SegmentedData::new(animated_payload, &animated_spans),
+        "coverage fixture: SegmentedData::new(animated_payload, &animated_spans)",
+    );
+    let animated_header = crate::coverage_support::require_ok(
+        sequence::parse(&animated_data, 0, animated_payload.len()),
+        "coverage fixture: sequence::parse(&animated_data, 0, animated_payload.len())",
+    );
     let mut state = FrameState::new();
     assert_eq!(state.accept_sequence(baseline_header.clone()), Ok(()));
     assert_eq!(state.accept_sequence(baseline_header), Ok(()));
@@ -1790,7 +1818,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             sequence: Some(SequencePayload {
                 color: invalid_plane(),
                 alpha: None,
-                timescale: NonZeroU32::new(1).unwrap(),
+                timescale: crate::coverage_support::require_some(
+                    NonZeroU32::new(1),
+                    "coverage fixture: NonZeroU32::new(1)"
+                ),
                 loop_count: crate::types::AnimationLoop::Unspecified,
             }),
             consumed: 0,
@@ -1820,7 +1851,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             sequence: Some(SequencePayload {
                 color: valid_plane(),
                 alpha: Some(invalid_plane()),
-                timescale: NonZeroU32::new(1).unwrap(),
+                timescale: crate::coverage_support::require_some(
+                    NonZeroU32::new(1),
+                    "coverage fixture: NonZeroU32::new(1)"
+                ),
                 loop_count: crate::types::AnimationLoop::Unspecified,
             }),
             consumed: 0,
@@ -1915,13 +1949,18 @@ pub(super) fn __coverage_portable_still() -> PortableStill {
 #[cfg(coverage)]
 #[coverage(off)]
 pub(crate) fn __coverage_sweep_first_leaf(input: &[u8]) {
-    let extracted = super::samples::validated(input).expect("portable AVIF fixture must extract");
-    let spans = extracted
-        .still
-        .as_ref()
-        .and_then(|still| still.color.samples.first())
-        .map(|sample| sample.spans.clone())
-        .expect("portable AVIF fixture must contain one still sample");
+    let extracted = crate::coverage_support::require_ok(
+        super::samples::validated(input),
+        "portable AVIF fixture must extract",
+    );
+    let spans = crate::coverage_support::require_some(
+        extracted
+            .still
+            .as_ref()
+            .and_then(|still| still.color.samples.first())
+            .map(|sample| sample.spans.clone()),
+        "portable AVIF fixture must contain one still sample",
+    );
     assert!(validate(&extracted).is_ok());
     drop(extracted);
 

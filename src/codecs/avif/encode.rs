@@ -102,7 +102,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut Vec::new(),
     );
 
-    let sequence = DecodedSequence::from_image(image.clone());
+    let sequence = DecodedSequence::from_image(image);
     let _ = encode_sequence(&sequence, &options);
     let _ = encode_sequence_to_sink(
         &sequence,

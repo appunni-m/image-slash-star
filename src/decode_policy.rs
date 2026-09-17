@@ -595,7 +595,11 @@ pub(crate) struct SequenceDecodeBudget {
 
 impl SequenceDecodeBudget {
     /// Create the unlimited budget used by convenience and still paths.
-    #[cfg(any(feature = "gif", feature = "avif", coverage))]
+    #[cfg(any(
+        feature = "gif",
+        feature = "avif",
+        all(coverage, any(feature = "png", feature = "tiff", feature = "webp"))
+    ))]
     #[cfg_attr(
         all(feature = "avif", not(feature = "gif"), not(coverage)),
         allow(dead_code)

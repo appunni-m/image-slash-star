@@ -213,12 +213,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut l16_writer,
     );
 
-    let palette = crate::types::ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![0, 255])
-        .expect("coverage palette should be valid");
+    let palette = crate::coverage_support::require_ok(
+        crate::types::ImagePalette::new(vec![0, 0, 0, 255, 255, 255], vec![0, 255]),
+        "coverage palette should be valid",
+    );
     let indexed = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(palette);
     let _ = encode(&indexed, &PngEncodeOptions::default());
-    let empty_alpha_palette = crate::types::ImagePalette::new(vec![0, 0, 0], Vec::new())
-        .expect("coverage palette with no alpha table should be valid");
+    let empty_alpha_palette = crate::coverage_support::require_ok(
+        crate::types::ImagePalette::new(vec![0, 0, 0], Vec::new()),
+        "coverage palette with no alpha table should be valid",
+    );
     let indexed_empty_alpha =
         DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8).with_palette(empty_alpha_palette);
     let _ = encode(&indexed_empty_alpha, &PngEncodeOptions::default());
@@ -276,7 +280,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         None,
         &mut probe_writer,
     );
-    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    let calls = usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
     for checks in 0..=calls {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
@@ -298,7 +302,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // A row wider than the checkpoint interval reaches both the adaptive
     // filter-score polls and the filtered-row poll. Measure cancellation so
     // every nested candidate is reached without a guessed schedule.
-    let wide_row: Vec<u8> = (0..2_048u16).map(|value| value as u8).collect();
+    let wide_row: Vec<u8> = (0..2_048u16).map(|value| value.to_le_bytes()[0]).collect();
     let probe = crate::CancellationToken::new();
     probe.cancel_after(usize::MAX);
     let _ = plain_rows(
@@ -310,7 +314,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         true,
         Some(&probe),
     );
-    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    let calls = usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
     for checks in 0..=calls {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
@@ -330,7 +334,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             if calls >= fail_at {
                 return Err(CodecError::OutputWrite("coverage sink rejected".to_owned()));
             }
-            calls += 1;
+            calls = crate::coverage_support::require_some(
+                (calls).checked_add(1),
+                "fixture counter or boundary",
+            );
             let _ = bytes;
             Ok(())
         };
@@ -348,7 +355,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             if calls >= fail_at {
                 return Err(CodecError::OutputWrite("coverage sink rejected".to_owned()));
             }
-            calls += 1;
+            calls = crate::coverage_support::require_some(
+                (calls).checked_add(1),
+                "fixture counter or boundary",
+            );
             let _ = bytes;
             Ok(())
         };
@@ -366,7 +376,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             if calls >= fail_at {
                 return Err(CodecError::OutputWrite("coverage sink rejected".to_owned()));
             }
-            calls += 1;
+            calls = crate::coverage_support::require_some(
+                (calls).checked_add(1),
+                "fixture counter or boundary",
+            );
             let _ = bytes;
             Ok(())
         };
@@ -400,13 +413,22 @@ pub(crate) fn __coverage_exercise_private_branches() {
         PngEncodeOptions::__coverage_legacy_ancillary_with(true, true, true, false, false);
     let _ = png_output_len(&rgb, &physical, usize::MAX - 49, 0);
     let text = PngEncodeOptions::__coverage_legacy_ancillary_with(true, true, true, true, false);
-    let text_increment = b"Comment\0pillow-rs".len() + 12;
+    let text_increment = crate::coverage_support::require_some(
+        (b"Comment\0pillow-rs".len()).checked_add(12),
+        "coverage fixture arithmetic",
+    );
     let _ = png_output_len(&rgb, &text, usize::MAX - 70, 0);
     let time = PngEncodeOptions::__coverage_legacy_ancillary_with(true, true, true, true, true);
     let _ = png_output_len(
         &rgb,
         &time,
-        usize::MAX - (20 + 16 + 13 + 21 + text_increment),
+        crate::coverage_support::require_some(
+            (usize::MAX).checked_sub(crate::coverage_support::require_some(
+                (70usize).checked_add(text_increment),
+                "coverage fixture arithmetic",
+            )),
+            "coverage fixture arithmetic",
+        ),
         0,
     );
     let _ = png_output_len(&rgb, &default_options, 13, usize::MAX);

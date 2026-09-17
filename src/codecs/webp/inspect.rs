@@ -401,7 +401,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     fn chunk(kind: &[u8; 4], payload: &[u8]) -> Vec<u8> {
         let mut result = kind.to_vec();
-        result.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        result.extend_from_slice(
+            &crate::coverage_support::require_ok(
+                u32::try_from(payload.len()),
+                "fixture value must fit u32",
+            )
+            .to_le_bytes(),
+        );
         result.extend_from_slice(payload);
         if payload.len() & 1 != 0 {
             result.push(0);
@@ -454,8 +460,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let mut payload = vec![0; 16];
         payload[0..3].copy_from_slice(&left.to_le_bytes()[..3]);
         payload[3..6].copy_from_slice(&top.to_le_bytes()[..3]);
-        payload[6..9].copy_from_slice(&(width - 1).to_le_bytes()[..3]);
-        payload[9..12].copy_from_slice(&(height - 1).to_le_bytes()[..3]);
+        payload[6..9].copy_from_slice(
+            &crate::coverage_support::require_some(
+                (width).checked_sub(1),
+                "coverage fixture arithmetic",
+            )
+            .to_le_bytes()[..3],
+        );
+        payload[9..12].copy_from_slice(
+            &crate::coverage_support::require_some(
+                (height).checked_sub(1),
+                "coverage fixture arithmetic",
+            )
+            .to_le_bytes()[..3],
+        );
         payload.extend_from_slice(&nested);
         payload
     }

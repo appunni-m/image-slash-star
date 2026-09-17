@@ -21312,8 +21312,14 @@ fn coverage_partition_walker_paths() {
                 start: 0,
                 end: input.len(),
             }];
-            let data = SegmentedData::new(&input, &spans).unwrap();
-            let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
+            let data = crate::coverage_support::require_ok(
+                SegmentedData::new(&input, &spans),
+                "coverage fixture: SegmentedData::new(&input, &spans)",
+            );
+            let mut decoder = crate::coverage_support::require_ok(
+                RangeDecoder::new(&data, 0, input.len(), false),
+                "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
+            );
             let _ = walk_partition_until_stop(&mut decoder, &context, |_decoder, _node| {
                 Ok(PartitionVisitControl::Continue)
             });
@@ -21327,8 +21333,14 @@ fn coverage_partition_walker_paths() {
         start: 0,
         end: input.len(),
     }];
-    let data = SegmentedData::new(&input, &spans).unwrap();
-    let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(&input, &spans),
+        "coverage fixture: SegmentedData::new(&input, &spans)",
+    );
+    let mut decoder = crate::coverage_support::require_ok(
+        RangeDecoder::new(&data, 0, input.len(), false),
+        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
+    );
     let _ = walk_partition_until_stop(&mut decoder, &invalid, |_decoder, _node| {
         Ok(PartitionVisitControl::Continue)
     });
@@ -22826,7 +22838,10 @@ fn coverage_restoration_and_partition_paths() {
         start: 0,
         end: input.len(),
     }];
-    let data = SegmentedData::new(&input, &spans).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(&input, &spans),
+        "coverage fixture: SegmentedData::new(&input, &spans)",
+    );
 
     let mut maximum_token = 0;
     for fill in 0..=u8::MAX {
@@ -22835,8 +22850,14 @@ fn coverage_restoration_and_partition_paths() {
             start: 0,
             end: input.len(),
         }];
-        let data = SegmentedData::new(&input, &spans).unwrap();
-        let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(&input, &spans),
+            "coverage fixture: SegmentedData::new(&input, &spans)",
+        );
+        let mut decoder = crate::coverage_support::require_ok(
+            RangeDecoder::new(&data, 0, input.len(), false),
+            "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
+        );
         let mut cdf = [24_576, 16_384, 8192, 0];
         maximum_token = maximum_token.max(decoder.high_token(&mut cdf));
         for frame_type in [
@@ -22845,7 +22866,10 @@ fn coverage_restoration_and_partition_paths() {
             RestorationType::SgrProjection,
         ] {
             for plane in 0..=1 {
-                let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
+                let mut decoder = crate::coverage_support::require_ok(
+                    RangeDecoder::new(&data, 0, input.len(), false),
+                    "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
+                );
                 let mut cdfs = RestorationCdfs::defaults();
                 let mut reference = RestorationReference::defaults();
                 let _ = decode_restoration_unit(
@@ -22919,31 +22943,35 @@ fn coverage_restoration_and_partition_paths() {
     let mut active_prefix = coverage_context();
     active_prefix.restoration_types[0] = Some(RestorationType::Wiener);
     active_prefix.restoration_unit_size_log2[0] = 3;
-    let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
-    assert_eq!(
-        decode_restoration_prefix(&mut decoder, &active_prefix),
-        true
+    let mut decoder = crate::coverage_support::require_ok(
+        RangeDecoder::new(&data, 0, input.len(), false),
+        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
     );
+    assert!(decode_restoration_prefix(&mut decoder, &active_prefix));
     active_prefix.block_y = 1;
-    let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
-    assert_eq!(
-        decode_restoration_prefix(&mut decoder, &active_prefix),
-        true
+    let mut decoder = crate::coverage_support::require_ok(
+        RangeDecoder::new(&data, 0, input.len(), false),
+        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
     );
+    assert!(decode_restoration_prefix(&mut decoder, &active_prefix));
     active_prefix.block_y = 0;
     active_prefix.upscaled_width = 65;
-    let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
-    assert_eq!(
-        decode_restoration_prefix(&mut decoder, &active_prefix),
-        false
+    let mut decoder = crate::coverage_support::require_ok(
+        RangeDecoder::new(&data, 0, input.len(), false),
+        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
     );
+    assert!(!decode_restoration_prefix(&mut decoder, &active_prefix));
     assert_eq!(
         validate_first_partition(&data, 0..input.len(), &active_prefix),
         Ok(None)
     );
 
     assert!(default_partition_cdf(5).is_err());
-    let cdf = default_partition_cdf(0).unwrap().0;
+    let cdf = crate::coverage_support::require_ok(
+        default_partition_cdf(0),
+        "coverage fixture: default_partition_cdf(0)",
+    )
+    .0;
     let _ = left_partition_probability(&cdf, 0);
     let _ = top_partition_probability(&cdf, 0);
 
@@ -22959,7 +22987,10 @@ fn coverage_restoration_and_partition_paths() {
         start: 0,
         end: FORBIDDEN_422.len(),
     }];
-    let forbidden_data = SegmentedData::new(&FORBIDDEN_422, &spans).unwrap();
+    let forbidden_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&FORBIDDEN_422, &spans),
+        "coverage fixture: SegmentedData::new(&FORBIDDEN_422, &spans)",
+    );
     assert!(
         validate_first_partition(&forbidden_data, 0..FORBIDDEN_422.len(), &coverage_context(),)
             .is_err()
@@ -22986,7 +23017,10 @@ fn coverage_restoration_and_partition_paths() {
             start: 0,
             end: input.len(),
         }];
-        let data = SegmentedData::new(&input, &spans).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(&input, &spans),
+            "coverage fixture: SegmentedData::new(&input, &spans)",
+        );
         let _ = validate_first_partition(&data, 0..input.len(), &horizontal_only);
         let _ = validate_first_partition(&data, 0..input.len(), &horizontal_422);
         let _ = validate_first_partition(&data, 0..input.len(), &vertical_444);
@@ -23013,11 +23047,19 @@ fn coverage_restoration_and_partition_paths() {
 #[coverage(off)]
 pub(super) fn __coverage_exercise_private_branches() {
     let empty_spans = [];
-    let empty = SegmentedData::new(&[], &empty_spans).unwrap();
+    let empty = crate::coverage_support::require_ok(
+        SegmentedData::new(&[], &empty_spans),
+        "coverage fixture: SegmentedData::new(&[], &empty_spans)",
+    );
     let _ = RangeDecoder::new(&empty, 1, 0, false);
     let _ = RangeDecoder::new(&empty, 0, 1, false);
-    let _ = validate_first_partition(&empty, 1..0, &coverage_context());
-    let mut frozen = RangeDecoder::new(&empty, 0, 0, true).unwrap();
+    // Deliberately reversed bounds exercise the malformed-partition path.
+    let reversed = std::ops::Range { start: 1, end: 0 };
+    let _ = validate_first_partition(&empty, reversed, &coverage_context());
+    let mut frozen = crate::coverage_support::require_ok(
+        RangeDecoder::new(&empty, 0, 0, true),
+        "coverage fixture: RangeDecoder::new(&empty, 0, 0, true)",
+    );
     let mut bool_cdf = [16_384, 0];
     let _ = frozen.adaptive_bool(&mut bool_cdf);
     let _ = inverse_recenter(1, 3);

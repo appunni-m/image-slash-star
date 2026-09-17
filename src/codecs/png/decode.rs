@@ -1965,7 +1965,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
     }
 
     fn append_chunk(data: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) {
-        data.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+        data.extend_from_slice(
+            &crate::coverage_support::require_ok(
+                u32::try_from(payload.len()),
+                "fixture value must fit u32",
+            )
+            .to_be_bytes(),
+        );
         data.extend_from_slice(&kind);
         data.extend_from_slice(payload);
         data.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
@@ -2025,7 +2031,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = verify(&png_chunk(*b"NOPE", &[0; 13]));
     let _ = verify(&png_chunk(*b"IHDR", &[0; 12]));
     let malformed = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x01tEXtx";
-    let mut chunks = Chunks::new(malformed, true).expect("coverage PNG signature should parse");
+    let mut chunks = crate::coverage_support::require_ok(
+        Chunks::new(malformed, true),
+        "coverage PNG signature should parse",
+    );
 
     assert!(chunks.next().is_some_and(|chunk| chunk.is_err()));
     assert!(chunks.failed);

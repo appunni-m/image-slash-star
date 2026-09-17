@@ -110,22 +110,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         for checks in 0..=192 {
             let token = crate::CancellationToken::new();
             token.cancel_after(checks);
-            let _ = compress_zlib_stored_chunked_with_token(
-                &stored,
-                [32_768usize, 32_767].into_iter(),
-                &token,
-            );
+            let input_chunks = [32_768usize, 32_767].into_iter();
+            let _ = compress_zlib_stored_chunked_with_token(&stored, input_chunks, &token);
         }
 
         // Keep the normal `IntoIter` instantiation alive as well as the
         // cancellation/error paths above. This exercises the bounded
         // stored-block continuation branch in the generic helper.
         let token = crate::CancellationToken::new();
-        let _ = compress_zlib_stored_chunked_with_token(
-            &stored,
-            [32_768usize, 32_768].into_iter(),
-            &token,
-        );
+        let input_chunks = [32_768usize, 32_768].into_iter();
+        let _ = compress_zlib_stored_chunked_with_token(&stored, input_chunks, &token);
         for checks in 0..=72 {
             let token = crate::CancellationToken::new();
             token.cancel_after(checks);
@@ -142,13 +136,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let short = vec![0u8; 2_048];
         let probe = crate::CancellationToken::new();
         probe.cancel_after(usize::MAX);
-        let _ = compress_zlib_stored_chunked_with_token(&short, [short.len()].into_iter(), &probe);
-        let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+        let input_chunks = [short.len()].into_iter();
+        let _ = compress_zlib_stored_chunked_with_token(&short, input_chunks, &probe);
+        let calls =
+            usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
         for checks in 0..=calls {
             let token = crate::CancellationToken::new();
             token.cancel_after(checks);
-            let _ =
-                compress_zlib_stored_chunked_with_token(&short, [short.len()].into_iter(), &token);
+            let input_chunks = [short.len()].into_iter();
+            let _ = compress_zlib_stored_chunked_with_token(&short, input_chunks, &token);
         }
     }
 
@@ -524,7 +520,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
 #[cfg(coverage)]
 #[allow(clippy::expect_used)]
 fn huffman_with_symbol(symbol: usize) -> Huffman {
-    let mut lengths = vec![0; symbol + 1];
+    let mut lengths = vec![
+        0;
+        crate::coverage_support::require_some(
+            (symbol).checked_add(1),
+            "coverage fixture arithmetic"
+        )
+    ];
     lengths[symbol] = 1;
     Huffman::from_lengths(&lengths).expect("coverage huffman should build")
 }

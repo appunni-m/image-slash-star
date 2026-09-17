@@ -151,6 +151,7 @@
     "src/codecs/webp/native/vp8.rs",
     "src/codecs/webp/native/vp8_arithmetic_decoder.rs",
     "src/codecs/webp/native/yuv.rs",
+    "src/coverage_support.rs",
     "src/decode_policy.rs",
     "src/diagnostic.rs",
     "src/encode_options.rs",

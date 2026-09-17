@@ -284,7 +284,7 @@ fn level1_window_tail_distance_one(
 fn __coverage_exercise_instrumented_matcher_paths() {
     let repeated = vec![b'a'; 1_024];
     let mixed = (0usize..1_024)
-        .map(|index| (index.wrapping_mul(37) as u8) ^ (index as u8 >> 3))
+        .map(|index| index.wrapping_mul(37).to_le_bytes()[0] ^ (index.to_le_bytes()[0] >> 3))
         .collect::<Vec<_>>();
 
     // These four matchers share the checkpoint contract but have different
@@ -601,9 +601,10 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         let medium_data = vec![b'a'; 64];
         let medium_probe = crate::CancellationToken::new();
         medium_probe.cancel_after(usize::MAX);
+        let input_chunks = [32, 32].into_iter();
         let _ = std::hint::black_box(tokenize_lookahead_medium_with_token(
             &medium_data,
-            [32, 32].into_iter(),
+            input_chunks,
             128,
             128,
             16,
@@ -617,9 +618,10 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         for checks in 0..=medium_checks {
             let token = crate::CancellationToken::new();
             token.cancel_after(checks);
+            let input_chunks = [32, 32].into_iter();
             let _ = std::hint::black_box(tokenize_lookahead_medium_with_token(
                 &medium_data,
-                [32, 32].into_iter(),
+                input_chunks,
                 128,
                 128,
                 16,
@@ -711,9 +713,11 @@ fn __coverage_exercise_instrumented_matcher_paths() {
                 matcher_data,
                 [
                     matcher_data.len() / 2,
-                    matcher_data.len() - matcher_data.len() / 2,
-                ]
-                .into_iter(),
+                    crate::coverage_support::require_some(
+                        (matcher_data.len()).checked_sub(matcher_data.len() / 2),
+                        "coverage fixture arithmetic",
+                    ),
+                ],
                 &probe,
             ));
             let calls =
@@ -725,9 +729,11 @@ fn __coverage_exercise_instrumented_matcher_paths() {
                     matcher_data,
                     [
                         matcher_data.len() / 2,
-                        matcher_data.len() - matcher_data.len() / 2,
-                    ]
-                    .into_iter(),
+                        crate::coverage_support::require_some(
+                            (matcher_data.len()).checked_sub(matcher_data.len() / 2),
+                            "coverage fixture arithmetic",
+                        ),
+                    ],
                     &token,
                 ));
             }
@@ -754,9 +760,10 @@ fn __coverage_exercise_instrumented_matcher_paths() {
 
         let level3_probe = crate::CancellationToken::new();
         level3_probe.cancel_after(usize::MAX);
+        let input_chunks = [32, 32].into_iter();
         let _ = std::hint::black_box(tokenize_early_matcher_with_token(
             &medium_data,
-            [32, 32].into_iter(),
+            input_chunks,
             4,
             8,
             4,
@@ -771,9 +778,10 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         for checks in 0..=level3_checks {
             let token = crate::CancellationToken::new();
             token.cancel_after(checks);
+            let input_chunks = [32, 32].into_iter();
             let _ = std::hint::black_box(tokenize_early_matcher_with_token(
                 &medium_data,
-                [32, 32].into_iter(),
+                input_chunks,
                 4,
                 8,
                 4,
@@ -788,9 +796,10 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         // the reinsert and lookahead branches of that specialization run.
         let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
         let level1_reinsert_token = crate::CancellationToken::new();
+        let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
         let _ = std::hint::black_box(tokenize_level1_with_token(
             &level1_reinsert_data,
-            [MIN_LOOKAHEAD, 3].into_iter(),
+            input_chunks,
             &level1_reinsert_token,
         ));
 
@@ -801,9 +810,10 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         // polls before it reaches that line.
         let level1_probe = crate::CancellationToken::new();
         level1_probe.cancel_after(usize::MAX);
+        let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
         let _ = std::hint::black_box(tokenize_level1_with_token(
             &level1_reinsert_data,
-            [MIN_LOOKAHEAD, 3].into_iter(),
+            input_chunks,
             &level1_probe,
         ));
         let level1_checks = usize::MAX.saturating_sub(
@@ -814,9 +824,10 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         for checks in 0..=level1_checks {
             let token = crate::CancellationToken::new();
             token.cancel_after(checks);
+            let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
             let _ = std::hint::black_box(tokenize_level1_with_token(
                 &level1_reinsert_data,
-                [MIN_LOOKAHEAD, 3].into_iter(),
+                input_chunks,
                 &token,
             ));
         }
@@ -877,7 +888,7 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         let mut mismatch_checkpoint = NoopMatcherCheckpoint {
             fail_after: usize::MAX,
         };
-        let mismatch_data = [b'a', b'a', b'a', b'a', b'b', b'b', b'b', b'b'];
+        let mismatch_data = *b"aaaabbbb";
         let _ = std::hint::black_box(tokenize_level1_position_with(
             &mismatch_data,
             mismatch_data.len(),
@@ -893,7 +904,7 @@ fn __coverage_exercise_instrumented_matcher_paths() {
         let mut short_match_checkpoint = NoopMatcherCheckpoint {
             fail_after: usize::MAX,
         };
-        let short_match_data = [b'a', b'a', b'a', b'a', b'a', b'a', b'b', b'b'];
+        let short_match_data = *b"aaaaaabb";
         let _ = std::hint::black_box(tokenize_level1_position_with(
             &short_match_data,
             short_match_data.len(),
@@ -942,15 +953,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
     #[cfg(feature = "png")]
     let _ = compress_level1_repeated(data, data.len(), 1);
     let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
-    let _ = tokenize_level1(&level1_reinsert_data, [MIN_LOOKAHEAD, 3].into_iter());
-    let _ = tokenize_level1(
-        &level1_reinsert_data,
-        [
-            MIN_LOOKAHEAD + 1,
-            level1_reinsert_data.len() - MIN_LOOKAHEAD - 1,
-        ]
-        .into_iter(),
-    );
+    let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
+    let _ = tokenize_level1(&level1_reinsert_data, input_chunks);
+    let input_chunks = [
+        MIN_LOOKAHEAD + 1,
+        crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                level1_reinsert_data.len().checked_sub(MIN_LOOKAHEAD),
+                "fixture remaining lookahead",
+            ))
+            .checked_sub(1),
+            "coverage fixture arithmetic",
+        ),
+    ]
+    .into_iter();
+    let _ = tokenize_level1(&level1_reinsert_data, input_chunks);
     let level1_tail_guard_data = vec![0; WINDOW_SIZE * 2 + MAX_MATCH];
     let level1_first_slide_guard_start = WINDOW_SIZE * 2 - MIN_LOOKAHEAD;
     let level1_tail_guard_position = WINDOW_SIZE * 2 - MIN_LOOKAHEAD + 1;
@@ -1387,7 +1404,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut checkpoint,
         );
 
-        let short_data = [b'a', b'a', b'b', b'a', b'a', b'c', b'a', b'a'];
+        let short_data = *b"aabaacaa";
         let mut short_head = vec![0usize; HASH_SIZE];
         short_head[level1_hash(&short_data, 3)] = 0;
         let mut short_tokens = Vec::new();
@@ -1419,13 +1436,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         for fail_after in [0, 1, 2, 64, 512, 4_096] {
             let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
             let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-            let _ = write_block_with(
-                &block_tokens,
-                &vec![0; 64],
-                true,
-                &mut writer,
-                &mut checkpoint,
-            );
+            let _ = write_block_with(&block_tokens, &[0; 64], true, &mut writer, &mut checkpoint);
         }
 
         // The public repeated-input path covers match tokens with its normal

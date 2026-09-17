@@ -1886,7 +1886,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         predictor: u16,
     ) -> Vec<u8> {
         let entry_count = 11u16;
-        let pixel_offset = 8 + 2 + usize::from(entry_count) * 12 + 4;
+        let pixel_offset = crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                usize::from(entry_count).checked_mul(12),
+                "fixture IFD entry table length",
+            ))
+            .checked_add(14),
+            "fixture IFD payload offset",
+        );
         let mut out = Vec::new();
         out.extend_from_slice(b"II");
         out.extend_from_slice(&42u16.to_le_bytes());
@@ -1896,66 +1903,87 @@ pub(crate) fn __coverage_exercise_private_branches() {
         put_entry(&mut out, 257, 4, 1, 1u32.to_le_bytes());
         put_entry(&mut out, 258, 3, bits_count, bits_inline);
         put_entry(&mut out, 259, 3, 1, [1, 0, 0, 0]);
-        put_entry(
-            &mut out,
-            262,
-            3,
-            1,
-            [photometric as u8, (photometric >> 8) as u8, 0, 0],
-        );
+        put_entry(&mut out, 262, 3, 1, u32::from(photometric).to_le_bytes());
         put_entry(
             &mut out,
             273,
             4,
             1,
-            u32::try_from(pixel_offset).unwrap().to_le_bytes(),
+            crate::coverage_support::require_ok(
+                u32::try_from(pixel_offset),
+                "coverage fixture: u32::try_from(pixel_offset)",
+            )
+            .to_le_bytes(),
         );
         put_entry(
             &mut out,
             277,
             3,
             1,
-            [
-                samples_per_pixel as u8,
-                (samples_per_pixel >> 8) as u8,
-                0,
-                0,
-            ],
+            u32::from(samples_per_pixel).to_le_bytes(),
         );
         put_entry(&mut out, 278, 4, 1, rows_per_strip.to_le_bytes());
         put_entry(&mut out, 279, 4, 1, 1u32.to_le_bytes());
-        put_entry(
-            &mut out,
-            284,
-            3,
-            1,
-            [planar as u8, (planar >> 8) as u8, 0, 0],
-        );
-        put_entry(
-            &mut out,
-            317,
-            3,
-            1,
-            [predictor as u8, (predictor >> 8) as u8, 0, 0],
-        );
+        put_entry(&mut out, 284, 3, 1, u32::from(planar).to_le_bytes());
+        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
         out.extend_from_slice(&0u32.to_le_bytes());
         out.push(0);
         out
     }
 
-    fn tiny_tiled_tiff(
+    struct TiffFixtureEncoding {
         bits_per_sample: u16,
+        compression: u16,
+        predictor: u16,
+    }
+
+    fn fixture_payload_offset(
+        external_start: usize,
+        offset_count: usize,
+        count_count: usize,
+    ) -> usize {
+        let mut position = external_start;
+        for count in [offset_count, count_count] {
+            if count > 1 {
+                position = crate::coverage_support::require_some(
+                    count
+                        .checked_mul(4)
+                        .and_then(|bytes| position.checked_add(bytes)),
+                    "fixture external TIFF arrays must fit usize",
+                );
+            }
+        }
+        position
+    }
+
+    fn tiny_tiled_tiff(
+        encoding: TiffFixtureEncoding,
         include_tile_offsets: bool,
         include_tile_byte_counts: bool,
         tile_width: u32,
         tile_height: u32,
-        predictor: u16,
-        compression: u16,
         tile_payload: &[u8],
     ) -> Vec<u8> {
-        let entry_count =
-            10u16 + u16::from(include_tile_offsets) + u16::from(include_tile_byte_counts);
-        let pixel_offset = 8 + 2 + usize::from(entry_count) * 12 + 4;
+        let TiffFixtureEncoding {
+            bits_per_sample,
+            compression,
+            predictor,
+        } = encoding;
+
+        let entry_count = crate::coverage_support::require_some(
+            10u16
+                .checked_add(u16::from(include_tile_offsets))
+                .and_then(|count| count.checked_add(u16::from(include_tile_byte_counts))),
+            "fixture IFD entry count",
+        );
+        let pixel_offset = crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                usize::from(entry_count).checked_mul(12),
+                "fixture IFD entry table length",
+            ))
+            .checked_add(14),
+            "fixture IFD payload offset",
+        );
         let mut out = Vec::new();
         out.extend_from_slice(b"II");
         out.extend_from_slice(&42u16.to_le_bytes());
@@ -1963,24 +1991,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
         out.extend_from_slice(&entry_count.to_le_bytes());
         put_entry(&mut out, 256, 4, 1, 1u32.to_le_bytes());
         put_entry(&mut out, 257, 4, 1, 1u32.to_le_bytes());
-        put_entry(&mut out, 258, 3, 1, [bits_per_sample as u8, 0, 0, 0]);
         put_entry(
             &mut out,
-            259,
+            258,
             3,
             1,
-            [compression as u8, (compression >> 8) as u8, 0, 0],
+            [bits_per_sample.to_le_bytes()[0], 0, 0, 0],
         );
+        put_entry(&mut out, 259, 3, 1, u32::from(compression).to_le_bytes());
         put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
         put_entry(&mut out, 277, 3, 1, [1, 0, 0, 0]);
         put_entry(&mut out, 278, 4, 1, 1u32.to_le_bytes());
-        put_entry(
-            &mut out,
-            317,
-            3,
-            1,
-            [predictor as u8, (predictor >> 8) as u8, 0, 0],
-        );
+        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
         put_entry(&mut out, 322, 4, 1, tile_width.to_le_bytes());
         put_entry(&mut out, 323, 4, 1, tile_height.to_le_bytes());
         if include_tile_offsets {
@@ -1989,7 +2011,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 324,
                 4,
                 1,
-                u32::try_from(pixel_offset).unwrap().to_le_bytes(),
+                crate::coverage_support::require_ok(
+                    u32::try_from(pixel_offset),
+                    "coverage fixture: u32::try_from(pixel_offset)",
+                )
+                .to_le_bytes(),
             );
         }
         if include_tile_byte_counts {
@@ -1998,7 +2024,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 325,
                 4,
                 1,
-                u32::try_from(tile_payload.len()).unwrap().to_le_bytes(),
+                crate::coverage_support::require_ok(
+                    u32::try_from(tile_payload.len()),
+                    "coverage fixture: u32::try_from(tile_payload.len())",
+                )
+                .to_le_bytes(),
             );
         }
         out.extend_from_slice(&0u32.to_le_bytes());
@@ -2017,12 +2047,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
             [] => put_entry(out, tag, 4, 0, [0; 4]),
             [value] => put_entry(out, tag, 4, 1, value.to_le_bytes()),
             _ => {
-                let position = u32::try_from(external_start + external.len()).unwrap();
+                let position = crate::coverage_support::require_ok(
+                    u32::try_from(crate::coverage_support::require_some(
+                        (external_start).checked_add(external.len()),
+                        "coverage fixture arithmetic",
+                    )),
+                    "coverage fixture: u32::try_from(external_start + external.len())",
+                );
                 put_entry(
                     out,
                     tag,
                     4,
-                    u32::try_from(values.len()).unwrap(),
+                    crate::coverage_support::require_ok(
+                        u32::try_from(values.len()),
+                        "coverage fixture: u32::try_from(values.len())",
+                    ),
                     position.to_le_bytes(),
                 );
                 for value in values {
@@ -2035,30 +2074,44 @@ pub(crate) fn __coverage_exercise_private_branches() {
     fn tiny_strip_tiff(
         width: u32,
         height: u32,
-        bits_per_sample: u16,
-        compression: u16,
-        predictor: u16,
+        encoding: TiffFixtureEncoding,
         rows_per_strip: u32,
         offset_count: usize,
         byte_counts: Option<&[u32]>,
         strip_payloads: &[&[u8]],
     ) -> Vec<u8> {
+        let TiffFixtureEncoding {
+            bits_per_sample,
+            compression,
+            predictor,
+        } = encoding;
+
         let entry_count = 11u16;
-        let external_start = 8 + 2 + usize::from(entry_count) * 12 + 4;
+        let external_start = crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                usize::from(entry_count).checked_mul(12),
+                "fixture IFD entry table length",
+            ))
+            .checked_add(14),
+            "fixture IFD payload offset",
+        );
         let counts_len = byte_counts.map_or(0, <[u32]>::len);
-        let pixel_offset = external_start
-            + if offset_count > 1 {
-                offset_count * 4
-            } else {
-                0
-            }
-            + if counts_len > 1 { counts_len * 4 } else { 0 };
-        let mut next_offset = u32::try_from(pixel_offset).unwrap();
+        let pixel_offset = fixture_payload_offset(external_start, offset_count, counts_len);
+        let mut next_offset = crate::coverage_support::require_ok(
+            u32::try_from(pixel_offset),
+            "coverage fixture: u32::try_from(pixel_offset)",
+        );
         let offsets = (0..offset_count)
             .map(|index| {
                 let offset = next_offset;
                 if let Some(payload) = strip_payloads.get(index) {
-                    next_offset += u32::try_from(payload.len()).unwrap();
+                    next_offset = crate::coverage_support::require_some(
+                        (next_offset).checked_add(crate::coverage_support::require_ok(
+                            u32::try_from(payload.len()),
+                            "coverage fixture: u32::try_from(payload.len())",
+                        )),
+                        "fixture strip or tile end",
+                    );
                 }
                 offset
             })
@@ -2071,14 +2124,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         out.extend_from_slice(&entry_count.to_le_bytes());
         put_entry(&mut out, 256, 4, 1, width.to_le_bytes());
         put_entry(&mut out, 257, 4, 1, height.to_le_bytes());
-        put_entry(&mut out, 258, 3, 1, [bits_per_sample as u8, 0, 0, 0]);
         put_entry(
             &mut out,
-            259,
+            258,
             3,
             1,
-            [compression as u8, (compression >> 8) as u8, 0, 0],
+            [bits_per_sample.to_le_bytes()[0], 0, 0, 0],
         );
+        put_entry(&mut out, 259, 3, 1, u32::from(compression).to_le_bytes());
         put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
         put_long_entry(&mut out, 273, &offsets, external_start, &mut external);
         put_entry(&mut out, 277, 3, 1, [1, 0, 0, 0]);
@@ -2091,13 +2144,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &mut external,
         );
         put_entry(&mut out, 284, 3, 1, [1, 0, 0, 0]);
-        put_entry(
-            &mut out,
-            317,
-            3,
-            1,
-            [predictor as u8, (predictor >> 8) as u8, 0, 0],
-        );
+        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
         out.extend_from_slice(&0u32.to_le_bytes());
         out.extend_from_slice(&external);
         for payload in strip_payloads {
@@ -2109,39 +2156,58 @@ pub(crate) fn __coverage_exercise_private_branches() {
     fn tiny_tiled_layout_tiff(
         width: u32,
         height: u32,
-        bits_per_sample: u16,
+        encoding: TiffFixtureEncoding,
         tile_width: u32,
         tile_height: u32,
-        predictor: u16,
-        compression: u16,
         tile_payloads: &[&[u8]],
         byte_counts: Option<&[u32]>,
     ) -> Vec<u8> {
+        let TiffFixtureEncoding {
+            bits_per_sample,
+            compression,
+            predictor,
+        } = encoding;
+
         let entry_count = 12u16;
-        let external_start = 8 + 2 + usize::from(entry_count) * 12 + 4;
-        let counts = byte_counts.map(<[u32]>::to_vec).unwrap_or_else(|| {
-            tile_payloads
-                .iter()
-                .map(|payload| payload.len() as u32)
-                .collect()
-        });
-        let pixel_offset = external_start
-            + if tile_payloads.len() > 1 {
-                tile_payloads.len() * 4
-            } else {
-                0
-            }
-            + if counts.len() > 1 {
-                counts.len() * 4
-            } else {
-                0
-            };
-        let mut next_offset = u32::try_from(pixel_offset).unwrap();
+        let external_start = crate::coverage_support::require_some(
+            (crate::coverage_support::require_some(
+                usize::from(entry_count).checked_mul(12),
+                "fixture IFD entry table length",
+            ))
+            .checked_add(14),
+            "fixture IFD payload offset",
+        );
+        let counts = byte_counts.map_or_else(
+            || {
+                tile_payloads
+                    .iter()
+                    .map(|payload| {
+                        crate::coverage_support::require_ok(
+                            u32::try_from(payload.len()),
+                            "fixture value must fit u32",
+                        )
+                    })
+                    .collect()
+            },
+            <[u32]>::to_vec,
+        );
+        let pixel_offset =
+            fixture_payload_offset(external_start, tile_payloads.len(), counts.len());
+        let mut next_offset = crate::coverage_support::require_ok(
+            u32::try_from(pixel_offset),
+            "coverage fixture: u32::try_from(pixel_offset)",
+        );
         let offsets = tile_payloads
             .iter()
             .map(|payload| {
                 let offset = next_offset;
-                next_offset += u32::try_from(payload.len()).unwrap();
+                next_offset = crate::coverage_support::require_some(
+                    (next_offset).checked_add(crate::coverage_support::require_ok(
+                        u32::try_from(payload.len()),
+                        "coverage fixture: u32::try_from(payload.len())",
+                    )),
+                    "fixture strip or tile end",
+                );
                 offset
             })
             .collect::<Vec<_>>();
@@ -2153,24 +2219,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
         out.extend_from_slice(&entry_count.to_le_bytes());
         put_entry(&mut out, 256, 4, 1, width.to_le_bytes());
         put_entry(&mut out, 257, 4, 1, height.to_le_bytes());
-        put_entry(&mut out, 258, 3, 1, [bits_per_sample as u8, 0, 0, 0]);
         put_entry(
             &mut out,
-            259,
+            258,
             3,
             1,
-            [compression as u8, (compression >> 8) as u8, 0, 0],
+            [bits_per_sample.to_le_bytes()[0], 0, 0, 0],
         );
+        put_entry(&mut out, 259, 3, 1, u32::from(compression).to_le_bytes());
         put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
         put_entry(&mut out, 277, 3, 1, [1, 0, 0, 0]);
         put_entry(&mut out, 278, 4, 1, 1u32.to_le_bytes());
-        put_entry(
-            &mut out,
-            317,
-            3,
-            1,
-            [predictor as u8, (predictor >> 8) as u8, 0, 0],
-        );
+        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
         put_entry(&mut out, 322, 4, 1, tile_width.to_le_bytes());
         put_entry(&mut out, 323, 4, 1, tile_height.to_le_bytes());
         put_long_entry(&mut out, 324, &offsets, external_start, &mut external);
@@ -2206,33 +2266,188 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 6, 1, 1, 1, 1), None);
     let _ = decode(&tiny_tiff(1, [16, 0, 0, 0], 6, 3, 1, 1, 1), None);
     let _ = decode(
-        &tiny_strip_tiff(0, 1, 8, 1, 1, 1, 1, Some(&[1]), &[&[0]]),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(1, 1, 8, 99, 1, 1, 1, Some(&[1]), &[&[0]]),
-        None,
-    );
-    let _ = decode(&tiny_tiled_tiff(8, false, true, 1, 1, 1, 1, &[0]), None);
-    let _ = decode(&tiny_tiled_tiff(8, true, false, 1, 1, 1, 1, &[0]), None);
-    let _ = decode(&tiny_tiled_tiff(8, true, true, 0, 1, 1, 1, &[0]), None);
-    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 0, 1, 1, &[0]), None);
-    let _ = decode(&tiny_tiled_tiff(1, true, true, 1, 1, 1, 1, &[0]), None);
-    let _ = decode(&tiny_tiled_tiff(8, true, true, 1, 1, 2, 1, &[0]), None);
-
-    let _ = decode(&tiny_strip_tiff(1, 1, 8, 1, 1, 1, 0, Some(&[]), &[]), None);
-    let _ = decode(&tiny_strip_tiff(1, 1, 8, 1, 1, 1, 1, Some(&[1]), &[]), None);
-    let _ = decode(
-        &tiny_strip_tiff(1, 1, 8, 1, 1, 1, 2, Some(&[1, 1]), &[&[0], &[1]]),
+        &tiny_strip_tiff(
+            0,
+            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            1,
+            1,
+            Some(&[1]),
+            &[&[0]],
+        ),
         None,
     );
     let _ = decode(
         &tiny_strip_tiff(
             1,
             1,
-            8,
-            COMPRESSION_PACKBITS as u16,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 99,
+                predictor: 1,
+            },
             1,
+            1,
+            Some(&[1]),
+            &[&[0]],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            false,
+            true,
+            1,
+            1,
+            &[0],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            true,
+            false,
+            1,
+            1,
+            &[0],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            true,
+            true,
+            0,
+            1,
+            &[0],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            true,
+            true,
+            1,
+            0,
+            &[0],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 1,
+                compression: 1,
+                predictor: 1,
+            },
+            true,
+            true,
+            1,
+            1,
+            &[0],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 2,
+            },
+            true,
+            true,
+            1,
+            1,
+            &[0],
+        ),
+        None,
+    );
+
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            1,
+            0,
+            Some(&[]),
+            &[],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            1,
+            1,
+            Some(&[1]),
+            &[],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            1,
+            2,
+            Some(&[1, 1]),
+            &[&[0], &[1]],
+        ),
+        None,
+    );
+    let _ = decode(
+        &tiny_strip_tiff(
+            1,
+            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_PACKBITS),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
             1,
             1,
             None,
@@ -2244,9 +2459,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_strip_tiff(
             1,
             2,
-            8,
-            COMPRESSION_PACKBITS as u16,
-            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_PACKBITS),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
             1,
             2,
             None,
@@ -2258,9 +2478,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_strip_tiff(
             1,
             2,
-            8,
-            COMPRESSION_PACKBITS as u16,
-            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_PACKBITS),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
             1,
             2,
             Some(&[2]),
@@ -2272,9 +2497,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_strip_tiff(
             1,
             1,
-            8,
-            COMPRESSION_PACKBITS as u16,
-            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_PACKBITS),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
             1,
             1,
             Some(&[4]),
@@ -2283,11 +2513,35 @@ pub(crate) fn __coverage_exercise_private_branches() {
         None,
     );
     let _ = decode(
-        &tiny_tiled_layout_tiff(2, 1, 8, 1, 1, 1, 1, &[&[0]], Some(&[1])),
+        &tiny_tiled_layout_tiff(
+            2,
+            1,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            1,
+            1,
+            &[&[0]],
+            Some(&[1]),
+        ),
         None,
     );
     let _ = decode(
-        &tiny_tiled_layout_tiff(2, 2, 8, 1, 1, 1, 1, &[&[1], &[2], &[3], &[4]], None),
+        &tiny_tiled_layout_tiff(
+            2,
+            2,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: 1,
+                predictor: 1,
+            },
+            1,
+            1,
+            &[&[1], &[2], &[3], &[4]],
+            None,
+        ),
         None,
     );
 
@@ -2318,7 +2572,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         for &code in codes {
             for shift in (0..9).rev() {
                 current = (current << 1) | (((code >> shift) & 1) as u8);
-                used += 1;
+                used = crate::coverage_support::require_some(
+                    (used).checked_add(1),
+                    "fixture counter or boundary",
+                );
                 if used == 8 {
                     out.push(current);
                     current = 0;
@@ -2326,7 +2583,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 }
             }
         }
-        out.push(current << (8 - used));
+        out.push(
+            current
+                << crate::coverage_support::require_some(
+                    (8u8).checked_sub(used),
+                    "coverage fixture arithmetic",
+                ),
+        );
         out
     }
 
@@ -2401,7 +2664,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let suffixes = [0u8; 4096];
     let mut stack = [0u8; 4096];
     for value in 1..=1024u16 {
-        prefixes[usize::from(value)] = value - 1;
+        prefixes[usize::from(value)] = crate::coverage_support::require_some(
+            (value).checked_sub(1),
+            "coverage fixture arithmetic",
+        );
     }
     let token = crate::CancellationToken::new();
     let _ = append_lzw_with_token(
@@ -2431,13 +2697,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
             &tiny_tiled_layout_tiff(
                 1,
                 1,
-                8,
+                TiffFixtureEncoding {
+                    bits_per_sample: 8,
+                    compression: crate::coverage_support::require_ok(
+                        u16::try_from(COMPRESSION_LZW),
+                        "fixture value must fit u16",
+                    ),
+                    predictor: 1,
+                },
                 1,
                 1,
-                1,
-                COMPRESSION_LZW as u16,
                 &[&lzw_a],
-                Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+                Some(&[crate::coverage_support::require_ok(
+                    u32::try_from(lzw_a.len()),
+                    "coverage fixture: u32::try_from(lzw_a.len())",
+                )]),
             ),
             Some(&token),
         );
@@ -2446,25 +2720,38 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_strip_tiff(
             1,
             1,
-            8,
-            COMPRESSION_LZW as u16,
-            2,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 2,
+            },
             1,
             1,
-            Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+            Some(&[crate::coverage_support::require_ok(
+                u32::try_from(lzw_a.len()),
+                "coverage fixture: u32::try_from(lzw_a.len())",
+            )]),
             &[&lzw_a],
         ),
         None,
     );
     let _ = decode(
         &tiny_tiled_tiff(
-            24,
+            TiffFixtureEncoding {
+                bits_per_sample: 24,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 2,
+            },
             true,
             true,
             1,
             1,
-            2,
-            COMPRESSION_LZW as u16,
             &pack_lzw_9(&[65, 66, 67]),
         ),
         None,
@@ -2473,13 +2760,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_tiled_layout_tiff(
             1,
             1,
-            8,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 2,
+            },
             1,
             1,
-            2,
-            COMPRESSION_LZW as u16,
             &[&lzw_a],
-            Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+            Some(&[crate::coverage_support::require_ok(
+                u32::try_from(lzw_a.len()),
+                "coverage fixture: u32::try_from(lzw_a.len())",
+            )]),
         ),
         None,
     );
@@ -2487,13 +2782,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_tiled_layout_tiff(
             1,
             2,
-            8,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
             1,
             1,
-            1,
-            COMPRESSION_LZW as u16,
             &[&lzw_a, &lzw_a],
-            Some(&[u32::try_from(lzw_a.len()).unwrap()]),
+            Some(&[crate::coverage_support::require_ok(
+                u32::try_from(lzw_a.len()),
+                "coverage fixture: u32::try_from(lzw_a.len())",
+            )]),
         ),
         None,
     );
@@ -2501,13 +2804,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_tiled_layout_tiff(
             1,
             1,
-            8,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
             1,
             1,
-            1,
-            COMPRESSION_LZW as u16,
             &[&lzw_a],
-            Some(&[u32::try_from(lzw_a.len() + 1).unwrap()]),
+            Some(&[crate::coverage_support::require_ok(
+                u32::try_from(crate::coverage_support::require_some(
+                    (lzw_a.len()).checked_add(1),
+                    "coverage fixture arithmetic",
+                )),
+                "coverage fixture: u32::try_from(lzw_a.len() + 1)",
+            )]),
         ),
         None,
     );
@@ -2515,11 +2829,16 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_tiled_layout_tiff(
             1,
             1,
-            8,
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
             1,
             1,
-            1,
-            COMPRESSION_LZW as u16,
             &[&[0]],
             Some(&[1]),
         ),
@@ -2530,12 +2849,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &tiny_strip_tiff(
             1,
             1,
-            24,
-            COMPRESSION_LZW as u16,
-            2,
+            TiffFixtureEncoding {
+                bits_per_sample: 24,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 2,
+            },
             1,
             1,
-            Some(&[u32::try_from(lzw_rgb.len()).unwrap()]),
+            Some(&[crate::coverage_support::require_ok(
+                u32::try_from(lzw_rgb.len()),
+                "coverage fixture: u32::try_from(lzw_rgb.len())",
+            )]),
             &[&lzw_rgb],
         ),
         None,
@@ -2573,19 +2900,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = empty_directory.one_or(1, 7);
     let _ = empty_directory.values_or(1, &[7, 8]);
     let inline_shorts = single_entry_ifd(300, 3, 2, [1, 0, 2, 0]);
-    let directory = Directory::parse(&inline_shorts, 0, Endian::Little).unwrap();
+    let directory = crate::coverage_support::require_ok(
+        Directory::parse(&inline_shorts, 0, Endian::Little),
+        "coverage fixture: Directory::parse(&inline_shorts, 0, Endian::Little)",
+    );
     let _ = directory.values(300);
     let inline_long = single_entry_ifd(301, 4, 1, 9u32.to_le_bytes());
-    let directory = Directory::parse(&inline_long, 0, Endian::Little).unwrap();
+    let directory = crate::coverage_support::require_ok(
+        Directory::parse(&inline_long, 0, Endian::Little),
+        "coverage fixture: Directory::parse(&inline_long, 0, Endian::Little)",
+    );
     let _ = directory.values(301);
     let mut external_shorts = single_entry_ifd(302, 3, 3, 18u32.to_le_bytes());
     external_shorts.extend_from_slice(&[1, 0, 2, 0, 3, 0]);
-    let directory = Directory::parse(&external_shorts, 0, Endian::Little).unwrap();
+    let directory = crate::coverage_support::require_ok(
+        Directory::parse(&external_shorts, 0, Endian::Little),
+        "coverage fixture: Directory::parse(&external_shorts, 0, Endian::Little)",
+    );
     let _ = directory.values(302);
     let mut external_longs = single_entry_ifd(303, 4, 2, 18u32.to_le_bytes());
     external_longs.extend_from_slice(&1u32.to_le_bytes());
     external_longs.extend_from_slice(&2u32.to_le_bytes());
-    let directory = Directory::parse(&external_longs, 0, Endian::Little).unwrap();
+    let directory = crate::coverage_support::require_ok(
+        Directory::parse(&external_longs, 0, Endian::Little),
+        "coverage fixture: Directory::parse(&external_longs, 0, Endian::Little)",
+    );
     let _ = directory.values(303);
 
     let mut predicted = vec![1, 2, 3, 4, 5, 6];
@@ -2667,13 +3006,41 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &token,
     );
     for checks in 0..=32 {
-        let tiny = tiny_tiled_tiff(8, true, true, 1, 1, 2, COMPRESSION_LZW as u16, &lzw_a);
+        let tiny = tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 8,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_LZW),
+                    "fixture value must fit u16",
+                ),
+                predictor: 2,
+            },
+            true,
+            true,
+            1,
+            1,
+            &lzw_a,
+        );
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(&tiny, Some(&token));
     }
     for checks in 0..=16 {
-        let tiny = tiny_tiled_tiff(16, true, true, 1, 1, 1, COMPRESSION_NONE as u16, &[0, 0]);
+        let tiny = tiny_tiled_tiff(
+            TiffFixtureEncoding {
+                bits_per_sample: 16,
+                compression: crate::coverage_support::require_ok(
+                    u16::try_from(COMPRESSION_NONE),
+                    "fixture value must fit u16",
+                ),
+                predictor: 1,
+            },
+            true,
+            true,
+            1,
+            1,
+            &[0, 0],
+        );
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
         let _ = decode(&tiny, Some(&token));
@@ -2975,7 +3342,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         vec![0; 1_024],
         TiffLayout::Palette { bits: 1 },
         Endian::Little,
-        palette.clone(),
+        palette,
         None,
         &token,
     );

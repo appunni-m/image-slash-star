@@ -55,6 +55,18 @@ those hashes does not extend the historical coverage run to new code, guards,
 or unexecuted regressions. The 2026-09-17 AVIF temporal-candidate repair remains
 unverified by Rust execution, as recorded in the roadmap.
 
+The 2026-09-17 coverage-fixture maintenance passes strict all-feature Clippy
+with `--cfg coverage` on native and `wasm32-unknown-unknown` targets. Native
+coverage builds also pass with no codecs, default codecs, and each codec
+individually. Ordinary native Clippy, both WASM library feature matrices, and
+all-feature rustdoc pass. Fixture setup retains explicit failure assertions,
+checked bounds, and the original malformed inputs; feature-specific exercises
+follow the same feature gates as their implementation. The Rust behavioral
+test suite and coverage measurements remain deferred. The documentation
+checker inadvertently executed the README quickstart during this maintenance;
+that example passed, but is not evidence of roadmap or parity completion. The
+historical coverage totals and open capability statuses remain unchanged.
+
 ## Diagnostic provenance
 
 The separate defensive-model contract has 61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row;

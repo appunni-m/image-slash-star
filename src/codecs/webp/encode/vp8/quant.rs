@@ -197,7 +197,7 @@ pub(super) fn trellis_quantize_block(
 ) -> bool {
     #[cfg(coverage)]
     let coverage_fail_after = {
-        let marker = i32::from(coefficients[15]) - i32::from(i16::MIN);
+        let marker = i32::from(coefficients[15]).saturating_sub(i32::from(i16::MIN));
         if coefficients[..15]
             .iter()
             .all(|&coefficient| coefficient == i16::MIN)

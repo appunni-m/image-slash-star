@@ -895,7 +895,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             transparency_override: None,
         },
     );
-    let long_delay_frame = coverage_frame(luma.clone(), 0, 0, u32::MAX, FrameDisposal::Keep);
+    let long_delay_frame = coverage_frame(luma, 0, 0, u32::MAX, FrameDisposal::Keep);
     let long_delay_sequence = DecodedSequence {
         width: 1,
         height: 1,
@@ -1008,7 +1008,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     valid_plain_text_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0x01, 12]);
     valid_plain_text_extension.extend_from_slice(&[0; 12]);
     valid_plain_text_extension.extend_from_slice(&[0, GIF_TRAILER]);
-    let mut valid_generic_extension = minimal_gif.clone();
+    let mut valid_generic_extension = minimal_gif;
     valid_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 0, 0, GIF_TRAILER]);
     let sink_cases = vec![
         b"bad".to_vec(),
@@ -1180,9 +1180,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let hash_colors = (0usize..1025)
         .map(|index| {
             [
-                index as u8,
-                index.wrapping_mul(37) as u8,
-                index.wrapping_mul(73) as u8,
+                index.to_le_bytes()[0],
+                index.wrapping_mul(37).to_le_bytes()[0],
+                index.wrapping_mul(73).to_le_bytes()[0],
             ]
         })
         .collect::<Vec<_>>();
@@ -1228,7 +1228,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Some(&compact_cancel_token),
     );
 
-    let rgba_opaque = vec![1u8, 2, 3, 255].repeat(1025);
+    let rgba_opaque = [1u8, 2, 3, 255].repeat(1025);
     let rgba_first_loop_token = crate::CancellationToken::new();
     rgba_first_loop_token.cancel_after(0);
     let _ = quantize_rgba(&rgba_opaque, Some(&rgba_first_loop_token));
@@ -1239,7 +1239,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let compact_replay_token = crate::CancellationToken::new();
     compact_replay_token.cancel_after(compact_checks);
     let _ = quantize_rgba(&rgba_opaque, Some(&compact_replay_token));
-    let rgba_transparent = vec![1u8, 2, 3, 0].repeat(1025);
+    let rgba_transparent = [1u8, 2, 3, 0].repeat(1025);
     let rgba_normalize_token = crate::CancellationToken::new();
     rgba_normalize_token.cancel_after(1);
     let _ = quantize_rgba(&rgba_transparent, Some(&rgba_normalize_token));
@@ -1323,10 +1323,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .collect::<Vec<_>>();
     sort_work = 0;
     let _ = apple_qsort_buckets_with_token(&mut reverse_buckets, &sort_token, &mut sort_work);
-    let mut partition_buckets = (0..16)
+    let mut partition_buckets = (0u32..16)
         .map(|count| OctreeBucket {
-            count: (count * 17) % 5,
-            sums: [u64::from(count), u64::from(15 - count), 0, 0],
+            count: crate::coverage_support::require_some(
+                (count).checked_mul(17),
+                "coverage fixture arithmetic",
+            ) % 5,
+            sums: [
+                u64::from(count),
+                u64::from(crate::coverage_support::require_some(
+                    (15u32).checked_sub(count),
+                    "coverage fixture arithmetic",
+                )),
+                0,
+                0,
+            ],
         })
         .collect::<Vec<_>>();
     sort_work = 0;
@@ -1363,7 +1374,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let mut recursive = (0usize..32)
             .map(|index| {
-                let count = (index.wrapping_mul(37).wrapping_add(11) % 19) as u32;
+                let count = crate::coverage_support::require_ok(
+                    u32::try_from(index.wrapping_mul(37).wrapping_add(11) % 19),
+                    "fixture value must fit u32",
+                );
                 OctreeBucket {
                     count,
                     sums: [u64::from(count), index as u64, 0, 0],
@@ -1395,7 +1409,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let mut recursive = (0usize..32)
             .map(|index| {
-                let count = (index.wrapping_mul(37).wrapping_add(11) % 19) as u32;
+                let count = crate::coverage_support::require_ok(
+                    u32::try_from(index.wrapping_mul(37).wrapping_add(11) % 19),
+                    "fixture value must fit u32",
+                );
                 OctreeBucket {
                     count,
                     sums: [u64::from(count), index as u64, 0, 0],
@@ -1601,10 +1618,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let octree_colors = (0u32..1025)
         .map(|value| {
             [
-                value as u8,
-                value.wrapping_mul(37) as u8,
-                value.wrapping_mul(73) as u8,
-                value.wrapping_mul(109) as u8,
+                value.to_le_bytes()[0],
+                value.wrapping_mul(37).to_le_bytes()[0],
+                value.wrapping_mul(73).to_le_bytes()[0],
+                value.wrapping_mul(109).to_le_bytes()[0],
             ]
         })
         .collect::<Vec<_>>();
@@ -1629,12 +1646,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
     // All colors occupy one coarse cube but 256 distinct fine buckets. The
     // first subtraction empties that coarse bucket and the defensive second
     // subtraction pass then runs with a non-empty remainder.
-    let coarse_collision_colors = (0..256)
+    let coarse_collision_colors = (0u8..=255)
         .map(|index| {
             [
-                (index % 8) as u8,
-                ((index / 8) % 16) as u8,
-                (((index / 128) % 2) * 8) as u8,
+                index % 8,
+                (index / 8) % 16,
+                crate::coverage_support::require_some(
+                    ((index / 128) % 2).checked_mul(8),
+                    "coverage fixture arithmetic",
+                ),
                 0,
             ]
         })
@@ -3358,14 +3378,11 @@ fn quantize_rgba(
     compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent, token)?;
     #[cfg(coverage)]
     // The coverage hook replays the same token-aware call at this exact
-    // checkpoint; spelling the propagation explicitly keeps the measured
-    // error edge stable while leaving production's `?` path unchanged.
+    // checkpoint, using the same error propagation as the production path.
     let compact_result =
         compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent, token);
     #[cfg(coverage)]
-    if let Err(error) = compact_result {
-        return Err(error);
-    }
+    compact_result?;
     let palette = rgba_palette
         .into_iter()
         .flat_map(|color| color[..3].to_vec())

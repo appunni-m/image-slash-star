@@ -176,8 +176,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let item_extent = AvifItemExtent::new(12, 34);
     assert_eq!(item_extent.offset(), 12);
     assert_eq!(item_extent.length(), 34);
-    let item_location =
-        AvifItemLocation::new(7, AvifItemLocationSource::Idat, vec![item_extent.clone()]);
+    let item_location = AvifItemLocation::new(7, AvifItemLocationSource::Idat, vec![item_extent]);
     assert_eq!(item_location.item_id(), 7);
     assert_eq!(item_location.source(), AvifItemLocationSource::Idat);
     assert_eq!(item_location.extents(), &[item_extent]);
@@ -278,7 +277,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert_eq!(provenance.avif_item_locations(), &[item_location]);
     assert_eq!(provenance.avif_grid_item_ids(), &[1, 2]);
     assert_eq!(provenance.avif_grid_properties(), Some(grid));
-    assert_eq!(provenance.avif_file_type().unwrap().major_brand(), *b"avif");
+    assert_eq!(
+        crate::coverage_support::require_some(
+            provenance.avif_file_type(),
+            "coverage fixture: provenance.avif_file_type()"
+        )
+        .major_brand(),
+        *b"avif"
+    );
 
     let duplicate_transform = AvifTransformProperties::default()
         .with_rotation(AvifRotation::Zero)
@@ -423,8 +429,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     ] {
         let _ = ImagePalette::new(rgb, alpha);
     }
-    let palette =
-        ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage palette should be valid");
+    let palette = crate::coverage_support::require_ok(
+        ImagePalette::new(vec![0, 0, 0], Vec::new()),
+        "coverage palette should be valid",
+    );
     let _ = palette.len();
     let _ = palette.is_empty();
 

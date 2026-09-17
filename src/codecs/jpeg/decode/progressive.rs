@@ -1409,13 +1409,15 @@ pub(crate) fn __coverage_exercise_private_branches() {
         metadata: Vec::new(),
     };
     let _ = progressive_reconstruct(&info, &[0, 0, 0xFF, 0xD0, 0], None);
-    let mut fast_info = info.clone();
+    let mut fast_info = info;
     fast_info.scans = vec![base_scan(1, 1, 0, 0, 0, 1)];
     let _ = progressive_reconstruct(&fast_info, &[0], None);
     let progressive_data =
         include_bytes!("../../../test_support/fixtures/input/images/jpeg/progressive.jpg");
-    let progressive_info =
-        super::parser::parse_jpeg(progressive_data).expect("coverage progressive JPEG must parse");
+    let progressive_info = crate::coverage_support::require_ok(
+        super::parser::parse_jpeg(progressive_data),
+        "coverage progressive JPEG must parse",
+    );
     assert!(progressive_reconstruct(&progressive_info, progressive_data, None).is_ok());
 
     let failing_scan = |ss, se, ah, al| ScanInfo {

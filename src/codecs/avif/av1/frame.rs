@@ -1441,10 +1441,10 @@ impl FrameState {
             return;
         };
         for reference in &mut self.references {
-            if let Some(reference) = reference.as_mut() {
-                if reference.surface.is_none() {
-                    reference.surface = Some(surface.clone());
-                }
+            if let Some(reference) = reference.as_mut()
+                && reference.surface.is_none()
+            {
+                reference.surface = Some(surface.clone());
             }
         }
     }
@@ -4258,15 +4258,23 @@ impl CoverageBitWriter {
             }
             let bit = ((value >> shift) & 1) as u8;
             let byte = self.position / 8;
-            let offset = 7 - (self.position % 8);
+            let offset = 7usize.saturating_sub(self.position % 8);
             self.bytes[byte] |= bit << offset;
-            self.position += 1;
+            self.position = crate::coverage_support::require_some(
+                (self.position).checked_add(1),
+                "fixture counter or boundary",
+            );
         }
     }
 
     fn push_signed(&mut self, value: i32, width: u32) {
-        let mask = (1_u32 << width) - 1;
-        self.push((value as u32) & mask, width);
+        let mask = crate::coverage_support::require_some(
+            1_u32
+                .checked_shl(width)
+                .and_then(|mask| mask.checked_sub(1)),
+            "signed fixture bit mask",
+        );
+        self.push(u32::from_ne_bytes(value.to_ne_bytes()) & mask, width);
     }
 
     fn finish(mut self) -> Vec<u8> {
@@ -4282,15 +4290,15 @@ impl CoverageBitWriter {
 #[coverage(off)]
 fn coverage_insert_bits(input: &[u8], position: usize, value: u32, width: u32) -> Vec<u8> {
     let mut output = CoverageBitWriter::new();
-    let input_bits = input.len() * 8;
+    let input_bits = crate::coverage_support::bit_len(input.len());
     for index in 0..position {
         let byte = input[index / 8];
-        output.push(u32::from((byte >> (7 - index % 8)) & 1), 1);
+        output.push(u32::from((byte >> 7usize.saturating_sub(index % 8)) & 1), 1);
     }
     output.push(value, width);
     for index in position..input_bits {
         let byte = input[index / 8];
-        output.push(u32::from((byte >> (7 - index % 8)) & 1), 1);
+        output.push(u32::from((byte >> 7usize.saturating_sub(index % 8)) & 1), 1);
     }
     output.bytes
 }
@@ -4307,22 +4315,30 @@ pub(super) fn __coverage_reduced_header_payload() -> Vec<u8> {
         start: 0,
         end: sample.len(),
     }];
-    let data = SegmentedData::new(&sample, &spans).unwrap();
-    let sequence = super::sequence::parse(&data, 0, SEQUENCE.len()).unwrap();
-    let (header, _) = parse(
-        &data,
-        SEQUENCE.len(),
-        sample.len(),
-        &sequence,
-        &std::array::from_fn(|_| None),
-        0,
-        0,
-    )
-    .unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(&sample, &spans),
+        "coverage fixture: SegmentedData::new(&sample, &spans)",
+    );
+    let sequence = crate::coverage_support::require_ok(
+        super::sequence::parse(&data, 0, SEQUENCE.len()),
+        "coverage fixture: super::sequence::parse(&data, 0, SEQUENCE.len())",
+    );
+    let (header, _) = crate::coverage_support::require_ok(
+        parse(
+            &data,
+            SEQUENCE.len(),
+            sample.len(),
+            &sequence,
+            &std::array::from_fn(|_| None),
+            0,
+            0,
+        ),
+        "coverage fixture: parse( &data, SEQUENCE.len(), sample.len(), &sequence, &std::array::from_fn(|_| None), 0, 0, ) ",
+    );
     let header_length = header.header_bits.saturating_add(1).div_ceil(8);
     let mut payload = FRAME[..header_length].to_vec();
     let trailing_byte = header.header_bits / 8;
-    let trailing_offset = 7 - (header.header_bits % 8);
+    let trailing_offset = 7usize.saturating_sub(header.header_bits % 8);
     payload[trailing_byte] &= u8::MAX << trailing_offset.saturating_add(1);
     payload[trailing_byte] |= 1 << trailing_offset;
     payload
@@ -4339,15 +4355,21 @@ fn coverage_read<T>(
         start: 0,
         end: input.len(),
     }];
-    let data = SegmentedData::new(input, &spans).unwrap();
-    let mut bits = BitReader::with_bit_end(&data, bit_end).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(input, &spans),
+        "coverage fixture: SegmentedData::new(input, &spans)",
+    );
+    let mut bits = crate::coverage_support::require_ok(
+        BitReader::with_bit_end(&data, bit_end),
+        "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
+    );
     read(&mut bits)
 }
 
 #[cfg(coverage)]
 #[coverage(off)]
 fn coverage_sweep_read(input: &[u8], mut read: impl FnMut(&mut BitReader<'_, '_, '_>)) {
-    for bit_end in 0..=input.len() * 8 {
+    for bit_end in 0..=crate::coverage_support::bit_len(input.len()) {
         coverage_read(input, bit_end, |bits| read(bits));
     }
 }
@@ -4363,8 +4385,14 @@ fn coverage_read_tile_group(
         start: 0,
         end: input.len(),
     }];
-    let data = SegmentedData::new(input, &spans).unwrap();
-    let mut bits = BitReader::with_bit_end(&data, bit_end).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(input, &spans),
+        "coverage fixture: SegmentedData::new(input, &spans)",
+    );
+    let mut bits = crate::coverage_support::require_ok(
+        BitReader::with_bit_end(&data, bit_end),
+        "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
+    );
     state
         .read_tile_group(&data, &mut bits, input.len())
         .map(|group| (group.start, group.end))
@@ -4399,9 +4427,15 @@ fn coverage_sweep_frame(
         start: 0,
         end: input.len(),
     }];
-    let data = SegmentedData::new(input, &spans).unwrap();
-    for bit_end in 0..=input.len() * 8 {
-        let bits = BitReader::with_bit_end(&data, bit_end).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(input, &spans),
+        "coverage fixture: SegmentedData::new(input, &spans)",
+    );
+    for bit_end in 0..=crate::coverage_support::bit_len(input.len()) {
+        let bits = crate::coverage_support::require_ok(
+            BitReader::with_bit_end(&data, bit_end),
+            "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
+        );
         let _ = parse_reader(bits, 0, sequence, references, 0, 0);
     }
 }
@@ -4413,9 +4447,9 @@ fn coverage_mutation_sweep_frame(
     sequence: &SequenceHeader,
     references: &[Option<FrameHeader>; 8],
 ) {
-    for bit in 0..input.len() * 8 {
+    for bit in 0..crate::coverage_support::bit_len(input.len()) {
         let mut mutated = input.to_vec();
-        mutated[bit / 8] ^= 1 << (7 - bit % 8);
+        mutated[bit / 8] ^= 1 << 7usize.saturating_sub(bit % 8);
         coverage_sweep_frame(&mutated, sequence, references);
     }
 }
@@ -4561,8 +4595,14 @@ fn coverage_header() -> FrameHeader {
 fn coverage_references() -> [Option<FrameHeader>; 8] {
     std::array::from_fn(|index| {
         let mut header = coverage_header();
-        header.frame_id = u32::try_from(index).unwrap();
-        header.order_hint = u32::try_from(index).unwrap();
+        header.frame_id = crate::coverage_support::require_ok(
+            u32::try_from(index),
+            "coverage fixture: u32::try_from(index)",
+        );
+        header.order_hint = crate::coverage_support::require_ok(
+            u32::try_from(index),
+            "coverage fixture: u32::try_from(index)",
+        );
         Some(header)
     })
 }
@@ -4612,35 +4652,63 @@ fn coverage_state_paths() {
     let sequence = coverage_sequence();
     let mut state = FrameState::new();
     let empty_spans = [ByteSpan { start: 0, end: 0 }];
-    let empty_data = SegmentedData::new(&[], &empty_spans).unwrap();
+    let empty_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&[], &empty_spans),
+        "coverage fixture: SegmentedData::new(&[], &empty_spans)",
+    );
     let tile_input = [0_u8; 16];
     let tile_spans = [ByteSpan {
         start: 0,
         end: tile_input.len(),
     }];
-    let tile_data = SegmentedData::new(&tile_input, &tile_spans).unwrap();
+    let tile_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&tile_input, &tile_spans),
+        "coverage fixture: SegmentedData::new(&tile_input, &tile_spans)",
+    );
     assert!(split_tile_payloads(&tile_data, 1, 0, 0, 0, 0).is_err());
-    assert!(split_tile_payloads(&tile_data, 0, tile_input.len() + 1, 0, 0, 0).is_err());
+    assert!(
+        split_tile_payloads(
+            &tile_data,
+            0,
+            crate::coverage_support::require_some(
+                (tile_input.len()).checked_add(1),
+                "coverage fixture arithmetic"
+            ),
+            0,
+            0,
+            0
+        )
+        .is_err()
+    );
     assert!(split_tile_payloads(&tile_data, 0, 1, 0, 1, 0).is_err());
     assert!(split_tile_payloads(&tile_data, 0, 6, 0, 1, 5).is_err());
     assert_eq!(
         split_tile_payloads(&tile_data, 0, 0, 0, 0, 0),
-        Ok(vec![0..0])
+        Ok(std::iter::once(0..0).collect())
     );
     for width in [1, 3, 4] {
         assert!(split_tile_payloads(&tile_data, 0, tile_input.len(), 0, 1, width).is_ok());
     }
     let mut entropy_header = coverage_header();
     entropy_header.primary_ref_frame = PRIMARY_REF_NONE;
-    let entropy_cdfs = entropy::FrameCdfs::defaults(1).unwrap();
+    let entropy_cdfs = crate::coverage_support::require_ok(
+        entropy::FrameCdfs::defaults(1),
+        "coverage fixture: entropy::FrameCdfs::defaults(1)",
+    );
     assert!(
         validate_tile_entropy_prefixes(
             &tile_data,
-            &[0..tile_input.len()],
+            &[std::ops::Range {
+                start: 0,
+                end: tile_input.len()
+            }],
             1,
             &entropy_header,
             &sequence,
-            entropy_header.tiling.as_ref().unwrap(),
+            crate::coverage_support::require_some(
+                entropy_header.tiling.as_ref(),
+                "coverage fixture: entropy_header.tiling.as_ref()"
+            ),
             TileEntropyInputs {
                 input_cdfs: Some(&entropy_cdfs),
                 current_segment_map: None,
@@ -4658,11 +4726,17 @@ fn coverage_state_paths() {
     assert!(
         validate_tile_entropy_prefixes(
             &tile_data,
-            &[0..tile_input.len()],
+            &[std::ops::Range {
+                start: 0,
+                end: tile_input.len()
+            }],
             0,
             &entropy_header,
             &sequence,
-            entropy_header.tiling.as_ref().unwrap(),
+            crate::coverage_support::require_some(
+                entropy_header.tiling.as_ref(),
+                "coverage fixture: entropy_header.tiling.as_ref()"
+            ),
             TileEntropyInputs {
                 input_cdfs: Some(&entropy_cdfs),
                 current_segment_map: None,
@@ -4673,12 +4747,19 @@ fn coverage_state_paths() {
         .is_ok()
     );
     let no_sequence = FrameState::new();
-    assert!(coverage_read_tile_group(&no_sequence, &tile_input, tile_input.len() * 8).is_err());
+    assert!(
+        coverage_read_tile_group(
+            &no_sequence,
+            &tile_input,
+            crate::coverage_support::bit_len(tile_input.len())
+        )
+        .is_err()
+    );
     let mut rejected_entropy = FrameState::new();
     rejected_entropy.sequence = Some(sequence.clone());
     rejected_entropy.pending = Some(coverage_pending(entropy_header));
     assert!(matches!(
-        coverage_read_tile_group(&rejected_entropy, &tile_input, tile_input.len() * 8),
+        coverage_read_tile_group(&rejected_entropy, &tile_input, crate::coverage_support::bit_len(tile_input.len())),
         Err(CodecError::Malformed(message))
             if message == "invalid AV1 bitstream: decoded inter frame references an empty slot"
     ));
@@ -4688,7 +4769,14 @@ fn coverage_state_paths() {
     accepted_header.frame_type = FrameType::Key;
     accepted_header.primary_ref_frame = PRIMARY_REF_NONE;
     accepted_entropy.pending = Some(coverage_pending(accepted_header));
-    assert!(coverage_read_tile_group(&accepted_entropy, &tile_input, tile_input.len() * 8).is_ok());
+    assert!(
+        coverage_read_tile_group(
+            &accepted_entropy,
+            &tile_input,
+            crate::coverage_support::bit_len(tile_input.len())
+        )
+        .is_ok()
+    );
     let _ = state.begin_frame(&empty_data, 0..0, false, 0, 0, false);
     let _ = state.tile_group_obu(&empty_data, 0, 0, false, 0, 0);
     let _ = state.tile_group_obu(&empty_data, 1, 0, false, 0, 0);
@@ -4726,7 +4814,10 @@ fn coverage_state_paths() {
     assert_eq!(state.accept_sequence(sequence.clone()), Ok(()));
     assert!(state.finish().is_ok());
     let mut inconsistent = sequence.clone();
-    inconsistent.max_width += 1;
+    inconsistent.max_width = crate::coverage_support::require_some(
+        (inconsistent.max_width).checked_add(1),
+        "fixture counter or boundary",
+    );
     assert!(state.accept_sequence(inconsistent).is_err());
 
     state.pending = Some(coverage_pending(coverage_header()));
@@ -4748,13 +4839,22 @@ fn coverage_state_paths() {
     shown_pending.staged_references = state.references.clone();
     state.pending = Some(shown_pending);
     assert_eq!(state.complete_show_existing(), Ok(()));
-    state.references[0].as_mut().unwrap().header.showable_frame = false;
+    crate::coverage_support::require_some(
+        state.references[0].as_mut(),
+        "coverage fixture: state.references[0].as_mut()",
+    )
+    .header
+    .showable_frame = false;
     let mut unshowable_pending = coverage_pending(shown.clone());
     unshowable_pending.staged_references = state.references.clone();
     state.pending = Some(unshowable_pending);
     assert!(state.complete_show_existing().is_err());
     state.references[0] = None;
-    state.pending.as_mut().unwrap().staged_references = state.references.clone();
+    crate::coverage_support::require_some(
+        state.pending.as_mut(),
+        "coverage fixture: state.pending.as_mut()",
+    )
+    .staged_references = state.references.clone();
     assert!(state.complete_show_existing().is_err());
     shown.existing_frame_idx = None;
     state.pending = Some(coverage_pending(shown));
@@ -4786,7 +4886,12 @@ fn coverage_state_paths() {
     state.references[0] = None;
     state.invalidate_old_references(10);
     state.references = coverage_reference_states();
-    state.references[0].as_mut().unwrap().header.frame_id = 11;
+    crate::coverage_support::require_some(
+        state.references[0].as_mut(),
+        "coverage fixture: state.references[0].as_mut()",
+    )
+    .header
+    .frame_id = 11;
     state.invalidate_old_references(10);
     state.references = coverage_reference_states();
     state.invalidate_old_references(1);
@@ -4842,42 +4947,50 @@ fn coverage_state_paths() {
     for bit_end in 0..=8 {
         let _ = coverage_read_tile_group(&state, &[0x80], bit_end);
     }
-    state
-        .pending
-        .as_mut()
-        .unwrap()
+    crate::coverage_support::require_some(
+        crate::coverage_support::require_some(
+            state.pending.as_mut(),
+            "coverage fixture: state .pending .as_mut() ",
+        )
         .header
         .tiling
-        .as_mut()
-        .unwrap()
-        .columns = 3;
-    state
-        .pending
-        .as_mut()
-        .unwrap()
+        .as_mut(),
+        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
+    )
+    .columns = 3;
+    crate::coverage_support::require_some(
+        crate::coverage_support::require_some(
+            state.pending.as_mut(),
+            "coverage fixture: state .pending .as_mut() ",
+        )
         .header
         .tiling
-        .as_mut()
-        .unwrap()
-        .log2_columns = 2;
-    state
-        .pending
-        .as_mut()
-        .unwrap()
+        .as_mut(),
+        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
+    )
+    .log2_columns = 2;
+    crate::coverage_support::require_some(
+        crate::coverage_support::require_some(
+            state.pending.as_mut(),
+            "coverage fixture: state .pending .as_mut() ",
+        )
         .header
         .tiling
-        .as_mut()
-        .unwrap()
-        .rows = 1;
-    state
-        .pending
-        .as_mut()
-        .unwrap()
+        .as_mut(),
+        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
+    )
+    .rows = 1;
+    crate::coverage_support::require_some(
+        crate::coverage_support::require_some(
+            state.pending.as_mut(),
+            "coverage fixture: state .pending .as_mut() ",
+        )
         .header
         .tiling
-        .as_mut()
-        .unwrap()
-        .log2_rows = 0;
+        .as_mut(),
+        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
+    )
+    .log2_rows = 0;
     let _ = coverage_read_tile_group(&state, &[0b1001_1000], 8);
     state.pending = None;
     let _ = coverage_read_tile_group(&state, &[], 0);
@@ -4891,8 +5004,14 @@ fn coverage_state_paths() {
         start: 0,
         end: sample.len(),
     }];
-    let data = SegmentedData::new(&sample, &spans).unwrap();
-    let parsed_sequence = super::sequence::parse(&data, 0, REDUCED_SEQUENCE.len()).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(&sample, &spans),
+        "coverage fixture: SegmentedData::new(&sample, &spans)",
+    );
+    let parsed_sequence = crate::coverage_support::require_ok(
+        super::sequence::parse(&data, 0, REDUCED_SEQUENCE.len()),
+        "coverage fixture: super::sequence::parse(&data, 0, REDUCED_SEQUENCE.len())",
+    );
     coverage_sweep_frame(
         REDUCED_FRAME,
         &parsed_sequence,
@@ -4905,9 +5024,14 @@ fn coverage_state_paths() {
         start: 0,
         end: ANIMATED_SEQUENCE.len(),
     }];
-    let animated_data = SegmentedData::new(ANIMATED_SEQUENCE, &animated_spans).unwrap();
-    let animated_sequence =
-        super::sequence::parse(&animated_data, 0, ANIMATED_SEQUENCE.len()).unwrap();
+    let animated_data = crate::coverage_support::require_ok(
+        SegmentedData::new(ANIMATED_SEQUENCE, &animated_spans),
+        "coverage fixture: SegmentedData::new(ANIMATED_SEQUENCE, &animated_spans)",
+    );
+    let animated_sequence = crate::coverage_support::require_ok(
+        super::sequence::parse(&animated_data, 0, ANIMATED_SEQUENCE.len()),
+        "coverage fixture: super::sequence::parse(&animated_data, 0, ANIMATED_SEQUENCE.len())",
+    );
     coverage_sweep_frame(
         ANIMATED_KEY,
         &animated_sequence,
@@ -4969,9 +5093,10 @@ fn coverage_state_paths() {
     const ANIMATED_INTER_5: &[u8] =
         b"\x30\x08\x00\x11\x30\x01\x46\x8c\x80\x00\x00\x90\x00\x08\x00\xb3\x2e\xde\x2e\xcf\x20";
     let mut animated_state = FrameState::new();
-    animated_state
-        .accept_sequence(animated_sequence.clone())
-        .unwrap();
+    crate::coverage_support::require_ok(
+        animated_state.accept_sequence(animated_sequence.clone()),
+        "coverage fixture: animated_state .accept_sequence(animated_sequence.clone()) ",
+    );
     let mut coverage_surface: Option<Arc<FrameSurface>> = None;
     for (frame_index, frame) in [
         ANIMATED_KEY,
@@ -4984,10 +5109,10 @@ fn coverage_state_paths() {
     {
         if let Some(surface) = coverage_surface.as_ref() {
             for reference in &mut animated_state.references {
-                if let Some(reference) = reference.as_mut() {
-                    if reference.surface.is_none() {
-                        reference.surface = Some(surface.clone());
-                    }
+                if let Some(reference) = reference.as_mut()
+                    && reference.surface.is_none()
+                {
+                    reference.surface = Some(surface.clone());
                 }
             }
         }
@@ -5015,7 +5140,10 @@ fn coverage_state_paths() {
             start: 0,
             end: frame.len(),
         }];
-        let data = SegmentedData::new(frame, &spans).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(frame, &spans),
+            "coverage fixture: SegmentedData::new(frame, &spans)",
+        );
         assert_eq!(
             animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
             Ok(())
@@ -5031,7 +5159,10 @@ fn coverage_state_paths() {
     let animated_references = animated_state.reference_headers();
     coverage_sweep_frame(&show_existing, &animated_sequence, &animated_references);
     let show_spans = [ByteSpan { start: 0, end: 1 }];
-    let show_data = SegmentedData::new(&show_existing, &show_spans).unwrap();
+    let show_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&show_existing, &show_spans),
+        "coverage fixture: SegmentedData::new(&show_existing, &show_spans)",
+    );
     assert_eq!(
         animated_state.frame_header_obu(&show_data, 0..1, false, 0, 0, false),
         Ok(())
@@ -5039,10 +5170,10 @@ fn coverage_state_paths() {
     for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
         if let Some(surface) = coverage_surface.as_ref() {
             for reference in &mut animated_state.references {
-                if let Some(reference) = reference.as_mut() {
-                    if reference.surface.is_none() {
-                        reference.surface = Some(surface.clone());
-                    }
+                if let Some(reference) = reference.as_mut()
+                    && reference.surface.is_none()
+                {
+                    reference.surface = Some(surface.clone());
                 }
             }
         }
@@ -5062,7 +5193,10 @@ fn coverage_state_paths() {
             start: 0,
             end: frame.len(),
         }];
-        let data = SegmentedData::new(frame, &spans).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(frame, &spans),
+            "coverage fixture: SegmentedData::new(frame, &spans)",
+        );
         assert_eq!(
             animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
             Ok(())
@@ -5071,7 +5205,10 @@ fn coverage_state_paths() {
     let frame_start = REDUCED_SEQUENCE.len();
     let frame_end = sample.len();
     let mut direct = FrameState::new();
-    direct.accept_sequence(parsed_sequence.clone()).unwrap();
+    crate::coverage_support::require_ok(
+        direct.accept_sequence(parsed_sequence.clone()),
+        "coverage fixture: direct.accept_sequence(parsed_sequence.clone())",
+    );
     assert!(
         direct
             .begin_frame(&data, frame_start..frame_end, false, 0, 0, false)
@@ -5103,30 +5240,47 @@ fn coverage_state_paths() {
         start: 0,
         end: frame_with_id.len(),
     }];
-    let frame_id_data = SegmentedData::new(&frame_with_id, &frame_id_spans).unwrap();
+    let frame_id_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&frame_with_id, &frame_id_spans),
+        "coverage fixture: SegmentedData::new(&frame_with_id, &frame_id_spans)",
+    );
     let mut frame_id_sequence = parsed_sequence.clone();
     frame_id_sequence.frame_id_numbers_present = true;
     frame_id_sequence.delta_frame_id_bits = 2;
     frame_id_sequence.frame_id_bits = 4;
     let mut frame_id_state = FrameState::new();
-    frame_id_state.accept_sequence(frame_id_sequence).unwrap();
+    crate::coverage_support::require_ok(
+        frame_id_state.accept_sequence(frame_id_sequence),
+        "coverage fixture: frame_id_state.accept_sequence(frame_id_sequence)",
+    );
     frame_id_state.current_frame_id = Some(3);
     let _ = frame_id_state.begin_frame(&frame_id_data, 0..frame_with_id.len(), false, 0, 0, false);
 
-    let header_bits = direct.pending.as_ref().unwrap().header.header_bits;
+    let header_bits = crate::coverage_support::require_some(
+        direct.pending.as_ref(),
+        "coverage fixture: direct.pending.as_ref()",
+    )
+    .header
+    .header_bits;
     let header_length = header_bits.saturating_add(1).div_ceil(8);
     let mut reduced_header = REDUCED_FRAME[..header_length].to_vec();
     let trailing_byte = header_bits / 8;
-    let trailing_offset = 7 - (header_bits % 8);
+    let trailing_offset = 7usize.saturating_sub(header_bits % 8);
     reduced_header[trailing_byte] &= u8::MAX << trailing_offset.saturating_add(1);
     reduced_header[trailing_byte] |= 1 << trailing_offset;
     let header_spans = [ByteSpan {
         start: 0,
         end: reduced_header.len(),
     }];
-    let header_data = SegmentedData::new(&reduced_header, &header_spans).unwrap();
+    let header_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&reduced_header, &header_spans),
+        "coverage fixture: SegmentedData::new(&reduced_header, &header_spans)",
+    );
     let mut split = FrameState::new();
-    split.accept_sequence(parsed_sequence.clone()).unwrap();
+    crate::coverage_support::require_ok(
+        split.accept_sequence(parsed_sequence),
+        "coverage fixture: split.accept_sequence(parsed_sequence)",
+    );
     assert_eq!(
         split.frame_header_obu(&header_data, 0..reduced_header.len(), false, 0, 0, false,),
         Ok(())
@@ -5142,7 +5296,10 @@ fn coverage_state_paths() {
     ));
 
     let mut illegal_show = FrameState::new();
-    illegal_show.accept_sequence(coverage_sequence()).unwrap();
+    crate::coverage_support::require_ok(
+        illegal_show.accept_sequence(coverage_sequence()),
+        "coverage fixture: illegal_show.accept_sequence(coverage_sequence())",
+    );
     illegal_show.references[0] = Some(ReferenceState {
         header: coverage_header(),
         decode: None,
@@ -5150,7 +5307,10 @@ fn coverage_state_paths() {
     });
     let show = [0x80];
     let show_spans = [ByteSpan { start: 0, end: 1 }];
-    let show_data = SegmentedData::new(&show, &show_spans).unwrap();
+    let show_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&show, &show_spans),
+        "coverage fixture: SegmentedData::new(&show, &show_spans)",
+    );
     assert!(
         illegal_show
             .frame_obu(&show_data, 0, 1, false, 0, 0)
@@ -5168,7 +5328,10 @@ fn coverage_state_paths() {
         start: 0,
         end: show_existing.len(),
     }];
-    let show_existing_data = SegmentedData::new(&show_existing, &show_existing_spans).unwrap();
+    let show_existing_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&show_existing, &show_existing_spans),
+        "coverage fixture: SegmentedData::new(&show_existing, &show_existing_spans)",
+    );
     let _ = parse(
         &show_existing_data,
         0,
@@ -5200,7 +5363,10 @@ fn coverage_state_paths() {
         start: 0,
         end: matching_existing.len(),
     }];
-    let matching_data = SegmentedData::new(&matching_existing, &matching_spans).unwrap();
+    let matching_data = crate::coverage_support::require_ok(
+        SegmentedData::new(&matching_existing, &matching_spans),
+        "coverage fixture: SegmentedData::new(&matching_existing, &matching_spans)",
+    );
     let _ = parse(
         &matching_data,
         0,
@@ -5262,19 +5428,19 @@ fn coverage_frame_id_and_timing_paths() {
         let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
     });
     sequence.timing = coverage_sequence().timing;
-    sequence
-        .timing
-        .as_mut()
-        .unwrap()
-        .buffer_removal_delay_length = None;
+    crate::coverage_support::require_some(
+        sequence.timing.as_mut(),
+        "coverage fixture: sequence .timing .as_mut() ",
+    )
+    .buffer_removal_delay_length = None;
     coverage_read(&[0x80], 1, |bits| {
         let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
     });
-    sequence
-        .timing
-        .as_mut()
-        .unwrap()
-        .frame_presentation_delay_length = None;
+    crate::coverage_support::require_some(
+        sequence.timing.as_mut(),
+        "coverage fixture: sequence .timing .as_mut() ",
+    )
+    .frame_presentation_delay_length = None;
     coverage_read(&[], 0, |bits| {
         let _ = read_presentation_delay(bits, &sequence);
     });
@@ -5285,7 +5451,11 @@ fn coverage_frame_id_and_timing_paths() {
         let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
     });
     sequence = coverage_sequence();
-    sequence.timing.as_mut().unwrap().equal_picture_interval = true;
+    crate::coverage_support::require_some(
+        sequence.timing.as_mut(),
+        "coverage fixture: sequence.timing.as_mut()",
+    )
+    .equal_picture_interval = true;
     coverage_read(&[], 0, |bits| {
         let _ = read_presentation_delay(bits, &sequence);
     });
@@ -5384,9 +5554,13 @@ fn coverage_frame_kind_and_geometry_paths() {
             header.show_frame = frame_type == FrameType::Key;
             header.error_resilient_mode = true;
             header.allow_screen_content_tools = true;
-            coverage_read(&input, input.len() * 8, |bits| {
-                let _ = read_frame_type_fields(bits, &sequence, &references, &mut header);
-            });
+            coverage_read(
+                &input,
+                crate::coverage_support::bit_len(input.len()),
+                |bits| {
+                    let _ = read_frame_type_fields(bits, &sequence, &references, &mut header);
+                },
+            );
         }
     }
     let mut syntax_sequence = sequence.clone();
@@ -5434,7 +5608,11 @@ fn coverage_frame_kind_and_geometry_paths() {
     });
 
     let mut matching_references = references.clone();
-    matching_references[0].as_mut().unwrap().frame_id = 2;
+    crate::coverage_support::require_some(
+        matching_references[0].as_mut(),
+        "coverage fixture: matching_references[0].as_mut()",
+    )
+    .frame_id = 2;
     let mut matching_ids = CoverageBitWriter::new();
     matching_ids.push(0, 8);
     matching_ids.push(0, 1);
@@ -5455,9 +5633,14 @@ fn coverage_frame_kind_and_geometry_paths() {
     matching_header.frame_id = 3;
     matching_header.error_resilient_mode = false;
     matching_header.frame_size_override = false;
-    coverage_read(&matching_ids, matching_ids.len() * 8, |bits| {
-        let _ = read_frame_type_fields(bits, &sequence, &matching_references, &mut matching_header);
-    });
+    coverage_read(
+        &matching_ids,
+        crate::coverage_support::bit_len(matching_ids.len()),
+        |bits| {
+            let _ =
+                read_frame_type_fields(bits, &sequence, &matching_references, &mut matching_header);
+        },
+    );
     coverage_sweep_read(&matching_ids, |bits| {
         let mut header = coverage_header();
         header.frame_id = 3;
@@ -5471,22 +5654,30 @@ fn coverage_frame_kind_and_geometry_paths() {
     missing_id_header.frame_id = 3;
     missing_id_header.error_resilient_mode = false;
     missing_id_header.frame_size_override = false;
-    coverage_read(&matching_ids, matching_ids.len() * 8, |bits| {
-        let _ = read_frame_type_fields(
-            bits,
-            &sequence,
-            &missing_id_reference,
-            &mut missing_id_header,
-        );
-    });
+    coverage_read(
+        &matching_ids,
+        crate::coverage_support::bit_len(matching_ids.len()),
+        |bits| {
+            let _ = read_frame_type_fields(
+                bits,
+                &sequence,
+                &missing_id_reference,
+                &mut missing_id_header,
+            );
+        },
+    );
 
     let mut header = coverage_header();
     header.frame_type = FrameType::Inter;
     header.error_resilient_mode = false;
     header.frame_size_override = true;
-    coverage_read(&bytes, bytes.len() * 8, |bits| {
-        let _ = read_frame_size(bits, &sequence, &references, &mut header, true);
-    });
+    coverage_read(
+        &bytes,
+        crate::coverage_support::bit_len(bytes.len()),
+        |bits| {
+            let _ = read_frame_size(bits, &sequence, &references, &mut header, true);
+        },
+    );
     coverage_read(&[], 0, |bits| {
         let _ = read_frame_size(bits, &sequence, &references, &mut header, true);
     });
@@ -5530,13 +5721,21 @@ fn coverage_frame_kind_and_geometry_paths() {
         let _ = read_superres(bits, &sequence, &mut header);
     });
 
-    let mut short_references = references.clone();
+    let mut short_references = references;
     for (index, reference) in short_references.iter_mut().enumerate() {
-        reference.as_mut().unwrap().order_hint = [1, 2, 3, 4, 5, 6, 7, 8][index];
+        crate::coverage_support::require_some(
+            reference.as_mut(),
+            "coverage fixture: reference.as_mut()",
+        )
+        .order_hint = [1, 2, 3, 4, 5, 6, 7, 8][index];
     }
     let _ = derive_short_references(&sequence, &short_references, 4, 0, 3);
     for (index, reference) in short_references.iter_mut().enumerate() {
-        reference.as_mut().unwrap().order_hint = [8, 7, 6, 5, 4, 3, 2, 1][index];
+        crate::coverage_support::require_some(
+            reference.as_mut(),
+            "coverage fixture: reference.as_mut()",
+        )
+        .order_hint = [8, 7, 6, 5, 4, 3, 2, 1][index];
     }
     let _ = derive_short_references(&sequence, &short_references, 4, 0, 3);
     let mut missing_reference = short_references.clone();
@@ -5544,7 +5743,11 @@ fn coverage_frame_kind_and_geometry_paths() {
     let _ = derive_short_references(&sequence, &missing_reference, 4, 0, 3);
     for order_hint in [0_u32, 8, 15] {
         for reference in &mut short_references {
-            reference.as_mut().unwrap().order_hint = order_hint.saturating_add(1) & 15;
+            crate::coverage_support::require_some(
+                reference.as_mut(),
+                "coverage fixture: reference.as_mut()",
+            )
+            .order_hint = order_hint.saturating_add(1) & 15;
         }
         let _ = derive_short_references(&sequence, &short_references, order_hint, 0, 3);
     }
@@ -5594,9 +5797,13 @@ fn coverage_tiling_and_metadata_paths() {
         header.frame_height = height;
         for fill in [0_u8, 0x55, 0xaa, 0xff] {
             let input = [fill; 512];
-            coverage_read(&input, input.len() * 8, |bits| {
-                let _ = read_tiling(bits, &sequence, &header);
-            });
+            coverage_read(
+                &input,
+                crate::coverage_support::bit_len(input.len()),
+                |bits| {
+                    let _ = read_tiling(bits, &sequence, &header);
+                },
+            );
         }
     }
     header.frame_width = 512;
@@ -5614,12 +5821,20 @@ fn coverage_tiling_and_metadata_paths() {
 
     for fill in [0_u8, 0x55, 0xaa, 0xff] {
         let input = [fill; 1024];
-        coverage_read(&input, input.len() * 8, |bits| {
-            let _ = read_quantization(bits, &sequence);
-        });
-        coverage_read(&input, input.len() * 8, |bits| {
-            let _ = read_segmentation(bits, &references, &header);
-        });
+        coverage_read(
+            &input,
+            crate::coverage_support::bit_len(input.len()),
+            |bits| {
+                let _ = read_quantization(bits, &sequence);
+            },
+        );
+        coverage_read(
+            &input,
+            crate::coverage_support::bit_len(input.len()),
+            |bits| {
+                let _ = read_segmentation(bits, &references, &header);
+            },
+        );
     }
     coverage_sweep_read(&[0; 64], |bits| {
         let _ = read_quantization(bits, &sequence);
@@ -5662,9 +5877,13 @@ fn coverage_tiling_and_metadata_paths() {
     let segmentation = segmentation.finish();
     let mut no_primary = header.clone();
     no_primary.primary_ref_frame = PRIMARY_REF_NONE;
-    coverage_read(&segmentation, segmentation.len() * 8, |bits| {
-        let _ = read_segmentation(bits, &references, &no_primary);
-    });
+    coverage_read(
+        &segmentation,
+        crate::coverage_support::bit_len(segmentation.len()),
+        |bits| {
+            let _ = read_segmentation(bits, &references, &no_primary);
+        },
+    );
     coverage_sweep_read(&segmentation, |bits| {
         let _ = read_segmentation(bits, &references, &no_primary);
     });
@@ -5680,7 +5899,11 @@ fn coverage_tiling_and_metadata_paths() {
     });
 
     let mut delta = header.clone();
-    delta.quantization.as_mut().unwrap().base = 128;
+    crate::coverage_support::require_some(
+        delta.quantization.as_mut(),
+        "coverage fixture: delta.quantization.as_mut()",
+    )
+    .base = 128;
     delta.segmentation.enabled = true;
     delta.segmentation.segments[0].delta_q = -255;
     coverage_read(&[0xff; 8], 64, |bits| {
@@ -5697,13 +5920,47 @@ fn coverage_tiling_and_metadata_paths() {
     });
     for index in 0..5 {
         let mut individual = coverage_header();
-        individual.quantization.as_mut().unwrap().base = 0;
+        crate::coverage_support::require_some(
+            individual.quantization.as_mut(),
+            "coverage fixture: individual.quantization.as_mut()",
+        )
+        .base = 0;
         match index {
-            0 => individual.quantization.as_mut().unwrap().y_dc_delta = 1,
-            1 => individual.quantization.as_mut().unwrap().u_dc_delta = 1,
-            2 => individual.quantization.as_mut().unwrap().u_ac_delta = 1,
-            3 => individual.quantization.as_mut().unwrap().v_dc_delta = 1,
-            _ => individual.quantization.as_mut().unwrap().v_ac_delta = 1,
+            0 => {
+                crate::coverage_support::require_some(
+                    individual.quantization.as_mut(),
+                    "coverage fixture: individual.quantization.as_mut()",
+                )
+                .y_dc_delta = 1
+            }
+            1 => {
+                crate::coverage_support::require_some(
+                    individual.quantization.as_mut(),
+                    "coverage fixture: individual.quantization.as_mut()",
+                )
+                .u_dc_delta = 1
+            }
+            2 => {
+                crate::coverage_support::require_some(
+                    individual.quantization.as_mut(),
+                    "coverage fixture: individual.quantization.as_mut()",
+                )
+                .u_ac_delta = 1
+            }
+            3 => {
+                crate::coverage_support::require_some(
+                    individual.quantization.as_mut(),
+                    "coverage fixture: individual.quantization.as_mut()",
+                )
+                .v_dc_delta = 1
+            }
+            _ => {
+                crate::coverage_support::require_some(
+                    individual.quantization.as_mut(),
+                    "coverage fixture: individual.quantization.as_mut()",
+                )
+                .v_ac_delta = 1
+            }
         }
         coverage_read(&[], 0, |bits| {
             let _ = read_delta_and_lossless(bits, &mut individual);
@@ -5715,19 +5972,31 @@ fn coverage_tiling_and_metadata_paths() {
         let _ = read_delta_and_lossless(bits, &mut missing_quantization);
     });
 
-    let mut filtered = header.clone();
+    let mut filtered = header;
     filtered.all_lossless = false;
     for fill in [0_u8, 0xff] {
         let input = [fill; 128];
-        coverage_read(&input, input.len() * 8, |bits| {
-            let _ = read_loop_filter(bits, &sequence, &references, &filtered);
-        });
-        coverage_read(&input, input.len() * 8, |bits| {
-            let _ = read_cdef(bits, &sequence, &filtered);
-        });
-        coverage_read(&input, input.len() * 8, |bits| {
-            let _ = read_restoration(bits, &sequence, &filtered);
-        });
+        coverage_read(
+            &input,
+            crate::coverage_support::bit_len(input.len()),
+            |bits| {
+                let _ = read_loop_filter(bits, &sequence, &references, &filtered);
+            },
+        );
+        coverage_read(
+            &input,
+            crate::coverage_support::bit_len(input.len()),
+            |bits| {
+                let _ = read_cdef(bits, &sequence, &filtered);
+            },
+        );
+        coverage_read(
+            &input,
+            crate::coverage_support::bit_len(input.len()),
+            |bits| {
+                let _ = read_restoration(bits, &sequence, &filtered);
+            },
+        );
     }
     coverage_sweep_read(&[0; 128], |bits| {
         let _ = read_loop_filter(bits, &sequence, &references, &filtered);
@@ -5766,7 +6035,7 @@ fn coverage_tiling_and_metadata_paths() {
     filtered.allow_intrabc = false;
     filtered.all_lossless = true;
     filtered.superres_enabled = true;
-    let mut restoration_sequence = sequence.clone();
+    let mut restoration_sequence = sequence;
     restoration_sequence.enable_restoration = false;
     coverage_read(&[], 0, |bits| {
         let _ = read_restoration(bits, &restoration_sequence, &filtered);
@@ -5784,9 +6053,13 @@ fn coverage_tiling_and_metadata_paths() {
         restoration_sequence.use_128x128_superblock = use_128;
         restoration_sequence.subsampling_x = subsampling_x;
         restoration_sequence.subsampling_y = subsampling_y;
-        coverage_read(input, input.len() * 8, |bits| {
-            let _ = read_restoration(bits, &restoration_sequence, &filtered);
-        });
+        coverage_read(
+            input,
+            crate::coverage_support::bit_len(input.len()),
+            |bits| {
+                let _ = read_restoration(bits, &restoration_sequence, &filtered);
+            },
+        );
         coverage_sweep_read(input, |bits| {
             let _ = read_restoration(bits, &restoration_sequence, &filtered);
         });
@@ -5811,11 +6084,19 @@ fn coverage_prediction_and_grain_paths() {
     let _ = derive_skip_mode_references(&sequence, &references, &header);
     sequence.enable_order_hint = true;
     for reference in &mut references {
-        reference.as_mut().unwrap().order_hint = 1;
+        crate::coverage_support::require_some(
+            reference.as_mut(),
+            "coverage fixture: reference.as_mut()",
+        )
+        .order_hint = 1;
     }
     let _ = derive_skip_mode_references(&sequence, &references, &header);
     for reference in &mut references {
-        reference.as_mut().unwrap().order_hint = 5;
+        crate::coverage_support::require_some(
+            reference.as_mut(),
+            "coverage fixture: reference.as_mut()",
+        )
+        .order_hint = 5;
     }
     let _ = derive_skip_mode_references(&sequence, &references, &header);
     let mut missing_skip_reference = references.clone();
@@ -5833,9 +6114,13 @@ fn coverage_prediction_and_grain_paths() {
     }
     let global = global.finish();
     header.primary_ref_frame = PRIMARY_REF_NONE;
-    coverage_read(&global, global.len() * 8, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
+    coverage_read(
+        &global,
+        crate::coverage_support::bit_len(global.len()),
+        |bits| {
+            let _ = read_global_motion(bits, &references, &header);
+        },
+    );
     coverage_sweep_read(&global, |bits| {
         let _ = read_global_motion(bits, &references, &header);
     });
@@ -5852,16 +6137,24 @@ fn coverage_prediction_and_grain_paths() {
     }
     let translation = translation.finish();
     header.allow_high_precision_mv = true;
-    coverage_read(&translation, translation.len() * 8, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
+    coverage_read(
+        &translation,
+        crate::coverage_support::bit_len(translation.len()),
+        |bits| {
+            let _ = read_global_motion(bits, &references, &header);
+        },
+    );
     coverage_sweep_read(&translation, |bits| {
         let _ = read_global_motion(bits, &references, &header);
     });
     header.allow_high_precision_mv = false;
-    coverage_read(&translation, translation.len() * 8, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
+    coverage_read(
+        &translation,
+        crate::coverage_support::bit_len(translation.len()),
+        |bits| {
+            let _ = read_global_motion(bits, &references, &header);
+        },
+    );
 
     let mut affine = CoverageBitWriter::new();
     affine.push(1, 1);
@@ -5875,9 +6168,13 @@ fn coverage_prediction_and_grain_paths() {
     }
     let affine = affine.finish();
     header.primary_ref_frame = 0;
-    coverage_read(&affine, affine.len() * 8, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
+    coverage_read(
+        &affine,
+        crate::coverage_support::bit_len(affine.len()),
+        |bits| {
+            let _ = read_global_motion(bits, &references, &header);
+        },
+    );
     coverage_sweep_read(&affine, |bits| {
         let _ = read_global_motion(bits, &references, &header);
     });
@@ -5940,19 +6237,27 @@ fn coverage_prediction_and_grain_paths() {
     let grain = grain.finish();
     sequence.subsampling_x = false;
     sequence.subsampling_y = false;
-    coverage_read(&grain, grain.len() * 8, |bits| {
-        let parsed = read_film_grain(bits, &sequence, &references, &header);
-        assert!(parsed.is_ok());
-    });
+    coverage_read(
+        &grain,
+        crate::coverage_support::bit_len(grain.len()),
+        |bits| {
+            let parsed = read_film_grain(bits, &sequence, &references, &header);
+            assert!(parsed.is_ok());
+        },
+    );
     coverage_sweep_read(&grain, |bits| {
         let _ = read_film_grain(bits, &sequence, &references, &header);
     });
 
     for fill in [0_u8, 0x55, 0xaa, 0xff] {
         let input = [fill; 512];
-        coverage_read(&input, input.len() * 8, |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        });
+        coverage_read(
+            &input,
+            crate::coverage_support::bit_len(input.len()),
+            |bits| {
+                let _ = read_film_grain(bits, &sequence, &references, &header);
+            },
+        );
     }
     sequence.monochrome = true;
     coverage_read(&[0xff; 512], 4096, |bits| {
@@ -5962,7 +6267,11 @@ fn coverage_prediction_and_grain_paths() {
     sequence = coverage_sequence();
     header.frame_type = FrameType::Inter;
     header.reference_indices = [0, 1, 2, 3, 4, 5, 6];
-    references[0].as_mut().unwrap().film_grain = Some(FilmGrain {
+    crate::coverage_support::require_some(
+        references[0].as_mut(),
+        "coverage fixture: references[0].as_mut()",
+    )
+    .film_grain = Some(FilmGrain {
         seed: 1,
         update: true,
         reference_slot: None,
@@ -5988,30 +6297,50 @@ fn coverage_prediction_and_grain_paths() {
     inherited.push(0, 1);
     inherited.push(0, 3);
     let inherited = inherited.finish();
-    coverage_read(&inherited, inherited.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &inherited,
+        crate::coverage_support::bit_len(inherited.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
     coverage_sweep_read(&inherited, |bits| {
         let _ = read_film_grain(bits, &sequence, &references, &header);
     });
     let mut no_grain_reference = references.clone();
-    no_grain_reference[0].as_mut().unwrap().film_grain = None;
-    coverage_read(&inherited, inherited.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &no_grain_reference, &header);
-    });
+    crate::coverage_support::require_some(
+        no_grain_reference[0].as_mut(),
+        "coverage fixture: no_grain_reference[0].as_mut()",
+    )
+    .film_grain = None;
+    coverage_read(
+        &inherited,
+        crate::coverage_support::bit_len(inherited.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &no_grain_reference, &header);
+        },
+    );
     no_grain_reference[0] = None;
-    coverage_read(&inherited, inherited.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &no_grain_reference, &header);
-    });
+    coverage_read(
+        &inherited,
+        crate::coverage_support::bit_len(inherited.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &no_grain_reference, &header);
+        },
+    );
     let mut invalid_inherited = CoverageBitWriter::new();
     invalid_inherited.push(1, 1);
     invalid_inherited.push(2, 16);
     invalid_inherited.push(0, 1);
     invalid_inherited.push(7, 3);
     let invalid_inherited = invalid_inherited.finish();
-    coverage_read(&invalid_inherited, invalid_inherited.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &invalid_inherited,
+        crate::coverage_support::bit_len(invalid_inherited.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
 
     sequence.film_grain_present = false;
     coverage_read(&[], 0, |bits| {
@@ -6039,9 +6368,13 @@ fn coverage_prediction_and_grain_paths() {
     invalid_y.push(0, 16);
     invalid_y.push(15, 4);
     let invalid_y = invalid_y.finish();
-    coverage_read(&invalid_y, invalid_y.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &invalid_y,
+        crate::coverage_support::bit_len(invalid_y.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
 
     sequence.subsampling_x = false;
     sequence.subsampling_y = false;
@@ -6052,9 +6385,13 @@ fn coverage_prediction_and_grain_paths() {
     invalid_uv.push(0, 1);
     invalid_uv.push(11, 4);
     let invalid_uv = invalid_uv.finish();
-    coverage_read(&invalid_uv, invalid_uv.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &invalid_uv,
+        crate::coverage_support::bit_len(invalid_uv.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
 
     sequence.subsampling_x = true;
     sequence.subsampling_y = true;
@@ -6070,9 +6407,13 @@ fn coverage_prediction_and_grain_paths() {
     empty_420.push(0, 1);
     empty_420.push(0, 1);
     let empty_420 = empty_420.finish();
-    coverage_read(&empty_420, empty_420.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &empty_420,
+        crate::coverage_support::bit_len(empty_420.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
     coverage_sweep_read(&empty_420, |bits| {
         let _ = read_film_grain(bits, &sequence, &references, &header);
     });
@@ -6088,9 +6429,13 @@ fn coverage_prediction_and_grain_paths() {
     asymmetric_uv.push(0, 8);
     asymmetric_uv.push(0, 4);
     let asymmetric_uv = asymmetric_uv.finish();
-    coverage_read(&asymmetric_uv, asymmetric_uv.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &asymmetric_uv,
+        crate::coverage_support::bit_len(asymmetric_uv.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
 
     let mut chroma_from_luma = CoverageBitWriter::new();
     chroma_from_luma.push(1, 1);
@@ -6112,16 +6457,24 @@ fn coverage_prediction_and_grain_paths() {
     chroma_from_luma.push(0, 1);
     chroma_from_luma.push(0, 1);
     let chroma_from_luma = chroma_from_luma.finish();
-    coverage_read(&chroma_from_luma, chroma_from_luma.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &chroma_from_luma,
+        crate::coverage_support::bit_len(chroma_from_luma.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
     coverage_sweep_read(&chroma_from_luma, |bits| {
         let _ = read_film_grain(bits, &sequence, &references, &header);
     });
     sequence.subsampling_y = false;
-    coverage_read(&grain, grain.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &grain,
+        crate::coverage_support::bit_len(grain.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
 
     sequence.monochrome = true;
     let mut monochrome_grain = CoverageBitWriter::new();
@@ -6140,9 +6493,13 @@ fn coverage_prediction_and_grain_paths() {
     monochrome_grain.push(0, 1);
     monochrome_grain.push(0, 1);
     let monochrome_grain = monochrome_grain.finish();
-    coverage_read(&monochrome_grain, monochrome_grain.len() * 8, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
+    coverage_read(
+        &monochrome_grain,
+        crate::coverage_support::bit_len(monochrome_grain.len()),
+        |bits| {
+            let _ = read_film_grain(bits, &sequence, &references, &header);
+        },
+    );
     coverage_sweep_read(&monochrome_grain, |bits| {
         let _ = read_film_grain(bits, &sequence, &references, &header);
     });

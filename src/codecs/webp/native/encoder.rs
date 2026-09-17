@@ -148,10 +148,10 @@ fn coverage_record_token_remaining(slot: &AtomicUsize, token: Option<&crate::Can
 #[cfg(coverage)]
 #[coverage(off)]
 fn coverage_cancel_token_at_optimize(token: Option<&crate::CancellationToken>) {
-    if COVERAGE_TOKEN_STREAM_CANCEL_AT_OPTIMIZE.swap(0, Ordering::Relaxed) != 0 {
-        if let Some(token) = token {
-            token.cancel_after(0);
-        }
+    if COVERAGE_TOKEN_STREAM_CANCEL_AT_OPTIMIZE.swap(0, Ordering::Relaxed) != 0
+        && let Some(token) = token
+    {
+        token.cancel_after(0);
     }
 }
 
@@ -3436,7 +3436,7 @@ fn __coverage_exercise_instrumented_generic_paths() {
     let large_meta_height = 128_usize;
     let large_meta_pixels = (0..large_meta_width * large_meta_height)
         .map(|index| {
-            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            let value = (index as u32).wrapping_mul(0x045d_9f3b);
             0xff00_0000 | (value & 0x00ff_ffff)
         })
         .collect::<Vec<_>>();
@@ -3594,17 +3594,20 @@ fn __coverage_exercise_instrumented_generic_paths() {
     };
     let mut live_noop_lengths = vec![0; 256];
     let mut live_noop_codes = vec![0; 256];
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut live_noop_writer,
-            &dense_frequencies,
-            &mut live_noop_lengths,
-            &mut live_noop_codes,
-            &mut huffman_scratch,
-            Some(&palette_token),
-        )
-        .expect("instrumented token Huffman coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut live_noop_writer,
+                &dense_frequencies,
+                &mut live_noop_lengths,
+                &mut live_noop_codes,
+                &mut huffman_scratch,
+                Some(&palette_token),
+            ),
+            "instrumented token Huffman coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(live_noop_writer.flush());
 
     let mut live_token_bytes = Vec::new();
@@ -3620,17 +3623,20 @@ fn __coverage_exercise_instrumented_generic_paths() {
     };
     let mut live_token_lengths = vec![0; 256];
     let mut live_token_codes = vec![0; 256];
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut live_token_writer,
-            &dense_frequencies,
-            &mut live_token_lengths,
-            &mut live_token_codes,
-            &mut huffman_scratch,
-            Some(&palette_token),
-        )
-        .expect("instrumented bit-token Huffman coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut live_token_writer,
+                &dense_frequencies,
+                &mut live_token_lengths,
+                &mut live_token_codes,
+                &mut huffman_scratch,
+                Some(&palette_token),
+            ),
+            "instrumented bit-token Huffman coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(live_token_writer.flush());
 
     let mut trimmed_token_bytes = Vec::new();
@@ -3646,17 +3652,20 @@ fn __coverage_exercise_instrumented_generic_paths() {
     };
     let mut trimmed_token_lengths = vec![0; 256];
     let mut trimmed_token_codes = vec![0; 256];
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut trimmed_token_writer,
-            &trimmed_frequencies,
-            &mut trimmed_token_lengths,
-            &mut trimmed_token_codes,
-            &mut huffman_scratch,
-            Some(&palette_token),
-        )
-        .expect("instrumented trimmed bit-token Huffman coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut trimmed_token_writer,
+                &trimmed_frequencies,
+                &mut trimmed_token_lengths,
+                &mut trimmed_token_codes,
+                &mut huffman_scratch,
+                Some(&palette_token),
+            ),
+            "instrumented trimmed bit-token Huffman coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(trimmed_token_writer.flush());
 
     for initial_bits in 0..8 {
@@ -3853,17 +3862,20 @@ fn __coverage_exercise_instrumented_generic_paths() {
             Some(&token),
         ));
     }
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut huffman_writer,
-            &dense_frequencies,
-            &mut huffman_lengths,
-            &mut huffman_codes,
-            &mut huffman_scratch,
-            None,
-        )
-        .expect("instrumented Huffman coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut huffman_writer,
+                &dense_frequencies,
+                &mut huffman_lengths,
+                &mut huffman_codes,
+                &mut huffman_scratch,
+                None,
+            ),
+            "instrumented Huffman coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(huffman_writer.flush());
 
     let palette = (0..20)
@@ -3905,18 +3917,21 @@ fn __coverage_exercise_instrumented_generic_paths() {
         .map(|index| palette[index % palette.len()])
         .collect::<Vec<_>>();
     let mut palette_scratch = ImageStreamScratch::default();
-    std::hint::black_box(
-        apply_palette(
-            &mut palette_writer,
-            &mut palette_pixels,
-            64,
-            32,
-            palette,
-            &mut palette_scratch,
-            None,
-        )
-        .expect("instrumented palette coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            apply_palette(
+                &mut palette_writer,
+                &mut palette_pixels,
+                64,
+                32,
+                palette,
+                &mut palette_scratch,
+                None,
+            ),
+            "instrumented palette coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(palette_writer.flush());
 
     let token_palette = (0..20)
@@ -3936,18 +3951,21 @@ fn __coverage_exercise_instrumented_generic_paths() {
         nbits: 0,
         checkpoint: NoopBitWriterCheckpoint::default(),
     };
-    std::hint::black_box(
-        apply_palette(
-            &mut token_palette_writer,
-            &mut token_palette_pixels,
-            64,
-            32,
-            token_palette.clone(),
-            &mut palette_scratch,
-            Some(&live_token),
-        )
-        .expect("instrumented token palette coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            apply_palette(
+                &mut token_palette_writer,
+                &mut token_palette_pixels,
+                64,
+                32,
+                token_palette.clone(),
+                &mut palette_scratch,
+                Some(&live_token),
+            ),
+            "instrumented token palette coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(token_palette_writer.flush());
 
     let mut token_palette_pixels = (0..(64 * 32))
@@ -3964,18 +3982,21 @@ fn __coverage_exercise_instrumented_generic_paths() {
             output_bytes: 0,
         },
     };
-    std::hint::black_box(
-        apply_palette(
-            &mut token_palette_writer,
-            &mut token_palette_pixels,
-            64,
-            32,
-            token_palette.clone(),
-            &mut palette_scratch,
-            Some(&live_token),
-        )
-        .expect("instrumented bit-token palette coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            apply_palette(
+                &mut token_palette_writer,
+                &mut token_palette_pixels,
+                64,
+                32,
+                token_palette.clone(),
+                &mut palette_scratch,
+                Some(&live_token),
+            ),
+            "instrumented bit-token palette coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(token_palette_writer.flush());
 
     let apply_probe_token = crate::CancellationToken::new();
@@ -4832,7 +4853,7 @@ fn coverage_exercise_remaining_encoder_errors_exploration() {
     let grayscale_pixels = vec![0xff40_4040; 32 * 32];
     let grayscale_token = crate::CancellationToken::new();
     grayscale_token.cancel_after(0);
-    let mut grayscale_pixels = grayscale_pixels.clone();
+    let mut grayscale_pixels = grayscale_pixels;
     let mut grayscale_scratch = ImageStreamScratch::default();
     let _ = encode_frame_stream(
         &mut grayscale_pixels,
@@ -4957,7 +4978,7 @@ fn coverage_exercise_remaining_encoder_errors_exploration() {
 
     let alpha_palette_delta = (0..256)
         .map(|index| {
-            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            let value = (index as u32).wrapping_mul(0x045d_9f3b);
             0xff00_0000 | (value & 0x00ff_ffff)
         })
         .collect::<Vec<_>>();
@@ -5310,11 +5331,10 @@ fn coverage_exercise_remaining_encoder_errors() {
         &mut copy_probe_token_scratch,
         Some(&copy_probe_token),
     );
-    let copy_checks = usize::MAX.saturating_sub(
-        copy_probe_token
-            .coverage_remaining_checks()
-            .expect("coverage token must retain its remaining checks"),
-    );
+    let copy_checks = usize::MAX.saturating_sub(crate::coverage_support::require_some(
+        copy_probe_token.coverage_remaining_checks(),
+        "coverage token must retain its remaining checks",
+    ));
     for checks in copy_checks.saturating_sub(4)..=copy_checks.saturating_add(4) {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
@@ -5486,7 +5506,7 @@ fn coverage_exercise_remaining_encoder_errors() {
 
     let alpha_palette = (0..256)
         .map(|index| {
-            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            let value = (index as u32).wrapping_mul(0x045d_9f3b);
             0xff00_0000 | (value & 0x00ff_ffff)
         })
         .collect::<Vec<_>>();
@@ -5931,17 +5951,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     token_tree_frequencies[1] = 1;
     token_tree_frequencies[128] = 1;
     token_tree_frequencies[255] = 7;
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut token_tree_writer,
-            &token_tree_frequencies,
-            &mut token_tree_lengths,
-            &mut token_tree_codes,
-            &mut huffman_scratch,
-            Some(&coverage_token),
-        )
-        .expect("token-aware huffman tree coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut token_tree_writer,
+                &token_tree_frequencies,
+                &mut token_tree_lengths,
+                &mut token_tree_codes,
+                &mut huffman_scratch,
+                Some(&coverage_token),
+            ),
+            "token-aware huffman tree coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = token_tree_writer.flush();
     std::hint::black_box(&token_tree_bytes);
 
@@ -5961,17 +5984,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let dense_tree_frequencies = (0..256)
         .map(|index| ((index * 37) % 251 + 1) as u32)
         .collect::<Vec<_>>();
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut dense_tree_writer,
-            &dense_tree_frequencies,
-            &mut dense_tree_lengths,
-            &mut dense_tree_codes,
-            &mut huffman_scratch,
-            Some(&coverage_token),
-        )
-        .expect("dense token-aware huffman tree coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut dense_tree_writer,
+                &dense_tree_frequencies,
+                &mut dense_tree_lengths,
+                &mut dense_tree_codes,
+                &mut huffman_scratch,
+                Some(&coverage_token),
+            ),
+            "dense token-aware huffman tree coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = dense_tree_writer.flush();
     std::hint::black_box(&dense_tree_bytes);
 
@@ -6009,17 +6035,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut token_trimmed_lengths = vec![0; 256];
     let mut token_trimmed_codes = vec![0; 256];
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut token_trimmed_tree_writer,
-            &trimmed_frequencies,
-            &mut token_trimmed_lengths,
-            &mut token_trimmed_codes,
-            &mut huffman_scratch,
-            Some(&coverage_token),
-        )
-        .expect("trimmed token-aware huffman tree coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut token_trimmed_tree_writer,
+                &trimmed_frequencies,
+                &mut token_trimmed_lengths,
+                &mut token_trimmed_codes,
+                &mut huffman_scratch,
+                Some(&coverage_token),
+            ),
+            "trimmed token-aware huffman tree coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = token_trimmed_tree_writer.flush();
     std::hint::black_box(&token_trimmed_tree_bytes);
 
@@ -6062,34 +6091,40 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut ordinary_token_lengths = vec![0; 256];
     let mut ordinary_token_codes = vec![0; 256];
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut ordinary_token_tree_writer,
-            &trimmed_frequencies,
-            &mut ordinary_token_lengths,
-            &mut ordinary_token_codes,
-            &mut huffman_scratch,
-            None,
-        )
-        .expect("ordinary token-writer huffman tree coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut ordinary_token_tree_writer,
+                &trimmed_frequencies,
+                &mut ordinary_token_lengths,
+                &mut ordinary_token_codes,
+                &mut huffman_scratch,
+                None,
+            ),
+            "ordinary token-writer huffman tree coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = ordinary_token_tree_writer.flush();
 
     let mut single_token_tree_frequencies = vec![0; 256];
     single_token_tree_frequencies[128] = 1;
     let mut single_token_tree_lengths = vec![0; 256];
     let mut single_token_tree_codes = vec![0; 256];
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut ordinary_token_tree_writer,
-            &single_token_tree_frequencies,
-            &mut single_token_tree_lengths,
-            &mut single_token_tree_codes,
-            &mut huffman_scratch,
-            None,
-        )
-        .expect("single-symbol token-writer huffman tree coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut ordinary_token_tree_writer,
+                &single_token_tree_frequencies,
+                &mut single_token_tree_lengths,
+                &mut single_token_tree_codes,
+                &mut huffman_scratch,
+                None,
+            ),
+            "single-symbol token-writer huffman tree coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = ordinary_token_tree_writer.flush();
     std::hint::black_box(&ordinary_token_tree_bytes);
 
@@ -6102,17 +6137,20 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let mut dense_success_lengths = vec![0; 256];
     let mut dense_success_codes = vec![0; 256];
-    std::hint::black_box(
-        write_huffman_tree(
-            &mut dense_success_writer,
-            &dense_tree_frequencies,
-            &mut dense_success_lengths,
-            &mut dense_success_codes,
-            &mut huffman_scratch,
-            None,
-        )
-        .expect("dense no-op Huffman coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            write_huffman_tree(
+                &mut dense_success_writer,
+                &dense_tree_frequencies,
+                &mut dense_success_lengths,
+                &mut dense_success_codes,
+                &mut huffman_scratch,
+                None,
+            ),
+            "dense no-op Huffman coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(dense_success_writer.flush());
 
     let populations = [
@@ -6365,7 +6403,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let wide_meta_height = 33_usize;
     let wide_meta_pixels = (0..wide_meta_width * wide_meta_height)
         .map(|index| {
-            let value = (index as u32).wrapping_mul(0x45d9_f3b);
+            let value = (index as u32).wrapping_mul(0x045d_9f3b);
             0xff00_0000 | (value & 0x00ff_ffff)
         })
         .collect::<Vec<_>>();
@@ -6678,7 +6716,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .copied()
         .map(backward_refs::Token::Literal)
         .collect::<Vec<_>>();
-    for (quality, histogram_bits) in [(100, 2)] {
+    {
+        let (quality, histogram_bits) = (100, 2);
         let mut bytes = Vec::new();
         let mut writer = BitWriter {
             writer: &mut bytes,
@@ -7107,7 +7146,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let wide_entropy_pixels = (0..(2 * 1_025))
         .map(|index| {
             let value = index as u32;
-            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | value * 7 & 0xff
+            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | (value * 7) & 0xff
         })
         .collect::<Vec<_>>();
     let entropy_probe_token = crate::CancellationToken::new();
@@ -7218,7 +7257,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut transform_pixels = (0..(64 * 64))
         .map(|index| {
             let value = index as u32;
-            0xff00_0000 | ((value & 0xff) << 16) | (((value * 3) & 0xff) << 8) | (value * 7 & 0xff)
+            0xff00_0000
+                | ((value & 0xff) << 16)
+                | (((value * 3) & 0xff) << 8)
+                | ((value * 7) & 0xff)
         })
         .collect::<Vec<_>>();
     let mut transform_scratch = ImageStreamScratch::default();
@@ -7710,18 +7752,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
         checkpoint: NoopBitWriterCheckpoint::default(),
     };
     let mut rich_success_scratch = ImageStreamScratch::default();
-    std::hint::black_box(
-        apply_palette(
-            &mut rich_success_writer,
-            &mut rich_success_pixels,
-            64,
-            32,
-            token_palette.clone(),
-            &mut rich_success_scratch,
-            None,
-        )
-        .expect("rich no-op palette coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            apply_palette(
+                &mut rich_success_writer,
+                &mut rich_success_pixels,
+                64,
+                32,
+                token_palette.clone(),
+                &mut rich_success_scratch,
+                None,
+            ),
+            "rich no-op palette coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = std::hint::black_box(rich_success_writer.flush());
     let mut token_palette_pixels = (0..(64 * 32))
         .map(|index| token_palette[index % token_palette.len()])
@@ -7737,18 +7782,21 @@ pub(crate) fn __coverage_exercise_private_branches() {
             output_bytes: 0,
         },
     };
-    std::hint::black_box(
-        apply_palette(
-            &mut token_palette_writer,
-            &mut token_palette_pixels,
-            64,
-            32,
-            token_palette,
-            &mut palette_scratch,
-            Some(&coverage_token),
-        )
-        .expect("token-aware palette coverage input must encode"),
-    );
+    {
+        crate::coverage_support::require_ok(
+            apply_palette(
+                &mut token_palette_writer,
+                &mut token_palette_pixels,
+                64,
+                32,
+                token_palette,
+                &mut palette_scratch,
+                Some(&coverage_token),
+            ),
+            "token-aware palette coverage input must encode",
+        );
+        std::hint::black_box(())
+    };
     let _ = token_palette_writer.flush();
     std::hint::black_box(&token_palette_bytes);
 

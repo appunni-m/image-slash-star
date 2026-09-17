@@ -1735,7 +1735,7 @@ fn av1_reconstruction_document() -> Result<&'static Av1ReconstructionDocument, &
             .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
         let mut document: Av1ReconstructionDocument = json::from_str(&contents)
             .map_err(|error| format!("cannot parse {}: {error:?}", path.display()))?;
-        let mut part_count = 0;
+        let mut part_count = 0usize;
         loop {
             let part_path = root
                 .join("tests")
@@ -1752,7 +1752,9 @@ fn av1_reconstruction_document() -> Result<&'static Av1ReconstructionDocument, &
             let mut cases: Vec<Av1ReconstructionCase> = json::from_str(&part_contents)
                 .map_err(|error| format!("cannot parse {}: {error:?}", part_path.display()))?;
             document.cases.append(&mut cases);
-            part_count += 1;
+            part_count = part_count
+                .checked_add(1)
+                .ok_or_else(|| "AV1 reconstruction part count overflows usize".to_owned())?;
         }
         if part_count == 0 {
             return Err(format!(
@@ -6418,9 +6420,12 @@ fn assert_i444_square8_case(
         case.fixture
     );
 
-    for leaf_index in 0..4 {
+    for leaf_index in 0usize..4 {
         let leaf_end = skip_positions
-            .get(leaf_index + 1)
+            .get(require_some(
+                leaf_index.checked_add(1),
+                "AV1 fixture next leaf index",
+            ))
             .copied()
             .unwrap_or(event_lines.len());
         let leaf_lines = &event_lines[skip_positions[leaf_index]..leaf_end];
@@ -6436,7 +6441,7 @@ fn assert_i444_square8_case(
         }
         semantic_prefixes.push(format!("Post-ymode[{}]:", expectation.ymode[leaf_index]));
         if resolved_angle >= 0 {
-            let base_angle = match expectation.ymode[leaf_index] {
+            let base_angle: i16 = match expectation.ymode[leaf_index] {
                 1 => 90,
                 2 => 180,
                 mode => panic!(
@@ -6446,7 +6451,13 @@ fn assert_i444_square8_case(
             };
             let angle_symbol = 3_i16;
             assert_eq!(
-                base_angle + (angle_symbol - 3) * 3,
+                require_some(
+                    angle_symbol
+                        .checked_sub(3)
+                        .and_then(|delta| delta.checked_mul(3))
+                        .and_then(|delta| base_angle.checked_add(delta)),
+                    "AV1 fixture resolved angle"
+                ),
                 resolved_angle,
                 "AV1 I444 Square8 resolved directional angle leaf {leaf_index}: {}",
                 case.fixture
@@ -6630,16 +6641,14 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         ),
         ("partitioned_4x16_green.avif", "partitioned_8x16_green.avif"),
     ] {
-        let accepted = expected
-            .cases
-            .iter()
-            .find(|case| case.fixture == accepted)
-            .expect("accepted recursive AVIF oracle case");
-        let extension = expected
-            .cases
-            .iter()
-            .find(|case| case.fixture == extension)
-            .expect("extended recursive AVIF oracle case");
+        let accepted = require_some(
+            expected.cases.iter().find(|case| case.fixture == accepted),
+            "accepted recursive AVIF oracle case",
+        );
+        let extension = require_some(
+            expected.cases.iter().find(|case| case.fixture == extension),
+            "extended recursive AVIF oracle case",
+        );
         assert_eq!(extension.partition_blocks, accepted.partition_blocks);
         assert_eq!(extension.entropy_operations, accepted.entropy_operations);
     }
@@ -7775,7 +7784,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 79,
                 "AV1 following Vertical8x16 split TX4x4 entropy operation count"
             );
-            for (child_index, pair) in case.entropy_operations[59..75].chunks_exact(2).enumerate() {
+            for (child_index, pair) in case.entropy_operations[59..75]
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .enumerate()
+            {
                 assert_eq!(pair[0].operation, "fixed", "luma child {child_index} setup");
                 assert_eq!(pair[0].value, 1, "luma child {child_index} setup value");
                 assert_eq!(
@@ -7784,7 +7798,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 );
                 assert_eq!(pair[1].value, 1, "luma child {child_index} skip value");
             }
-            for (plane_index, pair) in case.entropy_operations[75..79].chunks_exact(2).enumerate() {
+            for (plane_index, pair) in case.entropy_operations[75..79]
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .enumerate()
+            {
                 assert_eq!(
                     pair[0].operation, "fixed",
                     "chroma plane {plane_index} setup"
@@ -8152,14 +8171,14 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 .iter()
                 .filter_map(|event| event.as_object()?.get("line")?.as_str())
                 .collect::<Vec<_>>();
-            let u_prediction_index = event_lines
-                .iter()
-                .rposition(|line| *line == "u-intra-pred")
-                .expect("following Vertical8x16 U predictor trace");
-            let v_prediction_index = event_lines
-                .iter()
-                .rposition(|line| *line == "v-intra-pred")
-                .expect("following Vertical8x16 V predictor trace");
+            let u_prediction_index = require_some(
+                event_lines.iter().rposition(|line| *line == "u-intra-pred"),
+                "following Vertical8x16 U predictor trace",
+            );
+            let v_prediction_index = require_some(
+                event_lines.iter().rposition(|line| *line == "v-intra-pred"),
+                "following Vertical8x16 V predictor trace",
+            );
             assert_eq!(
                 &event_lines[u_prediction_index + 1..u_prediction_index + 9],
                 expected_u_prediction.as_slice(),
@@ -8174,14 +8193,18 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 (u_prediction_index, u_left_edge, u_top_edge, "U"),
                 (v_prediction_index, v_left_edge, v_top_edge, "V"),
             ] {
-                let left_index = event_lines[..prediction_index]
-                    .iter()
-                    .rposition(|line| *line == "l")
-                    .expect("following Vertical8x16 prepared left edge");
-                let top_index = event_lines[..prediction_index]
-                    .iter()
-                    .rposition(|line| *line == "t")
-                    .expect("following Vertical8x16 prepared top edge");
+                let left_index = require_some(
+                    event_lines[..prediction_index]
+                        .iter()
+                        .rposition(|line| *line == "l"),
+                    "following Vertical8x16 prepared left edge",
+                );
+                let top_index = require_some(
+                    event_lines[..prediction_index]
+                        .iter()
+                        .rposition(|line| *line == "t"),
+                    "following Vertical8x16 prepared top edge",
+                );
                 assert_eq!(
                     event_lines[left_index + 1],
                     expected_left,
@@ -8600,9 +8623,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 .filter_map(|event| event.as_object()?.get("line")?.as_str())
                 .collect::<Vec<_>>();
             assert!(
-                debug_lines
-                    .iter()
-                    .any(|line| *line == "Post-skip[0]: r=35349"),
+                debug_lines.contains(&"Post-skip[0]: r=35349"),
                 "AV1 Horizontal32x16 origin witness must be non-skipped"
             );
             assert!(
@@ -9065,10 +9086,10 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Vertical8x16 Diagonal67 witness leaf states"
             );
 
-            let bottom_prediction = debug_lines
-                .iter()
-                .rposition(|line| *line == "y-intra-pred")
-                .expect("AV1 Diagonal67 witness predictor trace");
+            let bottom_prediction = require_some(
+                debug_lines.iter().rposition(|line| *line == "y-intra-pred"),
+                "AV1 Diagonal67 witness predictor trace",
+            );
             assert_eq!(
                 &debug_lines[bottom_prediction + 1..bottom_prediction + 17],
                 &[
@@ -9092,10 +9113,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Vertical8x16 Diagonal67 predictor rows"
             );
 
-            let bottom_top = debug_lines[..bottom_prediction]
-                .iter()
-                .rposition(|line| *line == "t")
-                .expect("AV1 Diagonal67 witness top edge trace");
+            let bottom_top = require_some(
+                debug_lines[..bottom_prediction]
+                    .iter()
+                    .rposition(|line| *line == "t"),
+                "AV1 Diagonal67 witness top edge trace",
+            );
             assert_eq!(
                 &debug_lines[bottom_top - 2..bottom_top + 3],
                 &[
@@ -9108,15 +9131,19 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Vertical8x16 Diagonal67 top edge and top-left"
             );
 
-            let bottom_y_block = debug_lines
-                .iter()
-                .rposition(|line| *line == "Post-y-cf-blk[tx=7,txtp=0,eob=1]: r=64952")
-                .expect("AV1 Diagonal67 witness coefficient trace");
-            let bottom_dq = bottom_y_block
-                + debug_lines[bottom_y_block..]
+            let bottom_y_block = require_some(
+                debug_lines
                     .iter()
-                    .position(|line| *line == "dq")
-                    .expect("AV1 Diagonal67 witness dequantized coefficient matrix");
+                    .rposition(|line| *line == "Post-y-cf-blk[tx=7,txtp=0,eob=1]: r=64952"),
+                "AV1 Diagonal67 witness coefficient trace",
+            );
+            let bottom_dq = bottom_y_block
+                + require_some(
+                    debug_lines[bottom_y_block..]
+                        .iter()
+                        .position(|line| *line == "dq"),
+                    "AV1 Diagonal67 witness dequantized coefficient matrix",
+                );
             let actual_dq = debug_lines[bottom_dq + 1..bottom_dq + 9]
                 .iter()
                 .map(|line| line.split_whitespace().collect::<Vec<_>>())
@@ -9176,10 +9203,10 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Vertical8x16 Diagonal67 angle-64 witness leaf states"
             );
 
-            let bottom_prediction = debug_lines
-                .iter()
-                .rposition(|line| *line == "y-intra-pred")
-                .expect("AV1 Diagonal67 angle-64 witness predictor trace");
+            let bottom_prediction = require_some(
+                debug_lines.iter().rposition(|line| *line == "y-intra-pred"),
+                "AV1 Diagonal67 angle-64 witness predictor trace",
+            );
             assert_eq!(
                 &debug_lines[bottom_prediction + 1..bottom_prediction + 17],
                 &[
@@ -9203,10 +9230,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Vertical8x16 Diagonal67 angle-64 predictor rows"
             );
 
-            let bottom_top = debug_lines[..bottom_prediction]
-                .iter()
-                .rposition(|line| *line == "t")
-                .expect("AV1 Diagonal67 angle-64 witness top edge trace");
+            let bottom_top = require_some(
+                debug_lines[..bottom_prediction]
+                    .iter()
+                    .rposition(|line| *line == "t"),
+                "AV1 Diagonal67 angle-64 witness top edge trace",
+            );
             assert_eq!(
                 &debug_lines[bottom_top - 2..bottom_top + 3],
                 &[
@@ -9219,15 +9248,19 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 "AV1 following Vertical8x16 Diagonal67 angle-64 top edge and top-left"
             );
 
-            let bottom_y_block = debug_lines
-                .iter()
-                .rposition(|line| *line == "Post-y-cf-blk[tx=7,txtp=0,eob=2]: r=35080")
-                .expect("AV1 Diagonal67 angle-64 witness coefficient trace");
-            let bottom_dq = bottom_y_block
-                + debug_lines[bottom_y_block..]
+            let bottom_y_block = require_some(
+                debug_lines
                     .iter()
-                    .position(|line| *line == "dq")
-                    .expect("AV1 Diagonal67 angle-64 witness dequantized coefficient matrix");
+                    .rposition(|line| *line == "Post-y-cf-blk[tx=7,txtp=0,eob=2]: r=35080"),
+                "AV1 Diagonal67 angle-64 witness coefficient trace",
+            );
+            let bottom_dq = bottom_y_block
+                + require_some(
+                    debug_lines[bottom_y_block..]
+                        .iter()
+                        .position(|line| *line == "dq"),
+                    "AV1 Diagonal67 angle-64 witness dequantized coefficient matrix",
+                );
             let actual_dq = debug_lines[bottom_dq + 1..bottom_dq + 9]
                 .iter()
                 .map(|line| line.split_whitespace().collect::<Vec<_>>())
@@ -10434,10 +10467,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 .iter()
                 .filter_map(|event| event.as_object()?.get("line")?.as_str())
                 .collect::<Vec<_>>();
-            let first_bottom_leaf = all_debug_lines
-                .iter()
-                .position(|line| *line == "poc=0,y=2,x=0,bl=4,ctx=0,bp=0: r=34793")
-                .expect("AV1 70-degree witness must record its bottom leaf");
+            let first_bottom_leaf = require_some(
+                all_debug_lines
+                    .iter()
+                    .position(|line| *line == "poc=0,y=2,x=0,bl=4,ctx=0,bp=0: r=34793"),
+                "AV1 70-degree witness must record its bottom leaf",
+            );
             assert_eq!(
                 &all_debug_lines[first_bottom_leaf..first_bottom_leaf.saturating_add(19)],
                 [
@@ -10463,11 +10498,13 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 ],
                 "AV1 70-degree witness must retain dav1d's raw top-only edge and predictor"
             );
-            let first_bottom_dq = all_debug_lines[first_bottom_leaf..]
-                .iter()
-                .position(|line| *line == "dq")
-                .map(|offset| first_bottom_leaf.saturating_add(offset))
-                .expect("AV1 70-degree witness must record its first luma coefficient matrix");
+            let first_bottom_dq = require_some(
+                all_debug_lines[first_bottom_leaf..]
+                    .iter()
+                    .position(|line| *line == "dq")
+                    .map(|offset| first_bottom_leaf.saturating_add(offset)),
+                "AV1 70-degree witness must record its first luma coefficient matrix",
+            );
             assert_eq!(
                 &all_debug_lines[first_bottom_dq..first_bottom_dq.saturating_add(5)],
                 [
@@ -11012,20 +11049,21 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                         || line.starts_with("Post-uv-cf-blk[")
                 })
                 .collect::<Vec<_>>();
-            let y_intra_pred_index = case
-                .decoder_events
-                .iter()
-                .enumerate()
-                .filter_map(|(index, event)| {
-                    (event
-                        .as_object()
-                        .and_then(|object| object.get("line"))
-                        .and_then(Value::as_str)
-                        == Some("y-intra-pred"))
-                    .then_some(index)
-                })
-                .nth(1)
-                .expect("AV1 independent Horizontal16x4 witness must contain y-intra-pred");
+            let y_intra_pred_index = require_some(
+                case.decoder_events
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, event)| {
+                        (event
+                            .as_object()
+                            .and_then(|object| object.get("line"))
+                            .and_then(Value::as_str)
+                            == Some("y-intra-pred"))
+                        .then_some(index)
+                    })
+                    .nth(1),
+                "AV1 independent Horizontal16x4 witness must contain y-intra-pred",
+            );
             let y_intra_pred_rows = case
                 .decoder_events
                 .iter()
@@ -11588,9 +11626,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 .filter_map(|event| event.as_object()?.get("line")?.as_str())
                 .collect::<Vec<_>>();
             assert!(
-                debug_lines
-                    .iter()
-                    .any(|line| *line == "Post-delta_q[-2->2]: r=44296"),
+                debug_lines.contains(&"Post-delta_q[-2->2]: r=44296"),
                 "AV1 I444 rectangular witness must consume delta-Q"
             );
             assert_eq!(
@@ -11924,7 +11960,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             assert_eq!((expected.width, expected.height), expected_dimensions);
             assert_eq!(
                 expected.row_bytes.len(),
-                usize::try_from(expected.height).expect("AV1 plane height")
+                require_ok(usize::try_from(expected.height), "AV1 plane height")
             );
             let expected_bytes = expected
                 .row_bytes
@@ -11932,13 +11968,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 .flat_map(|row| {
                     assert_eq!(
                         row.len(),
-                        usize::try_from(expected.width)
-                            .expect("AV1 plane width")
+                        require_ok(usize::try_from(expected.width), "AV1 plane width")
                             .saturating_mul(2)
                     );
-                    row.as_bytes().chunks_exact(2).map(|pair| {
-                        let pair = std::str::from_utf8(pair).expect("hex pair must be UTF-8");
-                        u8::from_str_radix(pair, 16).expect("hex pair must be valid")
+                    row.as_bytes().as_chunks::<2>().0.iter().map(|pair| {
+                        let pair = require_ok(std::str::from_utf8(pair), "hex pair must be UTF-8");
+                        require_ok(u8::from_str_radix(pair, 16), "hex pair must be valid")
                     })
                 })
                 .collect::<Vec<_>>();
@@ -11949,7 +11984,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             );
             let actual_bytes = actual
                 .iter()
-                .map(|sample| u8::try_from(*sample).expect("eight-bit AV1 sample"))
+                .map(|sample| require_ok(u8::try_from(*sample), "eight-bit AV1 sample"))
                 .collect::<Vec<_>>();
             assert_eq!(
                 actual_bytes, expected_bytes,
@@ -12001,12 +12036,14 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         );
         assert_eq!(
             case.pillow.bytes,
-            usize::try_from(
-                case.pillow.size[0]
-                    .saturating_mul(case.pillow.size[1])
-                    .saturating_mul(3),
+            require_ok(
+                usize::try_from(
+                    case.pillow.size[0]
+                        .saturating_mul(case.pillow.size[1])
+                        .saturating_mul(3),
+                ),
+                "Pillow RGB byte count"
             )
-            .expect("Pillow RGB byte count")
         );
         let expected_pillow_sha256 = if let Some(expectation) = I444_SQUARE8_EXPECTATIONS
             .iter()
@@ -12689,13 +12726,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             .flat_map(|row| {
                 assert_eq!(
                     row.len(),
-                    usize::try_from(case.pillow.size[0])
-                        .expect("Pillow RGB width")
+                    require_ok(usize::try_from(case.pillow.size[0]), "Pillow RGB width")
                         .saturating_mul(6)
                 );
-                row.as_bytes().chunks_exact(2).map(|pair| {
-                    let pair = std::str::from_utf8(pair).expect("hex pair must be UTF-8");
-                    u8::from_str_radix(pair, 16).expect("hex pair must be valid")
+                row.as_bytes().as_chunks::<2>().0.iter().map(|pair| {
+                    let pair = require_ok(std::str::from_utf8(pair), "hex pair must be UTF-8");
+                    require_ok(u8::from_str_radix(pair, 16), "hex pair must be valid")
                 })
             })
             .collect::<Vec<_>>();
@@ -12770,11 +12806,13 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
         ),
         "masked-token AVIF fixture must be readable",
     );
-    let masked_trace = require_ok(
-        img::__coverage_av1_reconstruction(&masked_input),
-        "masked-token AVIF reconstruction validation must succeed",
-    )
-    .expect("masked-token AVIF must retain its portable reconstruction");
+    let masked_trace = require_some(
+        require_ok(
+            img::__coverage_av1_reconstruction(&masked_input),
+            "masked-token AVIF reconstruction validation must succeed",
+        ),
+        "masked-token AVIF must retain its portable reconstruction",
+    );
     assert_eq!((masked_trace.width, masked_trace.height), (4, 4));
     assert_eq!(masked_trace.planes[0], vec![199; 16]);
     assert_eq!(masked_trace.planes[1], vec![128; 4]);

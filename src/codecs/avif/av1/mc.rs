@@ -1468,7 +1468,7 @@ fn warp_horizontal(
     let scratch = scratch
         .get_mut(..WIDTH * HEIGHT)
         .ok_or_else(|| malformed("warped-motion intermediate scratch is too short"))?;
-    for (y, row) in scratch.chunks_exact_mut(WIDTH).enumerate() {
+    for (y, row) in scratch.as_chunks_mut::<WIDTH>().0.iter_mut().enumerate() {
         let y_offset = i32::try_from(y)
             .map_err(|_| malformed("warped-motion intermediate row exceeds i32"))?;
         let row_phase = mx

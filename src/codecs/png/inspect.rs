@@ -223,7 +223,13 @@ fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {
 pub(crate) fn __coverage_exercise_private_branches() {
     fn chunk(kind: [u8; 4], payload: &[u8]) -> Vec<u8> {
         let mut result = Vec::new();
-        result.extend_from_slice(&(payload.len() as u32).to_be_bytes());
+        result.extend_from_slice(
+            &crate::coverage_support::require_ok(
+                u32::try_from(payload.len()),
+                "fixture value must fit u32",
+            )
+            .to_be_bytes(),
+        );
         result.extend_from_slice(&kind);
         result.extend_from_slice(payload);
         result.extend_from_slice(&crc32(&kind, payload).to_be_bytes());

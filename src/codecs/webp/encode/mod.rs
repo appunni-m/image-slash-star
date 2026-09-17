@@ -1372,13 +1372,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let bilevel = DecodedImage::with_mode(8, 1, vec![0b1010_1010], ImageMode::L1);
     let indexed_opaque = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(
-        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX])
-            .expect("coverage palette should be valid"),
+        crate::coverage_support::require_ok(
+            crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX]),
+            "coverage palette should be valid",
+        ),
     );
-    let indexed_alpha = indexed_opaque.clone().with_palette(
-        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, 0])
-            .expect("coverage alpha palette should be valid"),
-    );
+    let indexed_alpha = indexed_opaque
+        .clone()
+        .with_palette(crate::coverage_support::require_ok(
+            crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, 0]),
+            "coverage alpha palette should be valid",
+        ));
     let la_opaque = DecodedImage::new(1, 1, vec![7, u8::MAX], crate::types::ColorType::La8);
     let la_alpha = DecodedImage::new(1, 1, vec![7, 0], crate::types::ColorType::La8);
     let cmyk = DecodedImage::new(1, 1, vec![1, 2, 3, 4], crate::types::ColorType::Cmyk8);
@@ -1405,8 +1409,8 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let large_l16 = DecodedImage::with_mode(
         1_024,
         1,
-        (0..1_024)
-            .flat_map(|pixel| [pixel as u8, u8::from(pixel % 2 != 0)])
+        (0u16..1_024)
+            .flat_map(|pixel| [pixel.to_le_bytes()[0], u8::from(pixel % 2 != 0)])
             .collect(),
         ImageMode::L16,
     );
@@ -1424,9 +1428,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         (0..1_024).flat_map(|_| [7, u8::MAX]).collect(),
         crate::types::ColorType::La8,
     );
-    let large_palette =
-        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX])
-            .expect("coverage palette should be valid");
+    let large_palette = crate::coverage_support::require_ok(
+        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX]),
+        "coverage palette should be valid",
+    );
     let large_indexed = DecodedImage::with_mode(1_024, 1, vec![0; 1_024], ImageMode::P8)
         .with_palette(large_palette);
     for image in [
@@ -1589,8 +1594,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts, None);
 
     let simple_rgb = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
-    let valid_encoded = encode(&simple_rgb, &WebPEncodeOptions::default())
-        .expect("coverage WebP input must encode");
+    let valid_encoded = crate::coverage_support::require_ok(
+        encode(&simple_rgb, &WebPEncodeOptions::default()),
+        "coverage WebP input must encode",
+    );
     let valid_metadata_token = crate::CancellationToken::new();
     let _ = attach_metadata(
         valid_encoded.clone(),

@@ -2941,8 +2941,14 @@ fn coverage_assert_sample(
 #[cfg(coverage)]
 fn coverage_fixture_contracts() {
     let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
-    let baseline_payload = extract_inner(baseline).unwrap();
-    let baseline_still = baseline_payload.still.as_ref().unwrap();
+    let baseline_payload = crate::coverage_support::require_ok(
+        extract_inner(baseline),
+        "coverage fixture: extract_inner(baseline)",
+    );
+    let baseline_still = crate::coverage_support::require_some(
+        baseline_payload.still.as_ref(),
+        "coverage fixture: baseline_payload.still.as_ref()",
+    );
     coverage_assert_sample(
         baseline,
         &baseline_still.color.samples[0],
@@ -2958,8 +2964,10 @@ fn coverage_fixture_contracts() {
     let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
     let mut animated_trailing = animated.to_vec();
     animated_trailing.extend_from_slice(b"garbage");
-    let animated_payload =
-        extract_inner(&animated_trailing).expect("trailing bytes after a sequence are ignored");
+    let animated_payload = crate::coverage_support::require_ok(
+        extract_inner(&animated_trailing),
+        "trailing bytes after a sequence are ignored",
+    );
     assert!(animated_payload.sequence.is_some());
 
     // An avis-only ftyp exercises the has_avif=false side of the trailing
@@ -2976,7 +2984,10 @@ fn coverage_fixture_contracts() {
     }
     avis_only.extend_from_slice(&animated[animated_size..]);
     avis_only.extend_from_slice(b"garbage");
-    let avis_payload = extract_inner(&avis_only).expect("avis-only trailing bytes are ignored");
+    let avis_payload = crate::coverage_support::require_ok(
+        extract_inner(&avis_only),
+        "avis-only trailing bytes are ignored",
+    );
     assert!(avis_payload.sequence.is_some());
 
     // Metadata-measurement error branches.
@@ -3007,22 +3018,20 @@ fn coverage_fixture_contracts() {
     let _ = metadata_bytes(&avis_ftyp);
     fn append_top_level_box(mut file: Vec<u8>, kind: &[u8; 4]) -> Vec<u8> {
         let mut position = 0usize;
-        while position.wrapping_add(8) <= file.len() {
-            let size = u32::from_be_bytes([
-                file[position],
-                file[position + 1],
-                file[position + 2],
-                file[position + 3],
-            ]) as usize;
-            if size < 8 || position + size > file.len() {
+        while let Some(header) = file.get(position..).and_then(|tail| tail.get(..8)) {
+            let size = u32::from_be_bytes([header[0], header[1], header[2], header[3]]) as usize;
+            let Some(end) = position.checked_add(size) else {
+                break;
+            };
+            if size < 8 || end > file.len() {
                 break;
             }
-            if &file[position + 4..position + 8] == kind {
-                let copied = file[position..position + size].to_vec();
+            if &header[4..8] == kind {
+                let copied = file[position..end].to_vec();
                 file.extend_from_slice(&copied);
                 break;
             }
-            position = position + size;
+            position = end;
         }
         file
     }
@@ -3035,8 +3044,14 @@ fn coverage_fixture_contracts() {
     let _ = append_top_level_box(baseline.to_vec(), b"XXXX");
 
     let alpha = include_bytes!("../../test_support/fixtures/input/images/avif/alpha.avif");
-    let alpha_payload = extract_inner(alpha).unwrap();
-    let alpha_still = alpha_payload.still.as_ref().unwrap();
+    let alpha_payload = crate::coverage_support::require_ok(
+        extract_inner(alpha),
+        "coverage fixture: extract_inner(alpha)",
+    );
+    let alpha_still = crate::coverage_support::require_some(
+        alpha_payload.still.as_ref(),
+        "coverage fixture: alpha_payload.still.as_ref()",
+    );
     coverage_assert_sample(
         alpha,
         &alpha_still.color.samples[0],
@@ -3047,7 +3062,11 @@ fn coverage_fixture_contracts() {
     );
     coverage_assert_sample(
         alpha,
-        &alpha_still.alpha.as_ref().unwrap().samples[0],
+        &crate::coverage_support::require_some(
+            alpha_still.alpha.as_ref(),
+            "coverage fixture: alpha_still.alpha.as_ref()",
+        )
+        .samples[0],
         &[(457, 270)],
         &[0x81, 0x00, 0x1c, 0x00],
         true,
@@ -3055,8 +3074,14 @@ fn coverage_fixture_contracts() {
     );
 
     let grid = include_bytes!("../../test_support/fixtures/input/images/avif/grid.avif");
-    let grid_payload = extract_inner(grid).unwrap();
-    let grid_still = grid_payload.still.as_ref().unwrap();
+    let grid_payload = crate::coverage_support::require_ok(
+        extract_inner(grid),
+        "coverage fixture: extract_inner(grid)",
+    );
+    let grid_still = crate::coverage_support::require_some(
+        grid_payload.still.as_ref(),
+        "coverage fixture: grid_payload.still.as_ref()",
+    );
     for (sample, expected) in grid_still
         .color
         .samples
@@ -3065,22 +3090,30 @@ fn coverage_fixture_contracts() {
     {
         coverage_assert_sample(grid, sample, expected, &[0x81, 0x20, 0x00, 0x00], true, 1);
     }
-    for (sample, expected) in grid_still
-        .alpha
-        .as_ref()
-        .unwrap()
-        .samples
-        .iter()
-        .zip([[(635, 589)].as_slice(), [(1_224, 243)].as_slice()])
+    for (sample, expected) in crate::coverage_support::require_some(
+        grid_still.alpha.as_ref(),
+        "coverage fixture: grid_still .alpha .as_ref() ",
+    )
+    .samples
+    .iter()
+    .zip([[(635, 589)].as_slice(), [(1_224, 243)].as_slice()])
     {
         coverage_assert_sample(grid, sample, expected, &[0x81, 0x00, 0x1c, 0x00], true, 1);
     }
 
     let hdr = include_bytes!("../../test_support/fixtures/input/images/avif/hdr.avif");
-    let hdr_payload = extract_inner(hdr).unwrap();
+    let hdr_payload = crate::coverage_support::require_ok(
+        extract_inner(hdr),
+        "coverage fixture: extract_inner(hdr)",
+    );
     coverage_assert_sample(
         hdr,
-        &hdr_payload.still.as_ref().unwrap().color.samples[0],
+        &crate::coverage_support::require_some(
+            hdr_payload.still.as_ref(),
+            "coverage fixture: hdr_payload.still.as_ref()",
+        )
+        .color
+        .samples[0],
         &[(687, 5_378)],
         &[0x81, 0x20, 0x40, 0x00],
         true,
@@ -3088,16 +3121,27 @@ fn coverage_fixture_contracts() {
     );
 
     let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
-    let animated_payload = extract_inner(animated).unwrap();
+    let animated_payload = crate::coverage_support::require_ok(
+        extract_inner(animated),
+        "coverage fixture: extract_inner(animated)",
+    );
     coverage_assert_sample(
         animated,
-        &animated_payload.still.as_ref().unwrap().color.samples[0],
+        &crate::coverage_support::require_some(
+            animated_payload.still.as_ref(),
+            "coverage fixture: animated_payload.still.as_ref()",
+        )
+        .color
+        .samples[0],
         &[(1_023, 39)],
         &[0x81, 0x00, 0x0c, 0x00],
         true,
         1,
     );
-    let animated_sequence = animated_payload.sequence.as_ref().unwrap();
+    let animated_sequence = crate::coverage_support::require_some(
+        animated_payload.sequence.as_ref(),
+        "coverage fixture: animated_payload.sequence.as_ref()",
+    );
     assert_eq!(animated_sequence.timescale.get(), 30);
     for (sample, (start, length, sync)) in animated_sequence.color.samples.iter().zip([
         (1_023, 39, true),
@@ -3118,8 +3162,14 @@ fn coverage_fixture_contracts() {
     assert!(animated_sequence.alpha.is_none());
 
     let high_bit = include_bytes!("../../test_support/fixtures/input/images/avif/10bit.avif");
-    let high_bit_payload = extract_inner(high_bit).unwrap();
-    let high_bit_still = high_bit_payload.still.as_ref().unwrap();
+    let high_bit_payload = crate::coverage_support::require_ok(
+        extract_inner(high_bit),
+        "coverage fixture: extract_inner(high_bit)",
+    );
+    let high_bit_still = crate::coverage_support::require_some(
+        high_bit_payload.still.as_ref(),
+        "coverage fixture: high_bit_payload.still.as_ref()",
+    );
     coverage_assert_sample(
         high_bit,
         &high_bit_still.color.samples[0],
@@ -3130,13 +3180,20 @@ fn coverage_fixture_contracts() {
     );
     coverage_assert_sample(
         high_bit,
-        &high_bit_still.alpha.as_ref().unwrap().samples[0],
+        &crate::coverage_support::require_some(
+            high_bit_still.alpha.as_ref(),
+            "coverage fixture: high_bit_still.alpha.as_ref()",
+        )
+        .samples[0],
         &[(1_852, 29)],
         &[0x81, 0x40, 0x7c, 0x00],
         true,
         1,
     );
-    let high_bit_sequence = high_bit_payload.sequence.as_ref().unwrap();
+    let high_bit_sequence = crate::coverage_support::require_some(
+        high_bit_payload.sequence.as_ref(),
+        "coverage fixture: high_bit_payload.sequence.as_ref()",
+    );
     assert_eq!(high_bit_sequence.timescale.get(), 1);
     for (sample, (start, length, sync)) in high_bit_sequence.color.samples.iter().zip([
         (2_022, 39, true),
@@ -3154,20 +3211,19 @@ fn coverage_fixture_contracts() {
             1,
         );
     }
-    for (sample, (start, length, sync)) in high_bit_sequence
-        .alpha
-        .as_ref()
-        .unwrap()
-        .samples
-        .iter()
-        .zip([
-            (1_852, 29, true),
-            (1_881, 20, false),
-            (1_901, 26, true),
-            (1_927, 44, true),
-            (1_971, 51, true),
-        ])
-    {
+    for (sample, (start, length, sync)) in crate::coverage_support::require_some(
+        high_bit_sequence.alpha.as_ref(),
+        "coverage fixture: high_bit_sequence .alpha .as_ref() ",
+    )
+    .samples
+    .iter()
+    .zip([
+        (1_852, 29, true),
+        (1_881, 20, false),
+        (1_901, 26, true),
+        (1_927, 44, true),
+        (1_971, 51, true),
+    ]) {
         coverage_assert_sample(
             high_bit,
             sample,
@@ -3473,13 +3529,19 @@ fn coverage_track(
             chunk_offsets: vec![0],
             mappings: vec![SampleToChunk {
                 first_chunk: 1,
-                samples_per_chunk: u32::try_from(sample_count).unwrap(),
+                samples_per_chunk: crate::coverage_support::require_ok(
+                    u32::try_from(sample_count),
+                    "coverage fixture: u32::try_from(sample_count)",
+                ),
                 description_index: 1,
             }],
             sample_sizes: vec![1; sample_count],
             sync_samples: Vec::new(),
             timings: vec![TimeToSample {
-                sample_count: u32::try_from(sample_count).unwrap(),
+                sample_count: crate::coverage_support::require_ok(
+                    u32::try_from(sample_count),
+                    "coverage fixture: u32::try_from(sample_count)",
+                ),
                 sample_delta: 1,
             }],
             descriptions: vec![SampleDescription {
@@ -4068,7 +4130,7 @@ fn coverage_structural_states() {
         &mut Meta::default(),
         &mut Budget::default(),
     );
-    let mut unknown_construction = iloc_v2.clone();
+    let mut unknown_construction = iloc_v2;
     unknown_construction[15] = 2;
     let _ = parse_iloc(
         &unknown_construction,
@@ -4563,7 +4625,10 @@ fn coverage_structural_states() {
         sequence: Some(SequencePayload {
             color: coverage_plane(&[(14, 16)]),
             alpha: Some(coverage_plane(&[(16, 18)])),
-            timescale: NonZeroU32::new(1).unwrap(),
+            timescale: crate::coverage_support::require_some(
+                NonZeroU32::new(1),
+                "coverage fixture: NonZeroU32::new(1)",
+            ),
             loop_count: AnimationLoop::Unspecified,
         }),
         consumed: 0,
@@ -4778,7 +4843,10 @@ fn coverage_structural_states() {
     let sample_input = [0_u8; 8];
     let _ = track_plane(&sample_input, &Track::default());
     let mut mapped_track = coverage_track(1, *b"pict", None, 2, 1, None);
-    let mapped_table = mapped_track.table.as_mut().unwrap();
+    let mapped_table = crate::coverage_support::require_some(
+        mapped_track.table.as_mut(),
+        "coverage fixture: mapped_track.table.as_mut()",
+    );
     mapped_table.chunk_offsets = vec![0, 1];
     mapped_table.mappings = vec![
         SampleToChunk {
@@ -4795,20 +4863,50 @@ fn coverage_structural_states() {
     let _ = track_plane(&sample_input, &mapped_track);
 
     let mut future_mapping = coverage_track(1, *b"pict", None, 1, 1, None);
-    future_mapping.table.as_mut().unwrap().mappings[0].first_chunk = 2;
+    crate::coverage_support::require_some(
+        future_mapping.table.as_mut(),
+        "coverage fixture: future_mapping.table.as_mut()",
+    )
+    .mappings[0]
+        .first_chunk = 2;
     let _ = track_plane(&sample_input, &future_mapping);
     let mut missing_mapping = coverage_track(1, *b"pict", None, 1, 1, None);
-    missing_mapping.table.as_mut().unwrap().mappings.clear();
+    crate::coverage_support::require_some(
+        missing_mapping.table.as_mut(),
+        "coverage fixture: missing_mapping.table.as_mut()",
+    )
+    .mappings
+    .clear();
     let _ = track_plane(&sample_input, &missing_mapping);
     let mut zero_mapping = coverage_track(1, *b"pict", None, 1, 1, None);
-    zero_mapping.table.as_mut().unwrap().mappings[0].samples_per_chunk = 0;
+    crate::coverage_support::require_some(
+        zero_mapping.table.as_mut(),
+        "coverage fixture: zero_mapping.table.as_mut()",
+    )
+    .mappings[0]
+        .samples_per_chunk = 0;
     let _ = track_plane(&sample_input, &zero_mapping);
     let mut missing_chunk = coverage_track(1, *b"pict", None, 1, 1, None);
-    missing_chunk.table.as_mut().unwrap().chunk_offsets.clear();
+    crate::coverage_support::require_some(
+        missing_chunk.table.as_mut(),
+        "coverage fixture: missing_chunk.table.as_mut()",
+    )
+    .chunk_offsets
+    .clear();
     let _ = track_plane(&sample_input, &missing_chunk);
     let mut empty_track = coverage_track(1, *b"pict", None, 0, 1, None);
-    empty_track.table.as_mut().unwrap().chunk_offsets.clear();
-    empty_track.table.as_mut().unwrap().mappings[0].samples_per_chunk = 1;
+    crate::coverage_support::require_some(
+        empty_track.table.as_mut(),
+        "coverage fixture: empty_track.table.as_mut()",
+    )
+    .chunk_offsets
+    .clear();
+    crate::coverage_support::require_some(
+        empty_track.table.as_mut(),
+        "coverage fixture: empty_track.table.as_mut()",
+    )
+    .mappings[0]
+        .samples_per_chunk = 1;
     let _ = track_plane(&sample_input, &empty_track);
 
     let duplicate_alpha_movie = Movie {
@@ -5036,7 +5134,10 @@ fn coverage_structural_states() {
                 }],
             },
             alpha: None,
-            timescale: NonZeroU32::new(1).unwrap(),
+            timescale: crate::coverage_support::require_some(
+                NonZeroU32::new(1),
+                "coverage fixture: NonZeroU32::new(1)",
+            ),
             loop_count: AnimationLoop::Unspecified,
         }),
     };
@@ -5066,7 +5167,10 @@ fn coverage_structural_states() {
                 samples: Vec::new(),
             },
             alpha: None,
-            timescale: NonZeroU32::new(1).unwrap(),
+            timescale: crate::coverage_support::require_some(
+                NonZeroU32::new(1),
+                "coverage fixture: NonZeroU32::new(1)",
+            ),
             loop_count: AnimationLoop::Unspecified,
         }),
     };
@@ -5103,7 +5207,10 @@ fn coverage_structural_states() {
             alpha: Some(EncodedPlane {
                 samples: Vec::new(),
             }),
-            timescale: NonZeroU32::new(1).unwrap(),
+            timescale: crate::coverage_support::require_some(
+                NonZeroU32::new(1),
+                "coverage fixture: NonZeroU32::new(1)",
+            ),
             loop_count: AnimationLoop::Unspecified,
         }),
     };
@@ -5153,7 +5260,10 @@ fn coverage_structural_states() {
                     },
                 ],
             }),
-            timescale: NonZeroU32::new(1).unwrap(),
+            timescale: crate::coverage_support::require_some(
+                NonZeroU32::new(1),
+                "coverage fixture: NonZeroU32::new(1)",
+            ),
             loop_count: AnimationLoop::Unspecified,
         }),
     };

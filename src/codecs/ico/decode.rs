@@ -804,13 +804,31 @@ pub(crate) fn __coverage_exercise_private_branches() {
     assert!(decode_cur_bmp(&[39, 0, 0, 0], 4).is_err());
     assert!(decode_cur_bmp(&[40, 0, 0, 0], 4).is_err());
     let cur_dib = indexed_dib(1, 1, 8, 2, &[1]);
-    assert!(decode_cur_bmp(&cur_dib, cur_dib.len() as u32).is_ok());
+    assert!(
+        decode_cur_bmp(
+            &cur_dib,
+            crate::coverage_support::require_ok(
+                u32::try_from(cur_dib.len()),
+                "fixture value must fit u32"
+            )
+        )
+        .is_ok()
+    );
     let mut cur_oversized_palette = vec![0u8; 40];
     cur_oversized_palette[0..4].copy_from_slice(&40u32.to_le_bytes());
     cur_oversized_palette[8..12].copy_from_slice(&2i32.to_le_bytes());
     cur_oversized_palette[14..16].copy_from_slice(&8u16.to_le_bytes());
     cur_oversized_palette[32..36].copy_from_slice(&u32::MAX.to_le_bytes());
-    assert!(decode_cur_bmp(&cur_oversized_palette, cur_oversized_palette.len() as u32).is_err());
+    assert!(
+        decode_cur_bmp(
+            &cur_oversized_palette,
+            crate::coverage_support::require_ok(
+                u32::try_from(cur_oversized_palette.len()),
+                "fixture value must fit u32"
+            )
+        )
+        .is_err()
+    );
 
     for (width, stored_height) in [(0u32, 2u32), (1, 0), (16_385, 2), (1, 32_770)] {
         let mut dib = vec![0u8; 40];
@@ -870,25 +888,57 @@ fn indexed_dib_with_mask(
     xor: &[u8],
     and_mask: &[u8],
 ) -> Vec<u8> {
-    let palette_entries = usize::try_from(colors).expect("coverage palette fits usize");
-    let row_bytes = (width as usize * usize::from(bpp)).div_ceil(8);
-    let padded_row = (row_bytes + 3) & !3;
-    let mask_row = (width as usize).div_ceil(32) * 4;
+    let palette_entries =
+        crate::coverage_support::require_ok(usize::try_from(colors), "coverage palette fits usize");
+    let row_bytes = crate::coverage_support::require_some(
+        (width as usize).checked_mul(usize::from(bpp)),
+        "coverage fixture arithmetic",
+    )
+    .div_ceil(8);
+    let padded_row = crate::coverage_support::require_some(
+        (row_bytes).checked_add(3),
+        "coverage fixture arithmetic",
+    ) & !3;
+    let mask_row = crate::coverage_support::require_some(
+        ((width as usize).div_ceil(32)).checked_mul(4),
+        "coverage fixture arithmetic",
+    );
     let mut dib = vec![0u8; 40];
     dib[0..4].copy_from_slice(&40u32.to_le_bytes());
     dib[4..8].copy_from_slice(&width.to_le_bytes());
-    dib[8..12].copy_from_slice(&(height * 2).to_le_bytes());
+    dib[8..12].copy_from_slice(
+        &crate::coverage_support::require_some(
+            (height).checked_mul(2),
+            "coverage fixture arithmetic",
+        )
+        .to_le_bytes(),
+    );
     dib[12..14].copy_from_slice(&1u16.to_le_bytes());
     dib[14..16].copy_from_slice(&bpp.to_le_bytes());
     dib[32..36].copy_from_slice(&colors.to_le_bytes());
     for index in 0..palette_entries {
-        let value = u8::try_from(index).expect("coverage palette value fits u8");
+        let value = crate::coverage_support::require_ok(
+            u8::try_from(index),
+            "coverage palette value fits u8",
+        );
         dib.extend_from_slice(&[value, value, value, 0]);
     }
-    let mut xor_plane = vec![0u8; padded_row * height as usize];
+    let mut xor_plane = vec![
+        0u8;
+        crate::coverage_support::require_some(
+            (padded_row).checked_mul(height as usize),
+            "coverage fixture arithmetic"
+        )
+    ];
     xor_plane[..xor.len()].copy_from_slice(xor);
     dib.extend_from_slice(&xor_plane);
-    let mut mask_plane = vec![0u8; mask_row * height as usize];
+    let mut mask_plane = vec![
+        0u8;
+        crate::coverage_support::require_some(
+            (mask_row).checked_mul(height as usize),
+            "coverage fixture arithmetic"
+        )
+    ];
     mask_plane[..and_mask.len()].copy_from_slice(and_mask);
     dib.extend_from_slice(&mask_plane);
     dib
@@ -897,18 +947,42 @@ fn indexed_dib_with_mask(
 #[cfg(coverage)]
 fn dib24(width: u32, height: u32, xor: &[u8], and_mask: &[u8]) -> Vec<u8> {
     let row_bytes = width as usize * 3;
-    let padded_row = (row_bytes + 3) & !3;
-    let mask_row = (width as usize).div_ceil(32) * 4;
+    let padded_row = crate::coverage_support::require_some(
+        (row_bytes).checked_add(3),
+        "coverage fixture arithmetic",
+    ) & !3;
+    let mask_row = crate::coverage_support::require_some(
+        ((width as usize).div_ceil(32)).checked_mul(4),
+        "coverage fixture arithmetic",
+    );
     let mut dib = vec![0u8; 40];
     dib[0..4].copy_from_slice(&40u32.to_le_bytes());
     dib[4..8].copy_from_slice(&width.to_le_bytes());
-    dib[8..12].copy_from_slice(&(height * 2).to_le_bytes());
+    dib[8..12].copy_from_slice(
+        &crate::coverage_support::require_some(
+            (height).checked_mul(2),
+            "coverage fixture arithmetic",
+        )
+        .to_le_bytes(),
+    );
     dib[12..14].copy_from_slice(&1u16.to_le_bytes());
     dib[14..16].copy_from_slice(&24u16.to_le_bytes());
-    let mut xor_plane = vec![0u8; padded_row * height as usize];
+    let mut xor_plane = vec![
+        0u8;
+        crate::coverage_support::require_some(
+            (padded_row).checked_mul(height as usize),
+            "coverage fixture arithmetic"
+        )
+    ];
     xor_plane[..xor.len()].copy_from_slice(xor);
     dib.extend_from_slice(&xor_plane);
-    let mut mask_plane = vec![0u8; mask_row * height as usize];
+    let mut mask_plane = vec![
+        0u8;
+        crate::coverage_support::require_some(
+            (mask_row).checked_mul(height as usize),
+            "coverage fixture arithmetic"
+        )
+    ];
     mask_plane[..and_mask.len()].copy_from_slice(and_mask);
     dib.extend_from_slice(&mask_plane);
     dib

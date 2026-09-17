@@ -2525,7 +2525,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
     let known_data =
         include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_420.jpg");
-    let known_info = parse_jpeg(known_data).expect("coverage baseline JPEG must parse");
+    let known_info = crate::coverage_support::require_ok(
+        parse_jpeg(known_data),
+        "coverage baseline JPEG must parse",
+    );
     assert!(known_single_entropy_segment(&known_info, known_data).is_some());
     for mutator in [
         Box::new(|candidate: &mut JpegInfo| candidate.progressive = true)
@@ -2534,9 +2537,24 @@ pub(crate) fn __coverage_exercise_private_branches() {
             candidate.scans.push(candidate.scans[0].clone());
         }),
         Box::new(|candidate: &mut JpegInfo| candidate.entropy_has_restart_markers = true),
-        Box::new(|candidate: &mut JpegInfo| candidate.scans[0].entropy_start += 1),
-        Box::new(|candidate: &mut JpegInfo| candidate.scans[0].entropy_end -= 1),
-        Box::new(|candidate: &mut JpegInfo| candidate.eoi_pos -= 1),
+        Box::new(|candidate: &mut JpegInfo| {
+            candidate.scans[0].entropy_start = crate::coverage_support::require_some(
+                (candidate.scans[0].entropy_start).checked_add(1),
+                "fixture counter or boundary",
+            )
+        }),
+        Box::new(|candidate: &mut JpegInfo| {
+            candidate.scans[0].entropy_end = crate::coverage_support::require_some(
+                (candidate.scans[0].entropy_end).checked_sub(1),
+                "fixture counter or boundary",
+            )
+        }),
+        Box::new(|candidate: &mut JpegInfo| {
+            candidate.eoi_pos = crate::coverage_support::require_some(
+                (candidate.eoi_pos).checked_sub(1),
+                "fixture counter or boundary",
+            )
+        }),
         Box::new(|candidate: &mut JpegInfo| {
             candidate.eoi_pos = 0;
             candidate.scans[0].entropy_end = 0;
@@ -2589,11 +2607,13 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 .components
                 .iter()
                 .map(|component| {
-                    let table = candidate
-                        .quant_tables
-                        .get(usize::from(component.quant_tbl))
-                        .and_then(Option::as_ref)
-                        .expect("coverage JPEG component must have a quantization table");
+                    let table = crate::coverage_support::require_some(
+                        candidate
+                            .quant_tables
+                            .get(usize::from(component.quant_tbl))
+                            .and_then(Option::as_ref),
+                        "coverage JPEG component must have a quantization table",
+                    );
                     let mut natural = [0i32; 64];
                     for zigzag in 0usize..64 {
                         natural[idct::JPEG_NATURAL_ORDER[zigzag]] = i32::from(table[zigzag]);
@@ -2627,7 +2647,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let converter = YccColorConverter::shared();
         let rgb420_data =
             include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_420.jpg");
-        let rgb420_info = parse_jpeg(rgb420_data).expect("coverage 4:2:0 JPEG must parse");
+        let rgb420_info = crate::coverage_support::require_ok(
+            parse_jpeg(rgb420_data),
+            "coverage 4:2:0 JPEG must parse",
+        );
         let rgb420_segments =
             extract_entropy_segments(rgb420_data, rgb420_info.entropy_start, rgb420_info.eoi_pos);
         let rgb420_quant = natural_quant_tables(&rgb420_info);
@@ -2703,7 +2726,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let rgb422_data =
             include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_422.jpg");
-        let rgb422_info = parse_jpeg(rgb422_data).expect("coverage 4:2:2 JPEG must parse");
+        let rgb422_info = crate::coverage_support::require_ok(
+            parse_jpeg(rgb422_data),
+            "coverage 4:2:2 JPEG must parse",
+        );
         let rgb422_segments =
             extract_entropy_segments(rgb422_data, rgb422_info.entropy_start, rgb422_info.eoi_pos);
         let rgb422_quant = natural_quant_tables(&rgb422_info);
@@ -2765,7 +2791,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let rgb444_data =
             include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_444.jpg");
-        let rgb444_info = parse_jpeg(rgb444_data).expect("coverage 4:4:4 JPEG must parse");
+        let rgb444_info = crate::coverage_support::require_ok(
+            parse_jpeg(rgb444_data),
+            "coverage 4:4:4 JPEG must parse",
+        );
         let rgb444_segments =
             extract_entropy_segments(rgb444_data, rgb444_info.entropy_start, rgb444_info.eoi_pos);
         let rgb444_quant = natural_quant_tables(&rgb444_info);
@@ -2823,7 +2852,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let gray_data =
             include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_gray.jpg");
-        let gray_info = parse_jpeg(gray_data).expect("coverage grayscale JPEG must parse");
+        let gray_info = crate::coverage_support::require_ok(
+            parse_jpeg(gray_data),
+            "coverage grayscale JPEG must parse",
+        );
         let gray_segments =
             extract_entropy_segments(gray_data, gray_info.entropy_start, gray_info.eoi_pos);
         let gray_quant = natural_quant_tables(&gray_info);
@@ -2926,7 +2958,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let cmyk_data =
             include_bytes!("../../../test_support/fixtures/input/images/jpeg/baseline_cmyk.jpg");
-        let cmyk_info = parse_jpeg(cmyk_data).expect("coverage CMYK JPEG must parse");
+        let cmyk_info = crate::coverage_support::require_ok(
+            parse_jpeg(cmyk_data),
+            "coverage CMYK JPEG must parse",
+        );
         let cmyk_segments =
             extract_entropy_segments(cmyk_data, cmyk_info.entropy_start, cmyk_info.eoi_pos);
         let cmyk_quant = natural_quant_tables(&cmyk_info);
@@ -3156,9 +3191,18 @@ pub(crate) fn __coverage_exercise_private_branches() {
         ));
 
         let mut restarted_420 = rgb420_info.clone();
-        restarted_420.restart_interval = rgb420_mcus_x as u16;
+        restarted_420.restart_interval = crate::coverage_support::require_ok(
+            u16::try_from(rgb420_mcus_x),
+            "fixture value must fit u16",
+        );
         let restart_segments = EntropySegments {
-            segments: vec![rgb420_segments.segments[0]; usize::try_from(rgb420_mcus_y).unwrap()],
+            segments: vec![
+                rgb420_segments.segments[0];
+                crate::coverage_support::require_ok(
+                    usize::try_from(rgb420_mcus_y),
+                    "coverage fixture: usize::try_from(rgb420_mcus_y)"
+                )
+            ],
             eoi_pos: rgb420_segments.eoi_pos,
         };
         let _ = reconstruct_baseline_420_direct_safe(
@@ -3174,7 +3218,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
 
         let four_bit_zero =
             HuffTable::build(&[0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
-        let mut short_420 = rgb420_info.clone();
+        let mut short_420 = rgb420_info;
         for table in &mut short_420.dc_huff_tables {
             *table = Some(four_bit_zero.clone().into());
         }
@@ -3231,7 +3275,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             ),
             Ok(None)
         ));
-        let mut short_422 = rgb422_info.clone();
+        let mut short_422 = rgb422_info;
         for table in &mut short_422.dc_huff_tables {
             *table = Some(four_bit_zero.clone().into());
         }
@@ -3318,7 +3362,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             segments: vec![(0, large_entropy.len())],
             eoi_pos: 0,
         };
-        let mut checkpoint_gray = gray_info.clone();
+        let mut checkpoint_gray = gray_info;
         checkpoint_gray.width = 8 * 1_024;
         checkpoint_gray.height = 8;
         let checkpoint_token = crate::CancellationToken::new();
@@ -3336,7 +3380,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             .is_err()
         );
 
-        let mut checkpoint_444 = rgb444_info.clone();
+        let mut checkpoint_444 = rgb444_info;
         checkpoint_444.width = 8 * 1_024;
         checkpoint_444.height = 8;
         let checkpoint_token = crate::CancellationToken::new();
@@ -3355,7 +3399,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
             .is_err()
         );
 
-        let mut generic_bad = info.clone();
+        let mut generic_bad = info;
         generic_bad.dc_huff_tables[0] = Some(dc_cat_64.clone().into());
         assert!(reconstruct_image(&generic_bad, &[0, 0, 0xff, 0xd0, 0], None).is_err());
     }

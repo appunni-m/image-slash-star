@@ -1974,7 +1974,10 @@ fn coverage_box(kind: FourCc, payload: &[u8]) -> Vec<u8> {
 #[cfg(coverage)]
 fn coverage_full_box(version: u8, flags: u32, payload: &[u8]) -> Vec<u8> {
     let flag_bytes = flags.to_be_bytes();
-    let mut bytes = Vec::with_capacity(payload.len() + 4);
+    let mut bytes = Vec::with_capacity(crate::coverage_support::require_some(
+        (payload.len()).checked_add(4),
+        "coverage fixture arithmetic",
+    ));
     bytes.extend_from_slice(&[version, flag_bytes[1], flag_bytes[2], flag_bytes[3]]);
     bytes.extend_from_slice(payload);
     bytes
@@ -2838,7 +2841,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut Meta::default(),
         &mut Budget::default(),
     ));
-    let mut trailing_iloc = iloc_v0.clone();
+    let mut trailing_iloc = iloc_v0;
     trailing_iloc.push(0);
     let _ = std::hint::black_box(parse_iloc(
         &[0],
@@ -3083,9 +3086,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
         0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
         0, 1,
     ];
-    for offset in [0, 4, 8, 12, 20, 28] {
+    for offset in [0usize, 4, 8, 12, 20, 28] {
         let mut invalid = clap_payload;
-        invalid[offset..offset + 4].fill(0);
+        invalid[offset
+            ..crate::coverage_support::require_some(
+                (offset).checked_add(4),
+                "coverage fixture arithmetic",
+            )]
+            .fill(0);
         let _ = parse_clap(&invalid);
     }
     let mut overlong_clap = [0_u8; 33];

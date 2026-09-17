@@ -99,7 +99,11 @@ impl<'data, 'input, 'spans> BitReader<'data, 'input, 'spans> {
         data: &'data SegmentedData<'input, 'spans>,
         end: usize,
     ) -> Av1Result<Self> {
-        if end > data.len() * 8 {
+        let available = data
+            .len()
+            .checked_mul(8)
+            .ok_or_else(|| malformed("bit-reader end overflows usize"))?;
+        if end > available {
             return Err(malformed("bit-reader end exceeds segmented data"));
         }
         Ok(Self {
@@ -294,7 +298,10 @@ fn inverse_recenter(reference: u64, value: u64) -> u64 {
 pub(super) fn __coverage_exercise_private_branches() {
     let input = [0b1010_0101, 0b0101_1010];
     let spans = [ByteSpan { start: 0, end: 1 }, ByteSpan { start: 1, end: 2 }];
-    let data = SegmentedData::new(&input, &spans).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(&input, &spans),
+        "coverage fixture: SegmentedData::new(&input, &spans)",
+    );
     assert_eq!(data.byte(0), Ok(input[0]));
     assert_eq!(data.byte(1), Ok(input[1]));
     assert!(data.byte(2).is_err());
@@ -314,20 +321,35 @@ pub(super) fn __coverage_exercise_private_branches() {
     let _ = BitReader::new(&data, 0, usize::MAX);
     let _ = BitReader::new(&data, 2, 1);
     let _ = BitReader::new(&data, 0, 3);
-    let _ = BitReader::with_bit_end(&data, data.len() * 8 + 1);
-    let _ = BitReader::with_bit_end(&data, data.len() * 8);
-    let mut reader = BitReader::new(&data, 0, data.len()).unwrap();
+    let _ = BitReader::with_bit_end(
+        &data,
+        crate::coverage_support::require_some(
+            (crate::coverage_support::bit_len(data.len())).checked_add(1),
+            "fixture overread bit boundary",
+        ),
+    );
+    let _ = BitReader::with_bit_end(&data, crate::coverage_support::bit_len(data.len()));
+    let mut reader = crate::coverage_support::require_ok(
+        BitReader::new(&data, 0, data.len()),
+        "coverage fixture: BitReader::new(&data, 0, data.len())",
+    );
     assert_eq!(reader.bits(4), Ok(0b1010));
     assert_eq!(reader.bits(12), Ok(0b0101_0101_1010));
     assert!(reader.bits(1).is_err());
-    let mut reader = BitReader::new(&data, 0, data.len()).unwrap();
+    let mut reader = crate::coverage_support::require_ok(
+        BitReader::new(&data, 0, data.len()),
+        "coverage fixture: BitReader::new(&data, 0, data.len())",
+    );
     let _ = reader.bits(33);
     let _ = reader.signed(0);
     let _ = reader.signed(32);
     assert_eq!(reader.ns(0), Ok(0));
     assert_eq!(reader.ns(1), Ok(0));
     let _ = reader.subexp(0, 31);
-    let mut reader = BitReader::with_bit_end(&data, 1).unwrap();
+    let mut reader = crate::coverage_support::require_ok(
+        BitReader::with_bit_end(&data, 1),
+        "coverage fixture: BitReader::with_bit_end(&data, 1)",
+    );
     let _ = reader.ns(3);
     let mut reader = BitReader {
         data: &data,
@@ -342,12 +364,24 @@ pub(super) fn __coverage_exercise_private_branches() {
     };
     let _ = reader.bits(1);
     let invalid_spans = [ByteSpan { start: 0, end: 1 }];
-    let invalid_data = SegmentedData::with_validated_spans(&[], &invalid_spans).unwrap();
-    let mut reader = BitReader::with_bit_end(&invalid_data, 8).unwrap();
+    let invalid_data = crate::coverage_support::require_ok(
+        SegmentedData::with_validated_spans(&[], &invalid_spans),
+        "coverage fixture: SegmentedData::with_validated_spans(&[], &invalid_spans)",
+    );
+    let mut reader = crate::coverage_support::require_ok(
+        BitReader::with_bit_end(&invalid_data, 8),
+        "coverage fixture: BitReader::with_bit_end(&invalid_data, 8)",
+    );
     let _ = reader.bits(1);
     let trailing_spans = [ByteSpan { start: 0, end: 1 }, ByteSpan { start: 1, end: 2 }];
-    let trailing_data = SegmentedData::with_validated_spans(&[0x80], &trailing_spans).unwrap();
-    let mut reader = BitReader::with_bit_end(&trailing_data, 16).unwrap();
+    let trailing_data = crate::coverage_support::require_ok(
+        SegmentedData::with_validated_spans(&[0x80], &trailing_spans),
+        "coverage fixture: SegmentedData::with_validated_spans(&[0x80], &trailing_spans)",
+    );
+    let mut reader = crate::coverage_support::require_ok(
+        BitReader::with_bit_end(&trailing_data, 16),
+        "coverage fixture: BitReader::with_bit_end(&trailing_data, 16)",
+    );
     let _ = reader.trailing_bits();
 
     let uvlc_inputs: &[&[u8]] = &[
@@ -364,8 +398,14 @@ pub(super) fn __coverage_exercise_private_branches() {
             start: 0,
             end: input.len(),
         }];
-        let data = SegmentedData::new(input, &spans).unwrap();
-        let mut reader = BitReader::new(&data, 0, data.len()).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(input, &spans),
+            "coverage fixture: SegmentedData::new(input, &spans)",
+        );
+        let mut reader = crate::coverage_support::require_ok(
+            BitReader::new(&data, 0, data.len()),
+            "coverage fixture: BitReader::new(&data, 0, data.len())",
+        );
         let _ = reader.uvlc();
     }
 
@@ -374,8 +414,14 @@ pub(super) fn __coverage_exercise_private_branches() {
             start: 0,
             end: input.len(),
         }];
-        let data = SegmentedData::new(input, &spans).unwrap();
-        let mut reader = BitReader::new(&data, 0, data.len()).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(input, &spans),
+            "coverage fixture: SegmentedData::new(input, &spans)",
+        );
+        let mut reader = crate::coverage_support::require_ok(
+            BitReader::new(&data, 0, data.len()),
+            "coverage fixture: BitReader::new(&data, 0, data.len())",
+        );
         let _ = reader.trailing_bits();
     }
 
@@ -394,9 +440,15 @@ pub(super) fn __coverage_exercise_private_branches() {
             start: 0,
             end: input.len(),
         }];
-        let data = SegmentedData::new(input, &spans).unwrap();
-        for bit_end in 0..=input.len() * 8 {
-            let mut reader = BitReader::with_bit_end(&data, bit_end).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(input, &spans),
+            "coverage fixture: SegmentedData::new(input, &spans)",
+        );
+        for bit_end in 0..=crate::coverage_support::bit_len(input.len()) {
+            let mut reader = crate::coverage_support::require_ok(
+                BitReader::with_bit_end(&data, bit_end),
+                "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
+            );
             let _ = reader.subexp(reference, width);
         }
     }

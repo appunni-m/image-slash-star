@@ -2329,7 +2329,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &EncodeOptions::for_format(ImageFormat::Png),
         Some(&probe),
     );
-    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    let calls = usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
     for checks in 0..=calls {
         let post_codec_cancel = crate::CancellationToken::new();
         post_codec_cancel.cancel_after(checks);
@@ -2365,7 +2365,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
                 crate::types::FrameBlend::Unspecified,
             ),
             crate::types::DecodedFrame::rendered_canvas(
-                luma.clone(),
+                luma,
                 crate::types::FrameRect {
                     left: 0,
                     top: 0,
@@ -2457,7 +2457,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let avif_still_cancel = crate::CancellationToken::new();
         avif_still_cancel.cancel_after(1);
         let _ = encode_format_with_token(
-            &luma,
+            &two_frame_sequence.frames[1].image,
             ImageFormat::Avif,
             &EncodeOptions::for_format(ImageFormat::Avif),
             Some(&avif_still_cancel),
@@ -2507,6 +2507,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         &mut SequenceDecodeBudget::default_for(ImageFormat::Avif),
     );
 
+    #[cfg(any(feature = "png", feature = "tiff"))]
     compression::__coverage_exercise_private_branches();
     #[cfg(feature = "avif")]
     avif::__coverage_exercise_private_branches();

@@ -2729,13 +2729,15 @@ pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
     let manager_tokens = vec![Token::Literal(0xff00_0000); 128];
     let mut manager_model = CostModel::default();
     let manager_token = crate::CancellationToken::new();
-    manager_model
-        .prepare_with_checkpoint(&manager_tokens, 1, 32, Some(&manager_token))
-        .expect("coverage cost model must prepare");
+    crate::coverage_support::require_ok(
+        manager_model.prepare_with_checkpoint(&manager_tokens, 1, 32, Some(&manager_token)),
+        "coverage cost model must prepare",
+    );
     let mut manager = CostManager::default();
-    manager
-        .prepare_with_checkpoint(256, &manager_model, Some(&manager_token))
-        .expect("coverage cost manager must prepare");
+    crate::coverage_support::require_ok(
+        manager.prepare_with_checkpoint(256, &manager_model, Some(&manager_token)),
+        "coverage cost manager must prepare",
+    );
     manager.intervals = (0..64)
         .map(|index| CostInterval {
             cost: 1,
@@ -2846,7 +2848,7 @@ pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
         &mut reference_refs,
     ));
     let mut valid_trace_scratch = TraceScratch::default();
-    std::hint::black_box(
+    std::hint::black_box(crate::coverage_support::require_ok(
         trace_backwards_impl::<false>(
             &reference_pixels,
             32,
@@ -2855,12 +2857,12 @@ pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
             0,
             None,
             &mut valid_trace_scratch,
-        )
-        .expect("coverage reference trace must encode"),
-    );
+        ),
+        "coverage reference trace must encode",
+    ));
     let valid_trace_token = crate::CancellationToken::new();
     let mut valid_token_trace_scratch = TraceScratch::default();
-    std::hint::black_box(
+    std::hint::black_box(crate::coverage_support::require_ok(
         trace_backwards_impl::<true>(
             &reference_pixels,
             32,
@@ -2869,12 +2871,12 @@ pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
             1,
             Some(&valid_trace_token),
             &mut valid_token_trace_scratch,
-        )
-        .expect("coverage token reference trace must encode"),
-    );
+        ),
+        "coverage token reference trace must encode",
+    ));
     let coarse_token_trace_token = crate::CancellationToken::new();
     let mut coarse_token_trace_scratch = TraceScratch::default();
-    std::hint::black_box(
+    std::hint::black_box(crate::coverage_support::require_ok(
         trace_backwards_impl::<false>(
             &reference_pixels,
             32,
@@ -2883,11 +2885,11 @@ pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
             1,
             Some(&coarse_token_trace_token),
             &mut coarse_token_trace_scratch,
-        )
-        .expect("coverage coarse token reference trace must encode"),
-    );
+        ),
+        "coverage coarse token reference trace must encode",
+    ));
     let mut wrapper_trace_scratch = TraceScratch::default();
-    std::hint::black_box(
+    std::hint::black_box(crate::coverage_support::require_ok(
         trace_backwards(
             &reference_pixels,
             32,
@@ -2896,12 +2898,12 @@ pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
             0,
             None,
             &mut wrapper_trace_scratch,
-        )
-        .expect("coverage wrapper trace must encode"),
-    );
+        ),
+        "coverage wrapper trace must encode",
+    ));
     let wrapper_trace_token = crate::CancellationToken::new();
     let mut wrapper_token_trace_scratch = TraceScratch::default();
-    std::hint::black_box(
+    std::hint::black_box(crate::coverage_support::require_ok(
         trace_backwards(
             &reference_pixels,
             32,
@@ -2910,9 +2912,9 @@ pub(crate) fn __coverage_exercise_instrumented_trace_paths() {
             1,
             Some(&wrapper_trace_token),
             &mut wrapper_token_trace_scratch,
-        )
-        .expect("coverage wrapper token trace must encode"),
-    );
+        ),
+        "coverage wrapper token trace must encode",
+    ));
     let _ = std::hint::black_box(rle_into(
         &reference_pixels[..512],
         32,

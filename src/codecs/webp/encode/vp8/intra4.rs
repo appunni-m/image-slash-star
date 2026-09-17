@@ -1078,17 +1078,17 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let mut measure_checkpoint = TokenSelectionCheckpoint {
         token: &measure_token,
     };
-    let mut measured_coefficients = measure_checkpoint
-        .forward_transform(&first_residual)
-        .expect("instrumented intra4 forward transform must encode");
-    let forward_checks = usize::MAX.saturating_sub(
-        measure_token
-            .coverage_remaining_checks()
-            .expect("coverage token must retain its remaining checks"),
+    let mut measured_coefficients = crate::coverage_support::require_ok(
+        measure_checkpoint.forward_transform(&first_residual),
+        "instrumented intra4 forward transform must encode",
     );
+    let forward_checks = usize::MAX.saturating_sub(crate::coverage_support::require_some(
+        measure_token.coverage_remaining_checks(),
+        "coverage token must retain its remaining checks",
+    ));
     let mut measured_levels = [0_i16; 16];
-    let _ = measure_checkpoint
-        .trellis_quantize_block(TrellisQuantizationInput {
+    let _ = crate::coverage_support::require_ok(
+        measure_checkpoint.trellis_quantize_block(TrellisQuantizationInput {
             coefficients: &mut measured_coefficients,
             levels: &mut measured_levels,
             initial_context: 0,
@@ -1096,14 +1096,14 @@ pub(crate) fn __coverage_exercise_private_branches() {
             matrix: &matrices.y1,
             lambda: matrices.lambda_trellis_i4,
             probabilities: &super::tokenize::COEFF_PROBS,
-        })
-        .expect("instrumented intra4 trellis transform must encode");
+        }),
+        "instrumented intra4 trellis transform must encode",
+    );
     let trellis_checks = usize::MAX
-        .saturating_sub(
-            measure_token
-                .coverage_remaining_checks()
-                .expect("coverage token must retain its remaining checks"),
-        )
+        .saturating_sub(crate::coverage_support::require_some(
+            measure_token.coverage_remaining_checks(),
+            "coverage token must retain its remaining checks",
+        ))
         .saturating_sub(forward_checks);
     let run_token_selection = |checks: usize| {
         let token = crate::CancellationToken::new();

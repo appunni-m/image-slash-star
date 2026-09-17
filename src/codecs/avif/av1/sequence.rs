@@ -449,8 +449,11 @@ impl CoverageBitWriter {
                 self.bytes.push(0);
             }
             let bit = ((value >> shift) & 1) as u8;
-            let byte_shift = 7 - (self.position % 8);
-            let index = self.bytes.len() - 1;
+            let byte_shift = 7usize.saturating_sub(self.position % 8);
+            let index = crate::coverage_support::require_some(
+                (self.bytes.len()).checked_sub(1),
+                "coverage fixture arithmetic",
+            );
             self.bytes[index] |= bit << byte_shift;
             self.position = self.position.saturating_add(1);
         }
@@ -468,7 +471,10 @@ fn coverage_parse(input: &[u8]) -> Av1Result<SequenceHeader> {
         start: 0,
         end: input.len(),
     }];
-    let data = SegmentedData::new(input, &spans).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(input, &spans),
+        "coverage fixture: SegmentedData::new(input, &spans)",
+    );
     parse(&data, 0, input.len())
 }
 
@@ -478,7 +484,10 @@ fn coverage_parse_bits(input: &[u8], bit_end: usize) -> Av1Result<SequenceHeader
         start: 0,
         end: input.len(),
     }];
-    let data = SegmentedData::new(input, &spans).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(input, &spans),
+        "coverage fixture: SegmentedData::new(input, &spans)",
+    );
     let mut bits = BitReader::with_bit_end(&data, bit_end)?;
     parse_bits(&mut bits)
 }
@@ -592,13 +601,22 @@ pub(super) fn __coverage_exercise_private_branches() {
     ];
 
     for payload in PAYLOADS {
-        let _ = coverage_parse_bits(payload, payload.len() * 8 + 1);
-        for bit_end in 0..=payload.len() * 8 {
+        let _ = coverage_parse_bits(
+            payload,
+            crate::coverage_support::require_some(
+                (crate::coverage_support::bit_len(payload.len())).checked_add(1),
+                "fixture overread bit boundary",
+            ),
+        );
+        for bit_end in 0..=crate::coverage_support::bit_len(payload.len()) {
             let _ = coverage_parse_bits(payload, bit_end);
         }
         for end in 0..=payload.len() {
             let spans = [ByteSpan { start: 0, end }];
-            let data = SegmentedData::new(&payload[..end], &spans).unwrap();
+            let data = crate::coverage_support::require_ok(
+                SegmentedData::new(&payload[..end], &spans),
+                "coverage fixture: SegmentedData::new(&payload[..end], &spans)",
+            );
             let _ = parse(&data, 0, end);
         }
         for index in 0..payload.len() {
@@ -612,7 +630,10 @@ pub(super) fn __coverage_exercise_private_branches() {
                     start: 0,
                     end: mutated.len(),
                 }];
-                let data = SegmentedData::new(&mutated, &spans).unwrap();
+                let data = crate::coverage_support::require_ok(
+                    SegmentedData::new(&mutated, &spans),
+                    "coverage fixture: SegmentedData::new(&mutated, &spans)",
+                );
                 let _ = parse(&data, 0, mutated.len());
 
                 if matches!(replacement, 0 | 1 | 0x7f | 0xff) {
@@ -621,7 +642,10 @@ pub(super) fn __coverage_exercise_private_branches() {
                         start: 0,
                         end: mutated.len(),
                     }];
-                    let data = SegmentedData::new(&mutated, &spans).unwrap();
+                    let data = crate::coverage_support::require_ok(
+                        SegmentedData::new(&mutated, &spans),
+                        "coverage fixture: SegmentedData::new(&mutated, &spans)",
+                    );
                     let _ = parse(&data, 0, mutated.len());
                 }
             }
@@ -635,7 +659,10 @@ pub(super) fn __coverage_exercise_private_branches() {
                 start: 0,
                 end: input.len(),
             }];
-            let data = SegmentedData::new(&input, &spans).unwrap();
+            let data = crate::coverage_support::require_ok(
+                SegmentedData::new(&input, &spans),
+                "coverage fixture: SegmentedData::new(&input, &spans)",
+            );
             let _ = parse(&data, 0, input.len());
         }
     }
@@ -651,7 +678,10 @@ pub(super) fn __coverage_exercise_private_branches() {
             start: 0,
             end: random.len(),
         }];
-        let data = SegmentedData::new(&random, &spans).unwrap();
+        let data = crate::coverage_support::require_ok(
+            SegmentedData::new(&random, &spans),
+            "coverage fixture: SegmentedData::new(&random, &spans)",
+        );
         let _ = parse(&data, 0, random.len());
     }
 
@@ -660,9 +690,15 @@ pub(super) fn __coverage_exercise_private_branches() {
         start: 0,
         end: payload.len(),
     }];
-    let data = SegmentedData::new(payload, &spans).unwrap();
+    let data = crate::coverage_support::require_ok(
+        SegmentedData::new(payload, &spans),
+        "coverage fixture: SegmentedData::new(payload, &spans)",
+    );
     let _ = parse(&data, usize::MAX, usize::MAX);
-    let header = parse(&data, 0, payload.len()).unwrap();
+    let header = crate::coverage_support::require_ok(
+        parse(&data, 0, payload.len()),
+        "coverage fixture: parse(&data, 0, payload.len())",
+    );
     assert!(header.matches_config(&[0x81, 0x00, 0x0c, 0]));
     assert!(!header.matches_config(&[0x81]));
     assert!(!header.matches_config(&[0, 0, 0, 0]));
@@ -735,7 +771,7 @@ pub(super) fn __coverage_exercise_private_branches() {
 
     let complex = coverage_complex_sequence();
     assert!(coverage_parse(&complex).is_ok());
-    for bit_end in 0..=complex.len() * 8 {
+    for bit_end in 0..=crate::coverage_support::bit_len(complex.len()) {
         let _ = coverage_parse_bits(&complex, bit_end);
     }
 

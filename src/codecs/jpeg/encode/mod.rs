@@ -1522,8 +1522,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = encode(&cmyk, &progressive_cmyk);
     let _ = encode(&rgb, &JpegEncodeOptions::default());
 
-    let encoded_rgb =
-        encode(&rgb, &JpegEncodeOptions::default()).expect("coverage JPEG image should encode");
+    let encoded_rgb = crate::coverage_support::require_ok(
+        encode(&rgb, &JpegEncodeOptions::default()),
+        "coverage JPEG image should encode",
+    );
     let mut rgb_sink = Vec::new();
     let _ = write_jpeg_to_sink(&encoded_rgb, None, &mut rgb_sink);
     let mut invalid_soi_sink = Vec::new();
@@ -1538,7 +1540,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let _ = write_jpeg_to_sink(&[0xff, 0xd8, 0xff, 0xd9], None, &mut no_scan_sink);
     for malformed in [&[0_u8][..], &[0xff][..], &[0xff, 0][..], &[0xff, 0xff][..]] {
         let mut malformed_sink = Vec::new();
-        let _ = write_jpeg_to_sink(&malformed, None, &mut malformed_sink);
+        let _ = write_jpeg_to_sink(malformed, None, &mut malformed_sink);
     }
     let _ = jpeg_length_segment_end(&[], 0);
     let _ = jpeg_length_segment_end(&[0, 0], 0);
@@ -1601,8 +1603,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
         progressive: Some(true),
         ..JpegEncodeOptions::default()
     };
-    let progressive_bytes = encode(&rgb, &progressive_sink_options)
-        .expect("coverage progressive JPEG image should encode");
+    let progressive_bytes = crate::coverage_support::require_ok(
+        encode(&rgb, &progressive_sink_options),
+        "coverage progressive JPEG image should encode",
+    );
     let _ = write_jpeg_to_sink(&progressive_bytes, None, &mut progressive_sink);
     let mut restart_sink = Vec::new();
     let restart_sink_options = JpegEncodeOptions {
@@ -1619,8 +1623,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
             .collect(),
         crate::types::ColorType::Rgb8,
     );
-    let restart_bytes = encode(&restart_rgb, &restart_sink_options)
-        .expect("coverage restart JPEG image should encode");
+    let restart_bytes = crate::coverage_support::require_ok(
+        encode(&restart_rgb, &restart_sink_options),
+        "coverage restart JPEG image should encode",
+    );
     let _ = write_jpeg_to_sink(&restart_bytes, None, &mut restart_sink);
     FORCE_SCAN_MARKER_READ_ERROR.store(true, Ordering::Relaxed);
     let mut forced_scan_marker_sink = Vec::new();
@@ -1677,7 +1683,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
                     "coverage JPEG sink rejected write",
                 ));
             }
-            self.writes += 1;
+            self.writes = crate::coverage_support::require_some(
+                (self.writes).checked_add(1),
+                "fixture counter or boundary",
+            );
             Ok(())
         }
     }
@@ -1828,7 +1837,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     bad_restart.restart_interval = Some(70_000);
     let _ = encode(&rgb, &bad_restart);
     let wide_rgb = DecodedImage::new(17, 1, vec![128; 17 * 3], crate::types::ColorType::Rgb8);
-    let mut overflowing_restart = restart.clone();
+    let mut overflowing_restart = restart;
     overflowing_restart.restart_interval = Some(u32::MAX);
     let _ = encode(&wide_rgb, &overflowing_restart);
     let large_rgb = DecodedImage::new(
@@ -1987,8 +1996,10 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = encode(&aligned_422, &low_quality_small);
 
-    let mut oversized_exif_options = JpegEncodeOptions::default();
-    oversized_exif_options.exif = Some(vec![0; usize::from(u16::MAX)]);
+    let oversized_exif_options = JpegEncodeOptions {
+        exif: Some(vec![0; usize::from(u16::MAX)]),
+        ..JpegEncodeOptions::default()
+    };
     let _ = encode(&gray, &oversized_exif_options);
     let mut marker_bytes = Vec::new();
     let _ = marker::write_exif_app1(&mut marker_bytes, b"Exif\0\0");

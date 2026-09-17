@@ -73094,10 +73094,14 @@ pub(super) fn __coverage_exercise_private_branches() {
         start: 0,
         end: invalid_input.len(),
     }];
-    let invalid_data =
-        super::bit_reader::SegmentedData::new(&invalid_input, &invalid_spans).unwrap();
-    let mut invalid_decoder =
-        RangeDecoder::new(&invalid_data, 0, invalid_input.len(), false).unwrap();
+    let invalid_data = crate::coverage_support::require_ok(
+        super::bit_reader::SegmentedData::new(&invalid_input, &invalid_spans),
+        "coverage fixture: super::bit_reader::SegmentedData::new(&invalid_input, &invalid_spans)",
+    );
+    let mut invalid_decoder = crate::coverage_support::require_ok(
+        RangeDecoder::new(&invalid_data, 0, invalid_input.len(), false),
+        "coverage fixture: RangeDecoder::new(&invalid_data, 0, invalid_input.len(), false)",
+    );
     let (_, _, invalid_filter_intra_cdf) = TransformGrid::Square8.properties();
     let mut invalid_cdfs = BlockCdfs::defaults(invalid_filter_intra_cdf);
     let _ = decode_boundary_coefficients(&mut invalid_decoder, 0, &mut invalid_cdfs, 1, 2);
@@ -73107,8 +73111,14 @@ pub(super) fn __coverage_exercise_private_branches() {
             start: 0,
             end: input.len(),
         }];
-        let data = super::bit_reader::SegmentedData::new(&input, &spans).unwrap();
-        let mut decoder = RangeDecoder::new(&data, 0, input.len(), false).unwrap();
+        let data = crate::coverage_support::require_ok(
+            super::bit_reader::SegmentedData::new(&input, &spans),
+            "coverage fixture: super::bit_reader::SegmentedData::new(&input, &spans)",
+        );
+        let mut decoder = crate::coverage_support::require_ok(
+            RangeDecoder::new(&data, 0, input.len(), false),
+            "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
+        );
         let _ = read_golomb(&mut decoder);
     }
 }
@@ -73274,8 +73284,8 @@ mod tests {
         let expected_row = [41, 86, 126, 158, 183, 201, 211, 215];
 
         assert_eq!(plane.samples.len(), 128);
-        for row in plane.samples.chunks_exact(8) {
-            assert_eq!(row, expected_row);
+        for row in plane.samples.as_chunks::<8>().0 {
+            assert_eq!(*row, expected_row);
         }
     }
 

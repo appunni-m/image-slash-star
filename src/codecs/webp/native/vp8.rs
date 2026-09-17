@@ -2074,14 +2074,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         let token = 0x80 | token as u8;
         for band in &mut decoder.token_probs[plane] {
             for complexity in band {
-                for node in complexity {
-                    *node = TreeNode {
-                        left: token,
-                        right: token,
-                        prob: 128,
-                        index: 0,
-                    };
-                }
+                complexity.fill(TreeNode {
+                    left: token,
+                    right: token,
+                    prob: 128,
+                    index: 0,
+                });
             }
         }
     }
@@ -2108,9 +2106,11 @@ pub(crate) fn __coverage_exercise_private_branches() {
     cursor_vec_decoder.left_border_u = vec![129; 1 + 8];
     cursor_vec_decoder.top_border_v = vec![127; 8];
     cursor_vec_decoder.left_border_v = vec![129; 1 + 8];
-    let mut prediction_macroblock = MacroBlock::default();
-    prediction_macroblock.luma_mode = LumaMode::DC;
-    prediction_macroblock.chroma_mode = ChromaMode::DC;
+    let prediction_macroblock = MacroBlock {
+        luma_mode: LumaMode::DC,
+        chroma_mode: ChromaMode::DC,
+        ..MacroBlock::default()
+    };
     let prediction_residuals = [0i32; 384];
     let cursor_vec_decoder = std::hint::black_box(&mut cursor_vec_decoder);
     cursor_vec_decoder.intra_predict_luma(0, 0, &prediction_macroblock, &prediction_residuals);

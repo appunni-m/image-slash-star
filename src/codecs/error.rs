@@ -522,7 +522,7 @@ pub(crate) fn into_incremental_image_result<T>(
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
-    use crate::{CodecOperation, ResourceLimit, UnsupportedReason};
+    use crate::{CodecOperation, ResourceLimit};
 
     #[cfg(all(feature = "avif", not(target_arch = "wasm32")))]
     {
@@ -540,71 +540,83 @@ pub(crate) fn __coverage_exercise_private_branches() {
         );
     }
 
-    for error in [
-        ImageError::Malformed {
-            format: ImageFormat::Png,
-            message: "malformed".to_owned(),
-            stage: Some(ImageErrorStage::StillDecode),
-            offset: Some(8),
-            identity: Some("png_chunk"),
-        },
-        ImageError::Unsupported {
-            format: Some(ImageFormat::Png),
-            message: "unsupported".to_owned(),
+    #[cfg(any(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "ico",
+        feature = "avif",
+        feature = "webp"
+    ))]
+    {
+        for error in [
+            ImageError::Malformed {
+                format: ImageFormat::Png,
+                message: "malformed".to_owned(),
+                stage: Some(ImageErrorStage::StillDecode),
+                offset: Some(8),
+                identity: Some("png_chunk"),
+            },
+            ImageError::Unsupported {
+                format: Some(ImageFormat::Png),
+                message: "unsupported".to_owned(),
+                stage: Some(ImageErrorStage::StillEncode),
+                reason: None,
+                offset: None,
+                identity: None,
+            },
+            ImageError::dimensions("dimensions"),
+            ImageError::parameter("parameter"),
+            ImageError::UnknownFormat,
+            ImageError::FeatureDisabled {
+                format: ImageFormat::Png,
+                feature: "png",
+            },
+            ImageError::LimitExceeded {
+                format: Some(ImageFormat::Png),
+                operation: CodecOperation::SequenceDecode,
+                resource: ResourceLimit::Frames,
+                maximum: 1,
+                observed: 2,
+            },
+            ImageError::NeedMoreData {
+                format: Some(ImageFormat::Png),
+                stage: Some(ImageErrorStage::Inspection),
+                offset: Some(8),
+                identity: Some("png_chunk"),
+                minimum: 41,
+            },
+            ImageError::Cancelled {
+                format: Some(ImageFormat::Png),
+                stage: Some(ImageErrorStage::StillDecode),
+            },
+            ImageError::OutputWrite {
+                format: Some(ImageFormat::Png),
+                message: "sink rejected".to_owned(),
+                stage: Some(ImageErrorStage::StillEncode),
+            },
+        ] {
+            let _ = CodecError::from_image_error(error);
+        }
+        let _ = CodecError::from_image_error(ImageError::Unsupported {
+            format: Some(ImageFormat::Avif),
+            message: "target".to_owned(),
             stage: Some(ImageErrorStage::StillEncode),
-            reason: None,
+            reason: Some(UnsupportedReason::TargetUnavailable),
             offset: None,
             identity: None,
-        },
-        ImageError::dimensions("dimensions"),
-        ImageError::parameter("parameter"),
-        ImageError::UnknownFormat,
-        ImageError::FeatureDisabled {
-            format: ImageFormat::Png,
-            feature: "png",
-        },
-        ImageError::LimitExceeded {
-            format: Some(ImageFormat::Png),
-            operation: CodecOperation::SequenceDecode,
-            resource: ResourceLimit::Frames,
-            maximum: 1,
-            observed: 2,
-        },
-        ImageError::NeedMoreData {
-            format: Some(ImageFormat::Png),
-            stage: Some(ImageErrorStage::Inspection),
-            offset: Some(8),
-            identity: Some("png_chunk"),
-            minimum: 41,
-        },
-        ImageError::Cancelled {
-            format: Some(ImageFormat::Png),
+        });
+        let _ = CodecError::from_image_error(ImageError::Unsupported {
+            format: Some(ImageFormat::Avif),
+            message: "planned".to_owned(),
             stage: Some(ImageErrorStage::StillDecode),
-        },
-        ImageError::OutputWrite {
-            format: Some(ImageFormat::Png),
-            message: "sink rejected".to_owned(),
-            stage: Some(ImageErrorStage::StillEncode),
-        },
-    ] {
-        let _ = CodecError::from_image_error(error);
+            reason: Some(UnsupportedReason::NotImplemented),
+            offset: None,
+            identity: None,
+        });
     }
-    let _ = CodecError::from_image_error(ImageError::Unsupported {
-        format: Some(ImageFormat::Avif),
-        message: "target".to_owned(),
-        stage: Some(ImageErrorStage::StillEncode),
-        reason: Some(UnsupportedReason::TargetUnavailable),
-        offset: None,
-        identity: None,
-    });
-    let _ = CodecError::from_image_error(ImageError::Unsupported {
-        format: Some(ImageFormat::Avif),
-        message: "planned".to_owned(),
-        stage: Some(ImageErrorStage::StillDecode),
-        reason: Some(UnsupportedReason::NotImplemented),
-        offset: None,
-        identity: None,
-    });
     let limit = CodecError::LimitExceeded(ImageError::LimitExceeded {
         format: Some(ImageFormat::Png),
         operation: CodecOperation::SequenceDecode,
@@ -625,14 +637,12 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .at(12, "webp_chunk")
         .into_image_error(ImageFormat::WebP, ImageErrorStage::StillDecode);
     let _ = CodecError::NotImplemented("not implemented".to_owned())
-        .clone()
         .into_image_error(ImageFormat::Avif, ImageErrorStage::StillDecode);
     let _ = CodecError::NotImplemented("not implemented".to_owned())
         .at(12, "avif_item")
         .into_incremental_image_error(ImageFormat::Avif, ImageErrorStage::SequenceDecode);
     let _ = CodecError::NotImplemented("not implemented".to_owned()).context("decode");
     let _ = CodecError::TargetUnavailable("target".to_owned())
-        .clone()
         .into_image_error(ImageFormat::Avif, ImageErrorStage::StillEncode);
     let _ = CodecError::TargetUnavailable("target".to_owned())
         .into_incremental_image_error(ImageFormat::Avif, ImageErrorStage::SequenceEncode);
@@ -686,29 +696,58 @@ pub(crate) fn __coverage_exercise_private_branches() {
         .at(4, "png_chunk")
         .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
     let _ = limit
-        .clone()
         .at(4, "png_chunk")
         .into_incremental_image_error(ImageFormat::Png, ImageErrorStage::Inspection);
     let _ = need_more.context("inspect basic");
-    let _ = need_slice(b"12345", 0, 6, "truncated field");
-    let _ = need_slice(b"12345", 7, 6, "inverted field");
-    let _ = need_from(b"12345", 3, "tail beyond input");
-    let _ = need_from(b"12345", 9, "tail beyond input");
-    let _ = codec_add_end(3, 2);
-    let _ = terminalize(CodecError::NeedMore {
-        minimum: 5,
-        message: "truncated".to_owned(),
-    });
-    let _ = terminalize(
-        CodecError::NeedMore {
+    #[cfg(any(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "tiff",
+        feature = "webp",
+        feature = "ico"
+    ))]
+    {
+        let _ = need_slice(b"12345", 0, 6, "truncated field");
+        let _ = need_slice(b"12345", 7, 6, "inverted field");
+    }
+    #[cfg(feature = "bmp")]
+    {
+        let _ = need_from(b"12345", 3, "tail beyond input");
+        let _ = need_from(b"12345", 9, "tail beyond input");
+    }
+    #[cfg(any(
+        feature = "jpeg",
+        feature = "png",
+        feature = "gif",
+        feature = "bmp",
+        feature = "webp",
+        feature = "ico"
+    ))]
+    {
+        let _ = codec_add_end(3, 2);
+    }
+    #[cfg(any(feature = "webp", feature = "ico"))]
+    {
+        let _ = terminalize(CodecError::NeedMore {
             minimum: 5,
             message: "truncated".to_owned(),
-        }
-        .at(3, "ico_entry"),
-    );
-    let _ = terminalize(CodecError::Unsupported("kept".to_owned()));
-    let _ = Option::<u8>::None.need_more(3, "truncated byte");
-    let _ = Option::<u8>::Some(1).need_more(3, "truncated byte");
+        });
+        let _ = terminalize(
+            CodecError::NeedMore {
+                minimum: 5,
+                message: "truncated".to_owned(),
+            }
+            .at(3, "ico_entry"),
+        );
+        let _ = terminalize(CodecError::Unsupported("kept".to_owned()));
+    }
+    #[cfg(feature = "gif")]
+    {
+        let _ = Option::<u8>::None.need_more(3, "truncated byte");
+        let _ = Option::<u8>::Some(1).need_more(3, "truncated byte");
+    }
     let cancelled = crate::CancellationToken::new();
     let _ = check_cancelled(None);
     let _ = check_cancelled(Some(&cancelled));

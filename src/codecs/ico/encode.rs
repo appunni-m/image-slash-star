@@ -70,7 +70,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     let probe = crate::CancellationToken::new();
     probe.cancel_after(usize::MAX);
     let _ = encode_with_token(&rgb, &exact_size, Some(&probe));
-    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    let calls = usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
     for checks in 0..=calls {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
@@ -91,7 +91,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
         Some(&probe),
         &mut sink,
     );
-    let calls = usize::MAX - probe.coverage_remaining_checks().unwrap_or(usize::MAX);
+    let calls = usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
     for checks in 0..=calls {
         let token = crate::CancellationToken::new();
         token.cancel_after(checks);
@@ -115,7 +115,7 @@ pub(crate) fn __coverage_exercise_private_branches() {
     };
     let _ = encode(&rgb, &wrong_size);
 
-    let mut bmp = exact_size.clone();
+    let mut bmp = exact_size;
     bmp.entry_type = IcoEntryType::Bmp;
     // BMP has one poll per source row plus final payload and directory polls.
     for checks in 0..=23 {

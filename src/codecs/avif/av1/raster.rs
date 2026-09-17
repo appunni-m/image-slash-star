@@ -1738,7 +1738,7 @@ impl FrameCanvas {
                     &mut block_output,
                 )
                 .ok_or_else(|| malformed("monochrome CDEF block exceeds its source plane"))?;
-                for (row, source_row) in block_output.chunks_exact(8).enumerate() {
+                for (row, source_row) in block_output.as_chunks::<8>().0.iter().enumerate() {
                     let destination = block_y
                         .checked_add(row)
                         .and_then(|y| y.checked_mul(coded_width))
@@ -2361,7 +2361,8 @@ pub(super) fn __coverage_exercise_private_branches() {
     };
     let valid = [plane(2, 2, 1), plane(1, 1, 2), plane(1, 1, 3)];
 
-    let mut empty = FrameCanvas::new(4, 4, true, true).expect("coverage canvas");
+    let mut empty =
+        crate::coverage_support::require_ok(FrameCanvas::new(4, 4, true, true), "coverage canvas");
     let empty_cell = CellPlacement {
         source_width: 0,
         source_height: 2,
@@ -2442,7 +2443,10 @@ pub(super) fn __coverage_exercise_private_branches() {
         x: 2,
         ..left_cell(2, 2, &complete_right_planes)
     };
-    let mut complete = FrameCanvas::new(4, 2, false, false).expect("coverage canvas");
+    let mut complete = crate::coverage_support::require_ok(
+        FrameCanvas::new(4, 2, false, false),
+        "coverage canvas",
+    );
     let _ = complete.place_cells(&[left, right]);
     let _ = complete.finish();
 }

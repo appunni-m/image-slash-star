@@ -360,6 +360,7 @@ pub struct TiffEncodeOptions {
 }
 
 #[cfg(coverage)]
+#[cfg(feature = "tiff")]
 impl TiffEncodeOptions {
     pub(crate) const fn force_output_len_overflow(&self) -> bool {
         self.force_output_len_overflow
@@ -413,6 +414,7 @@ impl WebPEncodeOptions {
 }
 
 #[cfg(coverage)]
+#[cfg(feature = "webp")]
 impl WebPEncodeOptions {
     pub(crate) const fn force_riff_size_overflow(&self) -> bool {
         self.force_riff_size_overflow
