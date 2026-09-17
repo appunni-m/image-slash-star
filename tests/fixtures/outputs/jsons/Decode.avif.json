@@ -26197,8 +26197,8 @@
           16
         ],
         "canvas_origin": "pillow_fixture",
-        "loop_count": null,
-        "loop_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "independent_implementation",
         "background": null,
         "frames": [
           {
@@ -26261,7 +26261,14 @@
             "pixel_assertion": "exact",
             "pixel_origin": "pillow_fixture"
           }
-        ]
+        ],
+        "loop_evidence": {
+          "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+          "index_sha256": "d0cd00048a5b388313a598e0ff9ed64fda0798dc4ad9787dbbfe296d444fa7c2",
+          "case": "error_resilient",
+          "input_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
+          "repetition_count": -1
+        }
       }
     },
     {

@@ -6865,7 +6865,7 @@
           "target_execution": "deferred_until_implementation_complete",
           "scope": "Private transition evidence for the existing full-file fixture; general temporal projection and complete public AVIF sequence parity remain unproven. No matrix row or work-item status is promoted."
         },
-        "next": "Complete remaining reference reconstruction, mixed reference histories and broader frame-ID policy evidence; reconcile native loop metadata with the matrix before final behavioral and managed coverage verification.",
+        "next": "Complete remaining reference reconstruction, mixed reference histories, broader frame-ID policy and resource accounting before final behavioral and managed coverage verification.",
         "current_slice_update_2026_09_17_streaming_presentation": {
           "status": "implemented_unverified",
           "scope": "One-display-at-a-time AVIF sequence conversion with persistent color/alpha references, completed-surface proof, pre-reconstruction output transfer reservations, inspected count/mode agreement and header geometry bounds. Ordinary first-image and sequence blanket gates removed; frame-ID sequence gap retained after full ID validation.",
@@ -7013,6 +7013,39 @@
             "Complete Rust reconstruction, resource accounting and public sequence parity remain unverified.",
             "Native loop metadata must be reconciled with existing Pillow-null matrix references before promotion."
           ]
+        },
+        "current_slice_update_2026_09_17_repetition": {
+          "status": "implemented_unverified",
+          "scope": "Native-compatible AVIF edit-list repetition, ignored-field and malformed boundaries; reconcile native loop provenance with the generated matrix.",
+          "oracle": "tests/fixtures/outputs/avif_loops/index.json",
+          "collector": "scripts/generate_avif_loop_refs.py",
+          "native_evidence": {
+            "complete_inputs": 28,
+            "accepted_inputs": 20,
+            "rejected_inputs": 8,
+            "retained_artifacts": 41,
+            "rgb_rgba_bytes": 420956,
+            "native_and_pillow_repeat_equal": true,
+            "encoded_media_payloads_unchanged": true
+          },
+          "production_invariants": [
+            "No edit list maps native -2 to Unspecified; nonrepeating lists return after version/flags.",
+            "Repeating lists validate one entry, version 0/1 and positive segment duration before interpreting track duration; ignored media fields do not change acceptance.",
+            "Checked quotient plus nonzero remainder preserves total plays through 2147483648; greater counts normalize to Infinite.",
+            "Color-track repetition controls playback; malformed alpha metadata still rejects the complete container."
+          ],
+          "provenance": "AVIF loop_count now uses independent_implementation origin and full input/index/case/native-count binding. Pillow missing loop keys remain separate observations. Missing native evidence aborts generation; swapped witnesses fail static validation.",
+          "regressions": [
+            "tests/support/avif_sequence.rs::avif_edit_lists_match_complete_native_repetition_witnesses"
+          ],
+          "option_review": "Retained Option<EditList> represents absent edts only; required elst fields and malformed boxes remain Result failures.",
+          "validation_policy": "Rust behavioral tests and managed Coverage MCP remain deferred. No finding, row, workstream or historical coverage measurement is promoted.",
+          "remaining": [
+            "Complete reconstruction and public sequence parity remain unverified.",
+            "Retained references/scratch resource accounting and broader mixed reference histories need completion.",
+            "Existing matrix Rust-error contracts will be reconciled only during final behavioral verification."
+          ],
+          "compile_verification": "All 16 strict Clippy lanes pass: native AVIF-only/all/default/no-feature in ordinary/cfg(coverage), and AVIF-only/all-feature wasm32-unknown-unknown/wasm32-wasip1 ordinary/cfg(coverage). Native and coverage unknown-WASM checks include all targets; WASI and ordinary unknown-WASM check libraries. Behavioral execution deferred."
         }
       },
       "AVF-TILE-001": {

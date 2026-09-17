@@ -144,6 +144,22 @@ All 12 strict compile-check lanes pass. Rust execution and managed coverage
 remain deferred, so no row or finding is promoted. Mixed reference histories,
 broader reconstruction, resource accounting and final parity remain open.
 
+## Sequence repetition implementation in progress — 2026-09-17
+
+The edit-list parser now matches pinned native handling of absent/nonrepeating
+lists, ignored fields, rounded repeats and signed repetition overflow. Exactly
+2,147,483,648 total plays remain finite; larger counts normalize to infinite.
+Malformed repeating-list counts, versions and missing fields are container
+errors. Color-track repetition takes precedence over alpha metadata.
+
+The [loop corpus](../tests/fixtures/outputs/avif_loops/index.json) contains
+28 complete files: 20 accepted cases with unchanged pixels and eight native
+parse/Pillow-open rejections. The matrix generator now binds AVIF loop values
+to native case/input/index hashes and records an independent origin. Pillow's
+missing loop key remains separately recorded. Deferred public regressions cover
+pixels, timing, loop values and malformed lifecycle operations. No row or
+finding is promoted; Rust execution and managed coverage remain deferred.
+
 ## Complete open-task inventory
 
 The retained ledger contains **244 active finding rows**.

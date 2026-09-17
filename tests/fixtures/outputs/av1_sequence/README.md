@@ -25,9 +25,9 @@ A development-only observer compiled against the pinned libavif header reads
 [high-depth native record](../avif_sequence_color/high_bitdepth/index.json)
 reads -1, meaning infinite repetition. The public `AnimationLoop` model retains
 container repetition; the deferred regression compares these native values.
-It does not label them as Pillow loop-key parity. Before matrix promotion,
-AVIF loop references must use this independent native origin where the
-existing generator currently records Pillow's missing key.
+It does not label them as Pillow loop-key parity. The subsequent
+[loop evidence bundle](../avif_loops/README.md) now supplies the independent
+native origin to matrix generation and retains Pillow's missing key separately.
 
 The deferred regression also compares the unchanged AVIF movie-source
 normalization in `scripts/generate_decode_refs.py`: full rendered canvases,
@@ -112,7 +112,8 @@ from pinned dav1d. The subsequent [short-reference candidate](../av1_short_refer
 addresses that gap with separate native witnesses. Stale-reference policies
 still require additional independent evidence. This fixture has explicit
 indices; it does not prove those other cases.
-Loop-reference reconciliation and resource limitations above still apply.
+Loop-reference reconciliation is recorded in the later loop bundle; resource
+limitations above still apply.
 
 Regenerate this bundle with the same command plus
 `--fixture animated_error_resilient` and a fresh `--output` path.

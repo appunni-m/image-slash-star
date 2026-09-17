@@ -1980,17 +1980,17 @@ fn parse_track(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseRes
                 .checked_add(u64::from(
                     !track.track_duration.is_multiple_of(edit.segment_duration),
                 ))
-                .ok_or_else(|| {
-                    CodecError::NotImplemented(
-                        "AVIF repetition count overflows the public sequence limit".to_owned(),
-                    )
-                })?;
-            AnimationLoop::Finite {
-                total_plays: u32::try_from(plays).map_err(|_| {
-                    CodecError::NotImplemented(
-                        "AVIF repetition count exceeds the public sequence limit".to_owned(),
-                    )
-                })?,
+                .ok_or_else(|| parse_failure!())?;
+            // libavif stores repetitions (total plays minus one) as a signed
+            // 32-bit value and normalizes larger values to infinite playback.
+            // Keep INT_MAX + 1 total plays finite; avoid rounding by addition
+            // to the untrusted duration, which could overflow before division.
+            if plays > 1_u64 << 31 {
+                AnimationLoop::Infinite
+            } else {
+                AnimationLoop::Finite {
+                    total_plays: u32::try_from(plays).map_err(|_| parse_failure!())?,
+                }
             }
         }
     };
@@ -2045,46 +2045,31 @@ fn parse_edit_box(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> Parse
 fn parse_edit_list_box(input: &[u8], payload: ByteSpan) -> ParseResult<EditList> {
     let mut reader = Reader::new(input, payload);
     let (version, flags) = parse_full_box(&mut reader)?;
-    if flags & !1 != 0 {
-        return Err(CodecError::NotImplemented(
-            "AVIF edit-list flags outside the bounded repetition contract".to_owned(),
-        ));
+    // Pinned libavif only interprets bit zero. Nonrepeating edit lists do
+    // not read entries or validate their version, duration, or media fields.
+    if flags & 1 == 0 {
+        return Ok(EditList {
+            repeating: false,
+            segment_duration: 0,
+        });
     }
     let entry_count = reader.u32()?;
     if entry_count != 1 {
-        return Err(CodecError::NotImplemented(
-            "AVIF edit lists with multiple entries are not supported".to_owned(),
-        ));
+        return Err(parse_failure!());
     }
     let segment_duration = match version {
         0 => u64::from(reader.u32()?),
         1 => reader.u64()?,
-        _ => {
-            return Err(CodecError::NotImplemented(
-                "AVIF edit-list version is not supported".to_owned(),
-            ));
-        }
+        _ => return Err(parse_failure!()),
     };
-    let media_time = match version {
-        0 => i64::from(i32::from_be_bytes(reader.u32()?.to_be_bytes())),
-        1 => i64::from_be_bytes(reader.u64()?.to_be_bytes()),
-        _ => unreachable!(),
-    };
-    let media_rate_integer = i32::from(i16::from_be_bytes(reader.u16()?.to_be_bytes()));
-    let media_rate_fraction = i32::from(i16::from_be_bytes(reader.u16()?.to_be_bytes()));
     if segment_duration == 0 {
         return Err(parse_failure!());
     }
-    if media_time != 0 || media_rate_integer != 1 || media_rate_fraction != 0 {
-        return Err(CodecError::NotImplemented(
-            "AVIF edit-list media timing is outside the bounded contract".to_owned(),
-        ));
-    }
-    if !reader.is_empty() {
-        return Err(parse_failure!());
-    }
+    // The complete-file native witnesses show that media time/rate and any
+    // remaining payload are ignored, including their absence. Box extents
+    // remain validated by the caller before these semantic fields are read.
     Ok(EditList {
-        repeating: flags & 1 != 0,
+        repeating: true,
         segment_duration,
     })
 }

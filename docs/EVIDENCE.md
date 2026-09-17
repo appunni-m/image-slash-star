@@ -42,7 +42,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `002f1a6293a0913d6a010f325db64a82258d5b5f7ae8e778e37b008af22ecc71`.
+- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `6caa3df163c35183ccaa9e6bcd69e430417d4900971990342033b97b481b811b`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -169,6 +169,27 @@ All 12 strict native/WASM, AVIF-only/all-feature, ordinary/coverage compile
 lanes pass. Rust behavior and managed coverage remain deferred. This corpus
 does not establish every mixed-distance history or complete sequence/resource
 parity; planned rows, finding counts and historical coverage remain unchanged.
+
+The 2026-09-17 repetition candidate aligns the container parser with native
+edit-list handling and replaces the matrix's absent-Pillow-loop inference with
+explicit native provenance. The [loop index](../tests/fixtures/outputs/avif_loops/index.json)
+retains 28 complete inputs, 41 hashed artifacts and 420,956 RGB/RGBA bytes.
+Twenty accepted observations preserve all frames; eight malformed files fail
+native parsing and Pillow opening. All observations repeat identically.
+
+The native signed-count boundary preserves 2,147,483,648 total plays as finite,
+then normalizes larger values to infinite. Absent edit lists stay unspecified;
+nonrepeating lists stop after flags. Repeating lists validate count, version
+and nonzero segment duration but ignore media fields. Color repetition wins
+over a different alpha value, while malformed alpha metadata still rejects.
+
+The generator and Rust matrix harness bind loop evidence to the complete
+input, case, native source, index hash and normalized value. The Python static
+validator rejects a valid witness substituted from a different file. Existing
+row statuses and deferred Rust capability contracts remain unchanged pending
+the final behavioral campaign. All 16 strict native/WASM compile configurations,
+warnings-as-errors rustdoc and static provenance checks pass. The guard inventory
+remains 540 across 89 files. No current-source coverage claim is made.
 
 ## Diagnostic provenance
 

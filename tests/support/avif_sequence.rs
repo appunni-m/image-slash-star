@@ -373,3 +373,163 @@ fn mismatched_reference_frame_id_rejects_sequence_and_preserves_first_image() {
     let first = require_ok(img::decode(&input), "independent first frame");
     assert_eq!(first.content.pixels, error_resilient().pixels[0]);
 }
+
+#[test]
+fn avif_edit_lists_match_complete_native_repetition_witnesses() {
+    if super::matrix_selection_is_filtered() {
+        return;
+    }
+    let root = bundle("avif_loops");
+    let index: Value = require_ok(
+        json::from_str(&require_ok(
+            fs::read_to_string(root.join("index.json")),
+            "loop oracle index",
+        )),
+        "loop oracle JSON",
+    );
+    assert_eq!(
+        field::<String>(&index, "schema"),
+        "image-slash-star/avif-loop-oracle@1"
+    );
+    assert_eq!(
+        field::<String>(&index, "origin"),
+        "libavif.avifDecoder.repetitionCount"
+    );
+    let source: Value = field(&index, "source");
+    assert_eq!(
+        field::<String>(&source, "commit"),
+        "6543b22b5bc706c53f038a16fe515f921556d9b3"
+    );
+    let oracle: Value = field(&index, "oracle");
+    assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
+    assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
+    let artifacts: Vec<Value> = field(&index, "artifacts");
+    assert_eq!(artifacts.len(), 41);
+    let mut artifact_paths = std::collections::HashSet::new();
+    for artifact in artifacts {
+        let path: String = field(&artifact, "path");
+        assert!(
+            Path::new(&path)
+                .components()
+                .all(|part| matches!(part, std::path::Component::Normal(_)))
+        );
+        assert!(artifact_paths.insert(path.clone()));
+        let bytes = require_ok(fs::read(root.join(path)), "loop artifact");
+        assert_eq!(bytes.len(), field::<usize>(&artifact, "bytes"));
+        assert_eq!(
+            sha256::digest_hex(&bytes),
+            field::<String>(&artifact, "sha256")
+        );
+    }
+    let cases: Vec<Value> = field(&index, "cases");
+    let expected_names = [
+        "animated",
+        "error_resilient",
+        "highdepth",
+        "no_edit_list",
+        "no_edit_list_zero_duration",
+        "nonrepeating_zero_duration",
+        "nonrepeating_ignored_fields",
+        "nonrepeating_header_only",
+        "repeating_exact",
+        "repeating_rounded",
+        "repeating_partial",
+        "repeating_reserved_flags",
+        "repeating_ignored_media",
+        "repeating_segment_only",
+        "repeating_v0",
+        "largest_finite",
+        "first_infinite",
+        "huge_finite_duration",
+        "indefinite",
+        "error_zero_duration",
+        "error_zero_segment",
+        "error_indefinite_zero_segment",
+        "error_entry_count",
+        "error_version",
+        "error_missing_segment",
+        "error_missing_flags",
+        "alpha_loop_disagreement",
+        "error_alpha_segment",
+    ];
+    assert_eq!(cases.len(), expected_names.len());
+    for (case, expected_name) in cases.iter().zip(expected_names) {
+        assert_eq!(field::<String>(case, "name"), expected_name);
+        assert!(field::<bool>(case, "repeat_equal"));
+        assert!(field::<bool>(case, "media_payloads_equal"));
+        let path: String = field(case, "input_path");
+        assert!(artifact_paths.contains(&path));
+        let data = require_ok(fs::read(root.join(path)), "complete loop input");
+        assert_eq!(data.len(), field::<usize>(case, "input_bytes"));
+        assert_eq!(
+            sha256::digest_hex(&data),
+            field::<String>(case, "input_sha256")
+        );
+        let native: Value = field(case, "native");
+        let pillow: Value = field(case, "pillow");
+        if field::<i32>(&native, "parse_result") != 0 {
+            assert_eq!(field::<i32>(&native, "parse_result"), 9);
+            assert_eq!(field::<String>(&pillow, "status"), "error");
+            assert!(!field::<String>(&native, "diagnostic").is_empty());
+            for result in [
+                img::inspect(&data).map(|_| ()),
+                img::decode(&data).map(|_| ()),
+                img::decode_sequence(&data).map(|_| ()),
+            ] {
+                let error = match result {
+                    Ok(()) => panic!("malformed edit list accepted: {expected_name}"),
+                    Err(error) => error,
+                };
+                assert_eq!(
+                    error.kind(),
+                    img::ImageErrorKind::Malformed,
+                    "{expected_name}"
+                );
+                assert_eq!(error.format(), Some(img::ImageFormat::Avif));
+            }
+            continue;
+        }
+        assert_eq!(field::<String>(&pillow, "status"), "ok");
+        assert_eq!(field::<Option<u32>>(&pillow, "loop_key"), None);
+        let mut expected = match field::<String>(case, "source").as_str() {
+            "animated" => animated(),
+            "error_resilient" => error_resilient(),
+            "highdepth" => highdepth(),
+            source => panic!("unregistered loop source {source}"),
+        };
+        assert_eq!(
+            sha256::digest_hex(&expected.data),
+            field::<String>(case, "source_sha256")
+        );
+        let repetitions: i32 = field(&native, "repetition_count");
+        expected.native_loop = match repetitions {
+            -2 => img::AnimationLoop::Unspecified,
+            -1 => img::AnimationLoop::Infinite,
+            value if value >= 0 => img::AnimationLoop::Finite {
+                total_plays: require_some(
+                    require_ok(u32::try_from(value), "native repetitions").checked_add(1),
+                    "total plays",
+                ),
+            },
+            _ => panic!("invalid native repetition"),
+        };
+        assert_eq!(
+            field::<usize>(&native, "decoded_frames"),
+            expected.pixels.len()
+        );
+        let frames: Vec<Value> = field(&pillow, "frames");
+        assert_eq!(frames.len(), expected.pixels.len());
+        for (frame, bytes) in frames.iter().zip(&expected.pixels) {
+            assert_eq!(field::<String>(frame, "sha256"), sha256::digest_hex(bytes));
+            assert_eq!(field::<usize>(frame, "bytes"), bytes.len());
+        }
+        let actual = require_ok(img::decode_sequence(&data), "native loop sequence");
+        assert_frames(&actual.content, &expected);
+        assert_eq!(
+            require_ok(img::decode(&data), "loop independent image")
+                .content
+                .pixels,
+            expected.pixels[0]
+        );
+    }
+}

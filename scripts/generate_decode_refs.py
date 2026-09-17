@@ -5,7 +5,8 @@ Decode: PIL open asset -> .tobytes() -> .bin reference -> matrix
 Encode:  PIL open source -> .save(format, params) -> reopen -> .tobytes() -> .bin reference
 
 The exact Pillow wheel and its bundled codec versions are pinned in
-``manifest.yaml``. Only public Pillow-observable behavior is part of the oracle.
+``manifest.yaml``. Pillow supplies observable pixels/errors; AVIF repetition
+uses separately pinned native observations because Pillow omits its loop key.
 """
 import argparse
 import hashlib
@@ -21,6 +22,8 @@ import zlib
 from pathlib import Path
 
 import yaml
+
+from avif_loop_evidence import LoopEvidenceError, sequence_loop_evidence, validate_loop_evidence
 
 ROOT = Path(__file__).parent.parent
 MANIFEST = ROOT / "manifest.yaml"
@@ -1589,6 +1592,7 @@ def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
         ):
             raise ValueError("WebP container metadata differs from Pillow")
     elif fmt_name == "avif":
+        parsed_loop_count, loop_evidence = sequence_loop_evidence(source_data)
         durations = avif_frame_durations(source_data, image.n_frames)
         background = None
         sources = [
@@ -1680,16 +1684,18 @@ def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
         ),
         "canvas_origin": "pillow_fixture",
         "loop_count": (
-            parsed_loop_count if fmt_name in {"png", "webp"} else image.info.get("loop")
+            parsed_loop_count if fmt_name in {"png", "webp", "avif"} else image.info.get("loop")
         ),
         "loop_origin": (
-            "specification_reference"
+            "independent_implementation" if fmt_name == "avif" else "specification_reference"
             if fmt_name in {"png", "tiff"}
             else "pillow_fixture"
         ),
         "background": background,
         "frames": frames,
     }
+    if fmt_name == "avif":
+        row["sequence"]["loop_evidence"] = loop_evidence
 
 
 def write_sequence_ref(row, image, fmt_name, asset_name):
@@ -2211,7 +2217,7 @@ def update_summary(matrix):
     }
 
 
-def validate_sequence_reference(sequence, case_name, expected_frame_count, fmt_name):
+def validate_sequence_reference(sequence, case_name, expected_frame_count, fmt_name, input_sha256=None):
     """Return every schema or artifact defect in one decoded-sequence reference."""
     failures = []
     canvas = sequence.get("canvas_size")
@@ -2231,6 +2237,11 @@ def validate_sequence_reference(sequence, case_name, expected_frame_count, fmt_n
         failures.append(f"{case_name}: sequence loop count is invalid")
     if sequence.get("loop_origin") not in ASSERTION_ORIGINS:
         failures.append(f"{case_name}: sequence loop origin is invalid")
+    if fmt_name == "avif":
+        try:
+            validate_loop_evidence(sequence, input_sha256)
+        except (LoopEvidenceError, OSError, ValueError, KeyError, TypeError) as error:
+            failures.append(f"{case_name}: {error}")
 
     background = sequence.get("background")
     if background is not None:
@@ -2586,7 +2597,7 @@ def validate_generated_outputs(matrix, target_format=None):
                     )
                 failures.extend(
                     validate_sequence_reference(
-                        sequence, case_name, row.get("ref_frame_count"), fmt_name
+                        sequence, case_name, row.get("ref_frame_count"), fmt_name, row.get("asset_sha256")
                     )
                 )
 
@@ -2662,7 +2673,7 @@ def validate_generated_outputs(matrix, target_format=None):
                     )
                 failures.extend(
                     validate_sequence_reference(
-                        sequence, case_name, row.get("source_frame_count"), fmt_name
+                        sequence, case_name, row.get("source_frame_count"), fmt_name, row.get("encoded_ref_sha256")
                     )
                 )
             evidence = [("encoded_ref_path", "encoded_ref_bytes", "encoded bytes")]
@@ -3853,6 +3864,10 @@ def generate_decode(manifest, matrix, target_format=None):
                         else:
                             write_sequence_ref(row, img, fmt_name, asset_name)
                     generated += 1
+                except LoopEvidenceError:
+                    # Missing native evidence is a generation failure, not a
+                    # Pillow skip that can silently retain stale loop metadata.
+                    raise
                 except Exception as e:
                     print(f"  SKIP decode {asset_name}: {e}", file=sys.stderr)
 

@@ -234,8 +234,18 @@ struct SequenceParityRef {
     canvas_origin: String,
     loop_count: Option<u32>,
     loop_origin: String,
+    loop_evidence: Option<AvifLoopEvidence>,
     background: Option<BackgroundParityRef>,
     frames: Vec<FrameParityRef>,
+}
+
+#[derive(Debug)]
+struct AvifLoopEvidence {
+    index_path: String,
+    index_sha256: String,
+    case: String,
+    input_sha256: String,
+    repetition_count: i32,
 }
 
 #[derive(Debug)]
@@ -1491,8 +1501,16 @@ json_object!(SequenceParityRef {
     canvas_origin,
     loop_count,
     loop_origin,
+    loop_evidence,
     background,
     frames,
+});
+json_object!(AvifLoopEvidence {
+    index_path,
+    index_sha256,
+    case,
+    input_sha256,
+    repetition_count,
 });
 json_object!(FrameParityRef {
     index,
@@ -3458,13 +3476,86 @@ fn assert_sequence_frame_pixels(
         .map_err(|message| format!("frame {}: {message}", expected.index))
 }
 
+fn assert_avif_loop_evidence(expected: &SequenceParityRef, input: &[u8]) -> Result<(), String> {
+    fn field<T: FromJson>(value: &Value, key: &str) -> Result<T, String> {
+        let value = value
+            .as_object()
+            .and_then(|object| object.get(key))
+            .ok_or_else(|| format!("AVIF loop oracle lacks {key}"))?;
+        T::from_json(value.clone()).map_err(|error| error.to_string())
+    }
+    let evidence = expected
+        .loop_evidence
+        .as_ref()
+        .ok_or("AVIF sequence lacks native loop evidence")?;
+    if evidence.index_path != "tests/fixtures/outputs/avif_loops/index.json"
+        || expected.loop_origin != "independent_implementation"
+        || evidence.input_sha256 != sha256::digest_hex(input)
+    {
+        return Err("AVIF native loop origin or complete input differs".to_owned());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let raw = fs::read(root.join(&evidence.index_path)).map_err(|error| error.to_string())?;
+    if sha256::digest_hex(&raw) != evidence.index_sha256 {
+        return Err("AVIF loop oracle index hash differs".to_owned());
+    }
+    let index: Value =
+        json::from_str(std::str::from_utf8(&raw).map_err(|error| error.to_string())?)
+            .map_err(|error| error.to_string())?;
+    if field::<String>(&index, "schema")? != "image-slash-star/avif-loop-oracle@1"
+        || field::<String>(&index, "origin")? != "libavif.avifDecoder.repetitionCount"
+        || field::<String>(&field::<Value>(&index, "source")?, "commit")?
+            != "6543b22b5bc706c53f038a16fe515f921556d9b3"
+    {
+        return Err("AVIF loop oracle source differs".to_owned());
+    }
+    let cases: Vec<Value> = field(&index, "cases")?;
+    let mut matched = 0_usize;
+    for case in cases {
+        if field::<String>(&case, "name")? != evidence.case {
+            continue;
+        }
+        matched = matched.checked_add(1).ok_or("loop case count overflow")?;
+        let native: Value = field(&case, "native")?;
+        if field::<String>(&case, "input_sha256")? != evidence.input_sha256
+            || field::<usize>(&case, "input_bytes")? != input.len()
+            || !field::<bool>(&case, "repeat_equal")?
+            || field::<i32>(&native, "parse_result")? != 0
+            || field::<i32>(&native, "repetition_count")? != evidence.repetition_count
+        {
+            return Err("AVIF loop case differs from its native observation".to_owned());
+        }
+    }
+    let normalized = match evidence.repetition_count {
+        -2 => None,
+        -1 => Some(0),
+        value if value >= 0 => Some(
+            u32::try_from(value)
+                .map_err(|error| error.to_string())?
+                .checked_add(1)
+                .ok_or("native repetition overflow")?,
+        ),
+        _ => return Err("invalid native repetition value".to_owned()),
+    };
+    if matched != 1 || expected.loop_count != normalized {
+        return Err("AVIF loop identity or normalization differs".to_owned());
+    }
+    Ok(())
+}
+
 fn assert_sequence_reference_parity(
     manifest_dir: &Path,
     row_id: &str,
     expected: &SequenceParityRef,
     actual: &img::DecodedSequence,
     expected_format: img::ImageFormat,
+    input: &[u8],
 ) -> Result<(), String> {
+    if expected_format == img::ImageFormat::Avif {
+        assert_avif_loop_evidence(expected, input)?;
+    } else if expected.loop_evidence.is_some() {
+        return Err("native AVIF loop evidence attached to another format".to_owned());
+    }
     actual
         .validate()
         .map_err(|error| format!("decoded sequence validation failed: {error}"))?;
@@ -3729,7 +3820,14 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
         ));
     }
     let actual = decoded.content;
-    assert_sequence_reference_parity(manifest_dir, &row.id, expected, &actual, expected_format)
+    assert_sequence_reference_parity(
+        manifest_dir,
+        &row.id,
+        expected,
+        &actual,
+        expected_format,
+        data,
+    )
 }
 
 // ── Decode Tests ─────────────────────────────────────────────────────────
@@ -5743,6 +5841,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                                 expected_sequence,
                                 &decoded.content,
                                 format,
+                                &encoded,
                             )
                         } else {
                             Err(format!(
