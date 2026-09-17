@@ -25,6 +25,10 @@ mod support;
 #[path = "support/av1_temporal.rs"]
 mod av1_temporal;
 
+#[cfg(coverage)]
+#[path = "support/avif_hdr_color.rs"]
+mod avif_hdr_color;
+
 use support::json::{self, FromJson, Object, Value};
 
 #[cfg(coverage)]

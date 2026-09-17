@@ -2207,6 +2207,23 @@ pub struct Av1ReconstructionTrace {
     pub entropy_operations: Vec<Av1EntropyOperationState>,
 }
 
+/// Convert independently decoded AV1 planes using the production color boundary.
+///
+/// This coverage-only adapter does not parse or reconstruct a bitstream.
+/// Unsupported declarations or invalid plane layouts return a structured error.
+#[cfg(all(coverage, feature = "avif"))]
+#[doc(hidden)]
+pub fn __coverage_av1_color_conversion(
+    input: Av1ReconstructionTrace,
+    alpha: Option<Vec<u16>>,
+) -> ImageResult<DecodedImage> {
+    codecs::into_image_result(
+        codecs::color_conversion_trace(input, alpha),
+        ImageFormat::Avif,
+        ImageErrorStage::StillDecode,
+    )
+}
+
 /// One scalar range-decoder operation from a reconstructed AV1 leaf.
 #[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]

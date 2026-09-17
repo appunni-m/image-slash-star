@@ -67,6 +67,20 @@ checker inadvertently executed the README quickstart during this maintenance;
 that example passed, but is not evidence of roadmap or parity completion. The
 historical coverage totals and open capability statuses remain unchanged.
 
+The 2026-09-17 HDR color candidate has independent full-file native evidence:
+dav1d and libavif agree on 240,000 YUV bytes, while pinned scalar libyuv,
+libavif and Pillow agree on 120,000 RGB bytes. The deterministic observation
+is recorded in the [HDR oracle index](../tests/fixtures/outputs/avif_hdr_color/hdr/index.json).
+This witnesses the native conversion of 10-bit full-range I444 CICP 9/16/9
+without alpha. The safe-Rust converter and its full-plane/tail regressions are
+implemented; their behavioral execution and managed coverage are deferred.
+Strict Clippy passes for native, `wasm32-unknown-unknown` and `wasm32-wasip1`
+with AVIF-only and all features, both ordinary and coverage configurations.
+Native and coverage-enabled unknown-WASM checks include all targets; WASI
+checks compile the library. Warnings-as-errors rustdoc, formatting and static
+provenance/roadmap checks also pass.
+The HDR public row remains planned and historical coverage is unchanged.
+
 ## Diagnostic provenance
 
 The separate defensive-model contract has 61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row;

@@ -9,7 +9,7 @@ mod container;
 mod samples;
 
 #[cfg(coverage)]
-pub(crate) use av1::temporal_candidate_trace;
+pub(crate) use av1::{color_conversion_trace, temporal_candidate_trace};
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {

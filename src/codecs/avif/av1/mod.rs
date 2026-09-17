@@ -1923,6 +1923,41 @@ pub(crate) fn __coverage_reconstruction(
     }))
 }
 
+/// Feed independently decoded planes through the production color boundary.
+/// This adapter does not parse or reconstruct AV1 and cannot prove that stage.
+#[cfg(coverage)]
+pub(crate) fn color_conversion_trace(
+    input: crate::Av1ReconstructionTrace,
+    alpha: Option<Vec<u16>>,
+) -> CodecResult<crate::DecodedImage> {
+    let still = PortableStill {
+        width: input.width,
+        height: input.height,
+        bit_depth: input.bit_depth,
+        monochrome: input.monochrome,
+        color_primaries: input.color_primaries,
+        transfer_characteristics: input.transfer_characteristics,
+        matrix_coefficients: input.matrix_coefficients,
+        color_range: input.color_range,
+        subsampling_x: input.subsampling_x,
+        subsampling_y: input.subsampling_y,
+        frame_id_numbers_present: false,
+        planes: input
+            .planes
+            .map(|samples| block::ReconstructedPlane { samples }),
+        alpha_plane: alpha.map(|samples| block::ReconstructedPlane { samples }),
+        entropy_operations: input.entropy_operations,
+    };
+    super::decode::decode_portable(&ValidatedAv1 {
+        portable_still: Some(still),
+    })
+    .ok_or_else(|| {
+        CodecError::NotImplemented(
+            "AVIF oracle planes are outside the color conversion boundary".to_owned(),
+        )
+    })
+}
+
 #[cfg(coverage)]
 #[coverage(off)]
 pub(super) fn __coverage_portable_still() -> PortableStill {
