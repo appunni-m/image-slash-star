@@ -1,6 +1,6 @@
 # Public capability roadmap
 
-This is a compact rendering of the unchanged [machine ledger](../roadmap.json).
+This is a compact rendering of the [machine ledger](../roadmap.json).
 Its claim baseline is `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`. Counts and finding statuses belong to that
 review; subsequent release and documentation improvements are recorded in
 [Evidence](EVIDENCE.md) and [Releasing](../RELEASING.md). A historical finding
@@ -11,7 +11,7 @@ is not evidence that a later fix failed. No entry is silently removed here.
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 Its recorded baseline test counts are 45/45 matrix tests and 66/66 feature-gate tests.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The coverage-origin verifier passes for 531 exact `cfg(coverage)` guards across 87 files.
+The coverage-origin verifier passes for 535 exact `cfg(coverage)` guards across 88 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -42,6 +42,23 @@ native runtime path or count a planned row as parity. The tracked work is:
 | hdr | AVF-COLOR-001 |
 | animated | AVF-SEQUENCE-001 |
 | All planned encoder rows | AVF-ENCODE-001 |
+
+## AVIF sequence implementation in progress — 2026-09-17
+
+The single-reference temporal candidate path now projects one vector instead
+of rejecting the unused second-reference sentinel. The independent
+[oracle record](../tests/fixtures/outputs/av1_temporal/animated/index.json)
+contains 177 lookups from the existing complete `animated.avif`, including
+32 valid single-reference candidates: two insertions, 30 weight updates, and
+two global-MV context updates. Unmodified and instrumented pinned dav1d output
+matches byte for byte, and the trace repeats exactly.
+
+The fixture-driven Rust regression is implemented and compile-checked;
+behavioral execution remains deferred until implementation is complete. This
+is private transition evidence, not proof of complete public sequence parity.
+`AVF-SEQUENCE-001`, the animated matrix row, and all finding counts retain their
+existing open status. Regeneration and limitations are documented in the
+[temporal oracle notes](../tests/fixtures/outputs/av1_temporal/README.md).
 
 ## Complete open-task inventory
 

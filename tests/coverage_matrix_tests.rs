@@ -21,6 +21,10 @@ use wide as _;
 mod sha256;
 mod support;
 
+#[cfg(coverage)]
+#[path = "support/av1_temporal.rs"]
+mod av1_temporal;
+
 use support::json::{self, FromJson, Object, Value};
 
 #[cfg(coverage)]

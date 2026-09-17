@@ -2016,7 +2016,16 @@ fn add_temporal_candidate(
         return;
     }
     let mut vectors = [MotionVector::ZERO; 2];
-    for index in 0..2 {
+    // A single-reference target ends with the absent-reference sentinel -1.
+    // dav1d projects only its first vector, then inserts/weights the candidate
+    // and updates the global-MV context. The sentinel is not a failed second
+    // projection (pinned refmvs.c add_temporal_candidate).
+    let reference_count = if matches!(target, ReferenceMvTarget::Single(_)) {
+        1
+    } else {
+        2
+    };
+    for index in 0..reference_count {
         let encoded = target_refs[index];
         if encoded <= 0 {
             return;
@@ -2049,6 +2058,108 @@ fn add_temporal_candidate(
         );
     }
     stack.add_or_weight(vectors, 2);
+}
+
+#[cfg(coverage)]
+pub(crate) fn temporal_candidate_trace(
+    input: &crate::Av1TemporalCandidateInput,
+) -> Av1Result<crate::Av1TemporalCandidateState> {
+    let reference = |value: i8| {
+        ReferenceFrame::from_segment_feature(i32::from(value))
+            .ok_or_else(|| malformed("temporal trace reference is outside 1..=7"))
+    };
+    let first = reference(input.references[0])?;
+    let target = if input.references[1] == -1 {
+        ReferenceMvTarget::Single(first)
+    } else {
+        ReferenceMvTarget::Compound(ReferencePair::compound(
+            first,
+            reference(input.references[1])?,
+        ))
+    };
+    if matches!(target, ReferenceMvTarget::Single(_))
+        && input.before.global_context.is_some()
+        && input.global_vector.is_none()
+    {
+        return Err(malformed("temporal trace context has no global vector"));
+    }
+    let vector = |[x, y]: [i16; 2]| MotionVector { x, y };
+    let mut stack = MotionCandidateStack::new();
+    stack.set_coded_count(input.before.candidates.len())?;
+    for (index, candidate) in input.before.candidates.iter().enumerate() {
+        stack.replace_slot(
+            index,
+            MotionCandidate {
+                vectors: candidate.vectors.map(vector),
+                weight: candidate.weight,
+            },
+        )?;
+    }
+    // The native trace supplies already resolved distances, not frame headers.
+    // Normalize them to seven-bit order hints without changing any distance.
+    // This adapter therefore exercises candidate projection, not header parsing.
+    let mut reference_order_hints = [0; 7];
+    for (hint, &distance) in reference_order_hints.iter_mut().zip(&input.distances) {
+        if !(-31..=31).contains(&distance) {
+            return Err(malformed("temporal trace distance is outside -31..=31"));
+        }
+        *hint = 32_i32
+            .checked_sub(distance)
+            .and_then(|value| u32::try_from(value).ok())
+            .ok_or_else(|| malformed("temporal trace order hint overflows"))?;
+    }
+    let request = ReferenceMvRequest {
+        target,
+        block_size: BlockSize::B8x8,
+        local_x_b4: 0,
+        local_y_b4: 0,
+        absolute_x_b4: 0,
+        absolute_y_b4: 0,
+        tile_left_b4: 0,
+        tile_top_b4: 0,
+        tile_right_b4: 2,
+        tile_bottom_b4: 2,
+        frame_width_b4: 2,
+        frame_height_b4: 2,
+        top_has_right: false,
+        global_motion: [GlobalMotion::identity(); 7],
+        force_integer_mv: input.force_integer,
+        high_precision_mv: input.high_precision,
+        sign_bias: [false; 7],
+        current_order_hint: 32,
+        order_hint_bits: 7,
+        reference_order_hints,
+        use_ref_frame_mvs: true,
+        temporal: None,
+    };
+    let mut global_context = input.before.global_context;
+    if let Some((source_vector, denominator)) = input.projected {
+        add_temporal_candidate(
+            &mut stack,
+            ProjectedTemporalEntry {
+                vector: vector(source_vector),
+                denominator,
+            },
+            target,
+            request,
+            [
+                vector(input.global_vector.unwrap_or([0; 2])),
+                MotionVector::ZERO,
+            ],
+            global_context.as_mut(),
+        );
+    }
+    Ok(crate::Av1TemporalCandidateState {
+        candidates: stack
+            .as_slice()
+            .iter()
+            .map(|candidate| crate::Av1TemporalCandidate {
+                vectors: candidate.vectors.map(|value| [value.x, value.y]),
+                weight: candidate.weight,
+            })
+            .collect(),
+        global_context,
+    })
 }
 
 /// Build the exact single/compound reference-MV stack for one block. This is

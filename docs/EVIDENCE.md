@@ -50,6 +50,11 @@ are not interchangeable. Selected incremental runs cannot substitute for a full
 fresh report. Keep the original raw reports and context rather than attaching
 old identities to new measurements.
 
+The ledger's fixture-manifest hashes track current-file integrity. Updating
+those hashes does not extend the historical coverage run to new code, guards,
+or unexecuted regressions. The 2026-09-17 AVIF temporal-candidate repair remains
+unverified by Rust execution, as recorded in the roadmap.
+
 ## Diagnostic provenance
 
 The separate defensive-model contract has 61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row;
@@ -95,4 +100,3 @@ These cases must stay out of `coverage_matrix.json` unless a row also has a
 separate Pillow-observable assertion. A Rust-only test may still use a
 Pillow-generated image as input; that makes the picture reproducible, but it
 does not turn the Rust-only result into Pillow parity.
-

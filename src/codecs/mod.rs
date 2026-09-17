@@ -2527,6 +2527,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
 }
 
 #[cfg(all(coverage, feature = "avif"))]
+pub(crate) use avif::temporal_candidate_trace;
+
+#[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn __coverage_av1_entropy_reference_trace()
 -> CodecResult<Vec<crate::Av1EntropyTraceState>> {
     avif::__coverage_entropy_reference_trace()

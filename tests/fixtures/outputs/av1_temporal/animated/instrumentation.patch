@@ -1,0 +1,75 @@
+diff --git a/src/refmvs.c b/src/refmvs.c
+index ac86c92e..79bbbf5f 100644
+--- a/src/refmvs.c
++++ b/src/refmvs.c
+@@ -31,0 +32 @@
++#include <stdio.h>
+@@ -193 +194 @@ static inline union mv mv_projection(const union mv mv, const int num, const int
+-static void add_temporal_candidate(const refmvs_frame *const rf,
++static void add_temporal_candidate_untraced(const refmvs_frame *const rf,
+@@ -238,0 +240,65 @@ static void add_temporal_candidate(const refmvs_frame *const rf,
++
++static unsigned temporal_event_index;
++
++static void temporal_vector(const union mv value) {
++    printf("[%d,%d]", value.x, value.y);
++}
++
++static void temporal_stack(const refmvs_candidate *const stack,
++                           const int count, const int single) {
++    putchar('[');
++    for (int i = 0; i < count; i++) {
++        if (i) putchar(',');
++        printf("{\"vectors\":[");
++        temporal_vector(stack[i].mv.mv[0]);
++        putchar(',');
++        if (single) fputs("null", stdout);
++        else temporal_vector(stack[i].mv.mv[1]);
++        printf("],\"weight\":%d}", stack[i].weight);
++    }
++    putchar(']');
++}
++
++static void add_temporal_candidate(const refmvs_frame *const rf,
++                                   refmvs_candidate *const mvstack, int *const cnt,
++                                   const refmvs_temporal_block *const rb,
++                                   const union refmvs_refpair ref, int *const globalmv_ctx,
++                                   const union mv gmv[])
++{
++    const int single = ref.ref[1] == -1;
++    const int valid = rb->mv.n != INVALID_MV;
++    printf("@TEMPORAL {\"event_index\":%u,\"frame_offset\":%u,"
++           "\"target_references\":[%d,%d],\"valid\":%s,"
++           "\"force_integer\":%s,\"high_precision\":%s,\"vector\":",
++           temporal_event_index++, rf->frm_hdr->frame_offset,
++           ref.ref[0], ref.ref[1], valid ? "true" : "false",
++           rf->frm_hdr->force_integer_mv ? "true" : "false",
++           rf->frm_hdr->hp ? "true" : "false");
++    temporal_vector(rb->mv);
++    fputs(",\"denominator\":", stdout);
++    if (valid) printf("%u", rb->ref);
++    else fputs("null", stdout);
++    fputs(",\"distances\":[", stdout);
++    for (int i = 0; i < 7; i++) {
++        if (i) putchar(',');
++        printf("%d", rf->pocdiff[i]);
++    }
++    fputs("],\"global_vector\":", stdout);
++    if (single && globalmv_ctx) temporal_vector(gmv[0]);
++    else fputs("null", stdout);
++    fputs(",\"global_context_before\":", stdout);
++    if (globalmv_ctx) printf("%d", *globalmv_ctx);
++    else fputs("null", stdout);
++    fputs(",\"stack_before\":", stdout);
++    temporal_stack(mvstack, *cnt, single);
++
++    add_temporal_candidate_untraced(rf, mvstack, cnt, rb, ref, globalmv_ctx, gmv);
++
++    fputs(",\"stack_after\":", stdout);
++    temporal_stack(mvstack, *cnt, single);
++    fputs(",\"global_context_after\":", stdout);
++    if (globalmv_ctx) printf("%d", *globalmv_ctx);
++    else fputs("null", stdout);
++    puts("}");
++}
++

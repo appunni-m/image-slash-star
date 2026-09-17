@@ -2084,6 +2084,62 @@ pub fn encode_default(img: &DecodedImage, format: ImageFormat) -> ImageResult<Ve
     encode(img, format, &EncodeOptions::for_format(format))
 }
 
+/// One candidate in the independent AV1 temporal-MV trace.
+#[cfg(all(coverage, feature = "avif"))]
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Av1TemporalCandidate {
+    /// First and second vectors, each in horizontal/vertical order; absent is zero.
+    pub vectors: [[i16; 2]; 2],
+    /// Native candidate weight.
+    pub weight: i32,
+}
+
+/// Candidate stack and optional global-MV context at one trace boundary.
+#[cfg(all(coverage, feature = "avif"))]
+#[doc(hidden)]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Av1TemporalCandidateState {
+    /// Candidates in their original order, without deduplication.
+    pub candidates: Vec<Av1TemporalCandidate>,
+    /// Optional context updated by the first temporal position.
+    pub global_context: Option<i32>,
+}
+
+/// Input observed by pinned dav1d while decoding a complete fixture.
+#[cfg(all(coverage, feature = "avif"))]
+#[doc(hidden)]
+#[derive(Debug, Clone)]
+pub struct Av1TemporalCandidateInput {
+    /// One-based references, with -1 for an absent second reference.
+    pub references: [i8; 2],
+    /// Source vector in horizontal/vertical order and its positive denominator.
+    pub projected: Option<([i16; 2], i32)>,
+    /// Resolved and clipped current-to-reference distances.
+    pub distances: [i32; 7],
+    /// Whether integer motion precision is forced.
+    pub force_integer: bool,
+    /// Whether eighth-pixel precision is enabled.
+    pub high_precision: bool,
+    /// Global vector when a single-reference global context is present.
+    pub global_vector: Option<[i16; 2]>,
+    /// Native state immediately before the candidate was processed.
+    pub before: Av1TemporalCandidateState,
+}
+
+/// Replay one fixture-derived temporal candidate through the private algorithm.
+#[cfg(all(coverage, feature = "avif"))]
+#[doc(hidden)]
+pub fn __coverage_av1_temporal_candidate(
+    input: &Av1TemporalCandidateInput,
+) -> ImageResult<Av1TemporalCandidateState> {
+    codecs::into_image_result(
+        codecs::temporal_candidate_trace(input),
+        ImageFormat::Avif,
+        ImageErrorStage::StillDecode,
+    )
+}
+
 /// One exact scalar AV1 entropy state used by the fixture-backed coverage gate.
 #[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]

@@ -1,0 +1,338 @@
+{
+  "artifacts": [
+    {
+      "bytes": 168750,
+      "path": "display.yuv",
+      "sha256": "62884b195d2489cab53a1763749b73c57219d773ddbeb569aa5f92c394a5bcd0"
+    },
+    {
+      "bytes": 65526,
+      "path": "events.jsonl",
+      "sha256": "ab8efe52654caab1b8315a9f06bfb820d03302b178844644475fe996a9bb0dc1"
+    },
+    {
+      "bytes": 2992,
+      "path": "instrumentation.patch",
+      "sha256": "14e14f14d390217f220b93a4d56b43006819d71aee0b7ba7f3f5d26ea1dd580e"
+    }
+  ],
+  "builds": {
+    "plain": {
+      "binary_sha256": "333447645f6f771a346bfa9a6e84ba4970254cea53ea7d105efe3f8de6b662a3",
+      "compile_argv": [
+        "meson",
+        "compile",
+        "-C",
+        "<build>",
+        "tools/dav1d"
+      ],
+      "compiler": {
+        "build": {
+          "c": {
+            "default_suffix": "c",
+            "exelist": [
+              "/usr/bin/clang"
+            ],
+            "file_suffixes": [
+              "c"
+            ],
+            "full_version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+            "id": "clang",
+            "linker_exelist": [
+              "/usr/bin/clang"
+            ],
+            "linker_id": "ld64",
+            "version": "17.0.0"
+          }
+        },
+        "host": {
+          "c": {
+            "default_suffix": "c",
+            "exelist": [
+              "/usr/bin/clang"
+            ],
+            "file_suffixes": [
+              "c"
+            ],
+            "full_version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+            "id": "clang",
+            "linker_exelist": [
+              "/usr/bin/clang"
+            ],
+            "linker_id": "ld64",
+            "version": "17.0.0"
+          }
+        }
+      },
+      "configure_argv": [
+        "meson",
+        "setup",
+        "<build>",
+        "<source-copy>",
+        "--buildtype=debug",
+        "-Denable_tools=true",
+        "-Denable_tests=false",
+        "-Denable_examples=false",
+        "-Dtestdata_tests=false",
+        "-Denable_asm=false"
+      ],
+      "libraries": [
+        {
+          "name": "libdav1d.7.dylib",
+          "sha256": "259229a1041493625e017cf9ae81905f403d301bdb452ba18e48511a56ee0356"
+        }
+      ],
+      "meson_version": "1.12.0",
+      "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+      "ninja_version": "1.13.2",
+      "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+      "refmvs_source_sha256": "3db058dd7305bc8936b76d2d284fce6c3d56594f8ff75874c0f4f13f3dce7b5b",
+      "tool_version": "1.5.3-0-gb546257f",
+      "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+    },
+    "trace": {
+      "binary_sha256": "d8fffce679c7de016bdd91300592847d61b10e0e70c115982d9e0081e4694f32",
+      "compile_argv": [
+        "meson",
+        "compile",
+        "-C",
+        "<build>",
+        "tools/dav1d"
+      ],
+      "compiler": {
+        "build": {
+          "c": {
+            "default_suffix": "c",
+            "exelist": [
+              "/usr/bin/clang"
+            ],
+            "file_suffixes": [
+              "c"
+            ],
+            "full_version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+            "id": "clang",
+            "linker_exelist": [
+              "/usr/bin/clang"
+            ],
+            "linker_id": "ld64",
+            "version": "17.0.0"
+          }
+        },
+        "host": {
+          "c": {
+            "default_suffix": "c",
+            "exelist": [
+              "/usr/bin/clang"
+            ],
+            "file_suffixes": [
+              "c"
+            ],
+            "full_version": "Apple clang version 17.0.0 (clang-1700.0.13.5)",
+            "id": "clang",
+            "linker_exelist": [
+              "/usr/bin/clang"
+            ],
+            "linker_id": "ld64",
+            "version": "17.0.0"
+          }
+        }
+      },
+      "configure_argv": [
+        "meson",
+        "setup",
+        "<build>",
+        "<source-copy>",
+        "--buildtype=debug",
+        "-Denable_tools=true",
+        "-Denable_tests=false",
+        "-Denable_examples=false",
+        "-Dtestdata_tests=false",
+        "-Denable_asm=false"
+      ],
+      "libraries": [
+        {
+          "name": "libdav1d.7.dylib",
+          "sha256": "bba58a2bfabf8d937b8987521f4a23f7119e163d946843d11bb07ac749125515"
+        }
+      ],
+      "meson_version": "1.12.0",
+      "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+      "ninja_version": "1.13.2",
+      "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+      "refmvs_source_sha256": "c2f0c3e32b9c57a5addd1659f64582fa12014e40ad7fa85cf0e004a4cdbd808b",
+      "tool_version": "1.5.3-0-gb546257f",
+      "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+    }
+  },
+  "collector": {
+    "path": "scripts/generate_av1_temporal_refs.py",
+    "sha256": "86c21264e469d4f98ef94630e9091f61a3d223b81c0812dbe4b554f68ea62470"
+  },
+  "counts": {
+    "compound": 0,
+    "events": 177,
+    "single": 32,
+    "valid": 32
+  },
+  "fixture": {
+    "bytes": 1235,
+    "path": "tests/fixtures/input/images/avif/animated.avif",
+    "sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+  },
+  "ivf": {
+    "bytes": 304,
+    "codec": "AV01",
+    "height": 150,
+    "path": "animated.ivf",
+    "rate_den": 1,
+    "rate_num": 30,
+    "samples": [
+      {
+        "length": 39,
+        "offset": 1023,
+        "pts": 0,
+        "sample_index": 0,
+        "sha256": "8ec6d1190463e5d3defa50a8f270a2daa51be85e636ee1e482be91be2aedebeb"
+      },
+      {
+        "length": 113,
+        "offset": 1062,
+        "pts": 1,
+        "sample_index": 1,
+        "sha256": "a4a77230e45708a7cbe33be90201dd715803a6014c54e7c7df81621bacff24ad"
+      },
+      {
+        "length": 5,
+        "offset": 1175,
+        "pts": 2,
+        "sample_index": 2,
+        "sha256": "e9e33cf3c379510fa68d4b4fc7d0bfb5677c717177cf5831033332b14cc15bdb"
+      },
+      {
+        "length": 30,
+        "offset": 1180,
+        "pts": 3,
+        "sample_index": 3,
+        "sha256": "5990be45371440951b1a8f7e8b50f65c48f447a7eabf5aec5b2f21e228a0adb7"
+      },
+      {
+        "length": 25,
+        "offset": 1210,
+        "pts": 4,
+        "sample_index": 4,
+        "sha256": "2f9b713fe83554cbc9701e85e93b6453d2a7e43edc5c19ea3fea2e457c926aa6"
+      }
+    ],
+    "sha256": "e608a371050483c915cd1e106c76faaf8375cbb0260485c73cf945bef5c4ab33",
+    "timestamps": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "width": 150
+  },
+  "noninterference": {
+    "display_bytes": 168750,
+    "display_sha256": "62884b195d2489cab53a1763749b73c57219d773ddbeb569aa5f92c394a5bcd0",
+    "raw_yuv_byte_equal": true,
+    "stdout_sha256": "d049ac509ce11f1d1be60fc13c72233ecc4e2981b74d23f0f70e070771961ecf",
+    "trace_repeat_byte_equal": true
+  },
+  "pillow": {
+    "codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    "imaging_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+    "libavif": "1.4.1",
+    "observations": {
+      "frame_count": 5,
+      "frames": [
+        {
+          "duration": 33,
+          "duration_observation": "Pillow.Image.info",
+          "index": 0,
+          "mode": "RGB",
+          "raw_bytes": 67500,
+          "raw_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "duration": 33,
+          "duration_observation": "Pillow.Image.info",
+          "index": 1,
+          "mode": "RGB",
+          "raw_bytes": 67500,
+          "raw_sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "duration": 33,
+          "duration_observation": "Pillow.Image.info",
+          "index": 2,
+          "mode": "RGB",
+          "raw_bytes": 67500,
+          "raw_sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "duration": 33,
+          "duration_observation": "Pillow.Image.info",
+          "index": 3,
+          "mode": "RGB",
+          "raw_bytes": 67500,
+          "raw_sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+          "size": [
+            150,
+            150
+          ]
+        },
+        {
+          "duration": 33,
+          "duration_observation": "Pillow.Image.info",
+          "index": 4,
+          "mode": "RGB",
+          "raw_bytes": 67500,
+          "raw_sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+          "size": [
+            150,
+            150
+          ]
+        }
+      ],
+      "loop_count": null,
+      "loop_observation": "not_present",
+      "mode": "RGB",
+      "size": [
+        150,
+        150
+      ]
+    },
+    "python": "3.12.13",
+    "version": "12.2.0"
+  },
+  "schema": "image-slash-star/av1-temporal-oracle@1",
+  "scope": {
+    "limitations": "Only observed vectors, references, and precisions are covered.",
+    "observation": "private temporal candidate transitions from a full file",
+    "public_sequence_parity": "not_proven",
+    "target_execution": "not_run"
+  },
+  "source": {
+    "clean_before_and_after": true,
+    "commit": "b546257f770768b2c88258c533da38b91a06f737",
+    "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+    "implementation": "dav1d",
+    "refmvs_source_sha256": "3db058dd7305bc8936b76d2d284fce6c3d56594f8ff75874c0f4f13f3dce7b5b",
+    "tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6",
+    "version": "1.5.3"
+  }
+}

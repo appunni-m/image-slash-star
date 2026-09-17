@@ -1234,8 +1234,8 @@
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 531,
-        "files": 87
+        "guards": 535,
+        "files": 88
       },
       "status": "open_until_all_four_metrics_are_100_percent"
     },
@@ -6789,6 +6789,26 @@
             }
           },
           "scope": "This closes independent first-sample materialization and stateful repeated-ID validation for the two named sequence cases. Full multi-frame AVIF presentation, timing, references, disposal, blend behavior, high-depth sequences, and the remaining animated row stay planned."
+        },
+        "current_slice_update_2026_09_17_temporal_candidates": {
+          "status": "implemented_unverified",
+          "fixture": "animated.avif",
+          "production_change": "Project exactly one vector for a single-reference temporal candidate before stack insertion/weighting and global-MV context update; preserve the two-vector compound path.",
+          "oracle": "tests/fixtures/outputs/av1_temporal/animated/index.json",
+          "collector": "scripts/generate_av1_temporal_refs.py",
+          "independent_observations": {
+            "events": 177,
+            "valid_single_candidates": 32,
+            "insertions": 2,
+            "weight_updates": 30,
+            "global_context_updates": 2,
+            "compound_candidates": 0,
+            "unmodified_and_instrumented_yuv_byte_equal": true,
+            "repeated_trace_byte_equal": true
+          },
+          "regression": "tests/support/av1_temporal.rs::temporal_candidates_match_pinned_dav1d_animated_trace",
+          "target_execution": "deferred_until_implementation_complete",
+          "scope": "Private transition evidence for the existing full-file fixture; general temporal projection and complete public AVIF sequence parity remain unproven. No matrix row or work-item status is promoted."
         },
         "next": "Implement one-frame-at-a-time AVIF sequence materialization before eager collection."
       },

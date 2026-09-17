@@ -9,6 +9,9 @@ mod container;
 mod samples;
 
 #[cfg(coverage)]
+pub(crate) use av1::temporal_candidate_trace;
+
+#[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {
     av1::__coverage_exercise_private_branches();
     container::__coverage_exercise_private_branches();
