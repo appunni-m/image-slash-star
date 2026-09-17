@@ -191,6 +191,25 @@ the final behavioral campaign. All 16 strict native/WASM compile configurations,
 warnings-as-errors rustdoc and static provenance checks pass. The guard inventory
 remains 540 across 89 files. No current-source coverage claim is made.
 
+The later 2026-09-17 display-retention candidate replaces the per-sample vector
+of shown completions with one selected completion. Online maximum selection
+preserves temporal-unit/spatial/temporal precedence and latest-tie behavior.
+Losing candidates still commit their reference/CDF/current-ID state. A hidden
+sample cannot reuse an earlier display as its current presentation. Failed
+flushes preserve the last completed-frame commit, not a whole-sample rollback.
+
+Two deferred internal ownership regressions use `Weak` references to check
+immediate release of losing/superseded surfaces and survival of independently
+referenced surfaces. They also cover selection axes, exact ties, a winning
+missing-surface gap, hidden-unit filtering, pending frames and counter overflow.
+Existing complete native animation/high-depth/frame-ID witnesses retain pixel
+authority. No input acceptance boundary or oracle output is changed. Rust
+behavior and managed coverage remain deferred; aggregate memory limits and
+peak-allocation measurements remain unfinished.
+All 12 strict native/WASM, AVIF-only/all-feature, ordinary/coverage compile
+configurations pass, along with rustdoc, formatting and static provenance gates.
+The coverage-origin inventory remains 540 guards across 89 files.
+
 ## Diagnostic provenance
 
 The separate defensive-model contract has 61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row;

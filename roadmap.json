@@ -7046,6 +7046,28 @@
             "Existing matrix Rust-error contracts will be reconciled only during final behavioral verification."
           ],
           "compile_verification": "All 16 strict Clippy lanes pass: native AVIF-only/all/default/no-feature in ordinary/cfg(coverage), and AVIF-only/all-feature wasm32-unknown-unknown/wasm32-wasip1 ordinary/cfg(coverage). Native and coverage unknown-WASM checks include all targets; WASI and ordinary unknown-WASM check libraries. Behavioral execution deferred."
+        },
+        "current_slice_update_2026_09_17_display_retention": {
+          "status": "implemented_unverified",
+          "scope": "Retain one selected AV1 display completion per track instead of every shown candidate until sample flush; release superseded and losing candidates immediately.",
+          "production_invariants": [
+            "Temporal unit precedes spatial layer and temporal layer; latest exact tie replaces the retained candidate.",
+            "Reference/CDF/current-ID commits remain independent of display selection.",
+            "Temporal-unit presentation queries occur only after successful sample flush and reject stale completions for hidden-only samples.",
+            "Failed flushes preserve the last completed-frame commit; no whole-sample rollback is claimed."
+          ],
+          "regressions": [
+            "src/codecs/avif/av1/frame.rs::presentation_tests::selected_completion_releases_superseded_and_losing_surfaces",
+            "src/codecs/avif/av1/frame.rs::presentation_tests::display_replacement_preserves_reference_ownership_and_unit_filtering"
+          ],
+          "evidence_origin": "Defensive internal ownership model with Weak lifetime checks; unchanged complete animated/error-resilient/high-depth native fixtures remain pixel authority. No new syntax or error acceptance boundary.",
+          "option_review": "Option<FrameCompletion> denotes genuine absence of any selected display; candidate ranking is infallible and performs no collection allocation.",
+          "validation_policy": "Rust behavioral tests and managed Coverage MCP remain deferred; no matrix/finding/workstream promotion or coverage exclusion.",
+          "remaining": [
+            "Complete Rust sequence pixel parity remains unverified.",
+            "Total retained-reference/scratch memory accounting, fallible allocation coverage and measured peak memory remain open."
+          ],
+          "compile_verification": "All 12 strict native/wasm32-unknown-unknown/wasm32-wasip1 AVIF-only/all-feature ordinary/cfg(coverage) configurations pass; native and coverage unknown-WASM include all targets. Warnings-as-errors rustdoc, formatting, static roadmap/provenance and coverage-origin checks pass. No Rust behavioral execution."
         }
       },
       "AVF-TILE-001": {

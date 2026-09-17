@@ -601,6 +601,12 @@ struct FrameCompletion {
     diagnostic_frame_dimensions: Option<(u32, u32)>,
 }
 
+impl FrameCompletion {
+    fn priority(&self) -> (u64, u32, u32) {
+        (self.temporal_unit, self.spatial_id, self.temporal_id)
+    }
+}
+
 #[derive(Clone)]
 struct ReferenceDecodeState {
     cdfs: entropy::FrameCdfs,
@@ -878,7 +884,10 @@ pub(super) struct FrameState {
     pending: Option<PendingFrame>,
     current_frame_id: Option<u32>,
     temporal_unit: u64,
-    completions: Vec<FrameCompletion>,
+    // Only the selected display owns an additional surface reference. Lower
+    // candidates can never win a later maximum, so release them at completion
+    // rather than retaining all shown surfaces until the sample is flushed.
+    completion: Option<FrameCompletion>,
 }
 
 impl FrameState {
@@ -892,7 +901,7 @@ impl FrameState {
             pending: None,
             current_frame_id: None,
             temporal_unit: 0,
-            completions: Vec::new(),
+            completion: None,
         }
     }
 
@@ -981,13 +990,6 @@ impl FrameState {
     pub(super) fn sample_flush(&mut self) -> Av1Result<u64> {
         let completed_temporal_unit = self.temporal_unit;
         self.advance_temporal_unit("AVIF sample ends during a pending frame")?;
-        if self.completions.len() > 1
-            && let Some(selected_index) = self.selected_completion_index()
-        {
-            let selected = self.completions.swap_remove(selected_index);
-            self.completions.clear();
-            self.completions.push(selected);
-        }
         Ok(completed_temporal_unit)
     }
 
@@ -1001,24 +1003,22 @@ impl FrameState {
         Ok(sequence)
     }
 
-    fn selected_completion_index(&self) -> Option<usize> {
-        self.completions
-            .iter()
-            .enumerate()
-            .max_by_key(|(index, completion)| {
-                (
-                    completion.temporal_unit,
-                    completion.spatial_id,
-                    completion.temporal_id,
-                    *index,
-                )
-            })
-            .map(|(index, _)| index)
+    /// Commit a completed display after fallible reconstruction succeeds.
+    /// References/CDFs commit independently, including for a losing candidate.
+    fn retain_completion(&mut self, candidate: FrameCompletion) {
+        if self
+            .completion
+            .as_ref()
+            .is_none_or(|retained| candidate.priority() >= retained.priority())
+        {
+            // Equality deliberately replaces: the former vector maximum used
+            // insertion order as its last key, selecting the latest exact tie.
+            self.completion = Some(candidate);
+        }
     }
 
     fn selected_completion(&self) -> Option<&FrameCompletion> {
-        self.selected_completion_index()
-            .and_then(|index| self.completions.get(index))
+        self.completion.as_ref()
     }
 
     #[allow(
@@ -1044,16 +1044,17 @@ impl FrameState {
     /// A frame state can retain an earlier shown completion while a later
     /// sample carries only hidden reference state. Sequence presentation must
     /// not mistake that retained completion for a newly displayed frame, so
-    /// callers identify the temporal unit returned by `sample_flush`.
+    /// callers query only after a successful `sample_flush`, using its returned
+    /// temporal unit. This method does not expose intermediate layer displays.
     pub(super) fn selected_display_for_temporal_unit_with_token(
         &self,
         temporal_unit: u64,
         token: Option<&crate::CancellationToken>,
     ) -> Av1Result<Option<SelectedDisplay>> {
         let Some(completion) = self
-            .completions
-            .iter()
-            .find(|completion| completion.temporal_unit == temporal_unit)
+            .completion
+            .as_ref()
+            .filter(|completion| completion.temporal_unit == temporal_unit)
         else {
             return Ok(None);
         };
@@ -1425,9 +1426,6 @@ impl FrameState {
         if !reference.header.showable_frame {
             return Err(malformed("frame syntax validation failed"));
         }
-        self.completions.try_reserve(1).map_err(|_| {
-            CodecError::Dimensions("unable to reserve AV1 frame completion".to_owned())
-        })?;
         let completion = FrameCompletion {
             surface: reference.surface.clone(),
             temporal_unit: self.temporal_unit,
@@ -1450,7 +1448,7 @@ impl FrameState {
         }
         self.references = references;
         self.current_frame_id = pending.staged_current_frame_id;
-        self.completions.push(completion);
+        self.retain_completion(completion);
         Ok(())
     }
 
@@ -1801,15 +1799,10 @@ impl FrameState {
             && !pending.header.superres_enabled
             && pending.header.restoration.is_none()
             && pending.header.film_grain.is_none();
-        if pending.header.show_frame {
-            self.completions.try_reserve(1).map_err(|_| {
-                CodecError::Dimensions("unable to reserve AV1 frame completion".to_owned())
-            })?;
-        }
-
-        // Assembly, surface validation, and completion reservation are all
-        // fallible. Ownership moves only after they succeed, making the state
-        // mutation below a single non-fallible commit.
+        // Assembly and surface validation are fallible. Ownership moves only
+        // after they succeed. Retaining the selected completion requires no
+        // collection allocation; reference refresh still commits for every
+        // decoded frame, even when its display loses selection.
         let pending = self
             .pending
             .take()
@@ -1878,7 +1871,7 @@ impl FrameState {
         }
         if completed.show_frame {
             let diagnostic_leaf = diagnostic_fallback.then_some(first_leaf).flatten();
-            self.completions.push(FrameCompletion {
+            self.retain_completion(FrameCompletion {
                 surface,
                 temporal_unit: self.temporal_unit,
                 temporal_id: completed.temporal_id,
@@ -6610,6 +6603,157 @@ pub(super) fn __coverage_exercise_private_branches() {
 mod presentation_tests {
     use super::*;
 
+    // Tiny owned surfaces model retention; they are not encoded-file or
+    // Pillow observations. Public pixel parity uses the full native fixtures.
+    fn model_completion(priority: (u64, u32, u32), sample: u16) -> Av1Result<FrameCompletion> {
+        let mut header = FrameHeader::empty(priority.2, priority.1);
+        header.frame_width = 1;
+        header.upscaled_width = 1;
+        header.frame_height = 1;
+        header.render_width = 1;
+        header.render_height = 1;
+        let depth = SampleDepth::new(8).ok_or_else(|| malformed("model depth"))?;
+        let surface = FrameSurface::from_validated_monochrome_plane(
+            super::super::block::ReconstructedPlane {
+                samples: vec![sample],
+            },
+            &header,
+            depth,
+            1,
+            TemporalMotionField::new(1, 1, 0, 0, [0; 7])?,
+        );
+        surface.validate()?;
+        Ok(FrameCompletion {
+            surface: Some(Arc::new(surface)),
+            temporal_unit: priority.0,
+            temporal_id: priority.2,
+            spatial_id: priority.1,
+            film_grain: None,
+            show_existing: false,
+            diagnostic_leaf: None,
+            diagnostic_frame_dimensions: None,
+        })
+    }
+
+    #[test]
+    fn selected_completion_releases_superseded_and_losing_surfaces() -> Av1Result<()> {
+        let mut state = FrameState::new();
+        let mut lifetimes = Vec::new();
+        // Each expected index is explicit: newer unit, latest exact tie,
+        // higher temporal layer, higher spatial layer, then two losing frames.
+        for (index, (priority, selected)) in [
+            ((0, 3, 7), 0),
+            ((1, 0, 0), 1),
+            ((1, 0, 0), 2),
+            ((1, 0, 1), 3),
+            ((1, 1, 0), 4),
+            ((0, 3, 7), 4),
+            ((1, 0, 7), 4),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let candidate = model_completion(
+                priority,
+                u16::try_from(index).map_err(|_| malformed("model index"))?,
+            )?;
+            lifetimes.push(Arc::downgrade(
+                candidate
+                    .surface
+                    .as_ref()
+                    .ok_or_else(|| malformed("model surface"))?,
+            ));
+            state.retain_completion(candidate);
+            for (retained_index, weak) in lifetimes.iter().enumerate() {
+                assert_eq!(weak.strong_count(), usize::from(retained_index == selected));
+            }
+        }
+        // A higher-priority capability gap must not silently fall back to an
+        // older, lower-priority reconstructed display.
+        let mut gap = model_completion((1, 1, 0), 7)?;
+        gap.surface = None;
+        state.retain_completion(gap);
+        assert!(lifetimes.iter().all(|weak| weak.strong_count() == 0));
+        assert!(state.selected_display()?.monochrome_plane.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn display_replacement_preserves_reference_ownership_and_unit_filtering() -> Av1Result<()> {
+        let mut state = FrameState::new();
+        let first = model_completion((0, 0, 0), 12)?;
+        let surface = first
+            .surface
+            .as_ref()
+            .ok_or_else(|| malformed("model surface"))?;
+        let old_lifetime = Arc::downgrade(surface);
+        state.references[0] = Some(ReferenceState {
+            header: FrameHeader::empty(0, 0),
+            decode: None,
+            surface: Some(Arc::clone(surface)),
+        });
+        state.retain_completion(first);
+        assert_eq!(old_lifetime.strong_count(), 2);
+        assert_eq!(state.sample_flush()?, 0);
+        state.retain_completion(model_completion((1, 0, 0), 34)?);
+        assert_eq!(old_lifetime.strong_count(), 1);
+        assert_eq!(state.sample_flush()?, 1);
+        state.references[0] = None;
+        assert!(old_lifetime.upgrade().is_none());
+
+        let hidden_unit = state.sample_flush()?;
+        assert_eq!(hidden_unit, 2);
+        assert!(
+            state
+                .selected_display_for_temporal_unit_with_token(hidden_unit, None)?
+                .is_none()
+        );
+        let display = state.selected_display()?;
+        assert_eq!(
+            display
+                .monochrome_plane
+                .ok_or_else(|| malformed("model display"))?
+                .samples,
+            [34]
+        );
+
+        // A failed flush preserves the last completed-frame commit. This is
+        // not a rollback promise for frames completed earlier in a sample.
+        state.accept_parsed_header(false, 0, false, FrameHeader::empty(0, 0))?;
+        let unit_before = state.temporal_unit;
+        let selected_before = state
+            .selected_completion()
+            .ok_or_else(|| malformed("model completion"))?
+            .priority();
+        assert!(matches!(
+            state.sample_flush(),
+            Err(CodecError::Malformed(_))
+        ));
+        assert_eq!(state.temporal_unit, unit_before);
+        assert_eq!(
+            state
+                .selected_completion()
+                .ok_or_else(|| malformed("model completion"))?
+                .priority(),
+            selected_before
+        );
+        state.pending = None;
+        state.temporal_unit = u64::MAX;
+        assert!(matches!(
+            state.sample_flush(),
+            Err(CodecError::Malformed(_))
+        ));
+        assert_eq!(state.temporal_unit, u64::MAX);
+        assert_eq!(
+            state
+                .selected_completion()
+                .ok_or_else(|| malformed("model completion"))?
+                .priority(),
+            selected_before
+        );
+        Ok(())
+    }
+
     #[test]
     fn sequence_geometry_rejects_before_pending_frame_allocation() -> Av1Result<()> {
         let bytes =
@@ -6633,7 +6777,7 @@ mod presentation_tests {
         ));
         assert!(state.pending.is_none());
         assert!(state.references.iter().all(Option::is_none));
-        assert!(state.completions.is_empty());
+        assert!(state.completion.is_none());
         Ok(())
     }
 

@@ -48,6 +48,14 @@ Variable-size hidden references and disagreements between primary-item and
 track declarations remain unsupported. The later frame-ID candidate described
 below removes the remaining frame-ID presentation gate.
 
+The later display-retention candidate keeps only the selected completion per
+track, releasing superseded/lower-priority candidates at each completed-frame
+commit. It preserves the existing temporal-unit/spatial/temporal/latest-tie
+ordering. Reference-slot ownership is separate; hidden samples still require
+their own displayed completion. Deferred `Weak` ownership tests are internal
+resource-model assertions, not new native or Pillow observations. This bounds
+the number of retained display candidates, not total working memory.
+
 Internal defensive regressions use these unchanged complete inputs to model
 missing reconstruction surfaces, empty reference slots, absent display proof,
 incorrect reservation geometry and an empty final tile range. They are Rust

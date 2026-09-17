@@ -160,6 +160,21 @@ missing loop key remains separately recorded. Deferred public regressions cover
 pixels, timing, loop values and malformed lifecycle operations. No row or
 finding is promoted; Rust execution and managed coverage remain deferred.
 
+## Display retention implementation in progress — 2026-09-17
+
+AV1 state now retains one selected display candidate per color/alpha track.
+Superseded and lower-priority candidates release their surface references and
+diagnostic buffers immediately. The selection order remains temporal unit,
+spatial layer, temporal layer, then latest exact tie. Reference refresh and CDF
+updates remain independent of whether a display wins selection.
+
+Deferred ownership regressions check candidate release, independent reference
+ownership, hidden-sample filtering and failed flushes. They are internal model
+assertions; the unchanged complete native sequence fixtures remain the pixel
+regression authority. This removes candidate-history growth without establishing
+a total reference/scratch memory limit or measured peak-memory improvement.
+Rust behavioral tests and managed coverage remain deferred; no row is promoted.
+
 ## Complete open-task inventory
 
 The retained ledger contains **244 active finding rows**.
