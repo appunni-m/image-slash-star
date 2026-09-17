@@ -1,0 +1,77 @@
+{
+  "alpha_track_id": null,
+  "color_track_id": 1,
+  "file": "input.avif",
+  "ftyp": {
+    "compatible": [
+      "avif",
+      "avis",
+      "msf1",
+      "iso8",
+      "mif1",
+      "miaf",
+      "MA1B"
+    ],
+    "major": "avis",
+    "minor": 0
+  },
+  "items": {
+    "alpha": [],
+    "color": [
+      {
+        "av1c": {
+          "hex": "81000c00",
+          "length": 4,
+          "offset": 233,
+          "sha256": "f2afc975a3a53560b19817ef66853a99b09ee868e404bcee43f1ee20793f5517"
+        },
+        "construction": "file",
+        "item_id": 1,
+        "length": 41,
+        "sha256": "8f6b26b7d4b90eca3ddf6bf2d00a260dd0d1a300c5c112e35ae8b3d026db30c9",
+        "spans": [
+          {
+            "length": 41,
+            "offset": 997
+          }
+        ],
+        "type": "av01"
+      }
+    ],
+    "primary_item_id": 1
+  },
+  "length": 1082,
+  "sha256": "92e6f02f68d5403422c3ffb4fea116159ad0afd19366ade7f95e8e2d91dbecae",
+  "tracks": [
+    {
+      "aux_for_track_id": null,
+      "av1c": {
+        "hex": "81000c00",
+        "length": 4,
+        "offset": 830,
+        "sha256": "f2afc975a3a53560b19817ef66853a99b09ee868e404bcee43f1ee20793f5517"
+      },
+      "handler": "pict",
+      "samples": [
+        {
+          "duration": 100,
+          "index": 0,
+          "length": 41,
+          "offset": 997,
+          "sha256": "8f6b26b7d4b90eca3ddf6bf2d00a260dd0d1a300c5c112e35ae8b3d026db30c9",
+          "sync": true
+        },
+        {
+          "duration": 100,
+          "index": 1,
+          "length": 44,
+          "offset": 1038,
+          "sha256": "977c94630e3d059b30a660e05e0c6516f789238d471af3aad0d16175fec8136d",
+          "sync": false
+        }
+      ],
+      "timescale": 1000,
+      "track_id": 1
+    }
+  ]
+}

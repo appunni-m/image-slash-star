@@ -1,0 +1,37 @@
+{
+  "distances": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "event": "short_references",
+  "golden": 7,
+  "kind": "lifecycle",
+  "last": 7,
+  "order_hint": 127,
+  "order_hint_bits": 7,
+  "reference_hints": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "selected": [
+    7,
+    0,
+    0,
+    7,
+    0,
+    1,
+    6
+  ]
+}

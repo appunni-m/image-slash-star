@@ -106,10 +106,12 @@ Show-existing IDs retain their separate equality check. Deferred regressions
 cover full sequence pixels, timing, budgets, wraparound and the malformed file.
 No Rust behavioral execution or managed coverage is claimed.
 
-The broader frame-ID/reference state space remains unfinished. In particular,
-the existing short-signaling no-future-reference fallback differs from pinned
-dav1d, and stale-reference policies require additional independent witnesses.
-This fixture has explicit indices; it does not prove those other cases.
+The broader frame-ID/reference state space remains unfinished. At this
+candidate's revision, the short-signaling no-future-reference fallback differed
+from pinned dav1d. The subsequent [short-reference candidate](../av1_short_references/README.md)
+addresses that gap with separate native witnesses. Stale-reference policies
+still require additional independent evidence. This fixture has explicit
+indices; it does not prove those other cases.
 Loop-reference reconciliation and resource limitations above still apply.
 
 Regenerate this bundle with the same command plus

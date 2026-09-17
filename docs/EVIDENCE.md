@@ -150,6 +150,26 @@ stale-reference behavior, broader reconstruction and native-versus-Pillow loop
 reference reconciliation remain unfinished. The bundle's README separates
 these limitations from the bounded evidence; no matrix row or finding closes.
 
+The 2026-09-17 short-reference candidate removes the no-future rejection and
+corrects the Python inspector's maximum-distance tie handling. The shared
+production helper preserves native fallback order, duplicate anchors and
+repeated earliest-slot reuse. Its normal parser wrapper still requires all
+eight reference headers.
+
+The [short-reference oracle](../tests/fixtures/outputs/av1_short_references/index.json)
+contains six complete AVIF mutations with independently repeated native traces,
+4,608 YUV bytes and 9,216 RGB bytes. Unmodified and instrumented dav1d agree
+byte for byte. Pillow/libavif observations repeat with exact native timing,
+and the corrected inspector agrees on all selected indices. Equal reference
+pixels make index comparisons necessary; the deferred coverage test invokes
+the same production selection helper. Invalid adapter arguments are separately
+identified as internal model assertions. No coverage exclusions were added.
+
+All 12 strict native/WASM, AVIF-only/all-feature, ordinary/coverage compile
+lanes pass. Rust behavior and managed coverage remain deferred. This corpus
+does not establish every mixed-distance history or complete sequence/resource
+parity; planned rows, finding counts and historical coverage remain unchanged.
+
 ## Diagnostic provenance
 
 The separate defensive-model contract has 61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row;

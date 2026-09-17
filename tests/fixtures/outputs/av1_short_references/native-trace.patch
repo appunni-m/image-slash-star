@@ -1,0 +1,32 @@
+diff --git a/src/obu.c b/src/obu.c
+index da5002ae..2b824e9b 100644
+--- a/src/obu.c
++++ b/src/obu.c
+@@ -585,6 +585,27 @@ static int parse_frame_hdr(Dav1dContext *const c, GetBits *const gb) {
+                 }
+             }
+         }
++        if (hdr->frame_ref_short_signaling) {
++            printf("@LIFECYCLE {\"event\":\"short_references\",\"order_hint_bits\":%u,"
++                   "\"order_hint\":%u,\"last\":%d,\"golden\":%d,\"reference_hints\":[",
++                   seqhdr->order_hint_n_bits, hdr->frame_offset, hdr->refidx[0], hdr->refidx[3]);
++            for (int j = 0; j < 8; j++) {
++                if (j) putchar(',');
++                printf("%u", c->refs[j].p.p.frame_hdr->frame_offset);
++            }
++            fputs("],\"distances\":[", stdout);
++            for (int j = 0; j < 8; j++) {
++                if (j) putchar(',');
++                printf("%d", get_poc_diff(seqhdr->order_hint_n_bits,
++                                         c->refs[j].p.p.frame_hdr->frame_offset, hdr->frame_offset));
++            }
++            fputs("],\"selected\":[", stdout);
++            for (int j = 0; j < 7; j++) {
++                if (j) putchar(',');
++                printf("%d", hdr->refidx[j]);
++            }
++            puts("]}");
++        }
+         for (int i = 0; i < 7; i++) {
+             if (!hdr->frame_ref_short_signaling)
+                 hdr->refidx[i] = dav1d_get_bits(gb, 3);

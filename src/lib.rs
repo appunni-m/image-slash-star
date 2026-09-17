@@ -2142,6 +2142,23 @@ pub fn __coverage_av1_temporal_candidate(
     )
 }
 
+/// Replay native short-reference inputs through the production selection helper.
+#[cfg(all(coverage, feature = "avif"))]
+#[doc(hidden)]
+pub fn __coverage_av1_short_references(
+    order_hint_bits: u32,
+    order_hint: u32,
+    reference_hints: &[u32; 8],
+    last: usize,
+    golden: usize,
+) -> ImageResult<[usize; 7]> {
+    codecs::into_image_result(
+        codecs::select_short_references(order_hint_bits, order_hint, reference_hints, last, golden),
+        ImageFormat::Avif,
+        ImageErrorStage::SequenceDecode,
+    )
+}
+
 /// One exact scalar AV1 entropy state used by the fixture-backed coverage gate.
 #[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]

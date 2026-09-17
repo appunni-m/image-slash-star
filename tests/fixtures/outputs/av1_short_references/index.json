@@ -1,0 +1,897 @@
+{
+  "artifacts": [
+    {
+      "bytes": 141,
+      "path": "equal_distinct/color.ivf",
+      "sha256": "1bbd2320216321e4e7eda7ce7b2b4f24806629bae8330385e02046a793877c85"
+    },
+    {
+      "bytes": 1736,
+      "path": "equal_distinct/container.json",
+      "sha256": "8bc125ad17fba55ce90cf5ccff88571c06c50ac5d07c2f51b1617b4f5b5dd1ee"
+    },
+    {
+      "bytes": 768,
+      "path": "equal_distinct/decoded/pillow/frame_0.rgb",
+      "sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    },
+    {
+      "bytes": 768,
+      "path": "equal_distinct/decoded/pillow/frame_1.rgb",
+      "sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7"
+    },
+    {
+      "bytes": 768,
+      "path": "equal_distinct/display.yuv",
+      "sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5"
+    },
+    {
+      "bytes": 1082,
+      "path": "equal_distinct/input.avif",
+      "sha256": "f0df456595eb9c962b400cf763805f95438d46cc5fc987b58c97d33c33672289"
+    },
+    {
+      "bytes": 357,
+      "path": "equal_distinct/native.json",
+      "sha256": "b2aaa0a1233b4a2a1a9301c31559699716c916d2da866d9a4c011a71a50eeded"
+    },
+    {
+      "bytes": 52595,
+      "path": "equal_distinct/syntax.json",
+      "sha256": "bd06df48e2de7aa65d11ecbc6eccf63074b9c03cfbc7cfee3414e188e2e4219b"
+    },
+    {
+      "bytes": 141,
+      "path": "equal_duplicate/color.ivf",
+      "sha256": "c32783c5d9c911de4c8bc01cc501d3bff4bbd2c7727fb4772e0c9f9478f6eeae"
+    },
+    {
+      "bytes": 1736,
+      "path": "equal_duplicate/container.json",
+      "sha256": "9fe64f61540a10a34e72cd28515f96e567d36fcd1d669adc4556729653989331"
+    },
+    {
+      "bytes": 768,
+      "path": "equal_duplicate/decoded/pillow/frame_0.rgb",
+      "sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    },
+    {
+      "bytes": 768,
+      "path": "equal_duplicate/decoded/pillow/frame_1.rgb",
+      "sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7"
+    },
+    {
+      "bytes": 768,
+      "path": "equal_duplicate/display.yuv",
+      "sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5"
+    },
+    {
+      "bytes": 1082,
+      "path": "equal_duplicate/input.avif",
+      "sha256": "c9270708ab42951cb77581ccd19e97960bd3771e3e362020ffff9e1fac39d13f"
+    },
+    {
+      "bytes": 357,
+      "path": "equal_duplicate/native.json",
+      "sha256": "1078d5dfadddd1646ae09c3a814289e8d6bd6f355f597593b3c28eef721ef04d"
+    },
+    {
+      "bytes": 52595,
+      "path": "equal_duplicate/syntax.json",
+      "sha256": "c1385562394117008be4f8bf5cd556edafb6ae86a1b813934415065d829dcb14"
+    },
+    {
+      "bytes": 1418,
+      "path": "native-trace.patch",
+      "sha256": "2abfa2485e6642c786255c9301e46c4a037e54c1302ec81dd6e3550cc2b14f68"
+    },
+    {
+      "bytes": 141,
+      "path": "past_distinct/color.ivf",
+      "sha256": "fb9760e044c01b89d2b36533bbdeb88b6c1b53c40b7184568c6033b5e445c6b4"
+    },
+    {
+      "bytes": 1736,
+      "path": "past_distinct/container.json",
+      "sha256": "a4c8afe9563cd15976c3ac07826efa223bbd46ebe62cff0519a0be155390a935"
+    },
+    {
+      "bytes": 768,
+      "path": "past_distinct/decoded/pillow/frame_0.rgb",
+      "sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    },
+    {
+      "bytes": 768,
+      "path": "past_distinct/decoded/pillow/frame_1.rgb",
+      "sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7"
+    },
+    {
+      "bytes": 768,
+      "path": "past_distinct/display.yuv",
+      "sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5"
+    },
+    {
+      "bytes": 1082,
+      "path": "past_distinct/input.avif",
+      "sha256": "92e6f02f68d5403422c3ffb4fea116159ad0afd19366ade7f95e8e2d91dbecae"
+    },
+    {
+      "bytes": 365,
+      "path": "past_distinct/native.json",
+      "sha256": "babdd7e3fea9444e1ed8620b9414cc554ac04ea7b11ae6b724dae39ecd266fed"
+    },
+    {
+      "bytes": 52595,
+      "path": "past_distinct/syntax.json",
+      "sha256": "07322e842589c75888fc13c811805a3f0f27beb8ab84ddfdebf1140610da7be1"
+    },
+    {
+      "bytes": 141,
+      "path": "past_duplicate/color.ivf",
+      "sha256": "b9cdb87904fb17052fdf97a104251957e2035ef612d17aaeca95a78690c56c89"
+    },
+    {
+      "bytes": 1736,
+      "path": "past_duplicate/container.json",
+      "sha256": "9bda4fa40d674b034813e6e9ba34a61ee670453399fc1bad25a41685b54c2b94"
+    },
+    {
+      "bytes": 768,
+      "path": "past_duplicate/decoded/pillow/frame_0.rgb",
+      "sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    },
+    {
+      "bytes": 768,
+      "path": "past_duplicate/decoded/pillow/frame_1.rgb",
+      "sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7"
+    },
+    {
+      "bytes": 768,
+      "path": "past_duplicate/display.yuv",
+      "sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5"
+    },
+    {
+      "bytes": 1082,
+      "path": "past_duplicate/input.avif",
+      "sha256": "bb6fa3090cf8bf96e8db6c2f75ef926d8589a4cab00a89536739e97e452a64bd"
+    },
+    {
+      "bytes": 365,
+      "path": "past_duplicate/native.json",
+      "sha256": "34853cf3d01396b582e62d097255a074eed3043bda3ca21af8c92d6be93b7e52"
+    },
+    {
+      "bytes": 52595,
+      "path": "past_duplicate/syntax.json",
+      "sha256": "5941b9f083ed2cba758b56bed4e1f05cba42a01ffedf38c75bb61b299ce8870b"
+    },
+    {
+      "bytes": 141,
+      "path": "wrapped_future_distinct/color.ivf",
+      "sha256": "214ce492814ac515d1382eefa160d9879581e427bb66fa42bfd3603d0fafb714"
+    },
+    {
+      "bytes": 1736,
+      "path": "wrapped_future_distinct/container.json",
+      "sha256": "6b1ca1b35ab8ce1e9d57c5c9d55d2be127962c44ba995002489f4b950280a925"
+    },
+    {
+      "bytes": 768,
+      "path": "wrapped_future_distinct/decoded/pillow/frame_0.rgb",
+      "sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    },
+    {
+      "bytes": 768,
+      "path": "wrapped_future_distinct/decoded/pillow/frame_1.rgb",
+      "sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7"
+    },
+    {
+      "bytes": 768,
+      "path": "wrapped_future_distinct/display.yuv",
+      "sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5"
+    },
+    {
+      "bytes": 1082,
+      "path": "wrapped_future_distinct/input.avif",
+      "sha256": "7694c7b21ef5f95ce06637727190143188fdbfdc911b17b4262fc41206d92e35"
+    },
+    {
+      "bytes": 359,
+      "path": "wrapped_future_distinct/native.json",
+      "sha256": "e2969cfc911f1c5ea62d26c37bae8f1bd1956d6b44d45831dc3aa1a9bb5aeb28"
+    },
+    {
+      "bytes": 52599,
+      "path": "wrapped_future_distinct/syntax.json",
+      "sha256": "420bf809f35b5be3861543aabec74c68a4920cac89f019fcc88eb0df1d12d5bb"
+    },
+    {
+      "bytes": 141,
+      "path": "wrapped_future_duplicate/color.ivf",
+      "sha256": "6dfae9382824d71f26070bf74f6091d963e469ef44aa49d5b4beed92614885ac"
+    },
+    {
+      "bytes": 1736,
+      "path": "wrapped_future_duplicate/container.json",
+      "sha256": "4194fe788914182025af09b0e6d35fb0c92deb4e46f7df7e0b91e9463ef942f3"
+    },
+    {
+      "bytes": 768,
+      "path": "wrapped_future_duplicate/decoded/pillow/frame_0.rgb",
+      "sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b"
+    },
+    {
+      "bytes": 768,
+      "path": "wrapped_future_duplicate/decoded/pillow/frame_1.rgb",
+      "sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7"
+    },
+    {
+      "bytes": 768,
+      "path": "wrapped_future_duplicate/display.yuv",
+      "sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5"
+    },
+    {
+      "bytes": 1082,
+      "path": "wrapped_future_duplicate/input.avif",
+      "sha256": "266ff7dca5f4c1a642d03be8f726a5171491c974acf9970880a7760d5a5bb1e5"
+    },
+    {
+      "bytes": 359,
+      "path": "wrapped_future_duplicate/native.json",
+      "sha256": "c74d4d072199f557167444ef4db54c6a6c5f2698b81d7b26c35162f01b119959"
+    },
+    {
+      "bytes": 52599,
+      "path": "wrapped_future_duplicate/syntax.json",
+      "sha256": "029b6feeff9256334e15f53672837fe8fb106ce0826bd41500142cdf00a14d9e"
+    }
+  ],
+  "builds": {
+    "plain": {
+      "binary_sha256": "1d60184ecae6eefe7e5f744552ad2ca6d63a9ef82934c10cd4fe770888bfbacc",
+      "compile_argv": [
+        "meson",
+        "compile",
+        "-C",
+        "<build>",
+        "tools/dav1d"
+      ],
+      "configure_argv": [
+        "meson",
+        "setup",
+        "<build>",
+        "<source-copy>",
+        "--buildtype=debug",
+        "-Denable_tools=true",
+        "-Denable_tests=false",
+        "-Denable_examples=false",
+        "-Dtestdata_tests=false",
+        "-Denable_asm=false"
+      ],
+      "meson_version": "1.12.0",
+      "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+      "ninja_version": "1.13.2",
+      "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+      "tool_version": "1.5.3-0-gb546257f",
+      "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+    },
+    "trace": {
+      "binary_sha256": "75e4defba3265d1498c48e97b32aa849f2530a0c64318cc04e48376794b1c138",
+      "compile_argv": [
+        "meson",
+        "compile",
+        "-C",
+        "<build>",
+        "tools/dav1d"
+      ],
+      "configure_argv": [
+        "meson",
+        "setup",
+        "<build>",
+        "<source-copy>",
+        "--buildtype=debug",
+        "-Denable_tools=true",
+        "-Denable_tests=false",
+        "-Denable_examples=false",
+        "-Dtestdata_tests=false",
+        "-Denable_asm=false"
+      ],
+      "meson_version": "1.12.0",
+      "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+      "ninja_version": "1.13.2",
+      "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+      "tool_version": "1.5.3-0-gb546257f",
+      "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+    }
+  },
+  "cases": [
+    {
+      "input_bytes": 1082,
+      "input_path": "past_distinct/input.avif",
+      "input_sha256": "92e6f02f68d5403422c3ffb4fea116159ad0afd19366ade7f95e8e2d91dbecae",
+      "name": "past_distinct",
+      "native": {
+        "distances": [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        "event": "short_references",
+        "golden": 6,
+        "kind": "lifecycle",
+        "last": 0,
+        "order_hint": 1,
+        "order_hint_bits": 7,
+        "reference_hints": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "selected": [
+          0,
+          7,
+          5,
+          6,
+          4,
+          3,
+          2
+        ]
+      },
+      "native_noninterference": true,
+      "native_repeat_equal": true,
+      "native_yuv_bytes": 768,
+      "native_yuv_sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5",
+      "pillow": {
+        "frame_count": 2,
+        "frames": [
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 0,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 0,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_0.rgb",
+            "raw_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+            "size": [
+              16,
+              16
+            ]
+          },
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 1,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 100,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_1.rgb",
+            "raw_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
+            "size": [
+              16,
+              16
+            ]
+          }
+        ],
+        "loop_count": null,
+        "loop_observation": "not_present",
+        "mode": "RGB",
+        "size": [
+          16,
+          16
+        ]
+      },
+      "pillow_repeat_equal": true,
+      "syntax_matches_native": true
+    },
+    {
+      "input_bytes": 1082,
+      "input_path": "equal_distinct/input.avif",
+      "input_sha256": "f0df456595eb9c962b400cf763805f95438d46cc5fc987b58c97d33c33672289",
+      "name": "equal_distinct",
+      "native": {
+        "distances": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "event": "short_references",
+        "golden": 6,
+        "kind": "lifecycle",
+        "last": 0,
+        "order_hint": 0,
+        "order_hint_bits": 7,
+        "reference_hints": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "selected": [
+          0,
+          0,
+          0,
+          6,
+          1,
+          2,
+          7
+        ]
+      },
+      "native_noninterference": true,
+      "native_repeat_equal": true,
+      "native_yuv_bytes": 768,
+      "native_yuv_sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5",
+      "pillow": {
+        "frame_count": 2,
+        "frames": [
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 0,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 0,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_0.rgb",
+            "raw_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+            "size": [
+              16,
+              16
+            ]
+          },
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 1,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 100,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_1.rgb",
+            "raw_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
+            "size": [
+              16,
+              16
+            ]
+          }
+        ],
+        "loop_count": null,
+        "loop_observation": "not_present",
+        "mode": "RGB",
+        "size": [
+          16,
+          16
+        ]
+      },
+      "pillow_repeat_equal": true,
+      "syntax_matches_native": true
+    },
+    {
+      "input_bytes": 1082,
+      "input_path": "wrapped_future_distinct/input.avif",
+      "input_sha256": "7694c7b21ef5f95ce06637727190143188fdbfdc911b17b4262fc41206d92e35",
+      "name": "wrapped_future_distinct",
+      "native": {
+        "distances": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "event": "short_references",
+        "golden": 6,
+        "kind": "lifecycle",
+        "last": 0,
+        "order_hint": 127,
+        "order_hint_bits": 7,
+        "reference_hints": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "selected": [
+          0,
+          0,
+          0,
+          6,
+          1,
+          2,
+          7
+        ]
+      },
+      "native_noninterference": true,
+      "native_repeat_equal": true,
+      "native_yuv_bytes": 768,
+      "native_yuv_sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5",
+      "pillow": {
+        "frame_count": 2,
+        "frames": [
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 0,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 0,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_0.rgb",
+            "raw_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+            "size": [
+              16,
+              16
+            ]
+          },
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 1,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 100,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_1.rgb",
+            "raw_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
+            "size": [
+              16,
+              16
+            ]
+          }
+        ],
+        "loop_count": null,
+        "loop_observation": "not_present",
+        "mode": "RGB",
+        "size": [
+          16,
+          16
+        ]
+      },
+      "pillow_repeat_equal": true,
+      "syntax_matches_native": true
+    },
+    {
+      "input_bytes": 1082,
+      "input_path": "past_duplicate/input.avif",
+      "input_sha256": "bb6fa3090cf8bf96e8db6c2f75ef926d8589a4cab00a89536739e97e452a64bd",
+      "name": "past_duplicate",
+      "native": {
+        "distances": [
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1
+        ],
+        "event": "short_references",
+        "golden": 7,
+        "kind": "lifecycle",
+        "last": 7,
+        "order_hint": 1,
+        "order_hint_bits": 7,
+        "reference_hints": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "selected": [
+          7,
+          6,
+          5,
+          7,
+          4,
+          3,
+          2
+        ]
+      },
+      "native_noninterference": true,
+      "native_repeat_equal": true,
+      "native_yuv_bytes": 768,
+      "native_yuv_sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5",
+      "pillow": {
+        "frame_count": 2,
+        "frames": [
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 0,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 0,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_0.rgb",
+            "raw_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+            "size": [
+              16,
+              16
+            ]
+          },
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 1,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 100,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_1.rgb",
+            "raw_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
+            "size": [
+              16,
+              16
+            ]
+          }
+        ],
+        "loop_count": null,
+        "loop_observation": "not_present",
+        "mode": "RGB",
+        "size": [
+          16,
+          16
+        ]
+      },
+      "pillow_repeat_equal": true,
+      "syntax_matches_native": true
+    },
+    {
+      "input_bytes": 1082,
+      "input_path": "equal_duplicate/input.avif",
+      "input_sha256": "c9270708ab42951cb77581ccd19e97960bd3771e3e362020ffff9e1fac39d13f",
+      "name": "equal_duplicate",
+      "native": {
+        "distances": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "event": "short_references",
+        "golden": 7,
+        "kind": "lifecycle",
+        "last": 7,
+        "order_hint": 0,
+        "order_hint_bits": 7,
+        "reference_hints": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "selected": [
+          7,
+          0,
+          0,
+          7,
+          0,
+          1,
+          6
+        ]
+      },
+      "native_noninterference": true,
+      "native_repeat_equal": true,
+      "native_yuv_bytes": 768,
+      "native_yuv_sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5",
+      "pillow": {
+        "frame_count": 2,
+        "frames": [
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 0,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 0,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_0.rgb",
+            "raw_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+            "size": [
+              16,
+              16
+            ]
+          },
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 1,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 100,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_1.rgb",
+            "raw_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
+            "size": [
+              16,
+              16
+            ]
+          }
+        ],
+        "loop_count": null,
+        "loop_observation": "not_present",
+        "mode": "RGB",
+        "size": [
+          16,
+          16
+        ]
+      },
+      "pillow_repeat_equal": true,
+      "syntax_matches_native": true
+    },
+    {
+      "input_bytes": 1082,
+      "input_path": "wrapped_future_duplicate/input.avif",
+      "input_sha256": "266ff7dca5f4c1a642d03be8f726a5171491c974acf9970880a7760d5a5bb1e5",
+      "name": "wrapped_future_duplicate",
+      "native": {
+        "distances": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "event": "short_references",
+        "golden": 7,
+        "kind": "lifecycle",
+        "last": 7,
+        "order_hint": 127,
+        "order_hint_bits": 7,
+        "reference_hints": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "selected": [
+          7,
+          0,
+          0,
+          7,
+          0,
+          1,
+          6
+        ]
+      },
+      "native_noninterference": true,
+      "native_repeat_equal": true,
+      "native_yuv_bytes": 768,
+      "native_yuv_sha256": "7f50887262a8755aea9f9910d2a6e002a152cf5bc5f094e234620f86716625e5",
+      "pillow": {
+        "frame_count": 2,
+        "frames": [
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 0,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 0,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_0.rgb",
+            "raw_sha256": "9ce641a4c1891e5972484b17881d0eb60763ca14bff21762a7b4e1abaf17ea9b",
+            "size": [
+              16,
+              16
+            ]
+          },
+          {
+            "duration": 100,
+            "duration_observation": "Pillow.Image.info",
+            "index": 1,
+            "mode": "RGB",
+            "native_duration": 100,
+            "native_pts": 100,
+            "native_timescale": 1000,
+            "raw_bytes": 768,
+            "raw_path": "decoded/pillow/frame_1.rgb",
+            "raw_sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7",
+            "size": [
+              16,
+              16
+            ]
+          }
+        ],
+        "loop_count": null,
+        "loop_observation": "not_present",
+        "mode": "RGB",
+        "size": [
+          16,
+          16
+        ]
+      },
+      "pillow_repeat_equal": true,
+      "syntax_matches_native": true
+    }
+  ],
+  "oracle": {
+    "codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    "libavif": "1.4.1",
+    "pillow": "12.2.0",
+    "pillow_avif_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+    "pillow_imaging_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26"
+  },
+  "schema": "image-slash-star/av1-short-references-oracle@1",
+  "source": {
+    "commit": "b546257f770768b2c88258c533da38b91a06f737",
+    "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+    "inspectors": [
+      {
+        "path": "scripts/inspect_av1_obus.py",
+        "sha256": "c0003aaa97bb3f4c01a14647ffc9c40766b7700c5c240284913c07d859d025a3"
+      },
+      {
+        "path": "scripts/inspect_avif_bitstreams.py",
+        "sha256": "1ad93edecab82181b45bbc390252b4dcd557ed30e19a91c166c3ffb4cbee353a"
+      }
+    ],
+    "tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6"
+  },
+  "source_boundary": "Complete pinned AVIF header mutations; no Rust output used",
+  "source_fixture": {
+    "bytes": 1084,
+    "path": "tests/fixtures/input/images/avif/animated_error_resilient.avif",
+    "sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0"
+  },
+  "target_execution": "deferred"
+}

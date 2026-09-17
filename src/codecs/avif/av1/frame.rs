@@ -3496,18 +3496,38 @@ fn derive_short_references(
     last: usize,
     golden: usize,
 ) -> Av1Result<[usize; 7]> {
-    let mut result = [usize::MAX; 7];
-    result[0] = last;
-    result[3] = golden;
-    let mut offsets = [0_i32; 8];
+    let mut hints = [0_u32; 8];
     for (index, reference) in references.iter().enumerate() {
         let Some(reference) = reference.as_ref() else {
             return Err(malformed("short reference signaling uses an empty slot"));
         };
-        let distance =
-            relative_distance(sequence.order_hint_bits, reference.order_hint, order_hint);
-        offsets[index] = distance;
+        hints[index] = reference.order_hint;
     }
+    select_short_references(sequence.order_hint_bits, order_hint, &hints, last, golden)
+}
+
+pub(crate) fn select_short_references(
+    order_hint_bits: u32,
+    order_hint: u32,
+    hints: &[u32; 8],
+    last: usize,
+    golden: usize,
+) -> Av1Result<[usize; 7]> {
+    if !(1..=8).contains(&order_hint_bits) || last >= hints.len() || golden >= hints.len() {
+        return Err(malformed(
+            "short reference signaling has invalid dimensions",
+        ));
+    }
+    // AV1 order hints are at most eight bits. This also makes the internal
+    // trace boundary reject impossible model values before array indexing.
+    let range = 1_u32 << order_hint_bits;
+    if order_hint >= range || hints.iter().any(|hint| *hint >= range) {
+        return Err(malformed("short reference order hint exceeds its width"));
+    }
+    let mut result = [usize::MAX; 7];
+    result[0] = last;
+    result[3] = golden;
+    let offsets = hints.map(|hint| relative_distance(order_hint_bits, hint, order_hint));
     let mut earliest = 0;
     for index in 1..offsets.len() {
         if offsets[index] < offsets[earliest] {
@@ -3523,13 +3543,12 @@ fn derive_short_references(
         .enumerate()
         .filter(|(index, offset)| !used[*index] && **offset >= 0)
         .max_by_key(|(_, offset)| **offset);
-    let Some((future, _)) = future else {
-        return Err(malformed(
-            "short reference signaling has no future reference",
-        ));
-    };
-    result[6] = future;
-    used[future] = true;
+    if let Some((future, _)) = future {
+        result[6] = future;
+        used[future] = true;
+    }
+    // Without a future reference, ALTREF remains unset until the same
+    // nearest-past/earliest fallback used by every other missing output.
 
     for output in [4_usize, 5] {
         let next = offsets

@@ -37,6 +37,10 @@ mod avif_highdepth_color;
 #[path = "support/avif_sequence.rs"]
 mod avif_sequence;
 
+#[cfg(feature = "avif")]
+#[path = "support/av1_short_references.rs"]
+mod av1_short_references;
+
 use support::json::{self, FromJson, Object, Value};
 
 #[cfg(coverage)]

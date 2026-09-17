@@ -480,10 +480,11 @@ def derive_short_references(
     nonnegative = [
         index for index, offset in enumerate(offsets) if index not in used and offset >= 0
     ]
-    if not nonnegative:
-        raise ValueError("short reference signaling lacks a future reference")
-    result[6] = max(nonnegative, key=offsets.__getitem__)
-    used.add(result[6])
+    if nonnegative:
+        # Native >= comparisons choose the last slot on ties; Python's max
+        # otherwise retains the first. An absent candidate uses past fallback.
+        result[6] = max(nonnegative, key=lambda index: (offsets[index], index))
+        used.add(result[6])
 
     for output in (4, 5):
         positive = [
@@ -505,7 +506,7 @@ def derive_short_references(
             if index not in used and offset < 0
         ]
         if past:
-            result[output] = max(past, key=offsets.__getitem__)
+            result[output] = max(past, key=lambda index: (offsets[index], index))
             used.add(result[output])
         else:
             result[output] = earliest_reference

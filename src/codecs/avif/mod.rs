@@ -38,7 +38,7 @@ fn portable_yuv_matrix(
 }
 
 #[cfg(coverage)]
-pub(crate) use av1::{color_conversion_trace, temporal_candidate_trace};
+pub(crate) use av1::{color_conversion_trace, select_short_references, temporal_candidate_trace};
 
 #[cfg(coverage)]
 pub(crate) fn __coverage_exercise_private_branches() {

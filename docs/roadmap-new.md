@@ -11,7 +11,7 @@ is not evidence that a later fix failed. No entry is silently removed here.
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 Its recorded baseline test counts are 45/45 matrix tests and 66/66 feature-gate tests.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The coverage-origin verifier passes for 539 exact `cfg(coverage)` guards across 88 files.
+The coverage-origin verifier passes for 540 exact `cfg(coverage)` guards across 89 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -125,6 +125,24 @@ positions agree after accounting for the OBU header. Rust behavioral execution
 and managed coverage remain deferred. Short-signaling fallback, stale-reference
 policy, broader reconstruction and matrix loop-origin reconciliation remain
 open; no row or finding is promoted by this candidate.
+
+## Short-reference selection implementation in progress — 2026-09-17
+
+The short-signaling candidate now retains an unset future reference until the
+native past/earliest fallback resolves it. Both the Rust helper and Python
+inspector preserve native tie rules and allow duplicate LAST/GOLDEN anchors
+and repeated reuse of the earliest slot. All eight reference headers remain
+required before selection.
+
+The [native corpus](../tests/fixtures/outputs/av1_short_references/index.json)
+contains six complete AVIF mutations, repeated native selected-index traces,
+4,608 YUV bytes and 9,216 RGB bytes. The tile and primary-image bytes are
+unchanged; OBU, sample and container lengths are repaired together. Deferred
+public tests compare every frame and exact timing, while a coverage-only
+adapter compares native indices through the actual production helper.
+All 12 strict compile-check lanes pass. Rust execution and managed coverage
+remain deferred, so no row or finding is promoted. Mixed reference histories,
+broader reconstruction, resource accounting and final parity remain open.
 
 ## Complete open-task inventory
 

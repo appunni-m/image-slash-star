@@ -1234,8 +1234,8 @@
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 539,
-        "files": 88
+        "guards": 540,
+        "files": 89
       },
       "status": "open_until_all_four_metrics_are_100_percent"
     },
@@ -6865,7 +6865,7 @@
           "target_execution": "deferred_until_implementation_complete",
           "scope": "Private transition evidence for the existing full-file fixture; general temporal projection and complete public AVIF sequence parity remain unproven. No matrix row or work-item status is promoted."
         },
-        "next": "Complete remaining reference reconstruction, short-signaling fallback and broader frame-ID policy evidence; reconcile native loop metadata with the matrix before final behavioral and managed coverage verification.",
+        "next": "Complete remaining reference reconstruction, mixed reference histories and broader frame-ID policy evidence; reconcile native loop metadata with the matrix before final behavioral and managed coverage verification.",
         "current_slice_update_2026_09_17_streaming_presentation": {
           "status": "implemented_unverified",
           "scope": "One-display-at-a-time AVIF sequence conversion with persistent color/alpha references, completed-surface proof, pre-reconstruction output transfer reservations, inspected count/mode agreement and header geometry bounds. Ordinary first-image and sequence blanket gates removed; frame-ID sequence gap retained after full ID validation.",
@@ -6963,6 +6963,55 @@
             "Complete Rust reconstruction and presentation parity remain unverified.",
             "Native loop origins must be reconciled with existing Pillow-null matrix references before promotion.",
             "Transfer-byte limits do not bound all retained reference/scratch memory."
+          ]
+        },
+        "current_slice_update_2026_09_17_short_references": {
+          "status": "implemented_unverified",
+          "scope": "Allow AV1 short-signaling without a future reference, preserve native past/earliest fallback and index tie rules, and correct the independent syntax inspector ties. The production wrapper still validates all eight headers.",
+          "oracle": "tests/fixtures/outputs/av1_short_references/index.json",
+          "collector": "scripts/generate_av1_short_reference_refs.py --verify-syntax",
+          "native_evidence": {
+            "complete_inputs": 6,
+            "input_bytes_each": 1082,
+            "native_state_events": 6,
+            "retained_artifacts": 49,
+            "yuv_bytes": 4608,
+            "rgb_bytes": 9216,
+            "dimensions": [
+              16,
+              16
+            ],
+            "frames_per_input": 2,
+            "native_duration": "100/1000 second per frame",
+            "variants": [
+              "all-past references",
+              "equal order hints",
+              "wrapped positive distance",
+              "distinct anchors",
+              "duplicate anchors"
+            ],
+            "native_plain_trace_repeat_equal": true,
+            "native_instrumentation_noninterference": true,
+            "pillow_repeat_equal": true,
+            "syntax_matches_native": true
+          },
+          "production_invariants": [
+            "Compute the earliest reference before marking anchors used; allow its repeated reuse in fallback.",
+            "Leave ALTREF unset when no future candidate exists, then fill missing outputs in order 1 through 6.",
+            "Choose the last slot for latest-future/nearest-past ties and first slot for earliest-future/earliest-overall ties.",
+            "Validate order-hint and anchor bounds at the shared helper; retain required-header validation at the normal parser boundary."
+          ],
+          "regressions": [
+            "tests/support/av1_short_references.rs::complete_short_reference_sequences_match_native_frames",
+            "tests/support/av1_short_references.rs::selected_short_reference_indices_match_native_decoder_state"
+          ],
+          "option_review": "Optional candidate lookup denotes the genuine absence of a future/past candidate; absent future selection proceeds to complete checked fallback. Required reference-header absence remains a typed Malformed error.",
+          "compile_verification": "All 12 strict native, wasm32-unknown-unknown and wasm32-wasip1 lanes pass for AVIF-only/all-features and ordinary/cfg(coverage). Native and coverage unknown-WASM checks include all targets; WASI checks the library. No behavioral Rust execution.",
+          "validation_policy": "Rust behavioral tests and managed Coverage MCP remain deferred; no row, finding or workstream is promoted. The exact coverage guard inventory increases to 540 across 89 files; no exclusions added.",
+          "remaining": [
+            "Full mixed-distance reference histories and stale-reference policies need broader independent evidence.",
+            "Complete Rust reconstruction, resource accounting and public sequence parity remain unverified.",
+            "Native loop metadata must be reconciled with existing Pillow-null matrix references before promotion."
           ]
         }
       },

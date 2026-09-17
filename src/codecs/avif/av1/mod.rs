@@ -25,7 +25,7 @@ mod tile_state;
 mod transform;
 
 #[cfg(coverage)]
-pub(crate) use motion::temporal_candidate_trace;
+pub(crate) use {frame::select_short_references, motion::temporal_candidate_trace};
 
 pub(super) use sample_depth::truncate_to_u8;
 
