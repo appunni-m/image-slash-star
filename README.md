@@ -101,8 +101,5 @@ before redistributing it.
 
 ## Acknowledgements
 
-Thank you to [Pillow](https://python-pillow.org/) and its contributors for the
-reference codec behavior, and [Puhu](https://github.com/bgunebakan/puhu) for the
-Rust/Python image-processing work that informed the parent project's early
-exploration. Thank you also to the codec authors credited in
-[NOTICE.md](NOTICE.md) for their implementations, research, and test material.
+Thank you to the codec authors credited in [NOTICE.md](NOTICE.md) for their
+implementations, research, and test material.
