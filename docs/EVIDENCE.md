@@ -3,6 +3,29 @@
 Fixture declarations, executed comparisons, source coverage, and release
 publication have different identities and denominators.
 
+The 2026-09-17 private still-container candidate has a
+[28-file native mux corpus](../tests/fixtures/outputs/avif_mux/index.json).
+Pinned Pillow/libavif/libaom observations repeat exactly, including complete
+encoded bytes and decoded pixels. Sixteen files correspond to registered
+planned still rows; twelve supplemental files cover orientation, combined
+alpha/metadata and actual media reuse within and across item boundaries.
+The corpus has 105 hashed artifacts totaling 314,731 bytes and retains clean
+libavif source, native binary, generator, source image and manifest identities.
+
+The Rust writer consumes semantic descriptors and encoded/metadata payloads;
+expected serialized boxes and output offsets are excluded from its inputs.
+Deferred tests compare complete containers, output limits and separate model
+error/interruption states. The source-derived 10/12-bit descriptor handling
+has no native encode witness yet; all 28 files are 8-bit. AV1 compression and
+metadata preparation remain unimplemented, so public encoding is still
+unavailable and no matrix row is promoted. Rust behavioral execution and
+managed coverage remain deferred; historical measurements below are unchanged.
+All 16 strict compile configurations pass across native and both WASM targets,
+with AVIF-only/all features and ordinary/coverage modes, plus native default
+and no-codec lanes. Warnings-as-errors rustdoc, formatting and static checks
+pass. The current exact guard inventory is 543 across 89 files; these added
+guards are provenance records, not coverage exclusions or a new measurement.
+
 ## Historical release 0.1.2
 
 Version 0.1.2 passed [main CI](https://github.com/appunni-m/image-slash-star/actions/runs/35007807946)

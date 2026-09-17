@@ -1234,7 +1234,7 @@
         }
       ],
       "coverage_origin_inventory": {
-        "guards": 540,
+        "guards": 543,
         "files": 89
       },
       "status": "open_until_all_four_metrics_are_100_percent"
@@ -7087,8 +7087,40 @@
           "AVF-SEQUENCE-001"
         ],
         "deliverable": "Write AVIF container and pure safe-Rust AV1 intra encoder, then round-trip through an independent decoder.",
-        "current_evidence": "No encoder is wired; all 32 encode rows are explicitly planned.",
-        "next": "Design a bounded intra encoder after reusable still-decoder primitives are complete."
+        "current_evidence": "The private still-container writer is implemented with 28 repeated complete native witnesses and deferred Rust remux regressions. AV1 compression remains unimplemented; all 32 public encode rows remain planned.",
+        "next": "Implement pure safe-Rust AV1 sample compression and metadata preparation, extend container output to sequences/grids/high-depth witnesses, then execute all deferred parity and coverage gates.",
+        "current_slice_update_2026_09_17_still_mux": {
+          "status": "implemented_unverified",
+          "scope": "Private standard still-image AVIF writer: color/alpha/EXIF/XMP items, ICC+nclx, orientation, property sharing and earliest substring media reuse across physical item boundaries.",
+          "oracle_index": "tests/fixtures/outputs/avif_mux/index.json",
+          "oracle_index_sha256": "8603bf99bacc0e3d86ac530a0e133b333e27a94134f1e5f4b653426509d12341",
+          "generator": "scripts/generate_avif_mux_refs.py",
+          "regression": "tests/support/avif_mux.rs",
+          "native_evidence": {
+            "complete_files": 28,
+            "registered_still_rows": 16,
+            "supplemental_files": 12,
+            "observations_per_file": 2,
+            "artifacts": 105,
+            "artifact_bytes": 314731,
+            "description": "Pinned Pillow/libavif/libaom repeated encoded files and native roundtrip pixels. Supplements cover all eight orientations on RGBA, four-item metadata, empty metadata and actual within-item/cross-item media reuse. Input-only descriptors retain semantic fields and payload spans; expected serialized boxes and offsets never enter the Rust writer."
+          },
+          "production_invariants": [
+            "Pure safe Rust with fixed-size item/property plans and no runtime native dependency.",
+            "Virtual concatenated media search preserves native earliest substring sharing and polls comparisons; bulk copies poll in 1024-byte chunks.",
+            "A counting pass checks 32-bit bounds and caller output policy before result allocation. Prepared sample/metadata memory is not included.",
+            "Compressor preparation remains NotImplemented after existing cancellation/image validation; public sequence behavior and all planned statuses are unchanged.",
+            "The sink pipeline propagates policy before allocation and writes the completed buffer only after successful preparation/muxing."
+          ],
+          "option_review": "Optional alpha, transforms, absent metadata and sizing-only output are genuine absence. Fixed property slots and checked slices are infallible lookup absence converted to typed failures when required; substring None means no reusable payload. All fallible muxing returns CodecResult.",
+          "validation_policy": "Rust behavioral execution and managed Coverage MCP remain deferred until implementation is complete. No matrix, finding or workstream promotion; historical coverage is unchanged.",
+          "remaining": [
+            "Pure Rust AV1 compression and metadata/color preparation.",
+            "Sequence, grid, layered and high-depth native encode witnesses; current complete mux fixtures are all 8-bit.",
+            "Final byte parity, native roundtrips, sink/option errors, total resource accounting and managed coverage."
+          ],
+          "compile_verification": "All 16 strict Clippy lanes pass: native AVIF-only/all/default/no-feature ordinary/cfg(coverage), and AVIF-only/all-feature wasm32-unknown-unknown/wasm32-wasip1 ordinary/cfg(coverage). Native and coverage unknown-WASM include all targets; other WASM lanes check libraries. Warnings-as-errors rustdoc, formatting and static roadmap/provenance checks pass. No Rust behavioral execution."
+        }
       }
     },
     "active_alpha_fixture": {

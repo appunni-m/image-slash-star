@@ -2531,6 +2531,9 @@ pub(crate) fn __coverage_exercise_private_branches() {
 pub(crate) use avif::{color_conversion_trace, select_short_references, temporal_candidate_trace};
 
 #[cfg(all(coverage, feature = "avif"))]
+pub(crate) use avif::encode::{mux_size_trace, mux_still_trace};
+
+#[cfg(all(coverage, feature = "avif"))]
 pub(crate) fn __coverage_av1_entropy_reference_trace()
 -> CodecResult<Vec<crate::Av1EntropyTraceState>> {
     avif::__coverage_entropy_reference_trace()

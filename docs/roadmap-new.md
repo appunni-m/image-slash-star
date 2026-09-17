@@ -11,7 +11,7 @@ is not evidence that a later fix failed. No entry is silently removed here.
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 Its recorded baseline test counts are 45/45 matrix tests and 66/66 feature-gate tests.
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The coverage-origin verifier passes for 540 exact `cfg(coverage)` guards across 89 files.
+The coverage-origin verifier passes for 543 exact `cfg(coverage)` guards across 89 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -174,6 +174,32 @@ assertions; the unchanged complete native sequence fixtures remain the pixel
 regression authority. This removes candidate-history growth without establishing
 a total reference/scratch memory limit or measured peak-memory improvement.
 Rust behavioral tests and managed coverage remain deferred; no row is promoted.
+
+## Still-container encoder implementation in progress — 2026-09-17
+
+The private safe-Rust AVIF writer now emits standard still-image color, alpha,
+EXIF and XMP items, ICC/nclx properties and orientation references. It shares
+identical properties and uses the native earliest-substring rule for media,
+including reuse across item boundaries. A counting pass checks the caller's
+output policy before allocating the result; copies and searches poll cancellation.
+The sink path passes that policy through and delivers only the completed buffer.
+
+The [native mux corpus](../tests/fixtures/outputs/avif_mux/index.json) retains
+28 complete files generated twice, covering 16 registered still rows and 12
+additional orientation/metadata/reuse cases. Its 105 hashed artifacts contain
+native containers, decoded pixels and semantic input payloads. Expected boxes,
+property indices and output offsets never enter the Rust writer.
+
+Deferred integration tests compare complete file bytes and output limits;
+separate model checks cover invalid descriptors, target-independent EXIF
+offset errors, size overflow and interruption. All native mux witnesses are
+8-bit; higher-depth descriptors still need native encoder witnesses. AV1
+compression, metadata preparation, sequence/grid/layered containers and total
+resource accounting remain open. Public encoding still returns NotImplemented,
+all 32 encode rows remain planned, and Rust behavior/coverage remain deferred.
+All 16 strict native/WASM ordinary/coverage compile configurations pass,
+including native no-codec/default lanes. Rustdoc, formatting and static
+roadmap/provenance checks pass; no Rust runtime result is inferred from them.
 
 ## Complete open-task inventory
 

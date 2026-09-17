@@ -2159,6 +2159,60 @@ pub fn __coverage_av1_short_references(
     )
 }
 
+/// Input-only access to the private AVIF container writer for native parity.
+#[cfg(all(coverage, feature = "avif"))]
+#[doc(hidden)]
+pub mod __coverage_avif_mux {
+    /// Exercise the production 32-bit container bound without a huge allocation.
+    pub fn checked_length(length: u64) -> crate::ImageResult<u32> {
+        crate::codecs::into_image_result(
+            crate::codecs::mux_size_trace(length),
+            crate::ImageFormat::Avif,
+            crate::ImageErrorStage::StillEncode,
+        )
+    }
+
+    /// Semantic metadata and compressor outputs extracted from complete native files.
+    pub struct Input<'a> {
+        /// Untransformed image dimensions.
+        pub dimensions: [u32; 2],
+        /// Color sample and its four-byte AV1 configuration record.
+        pub color: (&'a [u8], [u8; 4]),
+        /// Optional alpha sample with the same dimensions and depth.
+        pub alpha: Option<(&'a [u8], [u8; 4])>,
+        /// Color primaries, transfer characteristics and matrix coefficients.
+        pub cicp: [u16; 3],
+        /// Full-range color declaration.
+        pub full_range: bool,
+        /// Whether color was premultiplied by alpha upstream.
+        pub premultiplied: bool,
+        /// ICC bytes, empty when absent.
+        pub icc: &'a [u8],
+        /// Prepared EXIF item, including the four-byte TIFF offset.
+        pub exif: &'a [u8],
+        /// XMP bytes, empty when absent.
+        pub xmp: &'a [u8],
+        /// Optional counterclockwise quarter turns.
+        pub rotation: Option<u8>,
+        /// Optional mirror axis.
+        pub mirror: Option<u8>,
+    }
+
+    /// Exercise the production writer without invoking the unfinished compressor.
+    pub fn write(
+        input: &Input<'_>,
+        policy: crate::EncodePolicy,
+        token: Option<&crate::CancellationToken>,
+    ) -> crate::ImageResult<Vec<u8>> {
+        let budget_token = crate::encode_work_budget_token(&policy, token);
+        crate::codecs::into_image_result(
+            crate::codecs::mux_still_trace(input, policy, budget_token.as_ref().or(token)),
+            crate::ImageFormat::Avif,
+            crate::ImageErrorStage::StillEncode,
+        )
+    }
+}
+
 /// One exact scalar AV1 entropy state used by the fixture-backed coverage gate.
 #[cfg(all(coverage, feature = "avif"))]
 #[doc(hidden)]

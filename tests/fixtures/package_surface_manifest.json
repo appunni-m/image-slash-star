@@ -69,6 +69,7 @@
     "src/codecs/avif/container.rs",
     "src/codecs/avif/decode.rs",
     "src/codecs/avif/encode.rs",
+    "src/codecs/avif/encode/container.rs",
     "src/codecs/avif/inspect.rs",
     "src/codecs/avif/mod.rs",
     "src/codecs/avif/samples.rs",

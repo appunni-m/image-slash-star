@@ -33,6 +33,10 @@ mod avif_hdr_color;
 #[path = "support/avif_highdepth_color.rs"]
 mod avif_highdepth_color;
 
+#[cfg(coverage)]
+#[path = "support/avif_mux.rs"]
+mod avif_mux;
+
 #[cfg(feature = "avif")]
 #[path = "support/avif_sequence.rs"]
 mod avif_sequence;
