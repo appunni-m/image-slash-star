@@ -68,8 +68,13 @@ fn bundle(relative: &str) -> PathBuf {
         .join(relative)
 }
 
-fn animated() -> NativeSequence {
-    let root = bundle("av1_sequence/animated");
+fn native_sequence(
+    relative: &str,
+    dimensions: (u32, u32),
+    counts: (u32, u32, u32, usize),
+    repetitions: i32,
+) -> NativeSequence {
+    let root = bundle(relative);
     let (index, data) = read_index(&root, "image-slash-star/av1-sequence-oracle@2");
     let oracle: Value = field(&index, "oracle");
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
@@ -82,29 +87,41 @@ fn animated() -> NativeSequence {
     );
     let roles: Value = field(&index, "roles");
     let color: Value = field(&roles, "color");
-    let counts: Value = field(&color, "counts");
-    assert_eq!(field::<u32>(&counts, "decoded_frame_count"), 6);
-    assert_eq!(field::<u32>(&counts, "hidden_decoded_count"), 2);
-    assert_eq!(field::<u32>(&counts, "show_existing_count"), 1);
+    let native_counts: Value = field(&color, "counts");
+    assert_eq!(
+        field::<u32>(&native_counts, "decoded_frame_count"),
+        counts.0
+    );
+    assert_eq!(
+        field::<u32>(&native_counts, "hidden_decoded_count"),
+        counts.1
+    );
+    assert_eq!(
+        field::<u32>(&native_counts, "show_existing_count"),
+        counts.2
+    );
     let noninterference: Value = field(&color, "noninterference");
     assert!(field::<bool>(&noninterference, "byte_equal"));
     let pillow: Value = field(&index, "pillow");
     assert_eq!(field::<Option<u32>>(&pillow, "loop_count"), None);
     let native_loop: Value = field(&index, "native_loop");
-    assert_eq!(field::<i32>(&native_loop, "repetition_count"), 0);
+    assert_eq!(field::<i32>(&native_loop, "repetition_count"), repetitions);
     assert_eq!(
         field::<String>(&native_loop, "origin"),
         "libavif.avifDecoder.repetitionCount"
     );
     let frames: Vec<Value> = field(&pillow, "frames");
-    assert_eq!(frames.len(), 5);
+    assert_eq!(frames.len(), counts.3);
     let mut pixels = Vec::new();
     let mut durations = Vec::new();
     let mut milliseconds = Vec::new();
     for (ordinal, frame) in frames.iter().enumerate() {
         assert_eq!(field::<usize>(frame, "index"), ordinal);
         assert_eq!(field::<String>(frame, "mode"), "RGB");
-        assert_eq!(field::<Vec<u32>>(frame, "size"), [150, 150]);
+        assert_eq!(
+            field::<Vec<u32>>(frame, "size"),
+            [dimensions.0, dimensions.1]
+        );
         let raw = require_ok(
             fs::read(root.join(field::<String>(frame, "raw_path"))),
             "Pillow RGB",
@@ -123,14 +140,46 @@ fn animated() -> NativeSequence {
     }
     NativeSequence {
         data,
-        width: 150,
-        height: 150,
+        width: dimensions.0,
+        height: dimensions.1,
         mode: img::ImageMode::Rgb8,
         pixels,
         durations,
         milliseconds,
-        native_loop: img::AnimationLoop::Finite { total_plays: 1 },
+        native_loop: match repetitions {
+            -1 => img::AnimationLoop::Infinite,
+            0 => img::AnimationLoop::Finite { total_plays: 1 },
+            _ => panic!("unregistered repetition observation"),
+        },
     }
+}
+
+fn animated() -> NativeSequence {
+    native_sequence("av1_sequence/animated", (150, 150), (6, 2, 1, 5), 0)
+}
+
+fn error_resilient() -> NativeSequence {
+    native_sequence("av1_sequence/error_resilient", (16, 16), (2, 0, 0, 2), -1)
+}
+
+fn wrapped_frame_ids() -> NativeSequence {
+    let mut expected = error_resilient();
+    let root = bundle("av1_sequence/error_resilient");
+    let (index, _) = read_index(&root, "image-slash-star/av1-sequence-oracle@2");
+    let roles: Value = field(&index, "roles");
+    let color: Value = field(&roles, "color");
+    let evidence: Value = field(&color, "frame_id_evidence");
+    let wrap: Value = field(&evidence, "wraparound");
+    assert!(field::<bool>(&wrap, "repeat_equal"));
+    expected.data = require_ok(
+        fs::read(root.join(field::<String>(&wrap, "path"))),
+        "wrapped full file",
+    );
+    assert_eq!(
+        sha256::digest_hex(&expected.data),
+        field::<String>(&wrap, "sha256")
+    );
+    expected
 }
 
 fn highdepth() -> NativeSequence {
@@ -219,7 +268,12 @@ fn public_avif_sequences_match_every_native_display_and_exact_timing() {
     if super::matrix_selection_is_filtered() {
         return;
     }
-    for expected in [animated(), highdepth()] {
+    for expected in [
+        animated(),
+        highdepth(),
+        error_resilient(),
+        wrapped_frame_ids(),
+    ] {
         let actual = require_ok(
             img::decode_sequence(&expected.data),
             "public sequence parity",
@@ -243,7 +297,12 @@ fn avif_sequence_transfer_budget_is_reserved_once_and_before_reconstruction() {
     if super::matrix_selection_is_filtered() {
         return;
     }
-    for expected in [animated(), highdepth()] {
+    for expected in [
+        animated(),
+        highdepth(),
+        error_resilient(),
+        wrapped_frame_ids(),
+    ] {
         let frame_bytes = require_ok(u64::try_from(expected.pixels[0].len()), "frame bytes");
         let count = require_ok(u64::try_from(expected.pixels.len()), "frame count");
         let total = require_some(frame_bytes.checked_mul(count), "sequence byte total");
@@ -272,4 +331,45 @@ fn avif_sequence_transfer_budget_is_reserved_once_and_before_reconstruction() {
         let cancelled = img::decode_sequence_with_token(&expected.data, &token);
         assert!(matches!(cancelled, Err(img::ImageError::Cancelled { .. })));
     }
+}
+
+#[test]
+fn mismatched_reference_frame_id_rejects_sequence_and_preserves_first_image() {
+    if super::matrix_selection_is_filtered() {
+        return;
+    }
+    let root = bundle("av1_sequence/error_resilient");
+    let (index, _) = read_index(&root, "image-slash-star/av1-sequence-oracle@2");
+    let roles: Value = field(&index, "roles");
+    let color: Value = field(&roles, "color");
+    let evidence: Value = field(&color, "frame_id_evidence");
+    assert!(field::<bool>(&evidence, "syntax_matches_native"));
+    let reads: Vec<Value> = field(&evidence, "reference_reads");
+    assert_eq!(reads.len(), 7);
+    for read in reads {
+        assert_eq!(
+            field::<u32>(&read, "expected"),
+            field::<u32>(&read, "actual")
+        );
+    }
+    let mutation: Value = field(&evidence, "mutation");
+    assert!(field::<bool>(&mutation, "repeat_equal"));
+    let input = require_ok(
+        fs::read(root.join(field::<String>(&mutation, "path"))),
+        "mutated full file",
+    );
+    assert_eq!(
+        sha256::digest_hex(&input),
+        field::<String>(&mutation, "sha256")
+    );
+    let error = match img::decode_sequence(&input) {
+        Ok(_) => panic!("mismatched reference frame ID was accepted"),
+        Err(error) => error,
+    };
+    assert_eq!(error.kind(), img::ImageErrorKind::Malformed);
+    assert_eq!(error.stage(), Some(img::ImageErrorStage::SequenceDecode));
+    assert_eq!(error.format(), Some(img::ImageFormat::Avif));
+    assert!(error.to_string().contains("reference frame ID"));
+    let first = require_ok(img::decode(&input), "independent first frame");
+    assert_eq!(first.content.pixels, error_resilient().pixels[0]);
 }

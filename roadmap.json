@@ -6865,7 +6865,7 @@
           "target_execution": "deferred_until_implementation_complete",
           "scope": "Private transition evidence for the existing full-file fixture; general temporal projection and complete public AVIF sequence parity remain unproven. No matrix row or work-item status is promoted."
         },
-        "next": "Complete remaining reference reconstruction and frame-ID sequence presentation; reconcile native loop metadata with the matrix before final behavioral and managed coverage verification.",
+        "next": "Complete remaining reference reconstruction, short-signaling fallback and broader frame-ID policy evidence; reconcile native loop metadata with the matrix before final behavioral and managed coverage verification.",
         "current_slice_update_2026_09_17_streaming_presentation": {
           "status": "implemented_unverified",
           "scope": "One-display-at-a-time AVIF sequence conversion with persistent color/alpha references, completed-surface proof, pre-reconstruction output transfer reservations, inspected count/mode agreement and header geometry bounds. Ordinary first-image and sequence blanket gates removed; frame-ID sequence gap retained after full ID validation.",
@@ -6915,6 +6915,54 @@
             "Loop assertions use independent native source metadata. Future AVIF matrix promotion must reconcile existing Pillow-null loop references with the public source-repetition contract; no historical expected row was weakened.",
             "Default-only-frame flag assertions use the existing independent AVIF movie-source normalization, separately from first-image pixel equality.",
             "Historical coverage totals are not measurements of this candidate."
+          ]
+        },
+        "current_slice_update_2026_09_17_frame_ids": {
+          "status": "implemented_unverified",
+          "scope": "Repair interleaved AV1 reference index/delta parsing and validate expected reference IDs; enable frame-ID sequence presentation through the existing transactional visitor. Preserve repeated-current-ID precedence and separate show-existing equality.",
+          "oracle": "tests/fixtures/outputs/av1_sequence/error_resilient/index.json",
+          "collector": "scripts/generate_av1_sequence_refs.py --fixture animated_error_resilient",
+          "source_fixture": "tests/fixtures/input/images/avif/animated_error_resilient.avif",
+          "native_evidence": {
+            "full_rgb_bytes": 1536,
+            "full_yuv_bytes": 768,
+            "decoded_and_displayed_frames": 2,
+            "reference_reads": 7,
+            "reference_slots": [
+              0,
+              1,
+              7,
+              6,
+              7,
+              7,
+              0
+            ],
+            "current_id": 4627,
+            "reference_id": 4626,
+            "delta": 1,
+            "native_duration": "100/1000 second per display",
+            "native_repetition_count": -1,
+            "syntax_matches_native_positions_and_values": true,
+            "wrapped_ids": [
+              32767,
+              0
+            ],
+            "full_file_delta_mutation_sha256": "7406a1179886e21166cfab98cf6fb52a22003fdaf494710c939bd323b95d46d1",
+            "rejection_evidence": "Repeated native diagnostics, exactly one unchanged YUV display and mismatched-ID trace; Pillow first-frame success then frame-1 RuntimeError. Native CLI exits 0, which alone is not rejection evidence."
+          },
+          "regressions": [
+            "tests/support/avif_sequence.rs",
+            "tests/decode_policy_tests.rs::avif_repeated_frame_id_is_rejected_by_safe_sequence_validation"
+          ],
+          "option_review": "The previous frame ID is optional only when no predecessor has been committed. Reference-header Option remains genuine absence, converted to a typed Malformed error when required. No fallible codec helper returns Option.",
+          "compile_verification": "Strict Clippy passes all 12 native, wasm32-unknown-unknown and wasm32-wasip1 lanes with AVIF-only/all-features and ordinary/cfg(coverage) configurations. Native and coverage unknown-WASM checks include all targets; WASI checks the library. The final coverage-only diagnostic assertion correction also passes native all-feature coverage Clippy. Warnings-as-errors rustdoc, formatting, diff, artifact hashes and static provenance/roadmap checks pass. Rust behavioral and managed coverage execution remain deferred.",
+          "validation_policy": "No Rust behavioral tests or managed coverage executed; no matrix row, finding or workstream promoted.",
+          "remaining": [
+            "Short-signaling no-future-reference fallback currently differs from pinned dav1d and needs independent full-file evidence.",
+            "Existing current-ID/stale-reference policy differences remain unchanged pending broader native witnesses.",
+            "Complete Rust reconstruction and presentation parity remain unverified.",
+            "Native loop origins must be reconciled with existing Pillow-null matrix references before promotion.",
+            "Transfer-byte limits do not bound all retained reference/scratch memory."
           ]
         }
       },

@@ -109,6 +109,23 @@ but Rust behavioral execution and managed coverage remain deferred. The
 geometry, resource, metadata and frame-ID limitations. No row or finding is
 promoted by this implementation candidate.
 
+## Frame-ID sequence implementation in progress — 2026-09-17
+
+Pinned native traces exposed incorrect reference syntax ordering in both Rust
+and the Python inspector. The implementation now reads each index/delta pair
+together, validates the expected reference ID with checked modulo arithmetic,
+and presents frame-ID sequences through the common transactional path.
+Repeated current IDs retain their existing structural diagnostic.
+
+The [native bundle](../tests/fixtures/outputs/av1_sequence/error_resilient/index.json)
+records both complete error-resilient frames, all seven native reference reads,
+an accepted full-file ID-wraparound variant, and a rejected full-file delta
+mismatch that preserves the independent first image. Native and inspector
+positions agree after accounting for the OBU header. Rust behavioral execution
+and managed coverage remain deferred. Short-signaling fallback, stale-reference
+policy, broader reconstruction and matrix loop-origin reconciliation remain
+open; no row or finding is promoted by this candidate.
+
 ## Complete open-task inventory
 
 The retained ledger contains **244 active finding rows**.

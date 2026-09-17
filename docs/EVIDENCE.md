@@ -106,8 +106,8 @@ before advancing, and publishes frames only after all samples succeed. It
 reserves later output transfer bytes before reconstruction and requires the
 inspected frame count, output mode and actual frame geometry to agree. Missing
 reconstruction surfaces remain capability gaps; malformed tile envelopes and
-empty reference slots retain precedence. Frame-ID sequence presentation is
-still unsupported after structural validation.
+empty reference slots retain precedence. That revision retained the frame-ID
+sequence presentation gate; the later candidate below removes it.
 
 The [sequence native index](../tests/fixtures/outputs/av1_sequence/animated/index.json)
 retains five complete RGB displays, six decoded frames, two hidden frames and
@@ -128,6 +128,27 @@ provenance/roadmap checks pass. Rust behavioral execution and managed coverage
 remain deferred; no row or finding is promoted. Output transfer limits do not
 bound retained AV1 references or scratch memory, and variable frame geometry
 and primary-item/track declaration disagreements remain unsupported.
+
+The later 2026-09-17 frame-ID candidate corrects interleaved reference index and
+delta parsing in Rust and the syntax inspector. Seven pinned native reads
+establish the ordering and values independently of either implementation.
+The [frame-ID oracle](../tests/fixtures/outputs/av1_sequence/error_resilient/index.json)
+retains both native RGB displays, native YUV noninterference, exact timing and
+repetition, a full-file 32767-to-0 wraparound success and a full-file reference
+delta rejection. The latter preserves the first image in both native/Pillow
+observations and Rust's deferred regression. Native CLI diagnostics and actual
+frame outputs establish rejection even though that CLI returns exit code 0.
+Strict Clippy passes in all 12 native/WASM, AVIF-only/all-feature,
+ordinary/coverage lanes. Warnings-as-errors rustdoc, formatting, artifact
+hashes and static provenance/roadmap checks also pass. These are compile-only
+and static Rust checks; the native observer runs execute only pinned oracles.
+
+The frame-ID-only presentation gate is removed, while repeated-current-ID
+validation retains precedence over reference-delta failures. Behavioral Rust
+execution and managed coverage remain deferred. Short-signaling fallback,
+stale-reference behavior, broader reconstruction and native-versus-Pillow loop
+reference reconciliation remain unfinished. The bundle's README separates
+these limitations from the bounded evidence; no matrix row or finding closes.
 
 ## Diagnostic provenance
 

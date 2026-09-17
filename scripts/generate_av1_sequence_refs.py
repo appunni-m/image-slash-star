@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect an independent persistent dav1d trace for ``animated.avif``.
+"""Collect independent persistent dav1d traces for pinned AVIF sequences.
 
 This is a bounded diagnostic oracle for the first AVIF sequence case.  It
 copies the pinned dav1d checkout into a disposable ignored workspace, builds a
@@ -49,6 +49,13 @@ OUTPUT = ROOT / "target" / "oracle-staging" / "av1-sequence" / "animated"
 COPYING_SHA256 = "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5"
 SCHEMA = "image-slash-star/av1-sequence-oracle@2"
 FIXTURE_SHA256 = "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+FIXTURES = {
+    "animated": (FIXTURE_SHA256, 5, [150, 150], (7, 6, 6, 1)),
+    "animated_error_resilient": (
+        "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
+        2, [16, 16], (2, 2, 2, 0),
+    ),
+}
 LIBAVIF_COMMIT = "6543b22b5bc706c53f038a16fe515f921556d9b3"
 LOOP_OBSERVER = r'''
 #include <avif/avif.h>
@@ -186,6 +193,8 @@ def instrument(source: Path) -> None:
     """Install only high-level, field-wise trace hooks in the copied source."""
 
     obu = source / "src" / "obu.c"
+    if FIXTURE.stem == "animated_error_resilient":
+        instrument_frame_ids(obu)
     replace_once(obu, "#include <errno.h>\n", "#include <errno.h>\n#include <inttypes.h>\n")
     replace_once(
         obu,
@@ -361,6 +370,22 @@ def instrument(source: Path) -> None:
         "           hdr ? hdr->showable_frame : -1);\n"
         "    int res;\n",
     )
+
+
+def instrument_frame_ids(obu: Path) -> None:
+    """Observe actual native paired reads before the native validity check."""
+    anchor = "                const unsigned delta_ref_frame_id = dav1d_get_bits(gb, seqhdr->delta_frame_id_n_bits) + 1;"
+    replace_once(obu, anchor, "                const unsigned trace_delta_bit = dav1d_get_bits_pos(gb);\n" + anchor)
+    anchor = "                if (!ref_frame_hdr || ref_frame_hdr->frame_id != ref_frame_id) goto error;"
+    trace = r'''                printf("@LIFECYCLE {\"event\":\"reference_frame_id\",\"current\":%u,"
+                       "\"reference\":%d,\"slot\":%d,\"delta_bit\":%u,\"delta_bits\":%u,"
+                       "\"delta\":%u,\"expected\":%u,\"actual\":%d,\"short_signaling\":%u}\n",
+                       hdr->frame_id, i, hdr->refidx[i], trace_delta_bit,
+                       seqhdr->delta_frame_id_n_bits, delta_ref_frame_id, ref_frame_id,
+                       ref_frame_hdr ? (int)ref_frame_hdr->frame_id : -1,
+                       hdr->frame_ref_short_signaling);
+'''
+    replace_once(obu, anchor, trace + anchor)
 
 
 def source_anchor_report(source: Path) -> dict[str, object]:
@@ -841,10 +866,9 @@ def summarize_identity(
         raise RuntimeError(
             f"{track['handler']} track displayed {len(displays)} frames for {len(track['samples'])} samples"
         )
-    if len(headers) != 7 or len(submits) != 6 or len(exits) != 6 or len(show_existing) != 1:
+    if (len(headers), len(submits), len(exits), len(show_existing)) != FIXTURES[FIXTURE.stem][3]:
         raise RuntimeError(
-            "animated lifecycle cardinality differs from the expected 7 headers, "
-            "6 decoded frames, and 1 show-existing event"
+            "native lifecycle cardinality differs from the pinned fixture"
         )
     if any(int(exit_record["status"]) != 0 for exit_record in exits):
         raise RuntimeError("dav1d reported a nonzero frame decode exit")
@@ -922,7 +946,7 @@ def summarize_identity(
                 "pts": pts,
                 "duration_num": int(sample["duration"]),
                 "duration_den": int(track["timescale"]),
-                "pts_num": pts,
+                "pts_num": sum(int(previous["duration"]) for previous in track["samples"][:sample_index]),
                 "pts_den": int(track["timescale"]),
                 "sample_offset": int(sample["offset"]),
                 "sample_length": int(sample["length"]),
@@ -1060,7 +1084,13 @@ def collect_role(
     identity, counts = summarize_identity(
         track, syntax_samples, trace_records, display_reports
     )
+    frame_id_evidence = {}
+    if FIXTURE.stem == "animated_error_resilient" and role == "color":
+        frame_id_evidence = {"frame_id_evidence": collect_frame_id_evidence(
+            avif_data, track, syntax_samples, trace_records, work, bundle, env
+        )}
     return {
+        **frame_id_evidence,
         "handler": track["handler"],
         "track_id": int(track["track_id"]),
         "timescale": int(track["timescale"]),
@@ -1096,6 +1126,142 @@ def collect_role(
     }
 
 
+def collect_frame_id_evidence(data, track, syntax_samples, records, work, bundle, env):
+    native = [event for event in records if event.get("event") == "reference_frame_id"]
+    observed = []
+    for sample in syntax_samples:
+        for obu in sample["obus"]:
+            header = obu.get("frame_header", {})
+            for reference in header.get("reference_frame_ids", []):
+                expected = {**reference, "current": header["frame_id"],
+                            "short_signaling": int(header["frame_refs_short_signaling"]),
+                            "kind": "lifecycle", "event": "reference_frame_id"}
+                # Native positions begin at the OBU header; the inspector's
+                # positions begin at the payload. Compare the same boundary.
+                expected["delta_bit"] += obu["header_length"] * 8
+                observed.append(expected)
+    if native != observed or len(native) != 7 or any(
+        event["expected"] != event["actual"] or event["short_signaling"] for event in native
+    ):
+        raise RuntimeError("native paired frame-ID reads disagree with syntax observation")
+    frame_obu = next(obu for obu in syntax_samples[1]["obus"] if "frame_header" in obu)
+    if len(frame_obu["payload_spans"]) != 1:
+        raise RuntimeError("delta mutation requires one contiguous full-file payload")
+    reference = frame_obu["frame_header"]["reference_frame_ids"][0]
+    bit = frame_obu["payload_spans"][0]["offset"] * 8 + reference["delta_bit"] + reference["delta_bits"] - 1
+    mutated = bytearray(data)
+    mutated[bit // 8] ^= 1 << (7 - bit % 8)
+    mutated = bytes(mutated)
+    mutation_path = "malformed/reference_delta_mismatch.avif"
+    (bundle / mutation_path).parent.mkdir(parents=True, exist_ok=True)
+    (bundle / mutation_path).write_bytes(mutated)
+    try:
+        inspect_av1(bundle / mutation_path)
+    except ValueError as error:
+        inspector_error = str(error)
+        if "reference frame ID mismatch" not in inspector_error:
+            raise RuntimeError("syntax inspector rejected a different mutation boundary") from error
+    else:
+        raise RuntimeError("syntax inspector accepted the mismatched reference ID")
+    samples = []
+    for sample in track["samples"]:
+        payload = mutated[sample["offset"]:sample["offset"] + sample["length"]]
+        samples.append({**sample, "sha256": sha256(payload)})
+    ivf = work / "delta-mismatch.ivf"
+    make_ivf(mutated, samples, 16, 16, ivf)
+    runs = {}
+    for kind in ("plain", "trace"):
+        build = work / f"color-{kind}-build"
+        output = work / f"delta-{kind}.yuv"
+        command = [str(build / "tools/dav1d"), "--input", str(ivf), "--demuxer", "ivf",
+                   "--output", str(output), "--muxer", "yuv", "--threads", "1",
+                   "--framedelay", "1", "--cpumask", "0", "--quiet"]
+        observations = []
+        for _ in range(2):
+            result = run(command, cwd=build, env=env, check=False)
+            raw = output.read_bytes()
+            observations.append({"exit_code": result.returncode,
+                                 "stdout": result.stdout.decode(), "stderr": result.stderr.decode(),
+                                 "yuv_bytes": len(raw), "yuv_sha256": sha256(raw)})
+        if observations[0] != observations[1] or not observations[0]["stderr"]:
+            raise RuntimeError("native delta rejection did not repeat")
+        if raw != (bundle / "decoded/color/display_0.yuv").read_bytes():
+            raise RuntimeError("native delta mutation changed first-frame output or emitted a second frame")
+        runs[kind] = observations[0]
+    rejected_refs = [event for event in parse_trace(runs["trace"]["stdout"].encode())
+                     if event.get("event") == "reference_frame_id"]
+    if len(rejected_refs) != 1 or rejected_refs[0]["expected"] == rejected_refs[0]["actual"]:
+        raise RuntimeError("native delta failure lacks a mismatched reference witness")
+    pillow_observations = []
+    for _ in range(2):
+        with Image.open(io.BytesIO(mutated)) as image:
+            first = image.tobytes()
+            image.seek(1)
+            try:
+                image.tobytes()
+            except (OSError, ValueError, RuntimeError) as error:
+                pillow_observations.append({"first_rgb_bytes": len(first), "first_rgb_sha256": sha256(first),
+                                            "exception": type(error).__name__, "message": str(error)})
+            else:
+                raise RuntimeError("Pillow accepted the mismatched frame ID")
+    if pillow_observations[0] != pillow_observations[1]:
+        raise RuntimeError("Pillow rejection changed on repeat")
+    wrap = collect_frame_id_wrap(data, track, syntax_samples, work, bundle, env)
+    return {"syntax_matches_native": True, "reference_reads": native, "wraparound": wrap,
+            "mutation": {"path": mutation_path, "bytes": len(mutated), "sha256": sha256(mutated),
+                         "source_sha256": sha256(data), "flipped_file_bit": bit,
+                         "native": runs, "pillow": pillow_observations[0],
+                         "inspector_error": inspector_error, "repeat_equal": True}}
+
+
+def collect_frame_id_wrap(data, track, syntax_samples, work, bundle, env):
+    wrapped = bytearray(data)
+    mutations = []
+    for sample, expected, replacement in zip(syntax_samples, (4626, 4627), (32767, 0), strict=True):
+        obu = next(obu for obu in sample["obus"] if "frame_header" in obu)
+        header = obu["frame_header"]
+        if header["frame_id"] != expected or len(obu["payload_spans"]) != 1:
+            raise RuntimeError("wraparound mutation anchor moved")
+        start = obu["payload_spans"][0]["offset"] * 8 + header["frame_id_bit"]
+        for index in range(15):
+            bit = start + index
+            mask = 1 << (7 - bit % 8)
+            wrapped[bit // 8] = (wrapped[bit // 8] & ~mask) | (((replacement >> (14 - index)) & 1) * mask)
+        mutations.append({"file_bit": start, "width": 15, "original": expected, "replacement": replacement})
+    wrapped = bytes(wrapped)
+    relative = "valid/frame_id_wraparound.avif"
+    (bundle / relative).parent.mkdir(parents=True, exist_ok=True)
+    (bundle / relative).write_bytes(wrapped)
+    samples = [{**sample, "sha256": sha256(wrapped[sample["offset"]:sample["offset"] + sample["length"]])}
+               for sample in track["samples"]]
+    ivf = work / "wraparound.ivf"
+    make_ivf(wrapped, samples, 16, 16, ivf)
+    expected_yuv = b"".join((bundle / f"decoded/color/display_{index}.yuv").read_bytes() for index in range(2))
+    native = {}
+    for kind in ("plain", "trace"):
+        build = work / f"color-{kind}-build"
+        output = work / f"wraparound-{kind}.yuv"
+        observations = []
+        for _ in range(2):
+            events, stdout, stderr = run_decoder(build / "tools/dav1d", build, ivf, output, env)
+            if stderr or output.read_bytes() != expected_yuv:
+                raise RuntimeError("wrapped IDs changed native pixels")
+            observations.append(events)
+        if observations[0] != observations[1]:
+            raise RuntimeError("wrapped native trace changed on repeat")
+        native[kind] = {"yuv_bytes": len(expected_yuv), "yuv_sha256": sha256(expected_yuv),
+                        "reference_reads": [event for event in events if event.get("event") == "reference_frame_id"]}
+    refs = native["trace"]["reference_reads"]
+    if len(refs) != 7 or any((r["current"], r["expected"], r["actual"]) != (0, 32767, 32767) for r in refs):
+        raise RuntimeError("native wraparound identity disagrees")
+    pillow = pillow_report(wrapped)
+    if pillow != pillow_report(wrapped) or pillow != pillow_report(data):
+        raise RuntimeError("wrapped IDs changed Pillow pixels or metadata")
+    return {"path": relative, "bytes": len(wrapped), "sha256": sha256(wrapped),
+            "source_sha256": sha256(data), "mutations": mutations,
+            "native": native, "pillow": pillow, "repeat_equal": True}
+
+
 def native_loop_report(data: bytes, source: Path, work: Path, bundle: Path) -> dict:
     revision = text_output(run(["git", "-C", str(source), "rev-parse", "HEAD"]))
     if revision != LIBAVIF_COMMIT or run(["git", "-C", str(source), "status", "--porcelain"]).stdout:
@@ -1110,7 +1276,7 @@ def native_loop_report(data: bytes, source: Path, work: Path, bundle: Path) -> d
         raise RuntimeError("libavif license differs from the retained license")
     observer = bundle / "provenance/loop-observer.cc"
     observer.parent.mkdir(parents=True, exist_ok=True)
-    observer.write_text(LOOP_OBSERVER)
+    observer.write_text(LOOP_OBSERVER.replace("imageCount != 5", f"imageCount != {FIXTURES[FIXTURE.stem][1]}"))
     compiler = resolve_tool("c++", "C++ compiler")
     shared = work / "loop-observer.so"
     command = [str(compiler), "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
@@ -1153,7 +1319,8 @@ def build_bundle(
     if not FIXTURE.is_file():
         raise RuntimeError(f"missing animated fixture: {FIXTURE}")
     avif_data = FIXTURE.read_bytes()
-    if sha256(avif_data) != FIXTURE_SHA256:
+    fixture_hash, frame_count, dimensions, _ = FIXTURES[FIXTURE.stem]
+    if sha256(avif_data) != fixture_hash:
         raise RuntimeError("registered animated fixture has changed")
     codecs = _avif.codec_versions()
     if (Image.__version__ != "12.2.0" or features.version("avif") != "1.4.1"
@@ -1167,8 +1334,8 @@ def build_bundle(
     alpha = track_report(container, "auxv", container.get("alpha_track_id"))
     if primary is None:
         raise RuntimeError("animated fixture has no primary pict track")
-    if len(primary["samples"]) != 5:
-        raise RuntimeError("animated fixture must contain exactly five primary samples")
+    if len(primary["samples"]) != frame_count:
+        raise RuntimeError("fixture sample count differs from its pin")
     roles = [("color", primary)]
     if alpha is not None:
         roles.append(("alpha", alpha))
@@ -1193,12 +1360,12 @@ def build_bundle(
     if alpha is None:
         role_reports["alpha"] = {
             "status": "not_applicable",
-            "reason": "animated.avif has no auxiliary alpha track",
+            "reason": f"{FIXTURE.name} has no auxiliary alpha track",
         }
     pillow = pillow_report(avif_data, bundle)
     if pillow != pillow_report(avif_data, bundle):
         raise RuntimeError("repeated Pillow metadata observation changed")
-    if pillow["frame_count"] != 5 or pillow["mode"] != "RGB" or pillow["size"] != [150, 150]:
+    if pillow["frame_count"] != frame_count or pillow["mode"] != "RGB" or pillow["size"] != dimensions:
         raise RuntimeError("Pillow animated fixture observation changed unexpectedly")
     for frame, identity in zip(pillow["frames"], role_reports["color"]["identity"], strict=True):
         if (frame["native_timescale"], frame["native_pts"], frame["native_duration"]) != (
@@ -1266,6 +1433,8 @@ def build_bundle(
         },
         "roles": role_reports,
         "source_provenance": {
+            "syntax_inspectors": [{"path": f"scripts/{name}", "sha256": digest_file(ROOT / "scripts" / name)}
+                                  for name in ("inspect_av1_obus.py", "inspect_avif_bitstreams.py")],
             "dav1d_commit": DAV1D_COMMIT,
             "dav1d_source_tree_sha256": source_verify_before["tree_sha256"],
             "copying_path": "COPYING",
@@ -1318,19 +1487,21 @@ def publish(bundle: Path) -> str:
 
 
 def main() -> None:
-    global OUTPUT
+    global OUTPUT, FIXTURE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dav1d-source", type=Path, required=True)
     parser.add_argument("--libavif-source", type=Path, required=True)
     parser.add_argument("--meson", default="meson")
     parser.add_argument("--ninja", default="ninja")
     parser.add_argument("--output", type=Path, default=OUTPUT)
+    parser.add_argument("--fixture", choices=sorted(FIXTURES), default="animated")
     parser.add_argument(
         "--python-path",
         type=Path,
         help="Optional site-packages path for an isolated Meson installation",
     )
     args = parser.parse_args()
+    FIXTURE = FIXTURE.with_name(args.fixture + ".avif")
     OUTPUT = args.output.resolve()
     output_guard()
     source = args.dav1d_source.resolve()

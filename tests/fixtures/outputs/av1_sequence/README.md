@@ -45,8 +45,8 @@ and constrains actual coded/display geometry to the inspected canvas before
 per-frame allocation. Inspection and track frame count/mode must agree.
 This output-byte budget does not bound retained AV1 reference/scratch memory.
 Variable-size hidden references and disagreements between primary-item and
-track declarations remain unsupported. Frame-ID sequence presentation retains
-its existing gap after full current-frame-ID validation.
+track declarations remain unsupported. The later frame-ID candidate described
+below removes the remaining frame-ID presentation gate.
 
 Internal defensive regressions use these unchanged complete inputs to model
 missing reconstruction surfaces, empty reference slots, absent display proof,
@@ -68,3 +68,49 @@ The collector requires dav1d commit
 `6543b22b5bc706c53f038a16fe515f921556d9b3`. It verifies retained licenses and
 refuses changed inputs, versions or native observations. Native sources and
 observers remain oracle-only and are excluded from the Rust package.
+
+## Frame IDs and error-resilient presentation
+
+The `error_resilient` bundle observes the unchanged complete
+`animated_error_resilient.avif` with the same pinned native versions. Both
+16×16 RGB8 displays are retained (1,536 bytes total), alongside 768 YUV bytes,
+exact 100/1000-second timing, and native infinite repetition. Its 19-event
+trace includes seven actual native reference reads: slots 0, 1, 7, 6, 7, 7, 0,
+each with delta 1, current ID 4627 and reference ID 4626.
+
+The trace exposed an error shared by Rust and the Python syntax inspector:
+both previously read all indices before all deltas. Native dav1d reads each
+index and delta together and rejects a mismatched reference ID immediately.
+The corrected inspector is checked against all seven native read positions
+and values, with the OBU-header versus payload position origin made explicit.
+Its source hash is retained separately from native decoder provenance.
+
+Two deterministic full-file mutations extend that evidence:
+
+- `valid/frame_id_wraparound.avif` changes the consecutive IDs to 32767 and 0.
+  Both unmodified and instrumented native decoders preserve every YUV byte;
+  native traces observe all seven wrapped reference IDs as 32767. Repeated
+  Pillow observations preserve both RGB frames, durations and metadata.
+- `malformed/reference_delta_mismatch.avif` flips file bit 8447, changing the
+  first reference delta from 1 to 2. Both native decoders emit only the unchanged
+  first YUV frame and report a decoding error. Their CLI exit code is 0, so
+  rejection is established by the diagnostic, missing second output and native
+  mismatched-ID trace, not the exit code. Pillow preserves the first RGB frame
+  and raises `RuntimeError` when loading frame 1. The corrected syntax inspector
+  also rejects this complete file. Every observation repeats identically.
+
+The Rust candidate parses each pair, checks modulo ID arithmetic, and removes
+the frame-ID-only presentation gate. Current-ID continuity is checked before
+reference deltas, retaining the existing repeated-current-ID diagnostic.
+Show-existing IDs retain their separate equality check. Deferred regressions
+cover full sequence pixels, timing, budgets, wraparound and the malformed file.
+No Rust behavioral execution or managed coverage is claimed.
+
+The broader frame-ID/reference state space remains unfinished. In particular,
+the existing short-signaling no-future-reference fallback differs from pinned
+dav1d, and stale-reference policies require additional independent witnesses.
+This fixture has explicit indices; it does not prove those other cases.
+Loop-reference reconciliation and resource limitations above still apply.
+
+Regenerate this bundle with the same command plus
+`--fixture animated_error_resilient` and a fresh `--output` path.

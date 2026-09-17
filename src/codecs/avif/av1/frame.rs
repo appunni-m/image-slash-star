@@ -1246,8 +1246,8 @@ impl FrameState {
                 payload.end,
                 sequence,
                 &references,
-                temporal_id,
-                spatial_id,
+                (temporal_id, spatial_id),
+                self.current_frame_id,
             )?;
             if header != pending.header {
                 return Err(malformed("frame syntax validation failed"));
@@ -1264,8 +1264,8 @@ impl FrameState {
             payload.end,
             sequence,
             &references,
-            temporal_id,
-            spatial_id,
+            (temporal_id, spatial_id),
+            self.current_frame_id,
         )?;
         self.accept_parsed_header(
             sequence.frame_id_numbers_present,
@@ -3062,8 +3062,8 @@ fn parse<'data, 'input, 'spans>(
     end: usize,
     sequence: &SequenceHeader,
     references: &[Option<FrameHeader>; 8],
-    temporal_id: u32,
-    spatial_id: u32,
+    layer: (u32, u32),
+    previous_frame_id: Option<u32>,
 ) -> Av1Result<(FrameHeader, BitReader<'data, 'input, 'spans>)> {
     let bits = BitReader::new(data, start, end)?;
     // `BitReader::new` has already validated the byte-to-bit conversion.
@@ -3073,8 +3073,8 @@ fn parse<'data, 'input, 'spans>(
         start_bit,
         sequence,
         references,
-        temporal_id,
-        spatial_id,
+        layer,
+        previous_frame_id,
     )
 }
 
@@ -3083,9 +3083,10 @@ fn parse_reader<'data, 'input, 'spans>(
     start_bit: usize,
     sequence: &SequenceHeader,
     references: &[Option<FrameHeader>; 8],
-    temporal_id: u32,
-    spatial_id: u32,
+    layer: (u32, u32),
+    previous_frame_id: Option<u32>,
 ) -> Av1Result<(FrameHeader, BitReader<'data, 'input, 'spans>)> {
+    let (temporal_id, spatial_id) = layer;
     let mut header = FrameHeader::empty(temporal_id, spatial_id);
     header.show_existing_frame = !sequence.reduced_still_picture_header && bits.bit()?;
     if header.show_existing_frame {
@@ -3140,6 +3141,10 @@ fn parse_reader<'data, 'input, 'spans>(
     }
     if sequence.frame_id_numbers_present {
         header.frame_id = bits.bits(sequence.frame_id_bits)?;
+        // Validate continuity before reference deltas. Otherwise a repeated
+        // current ID also changes the expected reference ID and hides the
+        // earlier, more specific structural error.
+        validate_current_frame_id(sequence.frame_id_bits, previous_frame_id, &header)?;
     }
     header.frame_size_override = if sequence.reduced_still_picture_header {
         false
@@ -3356,18 +3361,38 @@ fn read_frame_type_fields(
         let golden = bits.bits(3)? as usize;
         header.reference_indices =
             derive_short_references(sequence, references, header.order_hint, last, golden)?;
-    } else {
-        for reference in &mut header.reference_indices {
-            *reference = bits.bits(3)? as usize;
-        }
     }
-    if sequence.frame_id_numbers_present {
-        for _ in &header.reference_indices {
-            // Pillow's pinned dav1d accepts libaom error-resilient sequences
-            // whose reference-frame IDs do not match the normative delta
-            // calculation. The fields still belong to the bitstream syntax
-            // and must be consumed to preserve every following bit offset.
-            let _ = bits.bits(sequence.delta_frame_id_bits)?;
+    // Explicit indices and their deltas are interleaved. With short
+    // signaling, the indices above are derived and only deltas are coded.
+    // Pinned dav1d src/obu.c reads and validates each pair in the same order.
+    for slot in &mut header.reference_indices {
+        if !header.frame_refs_short_signaling {
+            *slot = bits.bits(3)? as usize;
+        }
+        if sequence.frame_id_numbers_present {
+            let delta = bits
+                .bits(sequence.delta_frame_id_bits)?
+                .checked_add(1)
+                .ok_or_else(|| malformed("reference frame ID delta overflows"))?;
+            let range = 1_u32
+                .checked_shl(sequence.frame_id_bits)
+                .ok_or_else(|| malformed("reference frame ID width is invalid"))?;
+            let mask = range
+                .checked_sub(1)
+                .ok_or_else(|| malformed("reference frame ID range is empty"))?;
+            let expected = header
+                .frame_id
+                .checked_add(range)
+                .and_then(|value| value.checked_sub(delta))
+                .ok_or_else(|| malformed("reference frame ID arithmetic overflows"))?
+                & mask;
+            let reference = references
+                .get(*slot)
+                .and_then(Option::as_ref)
+                .ok_or_else(|| malformed("reference frame ID refers to an empty slot"))?;
+            if reference.frame_id != expected {
+                return Err(malformed("reference frame ID does not match its delta"));
+            }
         }
     }
     let use_reference = !header.error_resilient_mode && header.frame_size_override;
@@ -4377,8 +4402,8 @@ pub(super) fn __coverage_reduced_header_payload() -> Vec<u8> {
             sample.len(),
             &sequence,
             &std::array::from_fn(|_| None),
-            0,
-            0,
+            (0, 0),
+            None,
         ),
         "coverage fixture: parse( &data, SEQUENCE.len(), sample.len(), &sequence, &std::array::from_fn(|_| None), 0, 0, ) ",
     );
@@ -4483,7 +4508,7 @@ fn coverage_sweep_frame(
             BitReader::with_bit_end(&data, bit_end),
             "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
         );
-        let _ = parse_reader(bits, 0, sequence, references, 0, 0);
+        let _ = parse_reader(bits, 0, sequence, references, (0, 0), None);
     }
 }
 
@@ -4808,7 +4833,7 @@ fn coverage_state_paths() {
     assert!(matches!(
         coverage_read_tile_group(&rejected_entropy, &tile_input, crate::coverage_support::bit_len(tile_input.len())),
         Err(CodecError::Malformed(message))
-            if message == "invalid AV1 bitstream: decoded inter frame references an empty slot"
+            if message == "invalid AV1 bitstream: inter reference slot is empty"
     ));
     let mut accepted_entropy = FrameState::new();
     accepted_entropy.sequence = Some(sequence.clone());
@@ -4833,8 +4858,8 @@ fn coverage_state_paths() {
         0,
         &sequence,
         &std::array::from_fn(|_| None),
-        0,
-        0,
+        (0, 0),
+        None,
     );
     let _ = parse(
         &empty_data,
@@ -4842,8 +4867,8 @@ fn coverage_state_paths() {
         usize::MAX,
         &sequence,
         &std::array::from_fn(|_| None),
-        0,
-        0,
+        (0, 0),
+        None,
     );
     let mut missing_sequence = FrameState::new();
     assert!(matches!(
@@ -5385,8 +5410,8 @@ fn coverage_state_paths() {
         show_existing.len(),
         &coverage_sequence(),
         &references,
-        0,
-        0,
+        (0, 0),
+        None,
     );
     coverage_sweep_frame(&show_existing, &coverage_sequence(), &references);
     let mut missing_existing_reference = references.clone();
@@ -5397,8 +5422,8 @@ fn coverage_state_paths() {
         show_existing.len(),
         &coverage_sequence(),
         &missing_existing_reference,
-        0,
-        0,
+        (0, 0),
+        None,
     );
     let mut matching_existing = CoverageBitWriter::new();
     matching_existing.push(1, 1);
@@ -5420,8 +5445,8 @@ fn coverage_state_paths() {
         matching_existing.len(),
         &coverage_sequence(),
         &references,
-        0,
-        0,
+        (0, 0),
+        None,
     );
 }
 

@@ -1167,26 +1167,30 @@ def parse_frame_header(
                 sequence, header, references
             )
         else:
-            reference_indices = [bits.read(3) for _ in range(7)]
+            reference_indices = [0] * 7
         header["reference_indices"] = reference_indices
-        if sequence["frame_id_numbers_present"]:
-            for reference_index in reference_indices:
+        for index in range(7):
+            if not short:
+                reference_indices[index] = bits.read(3)
+            reference_index = reference_indices[index]
+            if sequence["frame_id_numbers_present"]:
+                delta_bit = bits.position
                 delta = bits.read(sequence["delta_frame_id_bits"]) + 1
                 expected = (
                     header["frame_id"] + (1 << sequence["frame_id_bits"]) - delta
                 ) & ((1 << sequence["frame_id_bits"]) - 1)
                 reference = references[reference_index]
+                header.setdefault("reference_frame_ids", []).append({
+                    "reference": index, "slot": reference_index,
+                    "delta_bit": delta_bit, "delta_bits": sequence["delta_frame_id_bits"],
+                    "delta": delta, "expected": expected,
+                    "actual": None if reference is None else reference["frame_id"],
+                })
                 if reference is None or reference["frame_id"] != expected:
                     actual = None if reference is None else reference["frame_id"]
-                    header.setdefault("reference_frame_id_mismatches", []).append(
-                        {
-                            "current": header["frame_id"],
-                            "slot": reference_index,
-                            "delta_bits": sequence["delta_frame_id_bits"],
-                            "delta": delta,
-                            "expected": expected,
-                            "actual": actual,
-                        }
+                    raise ValueError(
+                        f"reference frame ID mismatch at slot {reference_index}: "
+                        f"expected {expected}, got {actual}"
                     )
         use_reference_size = not error_resilient and frame_size_override
         read_frame_size(

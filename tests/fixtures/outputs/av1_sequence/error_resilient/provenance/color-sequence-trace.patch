@@ -1,0 +1,208 @@
+diff --git a/src/decode.c b/src/decode.c
+index fb5d23cd..b7012fc8 100644
+--- a/src/decode.c
++++ b/src/decode.c
+@@ -810,6 +810,16 @@ static int decode_b(Dav1dTaskContext *const t,
+     b->bp = bp;
+     b->bs = bs;
+ 
++    if (t->frame_thread.pass == 0)
++        printf("@BLOCK {\"kind\":\"leaf\",\"pts\":%" PRId64 ","
++               "\"frame_offset\":%u,\"tile_col\":%d,\"tile_row\":%d,"
++               "\"x4\":%d,\"y4\":%d,\"width4\":%d,\"height4\":%d,"
++               "\"block_level\":%d,\"partition\":%d,\"block_size\":%d,"
++               "\"layout\":%d,\"bpc\":%d,\"pass\":%d}\n",
++               f->tile[0].data.m.timestamp, f->frame_hdr->frame_offset,
++               ts->tiling.col, ts->tiling.row, t->bx, t->by, bw4, bh4, bl, bp,
++               bs, f->cur.p.layout, f->cur.p.bpc, t->frame_thread.pass);
++
+     const Dav1dSegmentationData *seg = NULL;
+ 
+     // segment_id (if seg_feature for skip/ref/gmv is enabled)
+@@ -2154,6 +2164,14 @@ static int decode_sb(Dav1dTaskContext *const t, const enum BlockLevel bl,
+             {
+                 return 1;
+             }
++            if (t->frame_thread.pass == 0)
++                printf("@BLOCK {\"kind\":\"partition\",\"pts\":%" PRId64 ","
++                       "\"frame_offset\":%u,\"tile_col\":%d,\"tile_row\":%d,"
++                       "\"x4\":%d,\"y4\":%d,\"block_level\":%d,"
++                       "\"context\":%d,\"partition\":%d,\"pass\":%d}\n",
++                       f->tile[0].data.m.timestamp, f->frame_hdr->frame_offset,
++                       ts->tiling.col, ts->tiling.row, t->bx, t->by, bl, ctx,
++                       bp, t->frame_thread.pass);
+             if (DEBUG_BLOCK_INFO)
+                 printf("poc=%d,y=%d,x=%d,bl=%d,ctx=%d,bp=%d: r=%d\n",
+                        f->frame_hdr->frame_offset, t->by, t->bx, bl, ctx, bp,
+@@ -3242,6 +3260,11 @@ error:
+ void dav1d_decode_frame_exit(Dav1dFrameContext *const f, int retval) {
+     const Dav1dContext *const c = f->c;
+ 
++    printf("@LIFECYCLE {\"event\":\"frame_decode_exit\",\"pts\":%" PRId64 ","
++           "\"frame_offset\":%u,\"status\":%d}\n",
++           f->n_tile_data ? f->tile[0].data.m.timestamp : INT64_MIN,
++           f->frame_hdr ? f->frame_hdr->frame_offset : 0, retval);
++
+     if (f->sr_cur.p.data[0])
+         atomic_init(&f->task_thread.error, 0);
+ 
+diff --git a/src/obu.c b/src/obu.c
+index da5002ae..619f8eb4 100644
+--- a/src/obu.c
++++ b/src/obu.c
+@@ -28,6 +28,7 @@
+ #include "config.h"
+ 
+ #include <errno.h>
++#include <inttypes.h>
+ #include <limits.h>
+ #include <stdio.h>
+ 
+@@ -45,6 +46,53 @@
+ #include "src/ref.h"
+ #include "src/thread_task.h"
+ 
++static unsigned sequence_trace_header_index;
++static unsigned sequence_trace_last_header_index;
++
++static void sequence_trace_reference(const Dav1dContext *const c, const int slot)
++{
++    const Dav1dFrameHeader *const hdr = c->refs[slot].p.p.frame_hdr;
++    if (!hdr) {
++        fputs("null", stdout);
++        return;
++    }
++    printf("{\"slot\":%d,\"frame_type\":%d,\"frame_offset\":%u,"
++           "\"frame_id\":%u,\"show_frame\":%u,\"showable_frame\":%u,"
++           "\"width\":%d,\"height\":%d,\"render_width\":%d,"
++           "\"render_height\":%d,\"refresh_frame_flags\":%u}",
++           slot, hdr->frame_type, hdr->frame_offset, hdr->frame_id,
++           hdr->show_frame, hdr->showable_frame, hdr->width[1], hdr->height,
++           hdr->render_width, hdr->render_height, hdr->refresh_frame_flags);
++}
++
++static void sequence_trace_frame_header(const Dav1dContext *const c,
++                                        const Dav1dData *const in,
++                                        const int obu_type)
++{
++    const Dav1dFrameHeader *const hdr = c->frame_hdr;
++    const unsigned index = sequence_trace_header_index++;
++    sequence_trace_last_header_index = index;
++    printf("@LIFECYCLE {\"event\":\"frame_header\","
++           "\"header_index\":%u,\"obu_type\":%d,\"pts\":%" PRId64 ","
++           "\"frame_type\":%d,\"frame_offset\":%u,\"frame_id\":%u,"
++           "\"show_existing_frame\":%u,\"existing_frame_idx\":%u,"
++           "\"show_frame\":%u,\"showable_frame\":%u,"
++           "\"error_resilient_mode\":%u,\"refresh_frame_flags\":%u,"
++           "\"width\":%d,\"height\":%d,\"render_width\":%d,"
++           "\"render_height\":%d,\"references_before\":[",
++           index, obu_type, in->m.timestamp, hdr->frame_type,
++           hdr->frame_offset, hdr->frame_id, hdr->show_existing_frame,
++           hdr->show_existing_frame ? hdr->existing_frame_idx : 0,
++           hdr->show_frame, hdr->showable_frame, hdr->error_resilient_mode,
++           hdr->refresh_frame_flags, hdr->width[1], hdr->height,
++           hdr->render_width, hdr->render_height);
++    for (int slot = 0; slot < 8; slot++) {
++        if (slot) putchar(',');
++        sequence_trace_reference(c, slot);
++    }
++    puts("]}");
++}
++
+ static int check_trailing_bits(GetBits *const gb,
+                                const int strict_std_compliance)
+ {
+@@ -589,9 +637,17 @@ static int parse_frame_hdr(Dav1dContext *const c, GetBits *const gb) {
+             if (!hdr->frame_ref_short_signaling)
+                 hdr->refidx[i] = dav1d_get_bits(gb, 3);
+             if (seqhdr->frame_id_numbers_present) {
++                const unsigned trace_delta_bit = dav1d_get_bits_pos(gb);
+                 const unsigned delta_ref_frame_id = dav1d_get_bits(gb, seqhdr->delta_frame_id_n_bits) + 1;
+                 const unsigned ref_frame_id = (hdr->frame_id + (1 << seqhdr->frame_id_n_bits) - delta_ref_frame_id) & ((1 << seqhdr->frame_id_n_bits) - 1);
+                 Dav1dFrameHeader *const ref_frame_hdr = c->refs[hdr->refidx[i]].p.p.frame_hdr;
++                printf("@LIFECYCLE {\"event\":\"reference_frame_id\",\"current\":%u,"
++                       "\"reference\":%d,\"slot\":%d,\"delta_bit\":%u,\"delta_bits\":%u,"
++                       "\"delta\":%u,\"expected\":%u,\"actual\":%d,\"short_signaling\":%u}\n",
++                       hdr->frame_id, i, hdr->refidx[i], trace_delta_bit,
++                       seqhdr->delta_frame_id_n_bits, delta_ref_frame_id, ref_frame_id,
++                       ref_frame_hdr ? (int)ref_frame_hdr->frame_id : -1,
++                       hdr->frame_ref_short_signaling);
+                 if (!ref_frame_hdr || ref_frame_hdr->frame_id != ref_frame_id) goto error;
+             }
+         }
+@@ -1284,6 +1340,7 @@ ptrdiff_t dav1d_parse_obus(Dav1dContext *const c, Dav1dData *const in) {
+             c->frame_hdr = NULL;
+             goto error;
+         }
++        sequence_trace_frame_header(c, in, type);
+         for (int n = 0; n < c->n_tile_data; n++)
+             dav1d_data_unref_internal(&c->tile[n].data);
+         c->n_tile_data = 0;
+@@ -1636,6 +1693,13 @@ ptrdiff_t dav1d_parse_obus(Dav1dContext *const c, Dav1dData *const in) {
+                     dav1d_ref_dec(&c->refs[i].refmvs);
+                 }
+             }
++            printf("@LIFECYCLE {\"event\":\"show_existing_queued\","
++                   "\"header_index\":%u,\"pts\":%" PRId64 ","
++                   "\"existing_frame_idx\":%u,\"frame_type\":%d,"
++                   "\"show_frame\":%u,\"showable_frame\":%u}\n",
++                   sequence_trace_last_header_index, in->m.timestamp,
++                   c->frame_hdr->existing_frame_idx, c->frame_hdr->frame_type,
++                   c->frame_hdr->show_frame, c->frame_hdr->showable_frame);
+             c->frame_hdr = NULL;
+         } else if (c->n_tiles == c->frame_hdr->tiling.cols * c->frame_hdr->tiling.rows) {
+             switch (c->frame_hdr->frame_type) {
+@@ -1657,8 +1721,23 @@ ptrdiff_t dav1d_parse_obus(Dav1dContext *const c, Dav1dData *const in) {
+             }
+             if (!c->n_tile_data)
+                 goto error;
++            const int trace_frame_type = c->frame_hdr->frame_type;
++            const unsigned trace_frame_offset = c->frame_hdr->frame_offset;
++            const unsigned trace_show_frame = c->frame_hdr->show_frame;
++            const unsigned trace_showable_frame = c->frame_hdr->showable_frame;
++            const unsigned trace_refresh_frame_flags = c->frame_hdr->refresh_frame_flags;
++            const int trace_tile_groups = c->n_tile_data;
+             if ((res = dav1d_submit_frame(c)) < 0)
+                 return res;
++            printf("@LIFECYCLE {\"event\":\"frame_submitted\","
++                   "\"header_index\":%u,\"pts\":%" PRId64 ","
++                   "\"frame_type\":%d,\"frame_offset\":%u,"
++                   "\"show_frame\":%u,\"showable_frame\":%u,"
++                   "\"refresh_frame_flags\":%u,\"tile_groups\":%d}\n",
++                   sequence_trace_last_header_index, in->m.timestamp,
++                   trace_frame_type, trace_frame_offset, trace_show_frame,
++                   trace_showable_frame, trace_refresh_frame_flags,
++                   trace_tile_groups);
+             assert(!c->n_tile_data);
+             c->frame_hdr = NULL;
+             c->n_tiles = 0;
+diff --git a/tools/output/output.c b/tools/output/output.c
+index f8910d48..86e79969 100644
+--- a/tools/output/output.c
++++ b/tools/output/output.c
+@@ -29,6 +29,7 @@
+ #include "cli_config.h"
+ 
+ #include <errno.h>
++#include <inttypes.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -230,6 +231,17 @@ static void assemble_filename(MuxerContext *const ctx, char *const filename,
+ }
+ 
+ int output_write(MuxerContext *const ctx, Dav1dPicture *const p) {
++    static unsigned sequence_trace_output_index;
++    const Dav1dFrameHeader *const hdr = p->frame_hdr;
++    printf("@OUTPUT {\"event\":\"picture_output\",\"output_index\":%u,"
++           "\"pts\":%" PRId64 ",\"duration\":%" PRId64 ","
++           "\"width\":%d,\"height\":%d,\"layout\":%d,\"bpc\":%d,"
++           "\"frame_header_available\":%d,\"frame_type\":%d,"
++           "\"show_frame\":%d,\"showable_frame\":%d}\n",
++           sequence_trace_output_index++, p->m.timestamp, p->m.duration,
++           p->p.w, p->p.h, p->p.layout, p->p.bpc, hdr != NULL,
++           hdr ? hdr->frame_type : -1, hdr ? hdr->show_frame : -1,
++           hdr ? hdr->showable_frame : -1);
+     int res;
+ 
+     if (ctx->one_file_per_frame && ctx->impl->write_header) {

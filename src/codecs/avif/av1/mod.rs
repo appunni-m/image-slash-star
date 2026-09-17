@@ -295,12 +295,6 @@ pub(super) fn visit_sequence_frames(
             None
         };
 
-        if sequence.color.samples.len() > 1 && color_sequence.frame_id_numbers_present {
-            // Preserve complete frame-ID validation before the existing
-            // error-resilient presentation gap. An earlier display or color
-            // capability gap must not conceal a later repeated current ID.
-            continue;
-        }
         if !(if color_sequence.monochrome {
             monochrome_primary_sequence_supported(&color_sequence)
         } else {
@@ -340,11 +334,6 @@ pub(super) fn visit_sequence_frames(
         let portable = sequence_portable_display(display, color_sequence, alpha_plane, dimensions)?;
         crate::codecs::error::check_cancelled(token)?;
         visit(index, portable)?;
-    }
-    if sequence.color.samples.len() > 1 && color_state.finish()?.frame_id_numbers_present {
-        return Err(sequence_presentation_gap(
-            "cannot present error-resilient frame references in the pure-Rust backend",
-        ));
     }
     Ok(())
 }
