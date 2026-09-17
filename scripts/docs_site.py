@@ -104,9 +104,9 @@ def check_sources(root: Path, config: dict) -> None:
     readme = (root / "README.md").read_text()
     end = readme.split("## Acknowledgements")[-1]
     if "## Acknowledgements" not in readme or not all(
-        link in end for link in ("https://github.com/bgunebakan/puhu", "https://python-pillow.org/")
+        link in end for link in ("[NOTICE.md](NOTICE.md)",)
     ):
-        errors.append("README must end with the Puhu and Pillow acknowledgements")
+        errors.append("README must end with the codec author acknowledgements and NOTICE link")
     if re.search(r"^## ", end, re.MULTILINE):
         errors.append("acknowledgements must be the last README section")
     if config["published_release"]["version"] not in readme:

@@ -12,7 +12,7 @@ source builds, tests, fixtures, benchmark collection, and release procedures.
 - [ ] Verify examples against the published package, not just the workspace source.
 - [ ] Keep package names, release links, API references, and platform requirements accurate.
 - [ ] Preserve historical measurements, source revisions, and incomplete results.
-- [ ] Keep attribution, licenses, and the final Puhu/Pillow acknowledgements.
+- [ ] Keep attribution, licenses, and the final codec-author acknowledgements.
 - [ ] Preview the site at narrow and wide widths; check search and navigation.
 
 ## Release freshness
