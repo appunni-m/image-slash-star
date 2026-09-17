@@ -25,7 +25,7 @@ identified in comments and for copied Pillow fixtures.
 | bytemuck | crate 1.25.1; crates.io package SHA-256 `d6aedf8ae72766347502cf3cb4f41cf5e9cc37d28bee90f1fdaaae15f9cf9424` | Sole Cargo dependency | `bytemuck/LICENSE-*` (Zlib OR Apache-2.0 OR MIT) |
 | dav1d | 1.5.3, commit `b546257f770768b2c88258c533da38b91a06f737` | Portable AV1 decoder source reference and fixture oracle identity | `dav1d/COPYING` (BSD-2-Clause) |
 | image-webp | crate 0.2.4; crates.io package SHA-256 `525e9ff3e1a4be2fbea1fdf0e98686a6d98b4d8f937e1bf7402245af1909e8c3` | Pure-Rust WebP decoder base | `image-webp/LICENSE-*` (MIT OR Apache-2.0) |
-| libaom | 3.13.2, commit `ad44980d7f3c7a2605c25d51ea96946949000841` | Portable AV1 encoder source reference and fixture oracle identity | `libaom/LICENSE` (BSD-2-Clause) and `libaom/PATENTS`; `PATENTS` is also retained at the crate root |
+| libaom | 3.13.2, commit `ad44980d7f3c7a2605c25d51ea96946949000841` | Portable AV1 encoder source reference, full-file entropy traces and unmodified native replay oracle | `libaom/LICENSE` (BSD-2-Clause) and `libaom/PATENTS`; `PATENTS` is also retained at the crate root |
 | libavif | 1.4.1, commit `6543b22b5bc706c53f038a16fe515f921556d9b3` | AVIF container/parser/writer source reference and native fixtures | `libavif/LICENSE` (complete upstream license bundle) |
 | libjpeg-turbo | 3.1.4.1, commit `9217719d3a58633923b096af4c1d50d304768a64` | JPEG encoder/decoder ports | `libjpeg-turbo/LICENSE.md` and `libjpeg-turbo/README.ijg` (IJG and BSD-style terms) |
 | libvpx | 1.15.2, commit `d168454ecd099805c675d4a98c66f4891373302a`; `vp8/common/quant_common.c` SHA-256 `fc8471698f061e5dcb9e7caef0df3bceec9921ec3aada2e1dc4c3348a5d7e8f2` | VP8 quantization-table source named by `src/codecs/webp/encode/vp8/quant.rs` | `libvpx/LICENSE` (BSD-3-Clause) and `libvpx/PATENTS` (WebM patent grant) |
@@ -76,6 +76,13 @@ The old copied public libavif header and C bridge were removed from the
 runtime and package surface. AVIF code in `src/codecs/avif/` is safe Rust;
 source-derived translations are modified Rust, not linked upstream object
 code.
+
+`scripts/av1_encoder_oracle/` contains development-only observers and native
+fixture/replay harnesses. The collector copies the clean pinned libaom tree
+before instrumentation, compares complete output with an unmodified build,
+and binds traces to independently inspected AVIF tiles. Native libraries,
+observers and fixture bundles are excluded from the published crate and never
+provide a runtime codec fallback.
 
 Run `python3 scripts/verify_third_party_licenses.py` to verify retained text
 hashes, the root patent-license copy, and required notice references.

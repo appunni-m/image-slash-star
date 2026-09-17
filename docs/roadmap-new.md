@@ -201,6 +201,26 @@ All 16 strict native/WASM ordinary/coverage compile configurations pass,
 including native no-codec/default lanes. Rustdoc, formatting and static
 roadmap/provenance checks pass; no Rust runtime result is inferred from them.
 
+## AV1 encoder entropy oracle
+
+The [native encoder corpus](../tests/fixtures/outputs/av1_encoder/index.json)
+now retains ten complete standalone libavif/libaom files and twelve uniquely
+bound tile-writer traces. It covers monochrome and all three chroma layouts,
+alpha, multiple tiles, lossless output and 8/10/12-bit samples. Instrumented
+and original encodes repeat exactly; unmodified native entropy replay matches
+logical state, adaptive CDFs and final bytes. Pinned Pillow/dav1d supplies
+decoded pixels. The 76 hashed artifacts total 1,468,557 bytes, including
+losslessly compressed traces with expanded hashes.
+
+Committed tile evidence includes real normalization flushes and two-byte
+carry propagation. Separate native algorithm models cover probability limits,
+all alphabets from 2 through 16, valid CDF plateaus, adaptation thresholds and
+termination. These files are not Pillow `save()` parity evidence. The next
+implementation must derive entropy contexts from semantic block/transform
+decisions; trace events remain fixture inputs, never a production token log.
+Rust entropy serialization, tile syntax, analysis and compression remain open.
+All 32 encode rows stay planned and behavioral/coverage execution stays deferred.
+
 ## Complete open-task inventory
 
 The retained ledger contains **244 active finding rows**.

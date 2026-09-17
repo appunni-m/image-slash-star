@@ -3,6 +3,29 @@
 Fixture declarations, executed comparisons, source coverage, and release
 publication have different identities and denominators.
 
+The [AV1 encoder entropy corpus](../tests/fixtures/outputs/av1_encoder/index.json)
+retains ten complete files from standalone pinned libavif/libaom builds, with
+Pillow/dav1d decoded pixels. It contains twelve independently inspected tile
+payloads: monochrome, 4:2:0/4:2:2/4:4:4, alpha, two-column tiling, lossless,
+and 8/10/12-bit samples. Original and instrumented builds each encode every
+file twice with identical results. All twelve tile payloads bind uniquely to
+finished native writers; unmodified libaom replay matches every logical state,
+CDF update and final byte. This is native encoder evidence, not Pillow `save()`
+parity or a Rust execution result.
+
+The 76 hashed artifacts total 1,468,557 bytes. Gzip traces retain expanded
+lengths and hashes; prepared planes, replay inputs, syntax reports, complete
+files, pixels, instrumentation patch and build identities remain separate.
+Committed tiles exhibit 252 normalization flushes and 89 carry changes,
+including a two-byte carry. Separately labelled native models cover alphabets
+2–16, probability endpoints, CDF plateaus, frozen adaptation, counter
+thresholds and empty/short termination. They are not full-file syntax claims.
+The generator is `scripts/generate_av1_encoder_refs.py`; its C observers under
+`scripts/av1_encoder_oracle/` are development tools, excluded from the crate.
+The Rust entropy/tile writer, image analysis and full AV1 compressor remain
+unimplemented. No roadmap or matrix status is promoted; Rust behavioral tests
+and managed coverage remain deferred.
+
 The 2026-09-17 private still-container candidate has a
 [28-file native mux corpus](../tests/fixtures/outputs/avif_mux/index.json).
 Pinned Pillow/libavif/libaom observations repeat exactly, including complete

@@ -1,0 +1,1489 @@
+{
+  "artifacts": [
+    {
+      "bytes": 661,
+      "path": "alpha/encoded.avif",
+      "sha256": "f6a3c3350e0e2238de1b4891fb235128762b5cebdc057ba914ca658a4cb33533"
+    },
+    {
+      "bytes": 256,
+      "path": "alpha/pixels.bin",
+      "sha256": "7d128b02a8a5effab833eec439c6a7ce80b5f41c57bb9d9e46187b816ee67f17"
+    },
+    {
+      "bytes": 512,
+      "path": "alpha/planes.u16le",
+      "sha256": "fc8e5846a4aa6e400e4a355fd12b96e28ae8c173d15d828b2e3180ef0640527d"
+    },
+    {
+      "bytes": 22863,
+      "path": "alpha/replay.txt",
+      "sha256": "b19f0d634fda0de57d391e1382fc6fed1551615793b073038560b384e954cfe9"
+    },
+    {
+      "bytes": 40842,
+      "path": "alpha/replayed.jsonl.gz",
+      "sha256": "d402ea865ec357fbf1c00042a48603ce5c190b0d225c08d08c2af695a83d8d60"
+    },
+    {
+      "bytes": 32928,
+      "path": "alpha/syntax.json",
+      "sha256": "c541f3b1f2f039097911a907f32127a3f1fae279d474477f163c2d5672a09143"
+    },
+    {
+      "bytes": 40842,
+      "path": "alpha/trace.jsonl.gz",
+      "sha256": "d402ea865ec357fbf1c00042a48603ce5c190b0d225c08d08c2af695a83d8d60"
+    },
+    {
+      "bytes": 3114,
+      "path": "aom-plain-config.h",
+      "sha256": "6ab4157cd2fc5fdb5361ccaa5b3cd471694d679a57ef5c1bc76948e3fa2eefb2"
+    },
+    {
+      "bytes": 3114,
+      "path": "aom-trace-config.h",
+      "sha256": "6ab4157cd2fc5fdb5361ccaa5b3cd471694d679a57ef5c1bc76948e3fa2eefb2"
+    },
+    {
+      "bytes": 64562,
+      "path": "boundaries/replay.txt",
+      "sha256": "901eaa9c1ac266685a566f31fe4efa52f9f5767deaa6332d7228db36c4194942"
+    },
+    {
+      "bytes": 117674,
+      "path": "boundaries/replayed.jsonl.gz",
+      "sha256": "d2c17269ecddf1c52c932300f0858ce47b7846527937a76ef7173cc63dd99225"
+    },
+    {
+      "bytes": 117674,
+      "path": "boundaries/trace.jsonl.gz",
+      "sha256": "d2c17269ecddf1c52c932300f0858ce47b7846527937a76ef7173cc63dd99225"
+    },
+    {
+      "bytes": 422,
+      "path": "high10_420/encoded.avif",
+      "sha256": "db6610f9a49e1cb7aae6cb65de9369703defffd95eec2db2df897ab70c1f34f9"
+    },
+    {
+      "bytes": 189,
+      "path": "high10_420/pixels.bin",
+      "sha256": "686fc29f38109e39b903300350625ce4f4cf02c5ff3b48cc2002c25ab08dcc3a"
+    },
+    {
+      "bytes": 206,
+      "path": "high10_420/planes.u16le",
+      "sha256": "f7c51cbead62712b8e9261e67a2082b6e89e16ccf3c43875ed79acfb914795fb"
+    },
+    {
+      "bytes": 15654,
+      "path": "high10_420/replay.txt",
+      "sha256": "a567a680e3a9e60603c43046227a00478a73b51024d0416506da79570515bcf4"
+    },
+    {
+      "bytes": 27995,
+      "path": "high10_420/replayed.jsonl.gz",
+      "sha256": "20847bd7cae767d053494ddc93827868af54c3751e0181c7144d176b03262d2d"
+    },
+    {
+      "bytes": 16535,
+      "path": "high10_420/syntax.json",
+      "sha256": "3ada3e927b0632da242f51f6583508c7018dfd9b645f013868db7a932f69c303"
+    },
+    {
+      "bytes": 27995,
+      "path": "high10_420/trace.jsonl.gz",
+      "sha256": "20847bd7cae767d053494ddc93827868af54c3751e0181c7144d176b03262d2d"
+    },
+    {
+      "bytes": 448,
+      "path": "high12_422/encoded.avif",
+      "sha256": "8b0ceb1d9ca87d861a8c863dc04b9bb7103c41e03b23d5dac60acd5bffa3e7b4"
+    },
+    {
+      "bytes": 189,
+      "path": "high12_422/pixels.bin",
+      "sha256": "b1a15ec2025a2cb9b5df686de79630fdd33da0d177a1d53adee34622a0031c99"
+    },
+    {
+      "bytes": 266,
+      "path": "high12_422/planes.u16le",
+      "sha256": "77cf4f096cb885b1fa1a27c88e564f33d51625c85a152d97127532bc0fcfeeda"
+    },
+    {
+      "bytes": 18605,
+      "path": "high12_422/replay.txt",
+      "sha256": "b961a24990a9cca4fba8586a3e78411612468a0b674f669c548ba532f0df04bc"
+    },
+    {
+      "bytes": 32895,
+      "path": "high12_422/replayed.jsonl.gz",
+      "sha256": "b72fe8d31b574bf63c5e7a9378af46caaf53c1afaa3ad14ec11f073758e26ec9"
+    },
+    {
+      "bytes": 16529,
+      "path": "high12_422/syntax.json",
+      "sha256": "f09792b02291941995841b6abbafa559e95da244f8b626d592fa809d853f44e1"
+    },
+    {
+      "bytes": 32895,
+      "path": "high12_422/trace.jsonl.gz",
+      "sha256": "b72fe8d31b574bf63c5e7a9378af46caaf53c1afaa3ad14ec11f073758e26ec9"
+    },
+    {
+      "bytes": 459,
+      "path": "high12_444/encoded.avif",
+      "sha256": "ec83079ba7e930bdd1047b8d9f9f36bd8b70ea5d5f81d7eb21298ba31f53abf1"
+    },
+    {
+      "bytes": 189,
+      "path": "high12_444/pixels.bin",
+      "sha256": "b2f0bdb2fad63059cc75376a743dacb98a036ef550ef63bd3570e70c7083e81f"
+    },
+    {
+      "bytes": 378,
+      "path": "high12_444/planes.u16le",
+      "sha256": "6d61414fe5704cd68dcfe7239e5924e2d1637416928f0d5ba5bd04638ab83849"
+    },
+    {
+      "bytes": 19999,
+      "path": "high12_444/replay.txt",
+      "sha256": "34a7b4f238835ff9d896f3b4f2977d7454a06c96f68498c0b935bda1dcc308af"
+    },
+    {
+      "bytes": 35722,
+      "path": "high12_444/replayed.jsonl.gz",
+      "sha256": "6e14a4665e4d5ef494c09a6075e2dfc6cebe53bfd8fc4d9a4802cf2163a1563a"
+    },
+    {
+      "bytes": 16529,
+      "path": "high12_444/syntax.json",
+      "sha256": "8667675bc1db19f9e2744b864f7f19aed6c93d5e10da7da8ea0a3ff1921c0199"
+    },
+    {
+      "bytes": 35722,
+      "path": "high12_444/trace.jsonl.gz",
+      "sha256": "6e14a4665e4d5ef494c09a6075e2dfc6cebe53bfd8fc4d9a4802cf2163a1563a"
+    },
+    {
+      "bytes": 1141,
+      "path": "instrumentation.patch",
+      "sha256": "86c31518cbd44edd924e60838fee6f59602d23fb217175ffeeca94f36ab89a7f"
+    },
+    {
+      "bytes": 382,
+      "path": "mono_lossless/encoded.avif",
+      "sha256": "8469cdc4efc5624ad9be5319c70dd561e503c90329092fa4bed68dec56c76f5e"
+    },
+    {
+      "bytes": 192,
+      "path": "mono_lossless/pixels.bin",
+      "sha256": "f68a6b450ecfebf46af5a6db60c75b7f2e1d991298fadf66c136e03661f26356"
+    },
+    {
+      "bytes": 128,
+      "path": "mono_lossless/planes.u16le",
+      "sha256": "510e3d913caa127cfb2db082447628280fec8d689e93c3be2d9f636cba8fbb33"
+    },
+    {
+      "bytes": 14861,
+      "path": "mono_lossless/replay.txt",
+      "sha256": "932cada48b7236d466049406864247d96ee80e8163ab1bc71734733114999450"
+    },
+    {
+      "bytes": 27094,
+      "path": "mono_lossless/replayed.jsonl.gz",
+      "sha256": "62685035240d2e975bf4bbd33463ce2c1f76c9efc8e649412fef17d635df350c"
+    },
+    {
+      "bytes": 16439,
+      "path": "mono_lossless/syntax.json",
+      "sha256": "b38e1f686abd70fa6adafd0994ac64fb35a9171a986d4eb18eb3090b3ac28bc9"
+    },
+    {
+      "bytes": 27094,
+      "path": "mono_lossless/trace.jsonl.gz",
+      "sha256": "62685035240d2e975bf4bbd33463ce2c1f76c9efc8e649412fef17d635df350c"
+    },
+    {
+      "bytes": 305,
+      "path": "mono_tiny/encoded.avif",
+      "sha256": "34fff010667ec49ec91a60543de6ec39d09e38ae8106e70257b0d95c1d97aeaf"
+    },
+    {
+      "bytes": 18,
+      "path": "mono_tiny/pixels.bin",
+      "sha256": "ab2cd7031df0764404d5f13662faa88b0dca99e1d7cc04d2518e13d93847f52f"
+    },
+    {
+      "bytes": 12,
+      "path": "mono_tiny/planes.u16le",
+      "sha256": "2b821dd1f38432c7be7e87d666f86caa4f809138bca7f26bc03fcc88ed960786"
+    },
+    {
+      "bytes": 1630,
+      "path": "mono_tiny/replay.txt",
+      "sha256": "cb491fcc70fe7ffe2eca4b951eca81d895ca40b36cc44084e9bf79f3791706e9"
+    },
+    {
+      "bytes": 3140,
+      "path": "mono_tiny/replayed.jsonl.gz",
+      "sha256": "287138bf5b25c36920436780f2bbd990f6c92c05270f1c6549e9e65921bfc87e"
+    },
+    {
+      "bytes": 16486,
+      "path": "mono_tiny/syntax.json",
+      "sha256": "c91a09644fedf8b191f2c6aecbe1ba9202404234d4c3b8dcd0b94a15da92dc72"
+    },
+    {
+      "bytes": 3140,
+      "path": "mono_tiny/trace.jsonl.gz",
+      "sha256": "287138bf5b25c36920436780f2bbd990f6c92c05270f1c6549e9e65921bfc87e"
+    },
+    {
+      "bytes": 312,
+      "path": "two_tiles/encoded.avif",
+      "sha256": "fe27de3e9be2d73a1021799e7e06b1e4c7b3bac9ea609b013c783e893d641b90"
+    },
+    {
+      "bytes": 24576,
+      "path": "two_tiles/pixels.bin",
+      "sha256": "2166181937444766611620cdc9f72d81f4b189218fa638d1e01ff58f1b56e219"
+    },
+    {
+      "bytes": 16384,
+      "path": "two_tiles/planes.u16le",
+      "sha256": "0b1e972390e91cf9e84bfadbf078f6d21712d763bd24f94cc1138404e6e31a1a"
+    },
+    {
+      "bytes": 2666,
+      "path": "two_tiles/replay.txt",
+      "sha256": "288984c41ec114af49d72659acc2560134fedaa842c3e007c435c6f1025dbfc9"
+    },
+    {
+      "bytes": 3272,
+      "path": "two_tiles/replayed.jsonl.gz",
+      "sha256": "35107a493a8392ee8fa70bb75cbc2ea052c8e450a6c826c5a060df6dab8be88f"
+    },
+    {
+      "bytes": 17287,
+      "path": "two_tiles/syntax.json",
+      "sha256": "bcaf1e8f4299141cec162c3429ee24372f64abd64165b2887e7e4cd244f4bfb0"
+    },
+    {
+      "bytes": 3272,
+      "path": "two_tiles/trace.jsonl.gz",
+      "sha256": "35107a493a8392ee8fa70bb75cbc2ea052c8e450a6c826c5a060df6dab8be88f"
+    },
+    {
+      "bytes": 598,
+      "path": "yuv420/encoded.avif",
+      "sha256": "f353efd41ed5b2898a3ffeded965c8f10596292c455f116d21ffa9750c6aa98f"
+    },
+    {
+      "bytes": 663,
+      "path": "yuv420/pixels.bin",
+      "sha256": "aafff0dd55cc7a50954ae9906affb224fcef4ed4427907f29bced1a3f2558c73"
+    },
+    {
+      "bytes": 694,
+      "path": "yuv420/planes.u16le",
+      "sha256": "d05da6b2a33fee29927a5c99130937c563f6169d22f4d5323f0c17dddfa0169e"
+    },
+    {
+      "bytes": 38383,
+      "path": "yuv420/replay.txt",
+      "sha256": "509e3d3a58ac98a085090fd731a0f85f5a86a544c19e6f3b17306bf35430a9c8"
+    },
+    {
+      "bytes": 72895,
+      "path": "yuv420/replayed.jsonl.gz",
+      "sha256": "33c479e045b7a9adba60ff40195da311ec5679f33baa2a5e03910b661b9e1ff8"
+    },
+    {
+      "bytes": 16575,
+      "path": "yuv420/syntax.json",
+      "sha256": "7be09304c21742b1434191883080370aebe348ef63eea6baaa56214520778f5d"
+    },
+    {
+      "bytes": 72895,
+      "path": "yuv420/trace.jsonl.gz",
+      "sha256": "33c479e045b7a9adba60ff40195da311ec5679f33baa2a5e03910b661b9e1ff8"
+    },
+    {
+      "bytes": 657,
+      "path": "yuv422/encoded.avif",
+      "sha256": "92352395a616285a4d907a38635ae1aa872fb968f5dbf82e082533f65b80d06e"
+    },
+    {
+      "bytes": 663,
+      "path": "yuv422/pixels.bin",
+      "sha256": "fe8c6181d3369c2640bb89c68aa4db65d8d39f177cbaaa16d000578dae053f88"
+    },
+    {
+      "bytes": 910,
+      "path": "yuv422/planes.u16le",
+      "sha256": "4528c3fa744ad4078c5cb2143b0fd19c95d79822029430a4f0b855ba8c716ced"
+    },
+    {
+      "bytes": 46166,
+      "path": "yuv422/replay.txt",
+      "sha256": "3cdbdafff93322d714791391aa6a1c985697480e4d2ed83f900fc02f2d1a17f1"
+    },
+    {
+      "bytes": 90458,
+      "path": "yuv422/replayed.jsonl.gz",
+      "sha256": "b40dc7df367569393b34e98071a44dc1e40607a5bcf376db5f2cb0ea6befee5a"
+    },
+    {
+      "bytes": 16565,
+      "path": "yuv422/syntax.json",
+      "sha256": "5f046bc25f518fef78e09d17ea8653290f8a88c175d3b20433e637ca18605e68"
+    },
+    {
+      "bytes": 90458,
+      "path": "yuv422/trace.jsonl.gz",
+      "sha256": "b40dc7df367569393b34e98071a44dc1e40607a5bcf376db5f2cb0ea6befee5a"
+    },
+    {
+      "bytes": 441,
+      "path": "yuv444/encoded.avif",
+      "sha256": "f69c7aabe63c561590d256561852e4f769bfb6b90cdf0eb30f0a423c54b1502b"
+    },
+    {
+      "bytes": 192,
+      "path": "yuv444/pixels.bin",
+      "sha256": "7c6fcd4ab6e39844241cfac0a328a604172c20ca83e5a25786abf4c8261a214c"
+    },
+    {
+      "bytes": 384,
+      "path": "yuv444/planes.u16le",
+      "sha256": "3478851a19d57b5c36850b75e11d3bd98e2dc8d1e38007f86ccd9683211d78b1"
+    },
+    {
+      "bytes": 16598,
+      "path": "yuv444/replay.txt",
+      "sha256": "7209f8170c0d9622195ded3cca34f846f9df173fcb9c2ca3f2a289eb854c34d5"
+    },
+    {
+      "bytes": 30570,
+      "path": "yuv444/replayed.jsonl.gz",
+      "sha256": "d0c3da9cfd5317d2d3d5bc016114e19cf1ff600423ac2777f48544143b72f9e7"
+    },
+    {
+      "bytes": 16528,
+      "path": "yuv444/syntax.json",
+      "sha256": "7487447371f2a7a5b90072284a40cca5f9f040591a6d23debb464fdbb8bc9e4a"
+    },
+    {
+      "bytes": 30570,
+      "path": "yuv444/trace.jsonl.gz",
+      "sha256": "d0c3da9cfd5317d2d3d5bc016114e19cf1ff600423ac2777f48544143b72f9e7"
+    }
+  ],
+  "boundary_models": {
+    "observations": {
+      "alphabets": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "bool_q15_max": 32767,
+      "bool_q15_min": 1,
+      "counts": {
+        "adaptation_15_16": 15,
+        "adaptation_31_32": 15,
+        "adaptation_32_32": 345,
+        "adaptation_disabled": 15,
+        "bool": 2084,
+        "carry_prefix_change": 11,
+        "cdf": 135,
+        "cdf_plateau": 133,
+        "finish": 25,
+        "longest_carry_prefix_change": 1,
+        "normalization_flush": 176,
+        "start": 25,
+        "symbol": 615
+      },
+      "termination_appended_bytes": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    "scope": "valid native algorithm models, not full-file syntax witnesses"
+  },
+  "build": {
+    "aom_options": [
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DAOM_TARGET_CPU=generic",
+      "-DENABLE_TESTS=OFF",
+      "-DENABLE_DOCS=OFF",
+      "-DENABLE_TOOLS=OFF",
+      "-DENABLE_EXAMPLES=OFF",
+      "-DCONFIG_AV1_DECODER=0",
+      "-DCONFIG_MULTITHREAD=0"
+    ],
+    "avif_options": [
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DBUILD_SHARED_LIBS=OFF",
+      "-DAVIF_CODEC_AOM=SYSTEM",
+      "-DAVIF_CODEC_AOM_DECODE=OFF",
+      "-DAVIF_CODEC_DAV1D=OFF",
+      "-DAVIF_LIBYUV=OFF",
+      "-DAVIF_BUILD_APPS=OFF",
+      "-DAVIF_BUILD_TESTS=OFF"
+    ],
+    "binary_sha256": {
+      "encode-plain": "c6eca4070ba6643a8d6ff1251f32a0f6a26c5903c5f0933aca97c2ff2cfbe8a0",
+      "encode-trace": "f3a3b78e2a7f45dfb3792dcfade6bc1c71dcd89ba3cd40316b83cec41cda125c",
+      "libavif.a": "ef4e6b9dcd1d78a4aeacb7456cf1aa9b404cabf09e1bf075bbf7ee66def13226",
+      "plain": "cd3b8d1458ff59c44bdb228ab7e43f0c397ea90bff667c96912f6c3dc0db9b95",
+      "replay": "3872e677d802be81d9d6d27a33502fb964b66b9fcdbe93ed309cfbd37a8f0fa8",
+      "trace": "909b4453c50c561758fdb1253a17f9bf57988f9262e2515e6a129fd38d542977"
+    },
+    "tools": {
+      "cc": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+      "cmake": "cmake version 4.4.0\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake).",
+      "cxx": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+    }
+  },
+  "cases": [
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 15,
+            "logical_offset": 21,
+            "physical_spans": [
+              {
+                "length": 15,
+                "offset": 290
+              }
+            ],
+            "sha256": "cff9514c635371957d42435838e122cd482dc1a95abf28e6eb011f6be2100dbc",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        2,
+        3
+      ],
+      "id": "mono_tiny",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 3,
+          "offset": 0,
+          "width": 2
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 73,
+      "pixel_format": 4,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 97,
+            "logical_offset": 16,
+            "physical_spans": [
+              {
+                "length": 97,
+                "offset": 285
+              }
+            ],
+            "sha256": "9e03140dfb0499b679447234322560e919e50f6fb5991411626e3b66eade685b",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        8,
+        8
+      ],
+      "id": "mono_lossless",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 8,
+          "offset": 0,
+          "width": 8
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 875,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 296,
+            "logical_offset": 27,
+            "physical_spans": [
+              {
+                "length": 296,
+                "offset": 302
+              }
+            ],
+            "sha256": "2a8fc1de19b40573abda59c4720d4d7a256534345f504056b362931c8e87bacb",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        17,
+        13
+      ],
+      "id": "yuv420",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 13,
+          "offset": 0,
+          "width": 17
+        },
+        {
+          "channel": 1,
+          "height": 7,
+          "offset": 442,
+          "width": 9
+        },
+        {
+          "channel": 2,
+          "height": 7,
+          "offset": 568,
+          "width": 9
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 1593,
+      "pixel_format": 3,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 361,
+            "logical_offset": 25,
+            "physical_spans": [
+              {
+                "length": 361,
+                "offset": 296
+              }
+            ],
+            "sha256": "eb37e6b9b93003d9fba1ca8cac24336492cff4f676d1899c73a7a1c943952650",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        17,
+        13
+      ],
+      "id": "yuv422",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 13,
+          "offset": 0,
+          "width": 17
+        },
+        {
+          "channel": 1,
+          "height": 13,
+          "offset": 442,
+          "width": 9
+        },
+        {
+          "channel": 2,
+          "height": 13,
+          "offset": 676,
+          "width": 9
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 1932,
+      "pixel_format": 2,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 140,
+            "logical_offset": 26,
+            "physical_spans": [
+              {
+                "length": 140,
+                "offset": 301
+              }
+            ],
+            "sha256": "eed088fcf0d70ac18e5da3e780e45fb29da70f6dd8a898aef27efc5496607883",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        8,
+        8
+      ],
+      "id": "yuv444",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 8,
+          "offset": 0,
+          "width": 8
+        },
+        {
+          "channel": 1,
+          "height": 8,
+          "offset": 128,
+          "width": 8
+        },
+        {
+          "channel": 2,
+          "height": 8,
+          "offset": 256,
+          "width": 8
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 712,
+      "pixel_format": 1,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 120,
+            "logical_offset": 27,
+            "physical_spans": [
+              {
+                "length": 120,
+                "offset": 302
+              }
+            ],
+            "sha256": "b1eef0312595b2a62a7a3b6e26de0fd598997d0f0af466e328dfbaf8ff646999",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 10,
+      "dimensions": [
+        9,
+        7
+      ],
+      "id": "high10_420",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 7,
+          "offset": 0,
+          "width": 9
+        },
+        {
+          "channel": 1,
+          "height": 4,
+          "offset": 126,
+          "width": 5
+        },
+        {
+          "channel": 2,
+          "height": 4,
+          "offset": 166,
+          "width": 5
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 728,
+      "pixel_format": 3,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 150,
+            "logical_offset": 27,
+            "physical_spans": [
+              {
+                "length": 150,
+                "offset": 298
+              }
+            ],
+            "sha256": "0eac4923f424896912971385867cf90498fe2bd6e086004cd70b49ebad88f36d",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 12,
+      "dimensions": [
+        9,
+        7
+      ],
+      "id": "high12_422",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 7,
+          "offset": 0,
+          "width": 9
+        },
+        {
+          "channel": 1,
+          "height": 7,
+          "offset": 126,
+          "width": 5
+        },
+        {
+          "channel": 2,
+          "height": 7,
+          "offset": 196,
+          "width": 5
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 804,
+      "pixel_format": 2,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 162,
+            "logical_offset": 26,
+            "physical_spans": [
+              {
+                "length": 162,
+                "offset": 297
+              }
+            ],
+            "sha256": "7ed8ccd8f3045008e14d0dcc0bebdfe9fcd16612e59d3eb200803fb1865e2d8a",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 12,
+      "dimensions": [
+        9,
+        7
+      ],
+      "id": "high12_444",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 7,
+          "offset": 0,
+          "width": 9
+        },
+        {
+          "channel": 1,
+          "height": 7,
+          "offset": 126,
+          "width": 9
+        },
+        {
+          "channel": 2,
+          "height": 7,
+          "offset": 252,
+          "width": 9
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 893,
+      "pixel_format": 1,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": true,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 140,
+            "logical_offset": 26,
+            "physical_spans": [
+              {
+                "length": 140,
+                "offset": 521
+              }
+            ],
+            "sha256": "eed088fcf0d70ac18e5da3e780e45fb29da70f6dd8a898aef27efc5496607883",
+            "size_field": null
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_alpha",
+          "tile": {
+            "index": 0,
+            "length": 49,
+            "logical_offset": 16,
+            "physical_spans": [
+              {
+                "length": 49,
+                "offset": 446
+              }
+            ],
+            "sha256": "321b31e8e4ae9aa276d92657a2331146a1a45dc3b0b6776dbce786a3ca109a68",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGBA",
+      "depth": 8,
+      "dimensions": [
+        8,
+        8
+      ],
+      "id": "alpha",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 8,
+          "offset": 0,
+          "width": 8
+        },
+        {
+          "channel": 1,
+          "height": 8,
+          "offset": 128,
+          "width": 8
+        },
+        {
+          "channel": 2,
+          "height": 8,
+          "offset": 256,
+          "width": 8
+        },
+        {
+          "channel": 3,
+          "height": 8,
+          "offset": 384,
+          "width": 8
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 966,
+      "pixel_format": 1,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 9,
+            "logical_offset": 25,
+            "physical_spans": [
+              {
+                "length": 9,
+                "offset": 294
+              }
+            ],
+            "sha256": "85cffadbc0cc7c8881fc0b5aab281d603c848919f45f2269271960b9ec0b307e",
+            "size_field": {
+              "encoded_size_minus_one": 8,
+              "logical_offset": 24,
+              "physical_spans": [
+                {
+                  "length": 1,
+                  "offset": 293
+                }
+              ],
+              "width": 1
+            }
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 1,
+            "length": 9,
+            "logical_offset": 34,
+            "physical_spans": [
+              {
+                "length": 9,
+                "offset": 303
+              }
+            ],
+            "sha256": "76f0d857004c726625831912d856c905f5fc66592ed8e14f8725ed4475a91bd5",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        128,
+        64
+      ],
+      "id": "two_tiles",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 64,
+          "offset": 0,
+          "width": 128
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 112,
+      "pixel_format": 4,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 1,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    }
+  ],
+  "decoder": {
+    "binary_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+    "codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    "oracle": {
+      "imaging_extension_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+      "implementation": "Pillow",
+      "profile": "pillow-12.2.0-cp312-macos-arm64",
+      "version": "12.2.0",
+      "wheel_sha256": "f3f40b3c5a968281fd507d519e444c35f0ff171237f4fdde090dd60699458421"
+    }
+  },
+  "encoder": "standalone pinned libavif/libaom; not Pillow save() parity",
+  "full_file_observations": {
+    "alphabets": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10,
+      11,
+      13,
+      14,
+      16
+    ],
+    "bool_q15_max": 16384,
+    "bool_q15_min": 16384,
+    "counts": {
+      "adaptation_15_16": 105,
+      "adaptation_31_32": 25,
+      "adaptation_32_32": 512,
+      "bool": 3099,
+      "carry_prefix_change": 89,
+      "cdf": 7,
+      "finish": 12,
+      "longest_carry_prefix_change": 2,
+      "normalization_flush": 252,
+      "start": 12,
+      "symbol": 5558
+    },
+    "termination_appended_bytes": [
+      1,
+      2,
+      3,
+      6
+    ]
+  },
+  "gzip_traces": [
+    {
+      "expanded_bytes": 551198,
+      "expanded_sha256": "64d87ab557d864899cd5352c6c29e3cc9b65dc910d2e36f19d558632f5e9df00",
+      "path": "alpha/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 551198,
+      "expanded_sha256": "64d87ab557d864899cd5352c6c29e3cc9b65dc910d2e36f19d558632f5e9df00",
+      "path": "alpha/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 4373450,
+      "expanded_sha256": "d55057a8b1983034a77d42fbed7842b4a994149f75dca097cf8ac892808ce144",
+      "path": "boundaries/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 4373450,
+      "expanded_sha256": "d55057a8b1983034a77d42fbed7842b4a994149f75dca097cf8ac892808ce144",
+      "path": "boundaries/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 425751,
+      "expanded_sha256": "9809695e45f4dbcc7ea72e8edb0c4b83070dcaa7b8c35faf3e649d97ca6463cf",
+      "path": "high10_420/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 425751,
+      "expanded_sha256": "9809695e45f4dbcc7ea72e8edb0c4b83070dcaa7b8c35faf3e649d97ca6463cf",
+      "path": "high10_420/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 510474,
+      "expanded_sha256": "c1ff923d71d8d9bbc8808bb340e5ead4fbf7e55be36c115d513f9cd17f021f48",
+      "path": "high12_422/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 510474,
+      "expanded_sha256": "c1ff923d71d8d9bbc8808bb340e5ead4fbf7e55be36c115d513f9cd17f021f48",
+      "path": "high12_422/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 597039,
+      "expanded_sha256": "0536bece61da373b8f318507a5365f968464bb0374b395c14759b4be902a22f4",
+      "path": "high12_444/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 597039,
+      "expanded_sha256": "0536bece61da373b8f318507a5365f968464bb0374b395c14759b4be902a22f4",
+      "path": "high12_444/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 443300,
+      "expanded_sha256": "ac6c2b2b9eb9b20b2274134419c821c1f81a3aca24bd70adac39c24ad8b48e0a",
+      "path": "mono_lossless/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 443300,
+      "expanded_sha256": "ac6c2b2b9eb9b20b2274134419c821c1f81a3aca24bd70adac39c24ad8b48e0a",
+      "path": "mono_lossless/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 25409,
+      "expanded_sha256": "b55f1b5a0234a655314c9af17e59a66b7a26e9d4e8cc3d678ed8a9f45051b953",
+      "path": "mono_tiny/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 25409,
+      "expanded_sha256": "b55f1b5a0234a655314c9af17e59a66b7a26e9d4e8cc3d678ed8a9f45051b953",
+      "path": "mono_tiny/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 37578,
+      "expanded_sha256": "07522e1f332fc74dc09a8ce7cff48b795e985c66c0c8bb8d310598657f0a3d0b",
+      "path": "two_tiles/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 37578,
+      "expanded_sha256": "07522e1f332fc74dc09a8ce7cff48b795e985c66c0c8bb8d310598657f0a3d0b",
+      "path": "two_tiles/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 1516658,
+      "expanded_sha256": "ead4e9a1fb8efcab02ceb6b69578f518d56d9e6485ede79a1ea7d5ba87546dac",
+      "path": "yuv420/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 1516658,
+      "expanded_sha256": "ead4e9a1fb8efcab02ceb6b69578f518d56d9e6485ede79a1ea7d5ba87546dac",
+      "path": "yuv420/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 2114802,
+      "expanded_sha256": "cbd644c2de81ea825991878ee7d93481a4842c16af2d1858eb8c643a64a89e16",
+      "path": "yuv422/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 2114802,
+      "expanded_sha256": "cbd644c2de81ea825991878ee7d93481a4842c16af2d1858eb8c643a64a89e16",
+      "path": "yuv422/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 440527,
+      "expanded_sha256": "fb0054ec48440a1a0db861eca9ed8e37846aa54b419d46c5e7186545daa45e5e",
+      "path": "yuv444/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 440527,
+      "expanded_sha256": "fb0054ec48440a1a0db861eca9ed8e37846aa54b419d46c5e7186545daa45e5e",
+      "path": "yuv444/trace.jsonl.gz"
+    }
+  ],
+  "inputs": [
+    {
+      "path": "scripts/generate_av1_encoder_refs.py",
+      "sha256": "36b1be18fa2993a8f07db4f0eb61e68a2e53583111a7be690115dbe52b969e37"
+    },
+    {
+      "path": "scripts/av1_encoder_oracle/encode.c",
+      "sha256": "e7c26c047ccde9f15fdb203a825f7f767e8b7bbf19d97cf633944874605c86e6"
+    },
+    {
+      "path": "scripts/av1_encoder_oracle/replay.c",
+      "sha256": "929b1b2b2487233ee299518a22d8645f2092925810454af7ea21c00c176ff4b1"
+    },
+    {
+      "path": "scripts/av1_encoder_oracle/trace.c",
+      "sha256": "52925b64f5443fac3f02df2913e575725ec9bb9413a957e5f55d0cf4cd0e95ae"
+    },
+    {
+      "path": "scripts/av1_encoder_oracle/trace.h",
+      "sha256": "4ee6f4cf6a654e88b96d16e1c32d5a21a1cba851343274bed97f57c32a58b906"
+    },
+    {
+      "path": "scripts/inspect_av1_obus.py",
+      "sha256": "c0003aaa97bb3f4c01a14647ffc9c40766b7700c5c240284913c07d859d025a3"
+    },
+    {
+      "path": "scripts/inspect_avif_bitstreams.py",
+      "sha256": "1ad93edecab82181b45bbc390252b4dcd557ed30e19a91c166c3ffb4cbee353a"
+    },
+    {
+      "path": "scripts/generate_decode_refs.py",
+      "sha256": "cab218b7d067515b8eb03831bb42db00c67692593a787e775ac31fa549af0917"
+    },
+    {
+      "path": "scripts/generate_av1_sequence_refs.py",
+      "sha256": "4d3309a417550454b0a921a31dd941779c68258f28fc689a2cefffad82109d1e"
+    },
+    {
+      "path": "scripts/generate_av1_reconstruction_refs.py",
+      "sha256": "0e95e60b859ae7a871ee102a5e01c173d90b9024edb182755f354d1240c08649"
+    },
+    {
+      "path": "manifest.yaml",
+      "sha256": "72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2"
+    },
+    {
+      "path": "pillow-oracle.lock.yaml",
+      "sha256": "95dc8d1138783da2b734f2e08ab4192121620ef319a09a8e1295cebfe91dde75"
+    }
+  ],
+  "limits": {
+    "events_per_process": 20000,
+    "logical_bytes_per_snapshot": 65536,
+    "sum_logical_snapshot_bytes": 16777216,
+    "trace_file_bytes": 41943040
+  },
+  "rust_execution": "deferred",
+  "schema": "image-slash-star/av1-encoder-entropy-oracle@1",
+  "sources": {
+    "libaom": {
+      "commit": "ad44980d7f3c7a2605c25d51ea96946949000841",
+      "files": [
+        {
+          "path": "aom_dsp/entenc.c",
+          "sha256": "24169349d516d326f67eaff0e063191e8658eed8d5021f31358bbac24524160e"
+        },
+        {
+          "path": "aom_dsp/entenc.h",
+          "sha256": "cea96bad5d830a5c866b0c9ca56bfd459361261eeb40710a0e4eded5c1fc213e"
+        },
+        {
+          "path": "aom_dsp/entcode.c",
+          "sha256": "a5ab717dfc11a235af34ca5b24d94dd9bcea82ce8515f3c1048b34d258c5edec"
+        },
+        {
+          "path": "aom_dsp/bitwriter.c",
+          "sha256": "8fac3def6d28c0452d8dbd154771f4163106558bf024d8c193227a2f5d33c19e"
+        },
+        {
+          "path": "aom_dsp/bitwriter.h",
+          "sha256": "5b31e77f300a3a1118a6188a8e159af0b0d2560a7921b91c46e6fcda2f7d6d96"
+        },
+        {
+          "path": "aom_dsp/prob.h",
+          "sha256": "1025cb5c67a847dd3cf9600c4e3e655082f4872a4203b8a935554a82888e89b4"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "4764a286d8b2faeaf42f4418e7d7a28d58fc8fd4d00a3d0a7f44b0a4099de7f2"
+        },
+        {
+          "path": "PATENTS",
+          "sha256": "661fb8e504744e95587b556b94a58343448300606a41bea8c7a9b97125696e61"
+        }
+      ],
+      "tree_sha256": "bf953deb73ed87d85721f501ca8e4c077b43d738abe24a3c7a56ee1c9ec901a3"
+    },
+    "libavif": {
+      "commit": "6543b22b5bc706c53f038a16fe515f921556d9b3",
+      "files": [
+        {
+          "path": "src/codec_aom.c",
+          "sha256": "a3154d1b734c6a4e44b7ddd38b4b937cf5a2abb61c12ecc13c474c47e44a86ac"
+        },
+        {
+          "path": "src/write.c",
+          "sha256": "c23001cdacec983451012a46d0af8686755ff2e44ab8c7acd892f48a5647d5ff"
+        },
+        {
+          "path": "include/avif/avif.h",
+          "sha256": "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "165abf92cc04b39e80d29cadea7a6a7e8fddf59407d4ad2616507a7ebe8216f9"
+        }
+      ],
+      "tree_sha256": "9a4323fe85047fecdc1822ce82e447fba7e329bf1f0dd9bbd9e5fb09fc5f5454"
+    }
+  }
+}

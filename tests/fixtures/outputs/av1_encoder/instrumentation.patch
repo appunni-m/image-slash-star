@@ -1,0 +1,38 @@
+--- a/bitwriter.h
++++ b/bitwriter.h
+@@ -19,0 +20 @@
++#include "oracle_trace.h"
+@@ -39,0 +41,2 @@
++  unsigned oracle_id;
++  int oracle_in_symbol;
+@@ -77,0 +81 @@
++  oracle_before(w->oracle_id, "bool", &w->ec, bit, p, NULL, 0, 0);
+@@ -78,0 +83 @@
++  oracle_after(&w->ec, NULL, 0);
+@@ -96,0 +102 @@
++  if (!w->oracle_in_symbol) oracle_before(w->oracle_id, "cdf", &w->ec, symb, 0, cdf, nsymbs, 0);
+@@ -97,0 +104 @@
++  if (!w->oracle_in_symbol) oracle_after(&w->ec, cdf, nsymbs);
+@@ -101,0 +109,2 @@
++  oracle_before(w->oracle_id, "symbol", &w->ec, symb, 0, cdf, nsymbs + 1, w->allow_update_cdf);
++  w->oracle_in_symbol = 1;
+@@ -102,0 +112 @@
++  w->oracle_in_symbol = 0;
+@@ -103,0 +114 @@
++  oracle_after(&w->ec, cdf, nsymbs + 1);
+--- a/bitwriter.c
++++ b/bitwriter.c
+@@ -13,0 +14,2 @@
++#include "oracle_trace.c"
++static unsigned oracle_next_id;
+@@ -18,0 +21,3 @@
++  w->oracle_id = ++oracle_next_id;
++  w->oracle_in_symbol = 0;
++  oracle_start(w->oracle_id, &w->ec);
+@@ -23 +28 @@
+-  uint32_t bytes;
++  uint32_t bytes = 0;
+@@ -24,0 +30 @@
++  oracle_finish_before(w->oracle_id, &w->ec);
+@@ -25,0 +32 @@
++  oracle_finish_after(&w->ec, data, bytes);

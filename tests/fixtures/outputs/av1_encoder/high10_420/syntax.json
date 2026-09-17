@@ -1,0 +1,578 @@
+{
+  "file": "encoded.avif",
+  "samples": [
+    {
+      "identity": 1,
+      "length": 147,
+      "obus": [
+        {
+          "has_extension": false,
+          "has_size_field": true,
+          "header_length": 2,
+          "header_spans": [
+            {
+              "length": 2,
+              "offset": 275
+            }
+          ],
+          "name": "temporal_delimiter",
+          "payload_length": 0,
+          "payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "payload_spans": [],
+          "spatial_id": 0,
+          "temporal_id": 0,
+          "type": 2
+        },
+        {
+          "has_extension": false,
+          "has_size_field": true,
+          "header_length": 2,
+          "header_spans": [
+            {
+              "length": 2,
+              "offset": 277
+            }
+          ],
+          "name": "sequence_header",
+          "payload_length": 8,
+          "payload_sha256": "54beee1e1a0d89446acb4843241f803da4e09219e82eeef2e8b8d16983595665",
+          "payload_spans": [
+            {
+              "length": 8,
+              "offset": 279
+            }
+          ],
+          "sequence_header": {
+            "bit_depth": 10,
+            "chroma_sample_position": 0,
+            "color_primaries": 1,
+            "color_range": 1,
+            "decoder_model_present": false,
+            "display_model_present": false,
+            "enable_cdef": true,
+            "enable_dual_filter": false,
+            "enable_filter_intra": true,
+            "enable_interintra_compound": false,
+            "enable_intra_edge_filter": true,
+            "enable_jnt_comp": false,
+            "enable_masked_compound": false,
+            "enable_order_hint": false,
+            "enable_ref_frame_mvs": false,
+            "enable_restoration": false,
+            "enable_superres": false,
+            "enable_warped_motion": false,
+            "film_grain_present": false,
+            "force_integer_mv": 2,
+            "frame_id_numbers_present": false,
+            "height_bits": 3,
+            "matrix_coefficients": 6,
+            "max_height": 7,
+            "max_width": 9,
+            "monochrome": false,
+            "operating_points": [
+              {
+                "decoder_model_present": false,
+                "display_model_present": false,
+                "idc": 0,
+                "initial_display_delay": 10,
+                "level": 0,
+                "tier": 0
+              }
+            ],
+            "order_hint_bits": 0,
+            "payload_bits": 64,
+            "payload_hex": "180ca335404341a1",
+            "profile": 0,
+            "reduced_still_picture_header": true,
+            "screen_content_tools": 2,
+            "separate_uv_delta_q": false,
+            "still_picture": true,
+            "subsampling_x": 1,
+            "subsampling_y": 1,
+            "timing": null,
+            "transfer_characteristics": 13,
+            "use_128x128_superblock": false,
+            "width_bits": 4
+          },
+          "spatial_id": 0,
+          "temporal_id": 0,
+          "type": 1
+        },
+        {
+          "frame_header": {
+            "all_lossless": false,
+            "allow_high_precision_mv": false,
+            "allow_intrabc": false,
+            "allow_screen_content_tools": false,
+            "allow_warped_motion": false,
+            "buffer_removal_times": [],
+            "cdef": {
+              "bits": 0,
+              "damping": 4,
+              "uv_strengths": [
+                0
+              ],
+              "y_strengths": [
+                21
+              ]
+            },
+            "delta_loop_filter": {
+              "multi": false,
+              "present": false,
+              "resolution_log2": 0
+            },
+            "delta_q": {
+              "present": true,
+              "resolution_log2": 0
+            },
+            "disable_cdf_update": false,
+            "error_resilient_mode": true,
+            "existing_frame_idx": null,
+            "film_grain": null,
+            "force_integer_mv": true,
+            "frame_height": 7,
+            "frame_id": 0,
+            "frame_size_override": false,
+            "frame_type": "key",
+            "frame_width": 9,
+            "global_motion": [
+              {
+                "matrix": [
+                  0,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  65536
+                ],
+                "type": "identity"
+              },
+              {
+                "matrix": [
+                  0,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  65536
+                ],
+                "type": "identity"
+              },
+              {
+                "matrix": [
+                  0,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  65536
+                ],
+                "type": "identity"
+              },
+              {
+                "matrix": [
+                  0,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  65536
+                ],
+                "type": "identity"
+              },
+              {
+                "matrix": [
+                  0,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  65536
+                ],
+                "type": "identity"
+              },
+              {
+                "matrix": [
+                  0,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  65536
+                ],
+                "type": "identity"
+              },
+              {
+                "matrix": [
+                  0,
+                  0,
+                  65536,
+                  0,
+                  0,
+                  65536
+                ],
+                "type": "identity"
+              }
+            ],
+            "have_render_size": false,
+            "header_bits": 90,
+            "interpolation_filter": "eighttap",
+            "loop_filter": {
+              "delta_enabled": true,
+              "delta_update": false,
+              "deltas": {
+                "mode": [
+                  0,
+                  0
+                ],
+                "reference": [
+                  1,
+                  0,
+                  0,
+                  0,
+                  -1,
+                  0,
+                  -1,
+                  -1
+                ]
+              },
+              "level_u": 6,
+              "level_v": 6,
+              "level_y": [
+                6,
+                6
+              ],
+              "sharpness": 7
+            },
+            "motion_mode_switchable": false,
+            "order_hint": 0,
+            "primary_ref_frame": 7,
+            "quantization": {
+              "base": 76,
+              "different_uv_delta": false,
+              "matrix_u": 9,
+              "matrix_v": 9,
+              "matrix_y": 9,
+              "u_ac_delta": -16,
+              "u_dc_delta": -16,
+              "using_matrix": true,
+              "v_ac_delta": -16,
+              "v_dc_delta": -16,
+              "y_dc_delta": 0
+            },
+            "reduced_transform_set": false,
+            "reference_indices": [],
+            "reference_mode": "single",
+            "reference_mode_bit": null,
+            "refresh_frame_context": false,
+            "refresh_frame_flags": 255,
+            "render_height": 7,
+            "render_width": 9,
+            "restoration": {
+              "types": [
+                0,
+                0,
+                0
+              ],
+              "unit_size_log2": [
+                8,
+                8
+              ]
+            },
+            "segment_lossless": [
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "segment_qindex": [
+              76,
+              76,
+              76,
+              76,
+              76,
+              76,
+              76,
+              76
+            ],
+            "segmentation": {
+              "enabled": false,
+              "segments": [
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                },
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                },
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                },
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                },
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                },
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                },
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                },
+                {
+                  "delta_lf_u": 0,
+                  "delta_lf_v": 0,
+                  "delta_lf_y_horizontal": 0,
+                  "delta_lf_y_vertical": 0,
+                  "delta_q": 0,
+                  "global_motion": false,
+                  "reference": -1,
+                  "skip": false
+                }
+              ],
+              "temporal": false,
+              "update_data": false,
+              "update_map": false
+            },
+            "show_existing_frame": false,
+            "show_frame": true,
+            "showable_frame": false,
+            "skip_mode_bit": null,
+            "skip_mode_enabled": false,
+            "skip_mode_references": null,
+            "spatial_id": 0,
+            "superres_denominator": 8,
+            "superres_enabled": false,
+            "temporal_id": 0,
+            "tiling": {
+              "column_starts": [
+                0,
+                1
+              ],
+              "columns": 1,
+              "context_update_tile": 0,
+              "log2_columns": 0,
+              "log2_rows": 0,
+              "maximum_log2_columns": 0,
+              "maximum_log2_rows": 0,
+              "minimum_log2_columns": 0,
+              "minimum_log2_rows": 0,
+              "row_starts": [
+                0,
+                1
+              ],
+              "rows": 1,
+              "tile_size_bytes": 0,
+              "uniform": true
+            },
+            "transform_mode": "largest",
+            "upscaled_width": 9,
+            "use_ref_frame_mvs": false
+          },
+          "has_extension": false,
+          "has_size_field": true,
+          "header_length": 3,
+          "header_spans": [
+            {
+              "length": 3,
+              "offset": 287
+            }
+          ],
+          "name": "frame",
+          "payload_length": 132,
+          "payload_sha256": "6ae55a38041ac730c09935a2852b8411981e3f5e1f3824be2f4d321a3d4954dd",
+          "payload_spans": [
+            {
+              "length": 132,
+              "offset": 290
+            }
+          ],
+          "references_after": [
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            },
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            },
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            },
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            },
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            },
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            },
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            },
+            {
+              "frame_height": 7,
+              "frame_id": 0,
+              "frame_type": "key",
+              "order_hint": 0,
+              "refresh_frame_flags": 255,
+              "render_height": 7,
+              "render_width": 9,
+              "showable_frame": false,
+              "upscaled_width": 9
+            }
+          ],
+          "references_before": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "spatial_id": 0,
+          "temporal_id": 0,
+          "tile_group": {
+            "data_bit": 96,
+            "end": 0,
+            "start": 0,
+            "tiles": [
+              {
+                "index": 0,
+                "length": 120,
+                "logical_offset": 27,
+                "physical_spans": [
+                  {
+                    "length": 120,
+                    "offset": 302
+                  }
+                ],
+                "sha256": "b1eef0312595b2a62a7a3b6e26de0fd598997d0f0af466e328dfbaf8ff646999",
+                "size_field": null
+              }
+            ]
+          },
+          "type": 6
+        }
+      ],
+      "role": "item_color",
+      "sha256": "cd388c2f390f1e3f9c18b8bcce9467c0f1b9ef891f410b21c38e5e2b352574b4",
+      "spans": [
+        {
+          "length": 147,
+          "offset": 275
+        }
+      ]
+    }
+  ]
+}

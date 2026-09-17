@@ -7087,8 +7087,8 @@
           "AVF-SEQUENCE-001"
         ],
         "deliverable": "Write AVIF container and pure safe-Rust AV1 intra encoder, then round-trip through an independent decoder.",
-        "current_evidence": "The private still-container writer is implemented with 28 repeated complete native witnesses and deferred Rust remux regressions. AV1 compression remains unimplemented; all 32 public encode rows remain planned.",
-        "next": "Implement pure safe-Rust AV1 sample compression and metadata preparation, extend container output to sequences/grids/high-depth witnesses, then execute all deferred parity and coverage gates.",
+        "current_evidence": "The private still-container writer is implemented with 28 repeated complete native witnesses and deferred Rust remux regressions. A separate ten-file native encoder corpus binds twelve tile streams to exact entropy traces and unmodified native replay. Rust AV1 compression remains unimplemented; all 32 public encode rows remain planned.",
+        "next": "Implement pure safe-Rust entropy and semantic tile/OBU serialization, then image analysis, sample compression and metadata preparation; extend sequence/grid container output and execute all deferred parity/coverage gates after implementation is complete.",
         "current_slice_update_2026_09_17_still_mux": {
           "status": "implemented_unverified",
           "scope": "Private standard still-image AVIF writer: color/alpha/EXIF/XMP items, ICC+nclx, orientation, property sharing and earliest substring media reuse across physical item boundaries.",
@@ -7120,6 +7120,39 @@
             "Final byte parity, native roundtrips, sink/option errors, total resource accounting and managed coverage."
           ],
           "compile_verification": "All 16 strict Clippy lanes pass: native AVIF-only/all/default/no-feature ordinary/cfg(coverage), and AVIF-only/all-feature wasm32-unknown-unknown/wasm32-wasip1 ordinary/cfg(coverage). Native and coverage unknown-WASM include all targets; other WASM lanes check libraries. Warnings-as-errors rustdoc, formatting and static roadmap/provenance checks pass. No Rust behavioral execution."
+        },
+        "current_slice_update_2026_09_17_encoder_oracle": {
+          "status": "oracle_evidence_only",
+          "scope": "Development-only pinned libavif/libaom complete-file encodes, byte-bound native entropy traces, unmodified native replay and Pillow/dav1d roundtrip pixels. No Rust implementation or execution.",
+          "oracle_index": "tests/fixtures/outputs/av1_encoder/index.json",
+          "oracle_index_sha256": "487fba2f0ebca42295115a2125f8cb87b7b407805401585f479726d480206b5b",
+          "generator": "scripts/generate_av1_encoder_refs.py",
+          "native_evidence": {
+            "complete_files": 10,
+            "committed_tile_streams": 12,
+            "observations_per_build_per_file": 2,
+            "artifacts": 76,
+            "artifact_bytes": 1468557,
+            "complete_file_state_records": 8688,
+            "boundary_state_records": 2884,
+            "normalization_flushes_in_committed_tiles": 252,
+            "carry_changes_in_committed_tiles": 89,
+            "longest_observed_carry_bytes": 2
+          },
+          "checks": [
+            "Original/instrumented complete-file output and repeated traces agree exactly.",
+            "Each inspected tile matches one and only one completed native writer; aggregates exclude any uncommitted attempts.",
+            "Unmodified native replay matches all logical states, adaptive CDF updates and final bytes; native allocation capacity/padding are excluded.",
+            "Actual headers confirm depth, subsampling, CICP, alpha roles and requested tile count; pinned Pillow/dav1d roundtrip pixels repeat.",
+            "All retained artifact, expanded gzip and generator/source-input hashes verify."
+          ],
+          "boundary_scope": "Separate valid native algorithm models cover alphabets 2..16, Q15 probabilities 1 and 32767, valid plateaus, frozen adaptation, count 15->16/31->32/32->32 and empty/short termination. These are not independent full-file syntax witnesses.",
+          "limitations": [
+            "Standalone native encoding is not Pillow save() parity.",
+            "Entropy events are fixture inputs only; production must derive contexts from semantic block and transform decisions.",
+            "Rust entropy/tile/OBU serialization, image analysis, compression and final behavioral/coverage verification remain open."
+          ],
+          "validation_policy": "No Rust behavioral tests, managed Coverage MCP execution, matrix/finding/workstream promotion, or coverage exclusions. Existing historical measurements and counts are unchanged."
         }
       }
     },
