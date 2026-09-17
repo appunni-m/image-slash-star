@@ -657,6 +657,21 @@ fn populate_temporal_motion_field(
     Ok(())
 }
 
+fn validate_inter_reference_headers(
+    header: &FrameHeader,
+    references: &[Option<ReferenceState>; REFERENCE_SLOTS],
+) -> Av1Result<()> {
+    // Check the complete syntax-level reference set before reporting any
+    // implementation gap in a present reference's reconstructed surface.
+    for &slot in &header.reference_indices {
+        let _ = references
+            .get(slot)
+            .and_then(Option::as_ref)
+            .ok_or_else(|| malformed("inter reference slot is empty"))?;
+    }
+    Ok(())
+}
+
 fn inter_frame_context<'a>(
     header: &FrameHeader,
     sequence: &SequenceHeader,
@@ -666,6 +681,7 @@ fn inter_frame_context<'a>(
     if !header.frame_type.is_inter() {
         return Err(malformed("intra frame requested inter reference context"));
     }
+    validate_inter_reference_headers(header, references)?;
     let mut reference_order_hints = [0_u32; 7];
     let mut sign_bias = [false; 7];
     let mut inter_references = [None; 7];
@@ -680,10 +696,11 @@ fn inter_frame_context<'a>(
             .get(slot)
             .and_then(Option::as_ref)
             .ok_or_else(|| malformed("decoded inter frame references an empty slot"))?;
-        let surface = reference
-            .surface
-            .as_deref()
-            .ok_or_else(|| malformed("decoded inter frame reference has no surface"))?;
+        let surface = reference.surface.as_deref().ok_or_else(|| {
+            CodecError::NotImplemented(
+                "AV1 inter reference reconstruction is incomplete".to_owned(),
+            )
+        })?;
         surface.validate()?;
         let order_hint = reference.header.order_hint;
         reference_order_hints[index] = order_hint;
@@ -762,6 +779,7 @@ fn projected_temporal_field(
     if !header.use_ref_frame_mvs {
         return Ok(None);
     }
+    validate_inter_reference_headers(header, references)?;
     let mut retained = [None; 7];
     let mut reference_order_hints = [0_u32; 7];
     for logical in ReferenceFrame::ALL {
@@ -775,10 +793,11 @@ fn projected_temporal_field(
             .get(slot)
             .and_then(Option::as_ref)
             .ok_or_else(|| malformed("temporal reference slot is empty"))?;
-        let surface = reference
-            .surface
-            .as_deref()
-            .ok_or_else(|| malformed("temporal reference has no surface"))?;
+        let surface = reference.surface.as_deref().ok_or_else(|| {
+            CodecError::NotImplemented(
+                "AV1 temporal reference reconstruction is incomplete".to_owned(),
+            )
+        })?;
         surface.validate()?;
         retained[index] = Some(&surface.motion);
         reference_order_hints[index] = reference.header.order_hint;
@@ -850,6 +869,9 @@ struct PendingFrame {
 
 pub(super) struct FrameState {
     sequence: Option<SequenceHeader>,
+    /// Present only for sequence presentation. The output budget was reserved
+    /// for this canvas before any AV1 reference or display was reconstructed.
+    expected_sequence_dimensions: Option<(u32, u32)>,
     operating_point_idc: u32,
     has_nonzero_operating_point_idc: bool,
     references: [Option<ReferenceState>; REFERENCE_SLOTS],
@@ -863,6 +885,7 @@ impl FrameState {
     pub(super) fn new() -> Self {
         Self {
             sequence: None,
+            expected_sequence_dimensions: None,
             operating_point_idc: 0,
             has_nonzero_operating_point_idc: false,
             references: std::array::from_fn(|_| None),
@@ -871,6 +894,12 @@ impl FrameState {
             temporal_unit: 0,
             completions: Vec::new(),
         }
+    }
+
+    pub(super) fn for_sequence(width: u32, height: u32) -> Self {
+        let mut state = Self::new();
+        state.expected_sequence_dimensions = Some((width, height));
+        state
     }
 
     pub(super) fn accept_sequence(&mut self, sequence: SequenceHeader) -> Av1Result<()> {
@@ -1270,6 +1299,19 @@ impl FrameState {
             );
             current_frame_id = Some(header.frame_id);
         }
+        if let Some((width, height)) = self.expected_sequence_dimensions
+            && ((header.upscaled_width, header.frame_height) != (width, height)
+                || (header.render_width, header.render_height) != (width, height)
+                || header.frame_width == 0
+                || header.frame_width > width)
+        {
+            // Check every coded frame, including hidden references and
+            // inherited show-existing geometry, before allocating its maps
+            // or pixels. Inspection may have selected a different item.
+            return Err(CodecError::NotImplemented(
+                "AVIF sequence frame geometry differs from the reserved canvas".to_owned(),
+            ));
+        }
         let block_width = header
             .frame_width
             .div_ceil(8)
@@ -1484,6 +1526,16 @@ impl FrameState {
             return Err(malformed("frame syntax validation failed"));
         }
         bits.byte_align()?;
+        // A missing implementation surface must not hide malformed tile
+        // lengths. Validate the complete group envelope before reference work.
+        let tile_ranges = split_tile_payloads(
+            data,
+            bits.position() / 8,
+            payload_end,
+            start,
+            end,
+            tiling.tile_size_bytes,
+        )?;
         let projected_temporal = if header.frame_type.is_inter() {
             projected_temporal_field(header, sequence, &pending.staged_references)?
         } else {
@@ -1499,14 +1551,6 @@ impl FrameState {
         } else {
             None
         };
-        let tile_ranges = split_tile_payloads(
-            data,
-            bits.position() / 8,
-            payload_end,
-            start,
-            end,
-            tiling.tile_size_bytes,
-        )?;
         let validation = validate_tile_entropy_prefixes(
             data,
             &tile_ranges,
@@ -2538,6 +2582,9 @@ fn split_tile_payloads(
             }
             encoded_size.saturating_add(1)
         };
+        if tile_size == 0 {
+            return Err(malformed("tile payload is empty"));
+        }
         let tile_end = cursor.saturating_add(tile_size);
         ranges.push(cursor..tile_end);
         cursor = tile_end;
@@ -6513,4 +6560,137 @@ pub(super) fn __coverage_exercise_private_branches() {
     coverage_frame_kind_and_geometry_paths();
     coverage_tiling_and_metadata_paths();
     coverage_prediction_and_grain_paths();
+}
+
+#[cfg(test)]
+mod presentation_tests {
+    use super::*;
+
+    #[test]
+    fn sequence_geometry_rejects_before_pending_frame_allocation() -> Av1Result<()> {
+        let bytes =
+            include_bytes!("../../../test_support/fixtures/input/images/avif/animated.avif");
+        let extracted = super::super::super::samples::validated(bytes)?;
+        let track = extracted
+            .sequence
+            .as_ref()
+            .ok_or_else(|| malformed("fixture has no movie track"))?;
+        let sample = track
+            .color
+            .samples
+            .first()
+            .ok_or_else(|| malformed("fixture has no first sample"))?;
+        // The encoded source remains unchanged. This is an internal model of
+        // a reservation made for a different inspected canvas.
+        let mut state = FrameState::for_sequence(149, 150);
+        assert!(matches!(
+            super::super::validate_sample(bytes, sample, &mut state),
+            Err(CodecError::NotImplemented(_))
+        ));
+        assert!(state.pending.is_none());
+        assert!(state.references.iter().all(Option::is_none));
+        assert!(state.completions.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn missing_reference_surface_is_a_gap_but_an_empty_slot_is_malformed() -> Av1Result<()> {
+        let bytes =
+            include_bytes!("../../../test_support/fixtures/input/images/avif/animated.avif");
+        let extracted = super::super::super::samples::validated(bytes)?;
+        let track = extracted
+            .sequence
+            .as_ref()
+            .ok_or_else(|| malformed("fixture has no movie track"))?;
+        let first = track
+            .color
+            .samples
+            .first()
+            .ok_or_else(|| malformed("fixture has no first sample"))?;
+        let second = track
+            .color
+            .samples
+            .get(1)
+            .ok_or_else(|| malformed("fixture has no second sample"))?;
+        for omit_header in [false, true] {
+            let mut state = FrameState::new();
+            super::super::validate_sample(bytes, first, &mut state)?;
+            assert!(state.references.iter().all(|reference| {
+                reference
+                    .as_ref()
+                    .is_some_and(|reference| reference.surface.is_some())
+            }));
+            // Internal capability-state mutation, not a malformed-file oracle.
+            for reference in &mut state.references {
+                if omit_header {
+                    *reference = None;
+                } else if let Some(reference) = reference {
+                    reference.surface = None;
+                }
+            }
+            let result = super::super::validate_sample(bytes, second, &mut state);
+            if omit_header {
+                assert!(matches!(result, Err(CodecError::Malformed(_))));
+            } else {
+                assert!(matches!(result, Err(CodecError::NotImplemented(_))));
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn later_empty_reference_precedes_an_earlier_surface_gap() -> Av1Result<()> {
+        let bytes =
+            include_bytes!("../../../test_support/fixtures/input/images/avif/animated.avif");
+        let extracted = super::super::super::samples::validated(bytes)?;
+        let first = extracted
+            .sequence
+            .as_ref()
+            .and_then(|track| track.color.samples.first())
+            .ok_or_else(|| malformed("fixture has no first sample"))?;
+        let mut state = FrameState::new();
+        super::super::validate_sample(bytes, first, &mut state)?;
+        let mut header = state.references[0]
+            .as_ref()
+            .ok_or_else(|| malformed("fixture omitted key reference"))?
+            .header
+            .clone();
+        header.frame_type = FrameType::Inter;
+        header.reference_indices = [0, 1, 2, 3, 4, 5, 6];
+        header.use_ref_frame_mvs = true;
+        state.references[0]
+            .as_mut()
+            .ok_or_else(|| malformed("key reference disappeared"))?
+            .surface = None;
+        state.references[6] = None;
+        let sequence = state.finish()?;
+        assert!(matches!(
+            inter_frame_context(&header, sequence, &state.references, None),
+            Err(CodecError::Malformed(_))
+        ));
+        assert!(matches!(
+            projected_temporal_field(&header, sequence, &state.references),
+            Err(CodecError::Malformed(_))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn empty_final_tile_is_rejected_by_the_envelope_check() -> Av1Result<()> {
+        let bytes =
+            include_bytes!("../../../test_support/fixtures/input/images/avif/animated.avif");
+        let extracted = super::super::super::samples::validated(bytes)?;
+        let first = extracted
+            .sequence
+            .as_ref()
+            .and_then(|track| track.color.samples.first())
+            .ok_or_else(|| malformed("fixture has no first sample"))?;
+        let data = SegmentedData::new(bytes, &first.spans)?;
+        // A defensive internal range mutation; the full source is unchanged.
+        assert!(matches!(
+            split_tile_payloads(&data, data.len(), data.len(), 0, 0, 0),
+            Err(CodecError::Malformed(_))
+        ));
+        Ok(())
+    }
 }

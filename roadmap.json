@@ -6865,7 +6865,58 @@
           "target_execution": "deferred_until_implementation_complete",
           "scope": "Private transition evidence for the existing full-file fixture; general temporal projection and complete public AVIF sequence parity remain unproven. No matrix row or work-item status is promoted."
         },
-        "next": "Implement one-frame-at-a-time AVIF sequence materialization before eager collection."
+        "next": "Complete remaining reference reconstruction and frame-ID sequence presentation; reconcile native loop metadata with the matrix before final behavioral and managed coverage verification.",
+        "current_slice_update_2026_09_17_streaming_presentation": {
+          "status": "implemented_unverified",
+          "scope": "One-display-at-a-time AVIF sequence conversion with persistent color/alpha references, completed-surface proof, pre-reconstruction output transfer reservations, inspected count/mode agreement and header geometry bounds. Ordinary first-image and sequence blanket gates removed; frame-ID sequence gap retained after full ID validation.",
+          "fixtures": [
+            "tests/fixtures/input/images/avif/animated.avif",
+            "tests/fixtures/input/images/avif/10bit.avif"
+          ],
+          "oracle_indices": [
+            "tests/fixtures/outputs/av1_sequence/animated/index.json",
+            "tests/fixtures/outputs/avif_sequence_color/high_bitdepth/index.json"
+          ],
+          "generator": "scripts/generate_av1_sequence_refs.py",
+          "regressions": [
+            "tests/support/avif_sequence.rs",
+            "src/codecs/avif/av1/frame.rs::presentation_tests",
+            "src/codecs/avif/av1/mod.rs::tests::sequence_display_rejects_a_diagnostic_leaf_without_surface_proof"
+          ],
+          "native_evidence": {
+            "animated_decoded_frames": 6,
+            "animated_hidden_frames": 2,
+            "animated_displays": 5,
+            "animated_show_existing_displays": 1,
+            "animated_yuv_bytes": 168750,
+            "animated_rgb_bytes": 337500,
+            "animated_native_duration": "1/30 second per display",
+            "animated_pillow_duration_ms": 33,
+            "animated_native_repetition_count": 0,
+            "highdepth_native_repetition_count": -1,
+            "pillow_loop_key": "absent for both sources",
+            "native_noninterference": "Unmodified and instrumented pinned scalar dav1d displayed YUV agree byte for byte; repeated Pillow/native decoder RGB and timing agree; pinned libavif repetition observations repeat exactly."
+          },
+          "production_invariants": [
+            "Reserve only samples 1 onward before reconstruction; public policy already charges the inspected first frame. No duplicate gap/conversion-loop charge.",
+            "Require actual upscaled/render dimensions to equal the reserved canvas before per-frame allocation, including hidden references and resolved show-existing geometry.",
+            "Advance color and alpha tracks together; publish only after all samples succeed. Never reuse an earlier temporal-unit completion for a sample without a display.",
+            "Reject empty tile envelopes and all empty referenced slots before reporting an unavailable reconstructed reference surface.",
+            "Do not invent CDFs for an incomplete retained reference. Preserve repeated-current-frame-ID Malformed behavior before final frame-ID presentation Unsupported."
+          ],
+          "option_review": "The removed eager validator no longer encodes sequence capability failures as Ok(None); the visitor and display assembly return typed Results. Optional alpha, per-sample absent displays and optional FrameState geometry constraints represent genuine absence. Existing private color-conversion Option semantics are retained.",
+          "validation_policy": "Rust behavioral tests and managed Coverage MCP remain deferred until all implementation is complete. Native oracle and compile-only/static checks are permitted; no planned row, finding or workstream is promoted.",
+          "compile_verification": "Strict Clippy passes in 12 lanes: native, wasm32-unknown-unknown and wasm32-wasip1; AVIF-only and all features; ordinary and cfg(coverage). Native and coverage unknown-WASM checks include all targets; WASI checks the library. Warnings-as-errors all-feature rustdoc, fmt, diff, roadmap, claim-ledger, coverage-origin, diagnostic, unreachable-contract, license, WebP-property and capability-document checks pass. No Rust behavioral test was executed for this slice.",
+          "limitations": [
+            "Public Rust reconstruction, sequence pixel/timing parity and complete resource safety remain unverified.",
+            "Fixed inspected geometry is required for all hidden and displayed frames; primary-item/track count or mode disagreements are Unsupported.",
+            "The output transfer-byte budget does not bound retained AV1 reference surfaces or scratch memory.",
+            "Frame-ID sequence presentation remains Unsupported after structural validation; repeated frame IDs remain Malformed.",
+            "Loop assertions use independent native source metadata. Future AVIF matrix promotion must reconcile existing Pillow-null loop references with the public source-repetition contract; no historical expected row was weakened.",
+            "Default-only-frame flag assertions use the existing independent AVIF movie-source normalization, separately from first-image pixel equality.",
+            "Historical coverage totals are not measurements of this candidate."
+          ]
+        }
       },
       "AVF-TILE-001": {
         "status": "implemented_for_fixture",

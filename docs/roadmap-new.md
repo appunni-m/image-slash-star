@@ -90,6 +90,25 @@ bound this evidence to color conversion. The Rust regressions compare five
 complete frames and 25 row slices; execution and managed coverage remain
 deferred. Sequence admission and all open matrix/finding statuses are retained.
 
+## Sequence presentation implementation in progress — 2026-09-17
+
+The 2026-09-17 sequence presentation candidate now processes matching color
+and alpha samples together, retains AV1 references between samples and converts
+each completed display before advancing. Output byte budgets are reserved
+before reconstruction, with frame-count/mode agreement and actual header
+geometry checks. Ordinary first-image and sequence blanket rejections are
+removed; missing surfaces remain typed capability gaps. Malformed tile
+envelopes and empty reference slots retain precedence over those gaps.
+
+The [sequence oracle](../tests/fixtures/outputs/av1_sequence/animated/index.json)
+records five native displays, including hidden-reference and show-existing
+state, exact 1/30-second timing and independent libavif repetition metadata.
+Public regressions cover all frames of both `animated.avif` and `10bit.avif`,
+but Rust behavioral execution and managed coverage remain deferred. The
+[evidence notes](../tests/fixtures/outputs/av1_sequence/README.md) retain the
+geometry, resource, metadata and frame-ID limitations. No row or finding is
+promoted by this implementation candidate.
+
 ## Complete open-task inventory
 
 The retained ledger contains **244 active finding rows**.

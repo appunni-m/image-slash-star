@@ -20,19 +20,6 @@ pub fn decode(
     let extracted = extract_av1(data)?;
     let validated = super::av1::validate_first_with_token(&extracted, token)
         .map_err(|error| error.context("AVIF AV1 validation failed"))?;
-    if extracted
-        .sequence
-        .as_ref()
-        .is_some_and(|sequence| sequence.color.samples.len() > 1)
-        && !validated
-            .portable_still
-            .as_ref()
-            .is_some_and(|still| still.frame_id_numbers_present)
-    {
-        return Err(CodecError::NotImplemented(
-            "AVIF multi-frame presentation is not implemented in the pure-Rust backend".to_owned(),
-        ));
-    }
     let image = decode_portable(&validated).ok_or_else(|| {
         CodecError::NotImplemented(
             "AVIF input is outside the supported pure-Rust decode subset".to_owned(),
@@ -208,106 +195,51 @@ pub fn decode_sequence(
     let loop_count = sequence_payload.loop_count;
 
     validate_sequence_timing(sequence_payload)?;
-    let portable_frames = match super::av1::validate_sequence_frames(&extracted, token)
-        .map_err(|error| error.context("AVIF sequence validation failed"))?
-    {
-        Some(frames) => frames,
-        None => {
-            if sequence_payload.color.samples.len() > 1 {
-                let info = super::inspect::inspect(data)
-                    .map_err(|error| error.context("AVIF sequence gap inspection failed"))?;
-                reserve_gap_frames(
-                    budget,
-                    info.mode,
-                    info.width,
-                    info.height,
-                    sequence_payload.color.samples.len(),
-                )?;
-            }
-            return Err(CodecError::NotImplemented(
-                "AVIF sequence sample is outside the supported pure-Rust presentation subset"
-                    .to_owned(),
-            ));
-        }
-    };
-    if sequence_payload.color.samples.len() > 1
-        && portable_frames
-            .first()
-            .is_some_and(|frame| frame.frame_id_numbers_present)
-    {
-        let first = portable_frames.first().ok_or_else(|| {
-            CodecError::Malformed("AVIF sequence has no displayable frame".to_owned())
-        })?;
-        reserve_gap_frames(
-            budget,
-            if first.alpha_plane.is_some() {
-                ImageMode::Rgba8
-            } else {
-                ImageMode::Rgb8
-            },
-            first.width,
-            first.height,
-            sequence_payload.color.samples.len(),
-        )?;
-        return Err(CodecError::NotImplemented(
-            "AVIF sequence rendering cannot present error-resilient frame references in the pure-Rust backend"
-                .to_owned(),
-        ));
-    }
-    if portable_frames.len() != sequence_payload.color.samples.len() {
-        // A public sequence must retain one displayable frame for every movie
-        // sample. Do not publish a silently collapsed prefix when an
-        // error-resilient or hidden-reference track falls outside the
-        // presentation subset.
-        return Err(CodecError::NotImplemented(
-            "AVIF sequence rendering cannot present every movie sample in the pure-Rust backend"
-                .to_owned(),
-        ));
-    }
-    let first = portable_frames.first().ok_or_else(|| {
-        CodecError::Malformed("AVIF sequence has no displayable frame".to_owned())
-    })?;
-    let width = first.width;
-    let height = first.height;
-    let bit_depth = first.bit_depth;
-    let color_primaries = first.color_primaries;
-    let transfer_characteristics = first.transfer_characteristics;
-    let matrix_coefficients = first.matrix_coefficients;
-    let color_range = first.color_range;
-    let subsampling_x = first.subsampling_x;
-    let subsampling_y = first.subsampling_y;
-    let mode = if first.alpha_plane.is_some() {
+    // Public policy preflight charged sample zero using inspection. Require
+    // that declaration to describe this track before using it to reserve the
+    // later output canvases. In particular, a primary item reporting one frame
+    // cannot authorize a longer track under a max_frames policy.
+    let info = super::inspect::inspect(data)
+        .map_err(|error| error.context("AVIF sequence inspection failed"))?;
+    let sample_count = u32::try_from(sequence_payload.color.samples.len())
+        .map_err(|_| CodecError::Dimensions("AVIF sequence frame count exceeds u32".to_owned()))?;
+    let mode = if sequence_payload.alpha.is_some() {
         ImageMode::Rgba8
     } else {
         ImageMode::Rgb8
     };
+    if info.frame_count != Some(sample_count) || info.mode != mode {
+        return Err(CodecError::NotImplemented(
+            "AVIF sequence track differs from the inspected presentation declaration".to_owned(),
+        ));
+    }
+    let width = info.width;
+    let height = info.height;
+    // Reserve output transfer bytes before reconstruction, including on a
+    // capability-gap path. This transfer-byte limit does not account for
+    // retained reference surfaces or scratch allocations.
+    for _ in 1..sample_count {
+        crate::codecs::error::check_cancelled(token)?;
+        budget
+            .reserve_later_frame(mode, width, height)
+            .map_err(CodecError::LimitExceeded)?;
+    }
     let source_template =
         avif_sequence_source_template(&extracted, file_type, mode == ImageMode::Rgba8);
     let mut frames = Vec::new();
-    frames.try_reserve(portable_frames.len()).map_err(|_| {
-        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
-    })?;
-    for (index, portable) in portable_frames.into_iter().enumerate() {
+    frames
+        .try_reserve(sequence_payload.color.samples.len())
+        .map_err(|_| {
+            CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
+        })?;
+    super::av1::visit_sequence_frames(&extracted, (width, height), token, |index, portable| {
         crate::codecs::error::check_cancelled(token)?;
-        if portable.width != width
-            || portable.height != height
+        if (portable.width, portable.height) != (width, height)
             || portable.alpha_plane.is_some() != (mode == ImageMode::Rgba8)
-            || portable.bit_depth != bit_depth
-            || portable.color_primaries != color_primaries
-            || portable.transfer_characteristics != transfer_characteristics
-            || portable.matrix_coefficients != matrix_coefficients
-            || portable.color_range != color_range
-            || portable.subsampling_x != subsampling_x
-            || portable.subsampling_y != subsampling_y
         {
             return Err(CodecError::NotImplemented(
-                "AVIF sequence changes geometry or color format between samples".to_owned(),
+                "AVIF sequence frame differs from its reserved output canvas".to_owned(),
             ));
-        }
-        if index != 0 {
-            budget
-                .reserve_later_frame(mode, width, height)
-                .map_err(CodecError::LimitExceeded)?;
         }
         let image = super::av1::ValidatedAv1 {
             portable_still: Some(portable),
@@ -337,7 +269,9 @@ pub fn decode_sequence(
             FrameDisposal::Unspecified,
             FrameBlend::Unspecified,
         ));
-    }
+        Ok(())
+    })
+    .map_err(|error| error.context("AVIF sequence validation failed"))?;
 
     let mut extracted = extracted;
     let consumed = extracted.consumed;
@@ -358,21 +292,6 @@ pub fn decode_sequence(
         },
         consumed,
     ))
-}
-
-fn reserve_gap_frames(
-    budget: &mut SequenceDecodeBudget,
-    mode: ImageMode,
-    width: u32,
-    height: u32,
-    sample_count: usize,
-) -> CodecResult<()> {
-    for _ in 1..sample_count {
-        budget
-            .reserve_later_frame(mode, width, height)
-            .map_err(CodecError::LimitExceeded)?;
-    }
-    Ok(())
 }
 
 fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> CodecResult<()> {
@@ -1459,7 +1378,6 @@ mod tests {
             color_range: true,
             subsampling_x: false,
             subsampling_y: false,
-            frame_id_numbers_present: false,
             planes: std::array::from_fn(|_| ReconstructedPlane {
                 samples: vec![128; 16],
             }),

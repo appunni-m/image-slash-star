@@ -1,0 +1,101 @@
+{
+  "alpha_track_id": null,
+  "color_track_id": 1,
+  "file": "animated.avif",
+  "ftyp": {
+    "compatible": [
+      "avif",
+      "avis",
+      "msf1",
+      "iso8",
+      "mif1",
+      "miaf",
+      "MA1B"
+    ],
+    "major": "avis",
+    "minor": 0
+  },
+  "items": {
+    "alpha": [],
+    "color": [
+      {
+        "av1c": {
+          "hex": "81000c00",
+          "length": 4,
+          "offset": 240,
+          "sha256": "f2afc975a3a53560b19817ef66853a99b09ee868e404bcee43f1ee20793f5517"
+        },
+        "construction": "file",
+        "item_id": 1,
+        "length": 39,
+        "sha256": "8ec6d1190463e5d3defa50a8f270a2daa51be85e636ee1e482be91be2aedebeb",
+        "spans": [
+          {
+            "length": 39,
+            "offset": 1023
+          }
+        ],
+        "type": "av01"
+      }
+    ],
+    "primary_item_id": 1
+  },
+  "length": 1235,
+  "sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
+  "tracks": [
+    {
+      "aux_for_track_id": null,
+      "av1c": {
+        "hex": "81000c00",
+        "length": 4,
+        "offset": 844,
+        "sha256": "f2afc975a3a53560b19817ef66853a99b09ee868e404bcee43f1ee20793f5517"
+      },
+      "handler": "pict",
+      "samples": [
+        {
+          "duration": 1,
+          "index": 0,
+          "length": 39,
+          "offset": 1023,
+          "sha256": "8ec6d1190463e5d3defa50a8f270a2daa51be85e636ee1e482be91be2aedebeb",
+          "sync": true
+        },
+        {
+          "duration": 1,
+          "index": 1,
+          "length": 113,
+          "offset": 1062,
+          "sha256": "a4a77230e45708a7cbe33be90201dd715803a6014c54e7c7df81621bacff24ad",
+          "sync": false
+        },
+        {
+          "duration": 1,
+          "index": 2,
+          "length": 5,
+          "offset": 1175,
+          "sha256": "e9e33cf3c379510fa68d4b4fc7d0bfb5677c717177cf5831033332b14cc15bdb",
+          "sync": false
+        },
+        {
+          "duration": 1,
+          "index": 3,
+          "length": 30,
+          "offset": 1180,
+          "sha256": "5990be45371440951b1a8f7e8b50f65c48f447a7eabf5aec5b2f21e228a0adb7",
+          "sync": false
+        },
+        {
+          "duration": 1,
+          "index": 4,
+          "length": 25,
+          "offset": 1210,
+          "sha256": "2f9b713fe83554cbc9701e85e93b6453d2a7e43edc5c19ea3fea2e457c926aa6",
+          "sync": false
+        }
+      ],
+      "timescale": 30,
+      "track_id": 1
+    }
+  ]
+}

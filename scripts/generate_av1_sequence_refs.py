@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import collections
+import ctypes
 import hashlib
 import io
 import json
@@ -24,11 +25,12 @@ import os
 import shutil
 import struct
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
+from PIL import Image, _avif, _imaging, features
 
 from generate_av1_reconstruction_refs import (
     DAV1D_COMMIT,
@@ -45,7 +47,35 @@ ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = ROOT / "tests" / "fixtures" / "input" / "images" / "avif" / "animated.avif"
 OUTPUT = ROOT / "target" / "oracle-staging" / "av1-sequence" / "animated"
 COPYING_SHA256 = "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5"
-SCHEMA = "image-slash-star/av1-sequence-oracle@1"
+SCHEMA = "image-slash-star/av1-sequence-oracle@2"
+FIXTURE_SHA256 = "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+LIBAVIF_COMMIT = "6543b22b5bc706c53f038a16fe515f921556d9b3"
+LOOP_OBSERVER = r'''
+#include <avif/avif.h>
+#include <dlfcn.h>
+extern "C" int observe_loop(void * library, const uint8_t * input, size_t size, int * repetition) {
+#define LOAD(name) \
+    auto p_##name = reinterpret_cast<decltype(&name)>(dlsym(library, #name)); \
+    if (!p_##name) return 1
+    LOAD(avifDecoderCreate);
+    LOAD(avifDecoderDestroy);
+    LOAD(avifDecoderSetIOMemory);
+    LOAD(avifDecoderParse);
+    LOAD(avifDecoderNthImage);
+#undef LOAD
+    avifDecoder * decoder = p_avifDecoderCreate();
+    if (!decoder) return 2;
+    decoder->codecChoice = AVIF_CODEC_CHOICE_DAV1D;
+    decoder->maxThreads = 1;
+    auto finish = [&](int result) { p_avifDecoderDestroy(decoder); return result; };
+    if (p_avifDecoderSetIOMemory(decoder, input, size) != AVIF_RESULT_OK ||
+        p_avifDecoderParse(decoder) != AVIF_RESULT_OK ||
+        p_avifDecoderNthImage(decoder, 0) != AVIF_RESULT_OK) return finish(3);
+    if (decoder->imageCount != 5 || !decoder->imageSequenceTrackPresent) return finish(4);
+    *repetition = decoder->repetitionCount;
+    return finish(0);
+}
+'''
 TRACE_FILES = ("src/obu.c", "src/decode.c", "tools/output/output.c")
 
 
@@ -120,8 +150,8 @@ def artifact_records(root: Path) -> list[dict[str, object]]:
 def output_guard() -> None:
     root = ROOT.resolve()
     target = OUTPUT.resolve()
-    if root not in target.parents:
-        raise RuntimeError("sequence output escaped the repository")
+    if (root / "target/oracle-staging") not in target.parents:
+        raise RuntimeError("sequence output must be below target/oracle-staging")
     canonical = (
         ROOT / "manifest.yaml",
         ROOT / "pillow-oracle.lock.yaml",
@@ -450,15 +480,33 @@ def make_ivf(
     }
 
 
-def pillow_report(data: bytes) -> dict[str, object]:
+def pillow_report(data: bytes, bundle: Path | None = None) -> dict[str, object]:
     stream = io.BytesIO(data)
     stream.name = FIXTURE.as_posix()
+    native_decoder = _avif.AvifDecoder(data, "dav1d", 1)
     with Image.open(stream) as image:
         count = int(getattr(image, "n_frames", 1))
         frames = []
         for index in range(count):
             image.seek(index)
             raw = image.tobytes()
+            native_raw, timescale, pts, duration = native_decoder.get_frame(index)
+            if native_raw != raw:
+                raise RuntimeError("Pillow and explicit dav1d/libavif pixels differ")
+            native_fields = {}
+            if bundle is not None:
+                relative = Path("decoded") / "pillow" / f"frame_{index}.rgb"
+                destination = bundle / relative
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                if destination.exists() and destination.read_bytes() != raw:
+                    raise RuntimeError("repeated Pillow observation changed pixels")
+                destination.write_bytes(raw)
+                native_fields = {
+                    "raw_path": relative.as_posix(),
+                    "native_timescale": timescale,
+                    "native_pts": pts,
+                    "native_duration": duration,
+                }
             frames.append(
                 {
                     "index": index,
@@ -467,6 +515,7 @@ def pillow_report(data: bytes) -> dict[str, object]:
                     "raw_bytes": len(raw),
                     "raw_sha256": sha256(raw),
                     "duration": image.info.get("duration"),
+                    **native_fields,
                     "duration_observation": (
                         "Pillow.Image.info" if "duration" in image.info else "not_present"
                     ),
@@ -998,8 +1047,14 @@ def collect_role(
     trace_path = bundle / trace_relative
     trace_path.parent.mkdir(parents=True, exist_ok=True)
     trace_path.write_bytes(
-        b"".join(json_bytes(record) for record in trace_records)
+        b"".join(
+            (json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+            for record in trace_records
+        )
     )
+    patch_relative = Path("provenance") / Path(build_info["patch_path"]).name
+    (bundle / patch_relative).parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(build_info["patch_path"], bundle / patch_relative)
     trace_yuv = work / f"{role}-trace.yuv"
     display_reports = output_frames(bundle, role, trace_yuv, trace_events)
     identity, counts = summarize_identity(
@@ -1029,7 +1084,7 @@ def collect_role(
             "instrumented": build_info["trace_build"],
         },
         "patch": {
-            "path": (Path("provenance") / Path(build_info["patch_path"]).name).as_posix(),
+            "path": patch_relative.as_posix(),
             "bytes": build_info["patch_bytes"],
             "sha256": build_info["patch_sha256"],
         },
@@ -1041,10 +1096,56 @@ def collect_role(
     }
 
 
+def native_loop_report(data: bytes, source: Path, work: Path, bundle: Path) -> dict:
+    revision = text_output(run(["git", "-C", str(source), "rev-parse", "HEAD"]))
+    if revision != LIBAVIF_COMMIT or run(["git", "-C", str(source), "status", "--porcelain"]).stdout:
+        raise RuntimeError("libavif source must be a clean pinned checkout")
+    provenance = {
+        "commit": revision,
+        "tree_sha256": git_tree_digest(source),
+        "files": [{"path": name, "sha256": digest_file(source / name)}
+                  for name in ("include/avif/avif.h", "src/read.c", "LICENSE")],
+    }
+    if digest_file(source / "LICENSE") != digest_file(ROOT / "third_party/libavif/LICENSE"):
+        raise RuntimeError("libavif license differs from the retained license")
+    observer = bundle / "provenance/loop-observer.cc"
+    observer.parent.mkdir(parents=True, exist_ok=True)
+    observer.write_text(LOOP_OBSERVER)
+    compiler = resolve_tool("c++", "C++ compiler")
+    shared = work / "loop-observer.so"
+    command = [str(compiler), "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+               "-shared", "-fPIC", f"-I{source / 'include'}", str(observer), "-o", str(shared)]
+    if sys.platform.startswith("linux"):
+        command.append("-ldl")
+    run(command)
+    library = ctypes.CDLL(_avif.__file__)
+    harness = ctypes.CDLL(str(shared))
+    observe = harness.observe_loop
+    observe.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_int)]
+    observe.restype = ctypes.c_int
+    observations = []
+    for _ in range(2):
+        repetition = ctypes.c_int()
+        if observe(library._handle, data, len(data), ctypes.byref(repetition)):
+            raise RuntimeError("native loop observer failed")
+        observations.append(repetition.value)
+    if observations[0] != observations[1]:
+        raise RuntimeError("native repetition changed on repeat")
+    return {
+        "repetition_count": observations[0], "origin": "libavif.avifDecoder.repetitionCount",
+        "source": provenance, "observer_path": "provenance/loop-observer.cc",
+        "observer_sha256": digest_file(shared),
+        "compiler": text_output(run([str(compiler), "--version"])),
+        "compile_argv": [value.replace(str(source), "<libavif-source>").replace(str(work), "<work>") for value in command],
+        "native_repeat_equal": True,
+    }
+
+
 def build_bundle(
     bundle: Path,
     work: Path,
     source: Path,
+    libavif_source: Path,
     meson: Path,
     ninja: Path,
     env: dict[str, str],
@@ -1052,6 +1153,12 @@ def build_bundle(
     if not FIXTURE.is_file():
         raise RuntimeError(f"missing animated fixture: {FIXTURE}")
     avif_data = FIXTURE.read_bytes()
+    if sha256(avif_data) != FIXTURE_SHA256:
+        raise RuntimeError("registered animated fixture has changed")
+    codecs = _avif.codec_versions()
+    if (Image.__version__ != "12.2.0" or features.version("avif") != "1.4.1"
+            or codecs != "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2"):
+        raise RuntimeError("Pillow/libavif/codec identity differs from the pinned oracle")
     container = inspect_avif(FIXTURE)
     syntax = inspect_av1(FIXTURE)
     write_json(bundle / "syntax" / "avif-container.json", container)
@@ -1088,9 +1195,17 @@ def build_bundle(
             "status": "not_applicable",
             "reason": "animated.avif has no auxiliary alpha track",
         }
-    pillow = pillow_report(avif_data)
+    pillow = pillow_report(avif_data, bundle)
+    if pillow != pillow_report(avif_data, bundle):
+        raise RuntimeError("repeated Pillow metadata observation changed")
     if pillow["frame_count"] != 5 or pillow["mode"] != "RGB" or pillow["size"] != [150, 150]:
         raise RuntimeError("Pillow animated fixture observation changed unexpectedly")
+    for frame, identity in zip(pillow["frames"], role_reports["color"]["identity"], strict=True):
+        if (frame["native_timescale"], frame["native_pts"], frame["native_duration"]) != (
+            identity["duration_den"], identity["pts_num"], identity["duration_num"]
+        ):
+            raise RuntimeError("native libavif and independent BMFF timing differ")
+    native_loop = native_loop_report(avif_data, libavif_source, work, bundle)
     source_verify_before = {
         "commit": text_output(run(["git", "-C", str(source), "rev-parse", "HEAD"])),
         "tree_sha256": git_tree_digest(source),
@@ -1118,6 +1233,15 @@ def build_bundle(
             "sha256": sha256(avif_data),
         },
         "pillow": pillow,
+        "native_loop": native_loop,
+        "oracle": {
+            "pillow": Image.__version__,
+            "libavif": features.version("avif"),
+            "codecs": codecs,
+            "pillow_avif_sha256": digest_file(Path(_avif.__file__)),
+            "pillow_imaging_sha256": digest_file(Path(_imaging.__file__)),
+            "pillow_repeat_equal": True,
+        },
         "container": {
             "color_track_id": container.get("color_track_id"),
             "alpha_track_id": container.get("alpha_track_id"),
@@ -1194,16 +1318,20 @@ def publish(bundle: Path) -> str:
 
 
 def main() -> None:
+    global OUTPUT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dav1d-source", type=Path, required=True)
+    parser.add_argument("--libavif-source", type=Path, required=True)
     parser.add_argument("--meson", default="meson")
     parser.add_argument("--ninja", default="ninja")
+    parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument(
         "--python-path",
         type=Path,
         help="Optional site-packages path for an isolated Meson installation",
     )
     args = parser.parse_args()
+    OUTPUT = args.output.resolve()
     output_guard()
     source = args.dav1d_source.resolve()
     verify_source(source)
@@ -1219,7 +1347,7 @@ def main() -> None:
     bundle = temp_root / "animated"
     bundle.mkdir()
     try:
-        build_bundle(bundle, temp_root, source, meson, ninja, env)
+        build_bundle(bundle, temp_root, source, args.libavif_source.resolve(), meson, ninja, env)
         outcome = publish(bundle)
     except Exception:
         if temp_root.exists():
@@ -1227,7 +1355,7 @@ def main() -> None:
         raise
     if temp_root.exists():
         shutil.rmtree(temp_root)
-    print(json.dumps({"output": "target/oracle-staging/av1-sequence/animated", "result": outcome}, sort_keys=True))
+    print(json.dumps({"output": str(OUTPUT.relative_to(ROOT)), "result": outcome}, sort_keys=True))
 
 
 if __name__ == "__main__":

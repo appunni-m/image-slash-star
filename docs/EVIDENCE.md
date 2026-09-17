@@ -100,6 +100,35 @@ presentation, Rust pixel execution and managed coverage remain unverified;
 the existing sequence gates, planned matrix rows and historical coverage
 totals are retained.
 
+The 2026-09-17 sequence presentation candidate processes matching color and
+alpha samples with persistent reference state, converts each complete display
+before advancing, and publishes frames only after all samples succeed. It
+reserves later output transfer bytes before reconstruction and requires the
+inspected frame count, output mode and actual frame geometry to agree. Missing
+reconstruction surfaces remain capability gaps; malformed tile envelopes and
+empty reference slots retain precedence. Frame-ID sequence presentation is
+still unsupported after structural validation.
+
+The [sequence native index](../tests/fixtures/outputs/av1_sequence/animated/index.json)
+retains five complete RGB displays, six decoded frames, two hidden frames and
+one show-existing display from the unchanged `animated.avif`. Unmodified and
+instrumented pinned scalar dav1d agree on 168,750 YUV bytes; repeated native
+libavif/Pillow observations agree on 337,500 RGB bytes. Native durations are
+exactly 1/30 second; Pillow reports rounded 33 ms durations.
+Independent libavif repetition observations distinguish this
+one-play animation from the infinitely repeating high-depth fixture. Pillow
+omits its loop field for both. The [bundle notes](../tests/fixtures/outputs/av1_sequence/README.md)
+retain the native metadata origin and required matrix reconciliation.
+
+Deferred regressions compare every public display, first-image pixels,
+timing, native repetition and output-budget boundaries for both fixtures.
+Internal defensive cases remain Rust model assertions. All 12 strict Clippy
+lanes described above, warnings-as-errors rustdoc, formatting and static
+provenance/roadmap checks pass. Rust behavioral execution and managed coverage
+remain deferred; no row or finding is promoted. Output transfer limits do not
+bound retained AV1 references or scratch memory, and variable frame geometry
+and primary-item/track declaration disagreements remain unsupported.
+
 ## Diagnostic provenance
 
 The separate defensive-model contract has 61 diagnostic cases: 38 use committed bytes that also have a Pillow parity row;

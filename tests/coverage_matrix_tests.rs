@@ -33,6 +33,10 @@ mod avif_hdr_color;
 #[path = "support/avif_highdepth_color.rs"]
 mod avif_highdepth_color;
 
+#[cfg(feature = "avif")]
+#[path = "support/avif_sequence.rs"]
+mod avif_sequence;
+
 use support::json::{self, FromJson, Object, Value};
 
 #[cfg(coverage)]

@@ -64,9 +64,6 @@ pub(super) struct PortableStill {
     pub(super) color_range: bool,
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
-    /// AV1 frame-ID syntax is retained so first-frame APIs can distinguish
-    /// an error-resilient movie from the ordinary multi-frame gap.
-    pub(super) frame_id_numbers_present: bool,
     pub(super) planes: [block::ReconstructedPlane; 3],
     /// A validated monochrome auxiliary plane for the narrow composition
     /// class. Unsupported alpha syntax never becomes a silent RGB decode.
@@ -247,175 +244,156 @@ fn validate_plane_state(input: &[u8], plane: &EncodedPlane) -> Av1Result<FrameSt
     Ok(state)
 }
 
-/// Validate and materialize every displayable sample in one AVIF track.
+/// Visit each complete display in movie sample order with persistent references.
 ///
-/// A movie sample is a temporal unit, not necessarily a complete intra frame.
-/// Keeping one [`FrameState`] alive across the loop preserves reference
-/// surfaces, frame IDs, CDFs, and segmentation state while the returned
-/// displays remain owned snapshots suitable for the public sequence API.
-pub(super) fn validate_sequence_frames(
+/// Color and alpha advance together, so only the current display's owned YUV
+/// planes remain outside the bounded reference state. The caller reserves the
+/// output transfer bytes first and keeps converted frames private until this
+/// entire traversal succeeds.
+pub(super) fn visit_sequence_frames(
     extracted: &ExtractedAvif<'_>,
+    dimensions: (u32, u32),
     token: Option<&crate::CancellationToken>,
-) -> Av1Result<Option<Vec<PortableStill>>> {
-    let Some(sequence) = &extracted.sequence else {
-        return Ok(None);
-    };
+    mut visit: impl FnMut(usize, PortableStill) -> Av1Result<()>,
+) -> Av1Result<()> {
+    let sequence = extracted
+        .sequence
+        .as_ref()
+        .ok_or_else(|| malformed("AVIF sequence has no track payload"))?;
     if sequence.color.samples.is_empty() {
         return Err(malformed("AVIF sequence has no color samples"));
     }
-
-    let mut color_state = FrameState::new();
-    let mut color_displays = Vec::new();
-    color_displays
-        .try_reserve(sequence.color.samples.len())
-        .map_err(|_| {
-            CodecError::Dimensions("unable to reserve AVIF color sequence state".to_owned())
-        })?;
-    for (sample_index, sample) in sequence.color.samples.iter().enumerate() {
-        crate::codecs::error::check_cancelled(token)?;
-        let temporal_unit =
-            validate_sample_and_return_temporal_unit(extracted.input, sample, &mut color_state)?;
-        let display =
-            color_state.selected_display_for_temporal_unit_with_token(temporal_unit, token)?;
-        color_displays.push(display);
-        if sample_index == 0 {
-            let first_sequence = color_state.finish()?;
-            // Reject an unsupported color profile before validating later
-            // reference samples. This keeps a known pure-Rust capability gap
-            // typed as Unsupported instead of exposing an incidental missing
-            // reference surface from the next temporal unit.
-            if !first_sequence.monochrome
-                && !portable_color_sequence_supported(first_sequence, sequence.alpha.is_some())
-            {
-                return Ok(None);
-            }
-            // Ordinary multi-frame AVIF presentation still lacks the
-            // reference and timing contract. Keep that gap typed even when a
-            // later sample would otherwise fail during partial validation.
-            if sequence.color.samples.len() > 1 && !first_sequence.frame_id_numbers_present {
-                return Ok(None);
-            }
-        }
-    }
-    let color_sequence = color_state.finish()?.clone();
-
-    let mut alpha_displays = None;
-    let mut alpha_sequence = None;
-    if let Some(alpha) = &sequence.alpha {
-        let mut alpha_state = FrameState::new();
-        let mut displays = Vec::new();
-        displays.try_reserve(alpha.samples.len()).map_err(|_| {
-            CodecError::Dimensions("unable to reserve AVIF alpha sequence state".to_owned())
-        })?;
-        for sample in &alpha.samples {
-            crate::codecs::error::check_cancelled(token)?;
-            let temporal_unit = validate_sample_and_return_temporal_unit(
-                extracted.input,
-                sample,
-                &mut alpha_state,
-            )?;
-            let display =
-                alpha_state.selected_display_for_temporal_unit_with_token(temporal_unit, token)?;
-            displays.push(display);
-        }
-        alpha_sequence = Some(alpha_state.finish()?.clone());
-        alpha_displays = Some(displays);
-    }
-
-    if alpha_displays
+    if sequence
+        .alpha
         .as_ref()
-        .is_some_and(|displays| displays.len() != color_displays.len())
+        .is_some_and(|alpha| alpha.samples.len() != sequence.color.samples.len())
     {
-        return Ok(None);
-    }
-    if let Some(alpha_sequence) = &alpha_sequence
-        && !monochrome_alpha_sequence_supported(alpha_sequence, color_sequence.bit_depth)
-    {
-        return Ok(None);
+        return Err(malformed(
+            "AVIF sequence color and alpha sample counts differ",
+        ));
     }
 
-    let mut frames = Vec::new();
-    frames.try_reserve(color_displays.len()).map_err(|_| {
-        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
-    })?;
-    if color_sequence.monochrome {
-        if !monochrome_primary_sequence_supported(&color_sequence) {
-            return Ok(None);
-        }
-        for display in &mut color_displays {
-            let Some(mut display) = display.take() else {
-                return Ok(None);
-            };
-            let Some(dimensions) = monochrome_display_dimensions(&display) else {
-                return Ok(None);
-            };
-            let Some(color_plane) = display.monochrome_plane.take() else {
-                return Ok(None);
-            };
-            let alpha_plane = if let Some(alpha_displays) = alpha_displays.as_mut() {
-                let Some(mut alpha_display) =
-                    alpha_displays.get_mut(frames.len()).and_then(Option::take)
-                else {
-                    return Ok(None);
-                };
-                let Some(alpha_dimensions) = monochrome_display_dimensions(&alpha_display) else {
-                    return Ok(None);
-                };
-                if alpha_dimensions != dimensions {
-                    return Ok(None);
-                }
-                let Some(alpha_plane) = alpha_display.monochrome_plane.take() else {
-                    return Ok(None);
-                };
-                Some(alpha_plane)
-            } else {
-                None
-            };
-            frames.push(portable_monochrome_still(
-                color_plane,
-                dimensions,
-                color_sequence.clone(),
-                alpha_plane,
-            ));
-        }
-        return Ok(Some(frames));
-    }
-    if !portable_color_sequence_supported(&color_sequence, sequence.alpha.is_some()) {
-        return Ok(None);
-    }
-    for (index, display) in color_displays.iter_mut().enumerate() {
-        let Some(display) = display.take() else {
-            return Ok(None);
-        };
-        let Some(color_leaf) = display.color_leaf else {
-            return Ok(None);
-        };
-        if display.dimensions != Some((color_leaf.width, color_leaf.height)) {
-            return Ok(None);
-        }
-        let alpha_plane = if let Some(alpha_displays) = alpha_displays.as_mut() {
-            let Some(alpha_display) = alpha_displays.get_mut(index).and_then(Option::take) else {
-                return Ok(None);
-            };
-            if monochrome_display_dimensions(&alpha_display)
-                != Some((color_leaf.width, color_leaf.height))
-            {
-                return Ok(None);
-            };
-            let Some(alpha_plane) = alpha_display.monochrome_plane else {
-                return Ok(None);
-            };
-            Some(alpha_plane)
+    let mut color_state = FrameState::for_sequence(dimensions.0, dimensions.1);
+    let mut alpha_state = FrameState::for_sequence(dimensions.0, dimensions.1);
+    for (index, sample) in sequence.color.samples.iter().enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
+        let color_unit =
+            validate_sample_and_return_temporal_unit(extracted.input, sample, &mut color_state)?;
+        let color_sequence = color_state.finish()?.clone();
+        let alpha_unit = if let Some(alpha) = &sequence.alpha {
+            crate::codecs::error::check_cancelled(token)?;
+            let alpha_sample = alpha
+                .samples
+                .get(index)
+                .ok_or_else(|| malformed("AVIF sequence alpha sample disappeared"))?;
+            Some(validate_sample_and_return_temporal_unit(
+                extracted.input,
+                alpha_sample,
+                &mut alpha_state,
+            )?)
         } else {
             None
         };
-        frames.push(portable_still(
-            color_leaf,
-            color_sequence.clone(),
+
+        if sequence.color.samples.len() > 1 && color_sequence.frame_id_numbers_present {
+            // Preserve complete frame-ID validation before the existing
+            // error-resilient presentation gap. An earlier display or color
+            // capability gap must not conceal a later repeated current ID.
+            continue;
+        }
+        if !(if color_sequence.monochrome {
+            monochrome_primary_sequence_supported(&color_sequence)
+        } else {
+            portable_color_sequence_supported(&color_sequence, sequence.alpha.is_some())
+        }) {
+            return Err(sequence_presentation_gap(
+                "has an unsupported color declaration",
+            ));
+        }
+        let alpha_plane = if let Some(alpha_unit) = alpha_unit {
+            if !monochrome_alpha_sequence_supported(alpha_state.finish()?, color_sequence.bit_depth)
+            {
+                return Err(sequence_presentation_gap(
+                    "has an unsupported auxiliary alpha declaration",
+                ));
+            }
+            let mut display = alpha_state
+                .selected_display_for_temporal_unit_with_token(alpha_unit, token)?
+                .ok_or_else(|| sequence_presentation_gap("has no alpha display for a sample"))?;
+            if monochrome_display_dimensions(&display) != Some(dimensions) {
+                return Err(sequence_presentation_gap(
+                    "has no complete matching alpha surface",
+                ));
+            }
+            Some(
+                display
+                    .monochrome_plane
+                    .take()
+                    .ok_or_else(|| sequence_presentation_gap("has no reconstructed alpha plane"))?,
+            )
+        } else {
+            None
+        };
+        let display = color_state
+            .selected_display_for_temporal_unit_with_token(color_unit, token)?
+            .ok_or_else(|| sequence_presentation_gap("has no color display for a sample"))?;
+        let portable = sequence_portable_display(display, color_sequence, alpha_plane, dimensions)?;
+        crate::codecs::error::check_cancelled(token)?;
+        visit(index, portable)?;
+    }
+    if sequence.color.samples.len() > 1 && color_state.finish()?.frame_id_numbers_present {
+        return Err(sequence_presentation_gap(
+            "cannot present error-resilient frame references in the pure-Rust backend",
+        ));
+    }
+    Ok(())
+}
+
+fn sequence_presentation_gap(message: &'static str) -> CodecError {
+    CodecError::NotImplemented(format!("AVIF sequence rendering {message}"))
+}
+
+fn sequence_portable_display(
+    mut display: frame::SelectedDisplay,
+    sequence: sequence::SequenceHeader,
+    alpha_plane: Option<block::ReconstructedPlane>,
+    dimensions: (u32, u32),
+) -> Av1Result<PortableStill> {
+    if sequence.monochrome {
+        if monochrome_display_dimensions(&display) != Some(dimensions) {
+            return Err(sequence_presentation_gap(
+                "has no complete matching monochrome surface",
+            ));
+        }
+        let plane = display
+            .monochrome_plane
+            .take()
+            .ok_or_else(|| sequence_presentation_gap("has no reconstructed monochrome plane"))?;
+        return Ok(portable_monochrome_still(
+            plane,
+            dimensions,
+            sequence,
             alpha_plane,
         ));
     }
-    Ok(Some(frames))
+    let geometry = display
+        .geometry
+        .ok_or_else(|| sequence_presentation_gap("has no completed color surface"))?;
+    if display.dimensions != Some(dimensions)
+        || (geometry.render_width, geometry.render_height) != dimensions
+        || display.monochrome_plane.is_some()
+    {
+        return Err(sequence_presentation_gap(
+            "has an unsupported color display geometry",
+        ));
+    }
+    let color_leaf = display
+        .color_leaf
+        .ok_or_else(|| sequence_presentation_gap("has no reconstructed color planes"))?;
+    if (color_leaf.width, color_leaf.height) != dimensions {
+        return Err(sequence_presentation_gap("has incomplete color planes"));
+    }
+    Ok(portable_still(color_leaf, sequence, alpha_plane))
 }
 
 #[allow(
@@ -572,7 +550,6 @@ fn portable_still(
         color_range: sequence.color_range,
         subsampling_x: sequence.subsampling_x,
         subsampling_y: sequence.subsampling_y,
-        frame_id_numbers_present: sequence.frame_id_numbers_present,
         planes: leaf.planes,
         alpha_plane,
         #[cfg(coverage)]
@@ -600,7 +577,6 @@ fn portable_monochrome_still(
         color_range: sequence.color_range,
         subsampling_x: sequence.subsampling_x,
         subsampling_y: sequence.subsampling_y,
-        frame_id_numbers_present: sequence.frame_id_numbers_present,
         planes: [plane, empty.clone(), empty],
         alpha_plane,
         #[cfg(coverage)]
@@ -1254,7 +1230,7 @@ fn validate_still_with_token(
         // image is an independent decode contract: later track samples must
         // not make `decode()` fail or hide a supported primary item.  Full
         // sequence presentation still validates every track sample through
-        // `validate_sequence` and remains a separate capability.
+        // `visit_sequence_frames` and remains a separate capability.
         portable = match (still.color.samples.as_slice(), color.first_leaf) {
             ([_], Some(leaf)) => Some(portable_still(leaf, color.sequence, alpha_plane)),
             _ => None,
@@ -1942,7 +1918,6 @@ pub(crate) fn color_conversion_trace(
         color_range: input.color_range,
         subsampling_x: input.subsampling_x,
         subsampling_y: input.subsampling_y,
-        frame_id_numbers_present: false,
         planes: input
             .planes
             .map(|samples| block::ReconstructedPlane { samples }),
@@ -1973,7 +1948,6 @@ pub(super) fn __coverage_portable_still() -> PortableStill {
         color_range: true,
         subsampling_x: false,
         subsampling_y: false,
-        frame_id_numbers_present: false,
         planes: std::array::from_fn(|_| block::ReconstructedPlane {
             samples: vec![128; 16],
         }),
@@ -2114,6 +2088,35 @@ mod tests {
         // Sequence validation deliberately remains a separate contract; no
         // sequence renderer is implied by the primary-item result above.
         validate_sequence(&extracted)?;
+        Ok(())
+    }
+
+    #[test]
+    fn sequence_display_rejects_a_diagnostic_leaf_without_surface_proof() -> Av1Result<()> {
+        let bytes = include_bytes!("../../../test_support/fixtures/input/images/avif/alpha.avif");
+        let extracted = super::super::samples::validated(bytes)?;
+        let still = extracted
+            .still
+            .as_ref()
+            .ok_or_else(|| malformed("alpha fixture has no still payload"))?;
+        let plane = validate_plane(bytes, &still.color)?;
+        assert!(plane.first_leaf.is_some());
+        assert!(plane.display_geometry.is_some());
+        let dimensions = plane
+            .frame_dimensions
+            .ok_or_else(|| malformed("fixture has no complete dimensions"))?;
+        // Internal state mutation: complete pixels alone are not proof that
+        // the decoder completed the surface and its display geometry.
+        let display = frame::SelectedDisplay {
+            color_leaf: plane.first_leaf,
+            monochrome_plane: None,
+            dimensions: Some(dimensions),
+            geometry: None,
+        };
+        assert!(matches!(
+            sequence_portable_display(display, plane.sequence, None, dimensions),
+            Err(CodecError::NotImplemented(_))
+        ));
         Ok(())
     }
 }

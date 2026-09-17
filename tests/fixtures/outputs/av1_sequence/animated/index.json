@@ -1,0 +1,4414 @@
+{
+  "artifacts": [
+    {
+      "bytes": 33750,
+      "path": "decoded/color/display_0.yuv",
+      "sha256": "c61db6ee4f04228b641acbb6524f011b295b88265fb1353a1f4581c332b2aa42"
+    },
+    {
+      "bytes": 33750,
+      "path": "decoded/color/display_1.yuv",
+      "sha256": "535d261965af88c2b20081b75ae128f9e326df0572faa5768f5b5eb0a025f0d0"
+    },
+    {
+      "bytes": 33750,
+      "path": "decoded/color/display_2.yuv",
+      "sha256": "af724a6d47969beca0fecb29ff3ef3b3b90d0f4f8503edde446ac24cdaca63d4"
+    },
+    {
+      "bytes": 33750,
+      "path": "decoded/color/display_3.yuv",
+      "sha256": "fc0d30889f3210f973c6cc4306b1a76b6894c8f3258aa6112945f314ecf0f0c0"
+    },
+    {
+      "bytes": 33750,
+      "path": "decoded/color/display_4.yuv",
+      "sha256": "bbbde6cda838779bedb6c04b0d75586bc733ad3297ba1213ec69ce535a0f89de"
+    },
+    {
+      "bytes": 67500,
+      "path": "decoded/pillow/frame_0.rgb",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "decoded/pillow/frame_1.rgb",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "decoded/pillow/frame_2.rgb",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "decoded/pillow/frame_3.rgb",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "decoded/pillow/frame_4.rgb",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 304,
+      "path": "inputs/color.ivf",
+      "sha256": "e608a371050483c915cd1e106c76faaf8375cbb0260485c73cf945bef5c4ab33"
+    },
+    {
+      "bytes": 8790,
+      "path": "provenance/color-sequence-trace.patch",
+      "sha256": "07554540d43ecb44a1e692d77254a23d4e56d62947da8b9a89d35bc521cac699"
+    },
+    {
+      "bytes": 1052,
+      "path": "provenance/loop-observer.cc",
+      "sha256": "d2307777576a3c396619701779f67e2ca6cab8a4ad4d203ec89684cee51a3fa4"
+    },
+    {
+      "bytes": 124208,
+      "path": "syntax/av1-obus.json",
+      "sha256": "d655ee546e888b21e176874597c2260d036b93e7a61db2e8d24cf3fe3cf9321b"
+    },
+    {
+      "bytes": 2425,
+      "path": "syntax/avif-container.json",
+      "sha256": "e6d7653ca3f2ce04ea5c1fabc228708cca6439a656d44226ebc7756df5c6ac82"
+    },
+    {
+      "bytes": 34057,
+      "path": "traces/color.jsonl",
+      "sha256": "39ac0adf5d46af2d462bd73c907a63af8a12cd0762272ec7f5fd711b272ec498"
+    }
+  ],
+  "container": {
+    "alpha_track_id": null,
+    "color_track_id": 1,
+    "sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
+    "tracks": [
+      {
+        "av1c": {
+          "hex": "81000c00",
+          "length": 4,
+          "offset": 844,
+          "sha256": "f2afc975a3a53560b19817ef66853a99b09ee868e404bcee43f1ee20793f5517"
+        },
+        "handler": "pict",
+        "samples": [
+          {
+            "duration": 1,
+            "index": 0,
+            "length": 39,
+            "offset": 1023,
+            "sha256": "8ec6d1190463e5d3defa50a8f270a2daa51be85e636ee1e482be91be2aedebeb",
+            "sync": true
+          },
+          {
+            "duration": 1,
+            "index": 1,
+            "length": 113,
+            "offset": 1062,
+            "sha256": "a4a77230e45708a7cbe33be90201dd715803a6014c54e7c7df81621bacff24ad",
+            "sync": false
+          },
+          {
+            "duration": 1,
+            "index": 2,
+            "length": 5,
+            "offset": 1175,
+            "sha256": "e9e33cf3c379510fa68d4b4fc7d0bfb5677c717177cf5831033332b14cc15bdb",
+            "sync": false
+          },
+          {
+            "duration": 1,
+            "index": 3,
+            "length": 30,
+            "offset": 1180,
+            "sha256": "5990be45371440951b1a8f7e8b50f65c48f447a7eabf5aec5b2f21e228a0adb7",
+            "sync": false
+          },
+          {
+            "duration": 1,
+            "index": 4,
+            "length": 25,
+            "offset": 1210,
+            "sha256": "2f9b713fe83554cbc9701e85e93b6453d2a7e43edc5c19ea3fea2e457c926aa6",
+            "sync": false
+          }
+        ],
+        "timescale": 30,
+        "track_id": 1
+      }
+    ]
+  },
+  "fixture": {
+    "bytes": 1235,
+    "path": "tests/fixtures/input/images/avif/animated.avif",
+    "sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
+  },
+  "identity": {
+    "decoded_frame_index": "actual dav1d frame_submitted order; excludes show-existing",
+    "display_index": "actual dav1d picture_output order, associated by unique PTS",
+    "hidden_frames": "actual dav1d frame_header/frame_submitted with show_frame false",
+    "sample_index": "BMFF track sample order and IVF PTS index",
+    "show_existing": "actual dav1d show_existing_queued event; no tile decode expected"
+  },
+  "native_loop": {
+    "compile_argv": [
+      "/usr/bin/c++",
+      "-std=c++17",
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-shared",
+      "-fPIC",
+      "-I<libavif-source>/include",
+      "<work>/animated/provenance/loop-observer.cc",
+      "-o",
+      "<work>/loop-observer.so"
+    ],
+    "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
+    "native_repeat_equal": true,
+    "observer_path": "provenance/loop-observer.cc",
+    "observer_sha256": "7f1ed5698692d02ec0a1e33a3192e482a5833f5696350aac20c4dce82396558f",
+    "origin": "libavif.avifDecoder.repetitionCount",
+    "repetition_count": 0,
+    "source": {
+      "commit": "6543b22b5bc706c53f038a16fe515f921556d9b3",
+      "files": [
+        {
+          "path": "include/avif/avif.h",
+          "sha256": "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e"
+        },
+        {
+          "path": "src/read.c",
+          "sha256": "d2e4062f7030ffa5843a3c9cc4984e382a07782ce2241d8b5354fda888266e85"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "165abf92cc04b39e80d29cadea7a6a7e8fddf59407d4ad2616507a7ebe8216f9"
+        }
+      ],
+      "tree_sha256": "9a4323fe85047fecdc1822ce82e447fba7e329bf1f0dd9bbd9e5fb09fc5f5454"
+    }
+  },
+  "oracle": {
+    "codecs": "dav1d [dec]:1.5.3-0-gb546257, aom [enc]:3.13.2",
+    "libavif": "1.4.1",
+    "pillow": "12.2.0",
+    "pillow_avif_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+    "pillow_imaging_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+    "pillow_repeat_equal": true
+  },
+  "pillow": {
+    "frame_count": 5,
+    "frames": [
+      {
+        "duration": 33,
+        "duration_observation": "Pillow.Image.info",
+        "index": 0,
+        "mode": "RGB",
+        "native_duration": 1,
+        "native_pts": 0,
+        "native_timescale": 30,
+        "raw_bytes": 67500,
+        "raw_path": "decoded/pillow/frame_0.rgb",
+        "raw_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+        "size": [
+          150,
+          150
+        ]
+      },
+      {
+        "duration": 33,
+        "duration_observation": "Pillow.Image.info",
+        "index": 1,
+        "mode": "RGB",
+        "native_duration": 1,
+        "native_pts": 1,
+        "native_timescale": 30,
+        "raw_bytes": 67500,
+        "raw_path": "decoded/pillow/frame_1.rgb",
+        "raw_sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+        "size": [
+          150,
+          150
+        ]
+      },
+      {
+        "duration": 33,
+        "duration_observation": "Pillow.Image.info",
+        "index": 2,
+        "mode": "RGB",
+        "native_duration": 1,
+        "native_pts": 2,
+        "native_timescale": 30,
+        "raw_bytes": 67500,
+        "raw_path": "decoded/pillow/frame_2.rgb",
+        "raw_sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+        "size": [
+          150,
+          150
+        ]
+      },
+      {
+        "duration": 33,
+        "duration_observation": "Pillow.Image.info",
+        "index": 3,
+        "mode": "RGB",
+        "native_duration": 1,
+        "native_pts": 3,
+        "native_timescale": 30,
+        "raw_bytes": 67500,
+        "raw_path": "decoded/pillow/frame_3.rgb",
+        "raw_sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+        "size": [
+          150,
+          150
+        ]
+      },
+      {
+        "duration": 33,
+        "duration_observation": "Pillow.Image.info",
+        "index": 4,
+        "mode": "RGB",
+        "native_duration": 1,
+        "native_pts": 4,
+        "native_timescale": 30,
+        "raw_bytes": 67500,
+        "raw_path": "decoded/pillow/frame_4.rgb",
+        "raw_sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+        "size": [
+          150,
+          150
+        ]
+      }
+    ],
+    "loop_count": null,
+    "loop_observation": "not_present",
+    "mode": "RGB",
+    "size": [
+      150,
+      150
+    ]
+  },
+  "roles": {
+    "alpha": {
+      "reason": "animated.avif has no auxiliary alpha track",
+      "status": "not_applicable"
+    },
+    "color": {
+      "av1c": {
+        "hex": "81000c00",
+        "length": 4,
+        "offset": 844,
+        "sha256": "f2afc975a3a53560b19817ef66853a99b09ee868e404bcee43f1ee20793f5517"
+      },
+      "build": {
+        "instrumented": {
+          "compile_argv": [
+            "meson",
+            "compile",
+            "-C",
+            "<build>",
+            "tools/dav1d"
+          ],
+          "configure_argv": [
+            "meson",
+            "setup",
+            "<build>",
+            "<source-copy>",
+            "--buildtype=debug",
+            "-Denable_tools=true",
+            "-Denable_tests=false",
+            "-Denable_examples=false",
+            "-Dtestdata_tests=false",
+            "-Denable_asm=false"
+          ],
+          "meson_version": "1.12.0",
+          "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+          "ninja_version": "1.13.2",
+          "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+          "tool_version": "1.5.3-0-gb546257f",
+          "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+        },
+        "plain": {
+          "compile_argv": [
+            "meson",
+            "compile",
+            "-C",
+            "<build>",
+            "tools/dav1d"
+          ],
+          "configure_argv": [
+            "meson",
+            "setup",
+            "<build>",
+            "<source-copy>",
+            "--buildtype=debug",
+            "-Denable_tools=true",
+            "-Denable_tests=false",
+            "-Denable_examples=false",
+            "-Dtestdata_tests=false",
+            "-Denable_asm=false"
+          ],
+          "meson_version": "1.12.0",
+          "meson_version_sha256": "331ce1e5c33189e88a2ba5ae9a0e344128968c1b5c643e5b36413fb01659835d",
+          "ninja_version": "1.13.2",
+          "ninja_version_sha256": "87729f1910e8eb02719463db46083e0f1a4c3cbade23b357806338b25df16a6a",
+          "tool_version": "1.5.3-0-gb546257f",
+          "tool_version_sha256": "471ff115771c05f6a8a6b1682a3c94cb499705b1e9557f3e89e31168585c8438"
+        }
+      },
+      "counts": {
+        "block_class_histogram": {
+          "leaf:3:0": 24,
+          "leaf:4:1": 12,
+          "leaf:6:2": 3,
+          "leaf:7:0": 24,
+          "partition:1:0": 24,
+          "partition:2:0": 24
+        },
+        "block_class_histogram_by_frame_offset": {
+          "0": {
+            "leaf:3:0": 4,
+            "leaf:4:1": 2,
+            "leaf:6:2": 2,
+            "leaf:7:0": 1,
+            "partition:1:0": 4,
+            "partition:2:0": 1
+          },
+          "1": {
+            "leaf:3:0": 4,
+            "leaf:4:1": 2,
+            "leaf:7:0": 5,
+            "partition:1:0": 4,
+            "partition:2:0": 5
+          },
+          "2": {
+            "leaf:3:0": 4,
+            "leaf:4:1": 2,
+            "leaf:7:0": 5,
+            "partition:1:0": 4,
+            "partition:2:0": 5
+          },
+          "3": {
+            "leaf:3:0": 4,
+            "leaf:4:1": 2,
+            "leaf:6:2": 1,
+            "leaf:7:0": 3,
+            "partition:1:0": 4,
+            "partition:2:0": 3
+          },
+          "4": {
+            "leaf:3:0": 8,
+            "leaf:4:1": 4,
+            "leaf:7:0": 10,
+            "partition:1:0": 8,
+            "partition:2:0": 10
+          }
+        },
+        "block_count": 111,
+        "decoded_frame_count": 6,
+        "display_count": 5,
+        "hidden_decoded_count": 2,
+        "show_existing_count": 1
+      },
+      "display_frames": [
+        {
+          "bit_depth": 8,
+          "display_index": 0,
+          "duration": 0,
+          "height": 150,
+          "layout": "I420",
+          "layout_code": 1,
+          "planes": [
+            {
+              "bytes": 22500,
+              "height": 150,
+              "name": "y",
+              "sha256": "3ad5ca8cf4341294fb0e77c6324fcd4fcb5af2846e0e5a7d5a45d0e0d3537a8a",
+              "width": 150
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "u",
+              "sha256": "cd1ffa34ee90f142d1fabd18e81de50e1be363f288b6dd6156e9185cd2d8f705",
+              "width": 75
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "v",
+              "sha256": "cd1ffa34ee90f142d1fabd18e81de50e1be363f288b6dd6156e9185cd2d8f705",
+              "width": 75
+            }
+          ],
+          "pts": 0,
+          "raw_bytes": 33750,
+          "raw_path": "decoded/color/display_0.yuv",
+          "raw_sha256": "c61db6ee4f04228b641acbb6524f011b295b88265fb1353a1f4581c332b2aa42",
+          "width": 150
+        },
+        {
+          "bit_depth": 8,
+          "display_index": 1,
+          "duration": 0,
+          "height": 150,
+          "layout": "I420",
+          "layout_code": 1,
+          "planes": [
+            {
+              "bytes": 22500,
+              "height": 150,
+              "name": "y",
+              "sha256": "3ff759c2b968d49da66b83cb3eaa937f2bd1f65272bae8c6678c0173b59d8da2",
+              "width": 150
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "u",
+              "sha256": "dfb34d3adb9a420e7b053511631b43d2e0da34ae4a874e671cf0e11227c0da63",
+              "width": 75
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "v",
+              "sha256": "8d8748f457f0cab1e10f8639b4102b03f316b1bfc22a6f55428b2a690905ab24",
+              "width": 75
+            }
+          ],
+          "pts": 1,
+          "raw_bytes": 33750,
+          "raw_path": "decoded/color/display_1.yuv",
+          "raw_sha256": "535d261965af88c2b20081b75ae128f9e326df0572faa5768f5b5eb0a025f0d0",
+          "width": 150
+        },
+        {
+          "bit_depth": 8,
+          "display_index": 2,
+          "duration": 0,
+          "height": 150,
+          "layout": "I420",
+          "layout_code": 1,
+          "planes": [
+            {
+              "bytes": 22500,
+              "height": 150,
+              "name": "y",
+              "sha256": "c161dee4f6c208d41599ed40c15a0ceb93f73282f43eaeb9986dadba1b47b65e",
+              "width": 150
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "u",
+              "sha256": "1203290fba41a3e43ef8f0eb69cf6896df95d859a8546edc6c6b8eedd3bc8138",
+              "width": 75
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "v",
+              "sha256": "dea81eda92fe83229a38df0ceb379d5becb0cfbef568f6aa52fa1fe2403dea2d",
+              "width": 75
+            }
+          ],
+          "pts": 2,
+          "raw_bytes": 33750,
+          "raw_path": "decoded/color/display_2.yuv",
+          "raw_sha256": "af724a6d47969beca0fecb29ff3ef3b3b90d0f4f8503edde446ac24cdaca63d4",
+          "width": 150
+        },
+        {
+          "bit_depth": 8,
+          "display_index": 3,
+          "duration": 0,
+          "height": 150,
+          "layout": "I420",
+          "layout_code": 1,
+          "planes": [
+            {
+              "bytes": 22500,
+              "height": 150,
+              "name": "y",
+              "sha256": "fa0e0f46337c54f4880a1310454e70b30d2a32ef03c90b3e9085ac6ba41a6e02",
+              "width": 150
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "u",
+              "sha256": "1203290fba41a3e43ef8f0eb69cf6896df95d859a8546edc6c6b8eedd3bc8138",
+              "width": 75
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "v",
+              "sha256": "dfb34d3adb9a420e7b053511631b43d2e0da34ae4a874e671cf0e11227c0da63",
+              "width": 75
+            }
+          ],
+          "pts": 3,
+          "raw_bytes": 33750,
+          "raw_path": "decoded/color/display_3.yuv",
+          "raw_sha256": "fc0d30889f3210f973c6cc4306b1a76b6894c8f3258aa6112945f314ecf0f0c0",
+          "width": 150
+        },
+        {
+          "bit_depth": 8,
+          "display_index": 4,
+          "duration": 0,
+          "height": 150,
+          "layout": "I420",
+          "layout_code": 1,
+          "planes": [
+            {
+              "bytes": 22500,
+              "height": 150,
+              "name": "y",
+              "sha256": "15275d297572f171967e751046a6ebe11787275c4dfbd43486dd5fcd75525783",
+              "width": 150
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "u",
+              "sha256": "da637067c941d7ea106c66e866f42a1c55eb5409f1b36c9c4a267875230fa6bb",
+              "width": 75
+            },
+            {
+              "bytes": 5625,
+              "height": 75,
+              "name": "v",
+              "sha256": "f21e8e8f8cdf7a1d3266f7b49c873092fc0c61e469fa15a9318b90e8d5dc36b7",
+              "width": 75
+            }
+          ],
+          "pts": 4,
+          "raw_bytes": 33750,
+          "raw_path": "decoded/color/display_4.yuv",
+          "raw_sha256": "bbbde6cda838779bedb6c04b0d75586bc733ad3297ba1213ec69ce535a0f89de",
+          "width": 150
+        }
+      ],
+      "geometry": {
+        "bit_depth": 8,
+        "height": 150,
+        "monochrome": false,
+        "profile": 0,
+        "subsampling_x": 1,
+        "subsampling_y": 1,
+        "width": 150
+      },
+      "handler": "pict",
+      "identity": [
+        {
+          "duration_den": 30,
+          "duration_num": 1,
+          "frames": [
+            {
+              "block_count": 14,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 1,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 0,
+                "frame_type": 0,
+                "header_index": 0,
+                "height": 150,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 0,
+                "references_before": [
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null
+                ],
+                "refresh_frame_flags": 255,
+                "render_height": 150,
+                "render_width": 150,
+                "show_existing_frame": 0,
+                "show_frame": 1,
+                "showable_frame": 0,
+                "width": 150
+              },
+              "dav1d_show_frame": true,
+              "dav1d_showable_frame": false,
+              "decoded_frame_index": 0,
+              "display_index": 0,
+              "display_reason": "show_frame",
+              "frame_offset": 0,
+              "frame_type": 0,
+              "header_index": 0,
+              "references_before": [
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+              ],
+              "refresh_frame_flags": 255,
+              "show_existing_frame": false,
+              "show_frame": true,
+              "showable_frame": false,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": false,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": false,
+                "allow_warped_motion": false,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 3,
+                  "uv_strengths": [
+                    0
+                  ],
+                  "y_strengths": [
+                    0
+                  ]
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": true,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "force_integer_mv": true,
+                "frame_height": 150,
+                "frame_id": 0,
+                "frame_size_override": false,
+                "frame_type": "key",
+                "frame_width": 150,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 68,
+                "interpolation_filter": "eighttap",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": false,
+                "order_hint": 0,
+                "primary_ref_frame": 7,
+                "quantization": {
+                  "base": 28,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [],
+                "reference_mode": "single",
+                "reference_mode_bit": null,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 255,
+                "render_height": 150,
+                "render_width": 150,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  28,
+                  28,
+                  28,
+                  28,
+                  28,
+                  28,
+                  28,
+                  28
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": true,
+                "showable_frame": false,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    3
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 2,
+                  "maximum_log2_rows": 2,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    3
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 150,
+                "use_ref_frame_mvs": false
+              }
+            }
+          ],
+          "pts": 0,
+          "pts_den": 30,
+          "pts_num": 0,
+          "sample_index": 0,
+          "sample_length": 39,
+          "sample_offset": 1023,
+          "sample_sha256": "8ec6d1190463e5d3defa50a8f270a2daa51be85e636ee1e482be91be2aedebeb",
+          "sync": true
+        },
+        {
+          "duration_den": 30,
+          "duration_num": 1,
+          "frames": [
+            {
+              "block_count": 20,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 0,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 4,
+                "frame_type": 1,
+                "header_index": 1,
+                "height": 150,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 1,
+                "references_before": [
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 0,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 1,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 2,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 3,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 4,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 5,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 6,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 7,
+                    "width": 150
+                  }
+                ],
+                "refresh_frame_flags": 2,
+                "render_height": 150,
+                "render_width": 150,
+                "show_existing_frame": 0,
+                "show_frame": 0,
+                "showable_frame": 1,
+                "width": 150
+              },
+              "dav1d_show_frame": false,
+              "dav1d_showable_frame": true,
+              "decoded_frame_index": 1,
+              "display_index": null,
+              "display_reason": "hidden",
+              "frame_offset": 4,
+              "frame_type": 1,
+              "header_index": 1,
+              "references_before": [
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 0,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 1,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 2,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 3,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 4,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 5,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 6,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 7,
+                  "width": 150
+                }
+              ],
+              "refresh_frame_flags": 2,
+              "show_existing_frame": false,
+              "show_frame": false,
+              "showable_frame": true,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": true,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": false,
+                "allow_warped_motion": true,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 3,
+                  "uv_strengths": [
+                    0
+                  ],
+                  "y_strengths": [
+                    0
+                  ]
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": false,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "force_integer_mv": false,
+                "frame_height": 150,
+                "frame_id": 0,
+                "frame_refs_short_signaling": false,
+                "frame_size_override": false,
+                "frame_type": "inter",
+                "frame_width": 150,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 118,
+                "interpolation_filter": "eighttap",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": true,
+                "order_hint": 4,
+                "primary_ref_frame": 7,
+                "quantization": {
+                  "base": 51,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "reference_mode": "single",
+                "reference_mode_bit": 108,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 2,
+                "render_height": 150,
+                "render_width": 150,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  51,
+                  51,
+                  51,
+                  51,
+                  51,
+                  51,
+                  51,
+                  51
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": false,
+                "showable_frame": true,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    3
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 2,
+                  "maximum_log2_rows": 2,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    3
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 150,
+                "use_ref_frame_mvs": true
+              }
+            },
+            {
+              "block_count": 20,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 0,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 2,
+                "frame_type": 1,
+                "header_index": 2,
+                "height": 150,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 1,
+                "references_before": [
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 0,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 4,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 2,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 1,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 2,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 3,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 4,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 5,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 6,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 7,
+                    "width": 150
+                  }
+                ],
+                "refresh_frame_flags": 4,
+                "render_height": 150,
+                "render_width": 150,
+                "show_existing_frame": 0,
+                "show_frame": 0,
+                "showable_frame": 1,
+                "width": 150
+              },
+              "dav1d_show_frame": false,
+              "dav1d_showable_frame": true,
+              "decoded_frame_index": 2,
+              "display_index": null,
+              "display_reason": "hidden",
+              "frame_offset": 2,
+              "frame_type": 1,
+              "header_index": 2,
+              "references_before": [
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 0,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 4,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 2,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 1,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 2,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 3,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 4,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 5,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 6,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 7,
+                  "width": 150
+                }
+              ],
+              "refresh_frame_flags": 4,
+              "show_existing_frame": false,
+              "show_frame": false,
+              "showable_frame": true,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": true,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": false,
+                "allow_warped_motion": true,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 4,
+                  "uv_strengths": [
+                    0
+                  ],
+                  "y_strengths": [
+                    0
+                  ]
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": false,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "force_integer_mv": false,
+                "frame_height": 150,
+                "frame_id": 0,
+                "frame_refs_short_signaling": false,
+                "frame_size_override": false,
+                "frame_type": "inter",
+                "frame_width": 150,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 118,
+                "interpolation_filter": "eighttap",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": true,
+                "order_hint": 2,
+                "primary_ref_frame": 7,
+                "quantization": {
+                  "base": 76,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "reference_mode": "single",
+                "reference_mode_bit": 108,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 4,
+                "render_height": 150,
+                "render_width": 150,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  76,
+                  76,
+                  76,
+                  76,
+                  76,
+                  76,
+                  76,
+                  76
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": false,
+                "showable_frame": true,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    3
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 2,
+                  "maximum_log2_rows": 2,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    3
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 150,
+                "use_ref_frame_mvs": true
+              }
+            },
+            {
+              "block_count": 20,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 0,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 1,
+                "frame_type": 1,
+                "header_index": 3,
+                "height": 150,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 1,
+                "references_before": [
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 0,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 4,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 2,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 1,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 2,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 4,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 2,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 3,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 4,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 5,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 6,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 7,
+                    "width": 150
+                  }
+                ],
+                "refresh_frame_flags": 8,
+                "render_height": 150,
+                "render_width": 150,
+                "show_existing_frame": 0,
+                "show_frame": 1,
+                "showable_frame": 1,
+                "width": 150
+              },
+              "dav1d_show_frame": true,
+              "dav1d_showable_frame": true,
+              "decoded_frame_index": 3,
+              "display_index": 1,
+              "display_reason": "show_frame",
+              "frame_offset": 1,
+              "frame_type": 1,
+              "header_index": 3,
+              "references_before": [
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 0,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 4,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 2,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 1,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 2,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 4,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 2,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 3,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 4,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 5,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 6,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 7,
+                  "width": 150
+                }
+              ],
+              "refresh_frame_flags": 8,
+              "show_existing_frame": false,
+              "show_frame": true,
+              "showable_frame": true,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": true,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": false,
+                "allow_warped_motion": true,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 4,
+                  "uv_strengths": [
+                    0
+                  ],
+                  "y_strengths": [
+                    0
+                  ]
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": false,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "force_integer_mv": false,
+                "frame_height": 150,
+                "frame_id": 0,
+                "frame_refs_short_signaling": false,
+                "frame_size_override": false,
+                "frame_type": "inter",
+                "frame_width": 150,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 117,
+                "interpolation_filter": "eighttap",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": true,
+                "order_hint": 1,
+                "primary_ref_frame": 7,
+                "quantization": {
+                  "base": 100,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  2,
+                  0,
+                  1
+                ],
+                "reference_mode": "single",
+                "reference_mode_bit": 107,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 8,
+                "render_height": 150,
+                "render_width": 150,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": true,
+                "showable_frame": true,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    3
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 2,
+                  "maximum_log2_rows": 2,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    3
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 150,
+                "use_ref_frame_mvs": true
+              }
+            }
+          ],
+          "pts": 1,
+          "pts_den": 30,
+          "pts_num": 1,
+          "sample_index": 1,
+          "sample_length": 113,
+          "sample_offset": 1062,
+          "sample_sha256": "a4a77230e45708a7cbe33be90201dd715803a6014c54e7c7df81621bacff24ad",
+          "sync": false
+        },
+        {
+          "duration_den": 30,
+          "duration_num": 1,
+          "frames": [
+            {
+              "block_count": 0,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 0,
+                "event": "frame_header",
+                "existing_frame_idx": 2,
+                "frame_id": 0,
+                "frame_offset": 0,
+                "frame_type": 0,
+                "header_index": 4,
+                "height": 0,
+                "kind": "lifecycle",
+                "obu_type": 3,
+                "pts": 2,
+                "references_before": [
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 0,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 4,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 2,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 1,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 2,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 4,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 2,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 1,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 8,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 1,
+                    "slot": 3,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 4,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 5,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 6,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 7,
+                    "width": 150
+                  }
+                ],
+                "refresh_frame_flags": 0,
+                "render_height": 0,
+                "render_width": 0,
+                "show_existing_frame": 1,
+                "show_frame": 0,
+                "showable_frame": 0,
+                "width": 0
+              },
+              "dav1d_show_frame": false,
+              "dav1d_showable_frame": false,
+              "decoded_frame_index": null,
+              "display_index": 2,
+              "display_reason": "show_existing",
+              "frame_offset": 0,
+              "frame_type": 0,
+              "header_index": 4,
+              "references_before": [
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 0,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 4,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 2,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 1,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 2,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 4,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 2,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 1,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 8,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 1,
+                  "slot": 3,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 4,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 5,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 6,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 7,
+                  "width": 150
+                }
+              ],
+              "refresh_frame_flags": 0,
+              "show_existing_frame": true,
+              "show_frame": true,
+              "showable_frame": true,
+              "syntax_frame_header": {
+                "disable_cdf_update": false,
+                "error_resilient_mode": false,
+                "existing_frame_idx": 2,
+                "frame_height": 150,
+                "frame_id": 0,
+                "frame_type": "inter",
+                "frame_width": 150,
+                "header_bits": 4,
+                "order_hint": 0,
+                "primary_ref_frame": 7,
+                "refresh_frame_flags": 0,
+                "render_height": 150,
+                "render_width": 150,
+                "show_existing_frame": true,
+                "show_frame": true,
+                "showable_frame": true,
+                "spatial_id": 0,
+                "temporal_id": 0,
+                "upscaled_width": 150
+              }
+            }
+          ],
+          "pts": 2,
+          "pts_den": 30,
+          "pts_num": 2,
+          "sample_index": 2,
+          "sample_length": 5,
+          "sample_offset": 1175,
+          "sample_sha256": "e9e33cf3c379510fa68d4b4fc7d0bfb5677c717177cf5831033332b14cc15bdb",
+          "sync": false
+        },
+        {
+          "duration_den": 30,
+          "duration_num": 1,
+          "frames": [
+            {
+              "block_count": 17,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 0,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 3,
+                "frame_type": 1,
+                "header_index": 5,
+                "height": 150,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 3,
+                "references_before": [
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 0,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 4,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 2,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 1,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 2,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 4,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 2,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 1,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 8,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 1,
+                    "slot": 3,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 4,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 5,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 6,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 7,
+                    "width": 150
+                  }
+                ],
+                "refresh_frame_flags": 16,
+                "render_height": 150,
+                "render_width": 150,
+                "show_existing_frame": 0,
+                "show_frame": 1,
+                "showable_frame": 1,
+                "width": 150
+              },
+              "dav1d_show_frame": true,
+              "dav1d_showable_frame": true,
+              "decoded_frame_index": 4,
+              "display_index": 3,
+              "display_reason": "show_frame",
+              "frame_offset": 3,
+              "frame_type": 1,
+              "header_index": 5,
+              "references_before": [
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 0,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 4,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 2,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 1,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 2,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 4,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 2,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 1,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 8,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 1,
+                  "slot": 3,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 4,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 5,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 6,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 7,
+                  "width": 150
+                }
+              ],
+              "refresh_frame_flags": 16,
+              "show_existing_frame": false,
+              "show_frame": true,
+              "showable_frame": true,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": true,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": false,
+                "allow_warped_motion": true,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 4,
+                  "uv_strengths": [
+                    0
+                  ],
+                  "y_strengths": [
+                    0
+                  ]
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": false,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "force_integer_mv": false,
+                "frame_height": 150,
+                "frame_id": 0,
+                "frame_refs_short_signaling": false,
+                "frame_size_override": false,
+                "frame_type": "inter",
+                "frame_width": 150,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 117,
+                "interpolation_filter": "eighttap",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": true,
+                "order_hint": 3,
+                "primary_ref_frame": 1,
+                "quantization": {
+                  "base": 100,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [
+                  2,
+                  3,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "reference_mode": "single",
+                "reference_mode_bit": 107,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 16,
+                "render_height": 150,
+                "render_width": 150,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": true,
+                "showable_frame": true,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    3
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 2,
+                  "maximum_log2_rows": 2,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    3
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 150,
+                "use_ref_frame_mvs": true
+              }
+            }
+          ],
+          "pts": 3,
+          "pts_den": 30,
+          "pts_num": 3,
+          "sample_index": 3,
+          "sample_length": 30,
+          "sample_offset": 1180,
+          "sample_sha256": "5990be45371440951b1a8f7e8b50f65c48f447a7eabf5aec5b2f21e228a0adb7",
+          "sync": false
+        },
+        {
+          "duration_den": 30,
+          "duration_num": 1,
+          "frames": [
+            {
+              "block_count": 20,
+              "dav1d_frame_header": {
+                "error_resilient_mode": 0,
+                "event": "frame_header",
+                "existing_frame_idx": 0,
+                "frame_id": 0,
+                "frame_offset": 4,
+                "frame_type": 1,
+                "header_index": 6,
+                "height": 150,
+                "kind": "lifecycle",
+                "obu_type": 6,
+                "pts": 4,
+                "references_before": [
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 0,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 4,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 2,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 1,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 2,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 4,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 0,
+                    "showable_frame": 1,
+                    "slot": 2,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 1,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 8,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 1,
+                    "slot": 3,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 3,
+                    "frame_type": 1,
+                    "height": 150,
+                    "refresh_frame_flags": 16,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 1,
+                    "slot": 4,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 5,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 6,
+                    "width": 150
+                  },
+                  {
+                    "frame_id": 0,
+                    "frame_offset": 0,
+                    "frame_type": 0,
+                    "height": 150,
+                    "refresh_frame_flags": 255,
+                    "render_height": 150,
+                    "render_width": 150,
+                    "show_frame": 1,
+                    "showable_frame": 0,
+                    "slot": 7,
+                    "width": 150
+                  }
+                ],
+                "refresh_frame_flags": 0,
+                "render_height": 150,
+                "render_width": 150,
+                "show_existing_frame": 0,
+                "show_frame": 1,
+                "showable_frame": 1,
+                "width": 150
+              },
+              "dav1d_show_frame": true,
+              "dav1d_showable_frame": true,
+              "decoded_frame_index": 5,
+              "display_index": 4,
+              "display_reason": "show_frame",
+              "frame_offset": 4,
+              "frame_type": 1,
+              "header_index": 6,
+              "references_before": [
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 0,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 4,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 2,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 1,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 2,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 4,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 0,
+                  "showable_frame": 1,
+                  "slot": 2,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 1,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 8,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 1,
+                  "slot": 3,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 3,
+                  "frame_type": 1,
+                  "height": 150,
+                  "refresh_frame_flags": 16,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 1,
+                  "slot": 4,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 5,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 6,
+                  "width": 150
+                },
+                {
+                  "frame_id": 0,
+                  "frame_offset": 0,
+                  "frame_type": 0,
+                  "height": 150,
+                  "refresh_frame_flags": 255,
+                  "render_height": 150,
+                  "render_width": 150,
+                  "show_frame": 1,
+                  "showable_frame": 0,
+                  "slot": 7,
+                  "width": 150
+                }
+              ],
+              "refresh_frame_flags": 0,
+              "show_existing_frame": false,
+              "show_frame": true,
+              "showable_frame": true,
+              "syntax_frame_header": {
+                "all_lossless": false,
+                "allow_high_precision_mv": true,
+                "allow_intrabc": false,
+                "allow_screen_content_tools": false,
+                "allow_warped_motion": true,
+                "buffer_removal_times": [],
+                "cdef": {
+                  "bits": 0,
+                  "damping": 4,
+                  "uv_strengths": [
+                    0
+                  ],
+                  "y_strengths": [
+                    0
+                  ]
+                },
+                "delta_loop_filter": {
+                  "multi": false,
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "delta_q": {
+                  "present": false,
+                  "resolution_log2": 0
+                },
+                "disable_cdf_update": false,
+                "error_resilient_mode": false,
+                "existing_frame_idx": null,
+                "film_grain": null,
+                "force_integer_mv": false,
+                "frame_height": 150,
+                "frame_id": 0,
+                "frame_refs_short_signaling": false,
+                "frame_size_override": false,
+                "frame_type": "inter",
+                "frame_width": 150,
+                "global_motion": [
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  },
+                  {
+                    "matrix": [
+                      0,
+                      0,
+                      65536,
+                      0,
+                      0,
+                      65536
+                    ],
+                    "type": "identity"
+                  }
+                ],
+                "have_render_size": false,
+                "header_bits": 117,
+                "interpolation_filter": "eighttap",
+                "loop_filter": {
+                  "delta_enabled": true,
+                  "delta_update": false,
+                  "deltas": {
+                    "mode": [
+                      0,
+                      0
+                    ],
+                    "reference": [
+                      1,
+                      0,
+                      0,
+                      0,
+                      -1,
+                      0,
+                      -1,
+                      -1
+                    ]
+                  },
+                  "level_u": 0,
+                  "level_v": 0,
+                  "level_y": [
+                    0,
+                    0
+                  ],
+                  "sharpness": 0
+                },
+                "motion_mode_switchable": true,
+                "order_hint": 4,
+                "primary_ref_frame": 0,
+                "quantization": {
+                  "base": 100,
+                  "different_uv_delta": false,
+                  "matrix_u": 0,
+                  "matrix_v": 0,
+                  "matrix_y": 0,
+                  "u_ac_delta": 0,
+                  "u_dc_delta": 0,
+                  "using_matrix": false,
+                  "v_ac_delta": 0,
+                  "v_dc_delta": 0,
+                  "y_dc_delta": 0
+                },
+                "reduced_transform_set": false,
+                "reference_indices": [
+                  4,
+                  2,
+                  3,
+                  0,
+                  0,
+                  0,
+                  1
+                ],
+                "reference_mode": "single",
+                "reference_mode_bit": 107,
+                "refresh_frame_context": true,
+                "refresh_frame_flags": 0,
+                "render_height": 150,
+                "render_width": 150,
+                "restoration": {
+                  "types": [
+                    0,
+                    0,
+                    0
+                  ],
+                  "unit_size_log2": [
+                    8,
+                    8
+                  ]
+                },
+                "segment_lossless": [
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false,
+                  false
+                ],
+                "segment_qindex": [
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100,
+                  100
+                ],
+                "segmentation": {
+                  "enabled": false,
+                  "segments": [
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    },
+                    {
+                      "delta_lf_u": 0,
+                      "delta_lf_v": 0,
+                      "delta_lf_y_horizontal": 0,
+                      "delta_lf_y_vertical": 0,
+                      "delta_q": 0,
+                      "global_motion": false,
+                      "reference": -1,
+                      "skip": false
+                    }
+                  ],
+                  "temporal": false,
+                  "update_data": false,
+                  "update_map": false
+                },
+                "show_existing_frame": false,
+                "show_frame": true,
+                "showable_frame": true,
+                "skip_mode_bit": null,
+                "skip_mode_enabled": false,
+                "skip_mode_references": null,
+                "spatial_id": 0,
+                "superres_denominator": 8,
+                "superres_enabled": false,
+                "temporal_id": 0,
+                "tiling": {
+                  "column_starts": [
+                    0,
+                    3
+                  ],
+                  "columns": 1,
+                  "context_update_tile": 0,
+                  "log2_columns": 0,
+                  "log2_rows": 0,
+                  "maximum_log2_columns": 2,
+                  "maximum_log2_rows": 2,
+                  "minimum_log2_columns": 0,
+                  "minimum_log2_rows": 0,
+                  "row_starts": [
+                    0,
+                    3
+                  ],
+                  "rows": 1,
+                  "tile_size_bytes": 0,
+                  "uniform": true
+                },
+                "transform_mode": "largest",
+                "upscaled_width": 150,
+                "use_ref_frame_mvs": true
+              }
+            }
+          ],
+          "pts": 4,
+          "pts_den": 30,
+          "pts_num": 4,
+          "sample_index": 4,
+          "sample_length": 25,
+          "sample_offset": 1210,
+          "sample_sha256": "2f9b713fe83554cbc9701e85e93b6453d2a7e43edc5c19ea3fea2e457c926aa6",
+          "sync": false
+        }
+      ],
+      "ivf": {
+        "bytes": 304,
+        "codec": "AV01",
+        "height": 150,
+        "path": "inputs/color.ivf",
+        "rate_den": 1,
+        "rate_num": 30,
+        "samples": [
+          {
+            "length": 39,
+            "offset": 1023,
+            "pts": 0,
+            "sample_index": 0,
+            "sha256": "8ec6d1190463e5d3defa50a8f270a2daa51be85e636ee1e482be91be2aedebeb"
+          },
+          {
+            "length": 113,
+            "offset": 1062,
+            "pts": 1,
+            "sample_index": 1,
+            "sha256": "a4a77230e45708a7cbe33be90201dd715803a6014c54e7c7df81621bacff24ad"
+          },
+          {
+            "length": 5,
+            "offset": 1175,
+            "pts": 2,
+            "sample_index": 2,
+            "sha256": "e9e33cf3c379510fa68d4b4fc7d0bfb5677c717177cf5831033332b14cc15bdb"
+          },
+          {
+            "length": 30,
+            "offset": 1180,
+            "pts": 3,
+            "sample_index": 3,
+            "sha256": "5990be45371440951b1a8f7e8b50f65c48f447a7eabf5aec5b2f21e228a0adb7"
+          },
+          {
+            "length": 25,
+            "offset": 1210,
+            "pts": 4,
+            "sample_index": 4,
+            "sha256": "2f9b713fe83554cbc9701e85e93b6453d2a7e43edc5c19ea3fea2e457c926aa6"
+          }
+        ],
+        "sha256": "e608a371050483c915cd1e106c76faaf8375cbb0260485c73cf945bef5c4ab33",
+        "timestamps": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "width": 150
+      },
+      "msac_detail": {
+        "reason": "High-level lifecycle/block evidence is complete; detailed MSAC instrumentation is deferred until a relevant unsupported block class is isolated.",
+        "status": "not_collected"
+      },
+      "noninterference": {
+        "byte_equal": true,
+        "bytes": 168750,
+        "plain_yuv_sha256": "62884b195d2489cab53a1763749b73c57219d773ddbeb569aa5f92c394a5bcd0",
+        "trace_yuv_sha256": "62884b195d2489cab53a1763749b73c57219d773ddbeb569aa5f92c394a5bcd0"
+      },
+      "patch": {
+        "bytes": 8790,
+        "path": "provenance/color-sequence-trace.patch",
+        "sha256": "07554540d43ecb44a1e692d77254a23d4e56d62947da8b9a89d35bc521cac699"
+      },
+      "timescale": 30,
+      "trace_event_count": 136,
+      "trace_path": "traces/color.jsonl",
+      "trace_sha256": "39ac0adf5d46af2d462bd73c907a63af8a12cd0762272ec7f5fd711b272ec498",
+      "track_id": 1
+    }
+  },
+  "rust_source_comparison": {
+    "av1_module": {
+      "contains": [
+        "selected_display_for_temporal_unit_with_token"
+      ],
+      "path": "src/codecs/avif/av1/mod.rs",
+      "sha256": "c32b5d358a9f2b74fba54b09d7cc473d3b77a8f22c4b412233176be204852872",
+      "status": "source_only_no_target_execution"
+    },
+    "decode": {
+      "contains": [
+        "decode_sequence",
+        "decode_portable"
+      ],
+      "path": "src/codecs/avif/decode.rs",
+      "sha256": "292868a5a8776b1aff81491cc0435582793d5b0171961a292be4ef02348d2566",
+      "status": "source_only_no_target_execution"
+    },
+    "entropy": {
+      "contains": [
+        "validate_complete_lossy_420_partition",
+        "decode_complete"
+      ],
+      "path": "src/codecs/avif/av1/entropy.rs",
+      "sha256": "275a16d0771a7d15e8dce3e7dec5fed489cb59aeeb52daad0d67f6d12d60b92b",
+      "status": "source_only_no_target_execution"
+    },
+    "frame": {
+      "contains": [
+        "decode_complete",
+        "complete_show_existing",
+        "selected_display"
+      ],
+      "path": "src/codecs/avif/av1/frame.rs",
+      "sha256": "2f35910f8ec9fc8c225b26a2c0735d8ba1b622adf15e38fbdb7240a3a96f8cd3",
+      "status": "source_only_no_target_execution"
+    },
+    "interpretation": "The pinned decoder trace records persistent references and block/lifecycle events for an I420 8-bit sequence. It does not prove that the Rust validate_complete_lossy_420_partition admission predicate is the causal gap; target execution is intentionally deferred.",
+    "trace_predicate_context": {
+      "bit_depth": 8,
+      "block_count": 14,
+      "dimensions": [
+        150,
+        150
+      ],
+      "frame_type": "key",
+      "layout": "I420",
+      "sample_index": 0,
+      "status": "observation_only_source_comparison"
+    }
+  },
+  "schema": "image-slash-star/av1-sequence-oracle@2",
+  "source_provenance": {
+    "anchors": {
+      "cli_send_get_drain": {
+        "contains": [
+          "dav1d_send_data(c, &data)",
+          "dav1d_get_picture(c, &p)",
+          "// flush"
+        ],
+        "path": "tools/dav1d.c",
+        "sha256": "64e465f2ae1f2c2c9d45ca7ab6698c9b1ac47fe2a8a27ce54964afd9cc57e277"
+      },
+      "decode_exit": {
+        "contains": [
+          "dav1d_decode_frame_exit",
+          "f->n_tile_data",
+          "f->frame_hdr"
+        ],
+        "path": "src/decode.c",
+        "sha256": "a0aa36d9d821e69027321cb43f9363053ea09ac4c4e28d874130931e4b058384"
+      },
+      "frame_header_and_submit": {
+        "contains": [
+          "parse_frame_hdr(c, &gb)",
+          "show_existing_frame",
+          "dav1d_submit_frame(c)"
+        ],
+        "path": "src/obu.c",
+        "sha256": "965692214aa625e43a14d739081cdc5959abfb0e918d38b81e1116d166114587"
+      },
+      "ivf_timestamp": {
+        "contains": [
+          "timebase[0]",
+          "*ts = rl64(data)",
+          "buf->m.timestamp = ts"
+        ],
+        "path": "tools/input/ivf.c",
+        "sha256": "11abf622d39f47a8b7764523abd0911fe36fbb390810d1100ac19b3ca2f56259"
+      }
+    },
+    "copying_path": "COPYING",
+    "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+    "dav1d_commit": "b546257f770768b2c88258c533da38b91a06f737",
+    "dav1d_source_tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6",
+    "source_checkout": "external clean checkout; invocation path intentionally omitted",
+    "verify_after": {
+      "clean": true,
+      "commit": "b546257f770768b2c88258c533da38b91a06f737",
+      "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+      "tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6"
+    },
+    "verify_before": {
+      "clean": true,
+      "commit": "b546257f770768b2c88258c533da38b91a06f737",
+      "copying_sha256": "dd92c3c2247c5651606fc23a5e2d6a1ebc5ace9a3e49cbde0e12f05ad1cb1ee5",
+      "tree_sha256": "49ae950ff61598ababbaf886f4640f3ffbe1610f149b0c74cba6dcd7f733ddf6"
+    }
+  },
+  "trace_scope": {
+    "msac_detail": "not_collected",
+    "state_provenance": "instrumented pinned dav1d scalar decoder",
+    "syntax_provenance": "independent inspect_avif_bitstreams and inspect_av1_obus",
+    "target_rust_execution": "deferred_by_slice_contract"
+  }
+}
