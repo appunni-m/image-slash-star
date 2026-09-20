@@ -647,20 +647,16 @@ pub(super) fn collect_local_warp_samples<S: SpatialMotionSource>(
     let block_end_x = block_x_b4
         .checked_add(block_width_b4)
         .ok_or_else(|| malformed("local-warp block right edge overflows"))?;
-    let block_end_y = block_y_b4
-        .checked_add(block_height_b4)
-        .ok_or_else(|| malformed("local-warp block bottom edge overflows"))?;
     let visible_end_x = block_x_b4
         .checked_add(visible_width_b4)
         .ok_or_else(|| malformed("local-warp visible right edge overflows"))?;
     let visible_end_y = block_y_b4
         .checked_add(visible_height_b4)
         .ok_or_else(|| malformed("local-warp visible bottom edge overflows"))?;
-    if block_end_x > tile_right_b4
-        || block_end_y > tile_bottom_b4
-        || visible_end_x > tile_right_b4
-        || visible_end_y > tile_bottom_b4
-    {
+    // dav1d's find_matching_ref scans the visible w4/h4 extent. A coded
+    // block may extend past a cropped frame edge; only its visible samples
+    // must fit the tile. Keep the coded width for top-right eligibility.
+    if visible_end_x > tile_right_b4 || visible_end_y > tile_bottom_b4 {
         return Err(malformed("local-warp block exceeds tile geometry"));
     }
 

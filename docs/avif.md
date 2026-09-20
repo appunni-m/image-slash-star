@@ -6,19 +6,21 @@ download.
 
 ## Application scope
 
-The maintained matrix contains 343 AVIF decode/inspect/verify rows: 340 active
-and three explicitly planned. All 32 encoder rows are planned. These counts
-describe selected files and operations, not all legal AVIF streams.
+The high-depth, HDR and animation additions below are on `main`, awaiting
+the next release. The published 0.1.3 crate retains its earlier partial scope.
 
-The implementation includes bounded still-image parsing, reconstruction,
-container relationships, color metadata, and specific tested transforms.
-High-bit-depth, HDR, and animation paths remain incomplete at the application
-evidence boundary, even where source code admits selected states.
+The maintained matrix contains 343 active AVIF decode/inspect/verify rows.
+All 32 encoder rows remain planned. These counts describe selected files and
+operations, not all legal AVIF streams.
 
-CICP metadata retention and bounded RGB conversion do not establish HDR transfer,
-primaries conversion, or tone mapping. A parsed movie track does not establish
-complete sequence decoding or timing/disposal behavior. Tile/grid witnesses
-cover their recorded geometry, not every layout.
+Selected still images, grids, high-depth images and animations have exact
+Pillow output checks. The tested animations include frame pixels, timing,
+loop metadata, auxiliary alpha, hidden references and show-existing frames.
+The HDR witness preserves encoded values in Pillow-compatible RGB output;
+it does not add tone mapping or general color management.
+
+Check your own files before adopting these paths. Untested syntax, geometry
+and color declarations can still return an unsupported error.
 
 ## Unsupported behavior and errors
 

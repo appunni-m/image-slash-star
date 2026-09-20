@@ -227,9 +227,17 @@ fn assert_frames(actual: &img::DecodedSequence, expected: &NativeSequence) {
     assert_eq!(actual.loop_count, expected.native_loop);
     assert_eq!(actual.frames.len(), expected.pixels.len());
     for (index, frame) in actual.frames.iter().enumerate() {
-        assert_eq!(
-            frame.image.pixels, expected.pixels[index],
-            "display {index}"
+        assert!(
+            frame.image.pixels == expected.pixels[index],
+            "display {index} differs: actual {} bytes, expected {} bytes, first mismatch {:?}",
+            frame.image.pixels.len(),
+            expected.pixels[index].len(),
+            frame
+                .image
+                .pixels
+                .iter()
+                .zip(&expected.pixels[index])
+                .position(|(actual, expected)| actual != expected)
         );
         assert_eq!(frame.image.mode, expected.mode);
         assert_eq!(
@@ -268,16 +276,23 @@ fn public_avif_sequences_match_every_native_display_and_exact_timing() {
     if super::matrix_selection_is_filtered() {
         return;
     }
+    let mut failures = Vec::new();
     for expected in [
         animated(),
         highdepth(),
         error_resilient(),
         wrapped_frame_ids(),
     ] {
-        let actual = require_ok(
-            img::decode_sequence(&expected.data),
-            "public sequence parity",
-        );
+        let actual = match img::decode_sequence(&expected.data) {
+            Ok(actual) => actual,
+            Err(error) => {
+                failures.push(format!(
+                    "{}x{} {:?}: {error:?}",
+                    expected.width, expected.height, expected.mode
+                ));
+                continue;
+            }
+        };
         assert_frames(&actual.content, &expected);
         let first = require_ok(
             img::decode(&expected.data),
@@ -290,6 +305,10 @@ fn public_avif_sequences_match_every_native_display_and_exact_timing() {
             (expected.width, expected.height)
         );
     }
+    assert!(
+        failures.is_empty(),
+        "sequence parity failures: {failures:#?}"
+    );
 }
 
 #[test]

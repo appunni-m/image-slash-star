@@ -33,19 +33,19 @@
       "total_rows": 1567,
       "decode_rows": 1170,
       "encode_rows": 397,
-      "decode_active": 1167,
-      "decode_planned": 3,
+      "decode_active": 1170,
+      "decode_planned": 0,
       "encode_active": 365,
       "encode_planned": 32
     },
     "avif": {
       "decode_rows": 343,
-      "decode_active": 340,
-      "decode_planned": 3,
+      "decode_active": 343,
+      "decode_planned": 0,
       "encode_rows": 32,
       "encode_active": 0,
       "encode_planned": 32,
-      "former_native_remaining": 35
+      "former_native_remaining": 32
     },
     "tests": {
       "coverage_matrix_tests": "45/45 matrix tests",
@@ -1771,29 +1771,20 @@
     }
   ],
   "avif": {
-    "planned_decode": [
-      {
-        "id": "high_bitdepth",
-        "work_item": "AVF-SAMPLE-001",
-        "gap": "Pure Rust AV1 still decoding does not yet cover 10/12-bit sample reconstruction and conversion.",
-        "former_native_only": true,
-        "status": "planned"
-      },
-      {
-        "id": "hdr",
-        "work_item": "AVF-COLOR-001",
-        "gap": "Pure Rust AVIF still decoding does not yet apply HDR transfer, primaries, and matrix conversion.",
-        "former_native_only": true,
-        "status": "planned"
-      },
-      {
-        "id": "animated",
-        "work_item": "AVF-SEQUENCE-001",
-        "gap": "Pure Rust AVIF sequence decoding does not yet implement track timing, frame references, or presentation.",
-        "former_native_only": true,
-        "status": "planned"
-      }
-    ],
+    "planned_decode": [],
+    "executed_decode_evidence": {
+      "date": "2026-09-20",
+      "rows": [
+        "high_bitdepth",
+        "hdr",
+        "animated"
+      ],
+      "scope": "Exact pinned Pillow still and sequence output; independent native full-frame, timing and loop comparisons. These selected inputs do not establish support for every legal AVIF stream.",
+      "tests": [
+        "test_decode_matrix_avif",
+        "avif_sequence::public_avif_sequences_match_every_native_display_and_exact_timing"
+      ]
+    },
     "planned_encode": [
       {
         "id": "enc_error_public_mode_contract",

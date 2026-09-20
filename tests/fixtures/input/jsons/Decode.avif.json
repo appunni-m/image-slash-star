@@ -16479,6 +16479,61 @@
       ]
     },
     {
+      "id": "high_bitdepth",
+      "asset": "10bit.avif",
+      "asset_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/10bit.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "high_bitdepth_still_10bit_444_lossless",
       "asset": "high_bitdepth_still_10bit_444_lossless.avif",
       "asset_sha256": "c49589983c8492a12c3920123f9535c887b8715bf5cbdb25b57dfdad0d8c3c7e",
@@ -17256,6 +17311,58 @@
       ]
     },
     {
+      "id": "hdr",
+      "asset": "hdr.avif",
+      "asset_sha256": "9980e58ddf718a923f1738c34aad1c72f8e5795ec07e68f1a5f9bd216ca19740",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/hdr.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "grid",
       "asset": "grid.avif",
       "asset_sha256": "bae56368b348b1d847e2bfb662522599f0c63dfe62fb68826c9e42a300ff405d",
@@ -17308,6 +17415,61 @@
       ]
     },
     {
+      "id": "animated",
+      "asset": "animated.avif",
+      "asset_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/animated.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "animated_error_resilient",
       "asset": "animated_error_resilient.avif",
       "asset_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
@@ -17333,32 +17495,22 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "independent_implementation",
-        "sequence_pixels": "pillow_fixture",
-        "rust_sequence_contract": "defensive_model"
+        "sequence_pixels": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
         "inspect": "ok",
         "verify": "ok",
         "decode": "ok",
-        "decode_sequence": "error"
+        "decode_sequence": "ok"
       },
-      "error_contracts": {
-        "decode_sequence": {
-          "pillow_type": null,
-          "pillow_message": null,
-          "rust_kind": "unsupported",
-          "rust_format": "AVIF",
-          "rust_message": "non_empty",
-          "origin": "defensive_model"
-        }
-      },
+      "error_contracts": {},
       "expect_error": false,
       "expect_sequence_error": false,
       "verification_scope": "header_only",
-      "rust_expect_sequence_error": true,
-      "rust_sequence_error_kind": "unsupported",
-      "rust_sequence_error_reason": "Pure Rust AVIF still decoding can publish sample zero, but multi-frame error-resilient presentation is not implemented yet.",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/avif/animated_error_resilient.avif",
         "operations": [

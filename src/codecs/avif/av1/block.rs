@@ -56536,8 +56536,8 @@ impl Lossy420Decoder {
                         || exact_large
                         || exact_lossy_grid
                         || exact_lossy_color_mode0
-                        || exact_lossy_wide
-                        || exact_lossy_direct_chroma_grid));
+                        || exact_lossy_wide))
+                || exact_lossy_direct_chroma_grid;
             (exact_geometry
                 && matches!(
                     chroma_sampling,

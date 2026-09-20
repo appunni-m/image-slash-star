@@ -155,6 +155,183 @@ fn restore_leaf_with_dimensions(
     Ok(leaf)
 }
 
+/// Apply one restoration unit per plane across AV1's restoration stripes.
+///
+/// dav1d 1.5.3 `lr_stripe` and `looprestoration_tmpl.c` use post-CDEF samples
+/// inside each stripe and two saved deblocked rows outside it. The third halo
+/// row repeats the farther saved row. Four padding rows preserve SGR's even
+/// row phase while reusing the checked Wiener/SGR kernels below.
+pub(super) fn restore_striped_leaf(
+    mut leaf: FirstLeaf,
+    deblocked: &[ReconstructedPlane; 3],
+    plan: Plan,
+    depth: SampleDepth,
+    subsampling_x: bool,
+    subsampling_y: bool,
+) -> Av1Result<FirstLeaf> {
+    for (index, unit) in plan.units.into_iter().enumerate() {
+        let Some(unit) = unit else { continue };
+        let vertical_shift = u32::from(index != 0 && subsampling_y);
+        let horizontal_shift = u32::from(index != 0 && subsampling_x);
+        restore_striped_plane(
+            &mut leaf.planes[index],
+            &deblocked[index],
+            (
+                leaf.width.div_ceil(1 << horizontal_shift),
+                leaf.height.div_ceil(1 << vertical_shift),
+            ),
+            vertical_shift,
+            unit,
+            depth,
+        )?;
+    }
+    Ok(leaf)
+}
+
+/// Restore a plane using saved deblocked samples at every stripe boundary.
+pub(super) fn restore_striped_plane(
+    plane: &mut ReconstructedPlane,
+    deblocked: &ReconstructedPlane,
+    dimensions: (u32, u32),
+    vertical_shift: u32,
+    unit: Unit,
+    depth: SampleDepth,
+) -> Av1Result<()> {
+    if vertical_shift > 1 {
+        return Err(malformed("restoration stripe subsampling is invalid"));
+    }
+    if unit == Unit::None {
+        return Ok(());
+    }
+    let width = usize::try_from(dimensions.0)
+        .map_err(|_| malformed("restoration stripe width exceeds usize"))?;
+    let height = usize::try_from(dimensions.1)
+        .map_err(|_| malformed("restoration stripe height exceeds usize"))?;
+    let count = width
+        .checked_mul(height)
+        .ok_or_else(|| malformed("restoration stripe extent overflows"))?;
+    if width == 0 || height == 0 || plane.samples.len() != count || deblocked.samples.len() != count
+    {
+        return Err(malformed("restoration stripe plane extent is invalid"));
+    }
+    let filtered = &plane.samples;
+    let mut output = Vec::new();
+    output
+        .try_reserve_exact(count)
+        .map_err(|_| malformed("unable to allocate striped restoration output"))?;
+    output.resize(count, 0);
+    let mut start = 0_usize;
+    while start < height {
+        let stripe_rows = if start == 0 { 56_usize } else { 64_usize } >> vertical_shift;
+        let end = start
+            .checked_add(stripe_rows)
+            .ok_or_else(|| malformed("restoration stripe end overflows"))?
+            .min(height);
+        let rows = end
+            .checked_sub(start)
+            .ok_or_else(|| malformed("restoration stripe rows underflow"))?;
+        let padded_rows = rows
+            .checked_add(8)
+            .ok_or_else(|| malformed("restoration stripe padding overflows"))?;
+        let padded_count = width
+            .checked_mul(padded_rows)
+            .ok_or_else(|| malformed("restoration stripe allocation overflows"))?;
+        let mut samples = Vec::new();
+        samples
+            .try_reserve_exact(padded_count)
+            .map_err(|_| malformed("unable to allocate restoration stripe"))?;
+        for row in 0..padded_rows {
+            let (source, source_y) = if row < 4 {
+                if start == 0 {
+                    (filtered, 0)
+                } else {
+                    let offset = if row == 3 { 1 } else { 2 };
+                    (
+                        &deblocked.samples,
+                        start
+                            .checked_sub(offset)
+                            .ok_or_else(|| malformed("restoration top halo underflows"))?,
+                    )
+                }
+            } else if row >= rows.saturating_add(4) {
+                if end == height {
+                    (filtered, height.saturating_sub(1))
+                } else {
+                    let offset = row.saturating_sub(rows.saturating_add(4)).min(1);
+                    (
+                        &deblocked.samples,
+                        end.checked_add(offset)
+                            .ok_or_else(|| malformed("restoration bottom halo overflows"))?
+                            .min(height.saturating_sub(1)),
+                    )
+                }
+            } else {
+                (
+                    filtered,
+                    start
+                        .checked_add(row.saturating_sub(4))
+                        .ok_or_else(|| malformed("restoration stripe row overflows"))?,
+                )
+            };
+            let begin = source_y
+                .checked_mul(width)
+                .ok_or_else(|| malformed("restoration stripe row offset overflows"))?;
+            let finish = begin
+                .checked_add(width)
+                .ok_or_else(|| malformed("restoration stripe row extent overflows"))?;
+            samples.extend_from_slice(
+                source
+                    .get(begin..finish)
+                    .ok_or_else(|| malformed("restoration stripe source row is missing"))?,
+            );
+        }
+        let mut stripe = ReconstructedPlane { samples };
+        let dimensions = (
+            u32::try_from(width).map_err(|_| malformed("restoration stripe width exceeds u32"))?,
+            u32::try_from(padded_rows)
+                .map_err(|_| malformed("restoration stripe height exceeds u32"))?,
+        );
+        match unit {
+            Unit::None => {}
+            Unit::Wiener {
+                horizontal,
+                vertical,
+            } => restore_wiener_plane(&mut stripe, dimensions, horizontal, vertical, depth)?,
+            Unit::SgrProjection {
+                parameter_index,
+                weights,
+            } => restore_sgr_plane(&mut stripe, dimensions, parameter_index, weights, depth)?,
+        }
+        let destination_start = start
+            .checked_mul(width)
+            .ok_or_else(|| malformed("restoration output offset overflows"))?;
+        let destination_end = end
+            .checked_mul(width)
+            .ok_or_else(|| malformed("restoration output end overflows"))?;
+        let source_start = 4_usize
+            .checked_mul(width)
+            .ok_or_else(|| malformed("restoration stripe crop overflows"))?;
+        let source_end = source_start
+            .checked_add(
+                rows.checked_mul(width)
+                    .ok_or_else(|| malformed("restoration stripe crop size overflows"))?,
+            )
+            .ok_or_else(|| malformed("restoration stripe crop end overflows"))?;
+        output
+            .get_mut(destination_start..destination_end)
+            .ok_or_else(|| malformed("restoration stripe destination is missing"))?
+            .copy_from_slice(
+                stripe
+                    .samples
+                    .get(source_start..source_end)
+                    .ok_or_else(|| malformed("restoration stripe crop is missing"))?,
+            );
+        start = end;
+    }
+    plane.samples = output;
+    Ok(())
+}
+
 /// Apply the bounded single-unit restoration plan to one monochrome frame.
 ///
 /// The entropy admission proves that only plane zero is active and that the
@@ -686,8 +863,10 @@ fn sgr_intermediates(
             let lookup = usize::try_from(z.min(255))
                 .map_err(|_| malformed("SGR lookup index exceeds usize"))?;
             let gain = u64::from(SGR_X_BY_X[lookup]);
+            // Only the variance is normalized to eight-bit precision. The
+            // mean retains the original sample depth (dav1d sgr_calc_row_ab).
             let mean = gain
-                .checked_mul(normalized_sum)
+                .checked_mul(sum)
                 .and_then(|value| value.checked_mul(reciprocal))
                 .and_then(|value| value.checked_add(1_u64 << 11))
                 .ok_or_else(|| malformed("SGR mean product overflows"))?

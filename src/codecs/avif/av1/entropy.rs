@@ -1536,8 +1536,8 @@ fn decode_complete_following_leaf(
     node: PartitionNode,
     width: u32,
     height: u32,
-    palette_coded_width: u32,
-    palette_coded_height: u32,
+    coded_width_units: u32,
+    coded_height_units: u32,
     quantization: super::block::LossyQuantization,
     mut tools: super::block::BlockTools,
     inter_luma_mode: Option<u32>,
@@ -1685,8 +1685,8 @@ fn decode_complete_following_leaf(
     let edges = match canvas.intra_edges(super::raster::IntraEdgeRequest {
         x_units: node.x,
         y_units: node.y,
-        width_units: palette_coded_width,
-        height_units: palette_coded_height,
+        width_units: coded_width_units,
+        height_units: coded_height_units,
         has_chroma,
         sample_depth: tools.sample_depth,
         intra_edges: node.intra_edges,
@@ -8771,7 +8771,10 @@ fn decode_inter_leaf(
                 luma_mode,
             )
         } else {
-            let (palette_coded_width, palette_coded_height) = node.block_size.pixel_dimensions();
+            // Prediction edges use AV1's four-pixel block grid, as in the
+            // intra-frame path. Pixel extents would request four times the
+            // available neighbor canvas and discard a valid reference frame.
+            let (coded_width_units, coded_height_units) = node.block_size.mi_dimensions();
             decode_complete_following_leaf(
                 decoder,
                 block_decoder,
@@ -8781,8 +8784,8 @@ fn decode_inter_leaf(
                 node,
                 visible_width,
                 visible_height,
-                palette_coded_width,
-                palette_coded_height,
+                coded_width_units,
+                coded_height_units,
                 prepared_quantization.quantization,
                 tools,
                 Some(luma_mode),
@@ -9396,10 +9399,14 @@ fn decode_inter_leaf(
                 | BlockSize::B64x16
         ),
     };
+    let (coded_width, coded_height) = node.block_size.pixel_dimensions();
     let local_warp_supported = local_warp_block_supported
         && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
-        && (visible_width, visible_height) == node.block_size.pixel_dimensions()
+        && visible_width > 0
+        && visible_width <= coded_width
+        && visible_height > 0
+        && visible_height <= coded_height
         && node.block_size.valid_for_layout(layout);
     let (motion_mode, local_warp) = if compound {
         (MotionMode::Translation, None)
@@ -10022,12 +10029,18 @@ fn decode_inter_leaf(
     .then_some(())
     .ok_or_else(|| malformed("inter luma context exceeds scratch"))?;
     coefficient_contexts.above[0][..luma_context_width_usize].copy_from_slice(
-        &tile_state.luma_contexts_above::<32>(node.x, node.y, luma_context_width)?
-            [..luma_context_width_usize],
+        &tile_state.luma_contexts_above::<32>(
+            node.x,
+            node.y,
+            luma_context_width.min(node.width),
+        )?[..luma_context_width_usize],
     );
     coefficient_contexts.left[0][..luma_context_height_usize].copy_from_slice(
-        &tile_state.luma_contexts_left::<32>(node.x, node.y, luma_context_height)?
-            [..luma_context_height_usize],
+        &tile_state.luma_contexts_left::<32>(
+            node.x,
+            node.y,
+            luma_context_height.min(node.height),
+        )?[..luma_context_height_usize],
     );
 
     let block_chroma_sampling = if context.monochrome {
@@ -10131,7 +10144,11 @@ fn decode_inter_leaf(
                         plane,
                         chroma_x,
                         chroma_y,
-                        chroma_context_width,
+                        chroma_context_width.min(if context.subsampling_x {
+                            node.width.div_ceil(2)
+                        } else {
+                            node.width
+                        }),
                     )?[..chroma_context_width_usize],
                 );
             coefficient_contexts.left[context_plane][..chroma_context_height_usize]
@@ -10140,7 +10157,11 @@ fn decode_inter_leaf(
                         plane,
                         chroma_x,
                         chroma_y,
-                        chroma_context_height,
+                        chroma_context_height.min(if context.subsampling_y {
+                            node.height.div_ceil(2)
+                        } else {
+                            node.height
+                        }),
                     )?[..chroma_context_height_usize],
                 );
         }
@@ -10721,7 +10742,10 @@ pub(super) type UnfilteredMonochromeTile = (
 
 impl Lossy420Reconstruction {
     /// Apply this tile's filters in isolation for the single-tile path.
-    pub(super) fn into_filtered_leaf(self) -> Av1Result<super::block::FirstLeaf> {
+    pub(super) fn into_filtered_leaf(
+        self,
+        striped_restoration: Option<(RestorationPlan, super::sample_depth::SampleDepth)>,
+    ) -> Av1Result<super::block::FirstLeaf> {
         let Lossy420Reconstruction {
             mut leaf,
             monochrome,
@@ -10744,6 +10768,41 @@ impl Lossy420Reconstruction {
         let mut canvas =
             super::raster::FrameCanvas::new(leaf.width, leaf.height, subsampling_x, subsampling_y)?;
         canvas.place_planes(leaf.width, leaf.height, &leaf.planes, 0, 0)?;
+        if let Some((plan, depth)) = striped_restoration {
+            let deblocked = canvas.finish_with_filters(
+                loop_parameters,
+                &filter_blocks,
+                None,
+                None,
+                None,
+                &[],
+                &[],
+            )?;
+            let mut cdef_canvas = super::raster::FrameCanvas::new(
+                leaf.width,
+                leaf.height,
+                subsampling_x,
+                subsampling_y,
+            )?;
+            cdef_canvas.place_planes(leaf.width, leaf.height, &deblocked, 0, 0)?;
+            leaf.planes = cdef_canvas.finish_with_filters(
+                None,
+                &[],
+                None,
+                None,
+                cdef_parameters,
+                &cdef_indices,
+                &cdef_active,
+            )?;
+            return super::restoration::restore_striped_leaf(
+                leaf,
+                &deblocked,
+                plan,
+                depth,
+                subsampling_x,
+                subsampling_y,
+            );
+        }
         leaf.planes = canvas.finish_with_filters(
             loop_parameters,
             &filter_blocks,
@@ -10826,6 +10885,10 @@ pub(super) fn validate_complete_lossy_420_partition(
     previous_segment_map: Option<&SegmentMap>,
     inter_context: Option<&InterFrameContext<'_>>,
 ) -> Av1Result<Option<Lossy420Reconstruction>> {
+    // The complete I422 intra decoder admits arbitrary valid partitions.
+    // Older bounded profiles may also match the frame tools; their terminal
+    // shape census must not restrict this complete path.
+    let complete_i422_intra = complete_422_intra_reconstruction_context(context);
     let bounded_intra_restoration =
         complete_bounded_restoration_intra_420_reconstruction_context(context);
     let high_depth_color_intra_restoration =
@@ -11425,7 +11488,7 @@ pub(super) fn validate_complete_lossy_420_partition(
     }
     #[cfg(coverage)]
     decoder.enable_operation_trace();
-    let restoration_plan = if bounded_intra_restoration
+    let mut restoration_plan = if bounded_intra_restoration
         || bounded_inter_restoration
         || bounded_i444_restoration
         || bounded_i444_intra_restoration
@@ -11659,6 +11722,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                     node.block_size
                 };
                 if !high_depth_color_nonsuperres_restoration
+                    && !complete_i422_intra
                     && (bounded_i444_inter
                         || bounded_i444_restoration
                         || bounded_i444_intra_restoration
@@ -12267,6 +12331,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                 return Ok(None);
             }
             if let Some(geometry) = bounded_subsampled_rect_geometry
+                && !complete_i422_intra
                 && bounded_subsampled_rect_leaf_count != geometry.expected_leaf_count()
             {
                 return Ok(None);
@@ -12288,7 +12353,54 @@ pub(super) fn validate_complete_lossy_420_partition(
         // A multi-tile monochrome CDEF tranche retains these maps for the
         // frame compositor. Only a complete single-tile canvas may filter in
         // this tile-local function.
-        let plane = if context.single_tile
+        let striped_plan =
+            if context.single_tile && !context.superres_enabled && context.frame_height > 56 {
+                restoration_plan.take()
+            } else {
+                None
+            };
+        let plane = if let Some(plan) = striped_plan {
+            let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("monochrome restoration sample depth is unsupported"))?;
+            if plan.units[1].is_some() || plan.units[2].is_some() {
+                return Err(malformed("monochrome restoration has chroma units"));
+            }
+            let deblocked = canvas.finish_monochrome_with_loop_filter(
+                loop_parameters,
+                &filter_blocks,
+                depth,
+            )?;
+            let mut cdef_canvas = super::raster::MonochromeFrameCanvas::new(
+                context.frame_width,
+                context.frame_height,
+            )?;
+            cdef_canvas.place_cropped_plane(
+                context.frame_width,
+                context.frame_height,
+                context.frame_width,
+                context.frame_height,
+                0,
+                0,
+                &deblocked,
+            )?;
+            let mut plane = cdef_canvas.finish_monochrome_with_cdef(
+                cdef_frame_parameters,
+                &cdef_indices,
+                &cdef_active,
+                depth,
+            )?;
+            if let Some(unit) = plan.units[0] {
+                super::restoration::restore_striped_plane(
+                    &mut plane,
+                    &deblocked,
+                    (context.frame_width, context.frame_height),
+                    0,
+                    unit,
+                    depth,
+                )?;
+            }
+            plane
+        } else if context.single_tile
             && (monochrome_mixed_lossless_postfilter
                 == Some(MixedMonochromePostfilter::LoopAndCdef)
                 || mixed_monochrome_superres_postfilter
@@ -12412,14 +12524,27 @@ pub(super) fn validate_complete_lossy_420_partition(
         {
             return Err(malformed("temporal-MV grid has unaligned geometry"));
         }
+        // Retained temporal motion uses past-facing references (dav1d's
+        // mfmv_sign), the opposite comparison from spatial sign_bias. Equal
+        // order hints are ineligible in both directions.
+        let temporal_reference_eligible = inter_context.reference_order_hints.map(|hint| {
+            super::motion::relative_distance(
+                inter_context.order_hint_bits,
+                hint,
+                inter_context.current_order_hint,
+            ) < 0
+        });
         let origin_x8 = context.tile_origin_b4_x / 2;
         let origin_y8 = context.tile_origin_b4_y / 2;
         let frame_width8 = context.frame_block_width / 2;
         let frame_height8 = context.frame_block_height / 2;
         for local_y8 in 0..context.block_height / 2 {
             for local_x8 in 0..context.block_width / 2 {
-                let Some(entry) =
-                    tile_state.temporal_entry_at(local_x8, local_y8, inter_context.sign_bias)?
+                let Some(entry) = tile_state.temporal_entry_at(
+                    local_x8,
+                    local_y8,
+                    temporal_reference_eligible,
+                )?
                 else {
                     continue;
                 };
@@ -17516,7 +17641,6 @@ fn complete_monochrome_restoration_supported(context: &FirstBlockContext) -> boo
         RestorationType::Wiener | RestorationType::SgrProjection
     ) || !(if context.level == 0 { 7..=8 } else { 6..=8 })
         .contains(&context.restoration_unit_size_log2[0])
-        || context.frame_height > 56
     {
         return false;
     }
@@ -20333,10 +20457,7 @@ fn high_depth_lossy_color_nonsuperres_restoration_common(context: &FirstBlockCon
     };
     let luma_log2 = context.restoration_unit_size_log2[0];
     let chroma_log2 = context.restoration_unit_size_log2[1];
-    if !(luma_min_log2..=8).contains(&luma_log2)
-        || !(chroma_min_log2..=8).contains(&chroma_log2)
-        || context.frame_height > 56
-    {
+    if !(luma_min_log2..=8).contains(&luma_log2) || !(chroma_min_log2..=8).contains(&chroma_log2) {
         return false;
     }
     let chroma_active =

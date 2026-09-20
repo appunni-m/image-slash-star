@@ -2866,7 +2866,7 @@ fn validate_tile_entropy_prefixes(
                 });
             }
             if tiling.tile_count() == 1 && ranges.len() == 1 {
-                let restoration_plan = reconstruction.restoration;
+                let mut restoration_plan = reconstruction.restoration;
                 if sequence.monochrome {
                     let plane = reconstruction.into_monochrome_plane()?;
                     let plane = if header.superres_enabled {
@@ -2904,7 +2904,19 @@ fn validate_tile_entropy_prefixes(
                     !reconstruction.subsampling_x && !reconstruction.subsampling_y;
                 let subsampled_420 = reconstruction.subsampling_x && reconstruction.subsampling_y;
                 let subsampled_422 = reconstruction.subsampling_x && !reconstruction.subsampling_y;
-                let leaf = reconstruction.into_filtered_leaf()?;
+                let striped_restoration = if !header.superres_enabled && header.frame_height > 56 {
+                    restoration_plan
+                        .take()
+                        .map(|plan| {
+                            SampleDepth::new(sequence.bit_depth)
+                                .map(|depth| (plan, depth))
+                                .ok_or_else(|| malformed("restoration sample depth is unsupported"))
+                        })
+                        .transpose()?
+                } else {
+                    None
+                };
+                let leaf = reconstruction.into_filtered_leaf(striped_restoration)?;
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
                         .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
@@ -4768,7 +4780,7 @@ fn coverage_state_paths() {
     assert!(split_tile_payloads(&tile_data, 0, 6, 0, 1, 5).is_err());
     assert_eq!(
         split_tile_payloads(&tile_data, 0, 0, 0, 0, 0),
-        Ok(std::iter::once(0..0).collect())
+        Err(malformed("tile payload is empty"))
     );
     for width in [1, 3, 4] {
         assert!(split_tile_payloads(&tile_data, 0, tile_input.len(), 0, 1, width).is_ok());

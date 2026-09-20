@@ -66,7 +66,7 @@ remain mandatory.
 ## Maintained fixture matrix
 
 The retained matrix contains 1,567 total rows: 1,170 decode /
-inspect / verify rows and 397 encode rows. Of those, 1,167 decode rows
+inspect / verify rows and 397 encode rows. Of those, 1,170 decode rows
 and 365 encode rows are active. Planned rows stay outside executed
 parity numerators. Active rows have operation-specific outcomes, including
 not-applicable results.
@@ -75,12 +75,32 @@ not-applicable results.
 native/all-feature fixture observations. A WASM cross-compile does not extend
 that pixel-evidence scope.
 
+## Decoder validation — 2026-09-20
+
+The full public matrix passes all 46 tests, including 343 AVIF rows and exact
+native comparisons of complete animations. All native, WASI and browser-WASM
+feature lanes pass. High-depth, HDR and animation additions are on `main`,
+awaiting the next release; the 32 AVIF encoder rows remain planned.
+
+A fresh local `make coverage` run passes every executed test and the unchanged
+release floors: 99,349/163,373 lines (60.8112%), 15,524/32,418 branches
+(47.8870%), 5,052/9,372 functions (53.9053%), and 145,689/243,793 regions
+(59.7593%). This is LLVM evidence, not a new managed Coverage MCP snapshot.
+The changed-line review observes 274/294 executable lines in the seven changed
+AV1 modules. Unobserved lines include defensive failures and the Wiener stripe
+branch; this is not complete line or branch coverage.
+
+The local reports live under `target/release-evidence/`: `coverage.json`,
+`coverage.lcov`, and `avif-fix-coverage.json`. The last receipt retains source
+and input hashes and the exact uncovered line list. CI produces a fresh report
+for each pushed commit and retains it as the `llvm-coverage` artifact.
+
 ## Historical claim ledger
 
 The following source-bound baseline was measured on 2026-08-27. Its historical
 percentages must not be relabeled as current-release coverage. The validator
-checks the original revision, manifest/matrix hashes, Coverage MCP identities,
-and all referenced fixture contracts. The public rendering is centralized here
+checks the historical manifest/matrix bytes at the measured Git revision,
+Coverage MCP identities, and separately checks current fixture integrity. The public rendering is centralized here
 so copied prose cannot drift across guides.
 
 <!-- current-claim-ledger:begin -->
@@ -88,7 +108,8 @@ Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-- Manifest SHA-256: `72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2`; generated matrix SHA-256: `6caa3df163c35183ccaa9e6bcd69e430417d4900971990342033b97b481b811b`.
+- Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
+- Current fixture integrity only: manifest `a733f11e94ba5054259726c9608da8d17e6a3ca2d6d3e757b8c89fe18d0c1476`; matrix `2919ec08515c562a0bcd1f3531845a615fb026278b319e456515a463ce1a0bc5`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

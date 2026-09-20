@@ -4656,8 +4656,7 @@ formats:
       description: 12-bit animated AVIF decoded to Pillow RGBA8 output
       test_assets:
       - 10bit.avif
-      status: planned
-      gap: Pure Rust AV1 still decoding does not yet cover 10/12-bit sample reconstruction and conversion.
+      status: active
       pure_rust_work_item: AVF-SAMPLE-001
     - id: high_bitdepth_still_10bit_444_lossless
       description: Single-frame 10-bit profile-1 full-range BT.601 SDR all-lossless 4:4:4 AVIF decoded to Pillow RGB8 output
@@ -4704,11 +4703,10 @@ formats:
       - oversized_mif1_ftyp.avif
       expect_error: true
     - id: hdr
-      description: HDR AVIF (PQ/HLG transfer)
+      description: HDR AVIF decoded to exact Pillow RGB8 output
       test_assets:
       - hdr.avif
-      status: planned
-      gap: Pure Rust AVIF still decoding does not yet apply HDR transfer, primaries, and matrix conversion.
+      status: active
       pure_rust_work_item: AVF-COLOR-001
     - id: grid
       description: AVIF with a 1x2 color grid and per-cell alpha items
@@ -4718,17 +4716,13 @@ formats:
       description: Five-frame AVIF with exact frame pixels and timing
       test_assets:
       - animated.avif
-      status: planned
-      gap: Pure Rust AVIF sequence decoding does not yet implement track timing, frame references, or presentation.
+      status: active
       pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_error_resilient
-      description: First-frame decode of a two-frame pinned AV1-oracle sequence with frame ID numbers enabled; full sequence presentation remains a safe-Rust gap
+      description: Two-frame pinned AV1-oracle sequence with frame ID numbers enabled, exact pixels and timing
       test_assets:
       - animated_error_resilient.avif
       status: active
-      rust_expect_sequence_error: true
-      rust_sequence_error_kind: unsupported
-      rust_sequence_error_reason: Pure Rust AVIF still decoding can publish sample zero, but multi-frame error-resilient presentation is not implemented yet.
     - id: error_animated_repeated_frame_id
       description: Error-resilient sequence whose first frame decodes independently and whose second frame repeats the previous current frame ID
       test_assets:

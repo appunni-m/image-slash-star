@@ -915,12 +915,12 @@ impl TileState {
 
     /// Select the temporal-MV entry dav1d saves for one local 8x8 cell. The
     /// source sample is intentionally the top-right 4x4 cell `(2*x8+1,2*y8)`
-    /// and the second future-facing reference has priority over the first.
+    /// and the second past-facing reference has priority over the first.
     pub(super) fn temporal_entry_at(
         &self,
         x8: u32,
         y8: u32,
-        sign_bias: [bool; 7],
+        reference_eligible: [bool; 7],
     ) -> Av1Result<Option<RetainedTemporalEntry>> {
         let x4 = x8
             .checked_mul(2)
@@ -942,7 +942,11 @@ impl TileState {
                 .ok_or_else(|| malformed("temporal sample reference underflows"))?;
             let reference_index = usize::try_from(encoded)
                 .map_err(|_| malformed("temporal sample reference exceeds seven"))?;
-            if !sign_bias.get(reference_index).copied().unwrap_or(false) {
+            if !reference_eligible
+                .get(reference_index)
+                .copied()
+                .unwrap_or(false)
+            {
                 continue;
             }
             let vector = block.vectors[index];

@@ -13,10 +13,13 @@ part of every image-format specification.
 | JPEG, PNG, GIF, BMP, TIFF, WebP | Selected decode, encode, detection, and inspection paths | Modes, options, and metadata vary by codec |
 | ICO/CUR | Selected container and embedded PNG/BMP paths | Requires the `ico` feature, which enables PNG and BMP |
 | Multi-frame images | Selected sequence operations | Check frame, timing, disposal, and encoding support for the chosen format |
-| AVIF | Opt-in partial still decoder and container inspection | No supported encoder; high-bit-depth, HDR, and animation are not supported application paths |
+| AVIF | Opt-in decoding and inspection, including selected high-depth, HDR and animated files | No encoder; supported syntax and layouts are limited to tested paths |
 | Resource policies | Input, output, dimension, sequence, and cooperative work limits | Defaults unlimited; no guarantee covering every allocation or immediate cancellation |
 | Image editing | Not provided | Resize, rotate, crop, drawing, and filtering belong in a separate library |
 | JavaScript and Python packages | Not provided | This project distributes a Rust crate |
+
+The high-depth, HDR and animated AVIF additions are validated on `main` and
+await the next release; version 0.1.3 retains its earlier partial AVIF scope.
 
 The default codec features are `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp`, and
 `ico`. AVIF must be enabled explicitly. There is no native codec fallback.

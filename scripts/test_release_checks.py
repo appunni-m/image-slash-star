@@ -20,6 +20,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_llvm_coverage as coverage
 import publish_release
+import verify_claim_ledger as claim_ledger
 
 
 class CoverageTests(unittest.TestCase):
@@ -137,6 +138,44 @@ class CoverageCliTests(unittest.TestCase):
                                 capture_output=True, text=True, check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("--strict", result.stdout)
+
+
+class ClaimLedgerTests(unittest.TestCase):
+    def test_measured_hashes_bind_to_committed_inputs_not_current_files(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*args: str) -> bytes:
+                return subprocess.check_output(["git", *args], cwd=root, stderr=subprocess.DEVNULL)
+            git("init", "-q")
+            measured = {}
+            for field in ("manifest_sha256", "matrix_sha256"):
+                path = root / claim_ledger.HASHED_FILES[field]
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"measured inputs\n")
+                measured[field] = hashlib.sha256(path.read_bytes()).hexdigest()
+            git("add", ".")
+            git("-c", "user.name=Ledger test", "-c", "user.email=ledger@example.invalid",
+                "-c", "commit.gpgsign=false", "commit", "-qm", "measured inputs")
+            ledger = {"base_revision": git("rev-parse", "HEAD").decode().strip(),
+                      "measured_inputs": measured}
+            for field in measured:
+                (root / claim_ledger.HASHED_FILES[field]).write_bytes(b"new unmeasured inputs\n")
+            with patch.object(claim_ledger, "ROOT", root):
+                errors = []
+                claim_ledger.verify_measured_inputs(ledger, errors)
+                self.assertEqual(errors, [])
+                for field in measured:
+                    changed = copy.deepcopy(ledger)
+                    changed["measured_inputs"][field] = claim_ledger.sha256(root / claim_ledger.HASHED_FILES[field])
+                    errors = []
+                    claim_ledger.verify_measured_inputs(changed, errors)
+                    self.assertEqual(errors, [f"measured_inputs.{field} does not match measured revision"])
+                for invalid in [{}, {"base_revision": "not-a-commit"},
+                                {"base_revision": ledger["base_revision"]},
+                                {**ledger, "base_revision": "0" * 40}]:
+                    errors = []
+                    claim_ledger.verify_measured_inputs(invalid, errors)
+                    self.assertTrue(errors)
 
 
 if __name__ == "__main__":

@@ -3946,7 +3946,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         .collect::<Vec<_>>();
     assert_eq!(
         former_native_decode.len(),
-        3,
+        0,
         "the AVIF former-native decode census changed"
     );
     assert!(
@@ -3960,7 +3960,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         planned.len(),
         "every former-native AVIF decode row must remain an explicit planned gap"
     );
-    assert_eq!(planned.len(), 3, "the AVIF planned-gap ledger changed");
+    assert_eq!(planned.len(), 0, "the AVIF planned-gap ledger changed");
     assert_eq!(
         planned.len(),
         matrix.summary.decode_planned,
@@ -4090,6 +4090,17 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         }
     }
 
+    let promoted_decode = ["high_bitdepth", "hdr", "animated"];
+    for id in promoted_decode {
+        let row = require_some(avif.decode.iter().find(|row| row.id == id), id);
+        assert_eq!(
+            row.status, "active",
+            "AVIF {id} must retain exact decode coverage"
+        );
+        assert!(row.gap.is_none() && !row.former_native_only);
+        assert!(row.ref_path.is_some() && row.ref_bytes.is_some() && row.ref_sha256.is_some());
+    }
+
     let planned_encodes = avif
         .encode
         .iter()
@@ -4117,7 +4128,7 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
         "every former-native AVIF encode row must remain an explicit planned gap"
     );
     assert_eq!(
-        former_native_decode.len() + former_native_encode.len(),
+        former_native_decode.len() + promoted_decode.len() + former_native_encode.len(),
         35,
         "the complete former-native AVIF census changed"
     );
@@ -13029,4 +13040,28 @@ fn test_coverage_matrix() {
 
         assert_coverage_matrix_summary(matrix);
     });
+}
+
+#[test]
+#[cfg(feature = "avif")]
+fn ci_probe_public_hdr_parity() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let data = require_ok(
+        fs::read(root.join("tests/fixtures/input/images/avif/hdr.avif")),
+        "HDR fixture",
+    );
+    let expected = require_ok(
+        fs::read(root.join("tests/fixtures/outputs/avif_hdr_color/hdr/display.rgb")),
+        "native RGB",
+    );
+    let actual = require_ok(img::decode(&data), "public HDR decode");
+    assert_eq!(
+        (
+            actual.content.width,
+            actual.content.height,
+            actual.content.mode
+        ),
+        (200, 200, img::ImageMode::Rgb8)
+    );
+    assert_eq!(actual.content.pixels, expected);
 }

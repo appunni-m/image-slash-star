@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""Verify the revision-bound claim ledger (QA-014).
+"""Verify historical measurement provenance and current fixture integrity.
 
-The claim tuple (base revision, Pillow manifest SHA-256, generated-matrix
-SHA-256, Coverage MCP run/snapshot, and every fixture-manifest SHA-256) is
-committed as ``tests/fixtures/claim_ledger.json``. This script checks that
-every hash matches the working tree, that the revision is a real commit, that
-the run/snapshot identifiers are well-formed, and that the maintained roadmap
-and current-contract documents reference the same base revision. CI runs it so
-the tuple cannot drift.
+Measured input hashes are checked against the measured Git revision. Separate
+working-tree hashes detect current fixture drift; they never extend historical
+coverage to new source or inputs.
 """
 
 from __future__ import annotations
@@ -56,6 +52,29 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def verify_measured_inputs(ledger: dict, errors: list[str]) -> None:
+    revision = ledger.get("base_revision")
+    if not isinstance(revision, str) or not SHA_RE.fullmatch(revision):
+        errors.append("cannot verify measured inputs without a valid base revision")
+        return
+    measured = ledger.get("measured_inputs")
+    if not isinstance(measured, dict):
+        errors.append("measured_inputs must contain the historical input hashes")
+        return
+    for field in ("manifest_sha256", "matrix_sha256"):
+        relative = HASHED_FILES[field]
+        result = subprocess.run(
+            ["git", "show", f"{revision}:{relative}"],
+            cwd=ROOT, capture_output=True,
+        )
+        if result.returncode:
+            errors.append(f"measured revision has no {relative}")
+            continue
+        actual = hashlib.sha256(result.stdout).hexdigest()
+        if measured.get(field) != actual:
+            errors.append(f"measured_inputs.{field} does not match measured revision")
+
+
 def current_claim_lines(ledger: dict, coverage: dict, measurement: dict) -> list[str]:
     plural = {"line": "lines", "branch": "branches", "function": "functions"}
     metrics = ", ".join(
@@ -73,7 +92,8 @@ def current_claim_lines(ledger: dict, coverage: dict, measurement: dict) -> list
         f"- Measured revision: `{ledger['base_revision']}`.",
         f"- Coverage MCP run: `{measurement['run_id']}`; snapshot: `{measurement['snapshot_id']}`.",
         f"- Coverage: {metrics}.",
-        f"- Manifest SHA-256: `{ledger['manifest_sha256']}`; generated matrix SHA-256: `{ledger['matrix_sha256']}`.",
+        f"- Measured manifest SHA-256: `{ledger['measured_inputs'].get('manifest_sha256', 'missing')}`; measured matrix SHA-256: `{ledger['measured_inputs'].get('matrix_sha256', 'missing')}`.",
+        f"- Current fixture integrity only: manifest `{ledger['manifest_sha256']}`; matrix `{ledger['matrix_sha256']}`.",
     ]
 
 
@@ -104,8 +124,8 @@ def failures() -> list[str]:
     except (OSError, json.JSONDecodeError) as error:
         return [f"cannot read {LEDGER_PATH}: {error}"]
 
-    if ledger.get("format_version") != 1:
-        errors.append("claim ledger format_version must be 1")
+    if ledger.get("format_version") != 2:
+        errors.append("claim ledger format_version must be 2")
 
     revision = ledger.get("base_revision")
     if not isinstance(revision, str) or not SHA_RE.fullmatch(revision):
@@ -119,6 +139,8 @@ def failures() -> list[str]:
         )
         if check.returncode != 0:
             errors.append(f"base_revision {revision} is not a commit in this repository")
+
+    verify_measured_inputs(ledger, errors)
 
     roadmap_path = ROOT / "roadmap.json"
     try:
@@ -167,7 +189,7 @@ def failures() -> list[str]:
         if revision != measurement.get("commit_sha"):
             errors.append("base_revision does not match roadmap current measurement commit_sha")
         current_coverage = roadmap.get("current_state", {}).get("coverage")
-        if isinstance(current_coverage, dict):
+        if isinstance(current_coverage, dict) and isinstance(ledger.get("measured_inputs"), dict):
             verify_current_claim_blocks(ledger, current_coverage, measurement, errors)
         else:
             errors.append("roadmap current coverage metrics are missing")

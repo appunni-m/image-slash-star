@@ -27,21 +27,30 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 343 rows total, 340 active, 3 explicit planned gaps.
+- AVIF decode/inspect/verify: 343 rows total, 343 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 1,567 rows total, 1167 active decode rows, 365 active encode rows, 3 planned decode rows, and 32 planned encode rows.
+- Whole matrix: 1,567 rows total, 1170 active decode rows, 365 active encode rows, 0 planned decode rows, and 32 planned encode rows.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 
 The `former_native_only` field preserves provenance; it does not authorize a
-native runtime path or count a planned row as parity. The tracked work is:
+native runtime path or count a planned row as parity. The remaining planned work is:
 
 | Input | Work item |
 | --- | --- |
-| high_bitdepth | AVF-SAMPLE-001 |
-| hdr | AVF-COLOR-001 |
-| animated | AVF-SEQUENCE-001 |
 | All planned encoder rows | AVF-ENCODE-001 |
+
+## Executed AVIF decode evidence — 2026-09-20
+
+All 343 AVIF matrix rows now execute exact operation-specific comparisons.
+The previously planned HDR, high-depth and animation inputs pass pinned Pillow
+output checks. Independent native witnesses also pass for every displayed frame,
+frame timing and loop metadata of the two larger animations and the small
+error-resilient sequence, including its wrapped frame-ID variant.
+
+The 2026-09-17 entries below are historical implementation notes. Their deferred
+decode execution has now run; the 32 encoder rows remain planned. This does not
+close broader syntax, encoding, or complete-coverage work items.
 
 ## AVIF sequence implementation in progress — 2026-09-17
 

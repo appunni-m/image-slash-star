@@ -386,14 +386,15 @@ impl InterCdfs {
         reset_binary_rows(&mut self.obmc);
     }
 
-    /// Block-size CDFs use this crate's specification-order discriminants,
-    /// matching the reverse lookup tables used by the inter syntax state.
+    /// These CDF arrays use AV1 specification order, matching `BlockSize`'s
+    /// discriminants. The separate dav1d index reverses/reorders these sizes
+    /// and must not be used with these arrays.
     #[allow(
         dead_code,
         reason = "consumed by the inter block engine in the following implementation slice"
     )]
     pub(super) fn motion_mode_for(&mut self, block_size: BlockSize) -> &mut Cdf<3> {
-        &mut self.motion_mode[block_size.cdf_index()]
+        &mut self.motion_mode[block_size as usize]
     }
 
     /// Typed OBMC lookup paired with [`Self::motion_mode_for`].
@@ -402,7 +403,7 @@ impl InterCdfs {
         reason = "consumed by the inter block engine in the following implementation slice"
     )]
     pub(super) fn obmc_for(&mut self, block_size: BlockSize) -> &mut Cdf<2> {
-        &mut self.obmc[block_size.cdf_index()]
+        &mut self.obmc[block_size as usize]
     }
 
     pub(super) fn interintra_for(&mut self, size_group: usize) -> Option<&mut Cdf<2>> {
