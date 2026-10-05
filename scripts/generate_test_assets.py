@@ -2735,6 +2735,8 @@ def gen_jpeg():
     d.joinpath("progressive_scan0_empty.jpg").write_bytes(
         progressive[:progressive_sos_end] + b"\xff\xd9"
     )
+    from generate_jpeg_sos_edge_fixtures import generate_fixtures as generate_sos_edges
+    generate_sos_edges(d, source_dir=d)
     print(f"  JPEG: {len(list(d.glob('*.jpg')))} files")
 
 

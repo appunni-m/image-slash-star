@@ -49,9 +49,9 @@ fn verify_header(data: &[u8]) -> CodecResult<VerifiedHeader<'_>> {
         let length = usize::from(read_u16(data, position)?);
         if length < 2 {
             if marker == SOS {
-                return Err(CodecError::Malformed(
-                    "JPEG SOS marker has an invalid length".to_owned(),
-                ));
+                // Pillow stops opening at SOS even when its declared payload
+                // length is negative. Materialization validates the scan.
+                return Ok(VerifiedHeader { frame });
             }
             continue;
         }

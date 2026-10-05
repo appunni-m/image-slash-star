@@ -312,7 +312,7 @@ pub(super) fn parse_sos(
     pos: &mut usize,
     components: &[FrameComponent],
 ) -> CodecResult<(Vec<ScanComponent>, usize, u8, u8, u8, u8)> {
-    let _len = read_u16(data, pos)?;
+    let length = read_u16(data, pos)?;
     let num_scan_comps = read_u8(data, pos)?;
     if num_scan_comps == 0 {
         return Err(CodecError::Malformed(
@@ -320,7 +320,20 @@ pub(super) fn parse_sos(
         ));
     }
 
-    let mut scan_comps = Vec::with_capacity(num_scan_comps as usize);
+    // Each selected component contributes an id and a table selector; the
+    // length, count and three spectral fields contribute six more bytes.
+    // The byte-sized count bounds this arithmetic to 516, including malformed
+    // counts. Like libjpeg-turbo, reject the shape before reading components.
+    let expected_length = u16::from(num_scan_comps)
+        .saturating_mul(2)
+        .saturating_add(6);
+    if length != expected_length || num_scan_comps > 4 {
+        return Err(CodecError::Malformed(
+            "JPEG scan header has an invalid length or component count".to_owned(),
+        ));
+    }
+
+    let mut scan_comps = Vec::with_capacity(usize::from(num_scan_comps));
     for _ in 0..num_scan_comps {
         let comp_id = read_u8(data, pos)?;
         let tbl_info = read_u8(data, pos)?;

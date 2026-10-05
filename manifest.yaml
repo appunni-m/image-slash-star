@@ -862,6 +862,61 @@ formats:
       test_assets:
       - short_marker_missing_eoi.jpg
       expect_error: true
+    - id: error_sos_length_0
+      description: Complete JPEG whose zero SOS length permits Pillow metadata and verification but rejects pixel decoding
+      test_assets:
+      - error_sos_length_0.jpg
+      expect_error: true
+    - id: error_sos_length_1
+      description: Complete JPEG whose one-byte SOS declaration permits Pillow metadata and verification but rejects pixel decoding
+      test_assets:
+      - error_sos_length_1.jpg
+      expect_error: true
+    - id: error_sos_length_2
+      description: Complete JPEG with an empty declared SOS payload and unchanged scan bytes rejected during pixel decoding
+      test_assets:
+      - error_sos_length_2.jpg
+      expect_error: true
+    - id: error_sos_length_11
+      description: Complete JPEG with a three-component SOS declared one byte short and rejected during pixel decoding
+      test_assets:
+      - error_sos_length_11.jpg
+      expect_error: true
+    - id: error_sos_length_13
+      description: Complete JPEG with a three-component SOS declared one byte long and rejected during pixel decoding
+      test_assets:
+      - error_sos_length_13.jpg
+      expect_error: true
+    - id: error_sos_length_65535
+      description: Complete JPEG whose UINT16_MAX SOS declaration exceeds the supplied bytes and fails during Pillow open
+      test_assets:
+      - error_sos_length_65535.jpg
+      expect_error: true
+    - id: error_sos_zero_components_length_6
+      description: Complete JPEG with a matching six-byte declaration for zero scan components rejected during pixel decoding
+      test_assets:
+      - error_sos_zero_components_length_6.jpg
+      expect_error: true
+    - id: error_sos_five_components_length_16
+      description: Complete JPEG with a matching SOS length for five components beyond the four-component scan limit
+      test_assets:
+      - error_sos_five_components_length_16.jpg
+      expect_error: true
+    - id: error_sos_255_components_length_516
+      description: Complete JPEG with a matching SOS length for UINT8_MAX components beyond the four-component scan limit
+      test_assets:
+      - error_sos_255_components_length_516.jpg
+      expect_error: true
+    - id: error_progressive_second_sos_length_7
+      description: Complete progressive JPEG whose second single-component SOS is declared one byte short after successful inspection
+      test_assets:
+      - error_progressive_second_sos_length_7.jpg
+      expect_error: true
+    - id: error_baseline_multiscan_second_sos_length_7
+      description: Complete baseline multiscan JPEG whose second single-component SOS is declared one byte short after successful inspection
+      test_assets:
+      - error_baseline_multiscan_second_sos_length_7.jpg
+      expect_error: true
     - id: progressive_com_tail_junk
       description: Progressive JPEG with a post-scan COM marker followed by non-marker bytes
       test_assets:

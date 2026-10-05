@@ -9091,6 +9091,374 @@
         "verify_status": "error"
       },
       {
+        "asset": "error_baseline_multiscan_second_sos_length_7.jpg",
+        "class": "error_baseline_multiscan_second_sos_length_7",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete baseline multiscan JPEG whose second single-component SOS is declared one byte short after successful inspection",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_progressive_second_sos_length_7.jpg",
+        "class": "error_progressive_second_sos_length_7",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete progressive JPEG whose second single-component SOS is declared one byte short after successful inspection",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_255_components_length_516.jpg",
+        "class": "error_sos_255_components_length_516",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG with a matching SOS length for UINT8_MAX components beyond the four-component scan limit",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_five_components_length_16.jpg",
+        "class": "error_sos_five_components_length_16",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG with a matching SOS length for five components beyond the four-component scan limit",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_length_0.jpg",
+        "class": "error_sos_length_0",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG whose zero SOS length permits Pillow metadata and verification but rejects pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_length_1.jpg",
+        "class": "error_sos_length_1",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG whose one-byte SOS declaration permits Pillow metadata and verification but rejects pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_length_11.jpg",
+        "class": "error_sos_length_11",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG with a three-component SOS declared one byte short and rejected during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_length_13.jpg",
+        "class": "error_sos_length_13",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG with a three-component SOS declared one byte long and rejected during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_length_2.jpg",
+        "class": "error_sos_length_2",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG with an empty declared SOS payload and unchanged scan bytes rejected during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "error_sos_length_65535.jpg",
+        "class": "error_sos_length_65535",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "Truncated File Read",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG whose UINT16_MAX SOS declaration exceeds the supplied bytes and fails during Pillow open",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "Truncated File Read",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "error"
+      },
+      {
+        "asset": "error_sos_zero_components_length_6.jpg",
+        "class": "error_sos_zero_components_length_6",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete JPEG with a matching six-byte declaration for zero scan components rejected during pixel decoding",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "dangling_marker.jpg",
         "class": "malformed_markers",
         "contracts": {
@@ -23162,23 +23530,23 @@
       "bmp": 65,
       "gif": 47,
       "ico": 30,
-      "jpeg": 82,
+      "jpeg": 93,
       "png": 60,
       "tiff": 76,
       "webp": 131
     },
     "by_origin": {
-      "pillow_fixture": 547,
+      "pillow_fixture": 558,
       "specification_reference": 56
     },
     "by_spec_status": {
       "ambiguous": 1,
       "not_the_format": 38,
-      "spec_violation": 323,
+      "spec_violation": 331,
       "tolerated": 0,
-      "truncated": 185
+      "truncated": 188
     },
-    "classes": 547,
+    "classes": 558,
     "formats": 8
   }
 }

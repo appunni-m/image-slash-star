@@ -11536,6 +11536,781 @@
       ]
     },
     {
+      "id": "error_sos_length_0",
+      "asset": "error_sos_length_0.jpg",
+      "asset_sha256": "729419da5fe9727a0f6d751a6865c55e44bcd95094bf153c06cc7e382ce2e4d0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_length_0.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_length_1",
+      "asset": "error_sos_length_1.jpg",
+      "asset_sha256": "a744fc417d07b52a16f2dd1f3ac0f7e784803c64b88423c2342f07c1d1ff7223",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_length_1.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_length_2",
+      "asset": "error_sos_length_2.jpg",
+      "asset_sha256": "066f03bcef810cb346ff6f55ffdb1cbab465b375d1832e894a542d2706062929",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_length_2.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_length_11",
+      "asset": "error_sos_length_11.jpg",
+      "asset_sha256": "5f235865d0e748c1f67a12d63ac883a43c73eea66cd255ae44f7e47a1534e960",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_length_11.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_length_13",
+      "asset": "error_sos_length_13.jpg",
+      "asset_sha256": "121633f20c3b9b7e4fc33e80ea817fbf6d7e4cab6a6eab2d4ab791cad029ed3d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_length_13.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_length_65535",
+      "asset": "error_sos_length_65535.jpg",
+      "asset_sha256": "63c54401762bd11614feb80554c736d1d8c80ba8be003c9d570224deefd47edb",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Truncated File Read",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Truncated File Read",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Truncated File Read",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Truncated File Read",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_length_65535.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_zero_components_length_6",
+      "asset": "error_sos_zero_components_length_6.jpg",
+      "asset_sha256": "538b1e21c0c658ef42b5d053ff6c379c0f7ea9a5f40ee2f53140ae3a4f8754fa",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_zero_components_length_6.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_five_components_length_16",
+      "asset": "error_sos_five_components_length_16.jpg",
+      "asset_sha256": "e192d29496bf30ab3f4ea34e2f8dc5fb3608ad66942475153695dc10b5d2c393",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_five_components_length_16.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_sos_255_components_length_516",
+      "asset": "error_sos_255_components_length_516.jpg",
+      "asset_sha256": "fffe6aba1f8e5ed5d232db2bc6eded2ddaaf20c4b4b13c11d1577cf6dbd3e4b8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_sos_255_components_length_516.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_progressive_second_sos_length_7",
+      "asset": "error_progressive_second_sos_length_7.jpg",
+      "asset_sha256": "eb1f33e9234cb7b8ab4ebabfb199c3eb255107a67b3e9ce468eaf81b07c0298e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_progressive_second_sos_length_7.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_baseline_multiscan_second_sos_length_7",
+      "asset": "error_baseline_multiscan_second_sos_length_7.jpg",
+      "asset_sha256": "d5dd86cf6d57ea40449b16e137de0a9403512c831f5d4bcee6c995ea8ee6c232",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "JPEG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/error_baseline_multiscan_second_sos_length_7.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "progressive_com_tail_junk",
       "asset": "progressive_com_tail_junk.jpg",
       "asset_sha256": "70dd4ed893d23e30d3e5c27ef1ac3f55e6a1a98e3aad166610db48754ee43ed2",
