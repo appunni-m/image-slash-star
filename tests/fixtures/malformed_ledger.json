@@ -15327,6 +15327,134 @@
     ],
     "tiff": [
       {
+        "asset": "associated_rgba_separate_strips_raw.tiff",
+        "class": "associated_rgba_separate_strips_raw",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "unknown raw mode for given image mode",
+        "pillow_status": "error",
+        "pillow_type": "builtins.ValueError",
+        "spec_status": "ambiguous",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "associated_rgba_separate_strips_raw_first_alpha_block.tiff",
+        "class": "associated_rgba_separate_strips_raw_first_alpha_block",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "unknown raw mode for given image mode",
+        "pillow_status": "error",
+        "pillow_type": "builtins.ValueError",
+        "spec_status": "ambiguous",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "associated_rgba_separate_tiles_raw.tiff",
+        "class": "associated_rgba_separate_tiles_raw",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "unknown raw mode for given image mode",
+        "pillow_status": "error",
+        "pillow_type": "builtins.ValueError",
+        "spec_status": "ambiguous",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "associated_rgba_separate_tiles_raw_first_alpha_block.tiff",
+        "class": "associated_rgba_separate_tiles_raw_first_alpha_block",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "unknown raw mode for given image mode",
+            "pillow_type": "builtins.ValueError",
+            "rust_format": "TIFF",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "unknown raw mode for given image mode",
+        "pillow_status": "error",
+        "pillow_type": "builtins.ValueError",
+        "spec_status": "ambiguous",
+        "verify_status": "ok"
+      },
+      {
         "asset": "bad_ifd.tiff",
         "class": "error_bad_ifd",
         "contracts": {
@@ -23532,21 +23660,21 @@
       "ico": 30,
       "jpeg": 93,
       "png": 60,
-      "tiff": 76,
+      "tiff": 80,
       "webp": 131
     },
     "by_origin": {
-      "pillow_fixture": 558,
+      "pillow_fixture": 562,
       "specification_reference": 56
     },
     "by_spec_status": {
-      "ambiguous": 1,
+      "ambiguous": 5,
       "not_the_format": 38,
       "spec_violation": 331,
       "tolerated": 0,
       "truncated": 188
     },
-    "classes": 558,
+    "classes": 562,
     "formats": 8
   }
 }

@@ -4064,6 +4064,98 @@ formats:
       description: Striped organization
       test_assets:
       - stripped.tiff
+    - id: associated_rgba_contiguous_strips_raw
+      description: Associated alpha in uncompressed contiguous RGBA samples and multiple strips follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_strips_raw.tiff
+    - id: associated_rgba_contiguous_strips_deflate
+      description: Associated alpha in Deflate contiguous RGBA samples and multiple strips follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_strips_deflate.tiff
+    - id: associated_rgba_contiguous_strips_lzw
+      description: Associated alpha in LZW contiguous RGBA samples and multiple strips follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_strips_lzw.tiff
+    - id: associated_rgba_contiguous_strips_packbits
+      description: Associated alpha in PackBits contiguous RGBA samples and multiple strips follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_strips_packbits.tiff
+    - id: associated_rgba_contiguous_tiles_raw
+      description: Associated alpha in uncompressed contiguous RGBA samples and clipped edge tiles follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_tiles_raw.tiff
+    - id: associated_rgba_contiguous_tiles_deflate
+      description: Associated alpha in Deflate contiguous RGBA samples and clipped edge tiles follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_tiles_deflate.tiff
+    - id: associated_rgba_contiguous_tiles_lzw
+      description: Associated alpha in LZW contiguous RGBA samples and clipped edge tiles follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_tiles_lzw.tiff
+    - id: associated_rgba_contiguous_tiles_packbits
+      description: Associated alpha in PackBits contiguous RGBA samples and clipped edge tiles follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_contiguous_tiles_packbits.tiff
+    - id: associated_rgba_separate_strips_raw
+      description: Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band
+      test_assets:
+      - associated_rgba_separate_strips_raw.tiff
+      expect_error: true
+    - id: associated_rgba_separate_strips_deflate
+      description: Associated alpha in Deflate separate component planes and multiple strips follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_separate_strips_deflate.tiff
+    - id: associated_rgba_separate_strips_lzw
+      description: Associated alpha in LZW separate component planes and multiple strips follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_separate_strips_lzw.tiff
+    - id: associated_rgba_separate_strips_packbits
+      description: Associated alpha in PackBits separate component planes and multiple strips follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_separate_strips_packbits.tiff
+    - id: associated_rgba_separate_tiles_raw
+      description: Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band
+      test_assets:
+      - associated_rgba_separate_tiles_raw.tiff
+      expect_error: true
+    - id: associated_rgba_separate_tiles_deflate
+      description: Associated alpha in Deflate separate component planes and clipped edge tiles follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_separate_tiles_deflate.tiff
+    - id: associated_rgba_separate_tiles_lzw
+      description: Associated alpha in LZW separate component planes and clipped edge tiles follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_separate_tiles_lzw.tiff
+    - id: associated_rgba_separate_tiles_packbits
+      description: Associated alpha in PackBits separate component planes and clipped edge tiles follows Pillow transfer bytes
+      test_assets:
+      - associated_rgba_separate_tiles_packbits.tiff
+    - id: associated_rgba_separate_strips_deflate_predictor
+      description: Associated alpha in Deflate separate component planes and multiple strips follows Pillow transfer bytes with per-plane horizontal prediction
+      test_assets:
+      - associated_rgba_separate_strips_deflate_predictor.tiff
+    - id: associated_rgba_separate_tiles_deflate_predictor
+      description: Associated alpha in Deflate separate component planes and clipped edge tiles follows Pillow transfer bytes with per-plane horizontal prediction
+      test_assets:
+      - associated_rgba_separate_tiles_deflate_predictor.tiff
+    - id: associated_rgba_separate_strips_raw_missing_alpha_plane
+      description: Raw separate RGB planes remain readable with an omitted alpha plane and zero alpha samples
+      test_assets:
+      - associated_rgba_separate_strips_raw_missing_alpha_plane.tiff
+    - id: associated_rgba_separate_strips_raw_first_alpha_block
+      description: Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band
+      test_assets:
+      - associated_rgba_separate_strips_raw_first_alpha_block.tiff
+      expect_error: true
+    - id: associated_rgba_separate_tiles_raw_missing_alpha_plane
+      description: Raw separate RGB planes remain readable with an omitted alpha plane and zero alpha samples
+      test_assets:
+      - associated_rgba_separate_tiles_raw_missing_alpha_plane.tiff
+    - id: associated_rgba_separate_tiles_raw_first_alpha_block
+      description: Raw separate associated alpha remains inspectable but Pillow rejects the first visited lowercase alpha band
+      test_assets:
+      - associated_rgba_separate_tiles_raw_first_alpha_block.tiff
+      expect_error: true
     - id: planar_separate_rgb
       description: Separate RGB sample planes across multiple uncompressed strips
       test_assets:

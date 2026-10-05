@@ -8959,6 +8959,9 @@ def gen_tiff():
         325,
         0,
     )
+    from generate_tiff_associated_alpha_fixtures import generate_fixtures as generate_associated_alpha
+
+    generate_associated_alpha(d)
     print(f"  TIFF: {len(list(d.glob('*.tiff')))} files")
 
 

@@ -8,6 +8,123 @@ retain the report-specific observations made when each entry was recorded.
 ## Last full all-feature coverage — 2026-10-05
 
 The latest full local report is
+`target/release-evidence/coverage-tiff-associated-alpha-20261005.json`, SHA-256
+`97b19bdff5d96774f0b4499a7177bbc25d0746eb51477cda829f201d44056e87`.
+`make coverage` uses `nightly-2026-07-16`, an empty `RUSTC_WRAPPER`, two build
+jobs and the dedicated `target/llvm-cov-tiff-associated-alpha-20261005` target.
+
+| Metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 89,044 / 135,657 | 65.639075% |
+| Branches | 17,363 / 31,216 | 55.622117% |
+| Functions | 4,984 / 8,682 | 57.406128% |
+| Regions | 136,223 / 210,663 | 64.663942% |
+
+All alpha floors pass. The separate 100% verifier exits 1; all four completion
+requirements remain unmet. All seven test binaries pass 3, 4, 1, 57, 7, 1 and
+68 tests, with zero failures or ignored tests. The ordinary inventory has
+2,067 rows: 1,604 active decode, 431 active encode and 32 planned encode.
+TIFF has 200 decode rows, JPEG 216 and AVIF 522. The 25 target-only fault
+contracts remain separately reported with oracle status `not_applicable`.
+
+All 5,094 source/configuration/script/fixture hashes remain exact across the
+fixed-source incremental and full campaigns: 5,093 repository files and one
+ignored ambient Finder file. The original full source receipt preserves its
+precommit base revision `3489d205f3acd4698d4c336eadfd1e756e40ff7a`; receipt
+SHA-256 is `009eff76925febd98014667645a7fae0233f87eaa02020fde320d48d56999d32`.
+Human evidence documentation is outside that inventory. Native full aggregate
+totals and selected-report coordinate totals remain distinct.
+
+All eight formatting/strict-Clippy gates pass, including coverage-nightly,
+JPEG benchmark and SSE2/AVX2 cross-compilation. All 33 feature lanes pass with
+all 5,004 captured file hashes unchanged: 11 native runtime, 11 WASI runtime
+and 11 browser-target compile/Clippy/rustdoc lanes. The feature receipt has
+SHA-256 `b8773060f79d62247a44b732187028308116bbee26c47677a238778d41c910ba`.
+The origin inventory remains 140 guards across 20 files. Private unit tests,
+unsafe code, coverage exclusions and ignored cases are absent from this change.
+
+### Complete TIFF associated-alpha parity — 2026-10-05
+
+Twenty-two complete ordinary inputs cover contiguous/separate sample planes,
+multiple strips, clipped edge tiles, raw/Deflate/LZW/PackBits compression and
+per-plane horizontal prediction. The maintained
+`scripts/generate_tiff_associated_alpha_fixtures.py` is called by the normal
+TIFF asset hook. It includes nonzero hidden RGB at alpha zero, stored colors
+above alpha, alpha 1/2/17/254, opaque samples and payloads crossing cancellation
+checkpoints. Two output-directory generations and `--check` reproduce every
+input byte. All 180 previously tracked TIFF inputs and 178 prior decode rows,
+59 encode rows, encoded reference JSON, other-format rows and 25 faults remain
+exact. Inputs contain storage samples and selectors; the live oracle owns all
+normalized expected pixels and failures.
+The final 22-input regeneration receipt has SHA-256
+`183af3b4daf63b2158bd59f8ea44dce8bc526c94a8b388c0ae5e39267adb6407`.
+
+Pinned Pillow 12.2.0 independently establishes inspection/verification success
+for all 22 inputs, 18 exact pixel successes and four materialization failures.
+The raw separate importer accepts three declared RGB planes with the alpha
+plane omitted, retaining colors with zero alpha. Declaring the first alpha
+block instead fails with `ValueError: unknown raw mode for given image mode`.
+These boundary inputs retain every payload and byte-count byte; only the
+offset count changes. They are ordinary parity cases. Their malformed-ledger
+specification status is `ambiguous`, because the complete TIFF storage is valid
+and the reference's raw band importer lacks that decoder. The ledger preserves
+558 prior classes and adds four, for 562.
+
+Associated RGBA normalization now runs in place: transparent pixels clear,
+opaque pixels retain their channels, and intermediate alpha uses truncated
+`channel * 255 / alpha`, clipped to 255. The source descriptor still records
+`SourceAlpha::Premultiplied`. Raw separate planes without an alpha block retain
+their reference-defined transfer samples. A shared pixel helper and 1,024-byte
+cancellation chunks add no pixel allocation or raster copy. One local Clippy
+expectation documents the exact arithmetic invariant: byte multiplication is
+at most 65,025 and the division arm's alpha is 1..=254. It excludes no source
+from coverage. This correction has no throughput claim.
+
+The preserved old binary mismatches all 18 initial inputs: 16 wrong normalized
+rasters and two incorrectly successful raw planar decodes. Two further first
+alpha-block inputs also expose the error; two omitted-plane controls already
+match and preserve that leniency. The fresh public probe matches all 22 final
+cases, with all inspection/verification boundaries retained. The canonical
+matrix supplies wrapper, cancellation, metadata, sequence and structured-error
+checks. The focused green receipt has SHA-256
+`cdaa78609447990e5f58d2a92592c96257668cdcdd6adb3b3cd35360ee510e7b`.
+The primary behavior is Pillow's `Unpack.c` RGBa unpacker and `TiffDecode.c`
+separate-plane completion, pinned to tag 12.2.0 and preserved in ignored proof.
+The tag resolves to commit `3c41c095064200a02672d89cc5ff629eaf4b0d4f`;
+the saved commit-addressed source text is provenance and was neither compiled
+nor executed.
+
+#### Incremental measurements and producer receipts
+
+Changed source is measured afresh: 178 prior ordinary TIFF rows, then batches
+of eight contiguous, eight compressed separate and six raw boundary rows.
+Every run passes with all 387 instrumented artifact hashes fixed. Raw profiles
+are reset independently and fresh nonempty profiles are required. Initial
+Cargo execution including compilation takes 124.120 seconds; later batches
+take 0.843–1.003 seconds under concurrent checks. These are workflow timings.
+
+Audited optional producer sidecars bind original report hashes, all 110 measured
+source files, the frozen build identity and passing canonical row logs.
+Coverage MCP verifies region union **6,116 → 6,153 / 210,643**: gains are 28,
+one and eight. The separately audited LCOV line union is verified
+**3,967 → 3,999 / 131,156**. These selected denominators differ from full
+aggregate totals and do not establish a full-suite regression comparison.
+JSON line and branch unions return `incomparable`; branch detail contains
+31,210 coordinate arms against 31,216 native arms. Those responses are kept
+without replacing native totals or inventing missing branch identities.
+
+The full run still has 46,613 missing lines, 13,853 missing branch outcomes,
+3,698 missing functions and 74,440 missing regions. In particular, selected
+gains include newly implemented conversion behavior and are not a claim that
+37 historical full-suite gaps disappeared. Historical managed ledger metrics,
+run/snapshot IDs and measured-input hashes remain unchanged. Evidence is under
+`target/release-evidence/tiff-planar-alpha-3489d205-20261005/`, with reports and
+feature receipts beside it. Wider ExtraSamples-zero and LA layout differences
+from the exploratory 128-input family remain unimplemented ordinary gaps.
+
+## Preceding JPEG scan-declaration full campaign — 2026-10-05
+
+The preceding JPEG full local report is
 `target/release-evidence/coverage-jpeg-sos-20261005.json`, generated by
 `make coverage` with `nightly-2026-07-16`, an empty `RUSTC_WRAPPER`, two
 Cargo build jobs and the dedicated `target/llvm-cov-jpeg-sos-20261005` target.
@@ -23,7 +140,7 @@ Its SHA-256 is
 
 All alpha floors pass. The separate strict verifier exits 1 because all four
 100% requirements remain unmet. All seven test binaries pass 3, 4, 1, 57, 7,
-1 and 68 tests, with no failures or ignored tests. The ordinary inventory now
+1 and 68 tests, with no failures or ignored tests. Its report-era ordinary inventory
 contains 2,045 rows: 1,582 active decode, 431 active encode and 32 planned
 encode rows. JPEG has 216 ordinary decode rows and AVIF retains 522. All 25
 target-only fault contracts remain separately counted, with their reference
@@ -149,8 +266,14 @@ Both LCOV and LLVM JSON branch-union requests return `incomparable` because
 normalized baseline detail does not match reported branch totals. Those
 responses are preserved; no aggregate branch union is claimed. Bounded raw
 parser/header observations and the full four-metric report remain separate
-from this provider limit. MCP still labels the line union limited, source
-unverified and tests unknown, despite the separately passing local receipts.
+from this provider limit. The original line query was limited, with source
+unverified and tests unknown. A subsequent read-only audit adapted the immutable
+producer receipts into optional sidecars before the TIFF source change.
+Coverage MCP then verified **9,155 → 9,157 / 210,588 regions** for all eleven
+JPEG cases, with no report or source mutation. Branch union remained
+incomparable: 31,190 coordinate arms versus 31,196 native arms. This historical
+fixed-source result and its producer audit are preserved in the JPEG bundle;
+it is not a comparison against the later TIFF source.
 
 The ignored evidence bundle is
 `target/release-evidence/jpeg-sos-455d66aa-20261005/`, with the original failed
@@ -2241,8 +2364,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,045 total rows: 1,582 decode / inspect /
-verify rows and 463 encode rows. Of those, 1,582 decode rows and 431 encode
+The current matrix contains 2,067 total rows: 1,604 decode / inspect /
+verify rows and 463 encode rows. Of those, 1,604 decode rows and 431 encode
 rows are active; 0 decode rows and 32 encode rows are planned. The 25
 fault contracts are tracked separately from the Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
@@ -5593,7 +5716,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `5f5f39b8bf2b771880323a89d398d8cd952a7ce345ed6802e230735eb1e15dce`; matrix `1cc0299fec358c608247b7b06a7668aa8631da9ec68ce70ab3690452c4334cf8`.
+- Current fixture integrity only: manifest `6b0ec6160971d82916c60478ecc12087e902cb895702556320b02bfd3b97db74`; matrix `ab63e103a6b50ca1483a8d9db4c8dcf55e221835d82f6132d3634f9203ee97b1`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

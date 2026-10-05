@@ -230,10 +230,21 @@ fn decode_ifd(
         sample_format,
         color_map.as_deref(),
     )?;
-    let alpha = directory
+    let source_alpha = directory
         .values(338)
         .as_deref()
         .and_then(source_alpha_from_extra_samples);
+    let associated_rgba =
+        layout == TiffLayout::Rgba8 && source_alpha == Some(SourceAlpha::Premultiplied);
+    let raw_separate_associated_alpha =
+        associated_rgba && separate_planar && compression == COMPRESSION_NONE;
+    let alpha = TiffAlpha {
+        source: source_alpha,
+        // Pillow's raw per-band importer leaves missing alpha planes at zero
+        // without normalizing the RGB bands. Its compressed importer and
+        // contiguous raw importer normalize associated RGBA after assembly.
+        unassociate: associated_rgba && !raw_separate_associated_alpha,
+    };
     if let Some(budget) = budget {
         budget
             .reserve_later_frame(layout.mode(), width, height)
@@ -318,6 +329,7 @@ fn decode_ifd(
                     predictor,
                     bits_per_sample,
                     endian,
+                    raw_associated_alpha: raw_separate_associated_alpha,
                 },
                 token,
             )?;
@@ -528,6 +540,7 @@ fn decode_ifd(
                 predictor,
                 bits_per_sample,
                 endian,
+                raw_associated_alpha: raw_separate_associated_alpha,
             },
             token,
         )?;
@@ -685,6 +698,7 @@ struct SeparatePlanarStripLayout<'a> {
     predictor: usize,
     bits_per_sample: u8,
     endian: Endian,
+    raw_associated_alpha: bool,
 }
 
 fn decode_separate_planar_strips(
@@ -699,6 +713,11 @@ fn decode_separate_planar_strips(
     if layout.offsets.len() > expected_strips {
         return Err(CodecError::Malformed(
             "TIFF separate-planar strip count exceeds its geometry".to_owned(),
+        ));
+    }
+    if layout.raw_associated_alpha && layout.offsets.len() > strips_per_plane.saturating_mul(3) {
+        return Err(CodecError::Malformed(
+            "TIFF raw separate associated-alpha band is invalid".to_owned(),
         ));
     }
 
@@ -825,6 +844,7 @@ struct SeparatePlanarTileLayout<'a> {
     predictor: usize,
     bits_per_sample: u8,
     endian: Endian,
+    raw_associated_alpha: bool,
 }
 
 fn decode_separate_planar_tiles(
@@ -842,6 +862,11 @@ fn decode_separate_planar_tiles(
     if layout.offsets.len() > expected_offsets {
         return Err(CodecError::Malformed(
             "TIFF separate-planar tile offset count exceeds its geometry".to_owned(),
+        ));
+    }
+    if layout.raw_associated_alpha && layout.offsets.len() > tiles_per_plane.saturating_mul(3) {
+        return Err(CodecError::Malformed(
+            "TIFF raw separate associated-alpha band is invalid".to_owned(),
         ));
     }
 
@@ -1280,13 +1305,41 @@ fn uses_horizontal_predictor(predictor: usize, compression: usize, bits: u8) -> 
     )
 }
 
+/// Keep source provenance separate from Pillow's normalized transfer samples.
+#[derive(Clone, Copy)]
+struct TiffAlpha {
+    source: Option<SourceAlpha>,
+    unassociate: bool,
+}
+
+/// Normalize one associated RGBA pixel exactly as Pillow's RGBa unpacker does.
+fn unassociate_rgba_pixel(pixel: &mut [u8; 4]) {
+    match pixel[3] {
+        0 => pixel.fill(0),
+        255 => {}
+        alpha => {
+            for sample in &mut pixel[..3] {
+                // Both operands are bytes, so the product fits u16. This arm
+                // has a nonzero denominator; clipping also handles stored
+                // colors greater than their declared alpha.
+                #[expect(
+                    clippy::arithmetic_side_effects,
+                    reason = "A byte times 255 is at most 65025; this match arm bounds alpha to 1..=254."
+                )]
+                let normalized = u16::from(*sample) * 255 / u16::from(alpha);
+                *sample = normalized.min(255).to_le_bytes()[0];
+            }
+        }
+    }
+}
+
 fn convert_pixels(
     dimensions: (u32, u32),
     mut pixels: Vec<u8>,
     layout: TiffLayout,
     endian: Endian,
     palette: Option<ImagePalette>,
-    alpha: Option<SourceAlpha>,
+    alpha: TiffAlpha,
 ) -> DecodedImage {
     let (width, height) = dimensions;
     let image = match layout {
@@ -1347,7 +1400,14 @@ fn convert_pixels(
         TiffLayout::I32 => DecodedImage::with_mode(width, height, pixels, ImageMode::I32),
         TiffLayout::F32 => DecodedImage::with_mode(width, height, pixels, ImageMode::F32),
         TiffLayout::Rgb8 => DecodedImage::new(width, height, pixels, ColorType::Rgb8),
-        TiffLayout::Rgba8 => DecodedImage::new(width, height, pixels, ColorType::Rgba8),
+        TiffLayout::Rgba8 => {
+            if alpha.unassociate {
+                for pixel in pixels.as_chunks_mut::<4>().0 {
+                    unassociate_rgba_pixel(pixel);
+                }
+            }
+            DecodedImage::new(width, height, pixels, ColorType::Rgba8)
+        }
         TiffLayout::Palette { bits } => {
             let indices = unpack_indices(&pixels, width, height, bits);
             let image = DecodedImage::with_mode(width, height, indices, ImageMode::P8);
@@ -1367,7 +1427,7 @@ fn convert_pixels(
         }
     };
     let mut descriptor = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
-    if let Some(alpha) = alpha {
+    if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
     image.with_source_descriptor(descriptor)
@@ -1379,7 +1439,7 @@ fn convert_pixels_for_token(
     layout: TiffLayout,
     endian: Endian,
     palette: Option<ImagePalette>,
-    alpha: Option<SourceAlpha>,
+    alpha: TiffAlpha,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<DecodedImage> {
     match token {
@@ -1398,7 +1458,7 @@ fn convert_pixels_with_token(
     layout: TiffLayout,
     endian: Endian,
     palette: Option<ImagePalette>,
-    alpha: Option<SourceAlpha>,
+    alpha: TiffAlpha,
     token: &crate::CancellationToken,
 ) -> CodecResult<DecodedImage> {
     let (width, height) = dimensions;
@@ -1491,7 +1551,17 @@ fn convert_pixels_with_token(
         TiffLayout::I32 => DecodedImage::with_mode(width, height, pixels, ImageMode::I32),
         TiffLayout::F32 => DecodedImage::with_mode(width, height, pixels, ImageMode::F32),
         TiffLayout::Rgb8 => DecodedImage::new(width, height, pixels, ColorType::Rgb8),
-        TiffLayout::Rgba8 => DecodedImage::new(width, height, pixels, ColorType::Rgba8),
+        TiffLayout::Rgba8 => {
+            if alpha.unassociate {
+                for chunk in pixels.chunks_mut(1_024) {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                    for pixel in chunk.as_chunks_mut::<4>().0 {
+                        unassociate_rgba_pixel(pixel);
+                    }
+                }
+            }
+            DecodedImage::new(width, height, pixels, ColorType::Rgba8)
+        }
         TiffLayout::Palette { bits } => {
             let indices = unpack_indices_with_token(&pixels, width, height, bits, token)?;
             let image = DecodedImage::with_mode(width, height, indices, ImageMode::P8);
@@ -1520,7 +1590,7 @@ fn convert_pixels_with_token(
         }
     };
     let mut descriptor = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
-    if let Some(alpha) = alpha {
+    if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
     Ok(image.with_source_descriptor(descriptor))

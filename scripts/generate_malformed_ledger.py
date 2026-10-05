@@ -25,6 +25,13 @@ LEDGER_PATH = ROOT / "tests" / "fixtures" / "malformed_ledger.json"
 SPEC_STATUS_OVERRIDES: dict[str, str] = {
     "jpeg:malformed_markers_fill_marker_only": "ambiguous",
     "gif:error_malformed_near_miss_version": "ambiguous",
+    # These complete classic TIFFs are valid associated-alpha storage. Pillow
+    # can inspect them but its raw separate-plane importer has no lowercase
+    # alpha-band unpacker; this is a decoder limitation, not a TIFF violation.
+    "tiff:associated_rgba_separate_strips_raw": "ambiguous",
+    "tiff:associated_rgba_separate_tiles_raw": "ambiguous",
+    "tiff:associated_rgba_separate_strips_raw_first_alpha_block": "ambiguous",
+    "tiff:associated_rgba_separate_tiles_raw_first_alpha_block": "ambiguous",
     "png:error_malformed_structure_ihdr_trailing_byte": "spec_violation",
     "png:error_malformed_structure_short_chunk_kind": "truncated",
 }

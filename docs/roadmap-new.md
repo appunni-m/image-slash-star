@@ -12,8 +12,8 @@ The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 The latest complete all-feature run passed 57/57 matrix tests and 68/68
 feature-gate tests, along with all 522 AVIF decode rows and all 25 target-only
 fault contracts. Its local full report is
-`target/release-evidence/coverage-jpeg-sos-20261005.json`, with SHA-256
-`5b6ca500bae7c9d3d2add1b9145c7ccf15afbc7879056e43853388a7cff67b0d`.
+`target/release-evidence/coverage-tiff-associated-alpha-20261005.json`, with SHA-256
+`97b19bdff5d96774f0b4499a7177bbc25d0746eb51477cda829f201d44056e87`.
 The LLVM percentages below remain the historical measured baseline; current
 local report counts and their separate denominator are recorded in
 [Evidence](EVIDENCE.md).
@@ -36,7 +36,7 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 - AVIF decode/inspect/verify: 522 rows total, 522 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 2,045 rows total, 1582 active decode rows, 431 active encode rows, 0 planned decode rows, and 32 planned encode rows. The 25 typed fault contracts remain outside Pillow parity totals.
+- Whole matrix: 2,067 rows total, 1604 active decode rows, 431 active encode rows, 0 planned decode rows, and 32 planned encode rows. The 25 typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 
