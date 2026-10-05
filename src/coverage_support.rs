@@ -54,6 +54,8 @@ pub enum CoverageFaultPoint {
     Av1MonochromeTileReservation,
     /// Force AV1 partial color tile-state retention to fail.
     Av1ColorTileReservation,
+    /// Force reservation of nonempty AV1 tile-group temporal-MV samples to fail.
+    Av1TileGroupTemporalSampleReservation,
     /// Force AVIF color-grid cell retention to fail.
     Av1GridCellReservation,
     /// Force assembled AV1 monochrome loop-filter metadata reservation to fail.

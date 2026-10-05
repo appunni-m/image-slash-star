@@ -1127,6 +1127,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "av1.frame.tile_group_temporal_sample_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1TileGroupTemporalSampleReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
             ("av1.grid.cell_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1GridCellReservation,
                 false,
@@ -1233,6 +1242,9 @@ fn execute_fault_contract(
         ),
         "av1.frame.color_tile_state_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to reserve reconstructed AV1 tile state",
+        ),
+        "av1.frame.tile_group_temporal_sample_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate AV1 tile-group temporal-MV samples",
         ),
         "av1.grid.cell_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to reserve AVIF grid cells")

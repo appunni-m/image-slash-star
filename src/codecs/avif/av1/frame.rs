@@ -2923,8 +2923,20 @@ fn validate_tile_entropy_prefixes(
         )?;
         if let Some(mut reconstruction) = complete {
             let tile_temporal_samples = std::mem::take(&mut reconstruction.temporal_samples);
+            #[cfg(coverage)]
+            let temporal_sample_reservation_count = if !tile_temporal_samples.is_empty()
+                && crate::coverage_support::take_fault_point(
+                    crate::coverage_support::CoverageFaultPoint::
+                        Av1TileGroupTemporalSampleReservation,
+                ) {
+                usize::MAX
+            } else {
+                tile_temporal_samples.len()
+            };
+            #[cfg(not(coverage))]
+            let temporal_sample_reservation_count = tile_temporal_samples.len();
             temporal_samples
-                .try_reserve(tile_temporal_samples.len())
+                .try_reserve(temporal_sample_reservation_count)
                 .map_err(|_| {
                     CodecError::Dimensions(
                         "unable to allocate AV1 tile-group temporal-MV samples".to_owned(),

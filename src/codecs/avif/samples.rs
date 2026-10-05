@@ -60,12 +60,7 @@ pub(super) struct ByteSpan {
 }
 
 impl ByteSpan {
-    fn from_offset_size(
-        offset: u64,
-        size: u64,
-        limit: usize,
-        truncation: bool,
-    ) -> ParseResult<Self> {
+    fn from_offset_size(offset: u64, size: u64) -> ParseResult<Self> {
         let end = offset.checked_add(size).ok_or_else(|| parse_failure!())?;
         #[cfg(target_pointer_width = "32")]
         let start = usize_from_u64(offset)?;
@@ -75,13 +70,23 @@ impl ByteSpan {
         let end = usize_from_u64(end)?;
         #[cfg(target_pointer_width = "64")]
         let end = usize_from_u64(end);
-        if end > limit {
+        Ok(Self { start, end })
+    }
+
+    fn from_bounded_offset_size(
+        offset: u64,
+        size: u64,
+        limit: usize,
+        truncation: bool,
+    ) -> ParseResult<Self> {
+        let span = Self::from_offset_size(offset, size)?;
+        if span.end > limit {
             if truncation {
-                return Err(parse_need_more!(end));
+                return Err(parse_need_more!(span.end));
             }
             return Err(parse_failure!());
         }
-        Ok(Self { start, end })
+        Ok(span)
     }
 
     pub(super) fn bytes(self, input: &[u8]) -> ParseResult<&[u8]> {
@@ -430,6 +435,8 @@ struct ItemLocation {
     source: ExtentSource,
     extents: Vec<ByteSpan>,
     declared_extents: Vec<AvifItemExtent>,
+    // The file length or, for nonempty idat extents, the validated box end.
+    source_end: usize,
 }
 
 #[derive(Default)]
@@ -446,7 +453,11 @@ struct Meta {
     locations: Vec<ItemLocation>,
 }
 
-fn parse_meta(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResult<Meta> {
+fn parse_meta<const CHECK_ITEM_BOUNDS: bool>(
+    input: &[u8],
+    payload: ByteSpan,
+    budget: &mut Budget,
+) -> ParseResult<Meta> {
     let mut reader = Reader::new(input, payload);
     let (version, _) = parse_full_box(&mut reader)?;
     if version != 0 {
@@ -517,7 +528,7 @@ fn parse_meta(input: &[u8], payload: ByteSpan, budget: &mut Budget) -> ParseResu
         return Err(parse_failure!());
     }
     let iloc = iloc.ok_or_else(|| parse_failure!())?;
-    parse_iloc(input, iloc, idat, &mut meta, budget)?;
+    parse_iloc::<CHECK_ITEM_BOUNDS>(input, iloc, idat, &mut meta, budget)?;
     Ok(meta)
 }
 
@@ -1035,7 +1046,7 @@ fn parse_iref(
 
 // ✅ VERIFIED: libavif 1.4.1 read.c:1979-2103. Field widths,
 // construction methods, and extent arithmetic match the pinned source.
-fn parse_iloc(
+fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
     input: &[u8],
     payload: ByteSpan,
     idat: Option<ByteSpan>,
@@ -1097,6 +1108,7 @@ fn parse_iloc(
             1 => ExtentSource::Idat,
             _ => return Err(parse_failure!()),
         };
+        let mut source_end = input.len();
         if reader.u16()? != 0 {
             return Err(parse_failure!());
         }
@@ -1117,14 +1129,22 @@ fn parse_iloc(
             declared_extents.push(AvifItemExtent::new(relative, extent_length));
             let span = match source {
                 ExtentSource::File => {
-                    ByteSpan::from_offset_size(relative, extent_length, input.len(), true)?
+                    ByteSpan::from_bounded_offset_size(relative, extent_length, input.len(), true)?
                 }
                 ExtentSource::Idat => {
                     let idat = idat.ok_or_else(|| parse_failure!())?;
+                    source_end = idat.end;
                     let start = (idat.start as u64)
                         .checked_add(relative)
                         .ok_or_else(|| parse_failure!())?;
-                    ByteSpan::from_offset_size(start, extent_length, idat.end, false)?
+                    if CHECK_ITEM_BOUNDS {
+                        ByteSpan::from_bounded_offset_size(start, extent_length, idat.end, false)?
+                    } else {
+                        // libavif checks this payload bound when reading an
+                        // item, after Image.open()/verify() read its metadata.
+                        // Inspection retains the declared span and source bound.
+                        ByteSpan::from_offset_size(start, extent_length)?
+                    }
                 }
             };
             extents.push(span);
@@ -1134,6 +1154,7 @@ fn parse_iloc(
             source,
             extents,
             declared_extents,
+            source_end,
         });
     }
     if !reader.is_empty() {
@@ -1176,14 +1197,17 @@ impl Meta {
             if location.extents.is_empty() {
                 return Err(parse_failure!());
             }
+            // source_end comes from this input's length or a validated idat
+            // box. Validate each extent before reserving its declared size.
+            let source_input = &input[..location.source_end];
             let capacity = location.extents.iter().try_fold(0_usize, |total, span| {
                 total
-                    .checked_add(span.len())
+                    .checked_add(span.bytes(source_input)?.len())
                     .ok_or_else(|| parse_failure!())
             })?;
             let mut data = Vec::with_capacity(capacity);
             for span in &location.extents {
-                data.extend_from_slice(span.bytes(input)?);
+                data.extend_from_slice(span.bytes(source_input)?);
             }
             metadata.push(OpaqueMetadata {
                 kind: kind.to_vec(),
@@ -1626,6 +1650,8 @@ impl Meta {
         let location = self
             .location(primary_item_id)
             .ok_or_else(|| parse_failure!())?;
+        // Keep grid descriptor reads inside the selected file/idat source.
+        let source_input = &input[..location.source_end];
         let total_length = location.extents.iter().try_fold(0usize, |length, extent| {
             length
                 .checked_add(extent.len())
@@ -1641,7 +1667,7 @@ impl Meta {
         let mut prefix = [0u8; 12];
         let mut copied = 0usize;
         for extent in &location.extents {
-            let bytes = extent.bytes(input)?;
+            let bytes = extent.bytes(source_input)?;
             let remaining = prefix.len().saturating_sub(copied);
             let count = bytes.len().min(remaining);
             prefix[copied..copied.saturating_add(count)].copy_from_slice(&bytes[..count]);
@@ -1744,16 +1770,16 @@ pub(super) struct ExtractedAvif<'input> {
 }
 
 impl ExtractedAvif<'_> {
-    pub(super) fn validate(&self) -> CodecResult<()> {
+    fn validate<const READ_PAYLOAD: bool>(&self) -> CodecResult<()> {
         if self.still.is_none() && self.sequence.is_none() {
             return Err(CodecError::Malformed(
                 "AVIF container has neither a still image nor an image sequence".to_owned(),
             ));
         }
         if let Some(still) = &self.still {
-            validate_plane(self.input, &still.color)?;
+            validate_plane::<READ_PAYLOAD>(self.input, &still.color)?;
             if let Some(alpha) = &still.alpha {
-                validate_plane(self.input, alpha)?;
+                validate_plane::<READ_PAYLOAD>(self.input, alpha)?;
                 if alpha.samples.len() != still.color.samples.len() {
                     return Err(CodecError::Malformed(
                         "AVIF still color and alpha sample counts differ".to_owned(),
@@ -1763,9 +1789,9 @@ impl ExtractedAvif<'_> {
         }
         if let Some(sequence) = &self.sequence {
             let _ = sequence.timescale;
-            validate_plane(self.input, &sequence.color)?;
+            validate_plane::<READ_PAYLOAD>(self.input, &sequence.color)?;
             if let Some(alpha) = &sequence.alpha {
-                validate_plane(self.input, alpha)?;
+                validate_plane::<READ_PAYLOAD>(self.input, alpha)?;
                 if alpha.samples.len() != sequence.color.samples.len() {
                     return Err(CodecError::Malformed(
                         "AVIF sequence color and alpha sample counts differ".to_owned(),
@@ -1777,7 +1803,7 @@ impl ExtractedAvif<'_> {
     }
 }
 
-fn validate_plane(input: &[u8], plane: &EncodedPlane) -> CodecResult<()> {
+fn validate_plane<const READ_PAYLOAD: bool>(input: &[u8], plane: &EncodedPlane) -> CodecResult<()> {
     if plane.samples.is_empty() {
         return Err(CodecError::Malformed(
             "AVIF sample plane is empty".to_owned(),
@@ -1795,10 +1821,14 @@ fn validate_plane(input: &[u8], plane: &EncodedPlane) -> CodecResult<()> {
             .map_err(|error| error.context("validate AVIF sample configuration"))?;
         let _ = sample.sync;
         let _ = sample.duration;
-        for span in &sample.spans {
-            let _ = span
-                .bytes(input)
-                .map_err(|error| error.context("validate AVIF sample payload"))?;
+        if READ_PAYLOAD {
+            // Decode extraction has already bounded every declared item to its
+            // file/idat source, including items absent from the selected plane.
+            for span in &sample.spans {
+                let _ = span
+                    .bytes(input)
+                    .map_err(|error| error.context("validate AVIF sample payload"))?;
+            }
         }
     }
     Ok(())
@@ -2545,8 +2575,12 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
                 .sample_sizes
                 .get(sample_index)
                 .ok_or_else(|| parse_failure!())?;
-            let span =
-                ByteSpan::from_offset_size(sample_offset, u64::from(size), input.len(), true)?;
+            let span = ByteSpan::from_bounded_offset_size(
+                sample_offset,
+                u64::from(size),
+                input.len(),
+                true,
+            )?;
             #[allow(
                 clippy::cast_possible_truncation,
                 reason = "The sample-size table count is encoded as u32, bounding every sample index."
@@ -2621,10 +2655,10 @@ fn sequence_payload(movie: &Movie, input: &[u8]) -> ParseResult<SequencePayload>
 }
 
 fn extract_inner(input: &[u8]) -> ParseResult<ExtractedAvif<'_>> {
-    extract_inner_with_metadata(input, true)
+    extract_inner_with_metadata::<true>(input, true)
 }
 
-fn extract_inner_with_metadata(
+fn extract_inner_with_metadata<const CHECK_ITEM_BOUNDS: bool>(
     input: &[u8],
     retain_metadata: bool,
 ) -> ParseResult<ExtractedAvif<'_>> {
@@ -2663,7 +2697,7 @@ fn extract_inner_with_metadata(
                             return Err(parse_failure!());
                         }
                         meta = Some(
-                            parse_meta(input, child.payload, &mut budget)
+                            parse_meta::<CHECK_ITEM_BOUNDS>(input, child.payload, &mut budget)
                                 .map_err(|error| error.at(box_offset, "avif_box"))?,
                         );
                     }
@@ -2819,7 +2853,14 @@ pub(super) fn extract(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
 
 pub(super) fn validated(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
     let extracted = extract(input)?;
-    extracted.validate()?;
+    extracted.validate::<true>()?;
+    Ok(extracted)
+}
+
+/// Validate inspection metadata without materializing encoded image payloads.
+pub(super) fn inspected(input: &[u8]) -> CodecResult<ExtractedAvif<'_>> {
+    let extracted = extract_inner_with_metadata::<false>(input, true)?;
+    extracted.validate::<false>()?;
     Ok(extracted)
 }
 
@@ -2882,7 +2923,7 @@ fn pixel_payload_bytes(extracted: &ExtractedAvif<'_>) -> u64 {
 /// Measure the encoded metadata extent: the parsed top-level BMFF bytes minus
 /// the referenced primary and auxiliary pixel-sample payload spans.
 pub(super) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
-    let extracted = extract_inner_with_metadata(data, false)?;
+    let extracted = extract_inner_with_metadata::<true>(data, false)?;
     #[allow(
         clippy::cast_possible_truncation,
         reason = "Supported targets have usize no wider than u64."

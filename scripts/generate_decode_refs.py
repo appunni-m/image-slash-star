@@ -2044,20 +2044,10 @@ def ico_bit_depth(data):
 
 
 def avif_bit_depth(image_path):
-    """Read AV1 configuration depth with the independent ISO-BMFF inspector."""
-    from inspect_avif_bitstreams import inspect as inspect_avif
+    """Read bounded AV1 configuration depth independently of sample extents."""
+    from inspect_avif_bitstreams import inspect_color_configurations
 
-    report = inspect_avif(image_path)
-    color_items = report.get("items", {}).get("color", [])
-    configurations = [
-        item.get("av1c") for item in color_items if item.get("av1c") is not None
-    ]
-    if not configurations:
-        configurations = [
-            track.get("av1c")
-            for track in report.get("tracks", [])
-            if track.get("handler") == "pict" and track.get("av1c") is not None
-        ]
+    configurations = inspect_color_configurations(image_path)
     if not configurations:
         raise ValueError("AVIF has no color AV1CodecConfigurationBox")
     payload = bytes.fromhex(configurations[0]["hex"])
@@ -2188,36 +2178,7 @@ def write_decoded_source_descriptor(row, image_path, fmt_name, image):
 def write_inspect_ref(row, image_path, fmt_name):
     """Record Pillow's lazy Image.open outcome without materializing pixels."""
     try:
-        with pillow_open_asset(image_path) as image:
-            row["inspect_container_format"] = image.format
-            bit_depth, origin = inspect_bit_depth(fmt_name, image_path, image)
-            row["ref_bit_depth"] = bit_depth
-            row["ref_bit_depth_origin"] = origin
-            if fmt_name == "tiff":
-                row["inspect_source_byte_order"] = tiff_source_byte_order(
-                    image_path.read_bytes(), image
-                )
-                row["inspect_source_byte_order_origin"] = "pillow_fixture"
-            else:
-                row["inspect_source_byte_order"] = None
-                row["inspect_source_byte_order_origin"] = None
-            if image.format == "CUR":
-                data = image_path.read_bytes()
-                count = int.from_bytes(data[4:6], "little")
-                entries = [
-                    data[6 + index * 16 : 22 + index * 16]
-                    for index in range(count)
-                ]
-                best = max(
-                    entries,
-                    key=lambda entry: (entry[0] or 256) * (entry[1] or 256),
-                )
-                row["inspect_cursor_hotspot"] = [
-                    int.from_bytes(best[4:6], "little"),
-                    int.from_bytes(best[6:8], "little"),
-                ]
-            else:
-                row["inspect_cursor_hotspot"] = None
+        image = pillow_open_asset(image_path)
     except Exception as error:
         row["inspect_status"] = "error"
         row.pop("inspect_container_format", None)
@@ -2231,11 +2192,44 @@ def write_inspect_ref(row, image_path, fmt_name):
         row["inspect_error_kind"] = decode_error_kind(
             row["oracle_detects_format"], error
         )
-    else:
-        row["inspect_status"] = "ok"
-        row.pop("inspect_error_type", None)
-        row.pop("inspect_error_message", None)
-        row.pop("inspect_error_kind", None)
+        return
+    # Only the public Pillow open belongs to the exception mapping above.
+    # Independent enrichment failures are generation errors, not evidence
+    # that Pillow rejected a file it actually opened successfully.
+    with image:
+        row["inspect_container_format"] = image.format
+        bit_depth, origin = inspect_bit_depth(fmt_name, image_path, image)
+        row["ref_bit_depth"] = bit_depth
+        row["ref_bit_depth_origin"] = origin
+        if fmt_name == "tiff":
+            row["inspect_source_byte_order"] = tiff_source_byte_order(
+                image_path.read_bytes(), image
+            )
+            row["inspect_source_byte_order_origin"] = "pillow_fixture"
+        else:
+            row["inspect_source_byte_order"] = None
+            row["inspect_source_byte_order_origin"] = None
+        if image.format == "CUR":
+            data = image_path.read_bytes()
+            count = int.from_bytes(data[4:6], "little")
+            entries = [
+                data[6 + index * 16 : 22 + index * 16]
+                for index in range(count)
+            ]
+            best = max(
+                entries,
+                key=lambda entry: (entry[0] or 256) * (entry[1] or 256),
+            )
+            row["inspect_cursor_hotspot"] = [
+                int.from_bytes(best[4:6], "little"),
+                int.from_bytes(best[6:8], "little"),
+            ]
+        else:
+            row["inspect_cursor_hotspot"] = None
+    row["inspect_status"] = "ok"
+    row.pop("inspect_error_type", None)
+    row.pop("inspect_error_message", None)
+    row.pop("inspect_error_kind", None)
 
 
 def write_verify_ref(row, image_path):
@@ -2571,6 +2565,9 @@ def sync_fault_contract_rows(manifest, matrix):
         },
         "av1.frame.color_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.tile_group_temporal_sample_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
         },
         "av1.grid.cell_reservation": {
             "decode_error_then_retry_succeeds"

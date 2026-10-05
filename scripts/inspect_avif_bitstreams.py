@@ -638,6 +638,67 @@ def inspect(path: Path) -> dict[str, object]:
     return result
 
 
+def inspect_color_configurations(path: Path) -> list[dict[str, object]]:
+    """Read color AV1 configuration records without reading sample extents.
+
+    Lazy public image inspection can succeed before a malformed item extent
+    fails at frame decoding. Configuration depth comes from bounded property
+    or sample-description boxes and does not require that payload validation.
+    The full ``inspect`` report retains its independent extent checks.
+    """
+    data = path.read_bytes()
+    top = parse_boxes(data, 0, len(data))
+    meta = unique_box(top, b"meta", required=False)
+    moov = unique_box(top, b"moov", required=False)
+    if meta is not None:
+        boxes = children(data, meta, prefix=4)
+        pitm = unique_box(boxes, b"pitm")
+        iinf = unique_box(boxes, b"iinf")
+        iprp = unique_box(boxes, b"iprp")
+        iref = unique_box(boxes, b"iref", required=False)
+        assert pitm is not None and iinf is not None and iprp is not None
+        primary = parse_pitm(data, pitm)
+        item_types = parse_iinf(data, iinf)
+        _, configs = parse_iprp_properties(data, iprp)
+        if item_types.get(primary) == b"av01":
+            color_ids = [primary]
+        elif item_types.get(primary) == b"grid":
+            references = parse_iref(data, iref) if iref is not None else []
+            color_ids = [
+                to_id
+                for kind, from_id, to_id in references
+                if kind == b"dimg" and from_id == primary
+            ]
+            if not color_ids:
+                raise ValueError("grid primary item has no dimg children")
+        else:
+            raise ValueError("primary item is not AV1 or grid")
+        configurations = [configs[item_id] for item_id in color_ids if item_id in configs]
+        if configurations:
+            return configurations
+    configurations = []
+    if moov is not None:
+        for track in children(data, moov):
+            if track.kind != b"trak":
+                continue
+            mdia = unique_box(children(data, track), b"mdia")
+            assert mdia is not None
+            media_boxes = children(data, mdia)
+            hdlr = unique_box(media_boxes, b"hdlr")
+            minf = unique_box(media_boxes, b"minf")
+            assert hdlr is not None and minf is not None
+            if parse_hdlr(data, hdlr) != b"pict":
+                continue
+            stbl = unique_box(children(data, minf), b"stbl")
+            assert stbl is not None
+            stsd = unique_box(children(data, stbl), b"stsd")
+            assert stsd is not None
+            config = parse_stsd_config(data, stsd)
+            if config is not None:
+                configurations.append(config)
+    return configurations
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(

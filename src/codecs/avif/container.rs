@@ -663,15 +663,20 @@ fn parse_iloc(
             let relative = base_offset
                 .checked_add(extent_offset)
                 .ok_or_else(|| parse_failure!())?;
-            let limit = match source {
-                AvifItemLocationSource::File => input.len(),
-                AvifItemLocationSource::Idat => idat.ok_or_else(|| parse_failure!())?.len(),
-            };
             let end = relative
                 .checked_add(extent_length)
                 .ok_or_else(|| parse_failure!())?;
-            if end > u64::try_from(limit).unwrap_or(u64::MAX) {
-                return Err(parse_failure!());
+            match source {
+                AvifItemLocationSource::File => {
+                    if end > u64::try_from(input.len()).unwrap_or(u64::MAX) {
+                        return Err(parse_failure!());
+                    }
+                }
+                AvifItemLocationSource::Idat => {
+                    // Inspection retains declared extents. The sample reader
+                    // checks their idat source bound before decoding payloads.
+                    let _ = idat.ok_or_else(|| parse_failure!())?;
+                }
             }
             extents.push(AvifItemExtent::new(relative, extent_length));
         }

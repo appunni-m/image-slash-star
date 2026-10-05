@@ -136,6 +136,14 @@ FAULT_CONTRACTS = {
         "point": "av1.frame.monochrome_tile_state_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_tile_group_temporal_sample_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure",
+        "source_case": "decode:avif:animated_motion_chroma",
+        "point": "av1.frame.tile_group_temporal_sample_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
     "avif_color_tile_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

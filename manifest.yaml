@@ -54,6 +54,20 @@ reference_oracles:
       pillow_feature: avif
       pillow_feature_version: 1.4.1
 fault_contracts:
+  - id: avif_tile_group_temporal_sample_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_motion_chroma
+    fault:
+      point: av1.frame.tile_group_temporal_sample_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_grid_cell_reservation_failure
     type: fault-contract
     operation: decode
@@ -4916,6 +4930,33 @@ formats:
       test_assets:
       - iloc_idat_indexed_extent.avif
       status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: iloc_idat_split_extents
+      description: Still AVIF assembles its unchanged primary AV1 item from two indexed idat extents using a nonzero base offset
+      test_assets:
+      - iloc_idat_split_extents.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_iloc_truncated_extent_index
+      description: A complete AVIF declares a four-byte extent index but its bounded iloc payload ends after only two index bytes
+      test_assets:
+      - error_iloc_truncated_extent_index.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_iloc_index_size_three
+      description: A complete AVIF declares an unsupported three-byte extent-index width in its iloc field-size header
+      test_assets:
+      - error_iloc_index_size_three.avif
+      status: active
+      expect_error: true
+      pure_rust_work_item: AVF-STILL-001
+    - id: error_iloc_idat_extent_out_of_bounds
+      description: A complete AVIF extends its indexed primary item one byte beyond idat; Pillow inspection and verification succeed before frame decoding rejects the malformed extent
+      test_assets:
+      - error_iloc_idat_extent_out_of_bounds.avif
+      status: active
+      expect_error: true
       pure_rust_work_item: AVF-STILL-001
     - id: ipma_wide_property_associations
       description: Still AVIF with 16-bit ipma property association indices
