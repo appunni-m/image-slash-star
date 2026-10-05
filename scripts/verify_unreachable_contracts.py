@@ -200,6 +200,22 @@ FAULT_CONTRACTS = {
         "point": "av1.frame.assembled_loop_filter_metadata_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_assembled_cdef_region_map_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_assembled_cdef_region_map_reservation_failure",
+        "source_case": "decode:avif:multitile_color_split_groups",
+        "point": "av1.frame.assembled_cdef_region_map_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_assembled_cdef_active_map_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_assembled_cdef_active_map_reservation_failure",
+        "source_case": "decode:avif:multitile_color_split_groups",
+        "point": "av1.frame.assembled_cdef_active_map_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_partition_node_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

@@ -35428,10 +35428,6 @@ fn combined_bottom_edge<const N: usize>(
     })
 }
 
-fn bottom_sample_at(plane: &ReconstructedPlane, row_width: u32, x_offset: u32) -> u16 {
-    bottom_edge_at::<1>(plane, row_width, x_offset)[0]
-}
-
 fn bottom_edge_16(plane: &ReconstructedPlane) -> [u16; 16] {
     if plane.samples.len() >= 256 {
         std::array::from_fn(|index| {
@@ -35725,28 +35721,6 @@ fn right_edge_4(plane: &ReconstructedPlane) -> [u16; 4] {
     }
 }
 
-fn right_edge_4_padded(plane: &ReconstructedPlane) -> [u16; 4] {
-    if plane.samples.len() >= 16 {
-        right_edge_4(plane)
-    } else if plane.samples.len() >= 8 {
-        [
-            plane.samples.get(1).copied().unwrap_or(128),
-            plane.samples.get(3).copied().unwrap_or(128),
-            plane.samples.get(5).copied().unwrap_or(128),
-            plane.samples.get(7).copied().unwrap_or(128),
-        ]
-    } else if plane.samples.len() >= 4 {
-        // A visible 2x2 4:2:0 neighbour has already been cropped from its
-        // coded 4x4 transform. AV1 extends the final available row/column
-        // when preparing an edge for the next coded block.
-        let right_top = plane.samples.get(1).copied().unwrap_or(128);
-        let right_bottom = plane.samples.get(3).copied().unwrap_or(right_top);
-        [right_top, right_bottom, right_bottom, right_bottom]
-    } else {
-        [128; 4]
-    }
-}
-
 fn right_edge_for_4x8(plane: &ReconstructedPlane) -> [u16; 8] {
     if plane.samples.len() >= 32 {
         std::array::from_fn(|index| {
@@ -35786,17 +35760,6 @@ fn bottom_right_for_square4(plane: &ReconstructedPlane) -> u16 {
         .get(if plane.samples.len() >= 64 { 63 } else { 15 })
         .copied()
         .unwrap_or(128)
-}
-
-fn bottom_right_for_4x4_padded(plane: &ReconstructedPlane) -> u16 {
-    let index = match plane.samples.len() {
-        64.. => 63,
-        16.. => 15,
-        8.. => 7,
-        4.. => 3,
-        _ => return 128,
-    };
-    plane.samples.get(index).copied().unwrap_or(128)
 }
 
 fn one_sided_dc_predictor(edge: [u16; 8]) -> u16 {
@@ -37696,311 +37659,6 @@ fn reconstruct_following_lossy_420_vertical_64x64_leaf(
         },
     ];
     reconstruct_leaf(syntax, predictors, palette_map_arena)
-}
-
-fn reconstruct_following_lossy_420_vertical_4x8_leaf(
-    syntax: BlockSyntax,
-    above: &ClosedLeaf,
-    left_top: Option<&ClosedLeaf>,
-    left_bottom: Option<&ClosedLeaf>,
-) -> PortableResult<ClosedLeaf> {
-    let BlockSyntax {
-        luma_predictor,
-        luma_angle,
-        chroma_predictor,
-        chroma_angle,
-        lossy_luma_4x8_coefficients,
-        lossy_luma_4x8_transform,
-        lossy_chroma_coefficients,
-        ..
-    } = syntax;
-
-    let above_luma_edge = bottom_edge_4_for_4x8(&above.planes[0]);
-    let luma_top = [
-        above_luma_edge[0],
-        above_luma_edge[1],
-        above_luma_edge[2],
-        above_luma_edge[3],
-    ];
-    let luma_left = match (left_top, left_bottom) {
-        (Some(top), Some(bottom)) => {
-            let top_edge = right_edge_for_4x8(&top.planes[0]);
-            let bottom_edge = right_edge_for_4x8(&bottom.planes[0]);
-            [
-                top_edge[0],
-                top_edge[1],
-                top_edge[2],
-                top_edge[3],
-                bottom_edge[0],
-                bottom_edge[1],
-                bottom_edge[2],
-                bottom_edge[3],
-            ]
-        }
-        (Some(left), None) | (None, Some(left)) => right_edge_for_4x8(&left.planes[0]),
-        (None, None) => [luma_top[0]; 8],
-    };
-    let luma_top_left = left_top.map_or(luma_top[0], |neighbor| {
-        right_edge_for_4x8(&neighbor.planes[0])[7]
-    });
-    let luma = match luma_predictor {
-        LumaPredictor::Dc => reconstruct_lossy_luma_4x8(
-            luma_top,
-            luma_left,
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        ),
-        LumaPredictor::Vertical => reconstruct_lossy_luma_4x8_from_prediction(
-            std::array::from_fn(|index| luma_top[index % 4]),
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        ),
-        LumaPredictor::Horizontal => reconstruct_lossy_luma_4x8_from_prediction(
-            std::array::from_fn(|index| luma_left[index / 4]),
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        ),
-        LumaPredictor::Paeth => reconstruct_lossy_luma_4x8_from_prediction(
-            std::array::from_fn(|index| {
-                paeth_predictor(luma_top[index % 4], luma_left[index / 4], luma_left[0])
-            }),
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        ),
-        LumaPredictor::Smooth => reconstruct_lossy_luma_4x8_smooth(
-            luma_top,
-            luma_top[3],
-            luma_left,
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        ),
-        LumaPredictor::SmoothVertical => reconstruct_lossy_luma_4x8_smooth_vertical(
-            luma_top,
-            luma_left[7],
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        ),
-        LumaPredictor::SmoothHorizontal => reconstruct_lossy_luma_4x8_smooth_horizontal(
-            luma_left,
-            luma_top[3],
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        ),
-        LumaPredictor::Diagonal45 | LumaPredictor::Diagonal67 => {
-            reconstruct_lossy_luma_4x8_diagonal_z1(
-                luma_top,
-                luma_top_left,
-                luma_angle.ok_or(PortableUnavailable)?,
-                lossy_luma_4x8_coefficients,
-                lossy_luma_4x8_transform,
-            )?
-        }
-        LumaPredictor::Diagonal203 => reconstruct_lossy_luma_4x8_diagonal_z3(
-            luma_left,
-            luma_left[0],
-            luma_angle.ok_or(PortableUnavailable)?,
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        )?,
-        LumaPredictor::DiagonalDownRight
-        | LumaPredictor::Diagonal113
-        | LumaPredictor::Diagonal157 => reconstruct_lossy_luma_4x8_diagonal_z2(
-            luma_top,
-            luma_left,
-            luma_left[0],
-            luma_angle.ok_or(PortableUnavailable)?,
-            lossy_luma_4x8_coefficients,
-            lossy_luma_4x8_transform,
-        )?,
-    };
-
-    let chroma_top_u = bottom_edge_4_padded(&above.planes[1]);
-    let chroma_top_v = bottom_edge_4_padded(&above.planes[2]);
-    let chroma_left = |plane: usize| -> [u16; 4] {
-        match (left_top, left_bottom) {
-            (Some(top), Some(bottom)) => {
-                let top_edge = right_edge_4_padded(&top.planes[plane]);
-                let bottom_edge = right_edge_4_padded(&bottom.planes[plane]);
-                [top_edge[0], top_edge[1], bottom_edge[0], bottom_edge[1]]
-            }
-            (Some(left), None) | (None, Some(left)) => right_edge_4_padded(&left.planes[plane]),
-            (None, None) => [chroma_top_u[0]; 4],
-        }
-    };
-    let chroma_u_left = chroma_left(1);
-    let chroma_v_left = chroma_left(2);
-    let chroma_top_left_u = bottom_right_for_4x4_padded(&above.planes[1]);
-    let chroma_top_left_v = bottom_right_for_4x4_padded(&above.planes[2]);
-    let chroma_top_u_z2 = [
-        chroma_top_u[0],
-        chroma_top_u[1],
-        chroma_top_u[2],
-        chroma_top_u[3],
-        chroma_top_u[3],
-        chroma_top_u[3],
-        chroma_top_u[3],
-        chroma_top_u[3],
-    ];
-    let chroma_top_v_z2 = [
-        chroma_top_v[0],
-        chroma_top_v[1],
-        chroma_top_v[2],
-        chroma_top_v[3],
-        chroma_top_v[3],
-        chroma_top_v[3],
-        chroma_top_v[3],
-        chroma_top_v[3],
-    ];
-    let chroma_u = match chroma_predictor {
-        ChromaPredictor::Cfl { alpha_u, .. } => reconstruct_lossy_chroma_4x4_cfl(
-            &luma,
-            dc_predictor(chroma_top_u, chroma_u_left),
-            alpha_u,
-            lossy_chroma_coefficients[0],
-        )?,
-        ChromaPredictor::Dc => reconstruct_lossy_chroma_4x4(
-            dc_predictor(chroma_top_u, chroma_u_left),
-            lossy_chroma_coefficients[0],
-            LossyTransformKind::DctDct,
-        ),
-        ChromaPredictor::Vertical => reconstruct_lossy_chroma_4x4_vertical(
-            chroma_top_u,
-            lossy_chroma_coefficients[0],
-            chroma_transform_kind(chroma_predictor),
-        ),
-        ChromaPredictor::Horizontal => reconstruct_lossy_chroma_4x4_horizontal(
-            chroma_u_left,
-            lossy_chroma_coefficients[0],
-            LossyTransformKind::DctAdst,
-        ),
-        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
-            reconstruct_lossy_4x4_diagonal_z1(
-                chroma_top_u,
-                chroma_top_left_u,
-                chroma_angle.ok_or(PortableUnavailable)?,
-                lossy_chroma_coefficients[0],
-                chroma_transform_kind(chroma_predictor),
-            )?
-        }
-        ChromaPredictor::DiagonalDownRight
-        | ChromaPredictor::Diagonal113
-        | ChromaPredictor::Diagonal157 => reconstruct_lossy_chroma_4x4_diagonal(
-            chroma_top_u_z2,
-            chroma_u_left,
-            chroma_angle.ok_or(PortableUnavailable)?,
-            lossy_chroma_coefficients[0],
-            chroma_transform_kind(chroma_predictor),
-        )?,
-        ChromaPredictor::Diagonal203 => reconstruct_lossy_chroma_4x4_diagonal_z3(
-            chroma_u_left,
-            chroma_top_left_u,
-            chroma_angle.ok_or(PortableUnavailable)?,
-            lossy_chroma_coefficients[0],
-            chroma_transform_kind(chroma_predictor),
-        )?,
-        ChromaPredictor::Paeth => reconstruct_lossy_4x4_paeth(
-            chroma_top_u,
-            chroma_u_left,
-            chroma_top_left_u,
-            lossy_chroma_coefficients[0],
-            LossyTransformKind::DctDct,
-        ),
-        ChromaPredictor::Smooth => reconstruct_lossy_chroma_4x4_smooth(
-            chroma_top_u,
-            chroma_top_u[3],
-            chroma_u_left,
-            lossy_chroma_coefficients[0],
-        ),
-        ChromaPredictor::SmoothVertical => reconstruct_lossy_4x4_smooth_vertical(
-            chroma_top_u,
-            chroma_u_left[3],
-            lossy_chroma_coefficients[0],
-            LossyTransformKind::AdstDct,
-        ),
-        ChromaPredictor::SmoothHorizontal => reconstruct_lossy_4x4_smooth_horizontal(
-            chroma_u_left,
-            chroma_top_u[3],
-            lossy_chroma_coefficients[0],
-            LossyTransformKind::DctAdst,
-        ),
-    };
-    let chroma_v = match chroma_predictor {
-        ChromaPredictor::Cfl { alpha_v, .. } => reconstruct_lossy_chroma_4x4_cfl(
-            &luma,
-            dc_predictor(chroma_top_v, chroma_v_left),
-            alpha_v,
-            lossy_chroma_coefficients[1],
-        )?,
-        ChromaPredictor::Dc => reconstruct_lossy_chroma_4x4(
-            dc_predictor(chroma_top_v, chroma_v_left),
-            lossy_chroma_coefficients[1],
-            LossyTransformKind::DctDct,
-        ),
-        ChromaPredictor::Vertical => reconstruct_lossy_chroma_4x4_vertical(
-            chroma_top_v,
-            lossy_chroma_coefficients[1],
-            chroma_transform_kind(chroma_predictor),
-        ),
-        ChromaPredictor::Horizontal => reconstruct_lossy_chroma_4x4_horizontal(
-            chroma_v_left,
-            lossy_chroma_coefficients[1],
-            LossyTransformKind::DctAdst,
-        ),
-        ChromaPredictor::Diagonal45 | ChromaPredictor::Diagonal67 => {
-            reconstruct_lossy_4x4_diagonal_z1(
-                chroma_top_v,
-                chroma_top_left_v,
-                chroma_angle.ok_or(PortableUnavailable)?,
-                lossy_chroma_coefficients[1],
-                chroma_transform_kind(chroma_predictor),
-            )?
-        }
-        ChromaPredictor::DiagonalDownRight
-        | ChromaPredictor::Diagonal113
-        | ChromaPredictor::Diagonal157 => reconstruct_lossy_chroma_4x4_diagonal(
-            chroma_top_v_z2,
-            chroma_v_left,
-            chroma_angle.ok_or(PortableUnavailable)?,
-            lossy_chroma_coefficients[1],
-            chroma_transform_kind(chroma_predictor),
-        )?,
-        ChromaPredictor::Diagonal203 => reconstruct_lossy_chroma_4x4_diagonal_z3(
-            chroma_v_left,
-            chroma_top_left_v,
-            chroma_angle.ok_or(PortableUnavailable)?,
-            lossy_chroma_coefficients[1],
-            chroma_transform_kind(chroma_predictor),
-        )?,
-        ChromaPredictor::Paeth => reconstruct_lossy_4x4_paeth(
-            chroma_top_v,
-            chroma_v_left,
-            chroma_top_left_v,
-            lossy_chroma_coefficients[1],
-            LossyTransformKind::DctDct,
-        ),
-        ChromaPredictor::Smooth => reconstruct_lossy_chroma_4x4_smooth(
-            chroma_top_v,
-            chroma_top_v[3],
-            chroma_v_left,
-            lossy_chroma_coefficients[1],
-        ),
-        ChromaPredictor::SmoothVertical => reconstruct_lossy_4x4_smooth_vertical(
-            chroma_top_v,
-            chroma_v_left[3],
-            lossy_chroma_coefficients[1],
-            LossyTransformKind::AdstDct,
-        ),
-        ChromaPredictor::SmoothHorizontal => reconstruct_lossy_4x4_smooth_horizontal(
-            chroma_v_left,
-            chroma_top_v[3],
-            lossy_chroma_coefficients[1],
-            LossyTransformKind::DctAdst,
-        ),
-    };
-    Ok(ClosedLeaf {
-        luma_predictor,
-        planes: [luma, chroma_u, chroma_v],
-    })
 }
 
 #[expect(
@@ -59665,21 +59323,27 @@ impl Lossy420Decoder {
         ))
     }
 
-    pub(super) fn decode_following_vertical_without_chroma(
+    /// Decode the luma-only third child of the closed 16x16 H4 compositor.
+    ///
+    /// The retained decoder remains 4:2:0, while this child's syntax and
+    /// visible leaf are monochrome because it does not own chroma samples.
+    fn decode_following_horizontal_four_without_chroma(
         &mut self,
         decoder: &mut RangeDecoder<'_, '_, '_>,
-        dimensions: (u32, u32),
         quantization: LossyQuantization,
         tools: BlockTools,
         neighbors: VerticalNeighbors<'_>,
-        full_edges: Option<&FullIntraEdges>,
     ) -> PortableResult<FirstLeaf> {
-        let (width, height) = dimensions;
+        let (width, height) = (16, 4);
         (tools.sample_depth == quantization.sample_depth)
             .then_some(())
             .portable()?;
         let block_size = self.following_block_size(width, height)?;
         let transform_grid = TransformGrid::from_block_size(block_size)?;
+        (matches!(transform_grid, TransformGrid::Horizontal16x4)
+            && self.chroma_sampling == ChromaSampling::Subsampled420)
+            .then_some(())
+            .portable()?;
         self.ensure_pending_block_geometry(transform_grid, width, height)?;
 
         let quantization = self.prepare_quantization(quantization);
@@ -59701,11 +59365,8 @@ impl Lossy420Decoder {
                 neighbors.above_left.tx_context_width >= max_transform_width,
             ));
         let above_luma_contexts = neighbors.above_luma_contexts;
-        // The partition walker assembles the complete coefficient edge before
-        // dispatch. Rebuilding it from `left` here loses upper segments when
-        // the current block follows several smaller leaves, which changes the
-        // DC-sign context while leaving prediction's scalar edge looking
-        // correct.
+        // The H4 compositor supplies the coefficient edge for each child.
+        // Retain its left-edge contexts during syntax decoding.
         let left_luma_contexts = neighbors.left_luma_contexts;
         let cdef_index_bits = self.take_cdef_index_bits();
         let syntax = self.decode_syntax_with_cdef(
@@ -59770,34 +59431,32 @@ impl Lossy420Decoder {
             syntax.lossy_luma_8x4_split.is_some(),
         );
         let luma_edge_contexts = luma_edge_contexts_for_syntax(&syntax);
-        if let Some(edges) = full_edges {
-            return reconstruct_visible_lossy_normalized_leaf(
-                &syntax,
-                &self.large_coeff_arena,
-                &self.palette_map_arena,
-                edges,
-                transform_grid,
-                width,
-                height,
-                tools.enable_intra_edge_filter,
-                tx_context,
-                &mut self.reconstruction_scratch,
-            );
-        }
         (!syntax.palette.is_present()).then_some(()).portable()?;
         let above_left = ClosedLeaf {
             luma_predictor: neighbors.above_left.luma_predictor,
             planes: neighbors.above_left.planes.clone(),
         };
-        let left_top = neighbors.left_top.map(|neighbor| ClosedLeaf {
-            luma_predictor: neighbor.luma_predictor,
-            planes: neighbor.planes.clone(),
-        });
-        let left_bottom = neighbors.left.map(|neighbor| ClosedLeaf {
-            luma_predictor: neighbor.luma_predictor,
-            planes: neighbor.planes.clone(),
-        });
-        let left_luma_edge = neighbors.left.map(|neighbor| {
+        if syntax.palette.is_present() {
+            return Err(PortableUnavailable);
+        }
+        let above_right_is_above_left = std::ptr::eq(neighbors.above_left, neighbors.above_right);
+        let luma_top = if above_right_is_above_left {
+            bottom_edge_at::<16>(
+                &neighbors.above_left.planes[0],
+                neighbors.above_left_width,
+                neighbors.above_left_x_offset,
+            )
+        } else {
+            combined_bottom_edge::<16>(
+                &neighbors.above_left.planes[0],
+                neighbors.above_left_width,
+                neighbors.above_left_x_offset,
+                &neighbors.above_right.planes[0],
+                neighbors.above_right_width,
+                neighbors.above_right_x_offset,
+            )
+        };
+        let luma_left = neighbors.left.map(|neighbor| {
             right_edge_at::<4>(
                 &neighbor.planes[0],
                 neighbor.width,
@@ -59805,110 +59464,31 @@ impl Lossy420Decoder {
                 neighbors.left_y_offset,
             )
         });
-        let top_luma_edge = Some(bottom_edge_at::<4>(
-            &neighbors.above_left.planes[0],
-            neighbors.above_left_width,
-            neighbors.above_left_x_offset,
-        ));
-        let top_luma_edge_extended = Some(combined_bottom_edge::<8>(
-            &neighbors.above_left.planes[0],
-            neighbors.above_left_width,
-            neighbors.above_left_x_offset,
-            &neighbors.above_right.planes[0],
-            neighbors.above_right_width,
-            neighbors.above_right_x_offset,
-        ));
-        let top_luma_left = neighbors.above_left_x_offset.checked_sub(1).map(|offset| {
-            bottom_sample_at(
-                &neighbors.above_left.planes[0],
-                neighbors.above_left_width,
-                offset,
-            )
-        });
-        let leaf = if matches!(transform_grid, TransformGrid::Horizontal16x4) {
-            if syntax.palette.is_present() {
-                return Err(PortableUnavailable);
-            }
-            let above_right_is_above_left =
-                std::ptr::eq(neighbors.above_left, neighbors.above_right);
-            let luma_top = if above_right_is_above_left {
-                bottom_edge_at::<16>(
-                    &neighbors.above_left.planes[0],
-                    neighbors.above_left_width,
-                    neighbors.above_left_x_offset,
-                )
-            } else {
-                combined_bottom_edge::<16>(
-                    &neighbors.above_left.planes[0],
-                    neighbors.above_left_width,
-                    neighbors.above_left_x_offset,
-                    &neighbors.above_right.planes[0],
-                    neighbors.above_right_width,
-                    neighbors.above_right_x_offset,
-                )
-            };
-            let luma_left = neighbors.left.map(|neighbor| {
-                right_edge_at::<4>(
-                    &neighbor.planes[0],
-                    neighbor.width,
-                    neighbor.height,
-                    neighbors.left_y_offset,
-                )
-            });
-            let edge_policy = DirectionalEdgePolicy::from_sequence(
-                tools.enable_intra_edge_filter,
-                is_smooth_luma_predictor(neighbors.above_left.luma_predictor)
-                    || neighbors
-                        .left_top
-                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
-                    || neighbors
-                        .left_luma_top
-                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
-                    || neighbors
-                        .left
-                        .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor)),
-            );
-            reconstruct_following_lossy_420_vertical_16x4_leaf(
-                syntax,
-                &self.palette_map_arena,
-                &above_left,
-                luma_top,
-                luma_left,
-                edge_policy,
-                ChromaEdgeArrays {
-                    top: [None; 2],
-                    left: [None; 2],
-                },
-            )?
-        } else if matches!(transform_grid, TransformGrid::Vertical4x8) {
-            reconstruct_following_lossy_420_vertical_4x8_leaf(
-                syntax,
-                &above_left,
-                left_top.as_ref(),
-                left_bottom.as_ref(),
-            )?
-        } else if matches!(transform_grid, TransformGrid::Square4) {
-            reconstruct_following_lossy_monochrome_square4_leaf(
-                syntax,
-                &self.palette_map_arena,
-                &above_left,
-                left_top.as_ref(),
-                left_bottom.as_ref(),
-                left_luma_edge,
-                top_luma_edge,
-                top_luma_edge_extended,
-                top_luma_left,
-                true,
-            )?
-        } else {
-            reconstruct_following_lossy_420_leaf(
-                syntax,
-                &self.palette_map_arena,
-                &above_left,
-                SplitOrientation::Vertical,
-                tools.enable_intra_edge_filter,
-            )?
-        };
+        let edge_policy = DirectionalEdgePolicy::from_sequence(
+            tools.enable_intra_edge_filter,
+            is_smooth_luma_predictor(neighbors.above_left.luma_predictor)
+                || neighbors
+                    .left_top
+                    .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
+                || neighbors
+                    .left_luma_top
+                    .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor))
+                || neighbors
+                    .left
+                    .is_some_and(|neighbor| is_smooth_luma_predictor(neighbor.luma_predictor)),
+        );
+        let leaf = reconstruct_following_lossy_420_vertical_16x4_leaf(
+            syntax,
+            &self.palette_map_arena,
+            &above_left,
+            luma_top,
+            luma_left,
+            edge_policy,
+            ChromaEdgeArrays {
+                top: [None; 2],
+                left: [None; 2],
+            },
+        )?;
 
         Ok(with_lossy_luma_context(
             with_lossy_chroma_contexts(
@@ -61814,13 +61394,11 @@ where
     let mut third_tools = tools;
     third_tools.palette_context =
         PaletteNeighborContext::from_cache_states(2, Some(second.palette_cache), None);
-    let third = state.decode_following_vertical_without_chroma(
+    let third = state.decode_following_horizontal_four_without_chroma(
         decoder,
-        (16, 4),
         quantization,
         third_tools,
         horizontal_four_split_vertical_neighbors(&second, None),
-        None,
     )?;
     between_leaves(decoder)?;
     let mut fourth_tools = tools;

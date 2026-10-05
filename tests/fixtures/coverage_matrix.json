@@ -1515,6 +1515,84 @@
           "error_contracts": {}
         },
         {
+          "id": "iloc_idat_indexed_extent",
+          "type": "decode",
+          "format": "avif",
+          "category": "iloc",
+          "description": "Still AVIF stores its unchanged primary AV1 item in meta/idat with a four-byte zero unused extent index accepted by pinned Pillow for construction method one",
+          "asset": "iloc_idat_indexed_extent.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d90e970b5b9570c5091df64871d58a8f500c72df294c456037fad90cc1d92aac",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_iloc_idat_indexed_extent_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "ipma_wide_property_associations",
           "type": "decode",
           "format": "avif",
@@ -168263,12 +168341,12 @@
     }
   },
   "summary": {
-    "total_rows": 2016,
-    "decode_rows": 1553,
+    "total_rows": 2017,
+    "decode_rows": 1554,
     "encode_rows": 463,
     "formats": 8,
-    "assets_available": 1550,
-    "decode_active": 1553,
+    "assets_available": 1551,
+    "decode_active": 1554,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
@@ -168669,6 +168747,44 @@
       "fault": {
         "point": "av1.temporal_projection.field_reservation",
         "contract": "sequence_decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_assembled_cdef_region_map_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:multitile_color_split_groups"
+      },
+      "fault": {
+        "point": "av1.frame.assembled_cdef_region_map_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "avif_assembled_cdef_active_map_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:multitile_color_split_groups"
+      },
+      "fault": {
+        "point": "av1.frame.assembled_cdef_active_map_reservation",
+        "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"
     }

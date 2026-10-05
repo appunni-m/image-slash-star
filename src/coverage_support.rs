@@ -70,6 +70,10 @@ pub enum CoverageFaultPoint {
     Av1TileBlockMetadataReservation,
     /// Force AV1 assembled loop-filter metadata reservation to fail.
     Av1AssembledLoopFilterMetadataReservation,
+    /// Force assembled AV1 color CDEF region-map reservation to fail.
+    Av1AssembledCdefRegionMapReservation,
+    /// Force assembled AV1 color CDEF active-map reservation to fail.
+    Av1AssembledCdefActiveMapReservation,
     /// Force AV1 partition-tree node reservation to fail.
     Av1PartitionNodeReservation,
     /// Force the AV1 SGR output-plane reservation to fail during restoration.

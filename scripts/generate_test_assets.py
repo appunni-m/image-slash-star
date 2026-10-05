@@ -16879,6 +16879,7 @@ def gen_avif():
 
     generate_config_disagreements(output_dir=d, source_path=baseline_path)
     write_avif_filmgrain_edge_fixtures(d)
+    # Both method-one idat inputs retain the same AV1 bytes and live pixels.
     generate_idat_fixture(output_dir=d, source_path=baseline_path)
 
     meta_payload_start, meta_payload_end = avif_unique_top_level_payload_range(

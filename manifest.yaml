@@ -348,6 +348,34 @@ fault_contracts:
       point: av1.temporal_projection.field_reservation
       contract: sequence_decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_assembled_cdef_region_map_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_color_split_groups
+    fault:
+      point: av1.frame.assembled_cdef_region_map_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_assembled_cdef_active_map_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_color_split_groups
+    fault:
+      point: av1.frame.assembled_cdef_active_map_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
 formats:
   jpeg:
     name: JPEG
@@ -4881,6 +4909,12 @@ formats:
       description: Still AVIF stores its unchanged primary AV1 item in meta/idat using construction method one and nonzero base and extent offsets
       test_assets:
       - iloc_idat_primary_item.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: iloc_idat_indexed_extent
+      description: Still AVIF stores its unchanged primary AV1 item in meta/idat with a four-byte zero unused extent index accepted by pinned Pillow for construction method one
+      test_assets:
+      - iloc_idat_indexed_extent.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
     - id: ipma_wide_property_associations

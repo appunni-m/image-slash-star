@@ -1977,15 +1977,35 @@ fn assemble_color_tiles(
         .checked_mul(active_height)
         .ok_or_else(|| malformed("assembled CDEF active map allocation overflows"))?;
     let mut cdef_indices = Vec::new();
+    #[cfg(coverage)]
+    let cdef_region_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1AssembledCdefRegionMapReservation,
+    ) {
+        usize::MAX
+    } else {
+        cdef_region_count
+    };
+    #[cfg(not(coverage))]
+    let cdef_region_reservation_count = cdef_region_count;
     cdef_indices
-        .try_reserve_exact(cdef_region_count)
+        .try_reserve_exact(cdef_region_reservation_count)
         .map_err(|_| {
             CodecError::Dimensions("unable to allocate assembled AV1 CDEF region map".to_owned())
         })?;
     cdef_indices.resize(cdef_region_count, None);
     let mut cdef_active = Vec::new();
+    #[cfg(coverage)]
+    let cdef_active_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1AssembledCdefActiveMapReservation,
+    ) {
+        usize::MAX
+    } else {
+        cdef_active_count
+    };
+    #[cfg(not(coverage))]
+    let cdef_active_reservation_count = cdef_active_count;
     cdef_active
-        .try_reserve_exact(cdef_active_count)
+        .try_reserve_exact(cdef_active_reservation_count)
         .map_err(|_| {
             CodecError::Dimensions("unable to allocate assembled AV1 CDEF active map".to_owned())
         })?;
