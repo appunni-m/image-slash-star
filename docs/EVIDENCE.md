@@ -297,6 +297,35 @@ whose fault dispatcher is empty. No fault selector was requested or counted
 as Pillow parity. Four earlier WASI malformed-range classifications remain
 outside this selected scope; this is no full WASI or 33-lane campaign claim.
 
+## TIFF payload-range classification on 32-bit WASI — 2026-10-05
+
+Four checked strip/tile offset additions now classify an unrepresentable
+payload range as `malformed`, using the adjacent out-of-bounds payload
+message. This matches the existing complete Pillow error fixtures for
+`planar_separate_rgb_tiled_oob_tile`, `planar_separate_rgb_oob_strip`,
+`tiled_palette4_oob_tile` and `error_bad_ifd_oob_strip`. Geometry errors and
+checked arithmetic remain unchanged. The correction has no dependency on
+the separate large-row diagnostic, which has not executed. Native 64-bit
+behavior remains unchanged; a representable incremental retry minimum on
+64-bit can still differ from a terminal unrepresentable range on 32-bit.
+
+All fourteen scoped commands pass on the candidate following `f04ba130`.
+Native and WASI each pass the full TIFF public matrix: 267/267 decode and
+59/59 encode, with 205 public encode calls and zero panics per target.
+The existing TIFF-only feature tests pass 67 native and 65 WASI tests, with
+zero failures or ignored tests. Formatting, fixture verification, native and
+WASI all-target/all-feature strict Clippy, coverage-configured strict Clippy,
+and WASI TIFF-only strict Clippy also pass. All prior fixture bytes and
+observations are unchanged; no fault selector is requested or counted.
+
+The receipt is `tiff-range-only-f04ba130-scoped-acceptance-v1/receipt.json`
+below the recovery directory above, SHA-256
+`392f5ba40a496f99b47fe00caefcc8488f49e7726fcde11fc772649024eade5d`.
+Final guards bind 5,374 source files, tools, rebuilt test binaries and the
+two unrelated untracked files. This resolves the four classification failures
+left outside the preceding three-row WASI selection. It is no complete
+33-lane campaign or fresh full coverage result.
+
 ## Pre-cleanup AVIF full coverage — 2026-10-05
 
 The last recorded full local report was

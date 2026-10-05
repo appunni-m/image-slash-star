@@ -415,7 +415,7 @@ fn decode_ifd(
             #[cfg(target_pointer_width = "32")]
             let encoded_end = offset
                 .checked_add(byte_count)
-                .dimensions("TIFF tile byte range overflows")?;
+                .malformed("TIFF tile payload is out of bounds")?;
             #[cfg(not(target_pointer_width = "32"))]
             let encoded_end = offset.saturating_add(byte_count);
             let encoded = if encoded_end <= data.len() {
@@ -635,7 +635,7 @@ fn decode_ifd(
         #[cfg(target_pointer_width = "32")]
         let encoded_end = offset
             .checked_add(byte_count)
-            .dimensions("TIFF strip byte range overflows")?;
+            .malformed("TIFF strip payload is out of bounds")?;
         #[cfg(not(target_pointer_width = "32"))]
         let encoded_end = offset.saturating_add(byte_count);
         let encoded = if encoded_end <= data.len() {
@@ -783,7 +783,7 @@ fn decode_separate_planar_strips(
         };
         let encoded_end = offset
             .checked_add(byte_count)
-            .dimensions("TIFF strip byte range overflows")?;
+            .malformed("TIFF strip payload is out of bounds")?;
         let encoded = if encoded_end <= data.len() {
             &data[offset..encoded_end]
         } else {
@@ -953,7 +953,7 @@ fn decode_separate_planar_tiles(
         let copied_height = layout.tile_height.min(layout.height.saturating_sub(tile_y));
         let encoded_end = offset
             .checked_add(byte_count)
-            .dimensions("TIFF tile byte range overflows")?;
+            .malformed("TIFF tile payload is out of bounds")?;
         let encoded = if encoded_end <= data.len() {
             &data[offset..encoded_end]
         } else {
