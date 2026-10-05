@@ -5074,7 +5074,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "filmgrain_inactive_reference_reuse_i444_64x64",
           "input_sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536",
           "repetition_count": -1
@@ -5316,7 +5316,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "filmgrain_reference_reuse_i444_64x64",
           "input_sha256": "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34",
           "repetition_count": -1
@@ -30944,7 +30944,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "highdepth",
           "input_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576",
           "repetition_count": -1
@@ -32900,7 +32900,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "animated",
           "input_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
           "repetition_count": 0
@@ -33152,7 +33152,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "opidc_0x101",
           "input_sha256": "25b79a856ea2767e02e5a509f72e7af3f9563202301779be65b0745724ab23be",
           "repetition_count": 0
@@ -33314,7 +33314,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "error_resilient",
           "input_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
           "repetition_count": -1
@@ -33476,7 +33476,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_b16x16",
           "input_sha256": "6973cfff29185ffc7283ec539d9cf6736dfe4cba52850c46e4b196ba9db51ead",
           "repetition_count": -1
@@ -33638,7 +33638,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_b8x16",
           "input_sha256": "9e3fbac5e42c61413ec8c1f7f4f72bc1338fb7cfd21587e30826855732e369c0",
           "repetition_count": -1
@@ -33800,7 +33800,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_intra_i444_b8x8_20x20",
           "input_sha256": "7636f2de4078d5271941e6cf7de85f9c77205acce155c75e529e43fbc1d0acbf",
           "repetition_count": -1
@@ -33962,7 +33962,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "odd_dimensions_inter_intra_boundary_420",
           "input_sha256": "736914091e00473af577a12de9910ce6abe2b038c84d2f580c5f528b0618c422",
           "repetition_count": -1
@@ -34154,7 +34154,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_interintra_420_nowedge_b16x16_64x64",
           "input_sha256": "adc58d72626865406be3d0a048ecf0b9a1670d16a68f48babe4b9167a2dc2dea",
           "repetition_count": -1
@@ -34346,7 +34346,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_interintra_420_nowedge_mode1_b16x16_64x64",
           "input_sha256": "dd4e06e559d83cc0863d65878799d2f7496c8f5d378eaeb639704fe3ac539f2f",
           "repetition_count": -1
@@ -34538,7 +34538,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_interintra_420_nowedge_mode2_b16x16_64x64",
           "input_sha256": "08f616c2e14f9abadb6157c425653b5a7fd703f2797f3db04e23b58bc519eda8",
           "repetition_count": -1
@@ -34730,7 +34730,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_interintra_420_nowedge_mode3_b16x16_64x64",
           "input_sha256": "7e035cef7293dfff72e50ff8c729bc0fad360ee14d7bf80d663b82b96ca7c4d7",
           "repetition_count": -1
@@ -34922,7 +34922,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_interintra_420_wedge_b16x16_64x64",
           "input_sha256": "1510b764d7e642f2caf02fff53e6dc966cfb92df8eca2e8f2d91c0b3bead1791",
           "repetition_count": -1
@@ -35114,7 +35114,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_split_inter_420_b16x16",
           "input_sha256": "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323",
           "repetition_count": -1
@@ -35306,7 +35306,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_b16_mixed_topology_inter_420_b16x16",
           "input_sha256": "3264482e2a50d80bd39be178b843fdfe9997e947d54b4466c745751837821d74",
           "repetition_count": -1
@@ -35528,7 +35528,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_wide_monochrome_b128x128",
           "input_sha256": "eb8dda5000882ffd03c182a817e08fc944ef110afa1e78aaf1678bef5efc65bf",
           "repetition_count": -1
@@ -35690,7 +35690,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_wide_i444_b128x128",
           "input_sha256": "b4693fd2fb43d1c9406fe4ac8d782d74709bf8eed1b2d36771c0bd80763d84e8",
           "repetition_count": -1
@@ -35852,7 +35852,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_wide_i444_mode2_unsplit_b128x128",
           "input_sha256": "ea87cfc19c427135396b44ea6b287b24e5301437abb5bd6769666d9a24144565",
           "repetition_count": -1
@@ -36014,7 +36014,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_wide_i444_mode2_split32_b128x128",
           "input_sha256": "f48a6d235c7ab245e8d57aedcc6135b897cea1bcbc579c3d630aa7c20e1a61aa",
           "repetition_count": -1
@@ -36236,7 +36236,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_global_rotzoom_compound_i444_b128x128",
           "input_sha256": "14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e",
           "repetition_count": -1
@@ -36458,7 +36458,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_global_halfblend_spatial_i444_b256x256",
           "input_sha256": "ec2f145f64fa87c5b7c255b13b6009fb58760be06070724ed367cd4ccd9a6d7b",
           "repetition_count": -1
@@ -36620,7 +36620,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_b32x32",
           "input_sha256": "65e8617044f7f12db081f65276235296f8dc208a006451210ebb9603f27f20a7",
           "repetition_count": -1
@@ -36782,7 +36782,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_b32x32_10bit",
           "input_sha256": "c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a",
           "repetition_count": -1
@@ -36944,7 +36944,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_b32x32_10bit_64x64",
           "input_sha256": "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
           "repetition_count": -1
@@ -37106,7 +37106,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_10bit_28x28",
           "input_sha256": "f9d829f20968483dbd078a47f136b9c413205ce78d423fb0b5f1bdb2d2c0cce4",
           "repetition_count": -1
@@ -37268,7 +37268,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64",
           "input_sha256": "8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f",
           "repetition_count": -1
@@ -37430,7 +37430,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
           "input_sha256": "a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe",
           "repetition_count": -1
@@ -37592,7 +37592,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_17x17",
           "input_sha256": "b29bedb6d7486dae5bed2abb74986a65e47bc737bfd26f85b1f69fa8bd666819",
           "repetition_count": -1
@@ -37764,7 +37764,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_i422_clipped_b32x32_49x64",
           "input_sha256": "fd18cdcef915327fd4aab6992c901e27f2efc1411d1d2d01eee93dd3f277d7b1",
           "repetition_count": -1
@@ -37926,7 +37926,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_i444_clipped_b32x32_49x64",
           "input_sha256": "d45defceb497272879b1093f76e6a6c645f0bde8a6d10a1903e2322af422caae",
           "repetition_count": -1
@@ -38088,7 +38088,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_i422_clipped_b32x32_52x64",
           "input_sha256": "43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05",
           "repetition_count": -1
@@ -38250,7 +38250,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_i444_clipped_b32x32_64x56",
           "input_sha256": "9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23",
           "repetition_count": -1
@@ -38412,7 +38412,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_i422_clipped_b32x32_52x60",
           "input_sha256": "53e06d79c586151d920b94cc6173eebcc1f9869ebb0f1fa5bec673df11c45e50",
           "repetition_count": -1
@@ -38574,7 +38574,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_i444_clipped_b32x32_52x60",
           "input_sha256": "9fdd099eb28fed9eaff2760b154e42d91933758fd6b01e532e441646f564993a",
           "repetition_count": -1
@@ -38736,7 +38736,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_60x64",
           "input_sha256": "a60dde64c6b7bf9f6fbb3afe7e75a74374d446f8106613b00837300df4963bbc",
           "repetition_count": -1
@@ -38898,7 +38898,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_64x60",
           "input_sha256": "7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6",
           "repetition_count": -1
@@ -39060,7 +39060,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_184x64",
           "input_sha256": "0a8c935fe67694fe576e7f21064eec4c428cffc2a05a3ff2d0be33e401a20c1d",
           "repetition_count": -1
@@ -39222,7 +39222,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b32x32_185x64",
           "input_sha256": "701d247ebbe2666b1f28f447fa1a086573e7dc6d88b0b29405f9f7a6f9460b59",
           "repetition_count": -1
@@ -39384,7 +39384,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_420_clipped_b16x16_60x64",
           "input_sha256": "7c8bd0f88cd6654fb1150d2220ecb33c6ec5874b26a2250909b51cab4ed2e17f",
           "repetition_count": -1
@@ -39546,7 +39546,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_inter_monochrome_b16x16",
           "input_sha256": "d29aaab346465bf7ac413954e3c862b2222d3ac510299f865fe579899d063fb5",
           "repetition_count": -1
@@ -39958,7 +39958,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "tkhd_version_zero",
           "input_sha256": "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674",
           "repetition_count": 0
@@ -40210,7 +40210,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "tkhd_version_zero_unknown_duration",
           "input_sha256": "ca1834317cd4b5b0db00130370cf3db3c94426ff7479c6414c4da2cabfef2a09",
           "repetition_count": 0
@@ -40826,6 +40826,762 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "animated_lossless_inter_420_derived_skip_refs_b32x32_64x64",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_derived_skip_refs_b32x32_64x64_avif.bin",
+      "ref_bytes": 12288,
+      "ref_sha256": "246d7547f907a6415c5f5cb7a99d1042824617e30f45186843c78099811fc850",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "ref_frame_count": 5,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          64,
+          64
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "independent_implementation",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_derived_skip_refs_b32x32_64x64_avif_frame_0.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "246d7547f907a6415c5f5cb7a99d1042824617e30f45186843c78099811fc850",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_derived_skip_refs_b32x32_64x64_avif_frame_1.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "154a50e2ba35253c74557acc37af46f0d3fd6767b7ce25dcf79b5aca2519c5f7",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 2,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_derived_skip_refs_b32x32_64x64_avif_frame_2.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "a9b5be3f7e254301e4cd4ffa448b36e973f021584c1f7088ffb1cb1348b49397",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 3,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_derived_skip_refs_b32x32_64x64_avif_frame_3.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "c9126430ad7a58b31ab2b361ef9a8faf780ac878d3a17be5656e4b4c9702e1a0",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 4,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_420_derived_skip_refs_b32x32_64x64_avif_frame_4.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "154a50e2ba35253c74557acc37af46f0d3fd6767b7ce25dcf79b5aca2519c5f7",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ],
+        "loop_evidence": {
+          "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
+          "case": "lossless_inter_420_derived_skip_refs_b32x32_64x64",
+          "input_sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15",
+          "repetition_count": -1
+        }
+      }
+    },
+    {
+      "id": "animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64_avif.bin",
+      "ref_bytes": 12288,
+      "ref_sha256": "60e3fc91dac20b820fecb7aad6b402776cf870fd922cc16f1df06cb5fb33183b",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "ref_frame_count": 5,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          64,
+          64
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "independent_implementation",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64_avif_frame_0.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "60e3fc91dac20b820fecb7aad6b402776cf870fd922cc16f1df06cb5fb33183b",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64_avif_frame_1.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "592885f88a2174e3c53e35576d107cece543936a82f7d445d7999e9accde6524",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 2,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64_avif_frame_2.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "02b7928def345b9886ca2315d7327cc8c014641082a86e916077c138b138c58d",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 3,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64_avif_frame_3.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "0d893520aade161494e2385153e5720a4ff44c539ecaeebf204e29d5ad6f5fa4",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 4,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64_avif_frame_4.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "592885f88a2174e3c53e35576d107cece543936a82f7d445d7999e9accde6524",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ],
+        "loop_evidence": {
+          "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
+          "case": "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
+          "input_sha256": "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",
+          "repetition_count": -1
+        }
+      }
+    },
+    {
+      "id": "animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "AVIF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "independent_implementation",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "independent_implementation",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64_avif.bin",
+      "ref_bytes": 12288,
+      "ref_sha256": "c75a4d87aa3854840ffabbc76be85853b3e427e782f41885438b26e8958ac7ed",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        64,
+        64
+      ],
+      "ref_frame_count": 5,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          64,
+          64
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "independent_implementation",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64_avif_frame_0.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "c75a4d87aa3854840ffabbc76be85853b3e427e782f41885438b26e8958ac7ed",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64_avif_frame_1.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "de82ebf27415e1c9a237f1ce99f9c358f2e2f923990e7c075c71fd972b855f9c",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 2,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64_avif_frame_2.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "bd1dced4f82a14783bf580de6eba952d2be9421e07064d7d742f9f2b7d8c857a",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 3,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64_avif_frame_3.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "e12b45bd994be50955a02715924d5e38f3a80e44b20b4822f9666dfb016ff75a",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 4,
+            "source_rect": [
+              0,
+              0,
+              64,
+              64
+            ],
+            "duration_num": 100,
+            "duration_den": 1000,
+            "duration_origin": "independent_implementation",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "independent_implementation",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64_avif_frame_4.bin",
+            "ref_bytes": 12288,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              64,
+              64
+            ],
+            "ref_sha256": "de82ebf27415e1c9a237f1ce99f9c358f2e2f923990e7c075c71fd972b855f9c",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ],
+        "loop_evidence": {
+          "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
+          "case": "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
+          "input_sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
+          "repetition_count": -1
+        }
+      }
+    },
+    {
       "id": "animated_lossless_motion_multitile",
       "status": "ok",
       "error_type": null,
@@ -41040,7 +41796,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_motion_multitile",
           "input_sha256": "24612186624c6b470a50a549d876469c8265976633afee87fa030d910cd0532b",
           "repetition_count": -1
@@ -41262,7 +42018,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossless_motion_multitile_split_groups",
           "input_sha256": "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596",
           "repetition_count": -1
@@ -41484,7 +42240,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_multitile",
           "input_sha256": "c248f019a008e9dea4425e1d5f44d1418b44929604312d95a69a0a3ac5d4709f",
           "repetition_count": -1
@@ -41706,7 +42462,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_multitile_split_groups",
           "input_sha256": "eb19bcebc0698dfa3149c76fb6828705b22e37f45e213b70541a61b3abd20b89",
           "repetition_count": -1
@@ -41928,7 +42684,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_chroma",
           "input_sha256": "473469335e58cff3c442df51b4bbdca00b9467e8f352319812f50cf789748535",
           "repetition_count": -1
@@ -42120,7 +42876,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "has_chroma_4x4",
           "input_sha256": "f9434d10ee465784ccb6c09f03c98813282f7033e3f06b90739e7815ec1eb75b",
           "repetition_count": -1
@@ -42342,7 +43098,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_chroma_422",
           "input_sha256": "5a83530dcc60f75f0bec7d36cb4db67ae7258b2acc481cbb08cc0987247ea66a",
           "repetition_count": -1
@@ -42504,7 +43260,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_inter_422_checker_random_b32x32",
           "input_sha256": "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134",
           "repetition_count": -1
@@ -42666,7 +43422,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lo8_superres_sgr_inter_160x56",
           "input_sha256": "c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7",
           "repetition_count": -1
@@ -43148,7 +43904,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "hi10_superres_sgr_inter_160x56",
           "input_sha256": "016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11",
           "repetition_count": -1
@@ -43310,7 +44066,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "hi10_superres_select_inter_160x56",
           "input_sha256": "04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e",
           "repetition_count": -1
@@ -43532,7 +44288,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_chroma_wide",
           "input_sha256": "54ca9823b7b3f6f64af19d3b7ab7dbc0be0b9db6583d85fedcc310dd62d28311",
           "repetition_count": -1
@@ -43724,7 +44480,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_inter_i444_mode2_b32x32",
           "input_sha256": "43aac6364eebb113b128861f0e1c2cfb976295d7b5e9e226fa8f0eaa93704af4",
           "repetition_count": -1
@@ -43886,7 +44642,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_inter_i444_split_b16x32_mode2",
           "input_sha256": "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
           "repetition_count": -1
@@ -44078,7 +44834,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "lossy_inter_i444_obmc_mixed_b16x32",
           "input_sha256": "71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743",
           "repetition_count": -1
@@ -44300,7 +45056,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_large_420",
           "input_sha256": "5b9ea2b9d552e8ff44f2818a7ae2b73a9dbe1eda84ead9c24c9f8a957c6e546f",
           "repetition_count": -1
@@ -44492,7 +45248,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "tx64_root_split_inter_420_64x64",
           "input_sha256": "9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c",
           "repetition_count": -1
@@ -44714,7 +45470,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_temporal_window_left_512x128",
           "input_sha256": "29e856c6c8a117c764bb0a176ccc1d82bac982fdf7287eb461f827ebdc31b399",
           "repetition_count": -1
@@ -44936,7 +45692,7 @@
         ],
         "loop_evidence": {
           "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-          "index_sha256": "38b94714d241f811741a4116bb80cbb9e1479feb8360da99a001bad37037b159",
+          "index_sha256": "38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d",
           "case": "motion_temporal_window_right_512x128",
           "input_sha256": "10d8e5514c1d8d9cad355f9a912b3e3075bf8bd661ee6af5ce44a9ce62d7cad2",
           "repetition_count": -1

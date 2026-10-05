@@ -8,6 +8,141 @@ retain the report-specific observations made when each entry was recorded.
 ## Last full all-feature coverage — 2026-10-05
 
 The latest full local report is
+`target/release-evidence/coverage-avif-derived-skip-refs-v2-20261005.json`, SHA-256
+`32b12a55dddb5a2488f8c09bfb67a02feb42dab40fa0ac21697c0b151983e0e3`.
+`make coverage` uses `nightly-2026-07-16`, an empty `RUSTC_WRAPPER`, two build
+jobs, `CARGO_INCREMENTAL=0` and a fresh
+`target/llvm-cov-avif-derived-skip-refs-v2-full-20261005` target.
+
+| Metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 88,832 / 135,656 | 65.483281% |
+| Branches | 17,359 / 31,196 | 55.644954% |
+| Functions | 4,921 / 8,682 | 56.680488% |
+| Regions | 135,986 / 210,661 | 64.552053% |
+
+All alpha floors pass. The separate strict verifier exits 1: all four 100%
+requirements remain unmet. All seven test binaries pass 3, 4, 1, 57, 7, 1 and
+68 tests, with zero failures or ignored tests. The current ordinary inventory
+contains 2,070 rows: 1,607 active decode, 431 active encode and 32 planned
+encode. AVIF has 525 decode rows, JPEG 216 and TIFF 200. All 25 target-only
+fault contracts retain oracle status `not_applicable` and separate results.
+The malformed-input ledger remains at 562 entries.
+
+The incremental and full campaigns preserve all 5,190 measured
+source/configuration/script/fixture hashes: 5,189 repository files and one
+ignored ambient Finder file. The full campaign has its own 113 instrumented
+artifacts and seven fresh profiles, unchanged across JSON and LCOV exports.
+The selected campaign's 63 artifacts and final profiles remain unchanged.
+Different test scopes use separately bound objects; no cross-scope object
+identity is claimed. The original full source receipt retains precommit base
+revision `61f4dfdc145f2a35526588667368d5873df07280` and SHA-256
+`dc6f39d09a0a1424857fd8c72ebb435bd084f6870cd47a752d8cdbf9549cf582`.
+Human evidence documentation is outside that measured inventory.
+
+All eight formatting/strict-Clippy gates pass, including coverage-nightly,
+JPEG benchmark and SSE2/AVX2 cross-compilation. Their v2 receipt has SHA-256
+`7ecdc21d94aa08a4c3f9ba76c947fdc2c3eed1e1607d9fbf2823c94aeafb892e`.
+All 33 feature lanes pass: 11 native runtime, 11 WASI runtime and 11 browser
+compile/strict-Clippy/rustdoc lanes. The v2 feature receipt has SHA-256
+`5b5451ff599288230aeaae13b032bde06b0f5d7d6fea48065417d98d695da871`.
+These cross-target checks provide compilation evidence, without matching x86
+runtime or throughput measurements for this change. The origin registry
+retains 140 guards across 20 files. This change adds no private unit tests,
+unsafe code, lint exceptions, coverage exclusions or ignored cases.
+
+### Complete AVIF disabled-skip reference parity — 2026-10-05
+
+Three complete ordinary lossless animations exercise I420, I422 and I444
+sampling with five 64×64 frames and fixed 32×32 blocks. At the observed inter
+context, the header retains a derived skip-reference pair while skip mode is
+disabled. The reconstruction gate now permits that unused pair, retaining
+the existing exclusion of enabled skip mode and all reference, quantizer,
+geometry and safety checks. The change removes one context predicate and
+adds no pixel allocation, raster copy or block-loop operation. It has no
+measured speed claim. Execution evidence covers bounded reconstruction for
+these three complete inputs.
+
+| Ordinary input | Bytes | Complete input SHA-256 |
+| --- | ---: | --- |
+| `animated_lossless_inter_420_derived_skip_refs_b32x32_64x64` | 6,130 | `50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15` |
+| `animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64` | 7,530 | `0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168` |
+| `animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64` | 10,135 | `3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009` |
+
+The maintained `scripts/generate_avif_derived_skip_reference_fixtures.py`
+runs through the normal AVIF asset hook. Recipes retain stimulus and complete
+input hashes; fresh pinned Pillow 12.2.0 owns expected pixel and lifecycle
+observations. Two separate output-directory generations and `--check`
+reproduce all three input files. The generator receipt has SHA-256
+`a618607002514ab86a69a686d24ecb6030c5c952678296526341600f9fb8d305`.
+The normal native loop producer independently observes all five displayed
+frames, exact pixels, 100 ms timing and loop zero. Its index grows from 88
+to 91 cases and 267 to 285 artifacts. All previous cases and artifact bytes
+remain exact. The new index SHA-256 is
+`38e8bf690190b189c26fb93876ef7c7b47b67ca57fa4c99c49b819b0ef58f13d`.
+
+Canonical regeneration preserves all 522 prior AVIF ordinary outcomes and
+every other format/encode block. Only the native index digest changes in the
+63 existing AVIF sequence provenance fields in each of the matrix and output
+JSON. All 25 fault contracts and historical managed-ledger measurements,
+run identities and measured-input hashes remain exact. An isolated public
+probe also matches seven complete ordinary inputs, 29 sequence frames and
+seven first images against fresh Pillow observations; its receipt has
+SHA-256 `9774993f56582350a1c7ce44e02295a14087d47f97d9cf069477223d1ee56a23`.
+Independent source review finds no required repairs and binds the retained
+skip-mode exclusion, all 18 new first-image/sequence references, old outcomes
+and native artifacts. Its receipt has SHA-256
+`c8e17b450b2ba14ec348b861c1ac9ad5461babb3605475f18102637e437ee504`.
+
+The first full attempt fails on the existing native observer's stale
+267-artifact assertion. The repair updates that observer to 285 artifacts,
+appends the three case registrations, shifts five origin line coordinates by
+one and refreshes the ledger's current origin digest. A subsequent manual
+formatting attempt also fails `rustfmt`; its unsuccessful evidence is kept.
+The authoritative `cargo fmt` output is used by every successful v2 campaign.
+The original incremental/feature successes, failed full attempt and formatting
+failures remain separate from the passing v2 receipts.
+
+#### Incremental measurements and coverage limits
+
+On the fixed v2 source, the baseline executes 522 prior ordinary AVIF rows
+and 24 applicable AVIF fault contracts, reported separately. Three subsequent
+runs execute one new ordinary input each through the existing matrix runner.
+All four runs pass, resetting raw profiles between runs and preserving all
+63 actual instrumented objects. The incremental receipt has SHA-256
+`301313e5e2c007b55b3fdb88420d94e4abafd83e19a40649a73c3f8f3efc1609`.
+The read-only producer audit binds original report hashes, 110 measured source
+files, all 5,190 frozen files, actual objects and passing selected-row logs.
+Its SHA-256 is
+`d67650d5986a300b9038b0a18c77b0129a8bec462009fc5c37fd65e444b00104`.
+
+Coverage MCP verifies the LCOV line-coordinate union
+**43,973 → 44,032 / 131,155**, with marginal gains of 58, one and zero.
+The 58 coordinates are in existing code: 40 forwarding-wrapper lines in
+`block.rs` and 18 compound-reconstruction lines in `entropy.rs`. The I422-only
+gain is a short-circuit right-hand evaluation in
+`bounded_reference_mode_supported`; it does not show enabled skip mode.
+The zero-gain I444 case retains independent parity value. Native LF/LH totals
+and the full report's aggregate metrics retain their separate denominators.
+JSON region and branch comparisons are `incomparable`: region summary/detail
+covered counts disagree, and native branch detail loses four identities.
+No JSON producer context, replacement counters or synthetic identities are
+introduced. The verbatim query receipt has SHA-256
+`0dee6bf2dc3a8842f191176cc4ddfed258f9018aae122e132168b9ba47263f53`.
+
+All four native full covered counts are lower than the preceding TIFF report.
+Source, fixture inventory and build identity differ, so these reports do not
+provide an exact full-suite regression comparison. The 59 selected line gains
+are not a claim that 59 preceding full-suite gaps disappeared. The current
+full report retains 46,824 missing lines, 13,837 missing branch outcomes,
+3,761 missing functions and 74,675 missing regions. Proofs are under
+`target/release-evidence/avif-derived-skip-v2-61f4dfdc-20261005/`, with original
+reports and receipts beside it; canonical producer evidence is under
+`target/release-evidence/avif-derived-skip-canonical-61f4dfdc-20261005/`.
+
+## Preceding TIFF associated-alpha full campaign — 2026-10-05
+
+The preceding TIFF full local report is
 `target/release-evidence/coverage-tiff-associated-alpha-20261005.json`, SHA-256
 `97b19bdff5d96774f0b4499a7177bbc25d0746eb51477cda829f201d44056e87`.
 `make coverage` uses `nightly-2026-07-16`, an empty `RUSTC_WRAPPER`, two build
@@ -2364,8 +2499,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,067 total rows: 1,604 decode / inspect /
-verify rows and 463 encode rows. Of those, 1,604 decode rows and 431 encode
+The current matrix contains 2,070 total rows: 1,607 decode / inspect /
+verify rows and 463 encode rows. Of those, 1,607 decode rows and 431 encode
 rows are active; 0 decode rows and 32 encode rows are planned. The 25
 fault contracts are tracked separately from the Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
@@ -5716,7 +5851,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `6b0ec6160971d82916c60478ecc12087e902cb895702556320b02bfd3b97db74`; matrix `ab63e103a6b50ca1483a8d9db4c8dcf55e221835d82f6132d3634f9203ee97b1`.
+- Current fixture integrity only: manifest `bb691b5538bf06dec81825e73a2c339ac96d3c65ebb103e1f86aa3d2ac50ab72`; matrix `c6a918a9011752acd1c11347ca87618f47ac2c7047348287f397c5ba4a4592b9`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

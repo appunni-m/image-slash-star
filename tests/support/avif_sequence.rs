@@ -492,7 +492,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
     assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
     let artifacts: Vec<Value> = field(&index, "artifacts");
-    assert_eq!(artifacts.len(), 267);
+    assert_eq!(artifacts.len(), 285);
     let mut artifact_paths = std::collections::HashSet::new();
     for artifact in artifacts {
         let path: String = field(&artifact, "path");
@@ -599,6 +599,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "motion_multitile_split_groups",
         "lossless_motion_multitile",
         "lossless_motion_multitile_split_groups",
+        "lossless_inter_420_derived_skip_refs_b32x32_64x64",
+        "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
+        "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
     ];
     assert_eq!(cases.len(), expected_names.len());
     for (case, expected_name) in cases.iter().zip(expected_names) {
@@ -690,6 +693,15 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             }
             "lossless_inter_420_b32x32" => {
                 matrix_sequence_case("animated_lossless_inter_420_b32x32")
+            }
+            "lossless_inter_420_derived_skip_refs_b32x32_64x64" => {
+                matrix_sequence_case("animated_lossless_inter_420_derived_skip_refs_b32x32_64x64")
+            }
+            "lossless_inter_i422_derived_skip_refs_b32x32_64x64" => {
+                matrix_sequence_case("animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64")
+            }
+            "lossless_inter_i444_derived_skip_refs_b32x32_64x64" => {
+                matrix_sequence_case("animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64")
             }
             "lossless_inter_420_b32x32_10bit" => {
                 matrix_sequence_case("animated_lossless_inter_420_b32x32_10bit")

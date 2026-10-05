@@ -7052,6 +7052,21 @@ formats:
       test_assets:
       - iloc_idat_data_reference_65535.avif
       status: active
+    - id: animated_lossless_inter_420_derived_skip_refs_b32x32_64x64
+      description: Five-frame lossless 64x64 4:2:0 AVIF sequence encoded with fixed B32 controls retains derived skip references while the frame skip-mode flag is disabled
+      test_assets:
+      - animated_lossless_inter_420_derived_skip_refs_b32x32_64x64.avif
+      status: active
+    - id: animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64
+      description: Five-frame lossless 64x64 4:2:2 AVIF sequence encoded with fixed B32 controls retains derived skip references while the frame skip-mode flag is disabled
+      test_assets:
+      - animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64.avif
+      status: active
+    - id: animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64
+      description: Five-frame lossless 64x64 4:4:4 AVIF sequence encoded with fixed B32 controls retains derived skip references while the frame skip-mode flag is disabled
+      test_assets:
+      - animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64.avif
+      status: active
     - id: animated_lossless_motion_multitile
       description: Four-frame lossless 256x128 4:2:0 AVIF motion sequence shares full-frame references across two tile columns
       test_assets:

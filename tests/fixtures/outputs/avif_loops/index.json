@@ -155,6 +155,84 @@
       "collection_index_sha256": "c8451c36025f0631bbca15052b5233aed552fab54b91401403bf483053aa0ca2",
       "generator_sha256": "2d6be1f45ddb7122c597a844b0eef45b273d93998fc7682d3d72563510957bbb",
       "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "4d60413c3c940565fb96f43db8981ccf7a754e43da33c6f3e462e9eeae9d5f0b",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_inter_420_derived_skip_refs_b32x32_64x64"
+      ],
+      "collection_index_sha256": "42e35a6700039f035a9b32e015bad0fd1e7a44f67ef525e54c6e8b1c9f81b779",
+      "generator_sha256": "ba8a2abf9adf6e556b76a818bfd3708390eb0adebfb256f9d26b827201a688fd",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "d49125019b6edd68c609fae28bd832fe75725645830eea73b9e03b7e3fcdc973",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_inter_i422_derived_skip_refs_b32x32_64x64"
+      ],
+      "collection_index_sha256": "b12e5d94d3ee6d96b0ad50549cb0539484a9ae88f8308d5fe2f513ddabbad449",
+      "generator_sha256": "ba8a2abf9adf6e556b76a818bfd3708390eb0adebfb256f9d26b827201a688fd",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "26685ac155e29384256619d73fd2b25c39d8154422aa0c5b6a370d528fc2531a",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_inter_i444_derived_skip_refs_b32x32_64x64"
+      ],
+      "collection_index_sha256": "da136e26c161897de1c70f16b83b08552aac2909daaec34918b52580e1ce8ec8",
+      "generator_sha256": "ba8a2abf9adf6e556b76a818bfd3708390eb0adebfb256f9d26b827201a688fd",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
     }
   ],
   "artifacts": [
@@ -339,6 +417,11 @@
       "sha256": "7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6"
     },
     {
+      "bytes": 6130,
+      "path": "inputs/lossless_inter_420_derived_skip_refs_b32x32_64x64.avif",
+      "sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15"
+    },
+    {
       "bytes": 1094,
       "path": "inputs/lossless_inter_i422_clipped_b32x32_49x64.avif",
       "sha256": "fd18cdcef915327fd4aab6992c901e27f2efc1411d1d2d01eee93dd3f277d7b1"
@@ -354,6 +437,11 @@
       "sha256": "43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05"
     },
     {
+      "bytes": 7530,
+      "path": "inputs/lossless_inter_i422_derived_skip_refs_b32x32_64x64.avif",
+      "sha256": "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168"
+    },
+    {
       "bytes": 14562,
       "path": "inputs/lossless_inter_i444_clipped_b32x32_49x64.avif",
       "sha256": "d45defceb497272879b1093f76e6a6c645f0bde8a6d10a1903e2322af422caae"
@@ -367,6 +455,11 @@
       "bytes": 7736,
       "path": "inputs/lossless_inter_i444_clipped_b32x32_64x56.avif",
       "sha256": "9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23"
+    },
+    {
+      "bytes": 10135,
+      "path": "inputs/lossless_inter_i444_derived_skip_refs_b32x32_64x64.avif",
+      "sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009"
     },
     {
       "bytes": 1109,
@@ -869,6 +962,31 @@
       "sha256": "7f37df610aca5d013ff8d28e549ca481cfebb730dfc845f31b1165f6634b012c"
     },
     {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_420_derived_skip_refs_b32x32_64x64/frame_0.bin",
+      "sha256": "246d7547f907a6415c5f5cb7a99d1042824617e30f45186843c78099811fc850"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_420_derived_skip_refs_b32x32_64x64/frame_1.bin",
+      "sha256": "154a50e2ba35253c74557acc37af46f0d3fd6767b7ce25dcf79b5aca2519c5f7"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_420_derived_skip_refs_b32x32_64x64/frame_2.bin",
+      "sha256": "a9b5be3f7e254301e4cd4ffa448b36e973f021584c1f7088ffb1cb1348b49397"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_420_derived_skip_refs_b32x32_64x64/frame_3.bin",
+      "sha256": "c9126430ad7a58b31ab2b361ef9a8faf780ac878d3a17be5656e4b4c9702e1a0"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_420_derived_skip_refs_b32x32_64x64/frame_4.bin",
+      "sha256": "154a50e2ba35253c74557acc37af46f0d3fd6767b7ce25dcf79b5aca2519c5f7"
+    },
+    {
       "bytes": 9408,
       "path": "pixels/lossless_inter_i422_clipped_b32x32_49x64/frame_0.bin",
       "sha256": "ccee2a21e9af8b3ba82e6d1dd1826ff64052d6e359cf064e59e658f394644e61"
@@ -899,6 +1017,31 @@
       "sha256": "b45ade74bc69b950cb44e621a1dee6eb404a8b22eb539e2dde3ffe195e3d1e52"
     },
     {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i422_derived_skip_refs_b32x32_64x64/frame_0.bin",
+      "sha256": "60e3fc91dac20b820fecb7aad6b402776cf870fd922cc16f1df06cb5fb33183b"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i422_derived_skip_refs_b32x32_64x64/frame_1.bin",
+      "sha256": "592885f88a2174e3c53e35576d107cece543936a82f7d445d7999e9accde6524"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i422_derived_skip_refs_b32x32_64x64/frame_2.bin",
+      "sha256": "02b7928def345b9886ca2315d7327cc8c014641082a86e916077c138b138c58d"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i422_derived_skip_refs_b32x32_64x64/frame_3.bin",
+      "sha256": "0d893520aade161494e2385153e5720a4ff44c539ecaeebf204e29d5ad6f5fa4"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i422_derived_skip_refs_b32x32_64x64/frame_4.bin",
+      "sha256": "592885f88a2174e3c53e35576d107cece543936a82f7d445d7999e9accde6524"
+    },
+    {
       "bytes": 9408,
       "path": "pixels/lossless_inter_i444_clipped_b32x32_49x64/frame_0.bin",
       "sha256": "9e9fccb3be60968a76c4d97caf618fe7d9cde4db1bdb6d4715161e7218cf41b5"
@@ -927,6 +1070,31 @@
       "bytes": 10752,
       "path": "pixels/lossless_inter_i444_clipped_b32x32_64x56/frame_1.bin",
       "sha256": "76be58fae64a18962093fe73cbb94cf14668d5e39098642063dba6a23931076e"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i444_derived_skip_refs_b32x32_64x64/frame_0.bin",
+      "sha256": "c75a4d87aa3854840ffabbc76be85853b3e427e782f41885438b26e8958ac7ed"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i444_derived_skip_refs_b32x32_64x64/frame_1.bin",
+      "sha256": "de82ebf27415e1c9a237f1ce99f9c358f2e2f923990e7c075c71fd972b855f9c"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i444_derived_skip_refs_b32x32_64x64/frame_2.bin",
+      "sha256": "bd1dced4f82a14783bf580de6eba952d2be9421e07064d7d742f9f2b7d8c857a"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i444_derived_skip_refs_b32x32_64x64/frame_3.bin",
+      "sha256": "e12b45bd994be50955a02715924d5e38f3a80e44b20b4822f9666dfb016ff75a"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/lossless_inter_i444_derived_skip_refs_b32x32_64x64/frame_4.bin",
+      "sha256": "de82ebf27415e1c9a237f1ce99f9c358f2e2f923990e7c075c71fd972b855f9c"
     },
     {
       "bytes": 1200,
@@ -6751,6 +6919,249 @@
       "repeat_equal": true,
       "source": "lossless_motion_multitile_split_groups",
       "source_sha256": "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596"
+    },
+    {
+      "input_bytes": 6130,
+      "input_path": "inputs/lossless_inter_420_derived_skip_refs_b32x32_64x64.avif",
+      "input_sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_inter_420_derived_skip_refs_b32x32_64x64",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "246d7547f907a6415c5f5cb7a99d1042824617e30f45186843c78099811fc850",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "154a50e2ba35253c74557acc37af46f0d3fd6767b7ce25dcf79b5aca2519c5f7",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "a9b5be3f7e254301e4cd4ffa448b36e973f021584c1f7088ffb1cb1348b49397",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "c9126430ad7a58b31ab2b361ef9a8faf780ac878d3a17be5656e4b4c9702e1a0",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "154a50e2ba35253c74557acc37af46f0d3fd6767b7ce25dcf79b5aca2519c5f7",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_inter_420_derived_skip_refs_b32x32_64x64",
+      "source_sha256": "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15"
+    },
+    {
+      "input_bytes": 7530,
+      "input_path": "inputs/lossless_inter_i422_derived_skip_refs_b32x32_64x64.avif",
+      "input_sha256": "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "60e3fc91dac20b820fecb7aad6b402776cf870fd922cc16f1df06cb5fb33183b",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "592885f88a2174e3c53e35576d107cece543936a82f7d445d7999e9accde6524",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "02b7928def345b9886ca2315d7327cc8c014641082a86e916077c138b138c58d",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "0d893520aade161494e2385153e5720a4ff44c539ecaeebf204e29d5ad6f5fa4",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "592885f88a2174e3c53e35576d107cece543936a82f7d445d7999e9accde6524",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
+      "source_sha256": "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168"
+    },
+    {
+      "input_bytes": 10135,
+      "input_path": "inputs/lossless_inter_i444_derived_skip_refs_b32x32_64x64.avif",
+      "input_sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "c75a4d87aa3854840ffabbc76be85853b3e427e782f41885438b26e8958ac7ed",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "de82ebf27415e1c9a237f1ce99f9c358f2e2f923990e7c075c71fd972b855f9c",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "bd1dced4f82a14783bf580de6eba952d2be9421e07064d7d742f9f2b7d8c857a",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "e12b45bd994be50955a02715924d5e38f3a80e44b20b4822f9666dfb016ff75a",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "de82ebf27415e1c9a237f1ce99f9c358f2e2f923990e7c075c71fd972b855f9c",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
+      "source_sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009"
     }
   ],
   "oracle": {

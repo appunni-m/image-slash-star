@@ -18905,8 +18905,9 @@ fn complete_lossless_inter_color_reconstruction_context(
         && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && !context.allow_intrabc
+        // Derived reference pairs can exist while skip mode is disabled.
+        // Only enabled skip mode affects the block syntax.
         && !context.skip_mode_enabled
-        && inter_context.skip_mode_references.is_none()
         && context.frame_tools.cdef.is_none()
         && (context.restoration_types == [None; 3] || active_color_restoration)
         && film_grain_supported

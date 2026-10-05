@@ -26,6 +26,18 @@ from inspect_avif_bitstreams import children, parse_boxes, unique_box
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = {
+    "lossless_inter_420_derived_skip_refs_b32x32_64x64": (
+        "animated_lossless_inter_420_derived_skip_refs_b32x32_64x64.avif",
+        "50d8bdd33c5a5e958d5991d25767748088ba3354d35d4b809d52e84a45713c15",
+    ),
+    "lossless_inter_i422_derived_skip_refs_b32x32_64x64": (
+        "animated_lossless_inter_i422_derived_skip_refs_b32x32_64x64.avif",
+        "0eae260be09a74b98b1f525261a237ef3783105870de44224de91dd65ee5d168",
+    ),
+    "lossless_inter_i444_derived_skip_refs_b32x32_64x64": (
+        "animated_lossless_inter_i444_derived_skip_refs_b32x32_64x64.avif",
+        "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
+    ),
     "animated": ("animated.avif", "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"),
     "tkhd_version_zero": (
         "animated_tkhd_version_zero.avif",

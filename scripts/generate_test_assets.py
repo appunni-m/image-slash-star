@@ -11768,6 +11768,12 @@ def gen_avif():
 
     generate_multitile_motion(d)
 
+    from generate_avif_derived_skip_reference_fixtures import (
+        generate_fixtures as generate_derived_skip_references,
+    )
+
+    generate_derived_skip_references(d)
+
     def encode_motion_chroma_422_animation():
         from PIL import ImageDraw
 
