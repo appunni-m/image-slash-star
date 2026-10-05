@@ -28,6 +28,51 @@ investigation checkpoint; the fresh validation below has its own artifacts.
 
 ## Last full all-feature coverage — 2026-10-05
 
+The fresh full run on `ede1d7fa` passes `make coverage-with-exporter` and all
+seven existing test binaries (3/4/1/57/7/1/68), with zero failures or ignored
+tests. Its ordinary inventory is 2,138 rows: 1,675 active decode, 431 active
+encode and 32 planned encode. All active rows pass. The 26 target-only fault
+contracts pass separately with oracle status `not_applicable`. There are
+1,647 public encode calls and zero encode panics.
+
+| Metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 89,212 / 135,769 | 65.708667% |
+| Branches | 17,401 / 31,246 | 55.690328% |
+| Functions | 4,989 / 8,685 | 57.443869% |
+| Regions | 136,469 / 210,864 | 64.718966% |
+
+All alpha floors pass. The separate strict 100% verifier exits 1 because
+every metric remains incomplete. This is a native all-feature test and
+coverage run; the preceding scoped target checks retain their own evidence.
+No matching x86 throughput measurement or codec speed claim is added.
+
+Proof paths below are relative to
+`/private/tmp/image-slash-star-evidence-recovery-a761-20261005/`.
+The fresh JSON is
+`maintained-exporter-canonical-main-ede1d7fa-v5/maintained-producer.json`,
+SHA-256 `48ba281a9429f6610d526e791a44319d6ab3e493bd46506bd6d900bb5a581e49`.
+The LCOV SHA-256 is
+`0de32869f420a49de6b849a69442c088e6320293088027c3ae63064bfd156b79`.
+Independent completion audit has SHA-256
+`f73865355296d835be2da2650c7c634d8e81e41b0dac0ef90e115e2bd0ce7eb5`.
+Its source, tool, log and report guards bind 5,388 source and fixture files,
+113 compiled artifacts, seven fresh raw profiles and one merged profile.
+All eight profile copies are preserved outside build directories. Empty
+compiler wrappers, two build jobs, offline Cargo and disabled incremental
+compilation are explicit. Objects and profiles remain fixed across exports.
+This evidence prose is updated after the measured source freeze is released.
+
+Coverage MCP reads byte-exact copies of the native reports and returns
+remaining JPEG, TIFF and AVIF branch locations. Its provider source and
+build identities are unregistered and test status is `unknown`; the local
+audit supplies the separate execution binding. Previous full source differs,
+so no incremental union or verified full-suite regression comparison is
+claimed from those queries. The failed preceding full attempt remains
+recorded below, without an accepted report.
+
+## Earlier full all-feature coverage at 2,134 rows — 2026-10-05
+
 The implementation at the recorded 2,134-row checkpoint was measured through
 `make coverage-with-exporter`,
 which delegates to the existing full `make coverage` command with the
