@@ -31,7 +31,11 @@ The malformed-input ledger remains at 562 entries.
 
 The incremental and full campaigns preserve all 5,190 measured
 source/configuration/script/fixture hashes: 5,189 repository files and one
-ignored ambient Finder file. The full campaign has its own 113 instrumented
+ignored ambient Finder file. The repository-local count includes the ignored
+`.cargo/config.toml`; 5,188 measured files are tracked in Git. The local
+configuration forces `CARGO_INCREMENTAL=0` and selects a compiler wrapper,
+which the recorded empty `RUSTC_WRAPPER` overrides. Both ignored files retain
+separately verified hashes. The full campaign has its own 113 instrumented
 artifacts and seven fresh profiles, unchanged across JSON and LCOV exports.
 The selected campaign's 63 artifacts and final profiles remain unchanged.
 Different test scopes use separately bound objects; no cross-scope object
