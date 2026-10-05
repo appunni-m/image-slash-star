@@ -26,6 +26,56 @@ functions with zero executions, while retaining genuinely unused functions
 and every reported source. No corrected result was admitted at that
 investigation checkpoint; the fresh validation below has its own artifacts.
 
+## Scoped JPEG grayscale and portable progressive parity — 2026-10-05
+
+The maintained input generator adds 11 complete JPEG decode cases and 15
+grayscale encode cases. Sizes 17x9, 128x128 and 512x512 cover omitted,
+4:4:4, 4:2:2 and 4:2:0 sampling options, with optimized, progressive and
+restart variants. Two complete inputs redefine DQT or DHT after the first
+scan. Pinned Pillow 12.2.0 supplies all encoded-byte and decoded-pixel
+references through the normal producer.
+
+The encoder preserves explicit grayscale SOF sampling descriptors while
+retaining one block per scan MCU. Non-1x1 singleton baseline scans use the
+existing sequential reconstruction path. Unsnapshotted quantization tables
+borrow the unchanged frame tables; missing captured tables remain errors.
+An explicit Huffman snapshot flag distinguishes uncaptured tables from
+captured absence, preserving first-scan provenance after later definitions.
+Lookup `Option`s retain absence semantics and checked error conversion;
+omitted encode options retain the grayscale default.
+
+WASI exposed a preceding progressive decoder bug: non-DC-only scalar IDCT
+received coefficients without dequantization. The correction multiplies in
+the existing reorder loop on portable targets. Native ARM/x86 expressions
+and the already dequantized DC-only path remain unchanged. The original
+main attempt passed 212/227 WASI decode cases and 92/96 encode cases; both
+failed receipts remain preserved. An isolated preceding-source reproduction
+also fails the old progressive case against its exact Pillow reference.
+
+Fresh main acceptance passes all 14 formatting, verification, strict native,
+coverage-hook and WASI gates. Native and WASI each pass 227/227 JPEG decode
+and 96/96 encode cases, with 454 public encode calls and zero panics. Existing
+JPEG feature contracts pass 68 native and 66 WASI tests, with zero failures
+or ignored tests. All 4,212 prior input/reference payloads, old ordinary row
+objects and 26 fault rows remain exact. Fault contracts were not requested
+in this normal scoped run. The main receipt SHA-256 is
+`ab2a02836cd8ed6f280b74055be6d326e52dbb5ce784a73bf7c6646fcc84823f`;
+independent acceptance review is
+`c6b5c05ba60d992b58850fc0fd65fd87f36be552aeaa09767ca8bbbfd4c04aaa`.
+Proofs are outside `target/`, under the recovery root recorded below.
+
+Before the portable correction, the frozen grayscale candidate was measured
+with 297 prior JPEG controls and then only 26 new ordinary cases, resetting
+profiles between runs. Native counters record ten newly exercised branch
+arms: five in JPEG and five in PNG deflate reached through the complete PNG
+inputs. Coverage MCP's line comparison is limited; branch comparison is
+incomparable because aggregate and normalized detail denominators differ.
+No aggregate incremental union or full-suite regression is claimed. The
+selected receipt SHA-256 is
+`2b7abd4fc08c566ff3faf2eac61cd7af94cc34f1f31454706d2007281d924744`.
+The full totals below belong to their earlier source. Paired throughput
+timing remains pending.
+
 ## Last full all-feature coverage — 2026-10-05
 
 The fresh full run on `ede1d7fa` passes `make coverage-with-exporter` and all
@@ -2949,8 +2999,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,138 total rows: 1,675 decode / inspect /
-verify rows and 463 encode rows. Of those, 1,675 decode rows and 431 encode
+The current matrix contains 2,164 total rows: 1,686 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,686 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 267 decode rows. The 26 fault contracts are tracked separately from the
 Pillow parity totals. Full
@@ -6297,12 +6347,13 @@ Coverage MCP identities, and separately checks current fixture integrity. The pu
 so copied prose cannot drift across guides.
 
 <!-- current-claim-ledger:begin -->
+
 Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `ed95a71970f7af59560b3fad830700cc68d06b82cf349e0177e61fd4fd6ce8fa`; matrix `e77b9ed6db7c11e45da8c8d2ce73c7dd7265a519a4caf51f11fb6f4e7cc3437a`.
+- Current fixture integrity only: manifest `c5c8d2e53513dc8c74640e362f0f7f0a8fe40d19f81718dd8676b3353089ee9a`; matrix `d59fbbcef2a97f6bbef3b860bb6faada10e29f0aa5fe1accaa0232b720098bb2`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

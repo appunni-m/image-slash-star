@@ -986,11 +986,16 @@ pub(super) fn progressive_reconstruct(
                 let mut has_ac = false;
                 for i in 0..64 {
                     let natural_index = JPEG_NATURAL_ORDER[i];
-                    block_natural[natural_index] = coeffs[i];
                     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
                     {
+                        block_natural[natural_index] = coeffs[i];
                         high_horizontal_nonzero |= coeffs[i] != 0 && natural_index & 4 != 0;
                         has_ac |= coeffs[i] != 0 && natural_index != 0;
+                    }
+                    #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
+                    {
+                        block_natural[natural_index] =
+                            coeffs[i].saturating_mul(quant_natural[natural_index]);
                     }
                 }
                 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]

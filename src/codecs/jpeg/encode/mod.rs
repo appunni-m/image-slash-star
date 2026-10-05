@@ -867,7 +867,14 @@ pub(crate) fn encode_with_token(
     let sof_marker: u8 = if progressive { 0xC2 } else { 0xC0 };
     let sof_comps: Vec<(u8, u8, u8, u8)> = comps
         .iter()
-        .map(|c| (c.id, c.h_samp, c.v_samp, c.quant_slot))
+        .map(|c| {
+            let (horizontal_sampling, vertical_sampling) = if num_components == 1 {
+                grayscale_frame_sampling(opts)
+            } else {
+                (c.h_samp, c.v_samp)
+            };
+            (c.id, horizontal_sampling, vertical_sampling, c.quant_slot)
+        })
         .collect();
     marker::write_sof(&mut out, sof_marker, low_u16(w), low_u16(h), &sof_comps);
 
@@ -1789,6 +1796,19 @@ fn encode_baseline_cmyk_block_row_streaming(
     Ok(output)
 }
 
+/// Preserve Pillow's explicit grayscale SOF sampling factors.
+///
+/// A single-component scan still emits one block per MCU, so these frame
+/// descriptors do not change the processing grid or restart-column count.
+/// An omitted option retains libjpeg's grayscale default of one by one.
+fn grayscale_frame_sampling(options: &JpegEncodeOptions) -> (u8, u8) {
+    match options.subsampling {
+        Some(JpegSubsampling::Cs420) => (2, 2),
+        Some(JpegSubsampling::Cs422) => (2, 1),
+        Some(JpegSubsampling::Cs444) | None => (1, 1),
+    }
+}
+
 /// Encode baseline grayscale as a four-block transform/entropy pipeline.
 #[allow(
     clippy::arithmetic_side_effects,
@@ -1824,12 +1844,13 @@ fn encode_baseline_grayscale_block_row_streaming(
         marker::write_exif_app1(&mut output, exif)?;
     }
     marker::write_dqt(&mut output, 0, &params.quant_tables[0]);
+    let (horizontal_sampling, vertical_sampling) = grayscale_frame_sampling(options);
     marker::write_sof(
         &mut output,
         0xC0,
         low_u16(width),
         low_u16(height),
-        &[(1, 1, 1, 0)],
+        &[(1, horizontal_sampling, vertical_sampling, 0)],
     );
     marker::write_dht(
         &mut output,

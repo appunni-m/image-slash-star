@@ -44,6 +44,8 @@ pub(super) struct ScanInfo {
     pub(super) restart_interval: u16,
     pub(super) dc_huff_tables: Vec<Option<HuffTableStorage>>,
     pub(super) ac_huff_tables: Vec<Option<HuffTableStorage>>,
+    // Empty vectors can be captured missing tables, so presence is explicit.
+    pub(super) huff_tables_snapshotted: bool,
     pub(super) component_quant_tables: Vec<Option<[u16; 64]>>,
 }
 
@@ -451,9 +453,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     .map_err(|error| error.at(marker_offset, "jpeg_dqt"))?;
             }
             M_DHT => {
-                if !progressive && scans.len() == 1 && scans[0].dc_huff_tables.is_empty() {
+                if !progressive && scans.len() == 1 && !scans[0].huff_tables_snapshotted {
                     scans[0].dc_huff_tables = dc_huff_tables.clone();
                     scans[0].ac_huff_tables = ac_huff_tables.clone();
+                    scans[0].huff_tables_snapshotted = true;
                 }
                 parse_dht(data, &mut pos, &mut dc_huff_tables, &mut ac_huff_tables)
                     .map_err(|error| error.at(marker_offset, "jpeg_dht"))?;
@@ -477,9 +480,10 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
 
                 if !progressive {
                     if !scans.is_empty() {
-                        if scans[0].dc_huff_tables.is_empty() {
+                        if !scans[0].huff_tables_snapshotted {
                             scans[0].dc_huff_tables = dc_huff_tables.clone();
                             scans[0].ac_huff_tables = ac_huff_tables.clone();
+                            scans[0].huff_tables_snapshotted = true;
                         }
                         if scans[0].component_quant_tables.is_empty() {
                             scans[0].component_quant_tables = snapshot_scan_quant_tables(
@@ -508,6 +512,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                         } else {
                             ac_huff_tables.clone()
                         },
+                        huff_tables_snapshotted: !scans.is_empty(),
                         component_quant_tables: if scans.is_empty() {
                             Vec::new()
                         } else {
@@ -540,6 +545,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                         restart_interval,
                         dc_huff_tables: dc_huff_tables.clone(),
                         ac_huff_tables: ac_huff_tables.clone(),
+                        huff_tables_snapshotted: true,
                         component_quant_tables: Vec::new(),
                     });
                     saw_sos = true;

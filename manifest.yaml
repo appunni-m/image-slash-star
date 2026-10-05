@@ -1035,6 +1035,61 @@ formats:
       description: Progressive JPEG with sequence-correct extra restart markers after scan 1 that form an empty segment and preserve Pillow pixels
       test_assets:
       - progressive_restart_overrun.jpg
+    - id: grayscale_sampling_422_17x9
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_422_17x9.jpg
+    - id: grayscale_sampling_420_17x9
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_420_17x9.jpg
+    - id: grayscale_sampling_422_128x128
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_422_128x128.jpg
+    - id: grayscale_sampling_420_128x128
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_420_128x128.jpg
+    - id: grayscale_sampling_422_512x512
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_422_512x512.jpg
+    - id: grayscale_sampling_420_512x512
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_420_512x512.jpg
+    - id: grayscale_sampling_420_128x128_optimized
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_420_128x128_optimized.jpg
+    - id: grayscale_sampling_420_128x128_progressive
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_420_128x128_progressive.jpg
+    - id: grayscale_sampling_420_128x128_restart_rows_4
+      description: Pillow grayscale frame sampling retains one block per non-interleaved
+        scan MCU
+      test_assets:
+      - grayscale_sampling_420_128x128_restart_rows_4.jpg
+    - id: grayscale_sampling_420_17x9_late_changed_dqt
+      description: Complete grayscale scan retains its original tables when a changed
+        definition follows entropy
+      test_assets:
+      - grayscale_sampling_420_17x9_late_changed_dqt.jpg
+    - id: grayscale_sampling_420_17x9_late_changed_dht
+      description: Complete grayscale scan retains its original tables when a changed
+        definition follows entropy
+      test_assets:
+      - grayscale_sampling_420_17x9_late_changed_dht.jpg
     encode_edge_cases:
     - id: enc_error_retained_sequence_geometry
       description: A still JPEG cannot represent a retained frame offset or a larger sequence canvas
@@ -1362,6 +1417,154 @@ formats:
         subsampling: '422'
         progressive: false
         optimize: false
+    - id: enc_grayscale_sampling_default_17x9
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_17x9.png
+    - id: enc_grayscale_sampling_444_17x9
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '444'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_17x9.png
+    - id: enc_grayscale_sampling_422_17x9
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '422'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_17x9.png
+    - id: enc_grayscale_sampling_420_17x9
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '420'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_17x9.png
+    - id: enc_grayscale_sampling_default_128x128
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_128x128.png
+    - id: enc_grayscale_sampling_444_128x128
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '444'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_128x128.png
+    - id: enc_grayscale_sampling_422_128x128
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '422'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_128x128.png
+    - id: enc_grayscale_sampling_420_128x128
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '420'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_128x128.png
+    - id: enc_grayscale_sampling_default_512x512
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_512x512.png
+    - id: enc_grayscale_sampling_444_512x512
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '444'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_512x512.png
+    - id: enc_grayscale_sampling_422_512x512
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '422'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_512x512.png
+    - id: enc_grayscale_sampling_420_512x512
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '420'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_512x512.png
+    - id: enc_grayscale_sampling_420_128x128_optimized
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: true
+        subsampling: '420'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_128x128.png
+    - id: enc_grayscale_sampling_420_128x128_progressive
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: true
+        optimize: false
+        subsampling: '420'
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_128x128.png
+    - id: enc_grayscale_sampling_420_128x128_restart_rows_4
+      description: Complete grayscale source with declared save options checks Pillow
+        frame sampling and singleton scan block order
+      params:
+        quality: 85
+        progressive: false
+        optimize: false
+        subsampling: '420'
+        restart_interval: 4
+      source_format: png
+      source_asset: jpeg_grayscale_sampling_source_128x128.png
   png:
     name: PNG
     extensions:

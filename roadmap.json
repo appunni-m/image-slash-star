@@ -6744,13 +6744,13 @@
       "status": "open_until_all_four_metrics_are_100_percent"
     },
     "matrix": {
-      "decode_active": 1675,
+      "decode_active": 1686,
       "decode_planned": 0,
-      "decode_rows": 1675,
-      "encode_active": 431,
+      "decode_rows": 1686,
+      "encode_active": 446,
       "encode_planned": 32,
-      "encode_rows": 463,
-      "total_rows": 2138
+      "encode_rows": 478,
+      "total_rows": 2164
     },
     "matrix_row_selector": {
       "coverage_scope": "selected_subset_not_release_or_full_coverage_gate",

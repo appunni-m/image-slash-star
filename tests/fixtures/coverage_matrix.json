@@ -31961,6 +31961,256 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "animated_primary_item_irot",
+          "type": "decode",
+          "format": "avif",
+          "category": "animated",
+          "description": "Five-frame AVIF sequence retains an essential primary-item 270-degree irot property while preserving the complete encoded samples",
+          "asset": "animated_primary_item_irot.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif.bin",
+          "ref_bytes": 67500,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            150,
+            150
+          ],
+          "ref_frame_count": 5,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              150,
+              150
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 1,
+            "loop_origin": "independent_implementation",
+            "background": null,
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  150,
+                  150
+                ],
+                "duration_num": 1,
+                "duration_den": 30,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_0.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "ref_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  150,
+                  150
+                ],
+                "duration_num": 1,
+                "duration_den": 30,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_1.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "ref_sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 2,
+                "source_rect": [
+                  0,
+                  0,
+                  150,
+                  150
+                ],
+                "duration_num": 1,
+                "duration_den": 30,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_2.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "ref_sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 3,
+                "source_rect": [
+                  0,
+                  0,
+                  150,
+                  150
+                ],
+                "duration_num": 1,
+                "duration_den": 30,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_3.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "ref_sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 4,
+                "source_rect": [
+                  0,
+                  0,
+                  150,
+                  150
+                ],
+                "duration_num": 1,
+                "duration_den": 30,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_4.bin",
+                "ref_bytes": 67500,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  150,
+                  150
+                ],
+                "ref_sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ],
+            "loop_evidence": {
+              "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+              "index_sha256": "c1831d6e960a73e60ecc5385d32a26217846aa2177f6b296b3956e9a31abac5d",
+              "case": "animated_primary_item_irot",
+              "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+              "repetition_count": 0
+            }
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "independent_implementation",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "animated_opidc_0x101",
           "type": "decode",
           "format": "avif",
@@ -48924,256 +49174,6 @@
               "origin": "pillow_fixture"
             }
           }
-        },
-        {
-          "id": "animated_primary_item_irot",
-          "type": "decode",
-          "format": "avif",
-          "category": "animated",
-          "description": "Five-frame AVIF sequence retains an essential primary-item 270-degree irot property while preserving the complete encoded samples",
-          "asset": "animated_primary_item_irot.avif",
-          "expect_error": false,
-          "expect_sequence_error": false,
-          "verification_scope": "header_only",
-          "rust_expect_sequence_error": false,
-          "rust_sequence_error_kind": null,
-          "rust_sequence_error_reason": null,
-          "rust_inspect_basic": false,
-          "rust_decode_with_metadata_limit": null,
-          "status": "active",
-          "asset_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
-          "execution": {
-            "target": "aarch64-apple-darwin",
-            "features": [
-              "jpeg",
-              "png",
-              "gif",
-              "bmp",
-              "tiff",
-              "webp",
-              "ico",
-              "avif"
-            ],
-            "suite": "native_all_features"
-          },
-          "oracle_detects_format": true,
-          "inspect_container_format": "AVIF",
-          "ref_bit_depth": 8,
-          "ref_bit_depth_origin": "independent_implementation",
-          "inspect_source_byte_order": null,
-          "inspect_source_byte_order_origin": null,
-          "inspect_cursor_hotspot": null,
-          "inspect_status": "ok",
-          "verify_status": "ok",
-          "oracle_status": "ok",
-          "ref_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif.bin",
-          "ref_bytes": 67500,
-          "ref_mode": "Rgb8",
-          "ref_size": [
-            150,
-            150
-          ],
-          "ref_frame_count": 5,
-          "ref_is_animated": true,
-          "decoded_source_byte_order": null,
-          "decoded_source_byte_order_origin": null,
-          "decoded_source_color": null,
-          "inspect_palette": {
-            "state": "absent",
-            "origin": "pillow_fixture"
-          },
-          "decoded_palette": {
-            "state": "absent",
-            "origin": "pillow_fixture"
-          },
-          "sequence": {
-            "canvas_size": [
-              150,
-              150
-            ],
-            "canvas_origin": "pillow_fixture",
-            "loop_count": 1,
-            "loop_origin": "independent_implementation",
-            "background": null,
-            "frames": [
-              {
-                "index": 0,
-                "source_rect": [
-                  0,
-                  0,
-                  150,
-                  150
-                ],
-                "duration_num": 1,
-                "duration_den": 30,
-                "duration_origin": "independent_implementation",
-                "disposal": "unspecified",
-                "blend": "unspecified",
-                "interlaced": false,
-                "is_default_image": false,
-                "pixel_layout": "rendered_canvas",
-                "source_origin": "independent_implementation",
-                "source_byte_order": null,
-                "source_byte_order_origin": null,
-                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_0.bin",
-                "ref_bytes": 67500,
-                "ref_mode": "Rgb8",
-                "ref_size": [
-                  150,
-                  150
-                ],
-                "ref_sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
-                "pixel_assertion": "exact",
-                "pixel_origin": "pillow_fixture"
-              },
-              {
-                "index": 1,
-                "source_rect": [
-                  0,
-                  0,
-                  150,
-                  150
-                ],
-                "duration_num": 1,
-                "duration_den": 30,
-                "duration_origin": "independent_implementation",
-                "disposal": "unspecified",
-                "blend": "unspecified",
-                "interlaced": false,
-                "is_default_image": false,
-                "pixel_layout": "rendered_canvas",
-                "source_origin": "independent_implementation",
-                "source_byte_order": null,
-                "source_byte_order_origin": null,
-                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_1.bin",
-                "ref_bytes": 67500,
-                "ref_mode": "Rgb8",
-                "ref_size": [
-                  150,
-                  150
-                ],
-                "ref_sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
-                "pixel_assertion": "exact",
-                "pixel_origin": "pillow_fixture"
-              },
-              {
-                "index": 2,
-                "source_rect": [
-                  0,
-                  0,
-                  150,
-                  150
-                ],
-                "duration_num": 1,
-                "duration_den": 30,
-                "duration_origin": "independent_implementation",
-                "disposal": "unspecified",
-                "blend": "unspecified",
-                "interlaced": false,
-                "is_default_image": false,
-                "pixel_layout": "rendered_canvas",
-                "source_origin": "independent_implementation",
-                "source_byte_order": null,
-                "source_byte_order_origin": null,
-                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_2.bin",
-                "ref_bytes": 67500,
-                "ref_mode": "Rgb8",
-                "ref_size": [
-                  150,
-                  150
-                ],
-                "ref_sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
-                "pixel_assertion": "exact",
-                "pixel_origin": "pillow_fixture"
-              },
-              {
-                "index": 3,
-                "source_rect": [
-                  0,
-                  0,
-                  150,
-                  150
-                ],
-                "duration_num": 1,
-                "duration_den": 30,
-                "duration_origin": "independent_implementation",
-                "disposal": "unspecified",
-                "blend": "unspecified",
-                "interlaced": false,
-                "is_default_image": false,
-                "pixel_layout": "rendered_canvas",
-                "source_origin": "independent_implementation",
-                "source_byte_order": null,
-                "source_byte_order_origin": null,
-                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_3.bin",
-                "ref_bytes": 67500,
-                "ref_mode": "Rgb8",
-                "ref_size": [
-                  150,
-                  150
-                ],
-                "ref_sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
-                "pixel_assertion": "exact",
-                "pixel_origin": "pillow_fixture"
-              },
-              {
-                "index": 4,
-                "source_rect": [
-                  0,
-                  0,
-                  150,
-                  150
-                ],
-                "duration_num": 1,
-                "duration_den": 30,
-                "duration_origin": "independent_implementation",
-                "disposal": "unspecified",
-                "blend": "unspecified",
-                "interlaced": false,
-                "is_default_image": false,
-                "pixel_layout": "rendered_canvas",
-                "source_origin": "independent_implementation",
-                "source_byte_order": null,
-                "source_byte_order_origin": null,
-                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_primary_item_irot_avif_frame_4.bin",
-                "ref_bytes": 67500,
-                "ref_mode": "Rgb8",
-                "ref_size": [
-                  150,
-                  150
-                ],
-                "ref_sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
-                "pixel_assertion": "exact",
-                "pixel_origin": "pillow_fixture"
-              }
-            ],
-            "loop_evidence": {
-              "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "c1831d6e960a73e60ecc5385d32a26217846aa2177f6b296b3956e9a31abac5d",
-              "case": "animated_primary_item_irot",
-              "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
-              "repetition_count": 0
-            }
-          },
-          "assertion_origins": {
-            "detection": "specification_reference",
-            "inspection": "pillow_fixture",
-            "verification": "pillow_fixture",
-            "decode": "pillow_fixture",
-            "operations": "pillow_fixture",
-            "sequence_canvas": "pillow_fixture",
-            "sequence_source": "independent_implementation",
-            "sequence_pixels": "pillow_fixture"
-          },
-          "operations": {
-            "detect": "ok",
-            "inspect": "ok",
-            "verify": "ok",
-            "decode": "ok",
-            "decode_sequence": "ok"
-          },
-          "error_contracts": {}
         }
       ],
       "encode": [
@@ -97199,6 +97199,864 @@
             "decode_sequence": "ok"
           },
           "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_422_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_422_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "073f466605758f65c1f6a0af7fbcaf072af42c61b2d43ef768f57ad19c41b8c4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_422_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_420_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "5ce93b78d7497ab9b6f651bd97b43ec594ebe28ec59ecdaffd8c9f06b59b5583",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_422_128x128",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_422_128x128.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "26ad036e67a855f4495851c59686c212b1d316c6a9c6699b16d0517b6f6c4f44",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_422_128x128_jpg.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_128x128",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_420_128x128.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ec3d968f651020392282ddf1ff6734ae45d95ccd4f4f7e69658f8a25be435cce",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_128x128_jpg.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_422_512x512",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_422_512x512.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f9f40477a1701ba7f721e4688db484daef27a30c4d7afab0c78462c7481445fe",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_422_512x512_jpg.bin",
+          "ref_bytes": 262144,
+          "ref_mode": "L8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_512x512",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_420_512x512.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "23603612ec346f2eac5f3b880d53fd433deec85c3156c44c8e110be12c025ef5",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_512x512_jpg.bin",
+          "ref_bytes": 262144,
+          "ref_mode": "L8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_128x128_optimized",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_420_128x128_optimized.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "e0dd7cb15399cb4588202b7cef0c068f7e5fa94db6be0d1179c27b7cff8cb9ad",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_128x128_optimized_jpg.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_128x128_progressive",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_420_128x128_progressive.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "9c91aace0599cb36f7f9fb970523f6951f971d7a4397666d265d9ad709d3bb9b",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_128x128_progressive_jpg.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_128x128_restart_rows_4",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Pillow grayscale frame sampling retains one block per non-interleaved scan MCU",
+          "asset": "grayscale_sampling_420_128x128_restart_rows_4.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "8c780ae5bb7f8cd3a7dfcc30e7504332b0da70b57ed3ee410eb489dcd301987c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_128x128_restart_rows_4_jpg.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_17x9_late_changed_dqt",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale scan retains its original tables when a changed definition follows entropy",
+          "asset": "grayscale_sampling_420_17x9_late_changed_dqt.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "67de8cbe884b353955dce05b9dd097616f63c3ce41a454d71bb1e009fc370cc7",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_17x9_late_changed_dqt_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_sampling_420_17x9_late_changed_dht",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale scan retains its original tables when a changed definition follows entropy",
+          "asset": "grayscale_sampling_420_17x9_late_changed_dht.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "73bf8861d53c59d5edc7a6031377a71b889d58f307c65a226c6d7cfcb6028e35",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_sampling_420_17x9_late_changed_dht_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
         }
       ],
       "encode": [
@@ -101630,6 +102488,844 @@
           ],
           "ref_frame_count": 1,
           "ref_is_animated": false
+        },
+        {
+          "id": "enc_grayscale_sampling_default_17x9",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+          "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_17x9.bin",
+          "encoded_ref_bytes": 468,
+          "encoded_ref_sha256": "a0bfa5319e30c5fdcb15fdb7775c994c5edb4934a8783f36908e2eada7fdb446",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_default_17x9.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_444_17x9",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "444"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+          "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_17x9.bin",
+          "encoded_ref_bytes": 468,
+          "encoded_ref_sha256": "a0bfa5319e30c5fdcb15fdb7775c994c5edb4934a8783f36908e2eada7fdb446",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_444_17x9.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_422_17x9",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "422"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+          "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_17x9.bin",
+          "encoded_ref_bytes": 468,
+          "encoded_ref_sha256": "073f466605758f65c1f6a0af7fbcaf072af42c61b2d43ef768f57ad19c41b8c4",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_422_17x9.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_420_17x9",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "420"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+          "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_17x9.bin",
+          "encoded_ref_bytes": 468,
+          "encoded_ref_sha256": "5ce93b78d7497ab9b6f651bd97b43ec594ebe28ec59ecdaffd8c9f06b59b5583",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_17x9.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_default_128x128",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+          "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_128x128.bin",
+          "encoded_ref_bytes": 11384,
+          "encoded_ref_sha256": "f848e394f95884859a02d8461450f272dfb59d809b9a1ab7145b7493cab67f0b",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_default_128x128.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_444_128x128",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "444"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+          "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_128x128.bin",
+          "encoded_ref_bytes": 11384,
+          "encoded_ref_sha256": "f848e394f95884859a02d8461450f272dfb59d809b9a1ab7145b7493cab67f0b",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_444_128x128.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_422_128x128",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "422"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+          "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_128x128.bin",
+          "encoded_ref_bytes": 11384,
+          "encoded_ref_sha256": "26ad036e67a855f4495851c59686c212b1d316c6a9c6699b16d0517b6f6c4f44",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_422_128x128.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_420_128x128",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "420"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+          "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128.bin",
+          "encoded_ref_bytes": 11384,
+          "encoded_ref_sha256": "ec3d968f651020392282ddf1ff6734ae45d95ccd4f4f7e69658f8a25be435cce",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_default_512x512",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+          "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_512x512.bin",
+          "encoded_ref_bytes": 176897,
+          "encoded_ref_sha256": "1909f0c98b6561134063ee49e68e2adb5f435864ea9e1dcc692e215693643ec9",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_default_512x512.bin",
+          "ref_bytes": 262144,
+          "ref_mode": "L8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_444_512x512",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "444"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+          "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_512x512.bin",
+          "encoded_ref_bytes": 176897,
+          "encoded_ref_sha256": "1909f0c98b6561134063ee49e68e2adb5f435864ea9e1dcc692e215693643ec9",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_444_512x512.bin",
+          "ref_bytes": 262144,
+          "ref_mode": "L8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_422_512x512",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "422"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+          "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_512x512.bin",
+          "encoded_ref_bytes": 176897,
+          "encoded_ref_sha256": "f9f40477a1701ba7f721e4688db484daef27a30c4d7afab0c78462c7481445fe",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_422_512x512.bin",
+          "ref_bytes": 262144,
+          "ref_mode": "L8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_420_512x512",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "420"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+          "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_512x512.bin",
+          "encoded_ref_bytes": 176897,
+          "encoded_ref_sha256": "23603612ec346f2eac5f3b880d53fd433deec85c3156c44c8e110be12c025ef5",
+          "ref_sha256": "4112f2c207ccc53140971924e40d69d50e030e20f6d577e39826eeb919e04281",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_512x512.bin",
+          "ref_bytes": 262144,
+          "ref_mode": "L8",
+          "ref_size": [
+            512,
+            512
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_420_128x128_optimized",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": true,
+            "subsampling": "420"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+          "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_optimized.bin",
+          "encoded_ref_bytes": 10514,
+          "encoded_ref_sha256": "e0dd7cb15399cb4588202b7cef0c068f7e5fa94db6be0d1179c27b7cff8cb9ad",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128_optimized.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_420_128x128_progressive",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": true,
+            "optimize": false,
+            "subsampling": "420"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+          "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_progressive.bin",
+          "encoded_ref_bytes": 10616,
+          "encoded_ref_sha256": "9c91aace0599cb36f7f9fb970523f6951f971d7a4397666d265d9ad709d3bb9b",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128_progressive.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "enc_grayscale_sampling_420_128x128_restart_rows_4",
+          "type": "encode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete grayscale source with declared save options checks Pillow frame sampling and singleton scan block order",
+          "params": {
+            "quality": 85,
+            "progressive": false,
+            "optimize": false,
+            "subsampling": "420",
+            "restart_interval": 4
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+          "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_restart_rows_4.bin",
+          "encoded_ref_bytes": 11401,
+          "encoded_ref_sha256": "8c780ae5bb7f8cd3a7dfcc30e7504332b0da70b57ed3ee410eb489dcd301987c",
+          "ref_sha256": "9324972150ab89a92742966cc6c84fe294198299b614d8c15e69a1bd9e516d06",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.jpeg_enc_grayscale_sampling_420_128x128_restart_rows_4.bin",
+          "ref_bytes": 16384,
+          "ref_mode": "L8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
         }
       ]
     },
@@ -179857,12 +181553,12 @@
     }
   },
   "summary": {
-    "total_rows": 2138,
-    "decode_rows": 1675,
-    "encode_rows": 463,
+    "total_rows": 2164,
+    "decode_rows": 1686,
+    "encode_rows": 478,
     "formats": 8,
-    "assets_available": 1672,
-    "decode_active": 1675,
+    "assets_available": 1683,
+    "decode_active": 1686,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

@@ -2233,11 +2233,17 @@ fn reconstruct_baseline_multi_scan(
             if first_quant_natural_by_component[component_index].is_some() {
                 continue;
             }
-            let quant_table = scan
-                .component_quant_tables
-                .get(component_index)
-                .and_then(Option::as_ref)
-                .malformed("missing JPEG quantization table")?;
+            // The parser snapshots the first baseline scan only when a
+            // later marker can change its tables. An empty snapshot borrows
+            // the unchanged frame tables; a present missing entry is an error.
+            let quant_table = if scan.component_quant_tables.is_empty() {
+                info.quant_tables
+                    .get(usize::from(info.components[component_index].quant_tbl))
+            } else {
+                scan.component_quant_tables.get(component_index)
+            }
+            .and_then(Option::as_ref)
+            .malformed("missing JPEG quantization table")?;
             let mut quant_natural = [0i32; 64];
             for zigzag in 0usize..64 {
                 quant_natural[idct::JPEG_NATURAL_ORDER[zigzag]] = i32::from(quant_table[zigzag]);
@@ -2254,6 +2260,16 @@ fn reconstruct_baseline_multi_scan(
     // components at their initialized neutral samples.
     for scan in &info.scans {
         crate::codecs::error::check_cancelled(token)?;
+        let dc_huff_tables = if scan.huff_tables_snapshotted {
+            &scan.dc_huff_tables
+        } else {
+            &info.dc_huff_tables
+        };
+        let ac_huff_tables = if scan.huff_tables_snapshotted {
+            &scan.ac_huff_tables
+        } else {
+            &info.ac_huff_tables
+        };
         let interleaved = scan.components.len() > 1;
         let (scan_mcus_x, scan_mcus_y) = if interleaved {
             (num_mcus_x, num_mcus_y)
@@ -2311,13 +2327,11 @@ fn reconstruct_baseline_multi_scan(
                 for scan_component in &scan.components {
                     let component_index = scan_component.comp_index;
                     let component = &info.components[component_index];
-                    let dc_table = scan
-                        .dc_huff_tables
+                    let dc_table = dc_huff_tables
                         .get(usize::from(scan_component.dc_tbl))
                         .and_then(Option::as_ref)
                         .malformed("missing JPEG DC Huffman table")?;
-                    let ac_table = scan
-                        .ac_huff_tables
+                    let ac_table = ac_huff_tables
                         .get(usize::from(scan_component.ac_tbl))
                         .and_then(Option::as_ref)
                         .malformed("missing JPEG AC Huffman table")?;
@@ -2608,7 +2622,14 @@ pub fn decode(
     crate::codecs::error::check_cancelled(token)?;
     let mut image = if info.progressive {
         progressive_reconstruct(&info, data, token)
-    } else if info.scans.len() > 1 {
+    } else if info.scans.len() > 1
+        || matches!(
+            info.components.as_slice(),
+            [component] if component.h_samp != 1 || component.v_samp != 1
+        )
+    {
+        // A singleton scan has one block per MCU even when its SOF sampling
+        // factors exceed one. The sequential scan path keeps that block order.
         reconstruct_baseline_multi_scan(&info, data, token)
     } else {
         reconstruct_image(&info, data, token)

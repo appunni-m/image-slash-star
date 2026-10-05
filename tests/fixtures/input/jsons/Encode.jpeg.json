@@ -4104,6 +4104,797 @@
           "tobytes"
         ]
       }
+    },
+    {
+      "id": "enc_grayscale_sampling_default_17x9",
+      "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_17x9.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_444_17x9",
+      "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "444"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_17x9.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_422_17x9",
+      "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "422"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_17x9.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_420_17x9",
+      "source_asset": "jpeg_grayscale_sampling_source_17x9.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "4e584350416029e9f948399802f76759ea5cdc3c76333267bf9fda3c9ba61baa",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "420"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_17x9.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_default_128x128",
+      "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_444_128x128",
+      "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "444"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_422_128x128",
+      "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "422"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_420_128x128",
+      "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "420"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_default_512x512",
+      "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_512x512.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_444_512x512",
+      "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "444"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_512x512.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 0
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_422_512x512",
+      "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "422"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_512x512.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 1
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_420_512x512",
+      "source_asset": "jpeg_grayscale_sampling_source_512x512.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "18335cff5497f4fdbe0274fc9bd22fd31a7228c7078726582e203ec5d69f6bbf",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "420"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_512x512.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_420_128x128_optimized",
+      "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": true,
+        "subsampling": "420"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": true,
+          "progressive": false,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_420_128x128_progressive",
+      "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": true,
+        "optimize": false,
+        "subsampling": "420"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": true,
+          "subsampling": 2
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_grayscale_sampling_420_128x128_restart_rows_4",
+      "source_asset": "jpeg_grayscale_sampling_source_128x128.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1e867f5f25ce98985347973a1f8332b8bcd83f773563b772f63be26269d69d33",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "quality": 85,
+        "progressive": false,
+        "optimize": false,
+        "subsampling": "420",
+        "restart_interval": 4
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/jpeg_grayscale_sampling_source_128x128.png",
+        "method": "PIL.Image.Image.save",
+        "format": "JPEG",
+        "kwargs": {
+          "quality": 85,
+          "optimize": false,
+          "progressive": false,
+          "subsampling": 2,
+          "restart_marker_rows": 4
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
     }
   ]
 }
