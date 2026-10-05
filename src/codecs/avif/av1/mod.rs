@@ -34,14 +34,8 @@ use self::bit_reader::SegmentedData;
 pub(super) use self::block::ReconstructedPlane;
 use self::frame::{DisplayGeometryProof, FrameState};
 pub(super) use self::raster::FrameCanvas;
-#[cfg(coverage)]
-use super::samples::ByteSpan;
 use super::samples::{EncodedPlane, EncodedSample, ExtractedAvif};
-#[cfg(coverage)]
-use super::samples::{SequencePayload, StillPayload};
 use crate::codecs::{CodecError, CodecResult};
-#[cfg(coverage)]
-use std::num::NonZeroU32;
 
 const MAX_OBUS_PER_SAMPLE: usize = 4_096;
 
@@ -410,17 +404,12 @@ fn validate_plane_with_token(
     })
 }
 
+/// Admit monochrome stills after their selected display plane is materialized.
+/// Film grain is applied to that plane during materialization.
 fn monochrome_primary_sequence_supported(sequence: &sequence::SequenceHeader) -> bool {
     sequence.monochrome
         && matches!(sequence.bit_depth, 8 | 10 | 12)
-        && sequence.color_range
-        && (
-            sequence.color_primaries,
-            sequence.transfer_characteristics,
-            sequence.matrix_coefficients,
-        ) == (1, 13, 6)
         && (sequence.subsampling_x, sequence.subsampling_y) == (true, true)
-        && !sequence.film_grain_present
 }
 
 /// Color formats that have a checked RGB8 boundary in `decode_portable`.
@@ -433,7 +422,7 @@ fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader, alpha:
         return false;
     }
     matches!(
-        super::portable_yuv_matrix(
+        super::portable_color_conversion(
             [
                 sequence.color_primaries,
                 sequence.transfer_characteristics,
@@ -444,7 +433,12 @@ fn portable_color_sequence_supported(sequence: &sequence::SequenceHeader, alpha:
             (sequence.subsampling_x, sequence.subsampling_y),
             alpha,
         ),
-        Some(super::PortableYuvMatrix::Bt601 | super::PortableYuvMatrix::Bt601Limited)
+        Some(
+            super::PortableColorConversion::IdentityRgb
+                | super::PortableColorConversion::Yuv(
+                    super::PortableYuvMatrix::Bt601 | super::PortableYuvMatrix::Bt601Limited,
+                ),
+        )
     )
 }
 
@@ -905,7 +899,20 @@ fn validate_grid_with_token(
         );
     }
 
-    let mut cells = Vec::with_capacity(cell_count);
+    #[cfg(coverage)]
+    let cell_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1GridCellReservation,
+    ) {
+        usize::MAX
+    } else {
+        cell_count
+    };
+    #[cfg(not(coverage))]
+    let cell_reservation_count = cell_count;
+    let mut cells = Vec::new();
+    cells
+        .try_reserve(cell_reservation_count)
+        .map_err(|_| CodecError::Dimensions("unable to reserve AVIF grid cells".to_owned()))?;
     for (index, sample) in still.color.samples.iter().enumerate() {
         let color = if index == 0 {
             first_color
@@ -1386,473 +1393,12 @@ pub(super) fn validate(extracted: &ExtractedAvif<'_>) -> Av1Result<ValidatedAv1>
 }
 
 #[cfg(coverage)]
-#[coverage(off)]
-fn coverage_sample(sample: &[u8], config: [u8; 4]) -> (Vec<u8>, EncodedSample) {
-    let mut input = sample.to_vec();
-    let config_start = input.len();
-    input.extend_from_slice(&config);
-    let input_length = input.len();
-    (
-        input,
-        EncodedSample {
-            spans: vec![ByteSpan {
-                start: 0,
-                end: config_start,
-            }],
-            config: ByteSpan {
-                start: config_start,
-                end: input_length,
-            },
-            sync: true,
-            duration: 1,
-        },
-    )
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_track_prefix(
-    samples: &[&[u8]],
-    target: usize,
-    replacement: &[u8],
-    config: [u8; 4],
-) -> Av1Result<()> {
-    let mut state = FrameState::new();
-    for (index, sample) in samples.iter().enumerate().take(target.saturating_add(1)) {
-        let bytes = if index == target { replacement } else { sample };
-        let (input, encoded) = coverage_sample(bytes, config);
-        validate_sample(&input, &encoded, &mut state)?;
-        state.__coverage_seed_missing_reference_surfaces();
-    }
-    Ok(())
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_sweep_track(samples: &[&[u8]], config: [u8; 4]) {
-    for (target, sample) in samples.iter().enumerate() {
-        assert!(coverage_track_prefix(samples, target, sample, config).is_ok());
-        for end in 0..sample.len() {
-            let _ = coverage_track_prefix(samples, target, &sample[..end], config);
-        }
-        for index in 0..sample.len() {
-            for replacement in [0, 1, 0x55, 0x7f, 0x80, 0xaa, 0xff] {
-                if sample[index] == replacement {
-                    continue;
-                }
-                let mut mutated = sample.to_vec();
-                mutated[index] = replacement;
-                let _ = coverage_track_prefix(samples, target, &mutated, config);
-            }
-        }
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    transform::__coverage_exercise_private_branches();
-    bit_reader::__coverage_exercise_private_branches();
-    block::__coverage_exercise_private_branches();
-    entropy::__coverage_exercise_private_branches();
-    frame::__coverage_exercise_private_branches();
-    raster::__coverage_exercise_private_branches();
-    sequence::__coverage_exercise_private_branches();
-
-    let valid = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0\x32\x0d\x10\x00\x93\x80\x00\x08\x00\x00\x01\x48\x1a\x7a\xa0";
-    let valid_config = [0x81, 0x40, 0x7c, 0];
-    let (input, sample) = coverage_sample(valid, valid_config);
-    assert_eq!(
-        validate_sample(&input, &sample, &mut FrameState::new()),
-        Ok(())
-    );
-    let header = frame::__coverage_reduced_header_payload();
-    let mut split = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0".to_vec();
-    split.extend_from_slice(&[
-        0x1a,
-        crate::coverage_support::require_ok(
-            u8::try_from(header.len()),
-            "coverage fixture: u8::try_from(header.len())",
-        ),
-    ]);
-    split.extend_from_slice(&header);
-    split.extend_from_slice(&[0x22, 1, 0]);
-    let (input, sample) = coverage_sample(&split, valid_config);
-    assert!(matches!(
-        validate_sample(&input, &sample, &mut FrameState::new()),
-        Err(CodecError::Malformed(message))
-            if message == "invalid AV1 bitstream: entropy symbol coder overread the tile padding"
-    ));
-    let mut pending_then_delimiter = split[..crate::coverage_support::require_some(
-        (split.len()).checked_sub(2),
-        "coverage fixture arithmetic",
-    )]
-        .to_vec();
-    pending_then_delimiter.extend_from_slice(&[0x12, 0]);
-    let (input, sample) = coverage_sample(&pending_then_delimiter, valid_config);
-    assert!(validate_sample(&input, &sample, &mut FrameState::new()).is_err());
-    let mut redundant = b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0".to_vec();
-    for obu_type in [0x1a, 0x3a] {
-        redundant.extend_from_slice(&[
-            obu_type,
-            crate::coverage_support::require_ok(
-                u8::try_from(header.len()),
-                "coverage fixture: u8::try_from(header.len())",
-            ),
-        ]);
-        redundant.extend_from_slice(&header);
-    }
-    redundant.extend_from_slice(&[0x22, 1, 0]);
-    let (input, sample) = coverage_sample(&redundant, valid_config);
-    assert!(matches!(
-        validate_sample(&input, &sample, &mut FrameState::new()),
-        Err(CodecError::Malformed(message))
-            if message == "invalid AV1 bitstream: entropy symbol coder overread the tile padding"
-    ));
-    let invalid_span = EncodedSample {
-        spans: vec![ByteSpan { start: 0, end: 1 }],
-        config: ByteSpan { start: 0, end: 0 },
-        sync: true,
-        duration: 1,
-    };
-    assert!(validate_sample(&[], &invalid_span, &mut FrameState::new()).is_err());
-    for end in 0..valid.len() {
-        let (input, sample) = coverage_sample(&valid[..end], valid_config);
-        let _ = validate_sample(&input, &sample, &mut FrameState::new());
-    }
-    for index in 0..valid.len() {
-        for replacement in 0..=u8::MAX {
-            if valid[index] == replacement {
-                continue;
-            }
-            let mut mutated = valid.to_vec();
-            mutated[index] = replacement;
-            let (input, sample) = coverage_sample(&mutated, valid_config);
-            let _ = validate_sample(&input, &sample, &mut FrameState::new());
-        }
-    }
-
-    let animated: &[&[u8]] = &[
-        b"\x12\x00\x0a\x0e\x00\x00\x00\x03\xbc\xac\xa9\xb5\xf2\x20\x21\xa0\xd0\x80\x32\x13\x10\x00\x83\x80\x00\x00\x80\x00\x00\x00\xeb\xc5\xa6\x2e\x0c\x0d\xd1\x51\x40",
-        b"\x12\x00\x32\x23\x28\x04\xe0\x40\x00\x00\x23\x43\x30\x00\x00\x40\x00\x04\x00\x00\x08\xe4\x66\x90\x91\x47\x7f\x6e\xcc\x05\x23\x9b\xc1\x1c\xc6\x74\xcb\x7e\xe0",
-        b"\x32\x23\x28\x02\xe0\x80\x00\x00\xa3\x44\xc0\x00\x00\x48\x00\x04\x00\x00\x26\x66\xc9\x49\xed\xf9\xfc\xed\x11\x20\x54\x85\xcf\x5f\x49\x98\x10\x5b\x20",
-        b"\x32\x23\x30\x03\xc2\x00\x00\x81\x46\x8c\x80\x00\x00\x90\x00\x08\x00\x1f\x3a\xcd\xf2\xb3\x29\xa3\x70\xb6\x44\xb1\xd9\x5a\x93\x1f\x3c\x56\x60\x14\xc4",
-        b"\x12\x00\x1a\x01\xa8",
-        b"\x12\x00\x32\x1a\x30\x06\x44\x09\x80\x01\x46\x8c\x80\x00\x00\x90\x00\x08\x00\x33\xa1\xc0\x60\x46\x86\x20\x7d\xcf\xf4\xfc",
-        b"\x12\x00\x32\x15\x30\x08\x00\x11\x30\x01\x46\x8c\x80\x00\x00\x90\x00\x08\x00\xb3\x2e\xde\x2e\xcf\x20",
-    ];
-    coverage_sweep_track(animated, [0x81, 0x00, 0x0c, 0]);
-
-    let twelve_bit_alpha: &[&[u8]] = &[
-        valid,
-        b"\x12\x00\x32\x10\x30\x03\x80\x80\x00\x00\x46\xa7\x80\x00\x09\x00\x08\x00\x9c\x50",
-        b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0\x32\x0a\x10\x00\xbe\x00\x00\x09\x00\x00\x0e\x36",
-        b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0\x32\x1c\x10\x00\xbe\x00\x00\x09\x18\x00\x3b\x95\xa6\xa8\x47\x2b\xdf\x67\x4b\xd6\x0e\x45\xbd\xbf\xf5\x1b\x6f\x23\x48\x62",
-        b"\x12\x00\x0a\x0a\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0\x32\x23\x10\x00\xa7\x80\x00\x09\x24\xe0\xff\xfc\xe9\x1e\xd8\x9f\x6e\x05\x5e\x6f\xc7\x36\x3a\x9d\x64\xd6\x35\x31\xf9\xc1\x4d\xfb\x26\x00\xd6\xbc\x5c",
-    ];
-    coverage_sweep_track(twelve_bit_alpha, [0x81, 0x40, 0x7c, 0]);
-
-    let invalid_streams: &[&[u8]] = &[
-        b"\x92\x00",
-        b"\x13\x00",
-        b"\x10",
-        b"\x16",
-        b"\x16\x01\x00",
-        b"\x12\x80",
-        b"\x12\x01",
-        b"\x12\x80\x80\x80\x80\x80\x80\x80\x80",
-        b"\x32\x00",
-        b"\x0a\x09\x18\x19\xbf\xff\x68\x80\x86\x83\x42",
-    ];
-    for stream in invalid_streams {
-        let (input, sample) = coverage_sample(stream, valid_config);
-        let _ = validate_sample(&input, &sample, &mut FrameState::new());
-    }
-    let extension = b"\x16\x00\x00\x0a\x09\x18\x19\xbf\xff\x68\x80\x86\x83\x42\x32\x00";
-    let (input, sample) = coverage_sample(extension, valid_config);
-    let _ = validate_sample(&input, &sample, &mut FrameState::new());
-    let reserved = b"\x4a\x00\x0a\x09\x18\x19\xbf\xff\x68\x80\x86\x83\x42\x32\x00";
-    let (input, sample) = coverage_sample(reserved, valid_config);
-    let _ = validate_sample(&input, &sample, &mut FrameState::new());
-    let (input, sample) = coverage_sample(valid, [0x81, 0x20, 0, 0]);
-    let _ = validate_sample(&input, &sample, &mut FrameState::new());
-
-    let many_delimiters = b"\x12\x00".repeat(MAX_OBUS_PER_SAMPLE.saturating_add(1));
-    let (input, sample) = coverage_sample(&many_delimiters, [0x81, 0x00, 0x0c, 0]);
-    let _ = validate_sample(&input, &sample, &mut FrameState::new());
-
-    let baseline_payload = b"\x18\x19\xbf\xff\x68\x80\x86\x83\x42";
-    let animated_payload = b"\x00\x00\x00\x03\xbc\xac\xa9\xb5\xf2\x20\x21\xa0\xd0\x80";
-    let baseline_spans = [ByteSpan {
-        start: 0,
-        end: baseline_payload.len(),
-    }];
-    let baseline_data = crate::coverage_support::require_ok(
-        SegmentedData::new(baseline_payload, &baseline_spans),
-        "coverage fixture: SegmentedData::new(baseline_payload, &baseline_spans)",
-    );
-    let baseline_header = crate::coverage_support::require_ok(
-        sequence::parse(&baseline_data, 0, baseline_payload.len()),
-        "coverage fixture: sequence::parse(&baseline_data, 0, baseline_payload.len())",
-    );
-    let animated_spans = [ByteSpan {
-        start: 0,
-        end: animated_payload.len(),
-    }];
-    let animated_data = crate::coverage_support::require_ok(
-        SegmentedData::new(animated_payload, &animated_spans),
-        "coverage fixture: SegmentedData::new(animated_payload, &animated_spans)",
-    );
-    let animated_header = crate::coverage_support::require_ok(
-        sequence::parse(&animated_data, 0, animated_payload.len()),
-        "coverage fixture: sequence::parse(&animated_data, 0, animated_payload.len())",
-    );
-    let mut state = FrameState::new();
-    assert_eq!(state.accept_sequence(baseline_header.clone()), Ok(()));
-    assert_eq!(state.accept_sequence(baseline_header), Ok(()));
-    assert!(state.accept_sequence(animated_header.clone()).is_err());
-
-    let (input, sample) = coverage_sample(valid, valid_config);
-    let mut inconsistent_state = FrameState::new();
-    assert_eq!(inconsistent_state.accept_sequence(animated_header), Ok(()));
-    assert!(validate_sample(&input, &sample, &mut inconsistent_state).is_err());
-
-    let _ = validate_plane(
-        &[],
-        &EncodedPlane {
-            samples: Vec::new(),
-        },
-    );
-    let invalid_plane = EncodedPlane {
-        samples: vec![EncodedSample {
-            spans: Vec::new(),
-            config: ByteSpan { start: 0, end: 0 },
-            sync: true,
-            duration: 1,
-        }],
-    };
-    assert!(validate_plane(&[], &invalid_plane).is_err());
-    assert!(
-        validate(&ExtractedAvif {
-            input: &[],
-            still: None,
-            sequence: None,
-            consumed: 0,
-            retained_boxes: Vec::new(),
-            metadata: Vec::new(),
-            source_color: crate::types::SourceColor::new(),
-            auxiliary_relationship: None,
-            auxiliary_relationships: Vec::new(),
-            item_relationships: Vec::new(),
-            premultiplied_relationships: Vec::new(),
-            item_color_properties: Vec::new(),
-            item_icc_profiles: Vec::new(),
-            item_properties: Vec::new(),
-            item_plane_properties: Vec::new(),
-            item_codec_properties: Vec::new(),
-            item_locations: Vec::new(),
-            grid_item_ids: Vec::new(),
-            grid_properties: None,
-            transform: None,
-        })
-        .is_ok()
-    );
-
-    let invalid_plane = || EncodedPlane {
-        samples: vec![EncodedSample {
-            spans: Vec::new(),
-            config: ByteSpan { start: 0, end: 0 },
-            sync: true,
-            duration: 1,
-        }],
-    };
-    assert!(
-        validate(&ExtractedAvif {
-            input: &[],
-            still: Some(StillPayload {
-                color: invalid_plane(),
-                alpha: None,
-            }),
-            sequence: None,
-            consumed: 0,
-            retained_boxes: Vec::new(),
-            metadata: Vec::new(),
-            source_color: crate::types::SourceColor::new(),
-            auxiliary_relationship: None,
-            auxiliary_relationships: Vec::new(),
-            item_relationships: Vec::new(),
-            premultiplied_relationships: Vec::new(),
-            item_color_properties: Vec::new(),
-            item_icc_profiles: Vec::new(),
-            item_properties: Vec::new(),
-            item_plane_properties: Vec::new(),
-            item_codec_properties: Vec::new(),
-            item_locations: Vec::new(),
-            grid_item_ids: Vec::new(),
-            grid_properties: None,
-            transform: None,
-        })
-        .is_err()
-    );
-
-    let valid_plane = || EncodedPlane {
-        samples: vec![EncodedSample {
-            spans: vec![ByteSpan {
-                start: 0,
-                end: valid.len(),
-            }],
-            config: ByteSpan {
-                start: valid.len(),
-                end: input.len(),
-            },
-            sync: true,
-            duration: 1,
-        }],
-    };
-    let valid_sample = || EncodedSample {
-        spans: vec![ByteSpan {
-            start: 0,
-            end: valid.len(),
-        }],
-        config: ByteSpan {
-            start: valid.len(),
-            end: input.len(),
-        },
-        sync: true,
-        duration: 1,
-    };
-    let validated_multi_sample = validate(&ExtractedAvif {
-        input: &input,
-        consumed: 0,
-        retained_boxes: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-        auxiliary_relationship: None,
-        auxiliary_relationships: Vec::new(),
-        item_relationships: Vec::new(),
-        premultiplied_relationships: Vec::new(),
-        item_color_properties: Vec::new(),
-        item_icc_profiles: Vec::new(),
-        item_properties: Vec::new(),
-        item_plane_properties: Vec::new(),
-        item_codec_properties: Vec::new(),
-        item_locations: Vec::new(),
-        grid_item_ids: Vec::new(),
-        grid_properties: None,
-        transform: None,
-        still: Some(StillPayload {
-            color: EncodedPlane {
-                samples: vec![valid_sample(), valid_sample()],
-            },
-            alpha: None,
-        }),
-        sequence: None,
-    });
-    assert!(validated_multi_sample.is_ok_and(|validated| validated.portable_still.is_none()));
-    assert!(
-        validate(&ExtractedAvif {
-            input: &input,
-            still: Some(StillPayload {
-                color: valid_plane(),
-                alpha: Some(invalid_plane()),
-            }),
-            sequence: None,
-            consumed: 0,
-            retained_boxes: Vec::new(),
-            metadata: Vec::new(),
-            source_color: crate::types::SourceColor::new(),
-            auxiliary_relationship: None,
-            auxiliary_relationships: Vec::new(),
-            item_relationships: Vec::new(),
-            premultiplied_relationships: Vec::new(),
-            item_color_properties: Vec::new(),
-            item_icc_profiles: Vec::new(),
-            item_properties: Vec::new(),
-            item_plane_properties: Vec::new(),
-            item_codec_properties: Vec::new(),
-            item_locations: Vec::new(),
-            grid_item_ids: Vec::new(),
-            grid_properties: None,
-            transform: None,
-        })
-        .is_ok_and(|validated| validated.portable_still.is_none())
-    );
-    assert!(
-        validate(&ExtractedAvif {
-            input: &[],
-            still: None,
-            sequence: Some(SequencePayload {
-                color: invalid_plane(),
-                alpha: None,
-                timescale: crate::coverage_support::require_some(
-                    NonZeroU32::new(1),
-                    "coverage fixture: NonZeroU32::new(1)"
-                ),
-                loop_count: crate::types::AnimationLoop::Unspecified,
-            }),
-            consumed: 0,
-            retained_boxes: Vec::new(),
-            metadata: Vec::new(),
-            source_color: crate::types::SourceColor::new(),
-            auxiliary_relationship: None,
-            auxiliary_relationships: Vec::new(),
-            item_relationships: Vec::new(),
-            premultiplied_relationships: Vec::new(),
-            item_color_properties: Vec::new(),
-            item_icc_profiles: Vec::new(),
-            item_properties: Vec::new(),
-            item_plane_properties: Vec::new(),
-            item_codec_properties: Vec::new(),
-            item_locations: Vec::new(),
-            grid_item_ids: Vec::new(),
-            grid_properties: None,
-            transform: None,
-        })
-        .is_err()
-    );
-    assert!(
-        validate(&ExtractedAvif {
-            input: &input,
-            still: None,
-            sequence: Some(SequencePayload {
-                color: valid_plane(),
-                alpha: Some(invalid_plane()),
-                timescale: crate::coverage_support::require_some(
-                    NonZeroU32::new(1),
-                    "coverage fixture: NonZeroU32::new(1)"
-                ),
-                loop_count: crate::types::AnimationLoop::Unspecified,
-            }),
-            consumed: 0,
-            retained_boxes: Vec::new(),
-            metadata: Vec::new(),
-            source_color: crate::types::SourceColor::new(),
-            auxiliary_relationship: None,
-            auxiliary_relationships: Vec::new(),
-            item_relationships: Vec::new(),
-            premultiplied_relationships: Vec::new(),
-            item_color_properties: Vec::new(),
-            item_icc_profiles: Vec::new(),
-            item_properties: Vec::new(),
-            item_plane_properties: Vec::new(),
-            item_codec_properties: Vec::new(),
-            item_locations: Vec::new(),
-            grid_item_ids: Vec::new(),
-            grid_properties: None,
-            transform: None,
-        })
-        .is_err()
-    );
-}
-
-#[cfg(coverage)]
 pub(crate) fn __coverage_entropy_reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>>
 {
     entropy::reference_trace()
 }
 
 #[cfg(coverage)]
-#[coverage(off)]
 pub(crate) fn __coverage_reconstruction(
     input: &[u8],
 ) -> CodecResult<Option<crate::Av1ReconstructionTrace>> {
@@ -1924,29 +1470,6 @@ pub(crate) fn color_conversion_trace(
 }
 
 #[cfg(coverage)]
-#[coverage(off)]
-pub(super) fn __coverage_portable_still() -> PortableStill {
-    PortableStill {
-        width: 4,
-        height: 4,
-        bit_depth: 8,
-        monochrome: false,
-        color_primaries: 1,
-        transfer_characteristics: 13,
-        matrix_coefficients: 6,
-        color_range: true,
-        subsampling_x: false,
-        subsampling_y: false,
-        planes: std::array::from_fn(|_| block::ReconstructedPlane {
-            samples: vec![128; 16],
-        }),
-        alpha_plane: None,
-        entropy_operations: Vec::new(),
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
 pub(crate) fn __coverage_sweep_first_leaf(input: &[u8]) {
     let extracted = crate::coverage_support::require_ok(
         super::samples::validated(input),

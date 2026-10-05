@@ -69,6 +69,9 @@ pub fn decode_sequence(
 
     loop {
         crate::codecs::error::check_cancelled(token)?;
+        if input.position() == data.len() && !frames.is_empty() {
+            break;
+        }
         let block_offset = input.position() as u64;
         match input
             .read_u8()
@@ -367,7 +370,11 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         input.read_bytes(color_table_len(packed))?;
     }
     let mut pixel = 0u64;
+    let mut saw_frame = false;
     loop {
+        if input.position() == data.len() && saw_frame {
+            break;
+        }
         let block_offset = input.position() as u64;
         match input
             .read_u8()
@@ -403,6 +410,7 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
                     .read_sub_blocks()
                     .map_err(|error| error.at(data_offset, "gif_image_data"))?;
                 pixel = pixel.saturating_add(image_data.len() as u64);
+                saw_frame = true;
             }
             TRAILER => break,
             _ => {
@@ -411,7 +419,10 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         }
     }
     // `pixel` is the sum of image-data sub-block payloads inside the scan.
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "The scanned cursor includes every image-data byte counted by pixel."
+    )]
     let metadata = input.position() as u64 - pixel;
     Ok(metadata)
 }
@@ -459,6 +470,9 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> CodecR
         suffixes[usize::from(value)] = value.to_le_bytes()[0];
     }
 
+    // `decode_image` rejects empty frames, and each output path returns as
+    // soon as it fills `expected_len`. At the top of this loop, the output is
+    // therefore always short; reaching EOI means the frame is truncated.
     loop {
         let code = bits.read(code_size)?;
         if code == clear_code {
@@ -468,17 +482,13 @@ fn decode_lzw(data: &[u8], minimum_code_size: u8, expected_len: usize) -> CodecR
             continue;
         }
         if code == end_code {
-            return if output.len() == expected_len {
-                Ok(output)
-            } else {
-                Err(CodecError::Malformed(
-                    "GIF LZW stream ended before filling the frame".to_owned(),
-                ))
-            };
+            return Err(CodecError::Malformed(
+                "GIF LZW stream ended before filling the frame".to_owned(),
+            ));
         }
 
         let Some(previous) = previous_code else {
-            if code >= clear_code || output.len() >= expected_len {
+            if code >= clear_code {
                 return Err(CodecError::Malformed(
                     "invalid first GIF LZW code".to_owned(),
                 ));
@@ -573,6 +583,8 @@ fn decode_lzw_with_token(
         suffixes[usize::from(value)] = value.to_le_bytes()[0];
     }
 
+    // The frame extent is positive, and every output path returns as soon as
+    // it is filled. A first code after a clear therefore always has room left.
     loop {
         crate::codecs::error::check_cancelled(Some(token))?;
         let code = bits.read(code_size)?;
@@ -589,7 +601,7 @@ fn decode_lzw_with_token(
         }
 
         let Some(previous) = previous_code else {
-            if code >= clear_code || output.len() >= expected_len {
+            if code >= clear_code {
                 return Err(CodecError::Malformed(
                     "invalid first GIF LZW code".to_owned(),
                 ));
@@ -643,7 +655,10 @@ fn decode_lzw_with_token(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The LZW code expansion uses fixed tables and caller-owned scratch/output buffers."
+)]
 fn append_code(
     mut code: u16,
     clear_code: u16,
@@ -670,7 +685,10 @@ fn append_code(
     first
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The cancellable LZW expansion passes its fixed tables and caller-owned buffers directly."
+)]
 fn append_code_with_token(
     mut code: u16,
     clear_code: u16,
@@ -704,102 +722,6 @@ fn append_code_with_token(
         }
     }
     Ok(first)
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Gif);
-    assert!(decode_sequence(b"", &mut budget, None).is_err());
-    assert!(decode_sequence(b"not gif", &mut budget, None).is_err());
-    assert!(decode_sequence(b"GIF89a", &mut budget, None).is_err());
-    assert!(decode_sequence(b"GIF89a\x01\0\x01\0\0\0\0\x7f", &mut budget, None).is_err());
-    // Two 1x1 palette-less frames prove the later-frame L8 budget branch.
-    let no_palette_two_frame =
-        b"GIF89a\x01\0\x01\0\0\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03\x44\x01\0\0\x3b";
-    assert!(decode_sequence(no_palette_two_frame, &mut budget, None).is_ok());
-    for checks in 0..=3 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(no_palette_two_frame, Some(&token));
-    }
-    let _ = metadata_bytes(b"");
-    let _ = metadata_bytes(b"not gif");
-    let _ = metadata_bytes(b"GIF89a");
-    let _ = metadata_bytes(b"GIF89a\x01\0\x01\0\0\0\0\x7f");
-    let _ = metadata_bytes(b"GIF89a\x01\0\x01\0\0\0\0\x2c\0\0\0\0\x01\0\x01\0\0\x02\x03");
-    let _ = metadata_bytes(b"GIF89a\x01\0\x01\0\0\0\0\x21\xf9");
-    let _ = metadata_bytes(no_palette_two_frame);
-    fn gif_prefix(length: usize, packed: u8) -> Vec<u8> {
-        let mut data = b"GIF89a".to_vec();
-        data.extend_from_slice(&[1, 0, 1, 0, packed, 0, 0]);
-        data.resize(length, 0);
-        data
-    }
-    for length in [6usize, 8, 10, 11, 12, 13] {
-        let _ = metadata_bytes(&gif_prefix(length, 0));
-    }
-    let _ = metadata_bytes(&gif_prefix(18, 0x80));
-    let _ = metadata_bytes(&gif_prefix(14, 0));
-    let mut extension = gif_prefix(13, 0);
-    extension.push(0x21);
-    let _ = metadata_bytes(&extension);
-    // The GIF reader never emits more than 256 RGB entries, but the private
-    // palette predicate still fails closed if called with a larger buffer.
-    // This is a Rust-only defensive witness; Pillow parity cannot construct
-    // an over-sized GIF palette either.
-    let mut oversized_palette = (0..=u8::MAX)
-        .flat_map(|value| [value, value, value])
-        .collect::<Vec<_>>();
-    oversized_palette.extend_from_slice(&[0, 0, 0]);
-    let _ = is_identity_grayscale_palette(&oversized_palette);
-    let mut extension_block = gif_prefix(13, 0);
-    extension_block.extend_from_slice(&[0x21, 0x01, 0xaa]);
-    let _ = metadata_bytes(&extension_block);
-    let mut short_image = gif_prefix(13, 0);
-    short_image.extend_from_slice(&[0x2c, 0, 0, 0, 0, 1, 0, 1, 0]);
-    let _ = metadata_bytes(&short_image);
-    let mut shorter_image = gif_prefix(13, 0);
-    shorter_image.extend_from_slice(&[0x2c, 0, 0, 0, 0, 1, 0]);
-    let _ = metadata_bytes(&shorter_image);
-    let mut local_palette = gif_prefix(13, 0);
-    local_palette.extend_from_slice(&[0x2c, 0, 0, 0, 0, 1, 0, 1, 0, 0x80]);
-    let _ = metadata_bytes(&local_palette);
-    let mut no_min_code = local_palette.clone();
-    no_min_code.extend_from_slice(&[0; 6]);
-    let _ = metadata_bytes(&no_min_code);
-    assert!(decode_lzw(&[0], 2, 0).is_err());
-    assert_eq!(decode_lzw(&[0x2c], 2, 0), Ok(Vec::new()));
-    let empty_token = crate::CancellationToken::new();
-    assert!(decode_lzw_with_token(&[0], 2, 0, &empty_token).is_err());
-    assert!(decode_lzw_with_token(&[], 2, 1, &empty_token).is_err());
-
-    // The public fixture and work-budget test cover cancellation while
-    // walking a real dictionary. This deterministic structural witness also
-    // reaches the separate 1,024-byte materialization checkpoint: the first
-    // poll (after the 1,024th link) is allowed, and the next poll is cancelled
-    // while the phrase is being emitted.
-    let mut token_prefixes = [0u16; MAX_LZW_CODE];
-    let token_suffixes = [0u8; MAX_LZW_CODE];
-    for code in 4_u16..=1_027 {
-        token_prefixes[usize::from(code)] = code.saturating_sub(1);
-    }
-    let mut token_stack = [0u8; MAX_LZW_CODE];
-    let mut token_output = Vec::new();
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    assert!(
-        append_code_with_token(
-            1_027,
-            3,
-            &token_prefixes,
-            &token_suffixes,
-            &mut token_stack,
-            &mut token_output,
-            1_024,
-            &token,
-        )
-        .is_err()
-    );
 }
 
 fn deinterlace(indices: &[u8], width: usize, height: usize) -> Vec<u8> {

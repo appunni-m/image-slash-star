@@ -49,6 +49,13 @@
 
 - Use manifest-driven fixtures for inputs, exact outputs, and errors. Do not
   replace parity assertions with byte-size checks or synthetic magic prefixes.
+- For codec coverage work, prefer public manifest parity cases and their exact
+  Pillow references. When a deterministic target-internal fault cannot be
+  reached by ordinary input, record it as an explicitly typed target-only
+  fault-contract row in the shared case index, with a `not_applicable` oracle
+  status and a separately reported result. Never count that result as Pillow
+  parity. Do not add or enable private unit tests solely to raise codec
+  coverage.
 - When public transfer-model fields need validation, use the closest complete
   Pillow source transformation in the manifest wherever Pillow exposes one.
   Never label a model-only defensive state as Pillow behavior.
@@ -56,6 +63,8 @@
   line, branch, function, and region totals without source exclusions. The
   owner-approved alpha release floors are 59%, 46%, 52%, and 58% respectively.
   `make coverage-complete` retains the 100% goal; all executed tests must pass.
+- `make verify` rejects `coverage(off)` attributes in Rust source and tests.
+  Keep defensive checks and coverage-only observers in the reported totals.
 - Run formatting and relevant manifest/feature/target tests after changes.
 
 ## Release Workflows
@@ -74,9 +83,25 @@ Strict Clippy is mandatory. The acceptance command is:
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 ```
 
+- `make lint-x86-simd` applies the same all-target, all-feature Clippy gate to
+  the x86-64 SSE2 baseline and an AVX2 build in separate Cargo target
+  directories. These compile checks do not replace runtime parity or benchmarks
+  on matching hardware.
+- `make lint` also runs nightly Clippy with `cfg(coverage)` and
+  `cfg(coverage_nightly)` so coverage-only hooks and integration-test code
+  receive the same strict gate. This is compile-time validation and does not
+  affect release code or runtime performance.
+- `make test-feature-matrix` runs strict library Clippy and rustdoc for every
+  `wasm32-unknown-unknown` feature lane. Its native and WASI lanes run the full
+  feature-gated integration tests, but do not repeat Clippy for each feature
+  subset. Run strict Clippy for a specific native or WASI feature lane when a
+  change touches code gated specifically to that target or feature selection.
 - Fix every diagnostic; do not use a warning baseline to declare completion.
-- Run equivalent strict commands for every supported native/WASM compilation
-  target and isolated feature lane; `--all-targets` alone does not cross-compile.
+- Deny `clippy::allow_attributes_without_reason`; every `#[allow]` or `#[expect]`
+  must carry an accurate local `reason = "..."`. Clippy enforces that a reason
+  is present; review must still confirm that it explains the exception.
+- `--all-targets` alone does not cross-compile; use the appropriate target
+  command when validating target-specific code.
 - Do not add broad `allow` attributes to silence diagnostics. A narrow
   false-positive allowance requires an adjacent invariant explaining why the
   warned behavior is correct and unreachable for invalid input.

@@ -541,18 +541,46 @@ class VP8LParser:
 def vp8l_payload(data: bytes) -> bytes:
     if data[:4] != b"RIFF" or data[8:12] != b"WEBP":
         raise ParseError("not a WebP RIFF file", code="invalid_webp_riff")
-    offset = 12
-    while offset + 8 <= len(data):
-        tag = data[offset : offset + 4]
-        size = int.from_bytes(data[offset + 4 : offset + 8], "little")
-        start = offset + 8
-        end = start + size
-        if end > len(data):
-            raise ParseError("truncated RIFF chunk", code="truncated_riff_chunk")
-        if tag == b"VP8L":
-            return data[start:end]
-        offset = end + (size & 1)
-    raise ParseError("WebP has no VP8L chunk", code="missing_vp8l_chunk")
+
+    def find_vp8l(start: int, limit: int, *, descend_anmf: bool) -> bytes | None:
+        offset = start
+        while offset < limit:
+            if offset + 8 > limit:
+                raise ParseError(
+                    "truncated RIFF chunk header",
+                    code="truncated_riff_chunk_header",
+                )
+            tag = data[offset : offset + 4]
+            size = int.from_bytes(data[offset + 4 : offset + 8], "little")
+            payload_start = offset + 8
+            payload_end = payload_start + size
+            if payload_end > limit:
+                raise ParseError("truncated RIFF chunk", code="truncated_riff_chunk")
+            next_offset = payload_end + (size & 1)
+            if next_offset > limit:
+                raise ParseError("truncated RIFF chunk padding", code="truncated_riff_padding")
+            if tag == b"VP8L":
+                return data[payload_start:payload_end]
+            if tag == b"ANMF" and descend_anmf:
+                if size < 16:
+                    raise ParseError(
+                        "truncated animation frame header",
+                        code="truncated_anmf_header",
+                    )
+                nested = find_vp8l(payload_start + 16, payload_end, descend_anmf=False)
+                if nested is not None:
+                    return nested
+            offset = next_offset
+        return None
+
+    # Prefer a top-level image bitstream when present; animated VP8L streams
+    # live in ANMF subchunks and are the fallback for container inspection.
+    payload = find_vp8l(12, len(data), descend_anmf=False)
+    if payload is None:
+        payload = find_vp8l(12, len(data), descend_anmf=True)
+    if payload is None:
+        raise ParseError("WebP has no VP8L chunk", code="missing_vp8l_chunk")
+    return payload
 
 
 def inspect_path(path: Path) -> dict:

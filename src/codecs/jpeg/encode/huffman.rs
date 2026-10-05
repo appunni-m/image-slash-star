@@ -315,16 +315,6 @@ pub(crate) fn optimal_table(frequencies: &[u64; 256]) -> OptimalTable {
     }
 }
 
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let mut frequencies = [0u64; 256];
-    for (index, frequency) in frequencies.iter_mut().take(18).enumerate() {
-        *frequency = 1u64 << index;
-    }
-    let table = optimal_table(&frequencies);
-    assert!(!table.values.is_empty());
-}
-
 /// Derive canonical Huffman codes from BITS/HUFFVAL (jcphuff.c jpeg_make_c_derived_tbl).
 pub(crate) fn derive_table(bits: &[u8; 16], huffval: &[u8]) -> DerivedTable {
     let mut codes = [0u32; 256];

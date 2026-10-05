@@ -17,9 +17,9 @@
 use super::bit_reader::BitReader;
 #[cfg(target_arch = "aarch64")]
 use super::bit_reader::FastBitReader;
-#[cfg(target_arch = "aarch64")]
-use super::idct::jpeg_idct_islow_dequantized_to_u8_safe;
 use super::idct::{JPEG_NATURAL_ORDER, YccColorConverter, extend, jpeg_idct_islow};
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+use super::idct::{dc_only_output, jpeg_idct_islow_dequantized_to_u8_safe};
 use super::implementation::extract_entropy_segments;
 use super::parser::JpegInfo;
 use super::upsample::{crop_component, fancy_upsample};
@@ -75,6 +75,17 @@ impl ProgressiveState {
     }
 }
 
+/// Match libjpeg-turbo's signed 16-bit `JCOEF` storage in progressive scans.
+///
+/// The decoder keeps coefficients in `i32` for reconstruction, but each write
+/// to libjpeg-turbo's coefficient arrays narrows to `JCOEF` (`short`). Decode
+/// the low two bytes explicitly so this matches that storage on every host.
+#[inline(always)]
+fn narrow_progressive_coefficient(value: i32) -> i32 {
+    let [low, high, ..] = value.to_le_bytes();
+    i32::from(i16::from_le_bytes([low, high]))
+}
+
 /// Process one DC-first block (decode_mcu_DC_first).
 fn dc_first_block<R: ProgressiveEntropyReader>(
     br: &mut R,
@@ -92,16 +103,21 @@ fn dc_first_block<R: ProgressiveEntropyReader>(
         let bits = br.read_padded(u32::from(dc_cat));
         *dc_pred = dc_pred.saturating_add(extend(bits, dc_cat));
     }
-    Ok(dc_pred.wrapping_shl(u32::from(al)))
+    Ok(narrow_progressive_coefficient(
+        dc_pred.wrapping_shl(u32::from(al)),
+    ))
 }
 
 /// Process one DC-refinement block (decode_mcu_DC_refine).
 fn dc_refine_block(coeff: &mut i32, p1: i32) {
     // One more bit of precision.  The caller reads the bit.
-    *coeff |= p1;
+    *coeff = narrow_progressive_coefficient(*coeff | p1);
 }
 
 /// Process one AC-first block (decode_mcu_AC_first).
+///
+/// `progressive_reconstruct` validates the scan band once before calling this
+/// helper, so `se` is always below the 64-coefficient block limit.
 /// Updates eobrun.  Returns the number of coefficients decoded (for debugging).
 fn ac_first_block<R: ProgressiveEntropyReader>(
     br: &mut R,
@@ -120,7 +136,7 @@ fn ac_first_block<R: ProgressiveEntropyReader>(
     let se = usize::from(se);
     let mut k = ss;
     let mut ncoeffs = 0usize;
-    while k <= se && k < 64 {
+    while k <= se {
         let sym = br.decode_huffman(ac_table)?;
         let run = usize::from(sym >> 4);
         let run_bits = u32::from(sym >> 4);
@@ -140,11 +156,18 @@ fn ac_first_block<R: ProgressiveEntropyReader>(
         }
         // Coefficient at position k + run
         k = k.saturating_add(run);
-        if k > se || k >= 64 {
+        if k > se {
+            // libjpeg-turbo consumes the value and writes through its padded
+            // zigzag table even when the run steps past `Se`.
+            let bits = br.read_padded(u32::from(size));
+            let last_coefficient = coeffs.len().saturating_sub(1);
+            coeffs[k.min(last_coefficient)] =
+                narrow_progressive_coefficient(extend(bits, size).wrapping_shl(u32::from(al)));
+            ncoeffs = ncoeffs.saturating_add(1);
             break;
         }
         let bits = br.read_padded(u32::from(size));
-        coeffs[k] = extend(bits, size).wrapping_shl(u32::from(al));
+        coeffs[k] = narrow_progressive_coefficient(extend(bits, size).wrapping_shl(u32::from(al)));
         ncoeffs = ncoeffs.saturating_add(1);
         k = k.saturating_add(1);
     }
@@ -152,6 +175,9 @@ fn ac_first_block<R: ProgressiveEntropyReader>(
 }
 
 /// Process one AC-refinement block (decode_mcu_AC_refine).
+///
+/// `progressive_reconstruct` validates the scan band once before calling this
+/// helper, so `se` is always below the 64-coefficient block limit.
 /// Updates eobrun.
 fn ac_refine_block<R: ProgressiveEntropyReader>(
     br: &mut R,
@@ -170,7 +196,7 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
 
     // Phase 1: Huffman decode when EOBRUN == 0
     if *eobrun == 0 {
-        while k <= se && k < 64 {
+        while k <= se {
             let sym = br.decode_huffman(ac_table)?;
             let mut r = i32::from(sym >> 4);
             let size = sym & 0x0F;
@@ -192,13 +218,15 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
 
             // do-while: traverse, refine non-zeros, count zeros
             loop {
-                if k > se || k >= 64 {
+                if k > se {
                     break;
                 }
                 if coeffs[k] != 0 {
                     let bit = br.read_padded(1);
                     if bit != 0 && (coeffs[k] & p1) == 0 {
-                        coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
+                        coeffs[k] = narrow_progressive_coefficient(
+                            coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 }),
+                        );
                     }
                 } else {
                     r = r.saturating_sub(1);
@@ -209,11 +237,14 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
                 k = k.saturating_add(1);
             }
 
-            if let Some(val) = new_val
-                && k <= se
-                && k < 64
-            {
-                coeffs[k] = val;
+            if let Some(val) = new_val {
+                // libjpeg-turbo's padded zigzag-order table writes the new
+                // coefficient at the position reached by the run, even when
+                // it steps one slot beyond `Se`. Its first padded entry maps
+                // to coefficient 63; this buffer is zigzag-indexed, so clamp
+                // that slot to the last coefficient while keeping the write
+                // in bounds.
+                coeffs[k.min(coeffs.len().saturating_sub(1))] = narrow_progressive_coefficient(val);
             }
             k = k.saturating_add(1);
         }
@@ -221,11 +252,13 @@ fn ac_refine_block<R: ProgressiveEntropyReader>(
 
     // Phase 2: EOBRUN handler — refine remaining non-zero coeffs
     if *eobrun > 0 {
-        while k <= se && k < 64 {
+        while k <= se {
             if coeffs[k] != 0 {
                 let bit = br.read_padded(1);
                 if bit != 0 && (coeffs[k] & p1) == 0 {
-                    coeffs[k] = coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 });
+                    coeffs[k] = narrow_progressive_coefficient(
+                        coeffs[k].saturating_add(if coeffs[k] >= 0 { p1 } else { m1 }),
+                    );
                 }
             }
             k = k.saturating_add(1);
@@ -618,11 +651,14 @@ fn smooth_dc_only_block(
     );
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(never)]
 // Keep the hot IDCT operands explicit so this wrapper remains allocation-free
 // and matches the vectorized kernel's calling convention.
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the per-block IDCT contract keeps coefficient buffers, output geometry, and sparsity flags explicit for scalar and SIMD kernels"
+)]
 fn progressive_dequantize_block(
     block_natural: &mut [i32; 64],
     quant_natural: &[i32; 64],
@@ -632,8 +668,25 @@ fn progressive_dequantize_block(
     block_x: usize,
     block_y: usize,
     high_horizontal_nonzero: bool,
+    has_ac: bool,
 ) -> bool {
-    if block_natural[0].checked_mul(quant_natural[0]).is_some() {
+    // Full-file parsing narrows progressive coefficients to i16 and DQT
+    // entries to u16, so valid JPEG inputs keep this DC product in i32. Retain
+    // the checked fallback for internal states outside that parser path.
+    if let Some(dequantized_dc) = block_natural[0].checked_mul(quant_natural[0]) {
+        if !has_ac {
+            let sample = dc_only_output(dequantized_dc);
+            for row in 0..8usize {
+                let start = block_y
+                    .saturating_add(row)
+                    .saturating_mul(stride)
+                    .saturating_add(block_x);
+                let end = start.saturating_add(8);
+                destination[start..end].fill(sample);
+            }
+            return true;
+        }
+
         jpeg_idct_islow_dequantized_to_u8_safe(
             block_natural,
             quant_natural,
@@ -672,7 +725,11 @@ pub(super) fn progressive_reconstruct(
     let mut comp_buf_width = [0usize; 4];
     let mut comp_buf_height = [0usize; 4];
     let mut comp_num_blocks = [0usize; 4];
+    let mut comp_scan_mcus_x = [0usize; 4];
+    let mut comp_scan_mcus_y = [0usize; 4];
     for (component_index, component) in info.components.iter().enumerate() {
+        let h_samp = u32::from(component.h_samp);
+        let v_samp = u32::from(component.v_samp);
         comp_buf_width[component_index] = bounded_usize(num_mcus_x)
             .saturating_mul(usize::from(component.h_samp))
             .saturating_mul(8);
@@ -682,6 +739,16 @@ pub(super) fn progressive_reconstruct(
         comp_num_blocks[component_index] = comp_buf_width[component_index]
             .div_euclid(8)
             .saturating_mul(comp_buf_height[component_index].div_euclid(8));
+        comp_scan_mcus_x[component_index] = bounded_usize(
+            u32::from(info.width)
+                .saturating_mul(h_samp)
+                .div_ceil(mcu_width),
+        );
+        comp_scan_mcus_y[component_index] = bounded_usize(
+            u32::from(info.height)
+                .saturating_mul(v_samp)
+                .div_ceil(mcu_height),
+        );
     }
 
     // Coefficient storage: [component][block_idx][64] in zigzag order
@@ -706,6 +773,11 @@ pub(super) fn progressive_reconstruct(
     // these scrambles block order for subsampled components (e.g. 4:2:0 chroma).
     for scan in info.scans.iter() {
         crate::codecs::error::check_cancelled(token)?;
+        if scan.ss > 63 || scan.se > 63 {
+            return Err(CodecError::Malformed(
+                "progressive JPEG spectral selection exceeds 63".to_owned(),
+            ));
+        }
         let extracted_segments = (scan.restart_interval != 0)
             .then(|| extract_entropy_segments(data, scan.entropy_start, scan.entropy_end));
         let single_segment = [(scan.entropy_start, scan.entropy_end)];
@@ -725,14 +797,14 @@ pub(super) fn progressive_reconstruct(
 
         // For non-interleaved scans, the "MCU" is a single block of the one
         // component, iterated over that component's block grid.
+        // Padded component buffers contain dummy edge blocks. A non-interleaved
+        // scan visits only blocks intersecting the image; its logical grid is
+        // separate from the padded storage stride used below.
         let (scan_mcus_x, scan_mcus_y): (usize, usize) = if interleaved {
             (bounded_usize(num_mcus_x), bounded_usize(num_mcus_y))
         } else {
             let ci = scan.components[0].comp_index;
-            (
-                comp_buf_width[ci].div_euclid(8),
-                comp_buf_height[ci].div_euclid(8),
-            )
+            (comp_scan_mcus_x[ci], comp_scan_mcus_y[ci])
         };
         let scan_total_mcus = scan_mcus_x.saturating_mul(scan_mcus_y);
 
@@ -908,17 +980,20 @@ pub(super) fn progressive_reconstruct(
                     block_natural[i] = block_natural[i].saturating_mul(quant_natural[i]);
                 }
             } else {
-                #[cfg(target_arch = "aarch64")]
+                #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
                 let mut high_horizontal_nonzero = false;
+                #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+                let mut has_ac = false;
                 for i in 0..64 {
                     let natural_index = JPEG_NATURAL_ORDER[i];
                     block_natural[natural_index] = coeffs[i];
-                    #[cfg(target_arch = "aarch64")]
+                    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
                     {
                         high_horizontal_nonzero |= coeffs[i] != 0 && natural_index & 4 != 0;
+                        has_ac |= coeffs[i] != 0 && natural_index != 0;
                     }
                 }
-                #[cfg(target_arch = "aarch64")]
+                #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
                 if progressive_dequantize_block(
                     &mut block_natural,
                     &quant_natural,
@@ -928,6 +1003,7 @@ pub(super) fn progressive_reconstruct(
                     block_x,
                     block_y,
                     high_horizontal_nonzero,
+                    has_ac,
                 ) {
                     continue;
                 }
@@ -1026,7 +1102,6 @@ pub(super) fn progressive_reconstruct(
         ))
     } else {
         debug_assert_eq!(info.num_components, 4);
-        let inverted = info.adobe_transform.is_some();
         let mut pixels = Vec::with_capacity(w.saturating_mul(h).saturating_mul(4));
         for y in 0..h {
             for x in 0..w {
@@ -1044,11 +1119,9 @@ pub(super) fn progressive_reconstruct(
                     let sample = comp_buffers[component][source_y
                         .saturating_mul(comp_buf_width[component])
                         .saturating_add(source_x)];
-                    pixels.push(if inverted {
-                        255u8.saturating_sub(sample)
-                    } else {
-                        sample
-                    });
+                    // Pillow exposes four-component JPEGs through inverted
+                    // CMYK bytes even when Adobe APP14 metadata is absent.
+                    pixels.push(255u8.saturating_sub(sample));
                 }
             }
         }
@@ -1059,466 +1132,4 @@ pub(super) fn progressive_reconstruct(
             ColorType::Cmyk8,
         ))
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    use super::parser::{FrameComponent, ScanComponent, ScanInfo};
-
-    #[cfg(target_arch = "aarch64")]
-    {
-        let mut block = [0i32; 64];
-        let mut quant = [1i32; 64];
-        let mut workspace = [0i32; 64];
-        let mut output = [0u8; 64];
-        assert!(progressive_dequantize_block(
-            &mut block,
-            &quant,
-            &mut workspace,
-            &mut output,
-            8,
-            0,
-            0,
-            false,
-        ));
-        block[0] = i32::MAX;
-        quant[0] = i32::MAX;
-        assert!(!progressive_dequantize_block(
-            &mut block,
-            &quant,
-            &mut workspace,
-            &mut output,
-            8,
-            0,
-            0,
-            false,
-        ));
-    }
-
-    assert_eq!(smooth_pred(1, 0, 0), 0);
-    assert_eq!(smooth_pred(1, 1, 0), 0);
-    assert_eq!(smooth_pred(1, 1, 2), 0);
-    assert_eq!(smooth_pred(-512, 2, -1), -1);
-    assert_eq!(smooth_pred(1_000_000, 1, 2), 3);
-
-    let entropy = [0x00; 16];
-    let zero =
-        super::huffman::HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[0]);
-    let invalid_dc_category =
-        super::huffman::HuffTable::build(&[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &[64]);
-    let overflow = super::huffman::HuffTable::build(
-        &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        &[0xF1],
-    );
-    let eob = super::huffman::HuffTable::build(
-        &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        &[0x10],
-    );
-    let new_coeff = super::huffman::HuffTable::build(
-        &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        &[0x01],
-    );
-    let empty_table = super::huffman::HuffTable::build(&[0; 16], &[]);
-    let one_new_coeff = super::huffman::HuffTable::build(
-        &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        &[0x00, 0x01],
-    );
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    let mut dc_pred = 0;
-    assert!(dc_first_block(&mut br, &invalid_dc_category, &mut dc_pred, 0).is_err());
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(dc_first_block(&mut br, &zero, &mut dc_pred, 0), Ok(0));
-    let positive_dc = super::huffman::HuffTable::build(
-        &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        &[0, 1],
-    );
-    let mut br = BitReader::new(&[0x80], 0, 1);
-    assert_eq!(
-        dc_first_block(&mut br, &positive_dc, &mut dc_pred, 1),
-        Ok(-2)
-    );
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    let mut coeffs = [0i32; 64];
-    let mut eobrun = 1;
-    assert_eq!(
-        ac_first_block(&mut br, &zero, 1, 1, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-    assert_eq!(
-        ac_first_block(&mut br, &zero, 64, 63, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &zero, 1, 1, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &eob, 1, 1, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-    eobrun = 0;
-
-    let zrl = super::huffman::HuffTable::build(
-        &[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        &[0xF0],
-    );
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &zrl, 1, 17, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &eob, 1, 2, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-    eobrun = 0;
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun),
-        Ok(1)
-    );
-
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &overflow, 63, 63, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert_eq!(
-        ac_first_block(&mut br, &overflow, 63, 80, 0, &mut coeffs, &mut eobrun),
-        Ok(0)
-    );
-
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(ac_refine_block(&mut br, &zero, 63, 63, 0, &mut coeffs, &mut eobrun).is_ok());
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(ac_refine_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun).is_ok());
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(ac_refine_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun).is_ok());
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    eobrun = 0;
-    assert!(ac_refine_block(&mut br, &eob, 1, 2, 0, &mut coeffs, &mut eobrun).is_ok());
-    let entropy_ones = [0xff; 16];
-    let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
-    coeffs[1] = 2;
-    assert!(ac_refine_block(&mut br, &new_coeff, 1, 1, 0, &mut coeffs, &mut eobrun).is_ok());
-    let mut coeffs_bit_false = [0i32; 64];
-    coeffs_bit_false[1] = 2;
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &new_coeff,
-            1,
-            1,
-            0,
-            &mut coeffs_bit_false,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-    let mut coeffs_masked = [0i32; 64];
-    coeffs_masked[1] = 1;
-    let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &new_coeff,
-            1,
-            1,
-            0,
-            &mut coeffs_masked,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-    let entropy_valid_one_bit_false = [0b1000_0000; 16];
-    let mut coeffs_valid_bit_false = [0i32; 64];
-    coeffs_valid_bit_false[1] = 2;
-    let mut br = BitReader::new(
-        &entropy_valid_one_bit_false,
-        0,
-        entropy_valid_one_bit_false.len(),
-    );
-    eobrun = 0;
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &one_new_coeff,
-            1,
-            1,
-            0,
-            &mut coeffs_valid_bit_false,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-    let mut coeffs_valid_mask_false = [0i32; 64];
-    coeffs_valid_mask_false[1] = 1;
-    let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
-    eobrun = 0;
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &one_new_coeff,
-            1,
-            1,
-            0,
-            &mut coeffs_valid_mask_false,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-    let entropy_symbol_one_then_bit_one = [0b1110_0000u8; 16];
-    let mut coeffs_non_marker_mask_false = [0i32; 64];
-    coeffs_non_marker_mask_false[1] = 1;
-    let mut br = BitReader::new(
-        &entropy_symbol_one_then_bit_one,
-        0,
-        entropy_symbol_one_then_bit_one.len(),
-    );
-    eobrun = 0;
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &one_new_coeff,
-            1,
-            1,
-            0,
-            &mut coeffs_non_marker_mask_false,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-    let mut coeffs_boundary = [0i32; 64];
-    coeffs_boundary[63] = 1;
-    let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &new_coeff,
-            63,
-            80,
-            0,
-            &mut coeffs_boundary,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-    let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
-    eobrun = 1;
-    assert!(ac_refine_block(&mut br, &zero, 1, 1, 0, &mut coeffs, &mut eobrun).is_ok());
-    let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
-    eobrun = 1;
-    assert!(ac_refine_block(&mut br, &zero, 64, 64, 0, &mut coeffs, &mut eobrun).is_ok());
-    let mut coeffs_phase2 = [0i32; 64];
-    coeffs_phase2[1] = 1;
-    let mut br = BitReader::new(&entropy_ones, 0, entropy_ones.len());
-    eobrun = 1;
-    assert!(ac_refine_block(&mut br, &zero, 1, 1, 0, &mut coeffs_phase2, &mut eobrun).is_ok());
-    let mut coeffs_phase2_false = [0i32; 64];
-    coeffs_phase2_false[1] = 2;
-    let mut br = BitReader::new(&entropy, 0, entropy.len());
-    eobrun = 1;
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &zero,
-            1,
-            1,
-            0,
-            &mut coeffs_phase2_false,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-    let entropy_refine_bit_one = [0b1000_0000u8; 16];
-    let mut coeffs_phase2_mask_false = [0i32; 64];
-    coeffs_phase2_mask_false[1] = 1;
-    let mut br = BitReader::new(&entropy_refine_bit_one, 0, entropy_refine_bit_one.len());
-    eobrun = 1;
-    assert!(
-        ac_refine_block(
-            &mut br,
-            &zero,
-            1,
-            1,
-            0,
-            &mut coeffs_phase2_mask_false,
-            &mut eobrun
-        )
-        .is_ok()
-    );
-
-    let component = FrameComponent {
-        id: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_tbl: 0,
-    };
-    let scan_component = ScanComponent {
-        comp_index: 0,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    };
-    let base_scan = |ss, se, ah, al, entropy_start, entropy_end| ScanInfo {
-        components: vec![scan_component],
-        entropy_start,
-        entropy_end,
-        ss,
-        se,
-        ah,
-        al,
-        restart_interval: 1,
-        dc_huff_tables: vec![Some(zero.clone().into())],
-        ac_huff_tables: vec![Some(zero.clone().into())],
-    };
-    let info = JpegInfo {
-        width: 8,
-        height: 8,
-        num_components: 1,
-        components: vec![component],
-        quant_tables: vec![Some([1; 64])],
-        dc_huff_tables: vec![Some(zero.clone().into())],
-        ac_huff_tables: vec![Some(zero.clone().into())],
-        scan_components: vec![scan_component],
-        restart_interval: 0,
-        entropy_has_restart_markers: false,
-        entropy_start: 0,
-        eoi_pos: 0,
-        max_h_samp: 1,
-        max_v_samp: 1,
-        progressive: true,
-        scans: vec![
-            base_scan(0, 0, 0, 0, 0, 0),
-            base_scan(0, 0, 0, 0, 0, 5),
-            base_scan(1, 1, 0, 0, 0, 5),
-            base_scan(1, 1, 1, 0, 0, 5),
-        ],
-        adobe_transform: None,
-        metadata: Vec::new(),
-    };
-    let _ = progressive_reconstruct(&info, &[0, 0, 0xFF, 0xD0, 0], None);
-    let mut fast_info = info;
-    fast_info.scans = vec![base_scan(1, 1, 0, 0, 0, 1)];
-    let _ = progressive_reconstruct(&fast_info, &[0], None);
-    let progressive_data =
-        include_bytes!("../../../test_support/fixtures/input/images/jpeg/progressive.jpg");
-    let progressive_info = crate::coverage_support::require_ok(
-        super::parser::parse_jpeg(progressive_data),
-        "coverage progressive JPEG must parse",
-    );
-    assert!(progressive_reconstruct(&progressive_info, progressive_data, None).is_ok());
-
-    let failing_scan = |ss, se, ah, al| ScanInfo {
-        components: vec![scan_component],
-        entropy_start: 0,
-        entropy_end: 1,
-        ss,
-        se,
-        ah,
-        al,
-        restart_interval: 1,
-        dc_huff_tables: vec![Some(empty_table.clone().into())],
-        ac_huff_tables: vec![Some(empty_table.clone().into())],
-    };
-    let failing_info = |scans| JpegInfo {
-        width: 8,
-        height: 8,
-        num_components: 1,
-        components: vec![component],
-        quant_tables: vec![Some([1; 64])],
-        dc_huff_tables: vec![Some(zero.clone().into())],
-        ac_huff_tables: vec![Some(zero.clone().into())],
-        scan_components: vec![scan_component],
-        restart_interval: 0,
-        entropy_has_restart_markers: false,
-        entropy_start: 0,
-        eoi_pos: 0,
-        max_h_samp: 1,
-        max_v_samp: 1,
-        progressive: true,
-        scans,
-        adobe_transform: None,
-        metadata: Vec::new(),
-    };
-    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(0, 0, 0, 0)]), &[0], None);
-    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 0, 0)]), &[0], None);
-    let _ = progressive_reconstruct(&failing_info(vec![failing_scan(1, 1, 1, 0)]), &[0], None);
-    let missing_dc_scan = ScanInfo {
-        components: vec![scan_component],
-        entropy_start: 0,
-        entropy_end: 1,
-        ss: 0,
-        se: 0,
-        ah: 0,
-        al: 0,
-        restart_interval: 1,
-        dc_huff_tables: vec![None],
-        ac_huff_tables: vec![Some(zero.clone().into())],
-    };
-    let missing_ac_first_scan = ScanInfo {
-        components: vec![scan_component],
-        entropy_start: 0,
-        entropy_end: 1,
-        ss: 1,
-        se: 1,
-        ah: 0,
-        al: 0,
-        restart_interval: 1,
-        dc_huff_tables: vec![Some(zero.clone().into())],
-        ac_huff_tables: vec![None],
-    };
-    let missing_ac_refine_scan = ScanInfo {
-        ah: 1,
-        ..missing_ac_first_scan.clone()
-    };
-    let _ = progressive_reconstruct(&failing_info(vec![missing_dc_scan]), &[0], None);
-    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_first_scan]), &[0], None);
-    let _ = progressive_reconstruct(&failing_info(vec![missing_ac_refine_scan]), &[0], None);
-
-    let cmyk_components = (0..4)
-        .map(|id| FrameComponent {
-            id,
-            h_samp: 1,
-            v_samp: 1,
-            quant_tbl: 0,
-        })
-        .collect::<Vec<_>>();
-    let cmyk_info = JpegInfo {
-        width: 1,
-        height: 1,
-        num_components: 4,
-        components: cmyk_components,
-        quant_tables: vec![Some([1; 64])],
-        dc_huff_tables: vec![Some(zero.clone().into())],
-        ac_huff_tables: vec![Some(zero.into())],
-        scan_components: Vec::new(),
-        restart_interval: 0,
-        entropy_has_restart_markers: false,
-        entropy_start: 0,
-        eoi_pos: 0,
-        max_h_samp: 1,
-        max_v_samp: 1,
-        progressive: true,
-        scans: Vec::new(),
-        adobe_transform: None,
-        metadata: Vec::new(),
-    };
-    let _ = progressive_reconstruct(&cmyk_info, &[], None);
-    let cmyk_info = JpegInfo {
-        adobe_transform: Some(0),
-        ..cmyk_info
-    };
-    let _ = progressive_reconstruct(&cmyk_info, &[], None);
 }

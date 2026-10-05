@@ -182,7 +182,7 @@ pub(crate) fn fdct_islow(data: &mut [i32; 64]) {
     }
 }
 
-#[allow(
+#[expect(
     clippy::arithmetic_side_effects,
     reason = "valid level-shifted JPEG samples keep every four-lane FDCT intermediate in i32 range"
 )]
@@ -240,7 +240,7 @@ fn fdct_line_four(values: [i32x4; 8], first_pass: bool) -> [i32x4; 8] {
     ]
 }
 
-#[allow(
+#[expect(
     clippy::arithmetic_side_effects,
     reason = "the fixed JPEG descale shifts are 2, 11, or 15 and intermediates are in range"
 )]
@@ -253,11 +253,6 @@ fn fdct_descale_four(value: i32x4, shift: u32) -> i32x4 {
         _ => i32x4::ZERO,
     };
     (value + bias).unbounded_shr_scalar(shift)
-}
-
-#[cfg(coverage)]
-pub(super) fn __coverage_exercise_private_branches() {
-    let _ = fdct_descale_four(i32x4::ZERO, 0);
 }
 
 #[inline(always)]

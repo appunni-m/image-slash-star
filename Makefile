@@ -18,10 +18,11 @@ help:
 	@printf "  make docs-build       Build and validate the Pages site\n"
 	@printf "  make docs-serve       Preview the site at localhost:8000\n"
 	@printf "  make bench-setup      Build the pinned TurboJPEG benchmark oracle\n"
-	@printf "  make bench            Run the complete JPEG comparison\n"
+	@printf "  make bench            Run the complete JPEG comparison (BENCH_OUTPUT, BENCH_TARGET_DIR, BENCH_ROUNDS)\n"
 	@printf "  make fmt              Check formatting\n"
 	@printf "  make verify           Run generated, claim, roadmap, and legal checks\n"
-	@printf "  make lint             Run strict Clippy and benchmark lint\n"
+	@printf "  make lint             Run strict Clippy for debug/release, coverage hooks, and benchmark code\n"
+	@printf "  make lint-x86-simd    Lint the x86-64 SSE2 baseline and AVX2 builds\n"
 	@printf "  make test             Run docs, tests, and target feature lanes\n"
 	@printf "  make supply-chain     Run cargo-deny\n"
 	@printf "  make coverage         Require alpha floors: lines 59, branches 46, functions 52, regions 58 percent\n"
@@ -36,6 +37,7 @@ help:
 .PHONY: fmt
 fmt:
 	cargo fmt --all -- --check
+	cargo fmt --manifest-path benchmarks/jpeg-production/rust/Cargo.toml -- --check
 
 .PHONY: verify
 verify: release-tools-test docs-lint docs-test
@@ -52,8 +54,15 @@ verify: release-tools-test docs-lint docs-test
 .PHONY: lint
 lint:
 	cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-	cargo fmt --manifest-path benchmarks/jpeg-production/rust/Cargo.toml -- --check
+	cargo clippy --release --workspace --all-targets --all-features --locked -- -D warnings
+	CARGO_TARGET_DIR=target/cfg-coverage-clippy cargo +"$(COVERAGE_TOOLCHAIN)" clippy --workspace --all-targets --all-features --locked -- -D warnings --cfg coverage --cfg coverage_nightly
 	cargo clippy --manifest-path benchmarks/jpeg-production/rust/Cargo.toml --release --locked -- -D warnings
+
+.PHONY: lint-x86-simd
+lint-x86-simd:
+	$(MAKE) fmt
+	CARGO_TARGET_DIR=target/x86_64-sse2 RUSTFLAGS="-C target-cpu=x86-64" cargo clippy --workspace --all-targets --all-features --locked --target x86_64-unknown-linux-gnu -- -D warnings
+	CARGO_TARGET_DIR=target/x86_64-avx2 RUSTFLAGS="-C target-cpu=x86-64 -C target-feature=+avx2" cargo clippy --workspace --all-targets --all-features --locked --target x86_64-unknown-linux-gnu -- -D warnings
 
 .PHONY: test
 test:
@@ -143,18 +152,21 @@ build:
 
 fmt-fix:
 	cargo fmt --all
+	cargo fmt --manifest-path benchmarks/jpeg-production/rust/Cargo.toml
 
 example:
 	cargo run --locked --example package_smoke
 
 BENCH_OUTPUT ?= target/benchmarks/jpeg/latest
 BENCH_ROUNDS ?= 5
+BENCH_TARGET_DIR ?= target/jpeg-production-matrix
 TURBOJPEG_PREFIX ?= $(CURDIR)/target/benchmark-oracle/3.2.0/install
 bench-setup:
 	$(PYTHON) scripts/setup_benchmark_oracle.py
 
 bench:
-	$(PYTHON) benchmarks/jpeg-production/run_matrix.py --rounds "$(BENCH_ROUNDS)" \
+	JPEG_PRODUCTION_TARGET_DIR="$(BENCH_TARGET_DIR)" \
+	  $(PYTHON) benchmarks/jpeg-production/run_matrix.py --rounds "$(BENCH_ROUNDS)" \
 	  --output "$(BENCH_OUTPUT)" --turbojpeg-prefix "$(TURBOJPEG_PREFIX)"
 
 include docs.mk

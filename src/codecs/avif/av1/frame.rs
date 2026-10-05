@@ -14,13 +14,9 @@ use super::resize;
 use super::restoration;
 use super::sample_depth::SampleDepth;
 use super::sequence::SequenceHeader;
-#[cfg(coverage)]
-use super::sequence::{DecoderParameters, OperatingPoint, Timing};
 use super::surface::{FramePlane, FrameSurface};
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
-#[cfg(coverage)]
-use crate::codecs::avif::samples::ByteSpan;
 
 const PRIMARY_REF_NONE: usize = 7;
 const REFERENCE_SLOTS: usize = 8;
@@ -1452,43 +1448,6 @@ impl FrameState {
         Ok(())
     }
 
-    #[cfg(coverage)]
-    fn invalidate_old_references(&mut self, frame_id: u32) {
-        // This method is called only after `begin_frame` has obtained the
-        // active sequence header.
-        let Some(sequence) = self.sequence.as_ref() else {
-            return;
-        };
-        invalidate_reference_slots(
-            &mut self.references,
-            frame_id,
-            sequence.delta_frame_id_bits,
-            sequence.frame_id_bits,
-        );
-    }
-
-    #[cfg(coverage)]
-    #[coverage(off)]
-    pub(super) fn __coverage_seed_missing_reference_surfaces(&mut self) {
-        // The compact parser probes intentionally omit full reconstruction for
-        // later inter frames. Reuse the validated key surface only to keep the
-        // synthetic state machine on the same precondition as production.
-        let Some(surface) = self
-            .references
-            .iter()
-            .find_map(|reference| reference.as_ref().and_then(|value| value.surface.clone()))
-        else {
-            return;
-        };
-        for reference in &mut self.references {
-            if let Some(reference) = reference.as_mut()
-                && reference.surface.is_none()
-            {
-                reference.surface = Some(surface.clone());
-            }
-        }
-    }
-
     // ✅ VERIFIED: AV1 specification section 5.11.1; dav1d 1.5.3
     // src/obu.c:1154-1167 and src/decode.c:3149-3181.
     fn read_tile_group(
@@ -1598,9 +1557,19 @@ impl FrameState {
                 .pending
                 .as_mut()
                 .ok_or(malformed("accepted tile group disappeared"))?;
+            #[cfg(coverage)]
+            let color_tile_reservation = if crate::coverage_support::take_fault_point(
+                crate::coverage_support::CoverageFaultPoint::Av1ColorTileReservation,
+            ) {
+                usize::MAX
+            } else {
+                group.complete_color_tiles.len()
+            };
+            #[cfg(not(coverage))]
+            let color_tile_reservation = group.complete_color_tiles.len();
             pending
                 .complete_color_tiles
-                .try_reserve(group.complete_color_tiles.len())
+                .try_reserve(color_tile_reservation)
                 .map_err(|_| {
                     CodecError::Dimensions(
                         "unable to reserve reconstructed AV1 tile state".to_owned(),
@@ -1614,9 +1583,19 @@ impl FrameState {
                         "unable to reserve retained AV1 temporal-MV samples".to_owned(),
                     )
                 })?;
+            #[cfg(coverage)]
+            let monochrome_tile_reservation = if crate::coverage_support::take_fault_point(
+                crate::coverage_support::CoverageFaultPoint::Av1MonochromeTileReservation,
+            ) {
+                usize::MAX
+            } else {
+                group.complete_monochrome_tiles.len()
+            };
+            #[cfg(not(coverage))]
+            let monochrome_tile_reservation = group.complete_monochrome_tiles.len();
             pending
                 .complete_monochrome_tiles
-                .try_reserve(group.complete_monochrome_tiles.len())
+                .try_reserve(monochrome_tile_reservation)
                 .map_err(|_| {
                     CodecError::Dimensions(
                         "unable to reserve reconstructed AV1 monochrome tiles".to_owned(),
@@ -1687,7 +1666,14 @@ impl FrameState {
                     .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
                 assembled_color_leaf = assembled_color_leaf
                     .map(|leaf| {
-                        upscale_color_leaf_for_superres(leaf, &pending.header, sequence, depth)
+                        upscale_color_leaf_for_superres(
+                            leaf,
+                            &pending.header,
+                            sequence,
+                            pending.header.frame_width,
+                            pending.header.frame_height,
+                            depth,
+                        )
                     })
                     .transpose()?;
             }
@@ -1703,12 +1689,12 @@ impl FrameState {
                 .sequence
                 .as_ref()
                 .ok_or(malformed("assembled monochrome frame has no sequence"))?;
-            assembled_monochrome_plane = assemble_monochrome_tiles(
+            assembled_monochrome_plane = Some(assemble_monochrome_tiles(
                 &pending.complete_monochrome_tiles,
                 &group.complete_monochrome_tiles,
                 &pending.header,
                 sequence,
-            )?;
+            )?);
             if pending.header.superres_enabled {
                 let depth = SampleDepth::new(sequence.bit_depth)
                     .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
@@ -1928,6 +1914,8 @@ struct ReconstructedMonochromeTile {
     y: u32,
     width: u32,
     height: u32,
+    coded_width: u32,
+    coded_height: u32,
     plane: super::block::ReconstructedPlane,
     cdef_parameters: Option<super::cdef::FrameParameters>,
     cdef_indices: Vec<Option<usize>>,
@@ -1967,8 +1955,18 @@ fn assemble_color_tiles(
         })
         .ok_or_else(|| malformed("assembled loop-filter block count overflows"))?;
     let mut filter_blocks = Vec::new();
+    #[cfg(coverage)]
+    let filter_block_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1AssembledLoopFilterMetadataReservation,
+    ) {
+        usize::MAX
+    } else {
+        filter_block_count
+    };
+    #[cfg(not(coverage))]
+    let filter_block_reservation_count = filter_block_count;
     filter_blocks
-        .try_reserve_exact(filter_block_count)
+        .try_reserve_exact(filter_block_reservation_count)
         .map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 loop-filter metadata".to_owned())
         })?;
@@ -2162,37 +2160,26 @@ fn upscale_color_leaf_for_superres(
     leaf: super::block::FirstLeaf,
     header: &FrameHeader,
     sequence: &SequenceHeader,
+    source_width: u32,
+    source_height: u32,
     depth: SampleDepth,
 ) -> Av1Result<super::block::FirstLeaf> {
+    let geometry = resize::ResizeGeometry {
+        coded_width: header.frame_width,
+        source_width,
+        source_height,
+        output_width: header.upscaled_width,
+        output_height: header.frame_height,
+        superres_denominator: header.superres_denominator,
+    };
     match PixelLayout::from_sequence(
         sequence.monochrome,
         sequence.subsampling_x,
         sequence.subsampling_y,
     ) {
-        Some(PixelLayout::I420) => resize::upscale_i420_leaf(
-            leaf,
-            header.frame_width,
-            header.upscaled_width,
-            header.frame_height,
-            header.superres_denominator,
-            depth,
-        ),
-        Some(PixelLayout::I422) => resize::upscale_i422_leaf(
-            leaf,
-            header.frame_width,
-            header.upscaled_width,
-            header.frame_height,
-            header.superres_denominator,
-            depth,
-        ),
-        Some(PixelLayout::I444) => resize::upscale_i444_leaf(
-            leaf,
-            header.frame_width,
-            header.upscaled_width,
-            header.frame_height,
-            header.superres_denominator,
-            depth,
-        ),
+        Some(PixelLayout::I420) => resize::upscale_i420_leaf(leaf, geometry, depth),
+        Some(PixelLayout::I422) => resize::upscale_i422_leaf(leaf, geometry, depth),
+        Some(PixelLayout::I444) => resize::upscale_i444_leaf(leaf, geometry, depth),
         _ => Err(malformed(
             "super-resolution carries an unsupported chroma sampling",
         )),
@@ -2204,10 +2191,7 @@ fn assemble_monochrome_tiles(
     trailing_tiles: &[ReconstructedMonochromeTile],
     header: &FrameHeader,
     sequence: &SequenceHeader,
-) -> Av1Result<Option<super::block::ReconstructedPlane>> {
-    if tiles.is_empty() && trailing_tiles.is_empty() {
-        return Ok(None);
-    }
+) -> Av1Result<super::block::ReconstructedPlane> {
     let depth = SampleDepth::new(sequence.bit_depth)
         .ok_or_else(|| malformed("monochrome tile sample depth is unsupported"))?;
     let frame_width = usize::try_from(header.frame_width)
@@ -2222,16 +2206,26 @@ fn assemble_monochrome_tiles(
         .iter()
         .chain(trailing_tiles)
         .any(|tile| tile.loop_parameters.is_some());
-    if cdef_enabled
-        && (frame_width < 8
-            || frame_height < 8
-            || !frame_width.is_multiple_of(8)
-            || !frame_height.is_multiple_of(8))
-    {
-        return Err(malformed(
-            "multi-tile monochrome CDEF requires an 8-pixel-aligned frame",
-        ));
-    }
+    let coded_frame_width = if cdef_enabled {
+        frame_width
+            .div_ceil(8)
+            .checked_mul(8)
+            .ok_or(malformed("coded monochrome frame width overflows"))?
+    } else {
+        frame_width
+    };
+    let coded_frame_height = if cdef_enabled {
+        frame_height
+            .div_ceil(8)
+            .checked_mul(8)
+            .ok_or(malformed("coded monochrome frame height overflows"))?
+    } else {
+        frame_height
+    };
+    let coded_frame_width_u32 = u32::try_from(coded_frame_width)
+        .map_err(|_| malformed("coded monochrome frame width exceeds u32"))?;
+    let coded_frame_height_u32 = u32::try_from(coded_frame_height)
+        .map_err(|_| malformed("coded monochrome frame height exceeds u32"))?;
     let mut loop_parameters = None;
     let mut filter_blocks = Vec::new();
     if loop_filter_enabled {
@@ -2242,11 +2236,24 @@ fn assemble_monochrome_tiles(
                 count.checked_add(tile.filter_blocks.len())
             })
             .ok_or_else(|| malformed("assembled monochrome loop-filter count overflows"))?;
-        filter_blocks.try_reserve_exact(block_count).map_err(|_| {
-            CodecError::Dimensions(
-                "unable to allocate assembled monochrome loop-filter metadata".to_owned(),
-            )
-        })?;
+        #[cfg(coverage)]
+        let reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::
+                Av1AssembledMonochromeLoopFilterMetadataReservation,
+        ) {
+            usize::MAX
+        } else {
+            block_count
+        };
+        #[cfg(not(coverage))]
+        let reservation_count = block_count;
+        filter_blocks
+            .try_reserve_exact(reservation_count)
+            .map_err(|_| {
+                CodecError::Dimensions(
+                    "unable to allocate assembled monochrome loop-filter metadata".to_owned(),
+                )
+            })?;
     }
     let active_width = frame_width.div_ceil(8);
     let active_height = frame_height.div_ceil(8);
@@ -2265,16 +2272,33 @@ fn assemble_monochrome_tiles(
         let active_count = active_width
             .checked_mul(active_height)
             .ok_or_else(|| malformed("assembled monochrome CDEF active map overflows"))?;
-        cdef_active.try_reserve_exact(active_count).map_err(|_| {
-            CodecError::Dimensions(
-                "unable to allocate assembled monochrome CDEF active map".to_owned(),
-            )
-        })?;
+        #[cfg(coverage)]
+        let active_reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::
+                Av1AssembledMonochromeCdefActiveMapReservation,
+        ) {
+            usize::MAX
+        } else {
+            active_count
+        };
+        #[cfg(not(coverage))]
+        let active_reservation_count = active_count;
+        cdef_active
+            .try_reserve_exact(active_reservation_count)
+            .map_err(|_| {
+                CodecError::Dimensions(
+                    "unable to allocate assembled monochrome CDEF active map".to_owned(),
+                )
+            })?;
         cdef_active.resize(active_count, false);
     }
     let mut cdef_parameters = None;
-    let mut canvas =
-        super::raster::MonochromeFrameCanvas::new(header.frame_width, header.frame_height)?;
+    let mut canvas = super::raster::MonochromeFrameCanvas::new_padded(
+        header.frame_width,
+        header.frame_height,
+        coded_frame_width_u32,
+        coded_frame_height_u32,
+    )?;
     for tile in tiles.iter().chain(trailing_tiles) {
         if loop_filter_enabled {
             let Some(tile_parameters) = tile.loop_parameters else {
@@ -2319,11 +2343,31 @@ fn assemble_monochrome_tiles(
                 "CDEF-disabled monochrome tile carries CDEF metadata",
             ));
         }
+        let tile_x = usize::try_from(tile.x)
+            .map_err(|_| malformed("monochrome filter tile x origin exceeds usize"))?;
+        let tile_y = usize::try_from(tile.y)
+            .map_err(|_| malformed("monochrome filter tile y origin exceeds usize"))?;
+        let coded_tile_width = usize::try_from(tile.coded_width)
+            .map_err(|_| malformed("coded monochrome tile width exceeds usize"))?;
+        let coded_tile_height = usize::try_from(tile.coded_height)
+            .map_err(|_| malformed("coded monochrome tile height exceeds usize"))?;
+        let tile_width = usize::try_from(tile.width)
+            .map_err(|_| malformed("monochrome filter tile width exceeds usize"))?;
+        let tile_height = usize::try_from(tile.height)
+            .map_err(|_| malformed("monochrome filter tile height exceeds usize"))?;
+        let visible_coded_tile_width = coded_frame_width
+            .saturating_sub(tile_x)
+            .min(coded_tile_width);
+        let visible_coded_tile_height = coded_frame_height
+            .saturating_sub(tile_y)
+            .min(coded_tile_height);
         canvas.place_cropped_plane(
-            tile.width,
-            tile.height,
-            tile.width,
-            tile.height,
+            tile.coded_width,
+            tile.coded_height,
+            u32::try_from(visible_coded_tile_width)
+                .map_err(|_| malformed("visible coded monochrome tile width exceeds u32"))?,
+            u32::try_from(visible_coded_tile_height)
+                .map_err(|_| malformed("visible coded monochrome tile height exceeds u32"))?,
             tile.x,
             tile.y,
             &tile.plane,
@@ -2332,27 +2376,19 @@ fn assemble_monochrome_tiles(
         if !cdef_enabled && !loop_filter_enabled {
             continue;
         }
-        let tile_x = usize::try_from(tile.x)
-            .map_err(|_| malformed("monochrome filter tile x origin exceeds usize"))?;
-        let tile_y = usize::try_from(tile.y)
-            .map_err(|_| malformed("monochrome filter tile y origin exceeds usize"))?;
-        let tile_width = usize::try_from(tile.width)
-            .map_err(|_| malformed("monochrome filter tile width exceeds usize"))?;
-        let tile_height = usize::try_from(tile.height)
-            .map_err(|_| malformed("monochrome filter tile height exceeds usize"))?;
         if cdef_enabled {
             if tile_x % 64 != 0 || tile_y % 64 != 0 {
                 return Err(malformed(
                     "monochrome CDEF tile origin is not 64-pixel aligned",
                 ));
             }
-            if tile_width < 8
-                || tile_height < 8
-                || !tile_width.is_multiple_of(8)
-                || !tile_height.is_multiple_of(8)
+            if coded_tile_width < 8
+                || coded_tile_height < 8
+                || !coded_tile_width.is_multiple_of(8)
+                || !coded_tile_height.is_multiple_of(8)
             {
                 return Err(malformed(
-                    "monochrome CDEF tile extent is not 8-pixel aligned",
+                    "coded monochrome CDEF tile extent is not 8-pixel aligned",
                 ));
             }
             let local_active_width = tile_width.div_ceil(8);
@@ -2476,8 +2512,8 @@ fn assemble_monochrome_tiles(
                     .ok_or_else(|| malformed("monochrome loop-filter block y overflows"))?;
                 if block.width == 0
                     || block.height == 0
-                    || local_end_x > tile_width
-                    || local_end_y > tile_height
+                    || local_end_x > coded_tile_width
+                    || local_end_y > coded_tile_height
                 {
                     return Err(malformed("monochrome loop-filter block exceeds its tile"));
                 }
@@ -2493,9 +2529,9 @@ fn assemble_monochrome_tiles(
                 let end_y = y
                     .checked_add(block.height)
                     .ok_or_else(|| malformed("assembled monochrome loop-filter y overflows"))?;
-                if end_x > frame_width || end_y > frame_height {
+                if end_x > coded_frame_width || end_y > coded_frame_height {
                     return Err(malformed(
-                        "assembled monochrome loop-filter block exceeds frame",
+                        "assembled monochrome loop-filter block exceeds coded frame",
                     ));
                 }
                 filter_blocks.push(super::filter::Block {
@@ -2522,7 +2558,7 @@ fn assemble_monochrome_tiles(
     } else {
         canvas.finish(depth)?
     };
-    Ok(Some(plane))
+    Ok(plane)
 }
 
 // ✅ VERIFIED: dav1d 1.5.3 src/decode.c:3149-3181 and libaom 3.13.2
@@ -2803,6 +2839,12 @@ fn validate_tile_entropy_prefixes(
             .min(block_height);
         let tile_block_width = tile_block_end_x.saturating_sub(block_x);
         let tile_block_height = tile_block_end_y.saturating_sub(block_y);
+        let coded_tile_width = tile_block_width
+            .checked_mul(4)
+            .ok_or(malformed("coded tile width overflows pixels"))?;
+        let coded_tile_height = tile_block_height
+            .checked_mul(4)
+            .ok_or(malformed("coded tile height overflows pixels"))?;
         let tile_origin_x = block_x.wrapping_mul(4);
         let tile_origin_y = block_y.wrapping_mul(4);
         // Tile boundaries are coded-superblock boundaries, so the final tile
@@ -2916,13 +2958,20 @@ fn validate_tile_entropy_prefixes(
                 } else {
                     None
                 };
-                let leaf = reconstruction.into_filtered_leaf(striped_restoration)?;
+                let filtered = reconstruction.into_filtered_leaf(striped_restoration)?;
                 let leaf = if header.superres_enabled {
                     let depth = SampleDepth::new(sequence.bit_depth)
                         .ok_or_else(|| malformed("super-resolution sample depth is unsupported"))?;
-                    upscale_color_leaf_for_superres(leaf, header, sequence, depth)?
+                    upscale_color_leaf_for_superres(
+                        filtered.leaf,
+                        header,
+                        sequence,
+                        filtered.source_width,
+                        filtered.source_height,
+                        depth,
+                    )?
                 } else {
-                    leaf
+                    filtered.leaf
                 };
                 let leaf = if let Some(plan) = restoration_plan {
                     let depth = SampleDepth::new(sequence.bit_depth)
@@ -2966,6 +3015,16 @@ fn validate_tile_entropy_prefixes(
                     y: tile_origin_y,
                     width: tile_width,
                     height: tile_height,
+                    coded_width: if cdef_parameters.is_some() {
+                        coded_tile_width
+                    } else {
+                        tile_width
+                    },
+                    coded_height: if cdef_parameters.is_some() {
+                        coded_tile_height
+                    } else {
+                        tile_height
+                    },
                     plane,
                     cdef_parameters,
                     cdef_indices,
@@ -3033,6 +3092,8 @@ fn validate_tile_entropy_prefixes(
                         y: tile_origin_y,
                         width: tile_width,
                         height: tile_height,
+                        coded_width: tile_width,
+                        coded_height: tile_height,
                         plane,
                         cdef_parameters: None,
                         cdef_indices: Vec::new(),
@@ -3853,7 +3914,7 @@ fn read_segmentation(
             }
             if bits.bit()? {
                 segment.features |= SEG_REFERENCE;
-                segment.reference = bits.bits(3)? as i32;
+                segment.reference = bits.bits(3)?.cast_signed();
             }
             segment.skip = bits.bit()?;
             if segment.skip {
@@ -4280,7 +4341,7 @@ fn read_film_grain(
             .try_reserve_exact(ar_count)
             .map_err(|_| malformed("unable to allocate film-grain luma AR coefficients"))?;
         for _ in 0..ar_positions {
-            ar_coefficients_y.push((bits.bits(8)? as i32).saturating_sub(128));
+            ar_coefficients_y.push(bits.bits(8)?.cast_signed().saturating_sub(128));
         }
     }
     let mut ar_coefficients_uv: [Vec<i32>; 2] = std::array::from_fn(|_| Vec::new());
@@ -4293,7 +4354,7 @@ fn read_film_grain(
                 .try_reserve_exact(count)
                 .map_err(|_| malformed("unable to allocate film-grain chroma AR coefficients"))?;
             for _ in 0..count {
-                coefficients.push((bits.bits(8)? as i32).saturating_sub(128));
+                coefficients.push(bits.bits(8)?.cast_signed().saturating_sub(128));
             }
         }
     }
@@ -4304,9 +4365,9 @@ fn read_film_grain(
     let mut uv_offset = [0_i32; 2];
     for plane in 0..2 {
         if !uv_points[plane].is_empty() {
-            uv_multiplier[plane] = (bits.bits(8)? as i32).saturating_sub(128);
-            uv_luma_multiplier[plane] = (bits.bits(8)? as i32).saturating_sub(128);
-            uv_offset[plane] = (bits.bits(9)? as i32).saturating_sub(256);
+            uv_multiplier[plane] = bits.bits(8)?.cast_signed().saturating_sub(128);
+            uv_luma_multiplier[plane] = bits.bits(8)?.cast_signed().saturating_sub(128);
+            uv_offset[plane] = bits.bits(9)?.cast_signed().saturating_sub(256);
         }
     }
     Ok(Some(FilmGrain {
@@ -4329,2286 +4390,6 @@ fn read_film_grain(
         clip_to_restricted_range: bits.bit()?,
         matrix_coefficients: sequence.matrix_coefficients,
     }))
-}
-
-#[cfg(coverage)]
-struct CoverageBitWriter {
-    bytes: Vec<u8>,
-    position: usize,
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-impl CoverageBitWriter {
-    fn new() -> Self {
-        Self {
-            bytes: Vec::new(),
-            position: 0,
-        }
-    }
-
-    fn push(&mut self, value: u32, width: u32) {
-        for shift in (0..width).rev() {
-            if self.position.is_multiple_of(8) {
-                self.bytes.push(0);
-            }
-            let bit = ((value >> shift) & 1) as u8;
-            let byte = self.position / 8;
-            let offset = 7usize.saturating_sub(self.position % 8);
-            self.bytes[byte] |= bit << offset;
-            self.position = crate::coverage_support::require_some(
-                (self.position).checked_add(1),
-                "fixture counter or boundary",
-            );
-        }
-    }
-
-    fn push_signed(&mut self, value: i32, width: u32) {
-        let mask = crate::coverage_support::require_some(
-            1_u32
-                .checked_shl(width)
-                .and_then(|mask| mask.checked_sub(1)),
-            "signed fixture bit mask",
-        );
-        self.push(u32::from_ne_bytes(value.to_ne_bytes()) & mask, width);
-    }
-
-    fn finish(mut self) -> Vec<u8> {
-        self.push(1, 1);
-        while !self.position.is_multiple_of(8) {
-            self.push(0, 1);
-        }
-        self.bytes
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_insert_bits(input: &[u8], position: usize, value: u32, width: u32) -> Vec<u8> {
-    let mut output = CoverageBitWriter::new();
-    let input_bits = crate::coverage_support::bit_len(input.len());
-    for index in 0..position {
-        let byte = input[index / 8];
-        output.push(u32::from((byte >> 7usize.saturating_sub(index % 8)) & 1), 1);
-    }
-    output.push(value, width);
-    for index in position..input_bits {
-        let byte = input[index / 8];
-        output.push(u32::from((byte >> 7usize.saturating_sub(index % 8)) & 1), 1);
-    }
-    output.bytes
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(super) fn __coverage_reduced_header_payload() -> Vec<u8> {
-    const FRAME: &[u8] = b"\x10\x00\x93\x80\x00\x08\x00\x00\x01\x48\x1a\x7a\xa0";
-    const SEQUENCE: &[u8] = b"\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0";
-    let mut sample = Vec::new();
-    sample.extend_from_slice(SEQUENCE);
-    sample.extend_from_slice(FRAME);
-    let spans = [ByteSpan {
-        start: 0,
-        end: sample.len(),
-    }];
-    let data = crate::coverage_support::require_ok(
-        SegmentedData::new(&sample, &spans),
-        "coverage fixture: SegmentedData::new(&sample, &spans)",
-    );
-    let sequence = crate::coverage_support::require_ok(
-        super::sequence::parse(&data, 0, SEQUENCE.len()),
-        "coverage fixture: super::sequence::parse(&data, 0, SEQUENCE.len())",
-    );
-    let (header, _) = crate::coverage_support::require_ok(
-        parse(
-            &data,
-            SEQUENCE.len(),
-            sample.len(),
-            &sequence,
-            &std::array::from_fn(|_| None),
-            (0, 0),
-            None,
-        ),
-        "coverage fixture: parse( &data, SEQUENCE.len(), sample.len(), &sequence, &std::array::from_fn(|_| None), 0, 0, ) ",
-    );
-    let header_length = header.header_bits.saturating_add(1).div_ceil(8);
-    let mut payload = FRAME[..header_length].to_vec();
-    let trailing_byte = header.header_bits / 8;
-    let trailing_offset = 7usize.saturating_sub(header.header_bits % 8);
-    payload[trailing_byte] &= u8::MAX << trailing_offset.saturating_add(1);
-    payload[trailing_byte] |= 1 << trailing_offset;
-    payload
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_read<T>(
-    input: &[u8],
-    bit_end: usize,
-    read: impl FnOnce(&mut BitReader<'_, '_, '_>) -> T,
-) -> T {
-    let spans = [ByteSpan {
-        start: 0,
-        end: input.len(),
-    }];
-    let data = crate::coverage_support::require_ok(
-        SegmentedData::new(input, &spans),
-        "coverage fixture: SegmentedData::new(input, &spans)",
-    );
-    let mut bits = crate::coverage_support::require_ok(
-        BitReader::with_bit_end(&data, bit_end),
-        "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
-    );
-    read(&mut bits)
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_sweep_read(input: &[u8], mut read: impl FnMut(&mut BitReader<'_, '_, '_>)) {
-    for bit_end in 0..=crate::coverage_support::bit_len(input.len()) {
-        coverage_read(input, bit_end, |bits| read(bits));
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_read_tile_group(
-    state: &FrameState,
-    input: &[u8],
-    bit_end: usize,
-) -> Av1Result<(u32, u32)> {
-    let spans = [ByteSpan {
-        start: 0,
-        end: input.len(),
-    }];
-    let data = crate::coverage_support::require_ok(
-        SegmentedData::new(input, &spans),
-        "coverage fixture: SegmentedData::new(input, &spans)",
-    );
-    let mut bits = crate::coverage_support::require_ok(
-        BitReader::with_bit_end(&data, bit_end),
-        "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
-    );
-    state
-        .read_tile_group(&data, &mut bits, input.len())
-        .map(|group| (group.start, group.end))
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_tile_group(start: u32, end: u32) -> TileGroup {
-    TileGroup {
-        start,
-        end,
-        first_leaf: None,
-        complete_color_leaf: None,
-        complete_color_tiles: Vec::new(),
-        temporal_samples: Vec::new(),
-        complete_monochrome_tiles: Vec::new(),
-        complete_monochrome_plane: None,
-        selected_cdfs: None,
-        segment_map: None,
-        decode_complete: false,
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_sweep_frame(
-    input: &[u8],
-    sequence: &SequenceHeader,
-    references: &[Option<FrameHeader>; 8],
-) {
-    let spans = [ByteSpan {
-        start: 0,
-        end: input.len(),
-    }];
-    let data = crate::coverage_support::require_ok(
-        SegmentedData::new(input, &spans),
-        "coverage fixture: SegmentedData::new(input, &spans)",
-    );
-    for bit_end in 0..=crate::coverage_support::bit_len(input.len()) {
-        let bits = crate::coverage_support::require_ok(
-            BitReader::with_bit_end(&data, bit_end),
-            "coverage fixture: BitReader::with_bit_end(&data, bit_end)",
-        );
-        let _ = parse_reader(bits, 0, sequence, references, (0, 0), None);
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_mutation_sweep_frame(
-    input: &[u8],
-    sequence: &SequenceHeader,
-    references: &[Option<FrameHeader>; 8],
-) {
-    for bit in 0..crate::coverage_support::bit_len(input.len()) {
-        let mut mutated = input.to_vec();
-        mutated[bit / 8] ^= 1 << 7usize.saturating_sub(bit % 8);
-        coverage_sweep_frame(&mutated, sequence, references);
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_sequence() -> SequenceHeader {
-    SequenceHeader {
-        profile: 0,
-        still_picture: false,
-        reduced_still_picture_header: false,
-        timing: Some(Timing {
-            num_units_in_tick: 1,
-            time_scale: 1,
-            equal_picture_interval: false,
-            num_ticks_per_picture: None,
-            num_units_in_decoding_tick: Some(1),
-            buffer_removal_delay_length: Some(3),
-            frame_presentation_delay_length: Some(3),
-        }),
-        decoder_model_present: true,
-        display_model_present: true,
-        operating_points: vec![
-            OperatingPoint {
-                idc: 0,
-                level: 0,
-                tier: 0,
-                decoder_parameters: Some(DecoderParameters {
-                    decoder_buffer_delay: 0,
-                    encoder_buffer_delay: 0,
-                    low_delay_mode: false,
-                }),
-                display_model_present: false,
-                initial_display_delay: 10,
-            },
-            OperatingPoint {
-                idc: (1 << 1) | (1 << 9),
-                level: 0,
-                tier: 0,
-                decoder_parameters: Some(DecoderParameters {
-                    decoder_buffer_delay: 0,
-                    encoder_buffer_delay: 0,
-                    low_delay_mode: false,
-                }),
-                display_model_present: false,
-                initial_display_delay: 10,
-            },
-        ],
-        width_bits: 16,
-        height_bits: 16,
-        max_width: 128,
-        max_height: 128,
-        frame_id_numbers_present: true,
-        delta_frame_id_bits: 2,
-        frame_id_bits: 4,
-        use_128x128_superblock: false,
-        enable_filter_intra: true,
-        enable_intra_edge_filter: true,
-        enable_interintra_compound: true,
-        enable_masked_compound: true,
-        enable_warped_motion: true,
-        enable_dual_filter: true,
-        enable_order_hint: true,
-        enable_jnt_comp: true,
-        enable_ref_frame_mvs: true,
-        screen_content_tools: 2,
-        force_integer_mv: 2,
-        order_hint_bits: 4,
-        enable_superres: true,
-        enable_cdef: true,
-        enable_restoration: true,
-        bit_depth: 10,
-        monochrome: false,
-        color_primaries: 2,
-        transfer_characteristics: 2,
-        matrix_coefficients: 2,
-        color_range: false,
-        subsampling_x: true,
-        subsampling_y: true,
-        chroma_sample_position: 0,
-        separate_uv_delta_q: true,
-        film_grain_present: true,
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_tiling(columns: u32, rows: u32) -> Tiling {
-    Tiling {
-        uniform: true,
-        min_log2_columns: 0,
-        max_log2_columns: 2,
-        log2_columns: columns.ilog2(),
-        columns,
-        column_starts: (0..=columns).collect(),
-        min_log2_rows: 0,
-        max_log2_rows: 2,
-        log2_rows: rows.ilog2(),
-        rows,
-        row_starts: (0..=rows).collect(),
-        context_update_tile: 0,
-        tile_size_bytes: 1,
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_header() -> FrameHeader {
-    let mut header = FrameHeader::empty(0, 0);
-    header.frame_type = FrameType::Inter;
-    header.show_frame = true;
-    header.showable_frame = true;
-    header.frame_id = 3;
-    header.frame_size_override = true;
-    header.order_hint = 4;
-    header.primary_ref_frame = 0;
-    header.refresh_frame_flags = 1;
-    header.upscaled_width = 128;
-    header.frame_width = 128;
-    header.frame_height = 128;
-    header.render_width = 128;
-    header.render_height = 128;
-    header.reference_indices = [0, 1, 2, 3, 4, 5, 6];
-    header.tiling = Some(coverage_tiling(1, 1));
-    header.quantization = Some(Quantization {
-        base: 1,
-        y_dc_delta: 0,
-        u_dc_delta: 0,
-        u_ac_delta: 0,
-        v_dc_delta: 0,
-        v_ac_delta: 0,
-        different_uv_delta: false,
-        using_matrix: false,
-        matrix_y: 0,
-        matrix_u: 0,
-        matrix_v: 0,
-    });
-    header
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_references() -> [Option<FrameHeader>; 8] {
-    std::array::from_fn(|index| {
-        let mut header = coverage_header();
-        header.frame_id = crate::coverage_support::require_ok(
-            u32::try_from(index),
-            "coverage fixture: u32::try_from(index)",
-        );
-        header.order_hint = crate::coverage_support::require_ok(
-            u32::try_from(index),
-            "coverage fixture: u32::try_from(index)",
-        );
-        Some(header)
-    })
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_reference_states() -> [Option<ReferenceState>; 8] {
-    coverage_references().map(|header| {
-        header.map(|header| ReferenceState {
-            header,
-            decode: None,
-            surface: None,
-        })
-    })
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_pending(header: FrameHeader) -> PendingFrame {
-    let qindex = header
-        .quantization
-        .as_ref()
-        .map_or(0, |quantization| quantization.base);
-    PendingFrame {
-        header,
-        obu_extension: false,
-        staged_references: std::array::from_fn(|_| None),
-        staged_current_frame_id: None,
-        next_tile: 0,
-        input_cdfs: entropy::FrameCdfs::defaults(qindex).ok(),
-        selected_cdfs: None,
-        previous_segment_map: None,
-        segment_map: None,
-        decode_complete: true,
-        first_leaf: None,
-        complete_color_leaf: None,
-        complete_color_tiles: Vec::new(),
-        temporal_samples: Vec::new(),
-        complete_monochrome_tiles: Vec::new(),
-        complete_monochrome_plane: None,
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_state_paths() {
-    let sequence = coverage_sequence();
-    let mut state = FrameState::new();
-    let empty_spans = [ByteSpan { start: 0, end: 0 }];
-    let empty_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&[], &empty_spans),
-        "coverage fixture: SegmentedData::new(&[], &empty_spans)",
-    );
-    let tile_input = [0_u8; 16];
-    let tile_spans = [ByteSpan {
-        start: 0,
-        end: tile_input.len(),
-    }];
-    let tile_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&tile_input, &tile_spans),
-        "coverage fixture: SegmentedData::new(&tile_input, &tile_spans)",
-    );
-    assert!(split_tile_payloads(&tile_data, 1, 0, 0, 0, 0).is_err());
-    assert!(
-        split_tile_payloads(
-            &tile_data,
-            0,
-            crate::coverage_support::require_some(
-                (tile_input.len()).checked_add(1),
-                "coverage fixture arithmetic"
-            ),
-            0,
-            0,
-            0
-        )
-        .is_err()
-    );
-    assert!(split_tile_payloads(&tile_data, 0, 1, 0, 1, 0).is_err());
-    assert!(split_tile_payloads(&tile_data, 0, 6, 0, 1, 5).is_err());
-    assert_eq!(
-        split_tile_payloads(&tile_data, 0, 0, 0, 0, 0),
-        Err(malformed("tile payload is empty"))
-    );
-    for width in [1, 3, 4] {
-        assert!(split_tile_payloads(&tile_data, 0, tile_input.len(), 0, 1, width).is_ok());
-    }
-    let mut entropy_header = coverage_header();
-    entropy_header.primary_ref_frame = PRIMARY_REF_NONE;
-    let entropy_cdfs = crate::coverage_support::require_ok(
-        entropy::FrameCdfs::defaults(1),
-        "coverage fixture: entropy::FrameCdfs::defaults(1)",
-    );
-    assert!(
-        validate_tile_entropy_prefixes(
-            &tile_data,
-            &[std::ops::Range {
-                start: 0,
-                end: tile_input.len()
-            }],
-            1,
-            &entropy_header,
-            &sequence,
-            crate::coverage_support::require_some(
-                entropy_header.tiling.as_ref(),
-                "coverage fixture: entropy_header.tiling.as_ref()"
-            ),
-            TileEntropyInputs {
-                input_cdfs: Some(&entropy_cdfs),
-                current_segment_map: None,
-                previous_segment_map: None,
-                inter_context: None,
-            },
-        )
-        .is_err()
-    );
-    entropy_header.restoration = Some(Restoration {
-        types: [Some(entropy::RestorationType::Wiener), None, None],
-        unit_size_log2: [5; 2],
-    });
-    entropy_header.upscaled_width = entropy_header.frame_width.saturating_add(1);
-    assert!(
-        validate_tile_entropy_prefixes(
-            &tile_data,
-            &[std::ops::Range {
-                start: 0,
-                end: tile_input.len()
-            }],
-            0,
-            &entropy_header,
-            &sequence,
-            crate::coverage_support::require_some(
-                entropy_header.tiling.as_ref(),
-                "coverage fixture: entropy_header.tiling.as_ref()"
-            ),
-            TileEntropyInputs {
-                input_cdfs: Some(&entropy_cdfs),
-                current_segment_map: None,
-                previous_segment_map: None,
-                inter_context: None,
-            },
-        )
-        .is_ok()
-    );
-    let no_sequence = FrameState::new();
-    assert!(
-        coverage_read_tile_group(
-            &no_sequence,
-            &tile_input,
-            crate::coverage_support::bit_len(tile_input.len())
-        )
-        .is_err()
-    );
-    let mut rejected_entropy = FrameState::new();
-    rejected_entropy.sequence = Some(sequence.clone());
-    rejected_entropy.pending = Some(coverage_pending(entropy_header));
-    assert!(matches!(
-        coverage_read_tile_group(&rejected_entropy, &tile_input, crate::coverage_support::bit_len(tile_input.len())),
-        Err(CodecError::Malformed(message))
-            if message == "invalid AV1 bitstream: inter reference slot is empty"
-    ));
-    let mut accepted_entropy = FrameState::new();
-    accepted_entropy.sequence = Some(sequence.clone());
-    let mut accepted_header = coverage_header();
-    accepted_header.frame_type = FrameType::Key;
-    accepted_header.primary_ref_frame = PRIMARY_REF_NONE;
-    accepted_entropy.pending = Some(coverage_pending(accepted_header));
-    assert!(
-        coverage_read_tile_group(
-            &accepted_entropy,
-            &tile_input,
-            crate::coverage_support::bit_len(tile_input.len())
-        )
-        .is_ok()
-    );
-    let _ = state.begin_frame(&empty_data, 0..0, false, 0, 0, false);
-    let _ = state.tile_group_obu(&empty_data, 0, 0, false, 0, 0);
-    let _ = state.tile_group_obu(&empty_data, 1, 0, false, 0, 0);
-    let _ = parse(
-        &empty_data,
-        1,
-        0,
-        &sequence,
-        &std::array::from_fn(|_| None),
-        (0, 0),
-        None,
-    );
-    let _ = parse(
-        &empty_data,
-        usize::MAX,
-        usize::MAX,
-        &sequence,
-        &std::array::from_fn(|_| None),
-        (0, 0),
-        None,
-    );
-    let mut missing_sequence = FrameState::new();
-    assert!(matches!(
-        missing_sequence.accept_parsed_header(
-            true,
-            sequence.frame_id_bits,
-            false,
-            coverage_header(),
-        ),
-        Err(CodecError::Malformed(message))
-            if message == "invalid AV1 bitstream: frame header has no sequence state"
-    ));
-    assert_eq!(state.temporal_delimiter(), Ok(()));
-    assert!(state.finish().is_err());
-    assert_eq!(state.accept_sequence(sequence.clone()), Ok(()));
-    assert!(state.finish().is_ok());
-    let mut inconsistent = sequence.clone();
-    inconsistent.max_width = crate::coverage_support::require_some(
-        (inconsistent.max_width).checked_add(1),
-        "fixture counter or boundary",
-    );
-    assert!(state.accept_sequence(inconsistent).is_err());
-
-    state.pending = Some(coverage_pending(coverage_header()));
-    assert!(state.temporal_delimiter().is_err());
-    assert!(state.finish().is_err());
-    assert_eq!(state.complete_show_existing(), Ok(()));
-    state.pending = None;
-    assert!(state.complete_show_existing().is_err());
-
-    let mut shown = coverage_header();
-    shown.show_existing_frame = true;
-    shown.existing_frame_idx = Some(0);
-    state.references[0] = Some(ReferenceState {
-        header: coverage_header(),
-        decode: None,
-        surface: None,
-    });
-    let mut shown_pending = coverage_pending(shown.clone());
-    shown_pending.staged_references = state.references.clone();
-    state.pending = Some(shown_pending);
-    assert_eq!(state.complete_show_existing(), Ok(()));
-    crate::coverage_support::require_some(
-        state.references[0].as_mut(),
-        "coverage fixture: state.references[0].as_mut()",
-    )
-    .header
-    .showable_frame = false;
-    let mut unshowable_pending = coverage_pending(shown.clone());
-    unshowable_pending.staged_references = state.references.clone();
-    state.pending = Some(unshowable_pending);
-    assert!(state.complete_show_existing().is_err());
-    state.references[0] = None;
-    crate::coverage_support::require_some(
-        state.pending.as_mut(),
-        "coverage fixture: state.pending.as_mut()",
-    )
-    .staged_references = state.references.clone();
-    assert!(state.complete_show_existing().is_err());
-    shown.existing_frame_idx = None;
-    state.pending = Some(coverage_pending(shown));
-    assert!(state.complete_show_existing().is_err());
-
-    let mut key = coverage_header();
-    key.frame_type = FrameType::Key;
-    key.showable_frame = true;
-    let mut shown_key = key.clone();
-    shown_key.show_existing_frame = true;
-    shown_key.existing_frame_idx = Some(0);
-    state.references[0] = Some(ReferenceState {
-        header: key,
-        decode: None,
-        surface: None,
-    });
-    let mut shown_key_pending = coverage_pending(shown_key);
-    shown_key_pending.staged_references = state.references.clone();
-    state.pending = Some(shown_key_pending);
-    assert_eq!(state.complete_show_existing(), Ok(()));
-    assert!(state.references.iter().all(|reference| {
-        reference
-            .as_ref()
-            .is_some_and(|frame| !frame.header.showable_frame)
-    }));
-
-    state.sequence = Some(sequence.clone());
-    state.references = coverage_reference_states();
-    state.references[0] = None;
-    state.invalidate_old_references(10);
-    state.references = coverage_reference_states();
-    crate::coverage_support::require_some(
-        state.references[0].as_mut(),
-        "coverage fixture: state.references[0].as_mut()",
-    )
-    .header
-    .frame_id = 11;
-    state.invalidate_old_references(10);
-    state.references = coverage_reference_states();
-    state.invalidate_old_references(1);
-    assert_eq!(
-        state.accept_parsed_header(true, sequence.frame_id_bits, false, coverage_header()),
-        Ok(())
-    );
-    state.pending = None;
-    let mut accepted_existing = coverage_header();
-    accepted_existing.show_existing_frame = true;
-    assert_eq!(
-        state.accept_parsed_header(true, sequence.frame_id_bits, false, accepted_existing),
-        Ok(())
-    );
-    state.pending = None;
-
-    let mut invalid_id_state = FrameState::new();
-    invalid_id_state.sequence = Some(sequence.clone());
-    invalid_id_state.current_frame_id = Some(3);
-    let mut repeated_id = coverage_header();
-    repeated_id.frame_type = FrameType::Inter;
-    repeated_id.frame_id = 3;
-    assert!(
-        invalid_id_state
-            .accept_parsed_header(true, sequence.frame_id_bits, false, repeated_id)
-            .is_err()
-    );
-
-    let mut tiled = coverage_header();
-    tiled.tiling = Some(coverage_tiling(2, 2));
-    tiled.refresh_frame_flags = 0b1000_0001;
-    state.pending = Some(coverage_pending(tiled));
-    assert!(state.accept_tile_group(coverage_tile_group(1, 1)).is_err());
-    assert_eq!(state.accept_tile_group(coverage_tile_group(0, 1)), Ok(()));
-    assert_eq!(state.accept_tile_group(coverage_tile_group(2, 3)), Ok(()));
-    assert!(state.pending.is_none());
-    assert!(state.references[0].is_some());
-    assert!(state.references[7].is_some());
-    assert!(state.accept_tile_group(coverage_tile_group(0, 0)).is_err());
-
-    let mut missing_tiling = coverage_header();
-    missing_tiling.tiling = None;
-    state.pending = Some(coverage_pending(missing_tiling));
-    let _ = state.accept_tile_group(coverage_tile_group(0, 0));
-    let _ = coverage_read_tile_group(&state, &[], 0);
-
-    let mut group_header = coverage_header();
-    group_header.tiling = Some(coverage_tiling(2, 2));
-    state.pending = Some(coverage_pending(group_header));
-    for payload in [[0b1001_1000_u8], [0b1110_0000], [0], [0x80]] {
-        let _ = coverage_read_tile_group(&state, &payload, 8);
-    }
-    for bit_end in 0..=8 {
-        let _ = coverage_read_tile_group(&state, &[0x80], bit_end);
-    }
-    crate::coverage_support::require_some(
-        crate::coverage_support::require_some(
-            state.pending.as_mut(),
-            "coverage fixture: state .pending .as_mut() ",
-        )
-        .header
-        .tiling
-        .as_mut(),
-        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
-    )
-    .columns = 3;
-    crate::coverage_support::require_some(
-        crate::coverage_support::require_some(
-            state.pending.as_mut(),
-            "coverage fixture: state .pending .as_mut() ",
-        )
-        .header
-        .tiling
-        .as_mut(),
-        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
-    )
-    .log2_columns = 2;
-    crate::coverage_support::require_some(
-        crate::coverage_support::require_some(
-            state.pending.as_mut(),
-            "coverage fixture: state .pending .as_mut() ",
-        )
-        .header
-        .tiling
-        .as_mut(),
-        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
-    )
-    .rows = 1;
-    crate::coverage_support::require_some(
-        crate::coverage_support::require_some(
-            state.pending.as_mut(),
-            "coverage fixture: state .pending .as_mut() ",
-        )
-        .header
-        .tiling
-        .as_mut(),
-        "coverage fixture: state .pending .as_mut() .unwrap() .header .tiling .as_mut() ",
-    )
-    .log2_rows = 0;
-    let _ = coverage_read_tile_group(&state, &[0b1001_1000], 8);
-    state.pending = None;
-    let _ = coverage_read_tile_group(&state, &[], 0);
-
-    const REDUCED_FRAME: &[u8] = b"\x10\x00\x93\x80\x00\x08\x00\x00\x01\x48\x1a\x7a\xa0";
-    const REDUCED_SEQUENCE: &[u8] = b"\x40\x00\x00\x02\xaf\xff\xbf\xff\x3e\xa0";
-    let mut sample = Vec::new();
-    sample.extend_from_slice(REDUCED_SEQUENCE);
-    sample.extend_from_slice(REDUCED_FRAME);
-    let spans = [ByteSpan {
-        start: 0,
-        end: sample.len(),
-    }];
-    let data = crate::coverage_support::require_ok(
-        SegmentedData::new(&sample, &spans),
-        "coverage fixture: SegmentedData::new(&sample, &spans)",
-    );
-    let parsed_sequence = crate::coverage_support::require_ok(
-        super::sequence::parse(&data, 0, REDUCED_SEQUENCE.len()),
-        "coverage fixture: super::sequence::parse(&data, 0, REDUCED_SEQUENCE.len())",
-    );
-    coverage_sweep_frame(
-        REDUCED_FRAME,
-        &parsed_sequence,
-        &std::array::from_fn(|_| None),
-    );
-    const ANIMATED_SEQUENCE: &[u8] = b"\x00\x00\x00\x03\xbc\xac\xa9\xb5\xf2\x20\x21\xa0\xd0\x80";
-    const ANIMATED_KEY: &[u8] =
-        b"\x10\x00\x83\x80\x00\x00\x80\x00\x00\x00\xeb\xc5\xa6\x2e\x0c\x0d\xd1\x51\x40";
-    let animated_spans = [ByteSpan {
-        start: 0,
-        end: ANIMATED_SEQUENCE.len(),
-    }];
-    let animated_data = crate::coverage_support::require_ok(
-        SegmentedData::new(ANIMATED_SEQUENCE, &animated_spans),
-        "coverage fixture: SegmentedData::new(ANIMATED_SEQUENCE, &animated_spans)",
-    );
-    let animated_sequence = crate::coverage_support::require_ok(
-        super::sequence::parse(&animated_data, 0, ANIMATED_SEQUENCE.len()),
-        "coverage fixture: super::sequence::parse(&animated_data, 0, ANIMATED_SEQUENCE.len())",
-    );
-    coverage_sweep_frame(
-        ANIMATED_KEY,
-        &animated_sequence,
-        &std::array::from_fn(|_| None),
-    );
-    let parser_references = coverage_references();
-    let parser_sequence = coverage_sequence();
-    let mut presentation_prefix = CoverageBitWriter::new();
-    presentation_prefix.push(0, 1);
-    presentation_prefix.push(0, 2);
-    presentation_prefix.push(1, 1);
-    coverage_sweep_frame(
-        &presentation_prefix.bytes,
-        &parser_sequence,
-        &parser_references,
-    );
-
-    let mut frame_id_prefix = CoverageBitWriter::new();
-    frame_id_prefix.push(0, 1);
-    frame_id_prefix.push(0, 2);
-    frame_id_prefix.push(1, 1);
-    frame_id_prefix.push(0, 3);
-    frame_id_prefix.push(0, 1);
-    frame_id_prefix.push(0, 1);
-    coverage_sweep_frame(&frame_id_prefix.bytes, &parser_sequence, &parser_references);
-    frame_id_prefix.push(3, parser_sequence.frame_id_bits);
-    coverage_sweep_frame(&frame_id_prefix.bytes, &parser_sequence, &parser_references);
-    let mut invalid_frame_id_prefix = CoverageBitWriter::new();
-    invalid_frame_id_prefix.push(0, 1);
-    invalid_frame_id_prefix.push(0, 2);
-    invalid_frame_id_prefix.push(0, 1);
-    invalid_frame_id_prefix.push(0, 1);
-    invalid_frame_id_prefix.push(0, 1);
-    invalid_frame_id_prefix.push(0, 1);
-    invalid_frame_id_prefix.push(3, parser_sequence.frame_id_bits);
-    coverage_sweep_frame(
-        &invalid_frame_id_prefix.bytes,
-        &parser_sequence,
-        &parser_references,
-    );
-
-    let mut buffer_prefix = frame_id_prefix;
-    buffer_prefix.push(0, 1);
-    buffer_prefix.push(0, parser_sequence.order_hint_bits);
-    buffer_prefix.push(1, 1);
-    coverage_sweep_frame(&buffer_prefix.bytes, &parser_sequence, &parser_references);
-
-    let mut film_sequence = parsed_sequence.clone();
-    film_sequence.film_grain_present = true;
-    coverage_sweep_frame(
-        REDUCED_FRAME,
-        &film_sequence,
-        &std::array::from_fn(|_| None),
-    );
-    const ANIMATED_INTER_1: &[u8] = b"\x28\x04\xe0\x40\x00\x00\x23\x43\x30\x00\x00\x40\x00\x04\x00\x00\x08\xe4\x66\x90\x91\x47\x7f\x6e\xcc\x05\x23\x9b\xc1\x1c\xc6\x74\xcb\x7e\xe0";
-    const ANIMATED_INTER_2: &[u8] = b"\x28\x02\xe0\x80\x00\x00\xa3\x44\xc0\x00\x00\x48\x00\x04\x00\x00\x26\x66\xc9\x49\xed\xf9\xfc\xed\x11\x20\x54\x85\xcf\x5f\x49\x98\x10\x5b\x20";
-    const ANIMATED_INTER_3: &[u8] = b"\x30\x03\xc2\x00\x00\x81\x46\x8c\x80\x00\x00\x90\x00\x08\x00\x1f\x3a\xcd\xf2\xb3\x29\xa3\x70\xb6\x44\xb1\xd9\x5a\x93\x1f\x3c\x56\x60\x14\xc4";
-    const ANIMATED_INTER_4: &[u8] = b"\x30\x06\x44\x09\x80\x01\x46\x8c\x80\x00\x00\x90\x00\x08\x00\x33\xa1\xc0\x60\x46\x86\x20\x7d\xcf\xf4\xfc";
-    const ANIMATED_INTER_5: &[u8] =
-        b"\x30\x08\x00\x11\x30\x01\x46\x8c\x80\x00\x00\x90\x00\x08\x00\xb3\x2e\xde\x2e\xcf\x20";
-    let mut animated_state = FrameState::new();
-    crate::coverage_support::require_ok(
-        animated_state.accept_sequence(animated_sequence.clone()),
-        "coverage fixture: animated_state .accept_sequence(animated_sequence.clone()) ",
-    );
-    let mut coverage_surface: Option<Arc<FrameSurface>> = None;
-    for (frame_index, frame) in [
-        ANIMATED_KEY,
-        ANIMATED_INTER_1,
-        ANIMATED_INTER_2,
-        ANIMATED_INTER_3,
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        if let Some(surface) = coverage_surface.as_ref() {
-            for reference in &mut animated_state.references {
-                if let Some(reference) = reference.as_mut()
-                    && reference.surface.is_none()
-                {
-                    reference.surface = Some(surface.clone());
-                }
-            }
-        }
-        let animated_references = animated_state.reference_headers();
-        coverage_sweep_frame(frame, &animated_sequence, &animated_references);
-        if frame_index == 1 {
-            coverage_mutation_sweep_frame(frame, &animated_sequence, &animated_references);
-            for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_references.clone();
-                missing_reference[slot] = None;
-                coverage_sweep_frame(frame, &animated_sequence, &missing_reference);
-            }
-        }
-        if frame_index == 3 {
-            let mut select_mode = frame.to_vec();
-            select_mode[107 / 8] ^= 1 << (7 - 107 % 8);
-            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_references);
-            for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_references.clone();
-                missing_reference[slot] = None;
-                coverage_sweep_frame(&select_mode, &animated_sequence, &missing_reference);
-            }
-        }
-        let spans = [ByteSpan {
-            start: 0,
-            end: frame.len(),
-        }];
-        let data = crate::coverage_support::require_ok(
-            SegmentedData::new(frame, &spans),
-            "coverage fixture: SegmentedData::new(frame, &spans)",
-        );
-        assert_eq!(
-            animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
-            Ok(())
-        );
-        if frame_index == 0 {
-            coverage_surface = animated_state
-                .references
-                .iter()
-                .find_map(|reference| reference.as_ref().and_then(|value| value.surface.clone()));
-        }
-    }
-    let show_existing = [0xa8_u8];
-    let animated_references = animated_state.reference_headers();
-    coverage_sweep_frame(&show_existing, &animated_sequence, &animated_references);
-    let show_spans = [ByteSpan { start: 0, end: 1 }];
-    let show_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&show_existing, &show_spans),
-        "coverage fixture: SegmentedData::new(&show_existing, &show_spans)",
-    );
-    assert_eq!(
-        animated_state.frame_header_obu(&show_data, 0..1, false, 0, 0, false),
-        Ok(())
-    );
-    for (frame_index, frame) in [ANIMATED_INTER_4, ANIMATED_INTER_5].into_iter().enumerate() {
-        if let Some(surface) = coverage_surface.as_ref() {
-            for reference in &mut animated_state.references {
-                if let Some(reference) = reference.as_mut()
-                    && reference.surface.is_none()
-                {
-                    reference.surface = Some(surface.clone());
-                }
-            }
-        }
-        let animated_references = animated_state.reference_headers();
-        coverage_sweep_frame(frame, &animated_sequence, &animated_references);
-        if frame_index == 0 {
-            let mut select_mode = frame.to_vec();
-            select_mode[107 / 8] ^= 1 << (7 - 107 % 8);
-            coverage_sweep_frame(&select_mode, &animated_sequence, &animated_references);
-            for slot in 0..REFERENCE_SLOTS {
-                let mut missing_reference = animated_references.clone();
-                missing_reference[slot] = None;
-                coverage_sweep_frame(&select_mode, &animated_sequence, &missing_reference);
-            }
-        }
-        let spans = [ByteSpan {
-            start: 0,
-            end: frame.len(),
-        }];
-        let data = crate::coverage_support::require_ok(
-            SegmentedData::new(frame, &spans),
-            "coverage fixture: SegmentedData::new(frame, &spans)",
-        );
-        assert_eq!(
-            animated_state.frame_obu(&data, 0, frame.len(), false, 0, 0),
-            Ok(())
-        );
-    }
-    let frame_start = REDUCED_SEQUENCE.len();
-    let frame_end = sample.len();
-    let mut direct = FrameState::new();
-    crate::coverage_support::require_ok(
-        direct.accept_sequence(parsed_sequence.clone()),
-        "coverage fixture: direct.accept_sequence(parsed_sequence.clone())",
-    );
-    assert!(
-        direct
-            .begin_frame(&data, frame_start..frame_end, false, 0, 0, false)
-            .is_ok()
-    );
-    assert!(
-        direct
-            .begin_frame(&data, frame_start..frame_end, false, 0, 0, false)
-            .is_err()
-    );
-    assert!(
-        direct
-            .begin_frame(&data, frame_start..frame_end, false, 0, 0, true)
-            .is_ok()
-    );
-    assert!(
-        direct
-            .begin_frame(&data, frame_start..frame_end, true, 1, 0, true)
-            .is_err()
-    );
-    assert!(
-        direct
-            .begin_frame(&data, frame_start..frame_start, false, 0, 0, true)
-            .is_err()
-    );
-
-    let frame_with_id = coverage_insert_bits(REDUCED_FRAME, 1, 3, 4);
-    let frame_id_spans = [ByteSpan {
-        start: 0,
-        end: frame_with_id.len(),
-    }];
-    let frame_id_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&frame_with_id, &frame_id_spans),
-        "coverage fixture: SegmentedData::new(&frame_with_id, &frame_id_spans)",
-    );
-    let mut frame_id_sequence = parsed_sequence.clone();
-    frame_id_sequence.frame_id_numbers_present = true;
-    frame_id_sequence.delta_frame_id_bits = 2;
-    frame_id_sequence.frame_id_bits = 4;
-    let mut frame_id_state = FrameState::new();
-    crate::coverage_support::require_ok(
-        frame_id_state.accept_sequence(frame_id_sequence),
-        "coverage fixture: frame_id_state.accept_sequence(frame_id_sequence)",
-    );
-    frame_id_state.current_frame_id = Some(3);
-    let _ = frame_id_state.begin_frame(&frame_id_data, 0..frame_with_id.len(), false, 0, 0, false);
-
-    let header_bits = crate::coverage_support::require_some(
-        direct.pending.as_ref(),
-        "coverage fixture: direct.pending.as_ref()",
-    )
-    .header
-    .header_bits;
-    let header_length = header_bits.saturating_add(1).div_ceil(8);
-    let mut reduced_header = REDUCED_FRAME[..header_length].to_vec();
-    let trailing_byte = header_bits / 8;
-    let trailing_offset = 7usize.saturating_sub(header_bits % 8);
-    reduced_header[trailing_byte] &= u8::MAX << trailing_offset.saturating_add(1);
-    reduced_header[trailing_byte] |= 1 << trailing_offset;
-    let header_spans = [ByteSpan {
-        start: 0,
-        end: reduced_header.len(),
-    }];
-    let header_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&reduced_header, &header_spans),
-        "coverage fixture: SegmentedData::new(&reduced_header, &header_spans)",
-    );
-    let mut split = FrameState::new();
-    crate::coverage_support::require_ok(
-        split.accept_sequence(parsed_sequence),
-        "coverage fixture: split.accept_sequence(parsed_sequence)",
-    );
-    assert_eq!(
-        split.frame_header_obu(&header_data, 0..reduced_header.len(), false, 0, 0, false,),
-        Ok(())
-    );
-    assert_eq!(
-        split.frame_header_obu(&header_data, 0..reduced_header.len(), false, 0, 0, true,),
-        Ok(())
-    );
-    assert!(matches!(
-        split.tile_group_obu(&header_data, 0, 0, false, 0, 0),
-        Err(crate::codecs::CodecError::Malformed(message))
-            if message.contains("tile payload is empty")
-    ));
-
-    let mut illegal_show = FrameState::new();
-    crate::coverage_support::require_ok(
-        illegal_show.accept_sequence(coverage_sequence()),
-        "coverage fixture: illegal_show.accept_sequence(coverage_sequence())",
-    );
-    illegal_show.references[0] = Some(ReferenceState {
-        header: coverage_header(),
-        decode: None,
-        surface: None,
-    });
-    let show = [0x80];
-    let show_spans = [ByteSpan { start: 0, end: 1 }];
-    let show_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&show, &show_spans),
-        "coverage fixture: SegmentedData::new(&show, &show_spans)",
-    );
-    assert!(
-        illegal_show
-            .frame_obu(&show_data, 0, 1, false, 0, 0)
-            .is_err()
-    );
-
-    let references = coverage_references();
-    let mut show_existing = CoverageBitWriter::new();
-    show_existing.push(1, 1);
-    show_existing.push(0, 3);
-    show_existing.push(0, 3);
-    show_existing.push(15, 4);
-    let show_existing = show_existing.bytes;
-    let show_existing_spans = [ByteSpan {
-        start: 0,
-        end: show_existing.len(),
-    }];
-    let show_existing_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&show_existing, &show_existing_spans),
-        "coverage fixture: SegmentedData::new(&show_existing, &show_existing_spans)",
-    );
-    let _ = parse(
-        &show_existing_data,
-        0,
-        show_existing.len(),
-        &coverage_sequence(),
-        &references,
-        (0, 0),
-        None,
-    );
-    coverage_sweep_frame(&show_existing, &coverage_sequence(), &references);
-    let mut missing_existing_reference = references.clone();
-    missing_existing_reference[0] = None;
-    let _ = parse(
-        &show_existing_data,
-        0,
-        show_existing.len(),
-        &coverage_sequence(),
-        &missing_existing_reference,
-        (0, 0),
-        None,
-    );
-    let mut matching_existing = CoverageBitWriter::new();
-    matching_existing.push(1, 1);
-    matching_existing.push(0, 3);
-    matching_existing.push(0, 3);
-    matching_existing.push(0, 4);
-    let matching_existing = matching_existing.bytes;
-    let matching_spans = [ByteSpan {
-        start: 0,
-        end: matching_existing.len(),
-    }];
-    let matching_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&matching_existing, &matching_spans),
-        "coverage fixture: SegmentedData::new(&matching_existing, &matching_spans)",
-    );
-    let _ = parse(
-        &matching_data,
-        0,
-        matching_existing.len(),
-        &coverage_sequence(),
-        &references,
-        (0, 0),
-        None,
-    );
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_frame_id_and_timing_paths() {
-    let mut sequence = coverage_sequence();
-    let mut header = coverage_header();
-    assert_eq!(
-        validate_current_frame_id(sequence.frame_id_bits, None, &header),
-        Ok(())
-    );
-    header.frame_type = FrameType::Key;
-    header.show_frame = true;
-    assert_eq!(
-        validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        Ok(())
-    );
-    header.show_frame = false;
-    header.frame_id = 4;
-    assert_eq!(
-        validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        Ok(())
-    );
-    header.frame_type = FrameType::Inter;
-    header.frame_id = 4;
-    assert_eq!(
-        validate_current_frame_id(sequence.frame_id_bits, Some(3), &header),
-        Ok(())
-    );
-    header.frame_id = 1;
-    assert_eq!(
-        validate_current_frame_id(sequence.frame_id_bits, Some(15), &header),
-        Ok(())
-    );
-    header.frame_id = 3;
-    assert!(validate_current_frame_id(sequence.frame_id_bits, Some(3), &header).is_err());
-    header.frame_id = 12;
-    assert!(validate_current_frame_id(sequence.frame_id_bits, Some(3), &header).is_err());
-
-    let bytes = [0xff; 8];
-    coverage_read(&bytes, 64, |bits| {
-        let _ = read_presentation_delay(bits, &coverage_sequence());
-    });
-    sequence = coverage_sequence();
-    sequence.timing = None;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_presentation_delay(bits, &sequence);
-    });
-    coverage_read(&[0x80], 1, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    sequence.timing = coverage_sequence().timing;
-    crate::coverage_support::require_some(
-        sequence.timing.as_mut(),
-        "coverage fixture: sequence .timing .as_mut() ",
-    )
-    .buffer_removal_delay_length = None;
-    coverage_read(&[0x80], 1, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    crate::coverage_support::require_some(
-        sequence.timing.as_mut(),
-        "coverage fixture: sequence .timing .as_mut() ",
-    )
-    .frame_presentation_delay_length = None;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_presentation_delay(bits, &sequence);
-    });
-    sequence = coverage_sequence();
-    sequence.decoder_model_present = false;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_presentation_delay(bits, &sequence);
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    sequence = coverage_sequence();
-    crate::coverage_support::require_some(
-        sequence.timing.as_mut(),
-        "coverage fixture: sequence.timing.as_mut()",
-    )
-    .equal_picture_interval = true;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_presentation_delay(bits, &sequence);
-    });
-    sequence = coverage_sequence();
-    coverage_read(&[0], 1, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    sequence = coverage_sequence();
-    coverage_read(&bytes, 64, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 1, 1);
-    });
-    coverage_read(&bytes, 64, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    coverage_sweep_read(&bytes, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    sequence.operating_points = vec![OperatingPoint {
-        idc: 1,
-        level: 0,
-        tier: 0,
-        decoder_parameters: Some(DecoderParameters {
-            decoder_buffer_delay: 0,
-            encoder_buffer_delay: 0,
-            low_delay_mode: false,
-        }),
-        display_model_present: false,
-        initial_display_delay: 10,
-    }];
-    coverage_read(&bytes, 64, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    sequence.operating_points[0].idc = 1 << 8;
-    coverage_read(&bytes, 64, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-    sequence.operating_points[0].decoder_parameters = None;
-    coverage_read(&bytes, 64, |bits| {
-        let _ = read_buffer_removal_times(bits, &sequence, 0, 0);
-    });
-
-    for (policy, byte) in [(0, 0_u8), (1, 0), (2, 0), (2, 0x80), (3, 0)] {
-        coverage_read(&[byte], 1, |bits| {
-            let _ = read_policy_flag(bits, policy);
-        });
-    }
-    let mut policy_header = coverage_header();
-    for (frame_type, show_frame, reduced, byte) in [
-        (FrameType::Key, true, false, 0),
-        (FrameType::Switch, false, false, 0),
-        (FrameType::Inter, false, true, 0),
-        (FrameType::Inter, false, false, 0),
-        (FrameType::Inter, false, false, 0x80),
-    ] {
-        policy_header.frame_type = frame_type;
-        policy_header.show_frame = show_frame;
-        sequence.reduced_still_picture_header = reduced;
-        coverage_read(&[byte], 1, |bits| {
-            let _ = read_error_resilient_mode(bits, &sequence, &policy_header);
-        });
-    }
-    sequence.reduced_still_picture_header = false;
-    for (frame_type, resilient, enabled, byte) in [
-        (FrameType::Key, false, true, 0),
-        (FrameType::Inter, true, true, 0),
-        (FrameType::Inter, false, false, 0),
-        (FrameType::Inter, false, true, 0),
-        (FrameType::Inter, false, true, 0x80),
-    ] {
-        policy_header.frame_type = frame_type;
-        policy_header.error_resilient_mode = resilient;
-        sequence.enable_warped_motion = enabled;
-        coverage_read(&[byte], 1, |bits| {
-            let _ = read_allow_warped_motion(bits, &sequence, &policy_header);
-        });
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_frame_kind_and_geometry_paths() {
-    let mut sequence = coverage_sequence();
-    let references = coverage_references();
-    let bytes = [0xff; 512];
-
-    for frame_type in [
-        FrameType::Key,
-        FrameType::Inter,
-        FrameType::IntraOnly,
-        FrameType::Switch,
-    ] {
-        for fill in [0_u8, 0x55, 0xaa, 0xff] {
-            let input = [fill; 512];
-            let mut header = coverage_header();
-            header.frame_type = frame_type;
-            header.show_frame = frame_type == FrameType::Key;
-            header.error_resilient_mode = true;
-            header.allow_screen_content_tools = true;
-            coverage_read(
-                &input,
-                crate::coverage_support::bit_len(input.len()),
-                |bits| {
-                    let _ = read_frame_type_fields(bits, &sequence, &references, &mut header);
-                },
-            );
-        }
-    }
-    let mut syntax_sequence = sequence.clone();
-    syntax_sequence.frame_id_numbers_present = false;
-    for frame_type in [
-        FrameType::Key,
-        FrameType::Inter,
-        FrameType::IntraOnly,
-        FrameType::Switch,
-    ] {
-        for input in [&[0_u8; 128][..], &[0xff_u8; 128][..]] {
-            let mut template = coverage_header();
-            template.frame_type = frame_type;
-            template.show_frame = false;
-            template.error_resilient_mode = true;
-            template.allow_screen_content_tools = true;
-            coverage_sweep_read(input, |bits| {
-                let mut header = template.clone();
-                let _ = read_frame_type_fields(bits, &syntax_sequence, &references, &mut header);
-            });
-        }
-    }
-    let mut no_order_sequence = sequence.clone();
-    no_order_sequence.enable_order_hint = false;
-    let mut no_order_header = coverage_header();
-    no_order_header.error_resilient_mode = false;
-    coverage_read(&[0; 512], 4096, |bits| {
-        let _ = read_frame_type_fields(bits, &no_order_sequence, &references, &mut no_order_header);
-    });
-    let mut no_order_intra = coverage_header();
-    no_order_intra.frame_type = FrameType::IntraOnly;
-    no_order_intra.error_resilient_mode = true;
-    coverage_read(&[0; 512], 4096, |bits| {
-        let _ = read_frame_type_fields(bits, &no_order_sequence, &references, &mut no_order_intra);
-    });
-    let mut no_order_resilient = coverage_header();
-    no_order_resilient.error_resilient_mode = true;
-    coverage_read(&[0; 512], 4096, |bits| {
-        let _ = read_frame_type_fields(
-            bits,
-            &no_order_sequence,
-            &references,
-            &mut no_order_resilient,
-        );
-    });
-
-    let mut matching_references = references.clone();
-    crate::coverage_support::require_some(
-        matching_references[0].as_mut(),
-        "coverage fixture: matching_references[0].as_mut()",
-    )
-    .frame_id = 2;
-    let mut matching_ids = CoverageBitWriter::new();
-    matching_ids.push(0, 8);
-    matching_ids.push(0, 1);
-    for _ in 0..7 {
-        matching_ids.push(0, 3);
-    }
-    for _ in 0..7 {
-        matching_ids.push(0, 2);
-    }
-    matching_ids.push(0, 7);
-    matching_ids.push(0, 1);
-    matching_ids.push(0, 1);
-    matching_ids.push(0, 2);
-    matching_ids.push(0, 1);
-    matching_ids.push(0, 1);
-    let matching_ids = matching_ids.finish();
-    let mut matching_header = coverage_header();
-    matching_header.frame_id = 3;
-    matching_header.error_resilient_mode = false;
-    matching_header.frame_size_override = false;
-    coverage_read(
-        &matching_ids,
-        crate::coverage_support::bit_len(matching_ids.len()),
-        |bits| {
-            let _ =
-                read_frame_type_fields(bits, &sequence, &matching_references, &mut matching_header);
-        },
-    );
-    coverage_sweep_read(&matching_ids, |bits| {
-        let mut header = coverage_header();
-        header.frame_id = 3;
-        header.error_resilient_mode = false;
-        header.frame_size_override = false;
-        let _ = read_frame_type_fields(bits, &sequence, &matching_references, &mut header);
-    });
-    let mut missing_id_reference = matching_references.clone();
-    missing_id_reference[0] = None;
-    let mut missing_id_header = coverage_header();
-    missing_id_header.frame_id = 3;
-    missing_id_header.error_resilient_mode = false;
-    missing_id_header.frame_size_override = false;
-    coverage_read(
-        &matching_ids,
-        crate::coverage_support::bit_len(matching_ids.len()),
-        |bits| {
-            let _ = read_frame_type_fields(
-                bits,
-                &sequence,
-                &missing_id_reference,
-                &mut missing_id_header,
-            );
-        },
-    );
-
-    let mut header = coverage_header();
-    header.frame_type = FrameType::Inter;
-    header.error_resilient_mode = false;
-    header.frame_size_override = true;
-    coverage_read(
-        &bytes,
-        crate::coverage_support::bit_len(bytes.len()),
-        |bits| {
-            let _ = read_frame_size(bits, &sequence, &references, &mut header, true);
-        },
-    );
-    coverage_read(&[], 0, |bits| {
-        let _ = read_frame_size(bits, &sequence, &references, &mut header, true);
-    });
-    coverage_read(&[0x80], 1, |bits| {
-        let _ = read_frame_size(bits, &sequence, &references, &mut header, true);
-    });
-    coverage_read(&[0; 8], 64, |bits| {
-        let _ = read_frame_size(bits, &sequence, &references, &mut header, false);
-    });
-    coverage_sweep_read(&[0; 8], |bits| {
-        let mut frame = header.clone();
-        let _ = read_frame_size(bits, &sequence, &references, &mut frame, false);
-    });
-    let mut explicit_render = CoverageBitWriter::new();
-    explicit_render.push(127, sequence.width_bits);
-    explicit_render.push(127, sequence.height_bits);
-    explicit_render.push(0, 1);
-    explicit_render.push(1, 1);
-    explicit_render.push(127, 16);
-    explicit_render.push(127, 16);
-    coverage_sweep_read(&explicit_render.bytes, |bits| {
-        let mut frame = header.clone();
-        let _ = read_frame_size(bits, &sequence, &references, &mut frame, false);
-    });
-    let mut missing_reference = references.clone();
-    missing_reference[0] = None;
-    coverage_read(&[0x80], 1, |bits| {
-        let _ = read_frame_size(bits, &sequence, &missing_reference, &mut header, true);
-    });
-    sequence.enable_superres = true;
-    header.upscaled_width = 128;
-    coverage_read(&[0xff; 2], 16, |bits| {
-        let _ = read_superres(bits, &sequence, &mut header);
-    });
-    coverage_sweep_read(&[0xff; 2], |bits| {
-        let mut frame = header.clone();
-        let _ = read_superres(bits, &sequence, &mut frame);
-    });
-    sequence.enable_superres = false;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_superres(bits, &sequence, &mut header);
-    });
-
-    let mut short_references = references;
-    for (index, reference) in short_references.iter_mut().enumerate() {
-        crate::coverage_support::require_some(
-            reference.as_mut(),
-            "coverage fixture: reference.as_mut()",
-        )
-        .order_hint = [1, 2, 3, 4, 5, 6, 7, 8][index];
-    }
-    let _ = derive_short_references(&sequence, &short_references, 4, 0, 3);
-    for (index, reference) in short_references.iter_mut().enumerate() {
-        crate::coverage_support::require_some(
-            reference.as_mut(),
-            "coverage fixture: reference.as_mut()",
-        )
-        .order_hint = [8, 7, 6, 5, 4, 3, 2, 1][index];
-    }
-    let _ = derive_short_references(&sequence, &short_references, 4, 0, 3);
-    let mut missing_reference = short_references.clone();
-    missing_reference[2] = None;
-    let _ = derive_short_references(&sequence, &missing_reference, 4, 0, 3);
-    for order_hint in [0_u32, 8, 15] {
-        for reference in &mut short_references {
-            crate::coverage_support::require_some(
-                reference.as_mut(),
-                "coverage fixture: reference.as_mut()",
-            )
-            .order_hint = order_hint.saturating_add(1) & 15;
-        }
-        let _ = derive_short_references(&sequence, &short_references, order_hint, 0, 3);
-    }
-    for bits in [0, 1, 4, 31, 32] {
-        let _ = relative_distance(bits, 1, 15);
-    }
-    for (block, target) in [(1, 1), (1, 64), (64, 1)] {
-        let _ = tile_log2(block, target);
-    }
-    let mut mvs_header = coverage_header();
-    for (resilient, enable_mvs, enable_order, byte) in [
-        (true, true, true, 0),
-        (false, false, true, 0),
-        (false, true, false, 0),
-        (false, true, true, 0),
-        (false, true, true, 0x80),
-    ] {
-        mvs_header.error_resilient_mode = resilient;
-        sequence.enable_ref_frame_mvs = enable_mvs;
-        sequence.enable_order_hint = enable_order;
-        coverage_read(&[byte], 1, |bits| {
-            let _ = read_use_ref_frame_mvs(bits, &sequence, &mvs_header);
-        });
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_tiling_and_metadata_paths() {
-    let mut sequence = coverage_sequence();
-    let mut header = coverage_header();
-    let references = coverage_references();
-
-    header.frame_width = 0;
-    coverage_read(&[0], 1, |bits| {
-        let _ = read_tiling(bits, &sequence, &header);
-    });
-
-    for (width, height) in [
-        (64, 64),
-        (512, 256),
-        (8192, 8192),
-        (4096, 32768),
-        (32768, 4096),
-    ] {
-        header.frame_width = width;
-        header.frame_height = height;
-        for fill in [0_u8, 0x55, 0xaa, 0xff] {
-            let input = [fill; 512];
-            coverage_read(
-                &input,
-                crate::coverage_support::bit_len(input.len()),
-                |bits| {
-                    let _ = read_tiling(bits, &sequence, &header);
-                },
-            );
-        }
-    }
-    header.frame_width = 512;
-    header.frame_height = 256;
-    coverage_sweep_read(&[0; 64], |bits| {
-        let _ = read_tiling(bits, &sequence, &header);
-    });
-    coverage_sweep_read(&[0xff; 64], |bits| {
-        let _ = read_tiling(bits, &sequence, &header);
-    });
-    sequence.use_128x128_superblock = true;
-    coverage_read(&[0xff; 512], 4096, |bits| {
-        let _ = read_tiling(bits, &sequence, &header);
-    });
-
-    for fill in [0_u8, 0x55, 0xaa, 0xff] {
-        let input = [fill; 1024];
-        coverage_read(
-            &input,
-            crate::coverage_support::bit_len(input.len()),
-            |bits| {
-                let _ = read_quantization(bits, &sequence);
-            },
-        );
-        coverage_read(
-            &input,
-            crate::coverage_support::bit_len(input.len()),
-            |bits| {
-                let _ = read_segmentation(bits, &references, &header);
-            },
-        );
-    }
-    coverage_sweep_read(&[0; 64], |bits| {
-        let _ = read_quantization(bits, &sequence);
-    });
-    coverage_sweep_read(&[0xff; 64], |bits| {
-        let _ = read_quantization(bits, &sequence);
-    });
-    sequence.monochrome = true;
-    coverage_read(&[0xff; 64], 512, |bits| {
-        let _ = read_quantization(bits, &sequence);
-    });
-    sequence.monochrome = false;
-
-    let mut inherited = header.clone();
-    inherited.primary_ref_frame = 0;
-    let inherit_bits = [0b1000_0000];
-    coverage_read(&inherit_bits, 3, |bits| {
-        let _ = read_segmentation(bits, &references, &inherited);
-    });
-    coverage_sweep_read(&[0xe0], |bits| {
-        let _ = read_segmentation(bits, &references, &inherited);
-    });
-
-    let mut segmentation = CoverageBitWriter::new();
-    segmentation.push(1, 1);
-    for index in 0..8 {
-        for (value, width) in [(1, 9), (-1, 7), (2, 7), (-2, 7), (3, 7)] {
-            segmentation.push(u32::from(index == 0), 1);
-            if index == 0 {
-                segmentation.push_signed(value, width);
-            }
-        }
-        segmentation.push(u32::from(index == 0), 1);
-        if index == 0 {
-            segmentation.push(3, 3);
-        }
-        segmentation.push(u32::from(index == 0), 1);
-        segmentation.push(u32::from(index == 0), 1);
-    }
-    let segmentation = segmentation.finish();
-    let mut no_primary = header.clone();
-    no_primary.primary_ref_frame = PRIMARY_REF_NONE;
-    coverage_read(
-        &segmentation,
-        crate::coverage_support::bit_len(segmentation.len()),
-        |bits| {
-            let _ = read_segmentation(bits, &references, &no_primary);
-        },
-    );
-    coverage_sweep_read(&segmentation, |bits| {
-        let _ = read_segmentation(bits, &references, &no_primary);
-    });
-    let mut no_primary_inherited = header.clone();
-    no_primary_inherited.primary_ref_frame = PRIMARY_REF_NONE;
-    coverage_read(&inherit_bits, 3, |bits| {
-        let _ = read_segmentation(bits, &references, &no_primary_inherited);
-    });
-    let mut missing_reference = references.clone();
-    missing_reference[0] = None;
-    coverage_read(&inherit_bits, 3, |bits| {
-        let _ = read_segmentation(bits, &missing_reference, &inherited);
-    });
-
-    let mut delta = header.clone();
-    crate::coverage_support::require_some(
-        delta.quantization.as_mut(),
-        "coverage fixture: delta.quantization.as_mut()",
-    )
-    .base = 128;
-    delta.segmentation.enabled = true;
-    delta.segmentation.segments[0].delta_q = -255;
-    coverage_read(&[0xff; 8], 64, |bits| {
-        let _ = read_delta_and_lossless(bits, &mut delta);
-    });
-    coverage_sweep_read(&[0xff; 8], |bits| {
-        let mut truncated = delta.clone();
-        truncated.allow_intrabc = false;
-        let _ = read_delta_and_lossless(bits, &mut truncated);
-    });
-    delta.allow_intrabc = true;
-    coverage_read(&[0xff; 8], 64, |bits| {
-        let _ = read_delta_and_lossless(bits, &mut delta);
-    });
-    for index in 0..5 {
-        let mut individual = coverage_header();
-        crate::coverage_support::require_some(
-            individual.quantization.as_mut(),
-            "coverage fixture: individual.quantization.as_mut()",
-        )
-        .base = 0;
-        match index {
-            0 => {
-                crate::coverage_support::require_some(
-                    individual.quantization.as_mut(),
-                    "coverage fixture: individual.quantization.as_mut()",
-                )
-                .y_dc_delta = 1
-            }
-            1 => {
-                crate::coverage_support::require_some(
-                    individual.quantization.as_mut(),
-                    "coverage fixture: individual.quantization.as_mut()",
-                )
-                .u_dc_delta = 1
-            }
-            2 => {
-                crate::coverage_support::require_some(
-                    individual.quantization.as_mut(),
-                    "coverage fixture: individual.quantization.as_mut()",
-                )
-                .u_ac_delta = 1
-            }
-            3 => {
-                crate::coverage_support::require_some(
-                    individual.quantization.as_mut(),
-                    "coverage fixture: individual.quantization.as_mut()",
-                )
-                .v_dc_delta = 1
-            }
-            _ => {
-                crate::coverage_support::require_some(
-                    individual.quantization.as_mut(),
-                    "coverage fixture: individual.quantization.as_mut()",
-                )
-                .v_ac_delta = 1
-            }
-        }
-        coverage_read(&[], 0, |bits| {
-            let _ = read_delta_and_lossless(bits, &mut individual);
-        });
-    }
-    let mut missing_quantization = coverage_header();
-    missing_quantization.quantization = None;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_delta_and_lossless(bits, &mut missing_quantization);
-    });
-
-    let mut filtered = header;
-    filtered.all_lossless = false;
-    for fill in [0_u8, 0xff] {
-        let input = [fill; 128];
-        coverage_read(
-            &input,
-            crate::coverage_support::bit_len(input.len()),
-            |bits| {
-                let _ = read_loop_filter(bits, &sequence, &references, &filtered);
-            },
-        );
-        coverage_read(
-            &input,
-            crate::coverage_support::bit_len(input.len()),
-            |bits| {
-                let _ = read_cdef(bits, &sequence, &filtered);
-            },
-        );
-        coverage_read(
-            &input,
-            crate::coverage_support::bit_len(input.len()),
-            |bits| {
-                let _ = read_restoration(bits, &sequence, &filtered);
-            },
-        );
-    }
-    coverage_sweep_read(&[0; 128], |bits| {
-        let _ = read_loop_filter(bits, &sequence, &references, &filtered);
-    });
-    coverage_sweep_read(&[0xff; 128], |bits| {
-        let _ = read_loop_filter(bits, &sequence, &references, &filtered);
-    });
-    let mut no_primary_filter = filtered.clone();
-    no_primary_filter.primary_ref_frame = PRIMARY_REF_NONE;
-    coverage_read(&[0; 32], 256, |bits| {
-        let _ = read_loop_filter(bits, &sequence, &references, &no_primary_filter);
-    });
-    coverage_read(&[0; 32], 256, |bits| {
-        let _ = read_loop_filter(bits, &sequence, &missing_reference, &filtered);
-    });
-    coverage_sweep_read(&[0; 128], |bits| {
-        let _ = read_cdef(bits, &sequence, &filtered);
-    });
-    coverage_sweep_read(&[0xff; 128], |bits| {
-        let _ = read_cdef(bits, &sequence, &filtered);
-    });
-    filtered.all_lossless = true;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_loop_filter(bits, &sequence, &references, &filtered);
-        let _ = read_cdef(bits, &sequence, &filtered);
-        let _ = read_restoration(bits, &sequence, &filtered);
-    });
-    filtered.all_lossless = false;
-    filtered.allow_intrabc = true;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_loop_filter(bits, &sequence, &references, &filtered);
-        let _ = read_cdef(bits, &sequence, &filtered);
-        let _ = read_restoration(bits, &sequence, &filtered);
-    });
-
-    filtered.allow_intrabc = false;
-    filtered.all_lossless = true;
-    filtered.superres_enabled = true;
-    let mut restoration_sequence = sequence;
-    restoration_sequence.enable_restoration = false;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_restoration(bits, &restoration_sequence, &filtered);
-    });
-    restoration_sequence.enable_restoration = true;
-    restoration_sequence.monochrome = false;
-    filtered.all_lossless = false;
-    for (use_128, subsampling_x, subsampling_y, input) in [
-        (false, false, false, &[0x57_u8, 0x80][..]),
-        (false, true, true, &[0x57_u8, 0xc0]),
-        (false, true, true, &[0x47_u8, 0xc0]),
-        (true, true, true, &[0x57_u8, 0x80]),
-        (false, true, false, &[0x40_u8, 0]),
-    ] {
-        restoration_sequence.use_128x128_superblock = use_128;
-        restoration_sequence.subsampling_x = subsampling_x;
-        restoration_sequence.subsampling_y = subsampling_y;
-        coverage_read(
-            input,
-            crate::coverage_support::bit_len(input.len()),
-            |bits| {
-                let _ = read_restoration(bits, &restoration_sequence, &filtered);
-            },
-        );
-        coverage_sweep_read(input, |bits| {
-            let _ = read_restoration(bits, &restoration_sequence, &filtered);
-        });
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_prediction_and_grain_paths() {
-    let mut sequence = coverage_sequence();
-    let mut references = coverage_references();
-    let mut header = coverage_header();
-    header.reference_mode_select = true;
-    let _ = derive_skip_mode_references(&sequence, &references, &header);
-    header.reference_mode_select = false;
-    let _ = derive_skip_mode_references(&sequence, &references, &header);
-    header.reference_mode_select = true;
-    header.frame_type = FrameType::Key;
-    let _ = derive_skip_mode_references(&sequence, &references, &header);
-    header.frame_type = FrameType::Inter;
-    sequence.enable_order_hint = false;
-    let _ = derive_skip_mode_references(&sequence, &references, &header);
-    sequence.enable_order_hint = true;
-    for reference in &mut references {
-        crate::coverage_support::require_some(
-            reference.as_mut(),
-            "coverage fixture: reference.as_mut()",
-        )
-        .order_hint = 1;
-    }
-    let _ = derive_skip_mode_references(&sequence, &references, &header);
-    for reference in &mut references {
-        crate::coverage_support::require_some(
-            reference.as_mut(),
-            "coverage fixture: reference.as_mut()",
-        )
-        .order_hint = 5;
-    }
-    let _ = derive_skip_mode_references(&sequence, &references, &header);
-    let mut missing_skip_reference = references.clone();
-    missing_skip_reference[0] = None;
-    let _ = derive_skip_mode_references(&sequence, &missing_skip_reference, &header);
-
-    let mut global = CoverageBitWriter::new();
-    global.push(1, 1);
-    global.push(1, 1);
-    for _ in 0..4 {
-        global.push(0, 4);
-    }
-    for _ in 1..7 {
-        global.push(0, 1);
-    }
-    let global = global.finish();
-    header.primary_ref_frame = PRIMARY_REF_NONE;
-    coverage_read(
-        &global,
-        crate::coverage_support::bit_len(global.len()),
-        |bits| {
-            let _ = read_global_motion(bits, &references, &header);
-        },
-    );
-    coverage_sweep_read(&global, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
-
-    let mut translation = CoverageBitWriter::new();
-    translation.push(1, 1);
-    translation.push(0, 1);
-    translation.push(1, 1);
-    for _ in 0..2 {
-        translation.push(0, 4);
-    }
-    for _ in 1..7 {
-        translation.push(0, 1);
-    }
-    let translation = translation.finish();
-    header.allow_high_precision_mv = true;
-    coverage_read(
-        &translation,
-        crate::coverage_support::bit_len(translation.len()),
-        |bits| {
-            let _ = read_global_motion(bits, &references, &header);
-        },
-    );
-    coverage_sweep_read(&translation, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
-    header.allow_high_precision_mv = false;
-    coverage_read(
-        &translation,
-        crate::coverage_support::bit_len(translation.len()),
-        |bits| {
-            let _ = read_global_motion(bits, &references, &header);
-        },
-    );
-
-    let mut affine = CoverageBitWriter::new();
-    affine.push(1, 1);
-    affine.push(0, 1);
-    affine.push(0, 1);
-    for _ in 0..6 {
-        affine.push(0, 4);
-    }
-    for _ in 1..7 {
-        affine.push(0, 1);
-    }
-    let affine = affine.finish();
-    header.primary_ref_frame = 0;
-    coverage_read(
-        &affine,
-        crate::coverage_support::bit_len(affine.len()),
-        |bits| {
-            let _ = read_global_motion(bits, &references, &header);
-        },
-    );
-    coverage_sweep_read(&affine, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
-    let mut invalid_global = header.clone();
-    invalid_global.primary_ref_frame = PRIMARY_REF_NONE;
-    coverage_read(&[0xc0], 2, |bits| {
-        let _ = read_global_motion(bits, &references, &invalid_global);
-    });
-    invalid_global.primary_ref_frame = 0;
-    let mut missing_global_reference = references.clone();
-    missing_global_reference[0] = None;
-    invalid_global.reference_indices[0] = 0;
-    coverage_read(&[0xc0], 2, |bits| {
-        let _ = read_global_motion(bits, &missing_global_reference, &invalid_global);
-    });
-    header.frame_type = FrameType::Key;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_global_motion(bits, &references, &header);
-    });
-
-    coverage_read(&[0x00, 0x01, 0x00, 0x01], 32, |bits| {
-        let _ = read_points(bits, 2);
-    });
-    coverage_read(&[0x01, 0x01, 0x00, 0x01], 32, |bits| {
-        let _ = read_points(bits, 2);
-    });
-    coverage_sweep_read(&[0x00, 0x01, 0x01, 0x01], |bits| {
-        let _ = read_points(bits, 2);
-    });
-
-    header = coverage_header();
-    header.frame_type = FrameType::Key;
-    header.show_frame = true;
-    let mut grain = CoverageBitWriter::new();
-    grain.push(1, 1);
-    grain.push(1, 16);
-    grain.push(1, 4);
-    grain.push(0, 8);
-    grain.push(1, 8);
-    grain.push(0, 1);
-    for _ in 0..2 {
-        grain.push(1, 4);
-        grain.push(0, 8);
-        grain.push(1, 8);
-    }
-    grain.push(0, 2);
-    grain.push(0, 2);
-    for _ in 0..2 {
-        grain.push(128, 8);
-    }
-    grain.push(0, 2);
-    grain.push(0, 2);
-    for _ in 0..2 {
-        grain.push(128, 8);
-        grain.push(128, 8);
-        grain.push(256, 9);
-    }
-    grain.push(1, 1);
-    grain.push(1, 1);
-    let grain = grain.finish();
-    sequence.subsampling_x = false;
-    sequence.subsampling_y = false;
-    coverage_read(
-        &grain,
-        crate::coverage_support::bit_len(grain.len()),
-        |bits| {
-            let parsed = read_film_grain(bits, &sequence, &references, &header);
-            assert!(parsed.is_ok());
-        },
-    );
-    coverage_sweep_read(&grain, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-
-    for fill in [0_u8, 0x55, 0xaa, 0xff] {
-        let input = [fill; 512];
-        coverage_read(
-            &input,
-            crate::coverage_support::bit_len(input.len()),
-            |bits| {
-                let _ = read_film_grain(bits, &sequence, &references, &header);
-            },
-        );
-    }
-    sequence.monochrome = true;
-    coverage_read(&[0xff; 512], 4096, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-
-    sequence = coverage_sequence();
-    header.frame_type = FrameType::Inter;
-    header.reference_indices = [0, 1, 2, 3, 4, 5, 6];
-    crate::coverage_support::require_some(
-        references[0].as_mut(),
-        "coverage fixture: references[0].as_mut()",
-    )
-    .film_grain = Some(FilmGrain {
-        seed: 1,
-        update: true,
-        reference_slot: None,
-        y_points: Vec::new(),
-        chroma_scaling_from_luma: false,
-        uv_points: std::array::from_fn(|_| Vec::new()),
-        scaling_shift: 8,
-        ar_coefficient_lag: 0,
-        ar_coefficients_y: Vec::new(),
-        ar_coefficients_uv: std::array::from_fn(|_| Vec::new()),
-        ar_coefficient_shift: 6,
-        grain_scale_shift: 0,
-        uv_multiplier: [0; 2],
-        uv_luma_multiplier: [0; 2],
-        uv_offset: [0; 2],
-        overlap: false,
-        clip_to_restricted_range: false,
-        matrix_coefficients: 6,
-    });
-    let mut inherited = CoverageBitWriter::new();
-    inherited.push(1, 1);
-    inherited.push(2, 16);
-    inherited.push(0, 1);
-    inherited.push(0, 3);
-    let inherited = inherited.finish();
-    coverage_read(
-        &inherited,
-        crate::coverage_support::bit_len(inherited.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-    coverage_sweep_read(&inherited, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-    let mut no_grain_reference = references.clone();
-    crate::coverage_support::require_some(
-        no_grain_reference[0].as_mut(),
-        "coverage fixture: no_grain_reference[0].as_mut()",
-    )
-    .film_grain = None;
-    coverage_read(
-        &inherited,
-        crate::coverage_support::bit_len(inherited.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &no_grain_reference, &header);
-        },
-    );
-    no_grain_reference[0] = None;
-    coverage_read(
-        &inherited,
-        crate::coverage_support::bit_len(inherited.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &no_grain_reference, &header);
-        },
-    );
-    let mut invalid_inherited = CoverageBitWriter::new();
-    invalid_inherited.push(1, 1);
-    invalid_inherited.push(2, 16);
-    invalid_inherited.push(0, 1);
-    invalid_inherited.push(7, 3);
-    let invalid_inherited = invalid_inherited.finish();
-    coverage_read(
-        &invalid_inherited,
-        crate::coverage_support::bit_len(invalid_inherited.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-
-    sequence.film_grain_present = false;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-    sequence.film_grain_present = true;
-    header.show_frame = false;
-    header.showable_frame = false;
-    coverage_read(&[], 0, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-    header.showable_frame = true;
-    coverage_read(&[0], 1, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-    header.show_frame = true;
-    header.showable_frame = false;
-    coverage_read(&[0], 1, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-
-    header.frame_type = FrameType::Key;
-    let mut invalid_y = CoverageBitWriter::new();
-    invalid_y.push(1, 1);
-    invalid_y.push(0, 16);
-    invalid_y.push(15, 4);
-    let invalid_y = invalid_y.finish();
-    coverage_read(
-        &invalid_y,
-        crate::coverage_support::bit_len(invalid_y.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-
-    sequence.subsampling_x = false;
-    sequence.subsampling_y = false;
-    let mut invalid_uv = CoverageBitWriter::new();
-    invalid_uv.push(1, 1);
-    invalid_uv.push(0, 16);
-    invalid_uv.push(0, 4);
-    invalid_uv.push(0, 1);
-    invalid_uv.push(11, 4);
-    let invalid_uv = invalid_uv.finish();
-    coverage_read(
-        &invalid_uv,
-        crate::coverage_support::bit_len(invalid_uv.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-
-    sequence.subsampling_x = true;
-    sequence.subsampling_y = true;
-    let mut empty_420 = CoverageBitWriter::new();
-    empty_420.push(1, 1);
-    empty_420.push(0, 16);
-    empty_420.push(0, 4);
-    empty_420.push(0, 1);
-    empty_420.push(0, 2);
-    empty_420.push(0, 2);
-    empty_420.push(0, 2);
-    empty_420.push(0, 2);
-    empty_420.push(0, 1);
-    empty_420.push(0, 1);
-    let empty_420 = empty_420.finish();
-    coverage_read(
-        &empty_420,
-        crate::coverage_support::bit_len(empty_420.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-    coverage_sweep_read(&empty_420, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-    let mut asymmetric_uv = CoverageBitWriter::new();
-    asymmetric_uv.push(1, 1);
-    asymmetric_uv.push(0, 16);
-    asymmetric_uv.push(1, 4);
-    asymmetric_uv.push(0, 8);
-    asymmetric_uv.push(0, 8);
-    asymmetric_uv.push(0, 1);
-    asymmetric_uv.push(1, 4);
-    asymmetric_uv.push(0, 8);
-    asymmetric_uv.push(0, 8);
-    asymmetric_uv.push(0, 4);
-    let asymmetric_uv = asymmetric_uv.finish();
-    coverage_read(
-        &asymmetric_uv,
-        crate::coverage_support::bit_len(asymmetric_uv.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-
-    let mut chroma_from_luma = CoverageBitWriter::new();
-    chroma_from_luma.push(1, 1);
-    chroma_from_luma.push(0, 16);
-    chroma_from_luma.push(1, 4);
-    chroma_from_luma.push(0, 8);
-    chroma_from_luma.push(0, 8);
-    chroma_from_luma.push(1, 1);
-    chroma_from_luma.push(0, 2);
-    chroma_from_luma.push(1, 2);
-    for _ in 0..4 {
-        chroma_from_luma.push(128, 8);
-    }
-    for _ in 0..10 {
-        chroma_from_luma.push(128, 8);
-    }
-    chroma_from_luma.push(0, 2);
-    chroma_from_luma.push(0, 2);
-    chroma_from_luma.push(0, 1);
-    chroma_from_luma.push(0, 1);
-    let chroma_from_luma = chroma_from_luma.finish();
-    coverage_read(
-        &chroma_from_luma,
-        crate::coverage_support::bit_len(chroma_from_luma.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-    coverage_sweep_read(&chroma_from_luma, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-    sequence.subsampling_y = false;
-    coverage_read(
-        &grain,
-        crate::coverage_support::bit_len(grain.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-
-    sequence.monochrome = true;
-    let mut monochrome_grain = CoverageBitWriter::new();
-    monochrome_grain.push(1, 1);
-    monochrome_grain.push(0, 16);
-    monochrome_grain.push(1, 4);
-    monochrome_grain.push(0, 8);
-    monochrome_grain.push(0, 8);
-    monochrome_grain.push(0, 2);
-    monochrome_grain.push(1, 2);
-    for _ in 0..4 {
-        monochrome_grain.push(128, 8);
-    }
-    monochrome_grain.push(0, 2);
-    monochrome_grain.push(0, 2);
-    monochrome_grain.push(0, 1);
-    monochrome_grain.push(0, 1);
-    let monochrome_grain = monochrome_grain.finish();
-    coverage_read(
-        &monochrome_grain,
-        crate::coverage_support::bit_len(monochrome_grain.len()),
-        |bits| {
-            let _ = read_film_grain(bits, &sequence, &references, &header);
-        },
-    );
-    coverage_sweep_read(&monochrome_grain, |bits| {
-        let _ = read_film_grain(bits, &sequence, &references, &header);
-    });
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(super) fn __coverage_exercise_private_branches() {
-    coverage_state_paths();
-    coverage_frame_id_and_timing_paths();
-    coverage_frame_kind_and_geometry_paths();
-    coverage_tiling_and_metadata_paths();
-    coverage_prediction_and_grain_paths();
 }
 
 #[cfg(test)]

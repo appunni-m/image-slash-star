@@ -1672,22 +1672,43 @@ fn add_spatial_candidate(
     if block.is_intra() {
         return;
     }
-    let wanted = target_references(target);
     if matches!(target, ReferenceMvTarget::IntraBc) && !block.intra_bc {
         return;
     }
     if !matches!(target, ReferenceMvTarget::IntraBc) && block.intra_bc {
         return;
     }
-    if block.references != wanted {
-        return;
-    }
     let mut vectors = block.vectors;
-    for index in 0..2 {
-        if block.global_affine[index]
-            && let Some(global) = affine[index]
-        {
-            vectors[index] = global;
+    match target {
+        ReferenceMvTarget::Single(reference) => {
+            // AV1 single-reference stack collection accepts the matching lane
+            // from a compound spatial neighbor.
+            let wanted_reference = reference.spatial_reference();
+            let Some(index) = block
+                .references
+                .iter()
+                .position(|candidate| *candidate == wanted_reference)
+            else {
+                return;
+            };
+            vectors = [block.vectors[index], MotionVector::ZERO];
+            if block.global_affine[index]
+                && let Some(global) = affine[0]
+            {
+                vectors[0] = global;
+            }
+        }
+        ReferenceMvTarget::Compound(_) | ReferenceMvTarget::IntraBc => {
+            if block.references != target_references(target) {
+                return;
+            }
+            for index in 0..2 {
+                if block.global_affine[index]
+                    && let Some(global) = affine[index]
+                {
+                    vectors[index] = global;
+                }
+            }
         }
     }
     *have_ref_mv = 1;
@@ -2964,7 +2985,17 @@ impl ProjectedTemporalField {
             .checked_mul(height)
             .ok_or_else(|| malformed("projected temporal allocation overflows"))?;
         let mut cells = Vec::new();
-        cells.try_reserve_exact(length).map_err(|_| {
+        #[cfg(coverage)]
+        let reservation_length = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1ProjectedTemporalFieldReservation,
+        ) {
+            usize::MAX
+        } else {
+            length
+        };
+        #[cfg(not(coverage))]
+        let reservation_length = length;
+        cells.try_reserve_exact(reservation_length).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 projected temporal field".to_owned())
         })?;
         cells.resize(length, None);
@@ -3088,7 +3119,17 @@ impl TemporalMotionField {
             .checked_mul(height)
             .ok_or_else(|| malformed("temporal motion allocation overflows"))?;
         let mut cells = Vec::new();
-        cells.try_reserve_exact(length).map_err(|_| {
+        #[cfg(coverage)]
+        let reservation_length = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1TemporalMotionFieldReservation,
+        ) {
+            usize::MAX
+        } else {
+            length
+        };
+        #[cfg(not(coverage))]
+        let reservation_length = length;
+        cells.try_reserve_exact(reservation_length).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 temporal motion field".to_owned())
         })?;
         cells.resize(length, None);
@@ -3310,13 +3351,13 @@ pub(super) fn load_projected_temporal_field(
                 };
                 let pos_x = i64::from(x)
                     .checked_add(i64::from(apply_sign(
-                        i32::from(offset.x).unsigned_abs() as i32 >> 6,
+                        i32::from(offset.x).unsigned_abs().cast_signed() >> 6,
                         i32::from(offset.x) ^ ref_sign,
                     )))
                     .and_then(|value| u32::try_from(value).ok());
                 let pos_y = i64::from(y)
                     .checked_add(i64::from(apply_sign(
-                        i32::from(offset.y).unsigned_abs() as i32 >> 6,
+                        i32::from(offset.y).unsigned_abs().cast_signed() >> 6,
                         i32::from(offset.y) ^ ref_sign,
                     )))
                     .and_then(|value| u32::try_from(value).ok());

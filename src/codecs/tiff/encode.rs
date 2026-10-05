@@ -4,8 +4,6 @@ use crate::codecs::compression::deflate::compress_zlib_tiff;
 use crate::codecs::{CodecError, CodecResult};
 use crate::encode_options::{TiffCompression, TiffEncodeOptions, TiffPredictor};
 use crate::encode_policy::EncodePolicy;
-#[cfg(coverage)]
-use crate::types::ColorType;
 use crate::types::{DecodedImage, DecodedSequence, FrameBlend, FrameDisposal, ImageMode};
 use crate::{CodecOperation, ImageFormat};
 use std::borrow::Cow;
@@ -247,12 +245,6 @@ fn encode_page_with_token(
     } else {
         pixel_offset.saturating_add(encoded.len())
     };
-    #[cfg(coverage)]
-    let output_len = if opts.force_output_len_overflow() {
-        usize::MAX
-    } else {
-        output_len
-    };
     // Classic TIFF stores offsets and byte counts as `u32`; bounding the full
     // output length bounds every offset/count written below.
     u32::try_from(output_len).map_err(|_| {
@@ -375,20 +367,6 @@ pub fn encode_sequence_with_token(
         crate::codecs::error::check_cancelled(token)?;
         pages.push(encode_page_with_token(&frame.image, opts, token)?);
     }
-    #[cfg(coverage)]
-    let final_len = if opts.force_sequence_len_overflow() {
-        sequence_output_len([usize::MAX])?
-    } else {
-        #[cfg(not(coverage))]
-        {
-            sequence_output_len(pages.iter().map(|page| page.bytes.len()))?
-        }
-        #[cfg(coverage)]
-        {
-            sequence_output_len(pages.iter().map(|page| page.bytes.len())).unwrap_or_default()
-        }
-    };
-    #[cfg(not(coverage))]
     let final_len = sequence_output_len(pages.iter().map(|page| page.bytes.len()))?;
     let mut output = Vec::with_capacity(final_len);
     let mut previous_next_position: Option<usize> = None;
@@ -495,9 +473,8 @@ fn tiff_sequence_fits_classic_limit(total: usize) -> CodecResult<()> {
 
 // A page plan produced by `encode_page_with_token` has addressable byte and
 // offset fields, and sequence sizing proves every relocation arithmetic step
-// fits classic TIFF limits. Forged private pages are exercised separately;
-// exclude only those impossible relocation errors from aggregate coverage.
-#[cfg_attr(coverage, coverage(off))]
+// fits classic TIFF limits. Keep checked field access and arithmetic here so
+// an inconsistent private page plan retains a meaningful error cause.
 fn relocate_pages(pages: &mut [EncodedPage]) -> CodecResult<()> {
     let mut end = 0usize;
     for index in 0..pages.len() {
@@ -545,13 +522,11 @@ fn relocate_pages(pages: &mut [EncodedPage]) -> CodecResult<()> {
 // useful diagnostics for a forged private page plan, but their overflow state
 // cannot be materialized by the supported encoder on the native coverage
 // target.
-#[cfg_attr(coverage, coverage(off))]
 fn tiff_page_end(base: usize, page_len: usize) -> CodecResult<usize> {
     base.checked_add(page_len)
         .ok_or_else(|| CodecError::Dimensions("TIFF sequence length overflows".to_owned()))
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn tiff_relocated_offset(base: usize, local: usize) -> CodecResult<usize> {
     base.checked_add(local)
         .ok_or_else(|| CodecError::Dimensions("TIFF relocated offset overflows".to_owned()))
@@ -599,342 +574,6 @@ fn write_page_to_sink(
         write_sink_segment(sink, &page.bytes[8..page.ifd_offset], token, written)?;
     }
     write_sink_segment(sink, &page.bytes[page.ifd_offset..], token, written)
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let _ = encode(
-        &DecodedImage::new(0, 1, Vec::new(), ColorType::L8),
-        &TiffEncodeOptions::default(),
-    );
-    let _ = encode(
-        &DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::La16),
-        &TiffEncodeOptions::default(),
-    );
-
-    let l1 = DecodedImage::with_mode(8, 1, vec![0b1010_1010], ImageMode::L1);
-    let la = DecodedImage::new(1, 1, vec![7, 255], ColorType::La8);
-    let l16 = DecodedImage::new(1, 1, 0x1234u16.to_le_bytes().to_vec(), ColorType::L16);
-    let f32 = DecodedImage::with_mode(1, 1, 1.0f32.to_ne_bytes().to_vec(), ImageMode::F32);
-    let i32 = DecodedImage::with_mode(1, 1, 42i32.to_ne_bytes().to_vec(), ImageMode::I32);
-    let rgb = DecodedImage::new(
-        2,
-        2,
-        vec![0, 0, 0, 255, 0, 0, 0, 255, 0, 255, 255, 255],
-        ColorType::Rgb8,
-    );
-    let rgba = DecodedImage::new(1, 1, vec![1, 2, 3, 4], ColorType::Rgba8);
-    let cmyk = DecodedImage::new(1, 1, vec![1, 2, 3, 4], ColorType::Cmyk8);
-    let wide_rgb = DecodedImage::new(70_000, 1, vec![0; 70_000 * 3], ColorType::Rgb8);
-    let tall_rgb = DecodedImage::new(1, 70_000, vec![0; 70_000 * 3], ColorType::Rgb8);
-
-    for image in [&l1, &la, &l16, &f32, &i32, &rgb, &rgba, &cmyk] {
-        let _ = encode(image, &TiffEncodeOptions::default());
-    }
-    for compression in [
-        TiffCompression::Lzw,
-        TiffCompression::Deflate,
-        TiffCompression::PackBits,
-        TiffCompression::Raw,
-    ] {
-        let mut options = TiffEncodeOptions::default();
-        options.compression = Some(compression);
-        let _ = encode(&rgb, &options);
-    }
-    let mut forced_output_overflow = TiffEncodeOptions::default();
-    forced_output_overflow.set_force_output_len_overflow();
-    let _ = encode(&rgb, &forced_output_overflow);
-    let mut packbits = TiffEncodeOptions::default();
-    packbits.compression = Some(TiffCompression::PackBits);
-    let _ = encode(&wide_rgb, &packbits);
-    let _ = encode(&tall_rgb, &packbits);
-    let mut horizontal = TiffEncodeOptions::default();
-    horizontal.predictor = Some(TiffPredictor::Horizontal);
-    let _ = encode(&l1, &horizontal);
-    let _ = checked_align_16(usize::MAX);
-    for page_lengths in [[usize::MAX, 0], [1, 2]] {
-        let _ = sequence_output_len(page_lengths);
-    }
-    for page_lengths in [[usize::MAX.saturating_sub(15), 16], [16, 16]] {
-        let _ = sequence_output_len(page_lengths);
-    }
-    let _ = sequence_output_len([usize::MAX.saturating_sub(15), usize::MAX]);
-    let _ = sequence_output_len([usize::MAX.saturating_sub(15), 15]);
-    for page_lengths in [[u32::MAX as usize, 1], [1, 1]] {
-        let _ = sequence_output_len(page_lengths);
-    }
-    #[cfg(not(target_pointer_width = "32"))]
-    for page_lengths in [[u32::MAX as usize + 1], [1]] {
-        let _ = sequence_output_len(page_lengths);
-    }
-    let _ = tiff_sequence_add(usize::MAX, 1);
-    let _ = tiff_sequence_fits_classic_limit(usize::MAX);
-    let mut sequence = DecodedSequence::from_image(rgb.clone());
-    sequence.frames.push(sequence.frames[0].clone());
-    // CancellationToken is a Rust-only checkpoint contract; Pillow cannot
-    // drive these page and relocation interruption edges.
-    let single_sequence = DecodedSequence::from_image(rgb.clone());
-    for checks in [0, 1] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_sequence_with_token(
-            &single_sequence,
-            &TiffEncodeOptions::default(),
-            Some(&token),
-        );
-    }
-    for checks in [1, 3, 4] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_sequence_with_token(&sequence, &TiffEncodeOptions::default(), Some(&token));
-    }
-    // Still-page cancellation is a Rust-only checkpoint contract. Exercise
-    // row preparation, PackBits rows, horizontal prediction, and the long
-    // LZW input loop without adding timing-sensitive public-test cases.
-    let checkpoint_image = DecodedImage::new(512, 16, vec![0; 512 * 16 * 3], ColorType::Rgb8);
-    let mut packbits_options = TiffEncodeOptions::default();
-    packbits_options.compression = Some(TiffCompression::PackBits);
-    for checks in [0, 1, 2, 3, 4] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_image, &packbits_options, Some(&token));
-    }
-    let mut lzw_options = TiffEncodeOptions::default();
-    lzw_options.compression = Some(TiffCompression::Lzw);
-    for checks in [0, 1, 2, 3, 4, 5] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_image, &lzw_options, Some(&token));
-    }
-    let mut predicted_lzw = lzw_options.clone();
-    predicted_lzw.predictor = Some(TiffPredictor::Horizontal);
-    for checks in [3, 4] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_image, &predicted_lzw, Some(&token));
-    }
-    let mut raw_options = TiffEncodeOptions::default();
-    raw_options.compression = Some(TiffCompression::Raw);
-    let mut deflate_options = TiffEncodeOptions::default();
-    deflate_options.compression = Some(TiffCompression::Deflate);
-    for checks in [4, 5] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_image, &raw_options, Some(&token));
-    }
-    for checks in [4, 5] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_image, &deflate_options, Some(&token));
-    }
-    let token = crate::CancellationToken::new();
-    token.cancel_after(7);
-    let _ = encode_sequence_with_token(&single_sequence, &raw_options, Some(&token));
-    for checks in [13, 14] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_sequence_with_token(&sequence, &raw_options, Some(&token));
-    }
-    // Adaptive dictionary resets change how many periodic polls precede the
-    // final LZW check, so sweep the deterministic checkpoint range.
-    for checks in 0..=16 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_image, &lzw_options, Some(&token));
-    }
-    // Successful token-bearing calls cover the post-compression and output
-    // relocation checkpoints that cancellation drills intentionally exit
-    // before reaching.
-    let token = crate::CancellationToken::new();
-    let _ = encode_with_token(
-        &checkpoint_image,
-        &TiffEncodeOptions::default(),
-        Some(&token),
-    );
-    let _ = encode_with_token(&checkpoint_image, &deflate_options, Some(&token));
-    let _ = encode_sequence_with_token(
-        &single_sequence,
-        &TiffEncodeOptions::default(),
-        Some(&token),
-    );
-    let _ = encode_sequence_with_token(&sequence, &TiffEncodeOptions::default(), Some(&token));
-    let _ = encode_with_token(&checkpoint_image, &lzw_options, Some(&token));
-    let mut sink = Vec::new();
-    let _ = encode_sequence_to_sink(
-        &sequence,
-        &TiffEncodeOptions::default(),
-        EncodePolicy::default(),
-        CodecOperation::SequenceEncode,
-        Some(&token),
-        &mut sink,
-    );
-    let invalid = DecodedImage::new(0, 1, Vec::new(), ColorType::L8);
-    let mut invalid_sink = Vec::new();
-    let _ = encode_to_sink(
-        &invalid,
-        &TiffEncodeOptions::default(),
-        EncodePolicy::default(),
-        CodecOperation::StillEncode,
-        None,
-        &mut invalid_sink,
-    );
-    let invalid_sequence = DecodedSequence::from_image(invalid);
-    let _ = encode_sequence_to_sink(
-        &invalid_sequence,
-        &TiffEncodeOptions::default(),
-        EncodePolicy::default(),
-        CodecOperation::SequenceEncode,
-        None,
-        &mut invalid_sink,
-    );
-    let mut semantic_sequence = sequence.clone();
-    semantic_sequence.loop_count = crate::types::AnimationLoop::Finite { total_plays: 1 };
-    let _ = encode_sequence_to_sink(
-        &semantic_sequence,
-        &TiffEncodeOptions::default(),
-        EncodePolicy::default(),
-        CodecOperation::SequenceEncode,
-        None,
-        &mut invalid_sink,
-    );
-    for checks in 0..=64 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        invalid_sink.clear();
-        let _ = encode_sequence_to_sink(
-            &sequence,
-            &TiffEncodeOptions::default(),
-            EncodePolicy::default(),
-            CodecOperation::SequenceEncode,
-            Some(&token),
-            &mut invalid_sink,
-        );
-    }
-    // Page lengths are not all 16-byte aligned. Sweep a small set of real
-    // source dimensions so the sequence writer emits its final padding bytes
-    // as well as the inter-page padding already covered above.
-    for width in 1u32..=8 {
-        for height in 1u32..=4 {
-            let image = DecodedImage::new(
-                width,
-                height,
-                vec![0; (width.saturating_mul(height).saturating_mul(3)) as usize],
-                ColorType::Rgb8,
-            );
-            let mut sequence = DecodedSequence::from_image(image);
-            sequence.frames.push(sequence.frames[0].clone());
-            let mut sink = Vec::new();
-            let _ = encode_sequence_to_sink(
-                &sequence,
-                &TiffEncodeOptions::default(),
-                EncodePolicy::default(),
-                CodecOperation::SequenceEncode,
-                Some(&token),
-                &mut sink,
-            );
-        }
-    }
-    let mut malformed_next_pages = vec![
-        EncodedPage {
-            bytes: vec![0; 8],
-            ifd_offset: 0,
-            offset_positions: Vec::new(),
-            next_position: 8,
-        },
-        EncodedPage {
-            bytes: Vec::new(),
-            ifd_offset: 0,
-            offset_positions: Vec::new(),
-            next_position: 0,
-        },
-    ];
-    let _ = relocate_pages(&mut malformed_next_pages);
-    let mut malformed_next_ifd_overflow = vec![
-        EncodedPage {
-            bytes: vec![0; 8],
-            ifd_offset: 0,
-            offset_positions: Vec::new(),
-            next_position: 0,
-        },
-        EncodedPage {
-            bytes: vec![0; 8],
-            ifd_offset: usize::MAX,
-            offset_positions: Vec::new(),
-            next_position: 0,
-        },
-    ];
-    let _ = relocate_pages(&mut malformed_next_ifd_overflow);
-    let mut malformed_next_field_overflow = vec![
-        EncodedPage {
-            bytes: vec![0; 8],
-            ifd_offset: 0,
-            offset_positions: Vec::new(),
-            next_position: usize::MAX,
-        },
-        EncodedPage {
-            bytes: vec![0; 8],
-            ifd_offset: 0,
-            offset_positions: Vec::new(),
-            next_position: 0,
-        },
-    ];
-    let _ = relocate_pages(&mut malformed_next_field_overflow);
-    let mut malformed_offset_page = EncodedPage {
-        bytes: vec![0; 8],
-        ifd_offset: 0,
-        offset_positions: vec![8],
-        next_position: 0,
-    };
-    let _ = relocate_pages(std::slice::from_mut(&mut malformed_offset_page));
-    let mut malformed_offset_position_overflow = EncodedPage {
-        bytes: vec![0; 8],
-        ifd_offset: 0,
-        offset_positions: vec![usize::MAX],
-        next_position: 0,
-    };
-    let _ = relocate_pages(std::slice::from_mut(
-        &mut malformed_offset_position_overflow,
-    ));
-    let mut forced_sequence_overflow = TiffEncodeOptions::default();
-    forced_sequence_overflow.set_force_sequence_len_overflow();
-    let _ = encode_sequence(&sequence, &forced_sequence_overflow);
-
-    let mut predicted = TiffEncodeOptions::default();
-    predicted.compression = Some(TiffCompression::Deflate);
-    predicted.predictor = Some(TiffPredictor::Horizontal);
-    let _ = encode(&rgb, &predicted);
-    let _ = encode(&l16, &predicted);
-    let _ = encode(&f32, &predicted);
-    let _ = encode(&i32, &predicted);
-
-    let mut bytes8 = vec![1, 2, 5, 9, 3, 4];
-    let _ = apply_horizontal_predictor(&mut bytes8, 6, 3, 8, None);
-    let mut bytes16 = vec![1, 0, 2, 0, 5, 0, 9, 0];
-    let _ = apply_horizontal_predictor(&mut bytes16, 8, 2, 16, None);
-    let mut bytes32 = vec![1, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0, 9, 0, 0, 0];
-    let _ = apply_horizontal_predictor(&mut bytes32, 16, 2, 32, None);
-
-    let literal: Vec<u8> = (0u8..=130).collect();
-    let run = vec![7u8; 260];
-    let mixed = [1u8, 2, 2, 3, 4, 4, 4, 5];
-    let _ = encode_packbits(&literal, literal.len(), None);
-    let _ = encode_packbits(&run, run.len(), None);
-    let _ = encode_packbits(&mixed, mixed.len(), None);
-    let mut packbits = Vec::new();
-    encode_packbits_row(&literal, &mut packbits);
-    encode_packbits_row(&run, &mut packbits);
-    encode_packbits_row(&mixed, &mut packbits);
-
-    let _ = encode_lzw(&[], None);
-    let _ = encode_lzw(b"TOBEORNOTTOBEORTOBEORNOT", None);
-    let mut writer = MsbWriter::default();
-    writer.write(0x1ff, 9);
-    writer.write(0, 1);
-    let _ = writer.finish();
-    let mut entries = Vec::new();
-    let endian = Endian::Little;
-    write_short_entry(&mut entries, endian, 256, 1);
-    write_entry(&mut entries, endian, 257, 4, 1, 1);
 }
 
 fn apply_horizontal_predictor(

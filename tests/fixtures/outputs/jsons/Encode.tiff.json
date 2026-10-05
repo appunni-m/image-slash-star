@@ -1446,6 +1446,121 @@
       }
     },
     {
+      "id": "enc_sequence_raw_final_aligned",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_sequence_raw_final_aligned.bin",
+      "ref_bytes": 36,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        4,
+        3
+      ],
+      "ref_sha256": "78ea9131a8ed73f36281684f5e7e01fa1fd16390b5bf76d90eece8634e540cb7",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_sequence_raw_final_aligned.bin",
+      "encoded_ref_bytes": 352,
+      "encoded_ref_sha256": "912b7b7b0a38dea18ed3f8c6e4c0744c5b5cdb7e5a067a7c1d9f4fb28ff646d0",
+      "source_mode": "Rgb8",
+      "source_sha256": "912b7b7b0a38dea18ed3f8c6e4c0744c5b5cdb7e5a067a7c1d9f4fb28ff646d0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          4,
+          3
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              4,
+              3
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "source_byte_order": "little",
+            "source_byte_order_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_raw_final_aligned_tiff_frame_0.bin",
+            "ref_bytes": 36,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              4,
+              3
+            ],
+            "ref_sha256": "78ea9131a8ed73f36281684f5e7e01fa1fd16390b5bf76d90eece8634e540cb7",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              4,
+              3
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "source_byte_order": "little",
+            "source_byte_order_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_raw_final_aligned_tiff_frame_1.bin",
+            "ref_bytes": 36,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              4,
+              3
+            ],
+            "ref_sha256": "35b75563de3eebc75f2595ae3ede75cfdca68bee619c25fde54f1c53c8172f5d",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
       "id": "enc_sequence_lzw",
       "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_sequence_lzw.bin",
       "ref_bytes": 189,
@@ -1784,6 +1899,151 @@
               7
             ],
             "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
+      "id": "enc_sequence_three_pages",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.tiff_enc_sequence_three_pages.bin",
+      "ref_bytes": 189,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        9,
+        7
+      ],
+      "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.tiff_enc_sequence_three_pages.bin",
+      "encoded_ref_bytes": 992,
+      "encoded_ref_sha256": "5c2417380e0c614b4df10c3500e8cc6d99c58d567dce9273842c5edcc3926043",
+      "source_mode": "Rgb8",
+      "source_sha256": "5c2417380e0c614b4df10c3500e8cc6d99c58d567dce9273842c5edcc3926043",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "pillow_fixture",
+        "sequence_pixels": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "sequence": {
+        "canvas_size": [
+          9,
+          11
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": null,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "source_byte_order": "little",
+            "source_byte_order_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_three_pages_tiff_frame_0.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "c5a5a369300a470bf54bcc02e08e147a48f02f07f621427c25ae9001e4fbabb9",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              9,
+              7
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "source_byte_order": "little",
+            "source_byte_order_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_three_pages_tiff_frame_1.bin",
+            "ref_bytes": 189,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              9,
+              7
+            ],
+            "ref_sha256": "039d9d05c536e98e043dbe62389176f0e8b3c2e06ba1dafd01aff64bed154f4e",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 2,
+            "source_rect": [
+              0,
+              0,
+              5,
+              11
+            ],
+            "duration_num": 0,
+            "duration_den": 1,
+            "duration_origin": "specification_reference",
+            "disposal": "unspecified",
+            "blend": "unspecified",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "source_rectangle",
+            "source_origin": "pillow_fixture",
+            "source_byte_order": "little",
+            "source_byte_order_origin": "pillow_fixture",
+            "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_encoded_enc_sequence_three_pages_tiff_frame_2.bin",
+            "ref_bytes": 165,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              5,
+              11
+            ],
+            "ref_sha256": "499ac078ad85682bea7f3ec1e8615cdc65a083385bc61036d45d446f3ed0e155",
             "pixel_assertion": "exact",
             "pixel_origin": "pillow_fixture"
           }

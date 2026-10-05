@@ -1,6 +1,6 @@
 //! Pillow-compatible AVIF decoding with a portable closed-class fast path.
 
-use super::PortableYuvMatrix;
+use super::{PortableColorConversion, PortableYuvMatrix};
 use crate::SequenceDecodeBudget;
 use crate::codecs::CodecError;
 use crate::codecs::CodecResult;
@@ -227,11 +227,20 @@ pub fn decode_sequence(
     let source_template =
         avif_sequence_source_template(&extracted, file_type, mode == ImageMode::Rgba8);
     let mut frames = Vec::new();
-    frames
-        .try_reserve(sequence_payload.color.samples.len())
-        .map_err(|_| {
-            CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
-        })?;
+    #[cfg(coverage)]
+    let frame_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifSequenceFrameReservation,
+    ) {
+        // `try_reserve` rejects this capacity before consulting the allocator.
+        usize::MAX
+    } else {
+        sequence_payload.color.samples.len()
+    };
+    #[cfg(not(coverage))]
+    let frame_reservation_count = sequence_payload.color.samples.len();
+    frames.try_reserve(frame_reservation_count).map_err(|_| {
+        CodecError::Dimensions("unable to reserve AVIF decoded sequence frames".to_owned())
+    })?;
     super::av1::visit_sequence_frames(&extracted, (width, height), token, |index, portable| {
         crate::codecs::error::check_cancelled(token)?;
         if (portable.width, portable.height) != (width, height)
@@ -406,9 +415,6 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
         return None;
     }
     if still.monochrome {
-        if !still.color_range {
-            return None;
-        }
         return decode_monochrome_portable(still, plane_length);
     }
     let subsampled = match (still.subsampling_x, still.subsampling_y) {
@@ -417,7 +423,7 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
         (true, false) => false,
         (false, true) => return None,
     };
-    let matrix = super::portable_yuv_matrix(
+    let conversion = super::portable_color_conversion(
         [
             still.color_primaries,
             still.transfer_characteristics,
@@ -493,15 +499,22 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
     let channel_count = if has_alpha { 4 } else { 3 };
     let pixel_capacity = plane_length.checked_mul(channel_count)?;
     let pixels = if !still.subsampling_x && !still.subsampling_y {
-        if has_alpha && still.bit_depth == 10 {
-            convert_full_resolution_rgb_10bit_alpha(
+        match conversion {
+            PortableColorConversion::IdentityRgb => convert_full_resolution_identity_rgb(
                 &y_plane.samples,
                 &u_plane.samples,
                 &v_plane.samples,
-                still.alpha_plane.as_ref()?.samples.as_slice(),
-            )?
-        } else {
-            convert_full_resolution_rgb(
+                still.bit_depth,
+            )?,
+            PortableColorConversion::Yuv(_) if has_alpha && still.bit_depth == 10 => {
+                convert_full_resolution_rgb_10bit_alpha(
+                    &y_plane.samples,
+                    &u_plane.samples,
+                    &v_plane.samples,
+                    still.alpha_plane.as_ref()?.samples.as_slice(),
+                )?
+            }
+            PortableColorConversion::Yuv(matrix) => convert_full_resolution_rgb(
                 &y_plane.samples,
                 &u_plane.samples,
                 &v_plane.samples,
@@ -511,19 +524,28 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
                     .map(|plane| plane.samples.as_slice()),
                 still.bit_depth,
                 matrix,
-            )?
+            )?,
         }
     } else {
+        let PortableColorConversion::Yuv(matrix) = conversion else {
+            return None;
+        };
         let shift = sample_depth.bits().checked_sub(8)?;
         let mut pixels = Vec::new();
         pixels.try_reserve_exact(pixel_capacity).ok()?;
         for (index, &y_sample) in y_plane.samples.iter().enumerate() {
             let (u_sample, v_sample) = if subsampled {
-                #[allow(clippy::arithmetic_side_effects)]
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "Validated nonzero plane width bounds the pixel-index quotient."
+                )]
                 let row = index.wrapping_div(width);
                 // `width` is validated nonzero; remainder matches euclidean
                 // semantics for non-negative operands without an intrinsic branch.
-                #[allow(clippy::arithmetic_side_effects)]
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "Validated nonzero plane width bounds the pixel-index remainder."
+                )]
                 let column = index.wrapping_rem(width);
                 (
                     if high_depth_10bit_subsampled_alpha || shift == 0 {
@@ -568,46 +590,27 @@ pub(super) fn decode_portable(validated: &super::av1::ValidatedAv1) -> Option<De
                     },
                 )
             } else {
-                #[allow(clippy::arithmetic_side_effects)]
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "Validated nonzero plane width bounds the pixel-index quotient."
+                )]
                 let row = index.wrapping_div(width);
-                #[allow(clippy::arithmetic_side_effects)]
+                #[allow(
+                    clippy::arithmetic_side_effects,
+                    reason = "Validated nonzero plane width bounds the pixel-index remainder."
+                )]
                 let column = index.wrapping_rem(width);
-                (
-                    if high_depth_10bit_subsampled_alpha || shift == 0 {
-                        libavif_422_bilinear_sample(
-                            &u_plane.samples,
-                            chroma_width,
-                            width,
-                            column,
-                            row,
-                        )
+                libyuv_422_bilinear_samples_at_depth(
+                    &u_plane.samples,
+                    &v_plane.samples,
+                    chroma_width,
+                    width,
+                    column,
+                    row,
+                    if high_depth_10bit_subsampled_alpha {
+                        0
                     } else {
-                        libavif_422_bilinear_sample_at_depth(
-                            &u_plane.samples,
-                            chroma_width,
-                            width,
-                            column,
-                            row,
-                            shift,
-                        )
-                    },
-                    if high_depth_10bit_subsampled_alpha || shift == 0 {
-                        libavif_422_bilinear_sample(
-                            &v_plane.samples,
-                            chroma_width,
-                            width,
-                            column,
-                            row,
-                        )
-                    } else {
-                        libavif_422_bilinear_sample_at_depth(
-                            &v_plane.samples,
-                            chroma_width,
-                            width,
-                            column,
-                            row,
-                            shift,
-                        )
+                        shift
                     },
                 )
             };
@@ -701,26 +704,47 @@ fn decode_monochrome_portable(
     let shift = sample_depth.bits().checked_sub(8)?;
     let mut pixels = Vec::new();
     pixels.try_reserve_exact(pixel_capacity).ok()?;
-    let remainder = sample_count.checked_rem(8)?;
-    let vectorized = sample_count.checked_sub(remainder)?;
-    for offset in (0..vectorized).step_by(8) {
-        let gray = truncate_u16_lanes(&still.planes[0].samples, offset, shift)?;
-        let alpha = match alpha_plane {
-            Some(plane) => Some(truncate_u16_lanes(plane, offset, shift)?),
-            None => None,
-        };
-        for lane in 0..8 {
-            pixels.extend_from_slice(&[gray[lane], gray[lane], gray[lane]]);
-            if let Some(alpha) = alpha.as_ref() {
-                pixels.push(alpha[lane]);
+    if still.color_range {
+        let remainder = sample_count.checked_rem(8)?;
+        let vectorized = sample_count.checked_sub(remainder)?;
+        for offset in (0..vectorized).step_by(8) {
+            let gray = truncate_u16_lanes(&still.planes[0].samples, offset, shift)?;
+            let alpha = match alpha_plane {
+                Some(plane) => Some(truncate_u16_lanes(plane, offset, shift)?),
+                None => None,
+            };
+            for lane in 0..8 {
+                pixels.extend_from_slice(&[gray[lane], gray[lane], gray[lane]]);
+                if let Some(alpha) = alpha.as_ref() {
+                    pixels.push(alpha[lane]);
+                }
             }
         }
-    }
-    for index in vectorized..sample_count {
-        let gray = sample_depth.truncate_to_u8(still.planes[0].samples[index])?;
-        pixels.extend_from_slice(&[gray, gray, gray]);
-        if let Some(alpha_plane) = alpha_plane {
-            pixels.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
+        for index in vectorized..sample_count {
+            let gray = sample_depth.truncate_to_u8(still.planes[0].samples[index])?;
+            pixels.extend_from_slice(&[gray, gray, gray]);
+            if let Some(alpha_plane) = alpha_plane {
+                pixels.push(sample_depth.truncate_to_u8(alpha_plane[index])?);
+            }
+        }
+    } else {
+        for (index, &sample) in still.planes[0].samples.iter().enumerate() {
+            let rgb = if has_alpha {
+                // libavif uses libyuv's I400 matrix for RGBA and first shifts
+                // high-depth luma down to eight bits.
+                let luma = sample_depth.truncate_to_u8(sample)?;
+                libyuv_rgb(luma, 128, 128, PortableYuvMatrix::Bt601Limited)
+            } else {
+                let gray = limited_luma_to_u8(sample, still.bit_depth)?;
+                [gray, gray, gray]
+            };
+            pixels.extend_from_slice(&rgb);
+            if let Some(alpha_plane) = alpha_plane {
+                pixels.push(full_range_sample_to_u8(
+                    alpha_plane[index],
+                    still.bit_depth,
+                )?);
+            }
         }
     }
     if pixels.len() != pixel_capacity {
@@ -751,6 +775,85 @@ fn decode_monochrome_portable(
         metadata: Vec::new(),
         source_color: SourceColor::new(),
     })
+}
+
+/// Match libavif's limited-range monochrome RGB path: normalize luma from
+/// studio range, clamp it, and round the 8-bit result half-up. The integer
+/// ratio is equivalent to the pinned float lookup path and avoids per-pixel
+/// floating-point work. Full-range decoding keeps its vectorized path above.
+fn limited_luma_to_u8(sample: u16, bit_depth: u32) -> Option<u8> {
+    let depth_shift = bit_depth.checked_sub(8)?;
+    let depth_scale = 1u32.checked_shl(depth_shift)?;
+    let luma_bias = 16u32.checked_mul(depth_scale)?;
+    let luma_range = 219u32.checked_mul(depth_scale)?;
+    let normalized = u32::from(sample).saturating_sub(luma_bias).min(luma_range);
+    let rounded = normalized
+        .checked_mul(255)?
+        .checked_add(luma_range / 2)?
+        .checked_div(luma_range)?;
+    u8::try_from(rounded).ok()
+}
+
+/// Scale a full-range auxiliary alpha sample to eight bits with libavif's
+/// round-half-up rule. Limited-range color does not change alpha range.
+fn full_range_sample_to_u8(sample: u16, bit_depth: u32) -> Option<u8> {
+    let max_sample = 1u32.checked_shl(bit_depth)?.checked_sub(1)?;
+    let rounded = u32::from(sample)
+        .checked_mul(255)?
+        .checked_add(max_sample / 2)?
+        .checked_div(max_sample)?;
+    u8::try_from(rounded).ok()
+}
+
+/// Materialize AV1 identity-CICP 12-bit I444 planes as RGB8 without applying a
+/// YUV matrix or range expansion. In identity mode AV1 stores G, B, R in its
+/// Y, Cb, Cr planes, respectively. Validate the full sample domain before
+/// truncating the color planes to Pillow's eight-bit output.
+fn convert_full_resolution_identity_rgb(
+    y_plane: &[u16],
+    u_plane: &[u16],
+    v_plane: &[u16],
+    bit_depth: u32,
+) -> Option<Vec<u8>> {
+    if bit_depth != 12 {
+        return None;
+    }
+    let sample_depth = super::av1::sample_depth::SampleDepth::new(bit_depth)?;
+    let sample_count = y_plane.len();
+    if u_plane.len() != sample_count || v_plane.len() != sample_count {
+        return None;
+    }
+    if y_plane
+        .iter()
+        .chain(u_plane)
+        .chain(v_plane)
+        .any(|&sample| sample_depth.validate(sample).is_none())
+    {
+        return None;
+    }
+
+    let output_length = sample_count.checked_mul(3)?;
+    let mut output = Vec::new();
+    output.try_reserve_exact(output_length).ok()?;
+    let shift = sample_depth.bits().checked_sub(8)?;
+    let remainder = sample_count.checked_rem(8)?;
+    let vectorized = sample_count.checked_sub(remainder)?;
+    for offset in (0..vectorized).step_by(8) {
+        let green = truncate_u16_lanes(y_plane, offset, shift)?;
+        let blue = truncate_u16_lanes(u_plane, offset, shift)?;
+        let red = truncate_u16_lanes(v_plane, offset, shift)?;
+        for ((red, green), blue) in red.iter().zip(&green).zip(&blue) {
+            output.extend_from_slice(&[*red, *green, *blue]);
+        }
+    }
+    for index in vectorized..sample_count {
+        output.extend_from_slice(&[
+            sample_depth.truncate_to_u8(*v_plane.get(index)?)?,
+            sample_depth.truncate_to_u8(*y_plane.get(index)?)?,
+            sample_depth.truncate_to_u8(*u_plane.get(index)?)?,
+        ]);
+    }
+    (output.len() == output_length).then_some(output)
 }
 
 /// Convert contiguous I444 planes with matrix dispatch hoisted out of the
@@ -971,6 +1074,7 @@ fn narrow_rgb_lanes(values: i32x8) -> [u8; 8] {
 // closest chroma sample receives 3/4 weight and its horizontal neighbor 1/4;
 // even output columns use the left neighbor and odd columns the right. 4:2:2
 // has no vertical chroma interpolation.
+#[cfg(test)]
 fn libavif_422_bilinear_sample(
     plane: &[u16],
     chroma_width: usize,
@@ -1015,6 +1119,42 @@ fn libavif_422_bilinear_sample_at_depth(
         .saturating_mul(3)
         .saturating_add(u32::from(sample(adjacent_column)));
     u16::try_from(weighted.saturating_add(2).wrapping_shr(2)).unwrap_or(u16::MAX)
+}
+
+// The pinned Pillow oracle uses libyuv's I422 conversion path. Its odd-width
+// bilinear tail replicates the final chroma sample at the right edge, while
+// libavif's scalar fallback keeps interpolating there. Sample both chroma
+// planes together so the endpoint check runs once per pixel.
+fn libyuv_422_bilinear_samples_at_depth(
+    u_plane: &[u16],
+    v_plane: &[u16],
+    chroma_width: usize,
+    width: usize,
+    column: usize,
+    row: usize,
+    shift: u32,
+) -> (u16, u16) {
+    if !width.is_multiple_of(2) && column == width.saturating_sub(1) {
+        if chroma_width == 0 {
+            return (0, 0);
+        }
+        let source_column = column.div_euclid(2).min(chroma_width.saturating_sub(1));
+        let source_index = row
+            .saturating_mul(chroma_width)
+            .saturating_add(source_column);
+        let sample = |plane: &[u16]| {
+            plane
+                .get(source_index)
+                .copied()
+                .unwrap_or_default()
+                .wrapping_shr(shift)
+        };
+        return (sample(u_plane), sample(v_plane));
+    }
+    (
+        libavif_422_bilinear_sample_at_depth(u_plane, chroma_width, width, column, row, shift),
+        libavif_422_bilinear_sample_at_depth(v_plane, chroma_width, width, column, row, shift),
+    )
 }
 
 // ✅ VERIFIED: libyuv 1922 commit 6067afde, source/convert_argb.cc:6799-6927
@@ -1072,6 +1212,10 @@ fn libyuv_420_bilinear_sample_at_depth(
     // at chroma edges (and is different from a generic centered 2x filter).
     let (left_weight, right_weight) = if column == 0 {
         (4_u32, 0_u32)
+    } else if !width.is_multiple_of(2) && column == width.saturating_sub(1) {
+        // libyuv's ScaleRowUp2_Linear wrapper copies the final source sample
+        // into the last output column when the destination width is odd.
+        (0_u32, 4_u32)
     } else if column.is_multiple_of(2) {
         (1_u32, 3_u32)
     } else {
@@ -1220,138 +1364,6 @@ fn libyuv_rgb8(value: i32) -> u8 {
     )]
     {
         value as u8
-    }
-}
-
-#[cfg(coverage)]
-fn decode_sequence_rust_unavailable(
-    data: &[u8],
-    validated: &super::av1::ValidatedAv1,
-    budget: &mut SequenceDecodeBudget,
-    consumed: usize,
-    token: Option<&crate::CancellationToken>,
-) -> CodecResult<(crate::types::DecodedSequence, usize)> {
-    crate::codecs::error::check_cancelled(token)?;
-    let _ = data;
-    let _ = validated.portable_still.as_ref();
-    let _ = budget;
-    let _ = consumed;
-    Err(CodecError::NotImplemented(
-        "AVIF sequence decoding is not implemented in the pure-Rust backend".to_owned(),
-    ))
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    use super::av1::{PortableStill, ValidatedAv1};
-
-    let _ = decode_sequence(
-        b"not an AVIF container",
-        &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
-        None,
-    );
-    let validated = ValidatedAv1 {
-        portable_still: None,
-    };
-    let _ = decode_portable(&validated);
-    let valid_still = super::av1::__coverage_portable_still();
-    let rejects = |still: PortableStill| {
-        assert!(
-            decode_portable(&ValidatedAv1 {
-                portable_still: Some(still),
-            })
-            .is_none()
-        );
-    };
-    let mut still = valid_still.clone();
-    still.width = 5;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.height = 5;
-    rejects(still);
-    let mut still = valid_still.clone();
-    // 12-bit stills are now a supported pure-Rust class; use 14 to exercise
-    // the unsupported-depth admission branch without mutating other invariants.
-    still.bit_depth = 14;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.monochrome = true;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.color_primaries = 2;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.transfer_characteristics = 2;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.matrix_coefficients = 1;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.color_range = false;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.subsampling_x = true;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.subsampling_y = true;
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.planes[0].samples.pop();
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.planes[1].samples.pop();
-    rejects(still);
-    let mut still = valid_still.clone();
-    still.planes[2].samples.pop();
-    rejects(still);
-    assert!(
-        decode_portable(&ValidatedAv1 {
-            portable_still: Some(valid_still),
-        })
-        .is_some()
-    );
-    let _ = metadata_bytes(b"");
-    let _ = decode_sequence_rust_unavailable(
-        b"not an AVIF container",
-        &validated,
-        &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
-        0,
-        None,
-    );
-    let baseline = include_bytes!("../../test_support/fixtures/input/images/avif/baseline.avif");
-    let animated = include_bytes!("../../test_support/fixtures/input/images/avif/animated.avif");
-    let mut malformed_file_type = baseline.to_vec();
-    malformed_file_type[8..12].copy_from_slice(b"free");
-    for offset in (16usize..32).step_by(4) {
-        malformed_file_type[offset
-            ..crate::coverage_support::require_some(
-                (offset).checked_add(4),
-                "coverage fixture arithmetic",
-            )]
-            .copy_from_slice(b"free");
-    }
-    let _ = decode(&malformed_file_type, None);
-    let _ = decode_sequence(
-        &malformed_file_type,
-        &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
-        None,
-    );
-    let _ = read_avif_file_type(&malformed_file_type);
-    for checks in 0..=6 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(baseline, Some(&token));
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(animated, Some(&token));
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode_sequence(
-            animated,
-            &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Avif),
-            Some(&token),
-        );
     }
 }
 

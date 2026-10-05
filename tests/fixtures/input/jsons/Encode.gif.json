@@ -130,6 +130,59 @@
       }
     },
     {
+      "id": "enc_static_finite_one_play",
+      "source_asset": "static.gif",
+      "source_format": "gif",
+      "source_mode": "P",
+      "source_sha256": "ba565db93aeec969583fd943d49b8c140e4144429700219c2616ec439a73dfc7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": false,
+        "sequence_total_plays": 1
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/static.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_total_plays": 1
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
+      }
+    },
+    {
       "id": "enc_error_retained_source_blend",
       "source_asset": "static.gif",
       "source_format": "gif",
@@ -541,6 +594,177 @@
       }
     },
     {
+      "id": "enc_animated_reserved_disposal",
+      "source_asset": "disposal_reserved.gif",
+      "source_format": "gif",
+      "source_mode": "P",
+      "source_sha256": "e7bcd6f6c3ce26129048303aca23fabe5de77f7efd79f83f3d3d4f8e160639f0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "loop": 1,
+        "preserve_disposal": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/disposal_reserved.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "disposal": {
+            "type": "disposals_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated_disposal_8_reserved_bits",
+      "source_asset": "disposal_reserved.gif",
+      "source_format": "gif",
+      "source_mode": "P",
+      "source_sha256": "e7bcd6f6c3ce26129048303aca23fabe5de77f7efd79f83f3d3d4f8e160639f0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "loop": 1,
+        "disposal": 8
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/disposal_reserved.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "disposal": 8,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated_disposal_255_u8_limit",
+      "source_asset": "disposal_reserved.gif",
+      "source_format": "gif",
+      "source_mode": "P",
+      "source_sha256": "e7bcd6f6c3ce26129048303aca23fabe5de77f7efd79f83f3d3d4f8e160639f0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "loop": 1,
+        "disposal": 255
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/disposal_reserved.gif",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "disposal": 255,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_animated_rgba",
       "source_asset": "animated_alpha.webp",
       "source_format": "webp",
@@ -576,6 +800,59 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/webp/animated_alpha.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated_rgba_transparency_composite",
+      "source_asset": "rgba_animation_transparency.tiff",
+      "source_format": "tiff",
+      "source_mode": "Rgba8",
+      "source_sha256": "445c160373a2391d3e090179cf9e5b3959382c1753b9ed762b0a653ec81bf5e6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/rgba_animation_transparency.tiff",
         "method": "PIL.Image.Image.save",
         "format": "GIF",
         "kwargs": {
@@ -1773,6 +2050,56 @@
       }
     },
     {
+      "id": "enc_rgb_balanced_checkerboard_token_split",
+      "source_asset": "gif_rgb_balanced_checkerboard.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "d5045ccb8a0f05d35a07e300642c7501d4349af24aee2157b0b6886a0e3a32d4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_balanced_checkerboard.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_rgb_high_color",
       "source_asset": "gif_rgb_high_color.png",
       "source_format": "png",
@@ -1813,6 +2140,156 @@
           "load",
           "tobytes"
         ]
+      }
+    },
+    {
+      "id": "enc_rgb_high_color_token_checkpoint",
+      "source_asset": "gif_rgb_high_color_token_checkpoint.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "a4c488ae9683a7ae782017bf8fc334d67ec43e0f0430a0c2442cfa426dcc82e6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_high_color_token_checkpoint.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_rgb_skewed_high_color_split",
+      "source_asset": "gif_rgb_skewed_high_color_split.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "970e6ca255cf3b5e940cd1c18c7719509eed5bf05397cc54501acc18ed358ad8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_skewed_high_color_split.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_rgb_257_color_low_green_dominant",
+      "source_asset": "gif_rgb_257_color_low_green_dominant.png",
+      "source_format": "png",
+      "source_mode": "Rgb8",
+      "source_sha256": "221a0b156a315d1113a1d491c7fe497b21253a21ff17ad28c9ac7dd6f3c7c0e7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgb_257_color_low_green_dominant.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {
@@ -1974,7 +2451,9 @@
         "encode_sequence": "ok"
       },
       "error_contracts": {},
-      "params": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gif_rgba_mixed.png",
         "method": "PIL.Image.Image.save",
@@ -1984,7 +2463,62 @@
           "PIL.Image.open",
           "load",
           "tobytes"
-        ]
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
+      "id": "enc_rgba_mixed_token_compact_checkpoint",
+      "source_asset": "gif_rgba_mixed_token_compact_checkpoint.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "86cff9370366a0acf43e8a7985625344ddf3795b2f0b8424209973aa7a825052",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_mixed_token_compact_checkpoint.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {
@@ -2031,6 +2565,56 @@
       }
     },
     {
+      "id": "enc_rgba_high_color_token_checkpoint",
+      "source_asset": "gif_rgba_high_color_token_checkpoint.png",
+      "source_format": "png",
+      "source_mode": "Rgba8",
+      "source_sha256": "1939c2816f1f56c21c3e672d03df8341a6dcf16181cbaa8035b93ad0e3ae9896",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/gif_rgba_high_color_token_checkpoint.png",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
+      }
+    },
+    {
       "id": "enc_rgba_octree",
       "source_asset": "gif_rgba_octree.png",
       "source_format": "png",
@@ -2060,7 +2644,9 @@
         "encode_sequence": "ok"
       },
       "error_contracts": {},
-      "params": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gif_rgba_octree.png",
         "method": "PIL.Image.Image.save",
@@ -2070,7 +2656,12 @@
           "PIL.Image.open",
           "load",
           "tobytes"
-        ]
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {
@@ -2103,7 +2694,9 @@
         "encode_sequence": "ok"
       },
       "error_contracts": {},
-      "params": {},
+      "params": {
+        "rust_encode_with_token": true
+      },
       "pillow_call": {
         "open": "tests/fixtures/input/images/png/gif_rgba_octree_sorted.png",
         "method": "PIL.Image.Image.save",
@@ -2113,7 +2706,12 @@
           "PIL.Image.open",
           "load",
           "tobytes"
-        ]
+        ],
+        "rust_public_call_parity": {
+          "method": "image_slash_star::encode_with_token",
+          "token": "fresh non-cancelled cancellation token",
+          "comparison": "exact Pillow encoded bytes and ordinary encode output"
+        }
       }
     },
     {
@@ -2157,6 +2755,193 @@
           "load",
           "tobytes"
         ]
+      }
+    },
+    {
+      "id": "enc_animated_rgb_full_palette_token",
+      "source_asset": "animated_rgb_full_palette.webp",
+      "source_format": "webp",
+      "source_mode": "Rgb8",
+      "source_sha256": "eda7f7272532e97d362a46a905d3f80dc857c5a5602232dde366f885d9838946",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "color_table": "local",
+        "rust_encode_sequence_with_token": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_rgb_full_palette.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "include_color_table": true,
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated_non_centisecond_delays",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_animated_large_fraction_delay",
+      "source_asset": "animated_sequence_rgba_keyframes.webp",
+      "source_format": "webp",
+      "source_mode": "Rgba8",
+      "source_sha256": "2621c9e090b3e2d872d75a2237454221c07957b56837547fc998f49d9ee42aa6",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "not_applicable",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "animated": true,
+        "frames": 2,
+        "preserve_duration": true,
+        "sequence_duration_fraction": [
+          18446744073709551615,
+          18446744073709551615
+        ]
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/webp/animated_sequence_rgba_keyframes.webp",
+        "method": "PIL.Image.Image.save",
+        "format": "GIF",
+        "kwargs": {
+          "save_all": true,
+          "append_images": {
+            "type": "frames_from_source",
+            "start": 1,
+            "count": 1
+          },
+          "duration": {
+            "type": "durations_from_source",
+            "count": 2,
+            "first_frame_override_ms": 1000
+          }
+        },
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ],
+        "retained_sequence_transform": {
+          "scope": "image-slash-star DecodedSequence contract",
+          "fields": {
+            "sequence_duration_fraction": [
+              18446744073709551615,
+              18446744073709551615
+            ]
+          },
+          "pillow_model": "Pillow saves the already materialized still image"
+        }
       }
     }
   ]

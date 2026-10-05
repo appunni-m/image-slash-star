@@ -38,23 +38,25 @@ fn malformed(stage: &'static str) -> CodecError {
     CodecError::Malformed(format!("invalid compressed stream: {stage}"))
 }
 
-#[cfg(any(feature = "png", coverage))]
+#[cfg(feature = "png")]
 fn parameter(stage: &'static str) -> CodecError {
     CodecError::Parameter(format!("invalid compression input: {stage}"))
 }
 
-#[cfg_attr(not(feature = "png"), allow(dead_code))]
+#[cfg_attr(
+    not(feature = "png"),
+    allow(
+        dead_code,
+        reason = "The shared module's row-compression helpers are only used by the PNG feature."
+    )
+)]
 pub(crate) mod deflate;
 #[cfg(any(feature = "png", feature = "tiff"))]
-#[cfg_attr(not(feature = "png"), allow(dead_code))]
+#[cfg_attr(
+    not(feature = "png"),
+    allow(
+        dead_code,
+        reason = "The compressor extension is selected only by PNG's feature-gated encoder."
+    )
+)]
 mod zlib_ng;
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    deflate::__coverage_exercise_private_branches();
-
-    #[cfg(any(feature = "png", feature = "tiff"))]
-    zlib_ng::__coverage_exercise_instrumented_paths();
-    #[cfg(any(feature = "png", feature = "tiff"))]
-    zlib_ng::__coverage_exercise_private_branches();
-}

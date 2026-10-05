@@ -60,6 +60,7 @@ MATRIX_OPERATION_FIELDS = {
     "decode": ("detect", "inspect", "verify", "decode", "decode_sequence"),
     "encode": ("encode", "encode_sequence"),
 }
+OPTIONAL_MATRIX_OPERATION_FIELDS = {"decode": ("decode_frame",), "encode": ()}
 OUTCOMES = {"ok", "error", "not_applicable"}
 VERIFICATION_SCOPES = {"header_only", "structure"}
 TIMED_SEQUENCE_FORMATS = {"avif", "gif", "png", "webp"}
@@ -241,7 +242,15 @@ def validate_active_row(row: dict, fmt: str, kind: str) -> None:
     validate_execution(row, context)
     validate_mode_fields(row, context)
     operations = require_dict(row.get("operations"), f"{context}.operations")
-    expected_operations = MATRIX_OPERATION_FIELDS[kind]
+    expected_operations = MATRIX_OPERATION_FIELDS[kind] + tuple(
+        operation
+        for operation in OPTIONAL_MATRIX_OPERATION_FIELDS[kind]
+        if operation in operations
+    )
+    if kind == "decode" and (row.get("frame_request") is not None) != (
+        "decode_frame" in operations
+    ):
+        fail(f"{context}.frame_request and decode_frame operation disagree")
     if set(operations) != set(expected_operations):
         fail(f"{context}.operations differs from the {kind} operation set")
     errors = row.get("error_contracts", {})
@@ -342,6 +351,13 @@ def validate_matrix(document: dict) -> tuple[list[tuple[str, str, dict]], dict, 
                         counts["not_applicable"] += 1
                     else:
                         counts["included_operation_entries"] += 1
+                for operation in OPTIONAL_MATRIX_OPERATION_FIELDS[kind]:
+                    if operation not in row["operations"]:
+                        continue
+                    if row["operations"][operation] == "not_applicable":
+                        counts["not_applicable"] += 1
+                    else:
+                        counts["included_operation_entries"] += 1
 
     expected_summary = {
         "total_rows": counts["decode_rows"] + counts["encode_rows"],
@@ -417,7 +433,12 @@ def grouped_decode_evidence(matrix: dict) -> list[dict]:
         for row in matrix["formats"][fmt]["decode"]:
             if row.get("status") != "active":
                 continue
-            for operation in MATRIX_OPERATIONS["decode"]:
+            operations = MATRIX_OPERATIONS["decode"] + tuple(
+                operation
+                for operation in OPTIONAL_MATRIX_OPERATION_FIELDS["decode"]
+                if operation in row["operations"]
+            )
+            for operation in operations:
                 if row["operations"][operation] == "not_applicable":
                     continue
                 outcome, error_kind = outcome_label(row, operation)
@@ -425,6 +446,8 @@ def grouped_decode_evidence(matrix: dict) -> list[dict]:
                     output_mode = normalize_mode(row["ref_mode"], f"{fmt}:{row['id']}.ref_mode")
                     if operation == "decode_sequence":
                         returned_kind = sequence_kind(fmt, row, operation)
+                    elif operation == "decode_frame":
+                        returned_kind = "DecodedFrame"
                     else:
                         returned_kind = "— (image result)"
                 else:
@@ -432,7 +455,11 @@ def grouped_decode_evidence(matrix: dict) -> list[dict]:
                     returned_kind = "— (no result)"
                 key = (
                     fmt,
-                    "still_decode" if operation == "decode" else "sequence_decode",
+                    {
+                        "decode": "still_decode",
+                        "decode_sequence": "sequence_decode",
+                        "decode_frame": "frame_decode",
+                    }[operation],
                     outcome,
                     output_mode,
                     returned_kind,

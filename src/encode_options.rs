@@ -204,8 +204,6 @@ pub struct PngEncodeOptions {
     /// cross-codec option.
     pub interlace: Option<bool>,
     legacy_ancillary: PngLegacyAncillary,
-    #[cfg(coverage)]
-    force_output_len_overflow: bool,
 }
 
 #[cfg(feature = "png")]
@@ -254,16 +252,6 @@ impl PngEncodeOptions {
             },
             ..Self::default()
         }
-    }
-
-    #[cfg(coverage)]
-    pub(crate) const fn __coverage_force_output_len_overflow(&self) -> bool {
-        self.force_output_len_overflow
-    }
-
-    #[cfg(coverage)]
-    pub(crate) fn __coverage_set_output_len_overflow(&mut self) {
-        self.force_output_len_overflow = true;
     }
 }
 
@@ -353,30 +341,6 @@ pub struct TiffEncodeOptions {
     pub compression: Option<TiffCompression>,
     /// Sample predictor override.
     pub predictor: Option<TiffPredictor>,
-    #[cfg(coverage)]
-    force_output_len_overflow: bool,
-    #[cfg(coverage)]
-    force_sequence_len_overflow: bool,
-}
-
-#[cfg(coverage)]
-#[cfg(feature = "tiff")]
-impl TiffEncodeOptions {
-    pub(crate) const fn force_output_len_overflow(&self) -> bool {
-        self.force_output_len_overflow
-    }
-
-    pub(crate) const fn force_sequence_len_overflow(&self) -> bool {
-        self.force_sequence_len_overflow
-    }
-
-    pub(crate) fn set_force_output_len_overflow(&mut self) {
-        self.force_output_len_overflow = true;
-    }
-
-    pub(crate) fn set_force_sequence_len_overflow(&mut self) {
-        self.force_sequence_len_overflow = true;
-    }
 }
 
 /// WebP encoder settings.
@@ -396,8 +360,6 @@ pub struct WebPEncodeOptions {
     /// Exact XMP chunk bytes.
     pub xmp: Option<Vec<u8>>,
     legacy_sequence: WebPLegacySequenceOptions,
-    #[cfg(coverage)]
-    force_riff_size_overflow: bool,
 }
 
 #[cfg(feature = "webp")]
@@ -410,18 +372,6 @@ impl WebPEncodeOptions {
         self.legacy_sequence.kmin.is_some()
             || self.legacy_sequence.minimize_size.is_some()
             || self.legacy_sequence.allow_mixed.is_some()
-    }
-}
-
-#[cfg(coverage)]
-#[cfg(feature = "webp")]
-impl WebPEncodeOptions {
-    pub(crate) const fn force_riff_size_overflow(&self) -> bool {
-        self.force_riff_size_overflow
-    }
-
-    pub(crate) fn set_force_riff_size_overflow(&mut self) {
-        self.force_riff_size_overflow = true;
     }
 }
 
@@ -689,11 +639,20 @@ fn parse_gif(pairs: &[(String, String)]) -> ImageResult<GifEncodeOptions> {
             }
             "disposal" => {
                 options.disposal = Some(match value.as_str() {
-                    "none" | "0" => crate::FrameDisposal::Unspecified,
-                    "keep" | "1" => crate::FrameDisposal::Keep,
-                    "background" | "2" => crate::FrameDisposal::Background,
-                    "previous" | "3" => crate::FrameDisposal::Previous,
-                    _ => return Err(parameter(format, "invalid GIF disposal option")),
+                    "none" => crate::FrameDisposal::Unspecified,
+                    "keep" => crate::FrameDisposal::Keep,
+                    "background" => crate::FrameDisposal::Background,
+                    "previous" => crate::FrameDisposal::Previous,
+                    value => match value
+                        .parse::<u8>()
+                        .map_err(|_| parameter(format, "invalid GIF disposal option"))?
+                    {
+                        0 => crate::FrameDisposal::Unspecified,
+                        1 => crate::FrameDisposal::Keep,
+                        2 => crate::FrameDisposal::Background,
+                        3 => crate::FrameDisposal::Previous,
+                        value => crate::FrameDisposal::Reserved(value),
+                    },
                 });
             }
             "color_table" => {

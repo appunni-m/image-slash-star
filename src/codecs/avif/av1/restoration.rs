@@ -12,6 +12,7 @@
 use super::block::{FirstLeaf, ReconstructedPlane};
 use super::sample_depth::SampleDepth;
 use super::{Av1Result, malformed};
+use crate::codecs::CodecError;
 
 /// One restoration unit's decoded operation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -237,9 +238,19 @@ pub(super) fn restore_striped_plane(
             .checked_mul(padded_rows)
             .ok_or_else(|| malformed("restoration stripe allocation overflows"))?;
         let mut samples = Vec::new();
-        samples
-            .try_reserve_exact(padded_count)
-            .map_err(|_| malformed("unable to allocate restoration stripe"))?;
+        #[cfg(coverage)]
+        let reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1RestorationStripeScratchReservation,
+        ) {
+            usize::MAX
+        } else {
+            padded_count
+        };
+        #[cfg(not(coverage))]
+        let reservation_count = padded_count;
+        samples.try_reserve_exact(reservation_count).map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 restoration stripe".to_owned())
+        })?;
         for row in 0..padded_rows {
             let (source, source_y) = if row < 4 {
                 if start == 0 {
@@ -641,7 +652,7 @@ fn restore_sgr_plane(
     let mut source = Vec::<u16>::new();
     source
         .try_reserve(sample_count)
-        .map_err(|_| malformed("unable to allocate SGR source"))?;
+        .map_err(|_| CodecError::Dimensions("unable to allocate AV1 SGR source".to_owned()))?;
     source.extend_from_slice(&plane.samples);
     let mut radius_two = None;
     if parameter.radius[0] != 0 {
@@ -672,9 +683,19 @@ fn restore_sgr_plane(
         .and_then(|value| value.checked_sub(i64::from(weights[1])))
         .ok_or_else(|| malformed("SGR projection weight overflows"))?;
     let mut restored = Vec::<u16>::new();
+    #[cfg(coverage)]
+    let output_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1SgrRestorationOutputReservation,
+    ) {
+        usize::MAX
+    } else {
+        sample_count
+    };
+    #[cfg(not(coverage))]
+    let output_reservation_count = sample_count;
     restored
-        .try_reserve(sample_count)
-        .map_err(|_| malformed("unable to allocate SGR output"))?;
+        .try_reserve(output_reservation_count)
+        .map_err(|_| CodecError::Dimensions("unable to allocate AV1 SGR output".to_owned()))?;
     restored.resize(sample_count, 0);
     let maximum = i64::from(depth.maximum());
     let extended_width = width
@@ -769,9 +790,19 @@ fn sgr_intermediates(
         .checked_mul(extended_height)
         .ok_or_else(|| malformed("SGR intermediate sample count overflows"))?;
     let mut output = Vec::<SgrIntermediate>::new();
-    output
-        .try_reserve(extended_count)
-        .map_err(|_| malformed("unable to allocate SGR intermediates"))?;
+    #[cfg(coverage)]
+    let reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1SgrIntermediateReservation,
+    ) {
+        usize::MAX
+    } else {
+        extended_count
+    };
+    #[cfg(not(coverage))]
+    let reservation_count = extended_count;
+    output.try_reserve(reservation_count).map_err(|_| {
+        CodecError::Dimensions("unable to allocate AV1 SGR intermediates".to_owned())
+    })?;
     output.resize(extended_count, SgrIntermediate { mean: 0, gain: 0 });
     let radius_signed =
         isize::try_from(radius).map_err(|_| malformed("SGR radius exceeds isize"))?;

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Verify the bounded v1 map for behavior Pillow cannot prove.
 
-The map is deliberately smaller than the roadmap.  It names existing
-fixture-backed integration contracts, or records a category as planned when no
-such contract exists.  It is a static audit: it does not execute Rust tests,
-collect coverage, or turn a Pillow parity row into evidence for a Rust-only
-field.
+The map is deliberately smaller than the roadmap. It names existing
+fixture-backed integration contracts and typed target-only fault cases, or
+records a category as planned when no such contract exists. It is a static
+audit: it does not execute Rust tests, collect coverage, or turn a Pillow
+parity row into evidence for a Rust-only field.
 """
 
 from __future__ import annotations
@@ -19,7 +19,13 @@ ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "tests" / "fixtures" / "unreachable_contract_manifest.json"
 DOCUMENT = ROOT / "docs" / "EVIDENCE.md"
 
-TOP_LEVEL_KEYS = {"format_version", "scope", "pillow_parity", "categories"}
+TOP_LEVEL_KEYS = {
+    "format_version",
+    "scope",
+    "pillow_parity",
+    "fault_contract_cases",
+    "categories",
+}
 PARITY_KEYS = {"status", "matrix", "reason"}
 CATEGORY_KEYS = {
     "id",
@@ -32,6 +38,169 @@ CATEGORY_KEYS = {
     "planned_context",
 }
 EVIDENCE_KEYS = {"kind", "path", "fixture", "tests", "command"}
+FAULT_CONTRACT_CASE_KEYS = {"id", "category", "selector", "test"}
+FAULT_CONTRACTS = {
+    "avif_display_plane_copy_allocation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_display_plane_copy_allocation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "av1.display_plane.reconstructed_copy_allocation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_temporal_motion_field_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_temporal_motion_field_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "av1.temporal_motion_field.reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_projected_temporal_field_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_projected_temporal_field_reservation_failure",
+        "source_case": "decode:avif:animated_motion_chroma",
+        "point": "av1.temporal_projection.field_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_grid_cell_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_grid_cell_reservation_failure",
+        "source_case": "decode:avif:grid",
+        "point": "av1.grid.cell_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_monochrome_loop_filter_metadata_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure",
+        "source_case": "decode:avif:multitile_monochrome_split_groups",
+        "point": "av1.frame.assembled_monochrome_loop_filter_metadata_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_monochrome_cdef_active_map_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure",
+        "source_case": "decode:avif:multitile_monochrome_split_groups",
+        "point": "av1.frame.assembled_monochrome_cdef_active_map_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_sequence_frames_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_sequence_frames_reservation_failure",
+        "source_case": "decode:avif:animated_motion_chroma",
+        "point": "avif.sequence_frames.output_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_superresolution_positions_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_superresolution_positions_reservation_failure",
+        "source_case": "decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56",
+        "point": "av1.superres.position_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_superresolution_plane_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_superresolution_plane_reservation_failure",
+        "source_case": "decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56",
+        "point": "av1.superres.plane_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "jpeg_multiscan_coefficient_reservation_failure": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure",
+        "source_case": "decode:jpeg:baseline_444_multiscan_duplicate_component",
+        "point": "jpeg.multiscan.coefficient_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_monochrome_tile_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_monochrome_tile_reservation_failure",
+        "source_case": "decode:avif:multitile_monochrome_split_groups",
+        "point": "av1.frame.monochrome_tile_state_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_color_tile_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_color_tile_reservation_failure",
+        "source_case": "decode:avif:multitile_color_split_groups",
+        "point": "av1.frame.color_tile_state_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_sgr_restoration_output_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_sgr_restoration_output_reservation_failure",
+        "source_case": "decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56",
+        "point": "av1.restoration.sgr_output_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_sgr_intermediate_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_sgr_intermediate_reservation_failure",
+        "source_case": "decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56",
+        "point": "av1.restoration.sgr_intermediate_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_restoration_stripe_scratch_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure",
+        "source_case": "decode:avif:high_bitdepth",
+        "point": "av1.restoration.stripe_scratch_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_tile_cell_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_tile_cell_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "av1.frame.tile_cell_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_tile_block_metadata_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_tile_block_metadata_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "av1.frame.tile_block_metadata_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_chroma_tile_cell_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_chroma_tile_cell_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "av1.frame.chroma_tile_cell_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_assembled_loop_filter_metadata_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure",
+        "source_case": "decode:avif:multitile_color_split_groups",
+        "point": "av1.frame.assembled_loop_filter_metadata_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_partition_node_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_partition_node_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "av1.partition_tree.node_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+}
 EXPECTED_CATEGORIES = (
     ("decode-encode-policy-limits", "DecodePolicy and EncodePolicy limits"),
     ("cancellation-work-budgets", "Cancellation and work budgets"),
@@ -91,6 +260,93 @@ def verify_test_symbols(path: Path, names: list[str], field: str) -> None:
     missing = sorted(set(names) - discovered)
     if missing:
         fail(f"{field} names are not #[test] functions in {path}: {missing}")
+
+
+def verify_fault_contract_case_index(entries: object) -> None:
+    if not isinstance(entries, list):
+        fail("fault_contract_cases must be an array")
+    if len(entries) != len(FAULT_CONTRACTS):
+        fail(
+            f"fault_contract_cases must contain exactly {len(FAULT_CONTRACTS)} allow-listed rows"
+        )
+
+    try:
+        coverage = json.loads(
+            (ROOT / "tests" / "fixtures" / "coverage_matrix.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        fail(f"cannot read target-only fault rows from coverage matrix: {error}")
+    rows = coverage.get("fault_contracts")
+    if not isinstance(rows, list):
+        fail("coverage matrix fault_contracts must be an array")
+    matrix_rows = {row.get("id"): row for row in rows if isinstance(row, dict)}
+
+    entry_ids = []
+    seen_entry_ids = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict) or set(entry) != FAULT_CONTRACT_CASE_KEYS:
+            fail(
+                f"fault_contract_cases[{index}] must use exactly {sorted(FAULT_CONTRACT_CASE_KEYS)}"
+            )
+        case_id = entry.get("id")
+        if not isinstance(case_id, str) or case_id in seen_entry_ids:
+            fail(f"fault_contract_cases[{index}] has an invalid or duplicate id {case_id!r}")
+        entry_ids.append(case_id)
+        seen_entry_ids.add(case_id)
+        expected = FAULT_CONTRACTS.get(case_id)
+        if expected is None or case_id not in matrix_rows:
+            fail(f"fault_contract_cases[{index}] names an unknown fault case {case_id!r}")
+        for field in ("category", "selector"):
+            if entry.get(field) != expected[field]:
+                fail(f"{case_id}: {field} differs from its allow-listed mapping")
+        if entry.get("test") != "test_fault_contract_matrix":
+            fail(f"{case_id}: test must name the shared fault-contract matrix runner")
+        verify_test_symbols(
+            Path("tests/coverage_matrix_tests.rs"),
+            [entry["test"]],
+            f"{case_id}.test",
+        )
+
+        row = matrix_rows[case_id]
+        fault = row.get("fault")
+        source = row.get("input")
+        if (
+            row.get("type") != "fault-contract"
+            or row.get("verification") != "fault-contract"
+            or row.get("oracle_status") != "not_applicable"
+            or row.get("operation") != "decode"
+            or row.get("status") != "active"
+            or row.get("format") != expected["format"]
+            or entry.get("selector")
+            != f"fault-contract:{row.get('format')}:{case_id}"
+            or entry.get("category") not in row.get("requirements", [])
+            or not isinstance(source, dict)
+            or source.get("source_case") != expected["source_case"]
+            or not isinstance(fault, dict)
+            or fault.get("point") != expected["point"]
+            or fault.get("contract") != expected["contract"]
+        ):
+            fail(f"{case_id}: shared matrix row violates the target-only fault contract")
+        parity_rows = (
+            coverage.get("formats", {}).get(expected["format"], {}).get("decode", [])
+        )
+        if not any(
+            candidate.get("id") == expected["source_case"].split(":", 2)[2]
+            and candidate.get("status") == "active"
+            and candidate.get("oracle_status") == "ok"
+            for candidate in parity_rows
+        ):
+            fail(f"{case_id}: source_case is not a live Pillow parity row")
+
+    if set(entry_ids) != set(FAULT_CONTRACTS):
+        missing = sorted(set(FAULT_CONTRACTS) - set(entry_ids))
+        unexpected = sorted(set(entry_ids) - set(FAULT_CONTRACTS))
+        fail(f"fault_contract_cases differs from the allowlist: missing={missing}, unexpected={unexpected}")
+
+    if len(matrix_rows) != len(rows):
+        fail("coverage matrix fault_contracts contains duplicate or invalid row ids")
 
 
 def verify_evidence(entry: object, category_id: str, index: int) -> None:
@@ -239,6 +495,7 @@ def verify_document(document_text: str, categories: list[dict]) -> None:
         "tests/fixtures/unreachable_contract_manifest.json",
         "make verify",
         "Pillow parity",
+        "fault-contract",
         "excluded",
     )
     missing = [phrase for phrase in required if phrase not in document_text]
@@ -275,6 +532,7 @@ def verify() -> tuple[int, int]:
     repository_file(parity.get("matrix"), "pillow_parity.matrix")
     if not isinstance(parity.get("reason"), str) or "Pillow" not in parity["reason"]:
         fail("pillow_parity reason must explain the Pillow boundary")
+    verify_fault_contract_case_index(document.get("fault_contract_cases"))
 
     categories = document.get("categories")
     if not isinstance(categories, list) or len(categories) != len(EXPECTED_CATEGORIES):

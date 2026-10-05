@@ -23,13 +23,11 @@
 #![allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "VP8L code fields are fixed-width and decoded dimensions are validated before conversion."
 )]
 
 use std::io::BufRead;
-
-#[cfg(coverage)]
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::decoder::DecodingError;
 use super::lossless_transform::{
@@ -82,8 +80,6 @@ const ALPHABET_SIZE: [u16; HUFFMAN_CODES_PER_META_CODE] = [256 + 24, 256, 256, 2
 const MAX_STACK_HUFFMAN_SYMBOLS: usize = 256 + 24;
 const MAX_COLOR_CACHE_BITS: u8 = 11;
 
-#[cfg(coverage)]
-pub(crate) static FORCE_DECODE_FRAME_RGB_ERROR: AtomicBool = AtomicBool::new(false);
 const MAX_HUFFMAN_SYMBOLS_WITH_COLOR_CACHE: usize =
     MAX_STACK_HUFFMAN_SYMBOLS + (1usize << MAX_COLOR_CACHE_BITS);
 
@@ -123,7 +119,11 @@ impl<'a> LosslessDecoder<'a> {
     /// dimension header.
     // Reading the preceding 14-bit height leaves the following four header
     // bits buffered by the reader contract.
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "Reading the VP8L height header buffers the following alpha and version bits."
+    )]
     pub(crate) fn decode_frame(
         &mut self,
         width: u32,
@@ -138,17 +138,17 @@ impl<'a> LosslessDecoder<'a> {
     /// the frame has no transforms. Transformed or alpha-bearing frames keep
     /// the ordinary RGBA workspace because their internal pixels are four
     /// bytes wide.
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "Reading the VP8L height header buffers the following alpha and version bits."
+    )]
     pub(crate) fn decode_frame_rgb(
         &mut self,
         width: u32,
         height: u32,
         buf: &mut [u8],
     ) -> Result<(), DecodingError> {
-        #[cfg(coverage)]
-        if FORCE_DECODE_FRAME_RGB_ERROR.swap(false, Ordering::Relaxed) {
-            return Err(DecodingError::BitStreamError);
-        }
         let alpha_used = self.read_frame_header(width, height)?;
         let transformed_width = self.read_transforms()?;
 
@@ -176,18 +176,25 @@ impl<'a> LosslessDecoder<'a> {
         Ok(())
     }
 
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "The height read leaves the VP8L alpha and version bits in the bit-reader buffer."
+    )]
     fn read_frame_header(&mut self, width: u32, height: u32) -> Result<bool, DecodingError> {
         self.width = width as u16;
         self.height = height as u16;
 
         let signature = self.bit_reader.read_bits::<u8>(8)?;
-        debug_assert_eq!(signature, 0x2f);
+        if signature != 0x2f {
+            return Err(DecodingError::LosslessSignatureInvalid);
+        }
 
         self.width = self.bit_reader.read_bits::<u16>(14)? + 1;
         self.height = self.bit_reader.read_bits::<u16>(14)? + 1;
-        debug_assert_eq!(u32::from(self.width), width);
-        debug_assert_eq!(u32::from(self.height), height);
+        if u32::from(self.width) != width || u32::from(self.height) != height {
+            return Err(DecodingError::InconsistentImageSizes);
+        }
 
         let alpha_used = self
             .bit_reader
@@ -197,7 +204,9 @@ impl<'a> LosslessDecoder<'a> {
             .bit_reader
             .read_bits::<u8>(3)
             .expect("VP8L height read success proves the version bits are buffered");
-        debug_assert_eq!(version_num, 0);
+        if version_num != 0 {
+            return Err(DecodingError::VersionNumberInvalid);
+        }
 
         Ok(alpha_used != 0)
     }
@@ -216,7 +225,11 @@ impl<'a> LosslessDecoder<'a> {
     }
 
     // `transform_order` only records slots populated by `read_transforms`.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "read_transforms records only initialized transform slots before this slice is read."
+    )]
     fn decode_frame_body(&mut self, buf: &mut [u8]) -> Result<(), DecodingError> {
         let transformed_width = self.read_transforms()?;
         let transformed_size = usize::from(transformed_width) * usize::from(self.height) * 4;
@@ -233,7 +246,11 @@ impl<'a> LosslessDecoder<'a> {
     }
 
     // `transform_order` only records slots populated by `read_transforms`.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "read_transforms bounds transform_order_len to initialized transform slots."
+    )]
     fn apply_transforms(&self, buf: &mut [u8], transformed_width: u16, transformed_size: usize) {
         let mut image_size = transformed_size;
         let mut width = transformed_width;
@@ -671,7 +688,11 @@ impl<'a> LosslessDecoder<'a> {
     /// Decodes the image data using the huffman trees and either of the 3 methods of decoding
     // All converted pixel slices are exact four-byte chunks established by
     // validated copy bounds.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "Validated copy bounds make every decoded RGBA output sample an exact four-byte chunk."
+    )]
     fn decode_image_data(
         &mut self,
         width: u16,
@@ -684,7 +705,11 @@ impl<'a> LosslessDecoder<'a> {
 
     /// Decodes image data with either the ordinary RGBA or the direct RGB
     /// pixel width selected by the caller.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "The checked pixel count bounds writes to the caller-sized RGB or RGBA output buffer."
+    )]
     fn decode_image_data_with_pixel_size<const PIXEL_SIZE: usize>(
         &mut self,
         width: u16,
@@ -856,7 +881,11 @@ impl<'a> LosslessDecoder<'a> {
 
     /// Gets the copy distance from the prefix code and bitstream.
     // VP8L prefix symbols bound the derived extra-bit count to `u8`.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "VP8L distance-prefix symbols keep the derived extra-bit count within u8."
+    )]
     fn get_copy_distance(
         bit_reader: &mut BitReader<Box<dyn BufRead + 'a>>,
         prefix_code: u16,
@@ -876,7 +905,10 @@ impl<'a> LosslessDecoder<'a> {
     /// Gets distance to pixel.
     // The negative/zero case returns above, so the retained distance is
     // representable as `usize` on every supported target.
-    #[allow(clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_used,
+        reason = "The distance-map branch returns for nonpositive values before converting the bounded positive distance."
+    )]
     fn plane_code_to_distance(xsize: u16, plane_code: usize) -> usize {
         if plane_code > 120 {
             plane_code - 120
@@ -896,7 +928,6 @@ impl<'a> LosslessDecoder<'a> {
 // RGB (3) or RGBA (4).  The assertion's false branch is therefore not a
 // reachable codec state, even though LLVM models the generic assertion as a
 // branch for every monomorphization.
-#[cfg_attr(coverage, coverage(off))]
 #[inline]
 fn write_pixel<const PIXEL_SIZE: usize>(data: &mut [u8], index: usize, pixel: [u8; 4]) {
     debug_assert!(PIXEL_SIZE == 3 || PIXEL_SIZE == 4);
@@ -913,7 +944,6 @@ fn read_pixel<const PIXEL_SIZE: usize>(data: &[u8], index: usize) -> [u8; 4] {
 // The same closed internal representation reaches this helper: only 3-byte
 // RGB and 4-byte RGBA slices are produced by the decoder.  The invalid-length
 // assertion branch is not an executable codec state.
-#[cfg_attr(coverage, coverage(off))]
 #[inline]
 fn pixel_to_rgba(pixel: &[u8]) -> [u8; 4] {
     debug_assert!(pixel.len() == 3 || pixel.len() == 4);
@@ -928,703 +958,6 @@ fn copy_is_out_of_bounds(index: usize, dist: usize, num_values: usize, length: u
 
 fn copy_needs_overlap_expansion(length: usize, dist: usize) -> bool {
     length > 4 || dist < 4
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    use std::io::{self, BufRead, Cursor, Read};
-
-    struct ErrorReader;
-
-    impl Read for ErrorReader {
-        fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
-            Err(io::Error::from(io::ErrorKind::Other))
-        }
-    }
-
-    impl BufRead for ErrorReader {
-        fn fill_buf(&mut self) -> io::Result<&[u8]> {
-            Err(io::Error::from(io::ErrorKind::Other))
-        }
-
-        fn consume(&mut self, _amt: usize) {}
-    }
-
-    struct OneThenErrorReader {
-        byte: [u8; 1],
-        consumed: bool,
-    }
-
-    struct OneThenEofThenErrorReader {
-        byte: [u8; 1],
-        phase: u8,
-    }
-
-    impl Read for OneThenErrorReader {
-        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-            if self.consumed {
-                return Err(io::Error::from(io::ErrorKind::Other));
-            }
-            if buf.is_empty() {
-                return Ok(0);
-            }
-            buf[0] = self.byte[0];
-            self.consumed = true;
-            Ok(1)
-        }
-    }
-
-    impl Read for OneThenEofThenErrorReader {
-        fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-            match self.phase {
-                0 if !buf.is_empty() => {
-                    buf[0] = self.byte[0];
-                    self.phase = 1;
-                    Ok(1)
-                }
-                0 => Ok(0),
-                1 => {
-                    self.phase = 2;
-                    Ok(0)
-                }
-                _ => Err(io::Error::from(io::ErrorKind::Other)),
-            }
-        }
-    }
-
-    impl BufRead for OneThenErrorReader {
-        fn fill_buf(&mut self) -> io::Result<&[u8]> {
-            if self.consumed {
-                Err(io::Error::from(io::ErrorKind::Other))
-            } else {
-                Ok(&self.byte)
-            }
-        }
-
-        fn consume(&mut self, _amt: usize) {
-            self.consumed = true;
-        }
-    }
-
-    impl BufRead for OneThenEofThenErrorReader {
-        fn fill_buf(&mut self) -> io::Result<&[u8]> {
-            match self.phase {
-                0 => Ok(&self.byte),
-                1 => {
-                    self.phase = 2;
-                    Ok(&[])
-                }
-                _ => Err(io::Error::from(io::ErrorKind::Other)),
-            }
-        }
-
-        fn consume(&mut self, amt: usize) {
-            if amt != 0 && self.phase == 0 {
-                self.phase = 1;
-            }
-        }
-    }
-
-    let make_color_cache = || {
-        Some(ColorCache {
-            color_cache_bits: 1,
-            color_cache: vec![[3, 5, 7, 255]; 2],
-        })
-    };
-    fn decoder_with_bits(
-        reader: Box<dyn BufRead>,
-        buffer: u64,
-        nbits: u8,
-        width: u16,
-        height: u16,
-    ) -> LosslessDecoder<'static> {
-        LosslessDecoder {
-            bit_reader: BitReader {
-                reader,
-                buffer,
-                nbits,
-            },
-            transforms: [None, None, None, None],
-            transform_order: [0; NUM_TRANSFORM_TYPES],
-            transform_order_len: 0,
-            color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-            width,
-            height,
-        }
-    }
-
-    let mut scratch = [0u8; 1];
-    let mut error_reader = ErrorReader;
-    let _ = error_reader.read(&mut scratch);
-    error_reader.consume(0);
-    let mut one_then_error = OneThenErrorReader {
-        byte: [0x55],
-        consumed: false,
-    };
-    let _ = one_then_error.read(&mut []);
-    let _ = one_then_error.read(&mut scratch);
-    let _ = one_then_error.read(&mut scratch);
-    let mut one_then_eof_then_error = OneThenEofThenErrorReader {
-        byte: [0xaa],
-        phase: 0,
-    };
-    one_then_eof_then_error.consume(0);
-    let _ = one_then_eof_then_error.read(&mut []);
-    let _ = one_then_eof_then_error.read(&mut scratch);
-    let _ = one_then_eof_then_error.read(&mut scratch);
-    let _ = one_then_eof_then_error.read(&mut scratch);
-    one_then_eof_then_error.consume(1);
-
-    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(Vec::<u8>::new())));
-    let mut buf = [0u8; 4];
-    let _ = decoder.decode_frame_implicit_dimensions(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(vec![0x2f])));
-    let _ = decoder.decode_frame(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(vec![0x2f, 0, 0])));
-    let _ = decoder.decode_frame(1, 1, &mut buf);
-    let mut decoder = LosslessDecoder::new(Box::new(std::io::Cursor::new(vec![0x2f, 0, 0, 0, 0])));
-    let _ = decoder.decode_frame(1, 1, &mut buf);
-    let mut rgb_header_decoder =
-        LosslessDecoder::new(Box::new(std::io::Cursor::new(Vec::<u8>::new())));
-    let mut rgb_header_buf = [0u8; 3];
-    let _ = rgb_header_decoder.decode_frame_rgb(1, 1, &mut rgb_header_buf);
-
-    // A valid zero-transform header followed by a failing image reader reaches
-    // the transformed-body error boundary without needing a complete VP8L
-    // entropy stream.
-    let mut body_decoder = decoder_with_bits(Box::new(ErrorReader), 0, 1, 1, 1);
-    let _ = body_decoder.decode_frame_body(&mut buf);
-    let alpha_header = 0x2f_u64 | (1_u64 << 36);
-    let mut rgb_decoder = decoder_with_bits(Box::new(ErrorReader), alpha_header, 41, 1, 1);
-    let mut rgb_buf = [0u8; 3];
-    let _ = rgb_decoder.decode_frame_rgb(1, 1, &mut rgb_buf);
-
-    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b001, 3, 1, 1);
-    let _ = decoder.read_transforms();
-    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b011, 3, 1, 1);
-    let _ = decoder.read_transforms();
-    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b1, 1, 1, 1);
-    let _ = decoder.read_transforms();
-
-    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 0, 1, 1);
-    let _ = decoder.read_huffman_codes(true, 1, 1, None);
-    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0b1, 1, 1, 1);
-    let _ = decoder.read_huffman_codes(true, 1, 1, None);
-
-    let _ = copy_is_out_of_bounds(0, 1, 2, 1);
-    let _ = copy_is_out_of_bounds(1, 1, 2, 2);
-    let _ = copy_is_out_of_bounds(1, 1, 2, 1);
-    let _ = copy_needs_overlap_expansion(5, 4);
-    let _ = copy_needs_overlap_expansion(4, 3);
-    let _ = copy_needs_overlap_expansion(4, 4);
-
-    let mut code_length_code_lengths = [0u16; CODE_LENGTH_CODES];
-    code_length_code_lengths[0] = 1;
-    code_length_code_lengths[1] = 1;
-    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 1, 1, 1);
-    let mut code_lengths = [0u16; MAX_STACK_HUFFMAN_SYMBOLS];
-    let _ = decoder.read_huffman_code_lengths(&code_length_code_lengths, 4, &mut code_lengths);
-
-    let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 8]));
-    let _ = reader.fill();
-    let _ = reader.consume(1);
-    let _: Result<u8, _> = reader.read_bits(1);
-    let mut reader = BitReader::__coverage_new(ErrorReader);
-    let _ = reader.fill();
-    let _: Result<u8, _> = reader.read_bits(1);
-    let mut reader = BitReader::__coverage_new(OneThenErrorReader {
-        byte: [0],
-        consumed: false,
-    });
-    let _ = reader.fill();
-
-    let mut reader = BitReader::__coverage_new(Cursor::new([0u8; 1]));
-    let _ = reader.fill();
-    let _ = reader.consume(8);
-    let _ = reader.consume(1);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
-    let _ = decoder.read_color_cache();
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0xff; 1])));
-    let _ = decoder.read_color_cache();
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: Box::new(Cursor::new(Vec::<u8>::new())),
-            buffer: 1,
-            nbits: 1,
-        },
-        transforms: [None, None, None, None],
-        transform_order: [0; NUM_TRANSFORM_TYPES],
-        transform_order_len: 0,
-        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-        width: 1,
-        height: 1,
-    };
-    let _ = decoder.read_color_cache();
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: Box::new(Cursor::new(Vec::<u8>::new())),
-            buffer: 0b00011,
-            nbits: 5,
-        },
-        transforms: [None, None, None, None],
-        transform_order: [0; NUM_TRANSFORM_TYPES],
-        transform_order_len: 0,
-        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-        width: 1,
-        height: 1,
-    };
-    let _ = decoder.read_color_cache();
-
-    let mut reader =
-        BitReader::__coverage_new(Box::new(Cursor::new([0b1010_1010u8; 8])) as Box<dyn BufRead>);
-    let _ = reader.fill();
-    let _ = LosslessDecoder::<'static>::get_copy_distance(&mut reader, 4);
-    let mut reader = BitReader {
-        reader: Box::new(Cursor::new(Vec::<u8>::new())) as Box<dyn BufRead>,
-        buffer: 0,
-        nbits: 0,
-    };
-    let _ = LosslessDecoder::<'static>::get_copy_distance(&mut reader, 4);
-    let _ = LosslessDecoder::<'static>::plane_code_to_distance(1, 121);
-    let _ = LosslessDecoder::<'static>::plane_code_to_distance(8, 1);
-    let _ = LosslessDecoder::<'static>::plane_code_to_distance(8, 8);
-
-    let info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: Vec::new(),
-    };
-    let _ = info.get_huff_index(0, 0);
-    let info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![3],
-        bits: 1,
-        mask: 1,
-        huffman_code_groups: Vec::new(),
-    };
-    let _ = info.get_huff_index(1, 0);
-
-    let mut decoder = decoder_with_bits(Box::new(ErrorReader), 0, 0, 1, 1);
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(7),
-            HuffmanTree::build_single_node(11),
-            HuffmanTree::build_single_node(13),
-            HuffmanTree::build_two_node(255, 255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = decoder_with_bits(
-        Box::new(OneThenEofThenErrorReader {
-            byte: [0],
-            phase: 0,
-        }),
-        0,
-        0,
-        1,
-        1,
-    );
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(7),
-            HuffmanTree::build_single_node(11),
-            HuffmanTree::build_single_node(13),
-            HuffmanTree::build_two_node(255, 255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
-    let mut data = [0u8; 8];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: make_color_cache(),
-        image: vec![0],
-        bits: 1,
-        mask: 1,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(7),
-            HuffmanTree::build_single_node(11),
-            HuffmanTree::build_single_node(13),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: make_color_cache(),
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(17, 17),
-            HuffmanTree::build_single_node(19),
-            HuffmanTree::build_single_node(23),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: Box::new(Cursor::new(Vec::<u8>::new())),
-            buffer: 0,
-            nbits: 1,
-        },
-        transforms: [None, None, None, None],
-        transform_order: [0; NUM_TRANSFORM_TYPES],
-        transform_order_len: 0,
-        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-        width: 1,
-        height: 1,
-    };
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(17, 17),
-            HuffmanTree::build_two_node(19, 19),
-            HuffmanTree::build_single_node(23),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: Box::new(Cursor::new(Vec::<u8>::new())),
-            buffer: 0,
-            nbits: 1,
-        },
-        transforms: [None, None, None, None],
-        transform_order: [0; NUM_TRANSFORM_TYPES],
-        transform_order_len: 0,
-        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-        width: 1,
-        height: 1,
-    };
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(17, 17),
-            HuffmanTree::build_single_node(19),
-            HuffmanTree::build_two_node(23, 23),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: Box::new(Cursor::new(Vec::<u8>::new())),
-            buffer: 0,
-            nbits: 1,
-        },
-        transforms: [None, None, None, None],
-        transform_order: [0; NUM_TRANSFORM_TYPES],
-        transform_order_len: 0,
-        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-        width: 1,
-        height: 1,
-    };
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(17, 17),
-            HuffmanTree::build_single_node(19),
-            HuffmanTree::build_single_node(23),
-            HuffmanTree::build_two_node(255, 255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(256),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(Vec::<u8>::new())));
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(260),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(Vec::<u8>::new())));
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(256),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_two_node(0, 0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(Vec::<u8>::new())));
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(256),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(4),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0000_0010u8; 1])));
-    let mut data = [0u8; 8];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(29, 256),
-            HuffmanTree::build_single_node(31),
-            HuffmanTree::build_single_node(37),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0011_0000u8; 1])));
-    let mut data = [0u8; 32];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(41, 256),
-            HuffmanTree::build_single_node(43),
-            HuffmanTree::build_single_node(47),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(4),
-        ]],
-    };
-    let _ = decoder.decode_image_data(8, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0000_1100u8; 1])));
-    let mut data = [0u8; 16];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(53, 256),
-            HuffmanTree::build_single_node(59),
-            HuffmanTree::build_single_node(61),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(4),
-        ]],
-    };
-    let _ = decoder.decode_image_data(4, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
-    let mut data = [0u8; 4];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(280),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(1, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0u8; 1])));
-    let mut data = [0u8; 8];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: make_color_cache(),
-        image: vec![0],
-        bits: 1,
-        mask: 1,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_single_node(280),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: Box::new(Cursor::new(Vec::<u8>::new())),
-            buffer: 0,
-            nbits: 1,
-        },
-        transforms: [None, None, None, None],
-        transform_order: [0; NUM_TRANSFORM_TYPES],
-        transform_order_len: 0,
-        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-        width: 2,
-        height: 1,
-    };
-    let mut data = [0u8; 8];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: make_color_cache(),
-        image: vec![0],
-        bits: 1,
-        mask: 1,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(280, 280),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(0),
-        ]],
-    };
-    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
-
-    let mut decoder = LosslessDecoder {
-        bit_reader: BitReader {
-            reader: Box::new(ErrorReader),
-            buffer: 0,
-            nbits: 0,
-        },
-        transforms: [None, None, None, None],
-        transform_order: [0; NUM_TRANSFORM_TYPES],
-        transform_order_len: 0,
-        color_indexing_table: [0; MAX_COLOR_INDEXING_TABLE_BYTES],
-        width: 1,
-        height: 1,
-    };
-    let _ = decoder.read_color_cache();
-
-    let mut decoder = LosslessDecoder::new(Box::new(Cursor::new(vec![0b0000_0010u8; 8])));
-    let mut data = [0u8; 8];
-    let huffman_info = HuffmanInfo {
-        xsize: 1,
-        _ysize: 1,
-        color_cache: None,
-        image: vec![0],
-        bits: 0,
-        mask: 0,
-        huffman_code_groups: vec![[
-            HuffmanTree::build_two_node(0, 257),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(0),
-            HuffmanTree::build_single_node(255),
-            HuffmanTree::build_single_node(1),
-        ]],
-    };
-    let _ = decoder.decode_image_data(2, 1, huffman_info, &mut data);
 }
 
 #[derive(Debug, Clone)]
@@ -1680,7 +1013,11 @@ pub(crate) struct BitReader<R> {
 }
 
 // This branch is entered only when `fill_buf()` exposes at least eight bytes.
-#[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_in_result,
+    clippy::unwrap_used,
+    reason = "The eight-byte conversion follows the explicit fill_buf length guard."
+)]
 fn fill_bit_buffer(
     reader: &mut dyn BufRead,
     buffer: &mut u64,
@@ -1735,11 +1072,6 @@ impl<R: BufRead> BitReader<R> {
             buffer: 0,
             nbits: 0,
         }
-    }
-
-    #[cfg(coverage)]
-    pub(crate) const fn __coverage_new(reader: R) -> Self {
-        Self::new(reader)
     }
 
     /// Fills the buffer with bits from the input stream.

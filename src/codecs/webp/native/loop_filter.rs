@@ -21,7 +21,10 @@
 // converted byte or a clamped intermediate, and callers provide validated edge
 // coordinates. Retaining the reference expressions keeps the tap equations
 // auditable and byte-exact.
-#![allow(clippy::arithmetic_side_effects)]
+#![allow(
+    clippy::arithmetic_side_effects,
+    reason = "RFC 6386 loop-filter tap equations use bounded byte and clamped intermediate values"
+)]
 
 #[inline]
 fn c(val: i32) -> i32 {

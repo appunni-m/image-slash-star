@@ -1,0 +1,54 @@
+diff --git a/src/codec_aom.c b/src/codec_aom.c
+index f9d72b2..d17bd2f 100644
+--- a/src/codec_aom.c
++++ b/src/codec_aom.c
+@@ -431,6 +431,12 @@ static avifBool avifProcessAOMOptionsPreInit(avifCodec * codec, avifBool alpha,
+                 return AVIF_FALSE;
+             }
+             cfg->rc_end_usage = val;
++        } else if (avifKeyEqualsName(entry->key, "superres-mode", alpha)) {
++            cfg->rc_superres_mode = atoi(entry->value);
++        } else if (avifKeyEqualsName(entry->key, "superres-denominator", alpha)) {
++            cfg->rc_superres_denominator = (unsigned int)atoi(entry->value);
++        } else if (avifKeyEqualsName(entry->key, "superres-kf-denominator", alpha)) {
++            cfg->rc_superres_kf_denominator = (unsigned int)atoi(entry->value);
+         }
+     }
+     return AVIF_TRUE;
+@@ -499,6 +505,11 @@ static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha)
+         if (avifKeyEqualsName(entry->key, "end-usage", alpha)) {
+             continue;
+         }
++        if (avifKeyEqualsName(entry->key, "superres-mode", alpha) ||
++            avifKeyEqualsName(entry->key, "superres-denominator", alpha) ||
++            avifKeyEqualsName(entry->key, "superres-kf-denominator", alpha)) {
++            continue;
++        }
+
+ #if defined(HAVE_AOM_CODEC_SET_OPTION)
+         const char * prefix = alpha ? "alpha:" : "color:";
+@@ -511,6 +522,24 @@ static avifBool avifProcessAOMOptionsPostInit(avifCodec * codec, avifBool alpha)
+         } else if (!strncmp(key, shortPrefix, shortPrefixLen)) {
+             key += shortPrefixLen;
+         }
++        int controlId = 0;
++        if (avifKeyEqualsName(entry->key, "min-partition-size", alpha)) {
++            controlId = AV1E_SET_MIN_PARTITION_SIZE;
++        } else if (avifKeyEqualsName(entry->key, "max-partition-size", alpha)) {
++            controlId = AV1E_SET_MAX_PARTITION_SIZE;
++        } else if (avifKeyEqualsName(entry->key, "enable-tx-size-search", alpha)) {
++            controlId = AV1E_SET_ENABLE_TX_SIZE_SEARCH;
++        }
++        if (controlId != 0) {
++            const int value = atoi(entry->value);
++            if (aom_codec_control(&codec->internal->encoder, controlId, value) != AOM_CODEC_OK) {
++                avifDiagnosticsPrintf(codec->diag, "aom_codec_control(%d, %d) failed: %s: %s",
++                                      controlId, value, aom_codec_error(&codec->internal->encoder),
++                                      aom_codec_error_detail(&codec->internal->encoder));
++                return AVIF_FALSE;
++            }
++            continue;
++        }
+         if (aom_codec_set_option(&codec->internal->encoder, key, entry->value) != AOM_CODEC_OK) {
+             avifDiagnosticsPrintf(codec->diag,
+                                   "aom_codec_set_option(\"%s\", \"%s\") failed: %s: %s",

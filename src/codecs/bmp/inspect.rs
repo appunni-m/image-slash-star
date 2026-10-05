@@ -218,9 +218,3 @@ fn le_i32(data: &[u8], offset: usize) -> CodecResult<i32> {
     .map_err(|error| error.at(u64::try_from(offset).unwrap_or(u64::MAX), "bmp_field"))?;
     Ok(i32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let _ = inspect(b"");
-    let _ = inspect(b"not a bitmap");
-}

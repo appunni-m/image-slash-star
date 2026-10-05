@@ -22,10 +22,8 @@ use crate::encode_policy::EncodePolicy;
 use crate::types::{DecodedImage, ImageMode};
 use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::borrow::Cow;
-#[cfg(coverage)]
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use wide::bytemuck::{cast, pod_read_unaligned};
-use wide::{i16x8, i32x4, i32x8, u8x16, u16x8};
+use wide::{i16x8, i32x4, i32x8, u8x16, u16x8, u32x4};
 
 /// Zigzag scan order (matches idct.rs JPEG_NATURAL_ORDER).
 const ZIGZAG: [usize; 64] = [
@@ -44,15 +42,6 @@ const PROGRESSIVE_EVENT_CHECKPOINT_EVENTS: usize = 1_024;
 const PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS: usize = 1_024;
 
 type PreparedJpegPlanes<'a> = (Cow<'a, [u8]>, Vec<u8>, Vec<u8>, Vec<u8>, bool);
-
-#[cfg(coverage)]
-static FORCE_FDCT_FAILURE_CALL: AtomicUsize = AtomicUsize::new(usize::MAX);
-#[cfg(coverage)]
-static FORCE_SCAN_MARKER_READ_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_MARKER_END_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_SINK_OUTPUT_END_ERROR: AtomicBool = AtomicBool::new(false);
 
 trait RgbConversionCheckpoint {
     fn row(&mut self) -> CodecResult<()>;
@@ -169,37 +158,14 @@ trait ProgressiveScanCheckpoint {
     fn event(&mut self) -> CodecResult<()>;
 }
 
-struct NoopProgressiveScanCheckpoint {
-    #[cfg(coverage)]
-    fail_after: usize,
-}
+struct NoopProgressiveScanCheckpoint;
 
 impl NoopProgressiveScanCheckpoint {
-    #[cfg_attr(coverage, coverage(off))]
     fn new() -> Self {
-        Self {
-            #[cfg(coverage)]
-            fail_after: usize::MAX,
-        }
+        Self
     }
 
-    #[cfg(coverage)]
-    #[coverage(off)]
-    fn with_fail_after(fail_after: usize) -> Self {
-        Self {
-            fail_after: std::hint::black_box(fail_after),
-        }
-    }
-
-    #[cfg_attr(coverage, coverage(off))]
     fn checkpoint(&mut self) -> CodecResult<()> {
-        #[cfg(coverage)]
-        {
-            if self.fail_after == 0 {
-                return Err(crate::codecs::CodecError::Cancelled);
-            }
-            self.fail_after = self.fail_after.saturating_sub(1);
-        }
         Ok(())
     }
 }
@@ -223,72 +189,6 @@ impl ProgressiveScanCheckpoint for NoopProgressiveScanCheckpoint {
     #[inline(always)]
     fn event(&mut self) -> CodecResult<()> {
         self.checkpoint()
-    }
-}
-
-#[cfg(coverage)]
-struct CoverageFailingProgressiveScanCheckpoint {
-    coefficient_calls: usize,
-    fail_after: usize,
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-impl ProgressiveScanCheckpoint for CoverageFailingProgressiveScanCheckpoint {
-    fn row(&mut self) -> CodecResult<()> {
-        if self.coefficient_calls == usize::MAX {
-            return Err(crate::codecs::CodecError::Cancelled);
-        }
-        Ok(())
-    }
-
-    fn block(&mut self) -> CodecResult<()> {
-        Ok(())
-    }
-
-    fn coefficient(&mut self) -> CodecResult<()> {
-        if self.coefficient_calls >= self.fail_after {
-            return Err(crate::codecs::CodecError::Cancelled);
-        }
-        self.coefficient_calls = self.coefficient_calls.saturating_add(1);
-        Ok(())
-    }
-
-    fn event(&mut self) -> CodecResult<()> {
-        Ok(())
-    }
-}
-
-#[cfg(coverage)]
-struct CoverageFailingProgressiveEventCheckpoint {
-    calls: usize,
-    fail_after: usize,
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-impl ProgressiveScanCheckpoint for CoverageFailingProgressiveEventCheckpoint {
-    fn row(&mut self) -> CodecResult<()> {
-        if self.calls == usize::MAX {
-            return Err(crate::codecs::CodecError::Cancelled);
-        }
-        Ok(())
-    }
-
-    fn block(&mut self) -> CodecResult<()> {
-        Ok(())
-    }
-
-    fn coefficient(&mut self) -> CodecResult<()> {
-        Ok(())
-    }
-
-    fn event(&mut self) -> CodecResult<()> {
-        if self.calls >= self.fail_after {
-            return Err(crate::codecs::CodecError::Cancelled);
-        }
-        self.calls = self.calls.saturating_add(1);
-        Ok(())
     }
 }
 
@@ -404,34 +304,6 @@ struct TokenEntropyOutputCheckpoint<'a> {
     baseline_mcus_until_checkpoint: usize,
 }
 
-#[cfg(coverage)]
-struct CoverageFailingEntropyOutputCheckpoint {
-    calls: usize,
-    fail_after: usize,
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-impl EntropyOutputCheckpoint for CoverageFailingEntropyOutputCheckpoint {
-    fn observe(&mut self, _current_output: usize) -> CodecResult<()> {
-        if self.calls >= self.fail_after {
-            return Err(crate::codecs::CodecError::Cancelled);
-        }
-        self.calls = self.calls.saturating_add(1);
-        Ok(())
-    }
-
-    fn baseline_mcu(&mut self) -> CodecResult<()> {
-        if self.calls >= self.fail_after {
-            return Err(crate::codecs::CodecError::Cancelled);
-        }
-        self.calls = self.calls.saturating_add(1);
-        Ok(())
-    }
-
-    fn reset(&mut self) {}
-}
-
 impl<'a> TokenEntropyOutputCheckpoint<'a> {
     fn new(token: &'a crate::CancellationToken) -> Self {
         Self {
@@ -503,6 +375,8 @@ struct FdctQuantizer {
 }
 
 impl FdctQuantizer {
+    /// Quantization tables are clamped to 1..=255, so prepared divisors are
+    /// always 8..=2040 and use the ceiling reciprocal below.
     fn new(qtable: &[u16; 64]) -> Self {
         let mut divisors = [0u32; 64];
         let mut reciprocals = [0u32; 64];
@@ -518,9 +392,17 @@ impl FdctQuantizer {
     }
 }
 
-#[cfg(coverage)]
-fn encode(img: &DecodedImage, opts: &JpegEncodeOptions) -> CodecResult<Vec<u8>> {
-    encode_with_token(img, opts, None)
+// Match the pinned Pillow oracle: rows above its signed 32-bit limit disable
+// DRI, while larger MCU intervals otherwise saturate at the 16-bit marker cap.
+fn restart_interval_from_rows(restart_rows: u32, mcu_columns: usize) -> u16 {
+    if restart_rows > i32::MAX as u32 {
+        return 0;
+    }
+
+    let interval = usize::try_from(restart_rows)
+        .unwrap_or(usize::MAX)
+        .saturating_mul(mcu_columns);
+    u16::try_from(interval).unwrap_or(u16::MAX)
 }
 
 pub(crate) fn encode_with_token(
@@ -549,11 +431,6 @@ pub(crate) fn encode_with_token(
 
     let quality = opts.quality.unwrap_or(75);
     let progressive = opts.progressive.unwrap_or(false);
-    if img.mode == ImageMode::Cmyk8 && progressive {
-        return Err(CodecError::Unsupported(
-            "progressive CMYK JPEG encoding is not supported".to_owned(),
-        ));
-    }
     let optimize = opts.optimize.unwrap_or(false);
     let subsampling = match opts.subsampling.unwrap_or(JpegSubsampling::Cs420) {
         JpegSubsampling::Cs444 => "444",
@@ -562,7 +439,7 @@ pub(crate) fn encode_with_token(
     };
     // The supported native and WebAssembly targets have at least a 32-bit
     // `usize`, so every public `u32` row interval is representable here.
-    let restart_rows = opts.restart_interval.unwrap_or(0) as usize;
+    let restart_rows = opts.restart_interval.unwrap_or(0);
 
     let params = quant::build_params(quality, usize::from(num_components));
     let y_quantizer = FdctQuantizer::new(&params.quant_tables[0]);
@@ -724,6 +601,7 @@ pub(crate) fn encode_with_token(
     // guarantees the four converted planes have exactly `w * h` samples.
     if token.is_none()
         && num_components == 4
+        && !progressive
         && !optimize
         && (w.saturating_mul(h) >= 1024 || (w.is_multiple_of(32) && h.is_multiple_of(8)))
     {
@@ -923,14 +801,7 @@ pub(crate) fn encode_with_token(
         .blocks_per_row
         .saturating_mul(8)
         .div_ceil(usize::from(max_h).saturating_mul(8));
-    let restart_interval = if restart_rows == 0 {
-        0
-    } else {
-        let interval = restart_rows.saturating_mul(mcu_columns);
-        u16::try_from(interval).map_err(|_| {
-            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
-        })?
-    };
+    let restart_interval = restart_interval_from_rows(restart_rows, mcu_columns);
 
     // Derive standard Huffman tables.
     let standard_tables = huffman::standard_derived_tables();
@@ -1121,7 +992,7 @@ pub(crate) fn encode_with_token(
                 max_h,
                 max_v,
                 &params,
-            );
+            )?;
         }
     }
 
@@ -1188,7 +1059,6 @@ fn encode_baseline_without_token(
     *out = bw.into_output();
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[allow(
     clippy::too_many_arguments,
     reason = "the no-token wrapper preserves the production checkpoint invariant while excluding an impossible error edge"
@@ -1200,7 +1070,7 @@ fn encode_progressive_without_token(
     maximum_horizontal_sampling: u8,
     maximum_vertical_sampling: u8,
     params: &quant::EncodeParams,
-) {
+) -> CodecResult<()> {
     let mut checkpoint = NoopEntropyOutputCheckpoint;
     let mut scan_checkpoint = NoopProgressiveScanCheckpoint::new();
     encode_progressive_scans_exact(
@@ -1214,7 +1084,6 @@ fn encode_progressive_without_token(
         &mut checkpoint,
         &mut scan_checkpoint,
     )
-    .unwrap_or_else(|error| panic!("no-token JPEG progressive checkpoint failed: {error:?}"));
 }
 
 /// Encode JPEG into validated marker and entropy-scan segments owned by the
@@ -1261,9 +1130,6 @@ fn write_jpeg_to_sink(
             if marker_start > offset {
                 write_jpeg_sink_segment(sink, &encoded[offset..marker_start], token, &mut written)?;
             }
-            #[cfg(coverage)]
-            let (marker, marker_end) = read_jpeg_scan_marker_for_coverage(encoded, marker_start)?;
-            #[cfg(not(coverage))]
             let (marker, marker_end) = read_jpeg_marker(encoded, marker_start)?;
             if is_restart_marker(marker) {
                 write_jpeg_sink_segment(
@@ -1345,17 +1211,6 @@ fn write_jpeg_to_sink(
         ));
     }
     Ok(written)
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn read_jpeg_scan_marker_for_coverage(encoded: &[u8], offset: usize) -> CodecResult<(u8, usize)> {
-    if FORCE_SCAN_MARKER_READ_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Malformed(
-            "coverage-forced JPEG scan marker failure".to_owned(),
-        ));
-    }
-    read_jpeg_marker(encoded, offset)
 }
 
 fn read_jpeg_marker(encoded: &[u8], offset: usize) -> CodecResult<(u8, usize)> {
@@ -1445,2966 +1300,16 @@ fn write_jpeg_sink_segment(
     Ok(())
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn jpeg_marker_end(marker_end: usize, length: usize) -> CodecResult<usize> {
-    #[cfg(coverage)]
-    if FORCE_MARKER_END_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Dimensions(
-            "coverage-forced JPEG marker length overflow".to_owned(),
-        ));
-    }
     marker_end
         .checked_add(length)
         .ok_or_else(|| CodecError::Dimensions("JPEG marker length overflows".to_owned()))
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn jpeg_sink_output_end(written: usize, bytes: usize) -> CodecResult<usize> {
-    #[cfg(coverage)]
-    if FORCE_SINK_OUTPUT_END_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Dimensions(
-            "coverage-forced JPEG sink output overflow".to_owned(),
-        ));
-    }
     written
         .checked_add(bytes)
         .ok_or_else(|| CodecError::Dimensions("JPEG sink output length overflows".to_owned()))
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    huffman::__coverage_exercise_private_branches();
-    fdct::__coverage_exercise_private_branches();
-
-    let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::L8);
-    let zero_height = DecodedImage::new(1, 0, Vec::new(), crate::types::ColorType::L8);
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = encode(&zero_width, &JpegEncodeOptions::default());
-    }));
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = encode(&zero_height, &JpegEncodeOptions::default());
-    }));
-
-    let gray = DecodedImage::new(2, 2, vec![0, 64, 128, 255], crate::types::ColorType::L8);
-    let cmyk = DecodedImage::new(1, 1, vec![0, 64, 128, 255], crate::types::ColorType::Cmyk8);
-    let rgb = DecodedImage::new(
-        3,
-        2,
-        vec![
-            0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0, 255, 255, 255,
-        ],
-        crate::types::ColorType::Rgb8,
-    );
-    let small_rgb = DecodedImage::new(
-        32,
-        16,
-        (0usize..(32 * 16 * 3))
-            .map(|index| index.to_le_bytes()[0].wrapping_mul(29))
-            .collect(),
-        crate::types::ColorType::Rgb8,
-    );
-    for subsampling in [
-        JpegSubsampling::Cs420,
-        JpegSubsampling::Cs422,
-        JpegSubsampling::Cs444,
-    ] {
-        let options = JpegEncodeOptions {
-            subsampling: Some(subsampling),
-            ..JpegEncodeOptions::default()
-        };
-        let _ = encode(&small_rgb, &options);
-    }
-    let _ = encode(&gray, &JpegEncodeOptions::default());
-    let progressive_cmyk = JpegEncodeOptions {
-        progressive: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&cmyk, &progressive_cmyk);
-    let _ = encode(&rgb, &JpegEncodeOptions::default());
-
-    let encoded_rgb = crate::coverage_support::require_ok(
-        encode(&rgb, &JpegEncodeOptions::default()),
-        "coverage JPEG image should encode",
-    );
-    let mut rgb_sink = Vec::new();
-    let _ = write_jpeg_to_sink(&encoded_rgb, None, &mut rgb_sink);
-    let mut invalid_soi_sink = Vec::new();
-    let _ = write_jpeg_to_sink(&[0xff, 0xd9], None, &mut invalid_soi_sink);
-    let mut repeated_ff_soi_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xff, 0xd8, 0xff, 0xd9],
-        None,
-        &mut repeated_ff_soi_sink,
-    );
-    let mut no_scan_sink = Vec::new();
-    let _ = write_jpeg_to_sink(&[0xff, 0xd8, 0xff, 0xd9], None, &mut no_scan_sink);
-    for malformed in [&[0_u8][..], &[0xff][..], &[0xff, 0][..], &[0xff, 0xff][..]] {
-        let mut malformed_sink = Vec::new();
-        let _ = write_jpeg_to_sink(malformed, None, &mut malformed_sink);
-    }
-    let _ = jpeg_length_segment_end(&[], 0);
-    let _ = jpeg_length_segment_end(&[0, 0], 0);
-    let _ = find_scan_marker(&[1, 2], 0);
-    let _ = find_scan_marker(&[0xff, 0], 0);
-    let _ = find_scan_marker(&[0xff, 0xff], 0);
-    let _ = find_scan_marker(&[0xff, 0, 0xff, 0xd9], 0);
-    let mut second_soi = vec![0xff, 0xd8];
-    second_soi.extend_from_slice(&encoded_rgb[2..]);
-    let mut second_soi_sink = Vec::new();
-    let _ = write_jpeg_to_sink(&second_soi, None, &mut second_soi_sink);
-    let mut explicit_second_soi_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xd8, 0xff, 0xd8, 0xff, 0xd9],
-        None,
-        &mut explicit_second_soi_sink,
-    );
-    let mut standalone_sink = Vec::new();
-    let _ = write_jpeg_to_sink(&[0xff, 0xd8, 0xff, 0x01], None, &mut standalone_sink);
-    let mut unterminated_scan_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xd8, 0xff, 0xda, 0, 2],
-        None,
-        &mut unterminated_scan_sink,
-    );
-    let mut trailing_eoi_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xd8, 0xff, 0xda, 0, 2, 0xff, 0xd9, 0],
-        None,
-        &mut trailing_eoi_sink,
-    );
-    let mut missing_eoi_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xd8, 0xff, 0xda, 0, 2, 0xff, 0xc0, 0, 2],
-        None,
-        &mut missing_eoi_sink,
-    );
-    let mut scan_without_marker_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xd8, 0xff, 0xda, 0, 2, 1, 2],
-        None,
-        &mut scan_without_marker_sink,
-    );
-    let mut non_marker_after_soi_sink = Vec::new();
-    let _ = write_jpeg_to_sink(&[0xff, 0xd8, 1], None, &mut non_marker_after_soi_sink);
-    let mut malformed_sos_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xd8, 0xff, 0xda, 0, 1],
-        None,
-        &mut malformed_sos_sink,
-    );
-    let mut malformed_segment_sink = Vec::new();
-    let _ = write_jpeg_to_sink(
-        &[0xff, 0xd8, 0xff, 0xe0, 0, 1],
-        None,
-        &mut malformed_segment_sink,
-    );
-    let mut progressive_sink = Vec::new();
-    let progressive_sink_options = JpegEncodeOptions {
-        progressive: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let progressive_bytes = crate::coverage_support::require_ok(
-        encode(&rgb, &progressive_sink_options),
-        "coverage progressive JPEG image should encode",
-    );
-    let _ = write_jpeg_to_sink(&progressive_bytes, None, &mut progressive_sink);
-    let mut restart_sink = Vec::new();
-    let restart_sink_options = JpegEncodeOptions {
-        optimize: Some(true),
-        subsampling: Some(JpegSubsampling::Cs422),
-        restart_interval: Some(1),
-        ..JpegEncodeOptions::default()
-    };
-    let restart_rgb = DecodedImage::new(
-        32,
-        32,
-        (0usize..(32 * 32 * 3))
-            .map(|index| index.to_le_bytes()[0].wrapping_mul(37))
-            .collect(),
-        crate::types::ColorType::Rgb8,
-    );
-    let restart_bytes = crate::coverage_support::require_ok(
-        encode(&restart_rgb, &restart_sink_options),
-        "coverage restart JPEG image should encode",
-    );
-    let _ = write_jpeg_to_sink(&restart_bytes, None, &mut restart_sink);
-    FORCE_SCAN_MARKER_READ_ERROR.store(true, Ordering::Relaxed);
-    let mut forced_scan_marker_sink = Vec::new();
-    let _ = write_jpeg_to_sink(&restart_bytes, None, &mut forced_scan_marker_sink);
-    #[cfg(coverage_nightly)]
-    {
-        let restart_probe_token = crate::CancellationToken::new();
-        restart_probe_token.cancel_after(usize::MAX);
-        let mut restart_probe_sink = Vec::new();
-        let _ = write_jpeg_to_sink(
-            &restart_bytes,
-            Some(&restart_probe_token),
-            &mut restart_probe_sink,
-        );
-        let restart_probe_checks = usize::MAX.saturating_sub(
-            restart_probe_token
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=restart_probe_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let mut sink = Vec::new();
-            let _ = write_jpeg_to_sink(&restart_bytes, Some(&token), &mut sink);
-        }
-        let progressive_probe_token = crate::CancellationToken::new();
-        progressive_probe_token.cancel_after(usize::MAX);
-        let mut progressive_probe_sink = Vec::new();
-        let _ = write_jpeg_to_sink(
-            &progressive_bytes,
-            Some(&progressive_probe_token),
-            &mut progressive_probe_sink,
-        );
-        let progressive_probe_checks = usize::MAX.saturating_sub(
-            progressive_probe_token
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=progressive_probe_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let mut sink = Vec::new();
-            let _ = write_jpeg_to_sink(&progressive_bytes, Some(&token), &mut sink);
-        }
-    }
-    struct RejectAfterWrites {
-        allowed: usize,
-        writes: usize,
-    }
-    impl crate::OutputSink for RejectAfterWrites {
-        fn write_all(&mut self, _bytes: &[u8]) -> crate::ImageResult<()> {
-            if self.writes >= self.allowed {
-                return Err(crate::ImageError::parameter(
-                    "coverage JPEG sink rejected write",
-                ));
-            }
-            self.writes = crate::coverage_support::require_some(
-                (self.writes).checked_add(1),
-                "fixture counter or boundary",
-            );
-            Ok(())
-        }
-    }
-    for allowed in [0, 1, 2, 32, 127] {
-        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
-        let _ = write_jpeg_to_sink(&restart_bytes, None, &mut rejecting);
-        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
-        let _ = write_jpeg_to_sink(&progressive_bytes, None, &mut rejecting);
-    }
-    let _ = jpeg_length_segment_end(&[0xff, 0xda, 0, 5, 0], 2);
-    FORCE_MARKER_END_ERROR.store(true, Ordering::Relaxed);
-    let _ = jpeg_length_segment_end(&[0, 2], 0);
-    let mut forced_output_end_sink = Vec::new();
-    let mut forced_output_end_written = 0usize;
-    FORCE_SINK_OUTPUT_END_ERROR.store(true, Ordering::Relaxed);
-    let _ = write_jpeg_sink_segment(
-        &mut forced_output_end_sink,
-        &[0],
-        None,
-        &mut forced_output_end_written,
-    );
-    let checkpoint_token = crate::CancellationToken::new();
-    let mut output_checkpoint = TokenEntropyOutputCheckpoint::new(&checkpoint_token);
-    let _ = output_checkpoint.observe(4_096);
-    let _ = output_checkpoint.observe(8_192);
-    let cancelled_output_token = crate::CancellationToken::new();
-    cancelled_output_token.cancel();
-    let mut cancelled_output_checkpoint =
-        TokenEntropyOutputCheckpoint::new(&cancelled_output_token);
-    let _ = cancelled_output_checkpoint.observe(2_048);
-    let cancelled_mcu_token = crate::CancellationToken::new();
-    cancelled_mcu_token.cancel();
-    let mut cancelled_mcu_checkpoint = TokenEntropyOutputCheckpoint::new(&cancelled_mcu_token);
-    cancelled_mcu_checkpoint.baseline_mcus_until_checkpoint = 1;
-    let _ = cancelled_mcu_checkpoint.baseline_mcu();
-
-    // Pillow has no caller-controlled cancellation token. These deterministic
-    // coverage-only drills exercise the Rust cancellation checkpoints across
-    // color conversion, sampling, quantization, and entropy preparation; they
-    // are not synthetic Pillow-parity rows.
-    let checkpoint_rgb = DecodedImage::new(
-        17,
-        17,
-        vec![128; 17 * 17 * 3],
-        crate::types::ColorType::Rgb8,
-    );
-    let rgb_observe_token = crate::CancellationToken::new();
-    rgb_observe_token.cancel_after(1);
-    let mut rgb_observe_checkpoint = TokenRgbConversionCheckpoint {
-        token: &rgb_observe_token,
-        pixels_until_checkpoint: 1,
-    };
-    let _ = std::hint::black_box(rgb_to_ycbcr_with_checkpoint(
-        &[0, 0, 0],
-        1,
-        1,
-        &mut rgb_observe_checkpoint,
-    ));
-    for checks in [0, 1, 2, 64, 128, 255] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_rgb, &JpegEncodeOptions::default(), Some(&token));
-    }
-    #[cfg(coverage_nightly)]
-    {
-        let baseline_probe_token = crate::CancellationToken::new();
-        baseline_probe_token.cancel_after(usize::MAX);
-        let _ = encode_with_token(
-            &checkpoint_rgb,
-            &JpegEncodeOptions::default(),
-            Some(&baseline_probe_token),
-        );
-        let baseline_probe_checks = usize::MAX.saturating_sub(
-            baseline_probe_token
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=baseline_probe_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = encode_with_token(&checkpoint_rgb, &JpegEncodeOptions::default(), Some(&token));
-        }
-    }
-    let grayscale_token = crate::CancellationToken::new();
-    grayscale_token.cancel_after(2);
-    let _ = encode_with_token(&gray, &JpegEncodeOptions::default(), Some(&grayscale_token));
-    let l1 = DecodedImage::with_mode(8, 2, vec![0xff, 0], ImageMode::L1);
-    let l1_token = crate::CancellationToken::new();
-    l1_token.cancel_after(2);
-    let _ = encode_with_token(&l1, &JpegEncodeOptions::default(), Some(&l1_token));
-    let cmyk_rows = DecodedImage::new(2, 2, vec![0; 2 * 2 * 4], crate::types::ColorType::Cmyk8);
-    let cmyk_rows_token = crate::CancellationToken::new();
-    cmyk_rows_token.cancel_after(2);
-    let _ = encode_with_token(
-        &cmyk_rows,
-        &JpegEncodeOptions::default(),
-        Some(&cmyk_rows_token),
-    );
-    let cmyk_fdct = DecodedImage::new(8, 8, vec![0; 8 * 8 * 4], crate::types::ColorType::Cmyk8);
-    FORCE_FDCT_FAILURE_CALL.store(1, Ordering::Relaxed);
-    let fdct_cb_token = crate::CancellationToken::new();
-    let _ = encode_with_token(
-        &cmyk_fdct,
-        &JpegEncodeOptions::default(),
-        Some(&fdct_cb_token),
-    );
-    FORCE_FDCT_FAILURE_CALL.store(3, Ordering::Relaxed);
-    let fdct_k_token = crate::CancellationToken::new();
-    let _ = encode_with_token(
-        &cmyk_fdct,
-        &JpegEncodeOptions::default(),
-        Some(&fdct_k_token),
-    );
-    let grayscale_alpha = DecodedImage::new(1, 1, vec![0, 255], crate::types::ColorType::La8);
-    let _ = encode(&grayscale_alpha, &JpegEncodeOptions::default());
-    let mut progressive = JpegEncodeOptions {
-        progressive: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&rgb, &progressive);
-    for checks in [0, 8, 24, 44, 45, 47, 64, 128] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&checkpoint_rgb, &progressive, Some(&token));
-    }
-    progressive.optimize = Some(true);
-    progressive.subsampling = Some(JpegSubsampling::Cs444);
-    let _ = encode(&rgb, &progressive);
-    let restart = JpegEncodeOptions {
-        optimize: Some(true),
-        subsampling: Some(JpegSubsampling::Cs422),
-        restart_interval: Some(1),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&rgb, &restart);
-    let optimized_checkpoint = JpegEncodeOptions {
-        optimize: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let optimized_token = crate::CancellationToken::new();
-    optimized_token.cancel_after(44);
-    let _ = encode_with_token(
-        &checkpoint_rgb,
-        &optimized_checkpoint,
-        Some(&optimized_token),
-    );
-    let mut bad_restart = restart.clone();
-    bad_restart.restart_interval = Some(70_000);
-    let _ = encode(&rgb, &bad_restart);
-    let wide_rgb = DecodedImage::new(17, 1, vec![128; 17 * 3], crate::types::ColorType::Rgb8);
-    let mut overflowing_restart = restart;
-    overflowing_restart.restart_interval = Some(u32::MAX);
-    let _ = encode(&wide_rgb, &overflowing_restart);
-    let large_rgb = DecodedImage::new(
-        33,
-        35,
-        vec![128; 33 * 35 * 3],
-        crate::types::ColorType::Rgb8,
-    );
-    let _ = encode(&large_rgb, &JpegEncodeOptions::default());
-    let low_quality_large_rgb = JpegEncodeOptions {
-        quality: Some(20),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&large_rgb, &low_quality_large_rgb);
-    // Keep each fast-path admission predicate independently witnessed. The
-    // zero-sized and truncated inputs are deliberately caught: they model a
-    // caller handing the encoder inconsistent in-memory dimensions, not a
-    // Pillow-visible file-format row.
-    let zero_width_rgb = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::Rgb8);
-    let zero_height_rgb = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::Rgb8);
-    for image in [&zero_width_rgb, &zero_height_rgb] {
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _ = encode(image, &JpegEncodeOptions::default());
-            let _ = encode(image, &low_quality_large_rgb);
-        }));
-    }
-    let truncated_rgb = DecodedImage::new(33, 35, vec![128; 3], crate::types::ColorType::Rgb8);
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = encode(&truncated_rgb, &JpegEncodeOptions::default());
-    }));
-    for subsampling in [JpegSubsampling::Cs422, JpegSubsampling::Cs444] {
-        let mut streaming = JpegEncodeOptions {
-            subsampling: Some(subsampling),
-            restart_interval: Some(1),
-            exif: Some(vec![0x45, 0x78, 0x69, 0x66, 0]),
-            ..JpegEncodeOptions::default()
-        };
-        let _ = encode(&large_rgb, &streaming);
-        streaming.restart_interval = Some(70_000);
-        let _ = encode(&large_rgb, &streaming);
-    }
-    let large_gray = DecodedImage::new(33, 35, vec![128; 33 * 35], crate::types::ColorType::L8);
-    let mut large_gray_options = JpegEncodeOptions {
-        restart_interval: Some(1),
-        exif: Some(vec![0x45, 0x78, 0x69, 0x66, 0]),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&large_gray, &large_gray_options);
-    large_gray_options.restart_interval = Some(70_000);
-    let _ = encode(&large_gray, &large_gray_options);
-    let large_gray_progressive = JpegEncodeOptions {
-        progressive: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let large_gray_optimized = JpegEncodeOptions {
-        optimize: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&large_gray, &large_gray_progressive);
-    let _ = encode(&large_gray, &large_gray_optimized);
-    // Exercise both sides of the aligned-small-image fallback used by the
-    // grayscale fast path: width-aligned/height-aligned and width-aligned
-    // with a partial final row.
-    let aligned_gray = DecodedImage::new(32, 8, vec![128; 32 * 8], crate::types::ColorType::L8);
-    let short_aligned_gray = DecodedImage::new(32, 1, vec![128; 32], crate::types::ColorType::L8);
-    let _ = encode(&aligned_gray, &JpegEncodeOptions::default());
-    let _ = encode(&short_aligned_gray, &JpegEncodeOptions::default());
-    let zero_width_gray = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::L8);
-    let zero_height_gray = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::L8);
-    for image in [&zero_width_gray, &zero_height_gray] {
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _ = encode(image, &JpegEncodeOptions::default());
-        }));
-    }
-    let truncated_gray = DecodedImage::new(33, 35, vec![128; 1], crate::types::ColorType::L8);
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = encode(&truncated_gray, &JpegEncodeOptions::default());
-    }));
-    let large_cmyk = DecodedImage::new(
-        33,
-        35,
-        vec![128; 33 * 35 * 4],
-        crate::types::ColorType::Cmyk8,
-    );
-    let mut large_cmyk_options = JpegEncodeOptions {
-        restart_interval: Some(1),
-        exif: Some(vec![0x45, 0x78, 0x69, 0x66, 0]),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&large_cmyk, &large_cmyk_options);
-    large_cmyk_options.restart_interval = Some(70_000);
-    let _ = encode(&large_cmyk, &large_cmyk_options);
-    let large_cmyk_progressive = JpegEncodeOptions {
-        progressive: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let large_cmyk_optimized = JpegEncodeOptions {
-        optimize: Some(true),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&large_cmyk, &large_cmyk_progressive);
-    let _ = encode(&large_cmyk, &large_cmyk_optimized);
-    let aligned_cmyk =
-        DecodedImage::new(32, 8, vec![128; 32 * 8 * 4], crate::types::ColorType::Cmyk8);
-    let _ = encode(&aligned_cmyk, &JpegEncodeOptions::default());
-    let narrow_cmyk_width =
-        DecodedImage::new(31, 8, vec![128; 31 * 8 * 4], crate::types::ColorType::Cmyk8);
-    let narrow_cmyk_height =
-        DecodedImage::new(32, 7, vec![128; 32 * 7 * 4], crate::types::ColorType::Cmyk8);
-    let _ = encode(&narrow_cmyk_width, &JpegEncodeOptions::default());
-    let _ = encode(&narrow_cmyk_height, &JpegEncodeOptions::default());
-    let zero_width_cmyk = DecodedImage::new(0, 33, Vec::new(), crate::types::ColorType::Cmyk8);
-    let zero_height_cmyk = DecodedImage::new(33, 0, Vec::new(), crate::types::ColorType::Cmyk8);
-    for image in [&zero_width_cmyk, &zero_height_cmyk] {
-        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            let _ = encode(image, &JpegEncodeOptions::default());
-        }));
-    }
-    let truncated_cmyk = DecodedImage::new(33, 35, vec![128; 4], crate::types::ColorType::Cmyk8);
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = encode(&truncated_cmyk, &JpegEncodeOptions::default());
-    }));
-
-    // Cover the sampling-boundary matrix through the real encoder entry
-    // point. These dimensions make the size predicate evaluate both the
-    // area and alignment terms without constructing malformed planes.
-    let narrow_420_with_token =
-        DecodedImage::new(8, 17, vec![128; 8 * 17 * 3], crate::types::ColorType::Rgb8);
-    let live_token = crate::CancellationToken::new();
-    let _ = encode_with_token(
-        &narrow_420_with_token,
-        &JpegEncodeOptions::default(),
-        Some(&live_token),
-    );
-    let narrow_422 = DecodedImage::new(64, 1, vec![128; 64 * 3], crate::types::ColorType::Rgb8);
-    let aligned_422 =
-        DecodedImage::new(64, 8, vec![128; 64 * 8 * 3], crate::types::ColorType::Rgb8);
-    let aligned_422_options = JpegEncodeOptions {
-        subsampling: Some(JpegSubsampling::Cs422),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&narrow_422, &aligned_422_options);
-    let _ = encode(&aligned_422, &aligned_422_options);
-    let short_aligned_444 =
-        DecodedImage::new(32, 1, vec![128; 32 * 3], crate::types::ColorType::Rgb8);
-    let aligned_444_options = JpegEncodeOptions {
-        subsampling: Some(JpegSubsampling::Cs444),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&short_aligned_444, &aligned_444_options);
-    let narrow_444 = DecodedImage::new(31, 8, vec![128; 31 * 8 * 3], crate::types::ColorType::Rgb8);
-    let _ = encode(&narrow_444, &aligned_444_options);
-    let low_quality_small = JpegEncodeOptions {
-        quality: Some(20),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&aligned_422, &low_quality_small);
-
-    let oversized_exif_options = JpegEncodeOptions {
-        exif: Some(vec![0; usize::from(u16::MAX)]),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode(&gray, &oversized_exif_options);
-    let mut marker_bytes = Vec::new();
-    let _ = marker::write_exif_app1(&mut marker_bytes, b"Exif\0\0");
-    let oversized_exif = vec![0u8; usize::from(u16::MAX)];
-    let _ = marker::write_exif_app1(&mut marker_bytes, &oversized_exif);
-
-    let plane = [10u8, 20, 30, 40];
-    let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, None);
-    let _ = downsample(&plane, 2, 2, 1, 2, 2, 1, None);
-    let _ = downsample(&plane, 2, 2, 1, 1, 2, 2, None);
-    let wide_plane = vec![10u8; 32 * 2];
-    let _ = downsample(&wide_plane, 32, 2, 16, 1, 2, 1, None);
-    let _ = downsample(&wide_plane, 32, 2, 16, 1, 2, 2, None);
-    let generic_plane = [10u8, 20, 30];
-    let _ = downsample(&generic_plane, 3, 1, 1, 1, 3, 1, None);
-    let _ = downsample(&[], 0, 0, 0, 0, 1, 1, None);
-    for &(sw, sh, dw, dh, hr, vr) in &[
-        (0, 2, 1, 1, 2, 1),
-        (2, 0, 1, 1, 2, 1),
-        (2, 2, 0, 1, 2, 1),
-        (2, 2, 1, 0, 2, 1),
-        (2, 2, 1, 1, 0, 1),
-        (2, 2, 1, 1, 2, 0),
-    ] {
-        let _ = downsample(&plane, sw, sh, dw, dh, hr, vr, None);
-    }
-    for &(sw, sh, dw, dh, hr, vr) in &[
-        (0, 2, 1, 1, 2, 1),
-        (2, 0, 1, 1, 2, 1),
-        (2, 2, 0, 1, 2, 1),
-        (2, 2, 1, 0, 2, 1),
-        (2, 2, 1, 1, 0, 1),
-        (2, 2, 1, 1, 2, 0),
-    ] {
-        let token = crate::CancellationToken::new();
-        let mut checkpoint = TokenDownsampleCheckpoint::new(&token);
-        let _ = downsample_with_checkpoint(&plane, sw, sh, dw, dh, hr, vr, &mut checkpoint);
-    }
-    for &(source_width, source_height, destination_width, destination_height, vertical_rows) in &[
-        (0, 1, 1, 1, 1),
-        (1, 0, 1, 1, 1),
-        (1, 1, 0, 1, 1),
-        (1, 1, 1, 0, 1),
-        (1, 1, 1, 1, 0),
-        (1, 1, 1, 1, 3),
-    ] {
-        let _ = downsample_two_to_one(
-            &plane,
-            source_width,
-            source_height,
-            destination_width,
-            destination_height,
-            vertical_rows,
-        );
-    }
-    let downsample_token = crate::CancellationToken::new();
-    downsample_token.cancel_after(0);
-    let _ = downsample(&plane, 2, 2, 2, 2, 1, 1, Some(&downsample_token));
-    let downsample_observe_token = crate::CancellationToken::new();
-    downsample_observe_token.cancel();
-    let mut downsample_observe_checkpoint = TokenDownsampleCheckpoint {
-        token: &downsample_observe_token,
-        pixels_until_checkpoint: 1,
-    };
-    let _ = DownsampleCheckpoint::observe(&mut downsample_observe_checkpoint);
-    let downsample_full_token = crate::CancellationToken::new();
-    downsample_full_token.cancel_after(1);
-    let mut downsample_full_checkpoint = TokenDownsampleCheckpoint {
-        token: &downsample_full_token,
-        pixels_until_checkpoint: 1,
-    };
-    let _ = downsample_with_checkpoint(&plane, 2, 2, 2, 2, 1, 1, &mut downsample_full_checkpoint);
-    let downsample_full_success_token = crate::CancellationToken::new();
-    let mut downsample_full_success_checkpoint =
-        TokenDownsampleCheckpoint::new(&downsample_full_success_token);
-    let _ = std::hint::black_box(downsample_with_checkpoint(
-        &plane,
-        2,
-        2,
-        2,
-        2,
-        1,
-        1,
-        &mut downsample_full_success_checkpoint,
-    ));
-    let downsample_subsampled_token = crate::CancellationToken::new();
-    downsample_subsampled_token.cancel_after(1);
-    let mut downsample_subsampled_checkpoint = TokenDownsampleCheckpoint {
-        token: &downsample_subsampled_token,
-        pixels_until_checkpoint: 1,
-    };
-    let _ = downsample_with_checkpoint(
-        &plane,
-        2,
-        2,
-        1,
-        1,
-        2,
-        2,
-        &mut downsample_subsampled_checkpoint,
-    );
-    let downsample_mixed_token = crate::CancellationToken::new();
-    let mut downsample_mixed_checkpoint = TokenDownsampleCheckpoint::new(&downsample_mixed_token);
-    let _ = std::hint::black_box(downsample_with_checkpoint(
-        &plane,
-        2,
-        2,
-        1,
-        2,
-        2,
-        1,
-        &mut downsample_mixed_checkpoint,
-    ));
-    let zero_ratio_token = crate::CancellationToken::new();
-    let mut zero_ratio_checkpoint = TokenDownsampleCheckpoint::new(&zero_ratio_token);
-    let _ = downsample_with_checkpoint(&plane, 2, 2, 1, 1, 0, 0, &mut zero_ratio_checkpoint);
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let downsample_invalid_token = crate::CancellationToken::new();
-        let mut downsample_invalid_checkpoint =
-            TokenDownsampleCheckpoint::new(&downsample_invalid_token);
-        let _ = downsample_with_checkpoint(
-            &plane,
-            2,
-            2,
-            1,
-            1,
-            2,
-            3,
-            &mut downsample_invalid_checkpoint,
-        );
-    }));
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let downsample_mixed_invalid_token = crate::CancellationToken::new();
-        let mut downsample_mixed_invalid_checkpoint =
-            TokenDownsampleCheckpoint::new(&downsample_mixed_invalid_token);
-        let _ = downsample_with_checkpoint(
-            &plane,
-            2,
-            2,
-            2,
-            1,
-            1,
-            2,
-            &mut downsample_mixed_invalid_checkpoint,
-        );
-    }));
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = downsample(&plane, 2, 2, 2, 1, 1, 2, None);
-    }));
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = downsample(&plane, 2, 2, 1, 1, 2, 3, None);
-    }));
-    let _ = downsample(&[0u8; 8], 16, 1, 8, 1, 2, 1, None);
-    let _ = downsample(&[0u8; 16], 16, 2, 8, 1, 2, 2, None);
-
-    // Exercise every production streaming layout with a genuinely partial
-    // final MCU, restart markers, and an EXIF segment. These calls are kept
-    // beside the private-branch coverage hook because the public fast-path
-    // gate intentionally selects only the default 4:2:0 RGB case.
-    let direct_width = 65usize;
-    let direct_height = 35usize;
-    let direct_luma_plane = vec![128u8; direct_width.saturating_mul(direct_height)];
-    let direct_chroma_width = direct_width.div_ceil(16).saturating_mul(8);
-    let direct_chroma_height = direct_height.div_ceil(2);
-    let direct_chroma_plane = vec![128u8; direct_chroma_width.saturating_mul(direct_chroma_height)];
-    let direct_422_chroma_plane = vec![128u8; direct_chroma_width.saturating_mul(direct_height)];
-    let direct_full_plane = direct_luma_plane.clone();
-    let direct_options = JpegEncodeOptions {
-        restart_interval: Some(1),
-        exif: Some(vec![b'E', b'x', b'i', b'f', 0]),
-        ..JpegEncodeOptions::default()
-    };
-    let direct_params_420 = quant::build_params(75, 3);
-    let direct_y_quantizer_420 = FdctQuantizer::new(&direct_params_420.quant_tables[0]);
-    let direct_chroma_quantizer_420 = FdctQuantizer::new(&direct_params_420.quant_tables[1]);
-    let _ = encode_baseline_420_mcu_row_streaming(
-        Baseline420Source::Planes {
-            y: &direct_luma_plane,
-            cb: &direct_chroma_plane,
-            cr: &direct_chroma_plane,
-            chroma_width: direct_chroma_width,
-            chroma_height: direct_chroma_height,
-        },
-        direct_width,
-        direct_height,
-        &direct_params_420,
-        &direct_y_quantizer_420,
-        &direct_chroma_quantizer_420,
-        &direct_options,
-    );
-    let low_quality_options = JpegEncodeOptions {
-        quality: Some(20),
-        ..direct_options.clone()
-    };
-    let direct_params_low = quant::build_params(20, 3);
-    let direct_y_quantizer_low = FdctQuantizer::new(&direct_params_low.quant_tables[0]);
-    let direct_chroma_quantizer_low = FdctQuantizer::new(&direct_params_low.quant_tables[1]);
-    let _ = encode_baseline_420_mcu_row_streaming(
-        Baseline420Source::Planes {
-            y: &direct_luma_plane,
-            cb: &direct_chroma_plane,
-            cr: &direct_chroma_plane,
-            chroma_width: direct_chroma_width,
-            chroma_height: direct_chroma_height,
-        },
-        direct_width,
-        direct_height,
-        &direct_params_low,
-        &direct_y_quantizer_low,
-        &direct_chroma_quantizer_low,
-        &low_quality_options,
-    );
-    for &(edge_width, edge_height) in &[(9usize, 9usize), (17, 9), (9, 17), (17, 17)] {
-        let edge_y = vec![128u8; edge_width.saturating_mul(edge_height)];
-        let edge_chroma_width = edge_width.div_ceil(16).saturating_mul(8);
-        let edge_chroma_height = edge_height.div_ceil(2);
-        let edge_chroma = vec![128u8; edge_chroma_width.saturating_mul(edge_chroma_height)];
-        let _ = encode_baseline_420_mcu_row_streaming(
-            Baseline420Source::Planes {
-                y: &edge_y,
-                cb: &edge_chroma,
-                cr: &edge_chroma,
-                chroma_width: edge_chroma_width,
-                chroma_height: edge_chroma_height,
-            },
-            edge_width,
-            edge_height,
-            &direct_params_420,
-            &direct_y_quantizer_420,
-            &direct_chroma_quantizer_420,
-            &JpegEncodeOptions::default(),
-        );
-    }
-    let direct_params_422 = quant::build_params(75, 3);
-    let direct_y_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[0]);
-    let direct_chroma_quantizer_422 = FdctQuantizer::new(&direct_params_422.quant_tables[1]);
-    let _ = encode_baseline_422_block_row_streaming(
-        &direct_full_plane,
-        &direct_422_chroma_plane,
-        &direct_422_chroma_plane,
-        direct_width,
-        direct_height,
-        direct_chroma_width,
-        direct_height,
-        &direct_params_422,
-        &direct_y_quantizer_422,
-        &direct_chroma_quantizer_422,
-        &direct_options,
-    );
-    let direct_params_444 = quant::build_params(75, 3);
-    let direct_y_quantizer_444 = FdctQuantizer::new(&direct_params_444.quant_tables[0]);
-    let direct_chroma_quantizer_444 = FdctQuantizer::new(&direct_params_444.quant_tables[1]);
-    let _ = encode_baseline_444_block_row_streaming(
-        &direct_full_plane,
-        &direct_full_plane,
-        &direct_full_plane,
-        direct_width,
-        direct_height,
-        &direct_params_444,
-        &direct_y_quantizer_444,
-        &direct_chroma_quantizer_444,
-        &direct_options,
-    );
-    let direct_params_gray = quant::build_params(75, 1);
-    let direct_gray_quantizer = FdctQuantizer::new(&direct_params_gray.quant_tables[0]);
-    let _ = encode_baseline_grayscale_block_row_streaming(
-        &direct_luma_plane,
-        direct_width,
-        direct_height,
-        &direct_params_gray,
-        &direct_gray_quantizer,
-        &direct_options,
-    );
-    let direct_params_cmyk = quant::build_params(75, 4);
-    let direct_cmyk_quantizer = FdctQuantizer::new(&direct_params_cmyk.quant_tables[0]);
-    let _ = encode_baseline_cmyk_block_row_streaming(
-        &direct_luma_plane,
-        &direct_luma_plane,
-        &direct_luma_plane,
-        &direct_luma_plane,
-        direct_width,
-        direct_height,
-        &direct_params_cmyk,
-        &direct_cmyk_quantizer,
-        &direct_options,
-    );
-    let overflowing_direct_options = JpegEncodeOptions {
-        restart_interval: Some(70_000),
-        ..JpegEncodeOptions::default()
-    };
-    let _ = encode_baseline_420_mcu_row_streaming(
-        Baseline420Source::Planes {
-            y: &direct_luma_plane,
-            cb: &direct_chroma_plane,
-            cr: &direct_chroma_plane,
-            chroma_width: direct_chroma_width,
-            chroma_height: direct_chroma_height,
-        },
-        direct_width,
-        direct_height,
-        &direct_params_420,
-        &direct_y_quantizer_420,
-        &direct_chroma_quantizer_420,
-        &overflowing_direct_options,
-    );
-    let _ = encode_baseline_422_block_row_streaming(
-        &direct_full_plane,
-        &direct_422_chroma_plane,
-        &direct_422_chroma_plane,
-        direct_width,
-        direct_height,
-        direct_chroma_width,
-        direct_height,
-        &direct_params_422,
-        &direct_y_quantizer_422,
-        &direct_chroma_quantizer_422,
-        &overflowing_direct_options,
-    );
-    let _ = encode_baseline_444_block_row_streaming(
-        &direct_full_plane,
-        &direct_full_plane,
-        &direct_full_plane,
-        direct_width,
-        direct_height,
-        &direct_params_444,
-        &direct_y_quantizer_444,
-        &direct_chroma_quantizer_444,
-        &overflowing_direct_options,
-    );
-    let _ = encode_baseline_grayscale_block_row_streaming(
-        &direct_luma_plane,
-        direct_width,
-        direct_height,
-        &direct_params_gray,
-        &direct_gray_quantizer,
-        &overflowing_direct_options,
-    );
-    let _ = encode_baseline_cmyk_block_row_streaming(
-        &direct_luma_plane,
-        &direct_luma_plane,
-        &direct_luma_plane,
-        &direct_luma_plane,
-        direct_width,
-        direct_height,
-        &direct_params_cmyk,
-        &direct_cmyk_quantizer,
-        &overflowing_direct_options,
-    );
-
-    let standard_tables = huffman::standard_derived_tables();
-    let dc_tables = [&standard_tables[0], &standard_tables[1]];
-    let ac_tables = [&standard_tables[2], &standard_tables[3]];
-    let zero_block = [0i16; 64];
-    let components_422 = [
-        CompData {
-            blocks: vec![zero_block; 2],
-            blocks_per_row: 2,
-            block_rows: 1,
-            h_samp: 2,
-            v_samp: 1,
-            quant_slot: 0,
-            id: 1,
-            dc_tbl: 0,
-            ac_tbl: 0,
-        },
-        CompData {
-            blocks: vec![zero_block],
-            blocks_per_row: 1,
-            block_rows: 1,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 1,
-            id: 2,
-            dc_tbl: 1,
-            ac_tbl: 1,
-        },
-        CompData {
-            blocks: vec![zero_block],
-            blocks_per_row: 1,
-            block_rows: 1,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 1,
-            id: 3,
-            dc_tbl: 1,
-            ac_tbl: 1,
-        },
-    ];
-    assert!(baseline_422_independent_entropy_is_compatible(
-        &components_422,
-        2,
-        1
-    ));
-    assert!(!baseline_422_independent_entropy_is_compatible(
-        &components_422,
-        1,
-        1
-    ));
-    assert!(!baseline_422_independent_entropy_is_compatible(&[], 2, 1));
-    macro_rules! reject_422 {
-        ($mutator:expr) => {{
-            let mut candidate = components_422.clone();
-            ($mutator)(&mut candidate);
-            assert!(!baseline_422_independent_entropy_is_compatible(
-                &candidate, 2, 1
-            ));
-        }};
-    }
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].v_samp = 2);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].h_samp = 1);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[1].h_samp = 2);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[2].h_samp = 2);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].blocks.clear());
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[0].blocks_per_row = 1);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[1].blocks_per_row = 2);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[1].block_rows = 2);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[2].blocks_per_row = 2);
-    reject_422!(|candidate: &mut [CompData; 3]| candidate[2].block_rows = 2);
-    let mut independent_422_output = Vec::new();
-    encode_baseline_422_independent_entropy(
-        &mut independent_422_output,
-        &components_422,
-        &dc_tables,
-        &ac_tables,
-    );
-    encode_baseline_422_independent_entropy(
-        &mut independent_422_output,
-        &[],
-        &dc_tables,
-        &ac_tables,
-    );
-
-    let components_444 = [
-        CompData {
-            blocks: vec![zero_block],
-            blocks_per_row: 1,
-            block_rows: 1,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 0,
-            id: 1,
-            dc_tbl: 0,
-            ac_tbl: 0,
-        },
-        CompData {
-            blocks: vec![zero_block],
-            blocks_per_row: 1,
-            block_rows: 1,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 1,
-            id: 2,
-            dc_tbl: 1,
-            ac_tbl: 1,
-        },
-        CompData {
-            blocks: vec![zero_block],
-            blocks_per_row: 1,
-            block_rows: 1,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 1,
-            id: 3,
-            dc_tbl: 1,
-            ac_tbl: 1,
-        },
-    ];
-    assert!(baseline_444_independent_entropy_is_compatible(
-        &components_444,
-        1,
-        1
-    ));
-    assert!(!baseline_444_independent_entropy_is_compatible(
-        &components_444,
-        2,
-        1
-    ));
-    assert!(!baseline_444_independent_entropy_is_compatible(
-        &components_444,
-        1,
-        2
-    ));
-    assert!(!baseline_444_independent_entropy_is_compatible(&[], 1, 1));
-    macro_rules! reject_444 {
-        ($mutator:expr) => {{
-            let mut candidate = components_444.clone();
-            ($mutator)(&mut candidate);
-            assert!(!baseline_444_independent_entropy_is_compatible(
-                &candidate, 1, 1
-            ));
-        }};
-    }
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[0].v_samp = 2);
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[0].h_samp = 2);
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[1].h_samp = 2);
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[2].h_samp = 2);
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[0].blocks.clear());
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[1].blocks_per_row = 2);
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[1].block_rows = 2);
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[2].blocks_per_row = 2);
-    reject_444!(|candidate: &mut [CompData; 3]| candidate[2].block_rows = 2);
-    let mut independent_444_output = Vec::new();
-    encode_baseline_444_independent_entropy(
-        &mut independent_444_output,
-        &components_444,
-        &dc_tables,
-        &ac_tables,
-    );
-    encode_baseline_444_independent_entropy(
-        &mut independent_444_output,
-        &[],
-        &dc_tables,
-        &ac_tables,
-    );
-
-    let components_420 = [
-        CompData {
-            blocks: vec![zero_block; 4],
-            blocks_per_row: 2,
-            block_rows: 2,
-            h_samp: 2,
-            v_samp: 2,
-            quant_slot: 0,
-            id: 1,
-            dc_tbl: 0,
-            ac_tbl: 0,
-        },
-        CompData {
-            blocks: vec![zero_block],
-            blocks_per_row: 1,
-            block_rows: 1,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 1,
-            id: 2,
-            dc_tbl: 1,
-            ac_tbl: 1,
-        },
-        CompData {
-            blocks: vec![zero_block],
-            blocks_per_row: 1,
-            block_rows: 1,
-            h_samp: 1,
-            v_samp: 1,
-            quant_slot: 1,
-            id: 3,
-            dc_tbl: 1,
-            ac_tbl: 1,
-        },
-    ];
-    assert!(baseline_420_independent_entropy_is_compatible(
-        &components_420,
-        2,
-        2
-    ));
-    assert!(!baseline_420_independent_entropy_is_compatible(
-        &components_420,
-        2,
-        1
-    ));
-    assert!(!baseline_420_independent_entropy_is_compatible(&[], 2, 2));
-    macro_rules! reject_420 {
-        ($mutator:expr) => {{
-            let mut candidate = components_420.clone();
-            ($mutator)(&mut candidate);
-            assert!(!baseline_420_independent_entropy_is_compatible(
-                &candidate, 2, 2
-            ));
-        }};
-    }
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].v_samp = 1);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].h_samp = 1);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[1].h_samp = 2);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[2].h_samp = 2);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].blocks.clear());
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].blocks_per_row = 1);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[0].block_rows = 1);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[1].blocks_per_row = 2);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[1].block_rows = 2);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[2].blocks_per_row = 2);
-    reject_420!(|candidate: &mut [CompData; 3]| candidate[2].block_rows = 2);
-    let mut independent_420_output = Vec::new();
-    encode_baseline_420_independent_entropy(
-        &mut independent_420_output,
-        &components_420,
-        &dc_tables,
-        &ac_tables,
-    );
-    encode_baseline_420_independent_entropy(
-        &mut independent_420_output,
-        &[],
-        &dc_tables,
-        &ac_tables,
-    );
-
-    let (edge_differences, _) = mcu_dc_differences(
-        [1, 2, 3, 4, 5, 6],
-        [true, false, true, false, true, false],
-        [0, 0, 0],
-    );
-    let mut coefficient_group = [0i16; 256];
-    for lane in 0..4 {
-        coefficient_group[ZIGZAG[1].saturating_mul(4).saturating_add(lane)] =
-            if lane == 0 { 128 } else { 1 };
-    }
-    let coefficient_blocks = [
-        CoefficientMajorBlock {
-            group: &coefficient_group,
-            lane: 0,
-        },
-        CoefficientMajorBlock {
-            group: &coefficient_group,
-            lane: 1,
-        },
-        CoefficientMajorBlock {
-            group: &coefficient_group,
-            lane: 2,
-        },
-        CoefficientMajorBlock {
-            group: &coefficient_group,
-            lane: 3,
-        },
-        CoefficientMajorBlock {
-            group: &coefficient_group,
-            lane: 0,
-        },
-        CoefficientMajorBlock {
-            group: &coefficient_group,
-            lane: 1,
-        },
-    ];
-    let mut edge_writers = [RawBlockWriter::new(); 6];
-    encode_six_coefficient_major_edge_raw_blocks(
-        &mut edge_writers,
-        coefficient_blocks,
-        edge_differences,
-        [true, false, true, false, true, false],
-        &standard_tables[0],
-        &standard_tables[2],
-        &standard_tables[1],
-        &standard_tables[3],
-        huffman::standard_ac_luma_coefficient_ready(),
-        huffman::standard_ac_chroma_coefficient_ready(),
-    );
-    encode_six_coefficient_major_edge_raw_blocks(
-        &mut edge_writers,
-        coefficient_blocks,
-        edge_differences,
-        [false, true, false, true, false, true],
-        &standard_tables[0],
-        &standard_tables[2],
-        &standard_tables[1],
-        &standard_tables[3],
-        huffman::standard_ac_luma_coefficient_ready(),
-        huffman::standard_ac_chroma_coefficient_ready(),
-    );
-    let mut raw_writer = RawBlockWriter::new();
-    let mut raw_run = 0;
-    encode_raw_ac_value(
-        &mut raw_writer,
-        0,
-        &mut raw_run,
-        &standard_tables[2],
-        huffman::standard_ac_luma_coefficient_ready(),
-    );
-    raw_run = 16;
-    encode_raw_ac_value(
-        &mut raw_writer,
-        128,
-        &mut raw_run,
-        &standard_tables[2],
-        huffman::standard_ac_luma_coefficient_ready(),
-    );
-    finish_raw_ac(&mut raw_writer, raw_run, &standard_tables[2]);
-    let reciprocal = reciprocal_divisor(8);
-    for value in [-1_000, -9, -1, 0, 1, 7, 8, 9, 127, 128] {
-        let _ = quantize_coefficient(value, 8, reciprocal);
-    }
-    for divisor in 2u32..=32 {
-        let exact = reciprocal_divisor(divisor);
-        for value in [-1_024, -100, -8, 0, 8, 100, 1_024] {
-            for reciprocal in [0, exact.saturating_sub(1), exact, exact.saturating_add(1)] {
-                let _ = quantize_coefficient(value, divisor, reciprocal);
-            }
-        }
-    }
-    let _ = quantize_coefficient(i32::MAX, 3, reciprocal_divisor(3));
-    let empty_ready = huffman::CoefficientReadyTable {
-        entries: [0; huffman::COEFFICIENT_READY_WIDTH * huffman::COEFFICIENT_READY_RUNS],
-    };
-    let mut packed_fallback_writer = RawBlockWriter::new();
-    let mut packed_fallback_run = 0;
-    encode_raw_ac_value(
-        &mut packed_fallback_writer,
-        1,
-        &mut packed_fallback_run,
-        &standard_tables[2],
-        &empty_ready,
-    );
-    finish_raw_ac(
-        &mut packed_fallback_writer,
-        packed_fallback_run,
-        &standard_tables[2],
-    );
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let mut invalid_output = Vec::new();
-        let mut invalid_scan = RawScanWriter::new(&mut invalid_output);
-        invalid_scan.write(3, 1);
-    }));
-    let mut raw_scan_output = Vec::new();
-    let mut raw_scan = RawScanWriter::new(&mut raw_scan_output);
-    raw_scan.write(1, 1);
-    raw_scan.write(u64::MAX, 64);
-    raw_scan.finish();
-
-    let progressive_dc_scan = ProgScan {
-        comps: vec![0, 1, 2],
-        ss: 0,
-        se: 0,
-        ah: 0,
-        al: 1,
-    };
-    let mut y_component = CompData {
-        blocks: vec![[0i16; 64]; 9],
-        blocks_per_row: 3,
-        block_rows: 3,
-        h_samp: 2,
-        v_samp: 2,
-        quant_slot: 0,
-        id: 1,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    };
-    y_component.blocks[0][0] = 4;
-    let cb_component = CompData {
-        blocks: vec![[0i16; 64]],
-        blocks_per_row: 1,
-        block_rows: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 1,
-        id: 2,
-        dc_tbl: 1,
-        ac_tbl: 1,
-    };
-    let cr_component = CompData {
-        blocks: vec![[0i16; 64]],
-        blocks_per_row: 1,
-        block_rows: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 1,
-        id: 3,
-        dc_tbl: 1,
-        ac_tbl: 1,
-    };
-    let progressive_components = [y_component, cb_component, cr_component];
-    let noninterleaved_dc_scan = ProgScan {
-        comps: vec![0],
-        ss: 0,
-        se: 0,
-        ah: 0,
-        al: 0,
-    };
-    let noninterleaved_dc_components = [CompData {
-        blocks: vec![[0i16; 64]; 2],
-        blocks_per_row: 2,
-        block_rows: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 0,
-        id: 1,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    }];
-    let mut noninterleaved_dc_noop_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = std::hint::black_box(dc_progressive_events(
-        &noninterleaved_dc_scan,
-        &noninterleaved_dc_components,
-        &mut noninterleaved_dc_noop_checkpoint,
-    ));
-    let mut noninterleaved_dc_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(dc_progressive_events(
-        &noninterleaved_dc_scan,
-        &noninterleaved_dc_components,
-        &mut noninterleaved_dc_event_checkpoint,
-    ));
-    let mut noninterleaved_dc_scan_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(dc_progressive_events(
-        &noninterleaved_dc_scan,
-        &noninterleaved_dc_components,
-        &mut noninterleaved_dc_scan_checkpoint,
-    ));
-    // Drive the token checkpoint through the nested `?` edges in the AC
-    // progressive helpers with one-block inputs. The public encoder polls at
-    // coarser intervals, so these deliberately tight counters are coverage
-    // scaffolding for the private cancellation contract.
-    let mut progressive_token_ac_block = [0i16; 64];
-    progressive_token_ac_block[ZIGZAG[1]] = 2;
-    let progressive_token_ac_components = [CompData {
-        blocks: vec![progressive_token_ac_block],
-        blocks_per_row: 1,
-        block_rows: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 0,
-        id: 1,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    }];
-    let progressive_token_refine_scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 1,
-        ah: 1,
-        al: 0,
-    };
-    let progressive_token_refine_token = crate::CancellationToken::new();
-    progressive_token_refine_token.cancel_after(0);
-    let mut progressive_token_refine_checkpoint = TokenProgressiveScanCheckpoint {
-        token: &progressive_token_refine_token,
-        blocks_until_checkpoint: 1,
-        coefficients_until_checkpoint: 1,
-        events_until_checkpoint: 1,
-    };
-    let mut progressive_token_refine_events = Vec::new();
-    let mut progressive_token_refine_eob = 0;
-    let mut progressive_token_refine_corrections = Vec::new();
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut progressive_token_refine_events,
-        &progressive_token_ac_components[0].blocks[0],
-        &progressive_token_refine_scan,
-        0,
-        &mut progressive_token_refine_eob,
-        &mut progressive_token_refine_corrections,
-        &mut progressive_token_refine_checkpoint,
-    ));
-    let progressive_token_first_scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 1,
-        ah: 0,
-        al: 0,
-    };
-    for checks in [1, 2] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut checkpoint = TokenProgressiveScanCheckpoint {
-            token: &token,
-            blocks_until_checkpoint: 1,
-            coefficients_until_checkpoint: 1,
-            events_until_checkpoint: 1,
-        };
-        let _ = std::hint::black_box(ac_progressive_events(
-            &progressive_token_first_scan,
-            &progressive_token_ac_components,
-            &mut checkpoint,
-        ));
-    }
-    let progressive_token_refine_error_token = crate::CancellationToken::new();
-    progressive_token_refine_error_token.cancel_after(1);
-    let mut progressive_token_refine_error_checkpoint = TokenProgressiveScanCheckpoint {
-        token: &progressive_token_refine_error_token,
-        blocks_until_checkpoint: 1,
-        coefficients_until_checkpoint: 1,
-        events_until_checkpoint: 1,
-    };
-    let _ = std::hint::black_box(ac_progressive_events(
-        &progressive_token_refine_scan,
-        &progressive_token_ac_components,
-        &mut progressive_token_refine_error_checkpoint,
-    ));
-    let progressive_token_refine_zero_token = crate::CancellationToken::new();
-    let mut progressive_token_refine_zero_checkpoint = TokenProgressiveScanCheckpoint {
-        token: &progressive_token_refine_zero_token,
-        blocks_until_checkpoint: 1,
-        coefficients_until_checkpoint: 1,
-        events_until_checkpoint: 1,
-    };
-    let mut progressive_token_refine_zero_events = Vec::new();
-    let mut progressive_token_refine_zero_eob = 0;
-    let mut progressive_token_refine_zero_corrections = Vec::new();
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut progressive_token_refine_zero_events,
-        &progressive_components[1].blocks[0],
-        &progressive_token_refine_scan,
-        0,
-        &mut progressive_token_refine_zero_eob,
-        &mut progressive_token_refine_zero_corrections,
-        &mut progressive_token_refine_zero_checkpoint,
-    ));
-    let progressive_dc_success_token = crate::CancellationToken::new();
-    let mut progressive_dc_success_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&progressive_dc_success_token);
-    let _ = std::hint::black_box(dc_progressive_events(
-        &progressive_dc_scan,
-        &progressive_components,
-        &mut progressive_dc_success_checkpoint,
-    ));
-
-    let progressive_block_token = crate::CancellationToken::new();
-    progressive_block_token.cancel();
-    let mut progressive_block_checkpoint = TokenProgressiveScanCheckpoint {
-        token: &progressive_block_token,
-        blocks_until_checkpoint: 1,
-        coefficients_until_checkpoint: 1,
-        events_until_checkpoint: 1,
-    };
-    let _ = ProgressiveScanCheckpoint::block(&mut progressive_block_checkpoint);
-    let progressive_event_token = crate::CancellationToken::new();
-    progressive_event_token.cancel();
-    let mut progressive_event_checkpoint = TokenProgressiveScanCheckpoint {
-        token: &progressive_event_token,
-        blocks_until_checkpoint: 1,
-        coefficients_until_checkpoint: 1,
-        events_until_checkpoint: 1,
-    };
-    let _ = ProgressiveScanCheckpoint::event(&mut progressive_event_checkpoint);
-
-    // Exercise baseline entropy checkpoint failures at the restart boundary,
-    // per-MCU boundary, and final flush. These are Rust cancellation states;
-    // Pillow does not expose a caller-controlled entropy checkpoint.
-    let baseline_components = [CompData {
-        blocks: vec![[0i16; 64]; 4],
-        blocks_per_row: 2,
-        block_rows: 2,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 0,
-        id: 1,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    }];
-    let baseline_dc = huffman::derive_table(&huffman::STD_DC_LUMA.0, &huffman::STD_DC_LUMA.1);
-    let baseline_ac = huffman::derive_table(&huffman::STD_AC_LUMA.0, &huffman::STD_AC_LUMA.1);
-    let baseline_dc_tables = [&baseline_dc, &baseline_dc];
-    let baseline_ac_tables = [&baseline_ac, &baseline_ac];
-    let mut baseline_frequency_nonzero_block = [0i16; 64];
-    baseline_frequency_nonzero_block[ZIGZAG[1]] = 1;
-    let baseline_frequency_nonzero_components = [CompData {
-        blocks: vec![baseline_frequency_nonzero_block],
-        blocks_per_row: 1,
-        block_rows: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 0,
-        id: 1,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    }];
-    let baseline_frequency_zero_token = crate::CancellationToken::new();
-    baseline_frequency_zero_token.cancel_after(1);
-    let mut baseline_frequency_zero_checkpoint = TokenHuffmanFrequencyCheckpoint {
-        token: &baseline_frequency_zero_token,
-        coefficients_until_checkpoint: 1,
-    };
-    let _ = std::hint::black_box(baseline_frequencies_with_checkpoint(
-        &baseline_components,
-        1,
-        1,
-        1,
-        &mut baseline_frequency_zero_checkpoint,
-    ));
-    let baseline_frequency_nonzero_token = crate::CancellationToken::new();
-    baseline_frequency_nonzero_token.cancel_after(1);
-    let mut baseline_frequency_nonzero_checkpoint = TokenHuffmanFrequencyCheckpoint {
-        token: &baseline_frequency_nonzero_token,
-        coefficients_until_checkpoint: 1,
-    };
-    let _ = std::hint::black_box(baseline_frequencies_with_checkpoint(
-        &baseline_frequency_nonzero_components,
-        1,
-        1,
-        1,
-        &mut baseline_frequency_nonzero_checkpoint,
-    ));
-    let huffman_row_token = crate::CancellationToken::new();
-    huffman_row_token.cancel();
-    let _ = baseline_frequencies(&baseline_components, 1, 1, 1, Some(&huffman_row_token));
-    let huffman_success_token = crate::CancellationToken::new();
-    let _ = std::hint::black_box(baseline_frequencies(
-        &baseline_components,
-        1,
-        1,
-        1,
-        Some(&huffman_success_token),
-    ));
-    for fail_after in [0, 1, 2, 8, 16] {
-        let mut output = Vec::new();
-        let mut checkpoint = CoverageFailingEntropyOutputCheckpoint {
-            calls: 0,
-            fail_after,
-        };
-        let _ = encode_baseline_entropy(
-            &mut output,
-            &baseline_components,
-            1,
-            1,
-            &baseline_dc_tables,
-            &baseline_ac_tables,
-            1,
-            None,
-            &mut checkpoint,
-        );
-    }
-    let mut final_flush_checkpoint = CoverageFailingEntropyOutputCheckpoint {
-        calls: 0,
-        fail_after: 11,
-    };
-    let mut final_flush_output = Vec::new();
-    let _ = encode_baseline_entropy(
-        &mut final_flush_output,
-        &baseline_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        1,
-        None,
-        &mut final_flush_checkpoint,
-    );
-    let baseline_token = crate::CancellationToken::new();
-    baseline_token.cancel_after(0);
-    let mut baseline_token_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &baseline_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 1,
-        baseline_mcus_until_checkpoint: 1,
-    };
-    let mut baseline_token_output = Vec::new();
-    let _ = encode_baseline_entropy(
-        &mut baseline_token_output,
-        &baseline_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        1,
-        Some(&baseline_token),
-        &mut baseline_token_checkpoint,
-    );
-    let baseline_success_token = crate::CancellationToken::new();
-    let mut baseline_success_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &baseline_success_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 1,
-        baseline_mcus_until_checkpoint: 1,
-    };
-    let mut baseline_success_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut baseline_success_output,
-        &baseline_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        1,
-        Some(&baseline_success_token),
-        &mut baseline_success_checkpoint,
-    ));
-    let baseline_no_restart_token = crate::CancellationToken::new();
-    let mut baseline_no_restart_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &baseline_no_restart_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 1,
-        baseline_mcus_until_checkpoint: 1,
-    };
-    let mut baseline_no_restart_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut baseline_no_restart_output,
-        &baseline_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        0,
-        Some(&baseline_no_restart_token),
-        &mut baseline_no_restart_checkpoint,
-    ));
-    let mut baseline_no_restart_failure_checkpoint = CoverageFailingEntropyOutputCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut baseline_no_restart_failure_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut baseline_no_restart_failure_output,
-        &baseline_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        0,
-        None,
-        &mut baseline_no_restart_failure_checkpoint,
-    ));
-    for checks in 0..=64 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut checkpoint = TokenEntropyOutputCheckpoint {
-            token: &token,
-            observed_output: 0,
-            bytes_until_checkpoint: 1,
-            baseline_mcus_until_checkpoint: 1,
-        };
-        let mut output = Vec::new();
-        let _ = std::hint::black_box(encode_baseline_entropy(
-            &mut output,
-            &baseline_components,
-            1,
-            1,
-            &baseline_dc_tables,
-            &baseline_ac_tables,
-            1,
-            Some(&token),
-            &mut checkpoint,
-        ));
-    }
-    let cancelled_baseline_token = crate::CancellationToken::new();
-    cancelled_baseline_token.cancel();
-    let mut cancelled_baseline_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &cancelled_baseline_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 1,
-        baseline_mcus_until_checkpoint: 1,
-    };
-    let mut cancelled_baseline_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut cancelled_baseline_output,
-        &baseline_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        1,
-        Some(&cancelled_baseline_token),
-        &mut cancelled_baseline_checkpoint,
-    ));
-    // Force the token checkpoint's per-MCU observation error after the row
-    // poll has succeeded. The zero threshold is an internal coverage state;
-    // production construction always starts with the configured byte budget.
-    let per_mcu_observe_token = crate::CancellationToken::new();
-    per_mcu_observe_token.cancel_after(1);
-    let mut per_mcu_observe_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &per_mcu_observe_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 0,
-        baseline_mcus_until_checkpoint: usize::MAX,
-    };
-    let mut per_mcu_observe_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut per_mcu_observe_output,
-        &baseline_frequency_nonzero_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        0,
-        Some(&per_mcu_observe_token),
-        &mut per_mcu_observe_checkpoint,
-    ));
-    // A zero-width component gives the final flush observation no earlier
-    // per-MCU checkpoint to consume the cancellation budget.
-    let baseline_empty_components = [CompData {
-        blocks: Vec::new(),
-        blocks_per_row: 0,
-        block_rows: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 0,
-        id: 1,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    }];
-    let final_observe_token = crate::CancellationToken::new();
-    final_observe_token.cancel_after(1);
-    let mut final_observe_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &final_observe_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 0,
-        baseline_mcus_until_checkpoint: usize::MAX,
-    };
-    let mut final_observe_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut final_observe_output,
-        &baseline_empty_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        0,
-        Some(&final_observe_token),
-        &mut final_observe_checkpoint,
-    ));
-    // The failing checkpoint deliberately succeeds so the token poll, rather
-    // than checkpoint failure, owns this instantiation's row error edge.
-    let failing_row_token = crate::CancellationToken::new();
-    failing_row_token.cancel();
-    let mut failing_row_checkpoint = CoverageFailingEntropyOutputCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut failing_row_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut failing_row_output,
-        &baseline_frequency_nonzero_components,
-        1,
-        1,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        0,
-        Some(&failing_row_token),
-        &mut failing_row_checkpoint,
-    ));
-    let baseline_edge_token = crate::CancellationToken::new();
-    let mut baseline_edge_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &baseline_edge_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 1,
-        baseline_mcus_until_checkpoint: 1,
-    };
-    let mut baseline_edge_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut baseline_edge_output,
-        &progressive_components,
-        2,
-        2,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        1,
-        Some(&baseline_edge_token),
-        &mut baseline_edge_checkpoint,
-    ));
-    let mut baseline_edge_failure_checkpoint = CoverageFailingEntropyOutputCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut baseline_edge_failure_output = Vec::new();
-    let _ = std::hint::black_box(encode_baseline_entropy(
-        &mut baseline_edge_failure_output,
-        &progressive_components,
-        2,
-        2,
-        &baseline_dc_tables,
-        &baseline_ac_tables,
-        1,
-        None,
-        &mut baseline_edge_failure_checkpoint,
-    ));
-    for checks in 1..=3 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut checkpoint = TokenEntropyOutputCheckpoint {
-            token: &token,
-            observed_output: 0,
-            bytes_until_checkpoint: 1,
-            baseline_mcus_until_checkpoint: 1,
-        };
-        let mut output = Vec::new();
-        let _ = encode_baseline_entropy(
-            &mut output,
-            &baseline_components,
-            1,
-            1,
-            &baseline_dc_tables,
-            &baseline_ac_tables,
-            1,
-            Some(&token),
-            &mut checkpoint,
-        );
-    }
-    let progressive_params = quant::build_params(75, 3);
-    let mut progressive_scan_error_output = Vec::new();
-    let mut progressive_scan_error_entropy = NoopEntropyOutputCheckpoint;
-    let mut progressive_scan_error_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: 0,
-    };
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut progressive_scan_error_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        None,
-        &mut progressive_scan_error_entropy,
-        &mut progressive_scan_error_checkpoint,
-    ));
-    let mut noop_progressive_scan_error_output = Vec::new();
-    let mut noop_progressive_scan_error_entropy = NoopEntropyOutputCheckpoint;
-    let mut noop_progressive_scan_error_checkpoint =
-        NoopProgressiveScanCheckpoint::with_fail_after(0);
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut noop_progressive_scan_error_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        None,
-        &mut noop_progressive_scan_error_entropy,
-        &mut noop_progressive_scan_error_checkpoint,
-    ));
-    let mut event_progressive_scan_error_output = Vec::new();
-    let mut event_progressive_scan_error_entropy = NoopEntropyOutputCheckpoint;
-    let mut event_progressive_scan_error_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: usize::MAX,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut event_progressive_scan_error_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        None,
-        &mut event_progressive_scan_error_entropy,
-        &mut event_progressive_scan_error_checkpoint,
-    ));
-    let mut progressive_scan_success_output = Vec::new();
-    let mut progressive_scan_success_entropy = NoopEntropyOutputCheckpoint;
-    let mut progressive_scan_success_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut progressive_scan_success_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        None,
-        &mut progressive_scan_success_entropy,
-        &mut progressive_scan_success_checkpoint,
-    ));
-    let progressive_token = crate::CancellationToken::new();
-    progressive_token.cancel_after(0);
-    let mut progressive_token_output = Vec::new();
-    let mut progressive_token_entropy = TokenEntropyOutputCheckpoint::new(&progressive_token);
-    let mut progressive_token_scan = TokenProgressiveScanCheckpoint::new(&progressive_token);
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut progressive_token_output,
-        &baseline_components,
-        1,
-        1,
-        1,
-        &progressive_params,
-        Some(&progressive_token),
-        &mut progressive_token_entropy,
-        &mut progressive_token_scan,
-    ));
-    let progressive_entropy_token = crate::CancellationToken::new();
-    progressive_entropy_token.cancel_after(2);
-    let mut progressive_entropy_components = [CompData {
-        blocks: vec![[0i16; 64]],
-        blocks_per_row: 1,
-        block_rows: 1,
-        h_samp: 1,
-        v_samp: 1,
-        quant_slot: 0,
-        id: 1,
-        dc_tbl: 0,
-        ac_tbl: 0,
-    }];
-    progressive_entropy_components[0].blocks[0][0] = 2_047;
-    let mut progressive_entropy_output = Vec::new();
-    let mut progressive_entropy_checkpoint = TokenEntropyOutputCheckpoint {
-        token: &progressive_entropy_token,
-        observed_output: 0,
-        bytes_until_checkpoint: 1,
-        baseline_mcus_until_checkpoint: BASELINE_ENTROPY_CHECKPOINT_MCUS,
-    };
-    let mut progressive_entropy_scan =
-        TokenProgressiveScanCheckpoint::new(&progressive_entropy_token);
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut progressive_entropy_output,
-        &progressive_entropy_components,
-        1,
-        1,
-        1,
-        &progressive_params,
-        Some(&progressive_entropy_token),
-        &mut progressive_entropy_checkpoint,
-        &mut progressive_entropy_scan,
-    ));
-    let progressive_start_token = crate::CancellationToken::new();
-    progressive_start_token.cancel_after(2);
-    let mut progressive_start_output = Vec::new();
-    let mut progressive_start_entropy_checkpoint = NoopEntropyOutputCheckpoint;
-    let mut progressive_start_scan_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = encode_progressive_scans_exact(
-        &mut progressive_start_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        Some(&progressive_start_token),
-        &mut progressive_start_entropy_checkpoint,
-        &mut progressive_start_scan_checkpoint,
-    );
-    for fail_after in [0, usize::MAX] {
-        let mut progressive_event_output = Vec::new();
-        let mut progressive_event_entropy_checkpoint = NoopEntropyOutputCheckpoint;
-        let mut progressive_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-            calls: 0,
-            fail_after,
-        };
-        let _ = std::hint::black_box(encode_progressive_scans_exact(
-            &mut progressive_event_output,
-            &progressive_components,
-            3,
-            2,
-            2,
-            &progressive_params,
-            None,
-            &mut progressive_event_entropy_checkpoint,
-            &mut progressive_event_checkpoint,
-        ));
-    }
-    for fail_after in [0, 1, 2, 16, 26, 64] {
-        let mut output = Vec::new();
-        let mut checkpoint = CoverageFailingEntropyOutputCheckpoint {
-            calls: 0,
-            fail_after,
-        };
-        let mut scan_checkpoint = NoopProgressiveScanCheckpoint::new();
-        let _ = encode_progressive_scans_exact(
-            &mut output,
-            &progressive_components,
-            3,
-            2,
-            2,
-            &progressive_params,
-            None,
-            &mut checkpoint,
-            &mut scan_checkpoint,
-        );
-    }
-    for fail_after in [0, 1, 2, 16, 26, 64] {
-        let mut output = Vec::new();
-        let mut checkpoint = CoverageFailingEntropyOutputCheckpoint {
-            calls: 0,
-            fail_after: usize::MAX,
-        };
-        let mut scan_checkpoint = NoopProgressiveScanCheckpoint::with_fail_after(fail_after);
-        let _ = std::hint::black_box(encode_progressive_scans_exact(
-            &mut output,
-            &progressive_components,
-            3,
-            2,
-            2,
-            &progressive_params,
-            None,
-            &mut checkpoint,
-            &mut scan_checkpoint,
-        ));
-    }
-    let progressive_end_token = crate::CancellationToken::new();
-    progressive_end_token.cancel_after(1);
-    let mut progressive_end_output = Vec::new();
-    let mut progressive_end_entropy_checkpoint = CoverageFailingEntropyOutputCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut progressive_end_scan_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut progressive_end_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        Some(&progressive_end_token),
-        &mut progressive_end_entropy_checkpoint,
-        &mut progressive_end_scan_checkpoint,
-    ));
-    let progressive_start_error_token = crate::CancellationToken::new();
-    progressive_start_error_token.cancel();
-    let mut progressive_start_error_output = Vec::new();
-    let mut progressive_start_error_entropy_checkpoint = CoverageFailingEntropyOutputCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut progressive_start_error_scan_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut progressive_start_error_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        Some(&progressive_start_error_token),
-        &mut progressive_start_error_entropy_checkpoint,
-        &mut progressive_start_error_scan_checkpoint,
-    ));
-    let mut entropy_progressive_scan_error_output = Vec::new();
-    let mut entropy_progressive_scan_error_checkpoint = CoverageFailingEntropyOutputCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut entropy_progressive_scan_error_scan_checkpoint =
-        NoopProgressiveScanCheckpoint::with_fail_after(0);
-    let _ = std::hint::black_box(encode_progressive_scans_exact(
-        &mut entropy_progressive_scan_error_output,
-        &progressive_components,
-        3,
-        2,
-        2,
-        &progressive_params,
-        None,
-        &mut entropy_progressive_scan_error_checkpoint,
-        &mut entropy_progressive_scan_error_scan_checkpoint,
-    ));
-    let mut progressive_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = dc_progressive_events(
-        &progressive_dc_scan,
-        &progressive_components,
-        &mut progressive_checkpoint,
-    );
-    for fail_after in 0..=1 {
-        let mut checkpoint = NoopProgressiveScanCheckpoint::with_fail_after(fail_after);
-        let _ = std::hint::black_box(dc_progressive_events(
-            &progressive_dc_scan,
-            &progressive_components,
-            &mut checkpoint,
-        ));
-    }
-    let mut progressive_row_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: usize::MAX,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(dc_progressive_events(
-        &progressive_dc_scan,
-        &progressive_components,
-        &mut progressive_row_failure_checkpoint,
-    ));
-    let mut progressive_event_row_failure_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: usize::MAX,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(dc_progressive_events(
-        &progressive_dc_scan,
-        &progressive_components,
-        &mut progressive_event_row_failure_checkpoint,
-    ));
-    let noninterleaved_row_scan = ProgScan {
-        comps: vec![0],
-        ss: 0,
-        se: 0,
-        ah: 0,
-        al: 0,
-    };
-    let mut noninterleaved_row_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: usize::MAX,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(dc_progressive_events(
-        &noninterleaved_row_scan,
-        &progressive_components,
-        &mut noninterleaved_row_failure_checkpoint,
-    ));
-    let mut noninterleaved_event_row_failure_checkpoint =
-        CoverageFailingProgressiveEventCheckpoint {
-            calls: usize::MAX,
-            fail_after: usize::MAX,
-        };
-    let _ = std::hint::black_box(dc_progressive_events(
-        &noninterleaved_row_scan,
-        &progressive_components,
-        &mut noninterleaved_event_row_failure_checkpoint,
-    ));
-    let noninterleaved_ac_row_scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 1,
-        ah: 0,
-        al: 0,
-    };
-    let mut noninterleaved_ac_row_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: usize::MAX,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(ac_progressive_events(
-        &noninterleaved_ac_row_scan,
-        &progressive_components,
-        &mut noninterleaved_ac_row_failure_checkpoint,
-    ));
-    let mut noninterleaved_ac_event_row_failure_checkpoint =
-        CoverageFailingProgressiveEventCheckpoint {
-            calls: usize::MAX,
-            fail_after: usize::MAX,
-        };
-    let _ = std::hint::black_box(ac_progressive_events(
-        &noninterleaved_ac_row_scan,
-        &progressive_components,
-        &mut noninterleaved_ac_event_row_failure_checkpoint,
-    ));
-    for checks in 0..=2 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut checkpoint = TokenProgressiveScanCheckpoint {
-            token: &token,
-            blocks_until_checkpoint: 1,
-            coefficients_until_checkpoint: PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS,
-            events_until_checkpoint: PROGRESSIVE_EVENT_CHECKPOINT_EVENTS,
-        };
-        let _ = std::hint::black_box(dc_progressive_events(
-            &progressive_dc_scan,
-            &progressive_components,
-            &mut checkpoint,
-        ));
-    }
-    let single_dc_scan = ProgScan {
-        comps: vec![0],
-        ss: 0,
-        se: 0,
-        ah: 0,
-        al: 0,
-    };
-    let single_dc_token = crate::CancellationToken::new();
-    single_dc_token.cancel_after(0);
-    let mut single_progressive_checkpoint = TokenProgressiveScanCheckpoint::new(&single_dc_token);
-    let _ = dc_progressive_events(
-        &single_dc_scan,
-        &progressive_components,
-        &mut single_progressive_checkpoint,
-    );
-    for fail_after in 0..=1 {
-        let mut checkpoint = NoopProgressiveScanCheckpoint::with_fail_after(fail_after);
-        let _ = std::hint::black_box(dc_progressive_events(
-            &single_dc_scan,
-            &progressive_components,
-            &mut checkpoint,
-        ));
-    }
-    for checks in 0..=2 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut checkpoint = TokenProgressiveScanCheckpoint {
-            token: &token,
-            blocks_until_checkpoint: 1,
-            coefficients_until_checkpoint: PROGRESSIVE_COEFFICIENT_CHECKPOINT_COEFFICIENTS,
-            events_until_checkpoint: PROGRESSIVE_EVENT_CHECKPOINT_EVENTS,
-        };
-        let _ = std::hint::black_box(dc_progressive_events(
-            &single_dc_scan,
-            &progressive_components,
-            &mut checkpoint,
-        ));
-    }
-    let single_dc_success_token = crate::CancellationToken::new();
-    let mut single_dc_success_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&single_dc_success_token);
-    let _ = std::hint::black_box(dc_progressive_events(
-        &single_dc_scan,
-        &progressive_components,
-        &mut single_dc_success_checkpoint,
-    ));
-    let mut single_dc_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(dc_progressive_events(
-        &single_dc_scan,
-        &progressive_components,
-        &mut single_dc_event_checkpoint,
-    ));
-    let scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 1,
-        ah: 1,
-        al: 0,
-    };
-    let table = 0;
-    let mut events = Vec::new();
-    let mut eob_run = 0;
-    let mut correction_bits = Vec::new();
-    let mut block = [0i16; 64];
-    block[ZIGZAG[1]] = 2;
-    let mut ac_progressive_checkpoint = NoopProgressiveScanCheckpoint::new();
-    correction_bits.resize(938, 0);
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut events,
-        &block,
-        &scan,
-        table,
-        &mut eob_run,
-        &mut correction_bits,
-        &mut ac_progressive_checkpoint,
-    ));
-    let mut token_correction_events = Vec::new();
-    let mut token_correction_eob = 0;
-    let mut token_correction_bits = vec![0; 938];
-    let token_correction_token = crate::CancellationToken::new();
-    let mut token_correction_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&token_correction_token);
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut token_correction_events,
-        &block,
-        &scan,
-        table,
-        &mut token_correction_eob,
-        &mut token_correction_bits,
-        &mut token_correction_checkpoint,
-    ));
-    let mut event_correction_events = Vec::new();
-    let mut event_correction_eob = 0;
-    let mut event_correction_bits = vec![0; 938];
-    let mut event_correction_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut event_correction_events,
-        &block,
-        &scan,
-        table,
-        &mut event_correction_eob,
-        &mut event_correction_bits,
-        &mut event_correction_checkpoint,
-    ));
-    let refine_scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 5,
-        ah: 1,
-        al: 0,
-    };
-    let mut refine_block = [0i16; 64];
-    refine_block[ZIGZAG[1]] = 1;
-    refine_block[ZIGZAG[2]] = 2;
-    let mut refine_events = Vec::new();
-    let mut refine_eob_run = 0;
-    let mut refine_correction_bits = Vec::new();
-    let mut refine_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = append_ac_refine_events(
-        &mut refine_events,
-        &refine_block,
-        &refine_scan,
-        table,
-        &mut refine_eob_run,
-        &mut refine_correction_bits,
-        &mut refine_checkpoint,
-    );
-    let refine_token = crate::CancellationToken::new();
-    let mut refine_token_checkpoint = TokenProgressiveScanCheckpoint::new(&refine_token);
-    let _ = append_ac_refine_events(
-        &mut refine_events,
-        &refine_block,
-        &refine_scan,
-        table,
-        &mut refine_eob_run,
-        &mut refine_correction_bits,
-        &mut refine_token_checkpoint,
-    );
-    for fail_after in 0..=3 {
-        let mut failure_events = Vec::new();
-        let mut failure_eob_run = 0;
-        let mut failure_corrections = Vec::new();
-        let mut checkpoint = NoopProgressiveScanCheckpoint::with_fail_after(fail_after);
-        let _ = append_ac_refine_events(
-            &mut failure_events,
-            &refine_block,
-            &refine_scan,
-            table,
-            &mut failure_eob_run,
-            &mut failure_corrections,
-            &mut checkpoint,
-        );
-    }
-    for checks in 0..=3 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut failure_events = Vec::new();
-        let mut failure_eob_run = 0;
-        let mut failure_corrections = Vec::new();
-        let mut checkpoint = TokenProgressiveScanCheckpoint {
-            token: &token,
-            blocks_until_checkpoint: PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS,
-            coefficients_until_checkpoint: 1,
-            events_until_checkpoint: PROGRESSIVE_EVENT_CHECKPOINT_EVENTS,
-        };
-        let _ = append_ac_refine_events(
-            &mut failure_events,
-            &refine_block,
-            &refine_scan,
-            table,
-            &mut failure_eob_run,
-            &mut failure_corrections,
-            &mut checkpoint,
-        );
-    }
-    let ac_first_scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 5,
-        ah: 0,
-        al: 0,
-    };
-    let mut first_block = [0i16; 64];
-    first_block[ZIGZAG[1]] = 1;
-    for fail_after in 0..=2 {
-        let mut first_events = Vec::new();
-        let mut first_eob_run = 0;
-        let mut first_corrections = Vec::new();
-        let mut checkpoint = CoverageFailingProgressiveScanCheckpoint {
-            coefficient_calls: 0,
-            fail_after,
-        };
-        let _ = append_ac_first_events(
-            &mut first_events,
-            &first_block,
-            &ac_first_scan,
-            table,
-            &mut first_eob_run,
-            &mut first_corrections,
-            &mut checkpoint,
-        );
-    }
-    for fail_after in 0..=2 {
-        let mut first_events = Vec::new();
-        let mut first_eob_run = 0;
-        let mut first_corrections = Vec::new();
-        let mut checkpoint = NoopProgressiveScanCheckpoint::with_fail_after(fail_after);
-        let _ = append_ac_first_events(
-            &mut first_events,
-            &first_block,
-            &ac_first_scan,
-            table,
-            &mut first_eob_run,
-            &mut first_corrections,
-            &mut checkpoint,
-        );
-    }
-    for checks in 0..=2 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut first_events = Vec::new();
-        let mut first_eob_run = 0;
-        let mut first_corrections = Vec::new();
-        let mut checkpoint = TokenProgressiveScanCheckpoint {
-            token: &token,
-            blocks_until_checkpoint: PROGRESSIVE_SCAN_CHECKPOINT_BLOCKS,
-            coefficients_until_checkpoint: 1,
-            events_until_checkpoint: PROGRESSIVE_EVENT_CHECKPOINT_EVENTS,
-        };
-        let _ = append_ac_first_events(
-            &mut first_events,
-            &first_block,
-            &ac_first_scan,
-            table,
-            &mut first_eob_run,
-            &mut first_corrections,
-            &mut checkpoint,
-        );
-    }
-    let mut refine_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: std::hint::black_box(0),
-    };
-    let _ = append_ac_refine_events(
-        &mut refine_events,
-        &refine_block,
-        &refine_scan,
-        table,
-        &mut refine_eob_run,
-        &mut refine_correction_bits,
-        &mut refine_failure_checkpoint,
-    );
-    let long_ac_first_scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 20,
-        ah: 0,
-        al: 0,
-    };
-    let mut long_ac_first_block = [0i16; 64];
-    long_ac_first_block[ZIGZAG[17]] = -3;
-    let mut long_ac_first_events = Vec::new();
-    let mut long_ac_first_eob = 0;
-    let mut long_ac_first_corrections = Vec::new();
-    let mut long_ac_first_noop = NoopProgressiveScanCheckpoint::new();
-    let _ = append_ac_first_events(
-        &mut long_ac_first_events,
-        &long_ac_first_block,
-        &long_ac_first_scan,
-        table,
-        &mut long_ac_first_eob,
-        &mut long_ac_first_corrections,
-        &mut long_ac_first_noop,
-    );
-    let long_ac_first_token = crate::CancellationToken::new();
-    let mut long_ac_first_token_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&long_ac_first_token);
-    let _ = append_ac_first_events(
-        &mut long_ac_first_events,
-        &long_ac_first_block,
-        &long_ac_first_scan,
-        table,
-        &mut long_ac_first_eob,
-        &mut long_ac_first_corrections,
-        &mut long_ac_first_token_checkpoint,
-    );
-    let mut long_ac_first_failing = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = append_ac_first_events(
-        &mut long_ac_first_events,
-        &long_ac_first_block,
-        &long_ac_first_scan,
-        table,
-        &mut long_ac_first_eob,
-        &mut long_ac_first_corrections,
-        &mut long_ac_first_failing,
-    );
-    let long_ac_refine_scan = ProgScan {
-        comps: vec![0],
-        ss: 1,
-        se: 20,
-        ah: 1,
-        al: 0,
-    };
-    let mut long_ac_refine_block = [0i16; 64];
-    long_ac_refine_block[ZIGZAG[1]] = 2;
-    long_ac_refine_block[ZIGZAG[18]] = 1;
-    let mut long_ac_refine_events = Vec::new();
-    let mut long_ac_refine_eob = 0;
-    let mut long_ac_refine_corrections = Vec::new();
-    let mut long_ac_refine_noop = NoopProgressiveScanCheckpoint::new();
-    let _ = append_ac_refine_events(
-        &mut long_ac_refine_events,
-        &long_ac_refine_block,
-        &long_ac_refine_scan,
-        table,
-        &mut long_ac_refine_eob,
-        &mut long_ac_refine_corrections,
-        &mut long_ac_refine_noop,
-    );
-    let long_ac_refine_token = crate::CancellationToken::new();
-    let mut long_ac_refine_token_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&long_ac_refine_token);
-    let _ = append_ac_refine_events(
-        &mut long_ac_refine_events,
-        &long_ac_refine_block,
-        &long_ac_refine_scan,
-        table,
-        &mut long_ac_refine_eob,
-        &mut long_ac_refine_corrections,
-        &mut long_ac_refine_token_checkpoint,
-    );
-    let mut long_ac_refine_failing = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = append_ac_refine_events(
-        &mut long_ac_refine_events,
-        &long_ac_refine_block,
-        &long_ac_refine_scan,
-        table,
-        &mut long_ac_refine_eob,
-        &mut long_ac_refine_corrections,
-        &mut long_ac_refine_failing,
-    );
-    let mut long_ac_refine_event = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = append_ac_refine_events(
-        &mut long_ac_refine_events,
-        &long_ac_refine_block,
-        &long_ac_refine_scan,
-        table,
-        &mut long_ac_refine_eob,
-        &mut long_ac_refine_corrections,
-        &mut long_ac_refine_event,
-    );
-    let mut refine_failing_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: std::hint::black_box(1),
-    };
-    let _ = append_ac_refine_events(
-        &mut refine_events,
-        &refine_block,
-        &refine_scan,
-        table,
-        &mut refine_eob_run,
-        &mut refine_correction_bits,
-        &mut refine_failing_checkpoint,
-    );
-    let mut ac_first_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = ac_progressive_events(
-        &ac_first_scan,
-        &progressive_components,
-        &mut ac_first_checkpoint,
-    );
-    for fail_after in [0, 1, 6] {
-        let mut checkpoint = NoopProgressiveScanCheckpoint::with_fail_after(fail_after);
-        let _ = std::hint::black_box(ac_progressive_events(
-            &ac_first_scan,
-            &progressive_components,
-            &mut checkpoint,
-        ));
-    }
-    for fail_after in [0, 1, 6] {
-        let mut checkpoint = NoopProgressiveScanCheckpoint::with_fail_after(fail_after);
-        let _ = std::hint::black_box(ac_progressive_events(
-            &refine_scan,
-            &progressive_components,
-            &mut checkpoint,
-        ));
-    }
-    for checks in [0, 1, 2, 6, 12] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut checkpoint = TokenProgressiveScanCheckpoint::new(&token);
-        let _ = ac_progressive_events(&ac_first_scan, &progressive_components, &mut checkpoint);
-    }
-    let ac_success_token = crate::CancellationToken::new();
-    let mut ac_success_checkpoint = TokenProgressiveScanCheckpoint::new(&ac_success_token);
-    let _ = std::hint::black_box(ac_progressive_events(
-        &ac_first_scan,
-        &progressive_components,
-        &mut ac_success_checkpoint,
-    ));
-    let ac_refine_success_token = crate::CancellationToken::new();
-    let mut ac_refine_success_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&ac_refine_success_token);
-    let _ = std::hint::black_box(ac_progressive_events(
-        &refine_scan,
-        &progressive_components,
-        &mut ac_refine_success_checkpoint,
-    ));
-    let mut ac_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(ac_progressive_events(
-        &ac_first_scan,
-        &progressive_components,
-        &mut ac_event_checkpoint,
-    ));
-    let mut ac_refine_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(ac_progressive_events(
-        &refine_scan,
-        &progressive_components,
-        &mut ac_refine_event_checkpoint,
-    ));
-    let mut ac_failure_success_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(ac_progressive_events(
-        &refine_scan,
-        &progressive_components,
-        &mut ac_failure_success_checkpoint,
-    ));
-    let mut final_coefficient_block = [0i16; 64];
-    final_coefficient_block[ZIGZAG[5]] = 1;
-    let mut final_coefficient_events = Vec::new();
-    let mut final_coefficient_eob = 0;
-    let mut final_coefficient_corrections = Vec::new();
-    let mut final_coefficient_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_coefficient_events,
-        &final_coefficient_block,
-        &ac_first_scan,
-        table,
-        &mut final_coefficient_eob,
-        &mut final_coefficient_corrections,
-        &mut final_coefficient_checkpoint,
-    ));
-    let final_coefficient_token = crate::CancellationToken::new();
-    let mut final_coefficient_token_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&final_coefficient_token);
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_coefficient_events,
-        &final_coefficient_block,
-        &ac_first_scan,
-        table,
-        &mut final_coefficient_eob,
-        &mut final_coefficient_corrections,
-        &mut final_coefficient_token_checkpoint,
-    ));
-    let mut final_coefficient_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut final_coefficient_event_eob = 0;
-    let mut final_coefficient_event_corrections = Vec::new();
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_coefficient_events,
-        &final_coefficient_block,
-        &ac_first_scan,
-        table,
-        &mut final_coefficient_event_eob,
-        &mut final_coefficient_event_corrections,
-        &mut final_coefficient_event_checkpoint,
-    ));
-    let final_eob_block = [0i16; 64];
-    let mut final_eob_events = Vec::new();
-    let mut final_eob_run = 0x7ffe;
-    let mut final_eob_corrections = Vec::new();
-    let mut final_eob_checkpoint = NoopProgressiveScanCheckpoint::new();
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_eob_events,
-        &final_eob_block,
-        &ac_first_scan,
-        table,
-        &mut final_eob_run,
-        &mut final_eob_corrections,
-        &mut final_eob_checkpoint,
-    ));
-    let final_eob_token = crate::CancellationToken::new();
-    let mut final_eob_token_checkpoint = TokenProgressiveScanCheckpoint::new(&final_eob_token);
-    let mut final_eob_token_run = 0x7ffe;
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_eob_events,
-        &final_eob_block,
-        &ac_first_scan,
-        table,
-        &mut final_eob_token_run,
-        &mut final_eob_corrections,
-        &mut final_eob_token_checkpoint,
-    ));
-    let mut final_eob_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let mut final_eob_event_run = 0x7ffe;
-    let mut final_eob_event_corrections = Vec::new();
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_eob_events,
-        &final_eob_block,
-        &ac_first_scan,
-        table,
-        &mut final_eob_event_run,
-        &mut final_eob_event_corrections,
-        &mut final_eob_event_checkpoint,
-    ));
-    let mut final_coefficient_failure_events = Vec::new();
-    let mut final_coefficient_failure_eob = 0;
-    let mut final_coefficient_failure_corrections = Vec::new();
-    let mut final_coefficient_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_coefficient_failure_events,
-        &final_coefficient_block,
-        &ac_first_scan,
-        table,
-        &mut final_coefficient_failure_eob,
-        &mut final_coefficient_failure_corrections,
-        &mut final_coefficient_failure_checkpoint,
-    ));
-    let mut final_eob_failure_events = Vec::new();
-    let mut final_eob_failure_run = 0x7ffe;
-    let mut final_eob_failure_corrections = Vec::new();
-    let mut final_eob_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut final_eob_failure_events,
-        &final_eob_block,
-        &ac_first_scan,
-        table,
-        &mut final_eob_failure_run,
-        &mut final_eob_failure_corrections,
-        &mut final_eob_failure_checkpoint,
-    ));
-    let mut event_long_first_events = Vec::new();
-    let mut event_long_first_eob = 1;
-    let mut event_long_first_corrections = Vec::new();
-    let mut event_long_first_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_first_events(
-        &mut event_long_first_events,
-        &long_ac_first_block,
-        &long_ac_first_scan,
-        table,
-        &mut event_long_first_eob,
-        &mut event_long_first_corrections,
-        &mut event_long_first_checkpoint,
-    ));
-    let mut refine_after_last_block = [0i16; 64];
-    refine_after_last_block[ZIGZAG[1]] = 1;
-    refine_after_last_block[ZIGZAG[18]] = 2;
-    let mut refine_after_last_failure_events = Vec::new();
-    let mut refine_after_last_failure_eob = 0;
-    let mut refine_after_last_failure_corrections = Vec::new();
-    let mut refine_after_last_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_after_last_failure_events,
-        &refine_after_last_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_after_last_failure_eob,
-        &mut refine_after_last_failure_corrections,
-        &mut refine_after_last_failure_checkpoint,
-    ));
-    let mut refine_after_last_event_events = Vec::new();
-    let mut refine_after_last_event_eob = 0;
-    let mut refine_after_last_event_corrections = Vec::new();
-    let mut refine_after_last_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_after_last_event_events,
-        &refine_after_last_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_after_last_event_eob,
-        &mut refine_after_last_event_corrections,
-        &mut refine_after_last_event_checkpoint,
-    ));
-    let mut refine_eob_failure_events = Vec::new();
-    let mut refine_eob_failure_run = 0x7ffe;
-    let mut refine_eob_failure_corrections = Vec::new();
-    let mut refine_eob_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_eob_failure_events,
-        &final_eob_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_eob_failure_run,
-        &mut refine_eob_failure_corrections,
-        &mut refine_eob_failure_checkpoint,
-    ));
-    let mut refine_eob_event_events = Vec::new();
-    let mut refine_eob_event_run = 0x7ffe;
-    let mut refine_eob_event_corrections = Vec::new();
-    let mut refine_eob_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_eob_event_events,
-        &final_eob_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_eob_event_run,
-        &mut refine_eob_event_corrections,
-        &mut refine_eob_event_checkpoint,
-    ));
-    let mut refine_buffer_failure_events = Vec::new();
-    let mut refine_buffer_failure_run = 0;
-    let mut refine_buffer_failure_corrections = vec![0; 938];
-    let mut refine_buffer_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_buffer_failure_events,
-        &final_eob_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_buffer_failure_run,
-        &mut refine_buffer_failure_corrections,
-        &mut refine_buffer_failure_checkpoint,
-    ));
-    let mut refine_buffer_event_events = Vec::new();
-    let mut refine_buffer_event_run = 0;
-    let mut refine_buffer_event_corrections = vec![0; 938];
-    let mut refine_buffer_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_buffer_event_events,
-        &final_eob_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_buffer_event_run,
-        &mut refine_buffer_event_corrections,
-        &mut refine_buffer_event_checkpoint,
-    ));
-    let mut refine_final_block = [0i16; 64];
-    refine_final_block[ZIGZAG[20]] = 1;
-    let mut refine_final_failure_events = Vec::new();
-    let mut refine_final_failure_run = 0;
-    let mut refine_final_failure_corrections = Vec::new();
-    let mut refine_final_failure_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_final_failure_events,
-        &refine_final_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_final_failure_run,
-        &mut refine_final_failure_corrections,
-        &mut refine_final_failure_checkpoint,
-    ));
-    let mut refine_final_event_events = Vec::new();
-    let mut refine_final_event_run = 0;
-    let mut refine_final_event_corrections = Vec::new();
-    let mut refine_final_event_checkpoint = CoverageFailingProgressiveEventCheckpoint {
-        calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_final_event_events,
-        &refine_final_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_final_event_run,
-        &mut refine_final_event_corrections,
-        &mut refine_final_event_checkpoint,
-    ));
-    let mut refine_final_correction_block = [0i16; 64];
-    refine_final_correction_block[ZIGZAG[20]] = 2;
-    let mut refine_final_correction_events = Vec::new();
-    let mut refine_final_correction_run = 0;
-    let mut refine_final_correction_bits = Vec::new();
-    let mut refine_final_correction_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_final_correction_events,
-        &refine_final_correction_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_final_correction_run,
-        &mut refine_final_correction_bits,
-        &mut refine_final_correction_checkpoint,
-    ));
-    let refine_token_eob_token = crate::CancellationToken::new();
-    let mut refine_token_eob_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&refine_token_eob_token);
-    let mut refine_token_eob_events = Vec::new();
-    let mut refine_token_eob_run = 0x7ffe;
-    let mut refine_token_eob_corrections = Vec::new();
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_token_eob_events,
-        &final_eob_block,
-        &long_ac_refine_scan,
-        table,
-        &mut refine_token_eob_run,
-        &mut refine_token_eob_corrections,
-        &mut refine_token_eob_checkpoint,
-    ));
-    let mut refine_token_small_eob_events = Vec::new();
-    let mut refine_token_small_eob_run = 0x7ffe;
-    let mut refine_token_small_eob_corrections = Vec::new();
-    let refine_token_small_eob_token = crate::CancellationToken::new();
-    let mut refine_token_small_eob_checkpoint =
-        TokenProgressiveScanCheckpoint::new(&refine_token_small_eob_token);
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_token_small_eob_events,
-        &final_eob_block,
-        &scan,
-        table,
-        &mut refine_token_small_eob_run,
-        &mut refine_token_small_eob_corrections,
-        &mut refine_token_small_eob_checkpoint,
-    ));
-    let mut refine_final_correction_small_block = [0i16; 64];
-    refine_final_correction_small_block[ZIGZAG[1]] = 2;
-    let mut refine_final_correction_small_events = Vec::new();
-    let mut refine_final_correction_small_run = 0;
-    let mut refine_final_correction_small_bits = Vec::new();
-    let mut refine_final_correction_small_checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: usize::MAX,
-    };
-    let _ = std::hint::black_box(append_ac_refine_events(
-        &mut refine_final_correction_small_events,
-        &refine_final_correction_small_block,
-        &scan,
-        table,
-        &mut refine_final_correction_small_run,
-        &mut refine_final_correction_small_bits,
-        &mut refine_final_correction_small_checkpoint,
-    ));
-    let mut checkpoint = CoverageFailingProgressiveScanCheckpoint {
-        coefficient_calls: 0,
-        fail_after: std::hint::black_box(0),
-    };
-    let _ = ac_progressive_events(&ac_first_scan, &progressive_components, &mut checkpoint);
 }
 
 fn bounded_usize(value: u32) -> usize {
@@ -4747,16 +1652,7 @@ fn encode_baseline_cmyk_block_row_streaming(
 
     let mcu_columns = width.div_ceil(8);
     let restart_rows = options.restart_interval.unwrap_or(0);
-    let restart_interval = if restart_rows == 0 {
-        0
-    } else {
-        let interval = usize::try_from(restart_rows)
-            .unwrap_or(usize::MAX)
-            .saturating_mul(mcu_columns);
-        u16::try_from(interval).map_err(|_| {
-            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
-        })?
-    };
+    let restart_interval = restart_interval_from_rows(restart_rows, mcu_columns);
 
     let standard_tables = huffman::standard_derived_tables();
     let luma_dc = &standard_tables[0];
@@ -4914,16 +1810,7 @@ fn encode_baseline_grayscale_block_row_streaming(
 
     let block_columns = width.div_ceil(8);
     let restart_rows = options.restart_interval.unwrap_or(0);
-    let restart_interval = if restart_rows == 0 {
-        0
-    } else {
-        let interval = usize::try_from(restart_rows)
-            .unwrap_or(usize::MAX)
-            .saturating_mul(block_columns);
-        u16::try_from(interval).map_err(|_| {
-            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
-        })?
-    };
+    let restart_interval = restart_interval_from_rows(restart_rows, block_columns);
 
     let standard_tables = huffman::standard_derived_tables();
     let luma_dc = &standard_tables[0];
@@ -5052,16 +1939,7 @@ fn encode_baseline_422_block_row_streaming(
 
     let mcu_columns = width.div_ceil(16);
     let restart_rows = options.restart_interval.unwrap_or(0);
-    let restart_interval = if restart_rows == 0 {
-        0
-    } else {
-        let interval = usize::try_from(restart_rows)
-            .unwrap_or(usize::MAX)
-            .saturating_mul(mcu_columns);
-        u16::try_from(interval).map_err(|_| {
-            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
-        })?
-    };
+    let restart_interval = restart_interval_from_rows(restart_rows, mcu_columns);
 
     let standard_tables = huffman::standard_derived_tables();
     let luma_dc = &standard_tables[0];
@@ -5299,16 +2177,7 @@ fn encode_baseline_444_block_row_streaming(
 
     let mcu_columns = width.div_ceil(8);
     let restart_rows = options.restart_interval.unwrap_or(0);
-    let restart_interval = if restart_rows == 0 {
-        0
-    } else {
-        let interval = usize::try_from(restart_rows)
-            .unwrap_or(usize::MAX)
-            .saturating_mul(mcu_columns);
-        u16::try_from(interval).map_err(|_| {
-            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
-        })?
-    };
+    let restart_interval = restart_interval_from_rows(restart_rows, mcu_columns);
 
     let standard_tables = huffman::standard_derived_tables();
     let luma_dc = &standard_tables[0];
@@ -5463,6 +2332,7 @@ struct Rgb420McuRowBuffers<'a> {
     cr: &'a mut [u8],
 }
 
+/// Convert one MCU row to YCbCr 4:2:0, replicating edge pixels when needed.
 #[expect(
     clippy::arithmetic_side_effects,
     reason = "validated RGB dimensions and fixed 16-pixel packets bound every source and row index"
@@ -5483,6 +2353,13 @@ fn convert_rgb_420_mcu_row(
     let chroma_width = padded_width / 2;
     debug_assert_eq!(buffers.cb.len(), chroma_width.saturating_mul(8));
     debug_assert_eq!(buffers.cr.len(), buffers.cb.len());
+
+    // `padded_width` is `ceil(width / 16) * 16`, so aligned width also proves
+    // that no horizontal padding is present.
+    if width.is_multiple_of(16) && height.is_multiple_of(16) {
+        convert_rgb_420_mcu_row_aligned(pixels, width, height, mcu_y, buffers);
+        return;
+    }
 
     for pair in 0usize..8 {
         let first_source_y = mcu_y
@@ -5535,6 +2412,61 @@ fn convert_rgb_420_mcu_row(
             buffers.cr[chroma_output.saturating_add(chroma_x)
                 ..chroma_output.saturating_add(chroma_x + 8)]
                 .copy_from_slice(&cr);
+        }
+    }
+}
+
+/// Convert a complete aligned MCU row without edge replication or packet checks.
+///
+/// The caller selects this only when the visible width and height are multiples
+/// of 16, so every source packet and output block is complete.
+#[expect(
+    clippy::arithmetic_side_effects,
+    reason = "the caller proves complete 16x16 MCU geometry and validated RGB storage bounds"
+)]
+#[inline(never)]
+fn convert_rgb_420_mcu_row_aligned(
+    pixels: &[u8],
+    width: usize,
+    height: usize,
+    mcu_y: usize,
+    buffers: &mut Rgb420McuRowBuffers<'_>,
+) {
+    debug_assert!(width.is_multiple_of(16));
+    debug_assert!(width != 0);
+    debug_assert!(height.is_multiple_of(16));
+    debug_assert!(mcu_y < height / 16);
+    debug_assert_eq!(buffers.y.len(), width * 16);
+    debug_assert_eq!(buffers.cb.len(), width * 4);
+    debug_assert_eq!(buffers.cr.len(), buffers.cb.len());
+
+    let row_bytes = width * 3;
+    let first_mcu_row = mcu_y * 16;
+    let chroma_width = width / 2;
+    for pair in 0usize..8 {
+        let first_source_row = (first_mcu_row + pair * 2) * row_bytes;
+        let second_source_row = first_source_row + row_bytes;
+        let first_y_output = pair * 2 * width;
+        let second_y_output = first_y_output + width;
+        let chroma_output = pair * chroma_width;
+
+        for x in (0usize..width).step_by(16) {
+            let first_start = first_source_row + x * 3;
+            let second_start = second_source_row + x * 3;
+            let first: &[u8; 48] = pixels[first_start..first_start + 48]
+                .try_into()
+                .unwrap_or_else(|_| unreachable!("validated RGB MCU packet is 48 bytes"));
+            let second: &[u8; 48] = pixels[second_start..second_start + 48]
+                .try_into()
+                .unwrap_or_else(|_| unreachable!("validated RGB MCU packet is 48 bytes"));
+            let (y_first, y_second, cb, cr) =
+                crate::codecs::jpeg::kernels::rgb_to_ycbcr_420_packet(first, second);
+
+            buffers.y[first_y_output + x..first_y_output + x + 16].copy_from_slice(&y_first);
+            buffers.y[second_y_output + x..second_y_output + x + 16].copy_from_slice(&y_second);
+            let chroma_x = x / 2;
+            buffers.cb[chroma_output + chroma_x..chroma_output + chroma_x + 8].copy_from_slice(&cb);
+            buffers.cr[chroma_output + chroma_x..chroma_output + chroma_x + 8].copy_from_slice(&cr);
         }
     }
 }
@@ -5609,15 +2541,14 @@ fn encode_baseline_420_mcu_pair(
     let first_values = first_blocks.map(|block| block.coefficient(0));
     let first_y_column = pair_mcu_x.saturating_mul(2);
     let first_y_row = mcu_y.saturating_mul(2);
-    // `mcu_y` comes from `0..height.div_ceil(16)`, so the first row of each
-    // two-row MCU pair is always inside `height.div_ceil(8)`. Only the
-    // second row needs an edge-presence check.
+    // The pair loop visits only existing 16-pixel MCUs, so each first luma
+    // column is present. Only the adjacent column and second row need checks.
+    let second_luma_row_present = first_y_row.saturating_add(1) < y_block_rows;
     let first_present = [
-        first_y_column < y_block_columns,
+        true,
         first_y_column.saturating_add(1) < y_block_columns,
-        first_y_column < y_block_columns && first_y_row.saturating_add(1) < y_block_rows,
-        first_y_column.saturating_add(1) < y_block_columns
-            && first_y_row.saturating_add(1) < y_block_rows,
+        second_luma_row_present,
+        first_y_column.saturating_add(1) < y_block_columns && second_luma_row_present,
         true,
         true,
     ];
@@ -5686,12 +2617,13 @@ fn encode_baseline_420_mcu_pair(
     ];
     let second_values = second_blocks.map(|block| block.coefficient(0));
     let second_y_column = pair_mcu_x.saturating_add(1).saturating_mul(2);
+    // The guard above proves that the next 16-pixel MCU exists, so its first
+    // luma column is present too.
     let second_present = [
-        second_y_column < y_block_columns,
+        true,
         second_y_column.saturating_add(1) < y_block_columns,
-        second_y_column < y_block_columns && first_y_row.saturating_add(1) < y_block_rows,
-        second_y_column.saturating_add(1) < y_block_columns
-            && first_y_row.saturating_add(1) < y_block_rows,
+        second_luma_row_present,
+        second_y_column.saturating_add(1) < y_block_columns && second_luma_row_present,
         true,
         true,
     ];
@@ -5777,16 +2709,7 @@ fn encode_baseline_420_mcu_row_streaming(
     let chroma_ac = &standard_tables[3];
     let mcu_columns = width.div_ceil(16);
     let restart_rows = options.restart_interval.unwrap_or(0);
-    let restart_interval = if restart_rows == 0 {
-        0
-    } else {
-        let interval = usize::try_from(restart_rows)
-            .unwrap_or(usize::MAX)
-            .saturating_mul(mcu_columns);
-        u16::try_from(interval).map_err(|_| {
-            CodecError::Parameter("JPEG restart interval exceeds 65535 MCUs".to_owned())
-        })?
-    };
+    let restart_interval = restart_interval_from_rows(restart_rows, mcu_columns);
 
     let mut output = Vec::with_capacity(width.saturating_mul(height).saturating_add(1024));
     marker::write_soi(&mut output);
@@ -6087,9 +3010,11 @@ fn load_fdct_samples_four_into(
     }
 }
 
-#[allow(
+#[expect(
     clippy::arithmetic_side_effects,
-    reason = "four fixed lanes and 64 JPEG coefficients exactly index the output packet"
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    reason = "JPEG FDCT bounds keep all four rounded quotients and signed results in range"
 )]
 #[inline(always)]
 fn fdct_quantize_four_coefficient_major(
@@ -6100,12 +3025,24 @@ fn fdct_quantize_four_coefficient_major(
     fdct::fdct_islow_four_coefficient_major_packed(samples);
     for (coefficient, values) in samples.iter().copied().enumerate() {
         let values = values.to_array();
+        let divisor = quantizer.divisors[coefficient];
+        let reciprocal = quantizer.reciprocals[coefficient];
+        let rounding = divisor >> 1;
+        let numerators = values.map(|value| value.unsigned_abs() + rounding);
+        let products = u32x4::new(numerators)
+            .widening_mul(u32x4::splat(reciprocal))
+            .to_array();
         for lane in 0usize..4 {
-            output[coefficient * 4 + lane] = quantize_coefficient(
-                values[lane],
-                quantizer.divisors[coefficient],
-                quantizer.reciprocals[coefficient],
-            );
+            let mut quotient = (products[lane] >> 32) as u32;
+            quotient -= u32::from(quotient * divisor > numerators[lane]);
+
+            let magnitude = quotient as i32;
+            let signed = if values[lane] < 0 {
+                -magnitude
+            } else {
+                magnitude
+            };
+            output[coefficient * 4 + lane] = signed as i16;
         }
     }
 }
@@ -6115,23 +3052,6 @@ fn fdct_quantize_four_coefficient_major(
 /// Forward DCT all blocks of a component plane, then quantize with ISLOW
 /// divisors (quantval<<3) and round-to-nearest. Returns (blocks, blocks_per_row,
 /// block_rows) in natural order.
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_cancel_fdct_call(token: Option<&crate::CancellationToken>) {
-    let remaining = FORCE_FDCT_FAILURE_CALL.load(Ordering::Relaxed);
-    if remaining == usize::MAX {
-        return;
-    }
-    if remaining == 0 {
-        if let Some(token) = token {
-            token.cancel();
-        }
-        FORCE_FDCT_FAILURE_CALL.store(usize::MAX, Ordering::Relaxed);
-    } else {
-        FORCE_FDCT_FAILURE_CALL.store(remaining.saturating_sub(1), Ordering::Relaxed);
-    }
-}
-
 fn fdct_quantize(
     plane: &[u8],
     w: usize,
@@ -6139,8 +3059,6 @@ fn fdct_quantize(
     quantizer: &FdctQuantizer,
     token: Option<&crate::CancellationToken>,
 ) -> CodecResult<(Vec<[i16; 64]>, usize, usize)> {
-    #[cfg(coverage)]
-    coverage_cancel_fdct_call(token);
     if let Some(token) = token {
         let mut checkpoint = TokenFdctCheckpoint::new(token);
         fdct_quantize_with_checkpoint(plane, w, h, quantizer, &mut checkpoint)
@@ -6270,8 +3188,9 @@ fn reciprocal_divisor(divisor: u32) -> u32 {
     (numerator / u64::from(divisor)) as u32
 }
 
-/// Round one transformed coefficient exactly as libjpeg's integer quantizer,
-/// using multiply-high plus bounded correction instead of integer division.
+/// Round one transformed coefficient exactly as libjpeg's integer quantizer.
+/// The prepared reciprocal is `ceil(2^32 / divisor)`, so multiply-high can
+/// only overestimate the quotient; one branchless downward correction replaces division.
 #[allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
@@ -6285,12 +3204,7 @@ fn quantize_coefficient(value: i32, divisor: u32, reciprocal: u32) -> i16 {
     let numerator = value.unsigned_abs() + (divisor >> 1);
     let mut quotient = ((u64::from(numerator) * u64::from(reciprocal)) >> 32) as u32;
 
-    if quotient * divisor > numerator {
-        quotient -= 1;
-    }
-    if (quotient + 1) * divisor <= numerator {
-        quotient += 1;
-    }
+    quotient -= u32::from(quotient * divisor > numerator);
 
     let magnitude = quotient as i32;
     let signed = if value < 0 { -magnitude } else { magnitude };
@@ -7873,7 +4787,7 @@ struct ProgScan {
     al: u8,
 }
 
-/// Build the default progressive scan script (jpeg_simple_progression, YCbCr).
+/// Build libjpeg's default progressive script, with its YCbCr optimization.
 fn default_progression_script(ncomp: u8) -> Vec<ProgScan> {
     let mut s = Vec::new();
     // ci index: 0=Y, 1=Cb, 2=Cr
@@ -7918,13 +4832,24 @@ fn default_progression_script(ncomp: u8) -> Vec<ProgScan> {
         s.push(ac(vec![1], 1, 63, 1, 0));
         s.push(ac(vec![0], 1, 63, 1, 0));
     } else {
-        // Grayscale: 2 DC + 4 AC scans.
-        s.push(dc(vec![0]));
-        s.push(ac(vec![0], 1, 5, 0, 2));
-        s.push(ac(vec![0], 6, 63, 0, 2));
-        s.push(ac(vec![0], 1, 63, 2, 1));
-        s.push(dc_refine(vec![0], 1, 0));
-        s.push(ac(vec![0], 1, 63, 1, 0));
+        // libjpeg's all-purpose script sends an interleaved DC scan, then
+        // four successive AC passes per component. This covers grayscale and
+        // Adobe CMYK without assuming the YCbCr-specific scan ordering above.
+        let component_indices = (0..usize::from(ncomp)).collect::<Vec<_>>();
+        s.push(dc(component_indices.clone()));
+        for component in 0..usize::from(ncomp) {
+            s.push(ac(vec![component], 1, 5, 0, 2));
+        }
+        for component in 0..usize::from(ncomp) {
+            s.push(ac(vec![component], 6, 63, 0, 2));
+        }
+        for component in 0..usize::from(ncomp) {
+            s.push(ac(vec![component], 1, 63, 2, 1));
+        }
+        s.push(dc_refine(component_indices, 1, 0));
+        for component in 0..usize::from(ncomp) {
+            s.push(ac(vec![component], 1, 63, 1, 0));
+        }
     }
     s
 }
@@ -8000,7 +4925,10 @@ fn encode_progressive_scans_exact<P: EntropyOutputCheckpoint, C: ProgressiveScan
             match event {
                 ProgressiveEvent::Symbol { table, value } => {
                     // The preceding frequency pass builds every referenced table.
-                    #[allow(clippy::expect_used)]
+                    #[allow(
+                        clippy::expect_used,
+                        reason = "the frequency pass counts every symbol event first, so each referenced table is built before emission"
+                    )]
                     let table = tables[table]
                         .as_ref()
                         .expect("progressive event table has a built Huffman table");

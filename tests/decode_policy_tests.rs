@@ -11,7 +11,10 @@ use wide as _;
 
 #[path = "support/sha256.rs"]
 mod sha256;
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "This shared support module exposes parser helpers used by other manifest test suites."
+)]
 mod support;
 
 use support::json::{self, FromJson, Object, Value};
@@ -192,6 +195,7 @@ struct MetadataManifest {
     format_version: u32,
     assertion_origin: String,
     formats: Vec<MetadataFormat>,
+    error_cases: Vec<MetadataErrorCase>,
 }
 
 struct MetadataFormat {
@@ -202,6 +206,14 @@ struct MetadataFormat {
     expected_format: String,
     metadata_bytes: u64,
     metadata_origin: String,
+}
+
+struct MetadataErrorCase {
+    name: String,
+    feature: String,
+    asset_path: String,
+    asset_sha256: String,
+    expected_format: String,
 }
 
 impl FromJson for TrailingManifest {
@@ -250,6 +262,7 @@ impl FromJson for MetadataManifest {
             format_version: object.take("format_version")?,
             assertion_origin: object.take("assertion_origin")?,
             formats: object.take("formats")?,
+            error_cases: object.take_or_default("error_cases")?,
         })
     }
 }
@@ -265,6 +278,19 @@ impl FromJson for MetadataFormat {
             expected_format: object.take("expected_format")?,
             metadata_bytes: object.take("metadata_bytes")?,
             metadata_origin: object.take("metadata_origin")?,
+        })
+    }
+}
+
+impl FromJson for MetadataErrorCase {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            name: object.take("name")?,
+            feature: object.take("feature")?,
+            asset_path: object.take("asset_path")?,
+            asset_sha256: object.take("asset_sha256")?,
+            expected_format: object.take("expected_format")?,
         })
     }
 }
@@ -1254,7 +1280,10 @@ fn trailing_input_policy_manifest_matches_the_public_contract()
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The case runner keeps each manifest expectation explicit at its call site."
+)]
 fn run_metadata_case(
     operation: &str,
     bytes: &[u8],
@@ -1549,6 +1578,66 @@ fn metadata_policy_manifest_matches_the_public_contract() -> Result<(), Box<dyn 
                 assert_eq!(error.message(), None);
             }
             Ok(_) => panic!("unknown signature unexpectedly succeeded"),
+        }
+    }
+
+    for case in manifest.error_cases {
+        let enabled = match case.feature.as_str() {
+            "tiff" => cfg!(feature = "tiff"),
+            other => panic!("{}: unknown feature `{other}`", case.name),
+        };
+        if !enabled {
+            continue;
+        }
+        let expected_format = match case.expected_format.as_str() {
+            "tiff" => img::ImageFormat::Tiff,
+            other => panic!("{}: unknown expected format `{other}`", case.name),
+        };
+        let bytes = fs::read(root.join(&case.asset_path))?;
+        assert_eq!(
+            sha256::digest_hex(&bytes),
+            case.asset_sha256,
+            "{}",
+            case.name
+        );
+        let policy = img::DecodePolicy::new().with_max_metadata_bytes(0);
+
+        let results = [
+            (
+                "inspect",
+                img::inspect_with_policy(&bytes, &policy).map(|_| ()),
+            ),
+            (
+                "decode",
+                img::decode_with_policy(&bytes, &policy).map(|_| ()),
+            ),
+            (
+                "decode_sequence",
+                img::decode_sequence_with_policy(&bytes, &policy).map(|_| ()),
+            ),
+        ];
+        for (operation, result) in results {
+            match result {
+                Err(error) => {
+                    assert_eq!(
+                        error.kind(),
+                        img::ImageErrorKind::Malformed,
+                        "{} {operation}",
+                        case.name
+                    );
+                    assert_eq!(
+                        error.format(),
+                        Some(expected_format),
+                        "{} {operation}",
+                        case.name
+                    );
+                    assert!(error.message().is_some_and(|message| !message.is_empty()));
+                }
+                Ok(()) => panic!(
+                    "{} {operation}: malformed metadata scan unexpectedly succeeded",
+                    case.name
+                ),
+            }
         }
     }
 

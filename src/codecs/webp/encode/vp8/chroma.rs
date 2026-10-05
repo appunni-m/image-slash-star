@@ -166,7 +166,10 @@ pub(super) struct ChromaCandidate {
     pub(super) nonzero: u32,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Mode evaluation consumes fixed source, neighbor, diffusion, rate, and probability inputs."
+)]
 fn evaluate(
     mode: ChromaMode,
     source_u: &[u8; 64],
@@ -334,7 +337,10 @@ fn evaluate(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The mode search passes fixed block context and rate inputs directly to its candidate evaluator."
+)]
 pub(super) fn select(
     source_u: &[u8; 64],
     source_v: &[u8; 64],
@@ -357,7 +363,10 @@ pub(super) fn select(
     coefficient_probabilities: &[[[[u8; 11]; 3]; 8]; 4],
 ) -> ChromaCandidate {
     // `fixed_mode`, when present, is itself a member of this non-empty enum set.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "ChromaMode::ALL is the statically non-empty set of VP8 chroma predictions."
+    )]
     ChromaMode::ALL
         .into_iter()
         .filter(|&mode| fixed_mode.is_none_or(|fixed| fixed == mode))

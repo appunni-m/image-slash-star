@@ -1,3 +1,8 @@
+#if defined(__linux__) && !defined(_POSIX_C_SOURCE)
+/* glibc exposes the POSIX clock APIs only when requested in strict C11 mode. */
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>

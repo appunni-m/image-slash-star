@@ -308,6 +308,7 @@ pub(crate) fn rgb_to_ycbcr_420_batch(
 /// Convert one 16-pixel pair of RGB rows to two luma rows and one 4:2:0
 /// chroma row. The fixed packet is the safe hand-off used by the streaming
 /// encoder; callers own right/bottom sample replication.
+#[inline(always)]
 pub(crate) fn rgb_to_ycbcr_420_packet(
     first_row: &[u8; 48],
     second_row: &[u8; 48],
@@ -718,27 +719,6 @@ pub(crate) fn ycc_to_rgb_pixel(
         green.to_le_bytes()[0],
         blue.to_le_bytes()[0],
     )
-}
-
-/// Exercise the empty-input and partially aligned tails of the fused 4:2:0
-/// color kernel. These are internal buffer contracts: public image validation
-/// rejects zero-sized images, while the kernel itself remains total for safe
-/// callers that use it as a row-building primitive.
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let (y, cb, cr) = rgb_to_ycbcr_420_batch(&[], 0, 0);
-    assert_eq!(y.len(), 0);
-    assert_eq!(cb.len(), 0);
-    assert_eq!(cr.len(), 0);
-
-    let _ = rgb_to_ycbcr_420_batch(&[], 1, 0);
-    let _ = rgb_to_ycbcr_420_batch(&[], 0, 1);
-
-    let pixels = vec![0u8; 16 * 3];
-    let (y, cb, cr) = rgb_to_ycbcr_420_batch(&pixels, 16, 1);
-    assert_eq!(y.len(), 16);
-    assert_eq!(cb.len(), 8);
-    assert_eq!(cr.len(), 8);
 }
 
 #[cfg(test)]

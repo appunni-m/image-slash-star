@@ -390,8 +390,8 @@
       "encoded_ref_path": null,
       "encoded_ref_bytes": null,
       "encoded_ref_sha256": null,
-      "source_mode": "Rgb8",
-      "source_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
+      "source_mode": "1",
+      "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [
@@ -1065,6 +1065,46 @@
       "encoded_ref_sha256": "80bd2b95d335772654a2d86ece2bc96a32a85ea4d0dfde161e783b765d327084",
       "source_mode": "Rgb8",
       "source_sha256": "80bd2b95d335772654a2d86ece2bc96a32a85ea4d0dfde161e783b765d327084",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_wide_scanline_checkpoint",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.bmp_enc_wide_scanline_checkpoint.bin",
+      "ref_bytes": 3075,
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1025,
+        1
+      ],
+      "ref_sha256": "9d84ef421e8ac0a48c88ae2afbca0fdf913306bb86f5d5549a45b0dced74df93",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.bmp_enc_wide_scanline_checkpoint.bin",
+      "encoded_ref_bytes": 3130,
+      "encoded_ref_sha256": "2f88896959682f64f68fdc25d35ffd4b087e584f510a4b996e9ded657185d2fb",
+      "source_mode": "Rgb8",
+      "source_sha256": "2f88896959682f64f68fdc25d35ffd4b087e584f510a4b996e9ded657185d2fb",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [

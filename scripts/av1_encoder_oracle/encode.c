@@ -5,20 +5,25 @@
 #include <string.h>
 
 int main(int argc, char **argv) {
-  if (argc != 11) return 1;
+  if (argc != 15) return 1;
   const unsigned width = (unsigned)atoi(argv[3]), height = (unsigned)atoi(argv[4]);
   const unsigned depth = (unsigned)atoi(argv[5]);
   const int format = atoi(argv[6]), alpha = atoi(argv[7]);
+  const int full_range = atoi(argv[11]);
+  const int color_primaries = atoi(argv[12]);
+  const int transfer_characteristics = atoi(argv[13]);
+  const int matrix_coefficients = atoi(argv[14]);
   if (!width || !height || width > 128 || height > 64 ||
-      (depth != 8 && depth != 10 && depth != 12) || format < 1 || format > 4)
+      (depth != 8 && depth != 10 && depth != 12) || format < 1 || format > 4 ||
+      (full_range != 0 && full_range != 1))
     return 2;
   avifImage *image = avifImageCreate(width, height, depth, (avifPixelFormat)format);
   avifEncoder *encoder = avifEncoderCreate();
   if (!image || !encoder) return 3;
-  image->yuvRange = AVIF_RANGE_FULL;
-  image->colorPrimaries = AVIF_COLOR_PRIMARIES_BT709;
-  image->transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_SRGB;
-  image->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT601;
+  image->yuvRange = full_range ? AVIF_RANGE_FULL : AVIF_RANGE_LIMITED;
+  image->colorPrimaries = (avifColorPrimaries)color_primaries;
+  image->transferCharacteristics = (avifTransferCharacteristics)transfer_characteristics;
+  image->matrixCoefficients = (avifMatrixCoefficients)matrix_coefficients;
   if (avifImageAllocatePlanes(image, alpha ? AVIF_PLANES_ALL : AVIF_PLANES_YUV)) return 4;
   FILE *input = fopen(argv[1], "rb");
   if (!input) return 5;

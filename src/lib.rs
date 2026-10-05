@@ -1,4 +1,4 @@
-#![cfg_attr(coverage, feature(coverage_attribute))]
+#![cfg_attr(not(test), deny(clippy::panic))]
 
 //! Byte-oriented, dependency-constrained image codecs.
 //!
@@ -90,6 +90,9 @@ pub mod capabilities;
 mod codecs;
 #[cfg(coverage)]
 mod coverage_support;
+#[cfg(coverage)]
+#[doc(hidden)]
+pub use coverage_support::CoverageFaultPoint;
 pub mod decode_policy;
 mod diagnostic;
 pub mod encode_options;
@@ -109,6 +112,19 @@ pub use encode_options::*;
 pub use encode_policy::EncodePolicy;
 pub use source::{EncodedImage, EncodedImageDecodeState, EncodedImageView};
 pub use types::*;
+
+/// Run a closure with a deterministic target fault armed for a coverage case.
+///
+/// The fault is thread-local, consumed at most once, and cleared when the
+/// closure returns or unwinds. This hook is absent from non-coverage builds.
+#[cfg(coverage)]
+#[doc(hidden)]
+pub fn __coverage_with_fault_point<T>(
+    point: CoverageFaultPoint,
+    operation: impl FnOnce() -> T,
+) -> T {
+    coverage_support::with_fault_point(point, operation)
+}
 
 fn work_budget_token(
     maximum: Option<u64>,
@@ -1174,6 +1190,12 @@ pub fn encode_with_token(
 /// codec boundary, so a cancelled operation never returns an oversized result.
 /// A configured work budget is layered over the caller token and reports a
 /// typed limit error separately from caller cancellation.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_with_policy`], plus
+/// [`ImageError::Cancelled`] when the caller's token is cancelled at an
+/// implemented checkpoint.
 pub fn encode_with_token_and_policy(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1265,6 +1287,12 @@ pub fn encode_sequence_with_token(
 /// [`encode_sequence_with_token`] with an explicit output-result policy.
 /// A configured work budget is layered over the caller token and reports a
 /// typed limit error separately from caller cancellation.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_sequence_with_policy`], plus
+/// [`ImageError::Cancelled`] when the caller's token is cancelled at an
+/// implemented checkpoint.
 pub fn encode_sequence_with_token_and_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1310,7 +1338,11 @@ pub trait OutputSink {
     /// with existing implementations. A buffered or externally owned sink can
     /// override this hook to surface its finalization error. A checkpointed
     /// sink is rolled back when finalization fails.
-    #[cfg_attr(coverage, coverage(off))]
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when finalization fails. The default
+    /// implementation always succeeds.
     fn flush(&mut self) -> ImageResult<()> {
         Ok(())
     }
@@ -1333,6 +1365,11 @@ pub trait OutputSink {
     /// the caller can no longer rely on the sink's output state. The default
     /// rejects rollback so a sink cannot accidentally claim atomic delivery
     /// by implementing [`OutputSink::checkpoint`] alone.
+    ///
+    /// # Errors
+    ///
+    /// Returns a structured error when the checkpoint cannot be restored. The
+    /// default implementation always returns an error.
     fn rollback(&mut self, _checkpoint: usize) -> ImageResult<()> {
         Err(ImageError::parameter(
             "output sink does not implement rollback",
@@ -1580,6 +1617,13 @@ fn encode_to_sink_with_policy_unchecked(
 /// caller-owned sink. Structural writers may stop after an already-written
 /// prefix when the token fires between writes or immediately after the final
 /// segment, before sink finalization.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode`], plus [`ImageError::Cancelled`] when
+/// the token is cancelled at an implemented checkpoint, or
+/// [`ImageError::OutputWrite`] when writing, finalizing, or rolling back the
+/// sink fails.
 pub fn encode_to_sink_with_token(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1594,6 +1638,13 @@ pub fn encode_to_sink_with_token(
 /// policy before delivering the admitted result to a caller-owned sink.
 /// A configured work budget is layered over the caller token and reports a
 /// typed limit error separately from caller cancellation.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_with_policy`], plus
+/// [`ImageError::Cancelled`] when the token is cancelled at an implemented
+/// checkpoint, or [`ImageError::OutputWrite`] when writing, finalizing, or
+/// rolling back the sink fails.
 pub fn encode_to_sink_with_token_and_policy(
     img: &DecodedImage,
     format: ImageFormat,
@@ -1845,6 +1896,13 @@ fn encode_sequence_to_sink_with_policy_unchecked(
 /// deliver it to a caller-owned sink. Structural writers may stop after an
 /// already-written prefix when the token fires between writes or immediately
 /// after the final segment, before sink finalization.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_sequence`], plus
+/// [`ImageError::Cancelled`] when the token is cancelled at an implemented
+/// checkpoint, or [`ImageError::OutputWrite`] when writing, finalizing, or
+/// rolling back the sink fails.
 pub fn encode_sequence_to_sink_with_token(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -1866,6 +1924,13 @@ pub fn encode_sequence_to_sink_with_token(
 /// output-result policy before delivering the admitted result to a sink.
 /// A configured work budget is layered over the caller token and reports a
 /// typed limit error separately from caller cancellation.
+///
+/// # Errors
+///
+/// Returns the same errors as [`encode_sequence_with_policy`], plus
+/// [`ImageError::Cancelled`] when the token is cancelled at an implemented
+/// checkpoint, or [`ImageError::OutputWrite`] when writing, finalizing, or
+/// rolling back the sink fails.
 pub fn encode_sequence_to_sink_with_token_and_policy(
     sequence: &DecodedSequence,
     format: ImageFormat,
@@ -2007,8 +2072,8 @@ fn rollback_sink_on_error<T>(
     }
 }
 
-/// Write complete encoded bytes through a trait object so the sink error path
-/// has exactly one non-generic coverage instantiation.
+/// Write complete encoded bytes through the trait object used by codec
+/// dispatchers without a structural sink writer.
 #[cfg(all(
     feature = "jpeg",
     feature = "png",
@@ -2020,25 +2085,21 @@ fn rollback_sink_on_error<T>(
     feature = "avif",
     not(target_arch = "wasm32")
 ))]
-#[cfg_attr(coverage, coverage(off))]
 fn missing_structural_writer() -> usize {
     unreachable!("all enabled native codecs provide a structural sink writer")
 }
 
-#[cfg(any(
-    coverage,
-    not(all(
-        feature = "jpeg",
-        feature = "png",
-        feature = "gif",
-        feature = "bmp",
-        feature = "tiff",
-        feature = "webp",
-        feature = "ico",
-        feature = "avif",
-        not(target_arch = "wasm32")
-    ))
-))]
+#[cfg(not(all(
+    feature = "jpeg",
+    feature = "png",
+    feature = "gif",
+    feature = "bmp",
+    feature = "tiff",
+    feature = "webp",
+    feature = "ico",
+    feature = "avif",
+    not(target_arch = "wasm32")
+)))]
 fn write_sink_all(
     sink: &mut dyn OutputSink,
     bytes: &[u8],
@@ -2336,150 +2397,4 @@ pub fn __coverage_av1_reconstruction(data: &[u8]) -> ImageResult<Option<Av1Recon
 #[doc(hidden)]
 pub fn __coverage_sweep_av1_first_leaf(data: &[u8]) {
     codecs::__coverage_sweep_av1_first_leaf(data);
-}
-
-#[cfg(coverage)]
-#[doc(hidden)]
-pub fn __coverage_exercise_private_branches() {
-    let _ = decode_sequence(b"not an image");
-    let image = DecodedImage::new(1, 1, vec![0], ColorType::L8);
-    let _ = encode_default(&image, ImageFormat::Png);
-
-    // Exercise the explicit encoded-input policy gate on both source forms.
-    // The source bytes are valid so construction succeeds; the zero-byte
-    // limit then returns before sequence decoding, which is the error edge
-    // owned by each source method.
-    let invalid = DecodedImage::new(1, 1, Vec::new(), ColorType::L8);
-    for candidate in [&image, &invalid] {
-        if let Ok(encoded) = encode_default(candidate, ImageFormat::Png) {
-            let limited = DecodePolicy::default().with_max_encoded_bytes(0);
-            for bytes in [&encoded[..], b"not an image".as_slice()] {
-                if let Ok(view) = EncodedImageView::new(bytes) {
-                    let _ = view.decode_sequence_with_policy(&limited);
-                }
-            }
-            for bytes in [encoded.clone(), b"not an image".to_vec()] {
-                if let Ok(source) = EncodedImage::new(bytes) {
-                    let _ = source.decode_sequence_with_policy(&limited);
-                }
-            }
-        }
-    }
-
-    // `try_with_mode` deliberately validates caller-provided bytes instead
-    // of inheriting the unchecked constructor's compatibility behavior.
-    let _ = DecodedImage::try_with_mode(1, 1, Vec::new(), ImageMode::L8);
-
-    fn detector_with_non_signature_error(_: &[u8]) -> ImageResult<ImageFormat> {
-        Err(ImageError::Cancelled {
-            format: None,
-            stage: None,
-        })
-    }
-    let _ = validate_explicit_format_with_detector(
-        b"coverage",
-        ImageFormat::Png,
-        detector_with_non_signature_error,
-    );
-
-    // Exercise the caller-owned sink boundary directly.  The codec dispatch
-    // hook covers format-specific structural writers; these calls cover the
-    // common admission, write, cancellation, and finalization decisions that
-    // sit around every writer.
-    struct RejectingSink;
-    impl OutputSink for RejectingSink {
-        fn write_all(&mut self, _bytes: &[u8]) -> ImageResult<()> {
-            Err(ImageError::parameter("coverage sink rejected write"))
-        }
-    }
-
-    struct FlushRejectingSink;
-    impl OutputSink for FlushRejectingSink {
-        fn write_all(&mut self, _bytes: &[u8]) -> ImageResult<()> {
-            Ok(())
-        }
-
-        fn flush(&mut self) -> ImageResult<()> {
-            Err(ImageError::parameter("coverage sink rejected flush"))
-        }
-    }
-
-    let sink_options = EncodeOptions::for_format(ImageFormat::Png);
-    let mut still_sink = Vec::new();
-    let _ = encode_to_sink_with_policy_impl(
-        &image,
-        ImageFormat::Png,
-        &sink_options,
-        &EncodePolicy::default(),
-        &mut still_sink,
-    );
-    let token = CancellationToken::new();
-    let mut token_sink = Vec::new();
-    let _ = encode_to_sink_with_token_and_policy_impl(
-        &image,
-        ImageFormat::Png,
-        &sink_options,
-        &EncodePolicy::default(),
-        &token,
-        &mut token_sink,
-    );
-    let sequence = DecodedSequence::from_image(image.clone());
-    let mut sequence_sink = Vec::new();
-    let _ = encode_sequence_to_sink_with_policy_impl(
-        &sequence,
-        ImageFormat::Png,
-        &sink_options,
-        &EncodePolicy::default(),
-        &mut sequence_sink,
-    );
-    let mut sequence_token_sink = Vec::new();
-    let _ = encode_sequence_to_sink_with_token_and_policy_impl(
-        &sequence,
-        ImageFormat::Png,
-        &sink_options,
-        &EncodePolicy::default(),
-        &token,
-        &mut sequence_token_sink,
-    );
-    let mut rejecting_sink = RejectingSink;
-    let _ = write_sink_all(
-        &mut rejecting_sink,
-        b"coverage",
-        ImageFormat::Png,
-        ImageErrorStage::StillEncode,
-        None,
-    );
-    let mut flush_rejecting_sink = FlushRejectingSink;
-    let _ = write_sink_all(
-        &mut flush_rejecting_sink,
-        b"coverage",
-        ImageFormat::Png,
-        ImageErrorStage::StillEncode,
-        None,
-    );
-    let cancelled = CancellationToken::new();
-    cancelled.cancel();
-    let mut cancelled_sink = Vec::new();
-    let _ = finish_sink(
-        &mut cancelled_sink,
-        ImageFormat::Png,
-        ImageErrorStage::StillEncode,
-        8,
-        Some(&cancelled),
-    );
-
-    let fresh = CancellationToken::new();
-    assert!(!fresh.is_cancelled());
-    let countdown = CancellationToken::new();
-    countdown.cancel_after(2);
-    assert!(!countdown.is_cancelled());
-    assert!(!countdown.is_cancelled());
-    assert!(countdown.is_cancelled());
-    let cancelled = CancellationToken::new();
-    cancelled.cancel();
-    assert!(cancelled.is_cancelled());
-    capabilities::__coverage_exercise_private_branches();
-    codecs::__coverage_exercise_private_branches();
-    decode_policy::__coverage_exercise_private_branches();
-    types::__coverage_exercise_private_branches();
 }

@@ -9,7 +9,11 @@
 // products and shifts. These two lint exceptions document that arithmetic
 // contract locally; they do not permit pointer operations or unchecked memory
 // access anywhere in the transform module.
-#![allow(clippy::arithmetic_side_effects, clippy::precedence)]
+#![allow(
+    clippy::arithmetic_side_effects,
+    clippy::precedence,
+    reason = "The integer butterflies preserve AV1's fixed-width wrapping arithmetic and normative expression grouping."
+)]
 
 use super::sample_depth::SampleDepth;
 
@@ -3044,7 +3048,7 @@ pub(super) fn inverse_adst_adst8x8(coefficients: &[i32; 64]) -> [i32; 64] {
     output
 }
 
-#[cfg(any(test, coverage))]
+#[cfg(test)]
 fn assert_sparse<const N: usize>(actual: [i32; N], expected: &[(usize, i32)]) {
     let mut expected_output = [0_i32; N];
     for &(index, value) in expected {
@@ -3055,7 +3059,7 @@ fn assert_sparse<const N: usize>(actual: [i32; N], expected: &[(usize, i32)]) {
     assert_eq!(actual, expected_output);
 }
 
-#[cfg(any(test, coverage))]
+#[cfg(test)]
 fn assert_i16_bounded<const N: usize>(output: [i32; N]) {
     assert!(
         output
@@ -3064,11 +3068,9 @@ fn assert_i16_bounded<const N: usize>(output: [i32; N]) {
     );
 }
 
-#[cfg(any(test, coverage))]
-#[cfg_attr(coverage, coverage(off))]
+#[cfg(test)]
 fn assert_rectangular_wrapper_conformance() {
-    // These checks are shared by the normal unit suite and the managed
-    // integration coverage hook. The expected values are checked-in output
+    // The expected values are checked-in output
     // from dav1d 1.5.3's scalar inv_txfm_add_c path (BITDEPTH=8,
     // HAVE_ASM=0), with the neutral destination bias removed.
     assert_eq!(inverse_identity16x8(&[0; 128]), [0; 128]);
@@ -3201,12 +3203,6 @@ fn assert_rectangular_wrapper_conformance() {
     assert_i16_bounded(inverse_dct_identity16x4(&[i32::MAX; 64]));
     assert_i16_bounded(inverse_adst_adst16x4(&[i32::MAX; 64]));
     assert_i16_bounded(inverse_adst_dct16x16(&[i32::MAX; 256]));
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(super) fn __coverage_exercise_private_branches() {
-    assert_rectangular_wrapper_conformance();
 }
 
 #[cfg(test)]

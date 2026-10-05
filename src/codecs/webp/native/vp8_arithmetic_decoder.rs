@@ -22,7 +22,8 @@
 #![allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "VP8 arithmetic-coder state bounds shifts and subtractions while packed lookahead follows the bitstream format"
 )]
 
 use super::decoder::DecodingError;
@@ -103,7 +104,10 @@ impl ArithmeticDecoder {
     }
 
     // A non-multiple-of-four length is created with one padded final chunk.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "a partial input length is padded into one final four-byte chunk before initialization"
+    )]
     pub(crate) fn init(&mut self, mut buf: Vec<[u8; 4]>, len: usize) {
         let mut final_bytes = [0; 3];
         let final_bytes_remaining = if len == 4 * buf.len() {
@@ -327,7 +331,7 @@ impl ArithmeticDecoder {
         // lowest byte of `self.state.range` which is a `u32`.
         let shift = self.state.range.leading_zeros().saturating_sub(24);
         self.state.range <<= shift;
-        self.state.bit_count -= shift as i32;
+        self.state.bit_count -= shift.cast_signed();
         debug_assert!(self.state.range >= 128);
 
         BitResult::ok(retval)
@@ -390,7 +394,7 @@ impl ArithmeticDecoder {
             if new_index < tree.len() {
                 index = new_index;
             } else {
-                let value = (t & 0x7f) as i8;
+                let value = (t & 0x7f).cast_signed();
                 return self.keep_accumulating(res, value);
             }
         }
@@ -489,7 +493,7 @@ impl FastDecoder<'_> {
         // lowest byte of `range` which is a `u32`.
         let shift = range.leading_zeros().saturating_sub(24);
         range <<= shift;
-        bit_count -= shift as i32;
+        bit_count -= shift.cast_signed();
         debug_assert!(range >= 128);
 
         self.uncommitted_state = State {
@@ -545,7 +549,7 @@ impl FastDecoder<'_> {
         // lowest byte of `range` which is a `u32`.
         let shift = range.leading_zeros().saturating_sub(24);
         range <<= shift;
-        bit_count -= shift as i32;
+        bit_count -= shift.cast_signed();
         debug_assert!(range >= 128);
 
         self.uncommitted_state = State {
@@ -572,7 +576,7 @@ impl FastDecoder<'_> {
             let b = self.fast_read_bit(prob);
             let i = if b { node.right } else { node.left };
             let Some(next_node) = tree.get(usize::from(i)) else {
-                return (i & 0x7f) as i8;
+                return (i & 0x7f).cast_signed();
             };
             node = *next_node;
         }

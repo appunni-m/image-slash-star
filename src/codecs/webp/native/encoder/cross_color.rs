@@ -26,7 +26,8 @@
 #![allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "signed-byte transform semantics, bounded multipliers, and validated tile geometry define this reference arithmetic"
 )]
 
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
@@ -71,25 +72,25 @@ struct Multipliers {
 
 #[inline]
 fn signed_byte(value: u32) -> i8 {
-    value as u8 as i8
+    (value as u8).cast_signed()
 }
 
 #[inline]
 fn color_delta(multiplier: u8, color: i8) -> i32 {
-    (i32::from(multiplier as i8) * i32::from(color)) >> 5
+    (i32::from(multiplier.cast_signed()) * i32::from(color)) >> 5
 }
 
 #[inline]
 fn transformed_red(multiplier: i32, argb: u32) -> u8 {
     let green = signed_byte(argb >> 8);
-    ((argb >> 16) as i32 - color_delta(multiplier as u8, green)) as u8
+    ((argb >> 16).cast_signed() - color_delta(multiplier as u8, green)) as u8
 }
 
 #[inline]
 fn transformed_blue(green_multiplier: i32, red_multiplier: i32, argb: u32) -> u8 {
     let green = signed_byte(argb >> 8);
     let red = signed_byte(argb >> 16);
-    ((argb & 0xff) as i32
+    ((argb & 0xff).cast_signed()
         - color_delta(green_multiplier as u8, green)
         - color_delta(red_multiplier as u8, red)) as u8
 }
@@ -126,180 +127,21 @@ fn div_round(value: i64, divisor: i64) -> i64 {
     }
 }
 
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    assert_eq!(div_round(-3, 2), -2);
-    let pixels = [0xff00_0000, 0xff11_2233, 0xff22_4466, 0xff33_6699];
-    let accumulated = [0_u32; 256];
-    let _ = best_blue_multipliers(
-        &pixels,
-        2,
-        2,
-        2,
-        Multipliers::default(),
-        Multipliers::default(),
-        10,
-        &accumulated,
-        None,
-    );
-    let _ = best_blue_multipliers(
-        &pixels,
-        2,
-        2,
-        2,
-        Multipliers::default(),
-        Multipliers::default(),
-        40,
-        &accumulated,
-        None,
-    );
-    let mut sampling = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
-    let _ = optimize_sampling(&mut sampling, 4, 4, 0, None);
-
-    for checks in 0..=24 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = best_green_to_red(
-            &pixels,
-            2,
-            2,
-            2,
-            Multipliers::default(),
-            Multipliers::default(),
-            40,
-            &accumulated,
-            Some(&token),
-        );
-    }
-    for checks in 0..=96 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = best_blue_multipliers(
-            &pixels,
-            2,
-            2,
-            2,
-            Multipliers::default(),
-            Multipliers::default(),
-            40,
-            &accumulated,
-            Some(&token),
-        );
-    }
-
-    let mut transform = [0xff11_2233; 16 * 16];
-    for checks in 0..=24 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = transform_tile(
-            &mut transform,
-            16,
-            16,
-            16,
-            Multipliers::default(),
-            Some(&token),
-        );
-    }
-    let equal_sampling = [0xff11_2233; 4 * 4];
-    for checks in 0..=8 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut sample = equal_sampling;
-        let _ = optimize_sampling(&mut sample, 4, 4, 0, Some(&token));
-    }
-    let mut unequal_sampling = [0_u32; 4 * 4];
-    unequal_sampling[4..8].fill(1);
-    let sampling_token = crate::CancellationToken::new();
-    let _ = optimize_sampling(&mut unequal_sampling, 4, 4, 0, Some(&sampling_token));
-    let mut copy_sampling = [0xff11_2233; 16 * 16];
-    let copy_token = crate::CancellationToken::new();
-    let _ = optimize_sampling(&mut copy_sampling, 16, 16, 0, Some(&copy_token));
-
-    // Rows are equal, but each two-column block is not; the optimizer must
-    // retain one sampling level and enter the token-aware copy loop. Sweep
-    // the preceding checkpoints so the copy-loop cancellation edge is
-    // observable without manufacturing private transform state.
-    for checks in 0..=128 {
-        let mut sampling_copy = [0_u32; 16 * 16];
-        for y in 0..16 {
-            for x in 0..16 {
-                sampling_copy[y * 16 + x] = (x / 2) as u32;
-            }
-        }
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = optimize_sampling(&mut sampling_copy, 16, 16, 0, Some(&token));
-    }
-
-    for checks in 0..=512 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut selected = pixels;
-        let mut scratch = CrossColorScratch::default();
-        let _ = select_and_apply(&mut selected, 2, 2, 0, 40, &mut scratch, Some(&token));
-    }
-
-    let cross_probe_token = crate::CancellationToken::new();
-    cross_probe_token.cancel_after(usize::MAX);
-    let mut cross_probe = vec![0xff11_2233; 32 * 64];
-    let _ = optimize_sampling(&mut cross_probe, 32, 64, 0, Some(&cross_probe_token));
-    for checks in 0..=2 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut rows = vec![0xff11_2233; 32 * 64];
-        let _ = optimize_sampling(&mut rows, 32, 64, 0, Some(&token));
-    }
-
-    // Keep the sampling scan small while still reaching both late
-    // checkpoint families: paired columns make the row comparison fail at
-    // the first useful level, then leave a 2-column copy with 2,048 samples.
-    let column_probe = (0..4_096).map(|x| (x / 2) as u32).collect::<Vec<_>>();
-    let measure_token = crate::CancellationToken::new();
-    measure_token.cancel_after(usize::MAX);
-    let mut measure_image = column_probe.clone();
-    let _ = optimize_sampling(&mut measure_image, 4_096, 1, 0, Some(&measure_token));
-    let sampling_calls = usize::MAX.saturating_sub(
-        measure_token
-            .coverage_remaining_checks()
-            .unwrap_or(usize::MAX),
-    );
-    for checks in [
-        sampling_calls.saturating_sub(5),
-        sampling_calls.saturating_sub(2),
-    ] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut sampling = column_probe.clone();
-        let _ = optimize_sampling(&mut sampling, 4_096, 1, 0, Some(&token));
-    }
-    let mut no_token_sampling = vec![0xff11_2233; 16 * 16];
-    let _ = optimize_sampling(&mut no_token_sampling, 16, 16, 0, None);
-    let _ = transform_tile(
-        &mut cross_probe,
-        32,
-        32,
-        64,
-        Multipliers::default(),
-        Some(&cross_probe_token),
-    );
-}
-
 pub(super) fn prediction_bias(counts: &[u32; 256], zero_weight: u64, mut exponential: u64) -> i64 {
     let mut bits = (zero_weight * u64::from(counts[0])) << 23;
     exponential <<= 23;
     for index in 1..16 {
         bits += div_round(
-            (exponential * u64::from(counts[index] + counts[256 - index])) as i64,
+            (exponential * u64::from(counts[index] + counts[256 - index])).cast_signed(),
             100,
         ) as u64;
-        exponential = div_round((6 * exponential) as i64, 10) as u64;
+        exponential = div_round((6 * exponential).cast_signed(), 10) as u64;
     }
-    -div_round(bits as i64, 10)
+    -div_round(bits.cast_signed(), 10)
 }
 
 fn prediction_cost(counts: &[u32; 256], accumulated: &[u32; 256]) -> i64 {
-    combined_shannon_entropy(counts, accumulated) as i64 + prediction_bias(counts, 3, 240)
+    combined_shannon_entropy(counts, accumulated).cast_signed() + prediction_bias(counts, 3, 240)
 }
 
 fn collect_red(
@@ -343,7 +185,10 @@ fn collect_blue(
     Ok(histogram)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "red candidate cost needs tile geometry, neighboring multipliers, the candidate, and accumulated histogram explicitly"
+)]
 fn red_cost(
     argb: &[u32],
     stride: usize,
@@ -370,7 +215,10 @@ fn red_cost(
     Ok(cost)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the green-to-red search passes geometry, neighbor predictors, quality, and histogram state to each candidate evaluation"
+)]
 fn best_green_to_red(
     argb: &[u32],
     stride: usize,
@@ -420,7 +268,10 @@ fn best_green_to_red(
     Ok(best as u8)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "blue candidate cost uses both candidate multipliers and both neighbor predictors for the reference bias calculation"
+)]
 fn blue_cost(
     argb: &[u32],
     stride: usize,
@@ -466,7 +317,10 @@ fn blue_cost(
     Ok(cost)
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the blue search needs tile geometry, both neighbor predictors, quality, and accumulated histogram for each candidate"
+)]
 fn best_blue_multipliers(
     argb: &[u32],
     stride: usize,
@@ -557,7 +411,7 @@ fn transform_tile(
             let green = signed_byte(source >> 8);
             let red = signed_byte(source >> 16);
             let new_red = (i32::from(red) & 0xff) - color_delta(multipliers.green_to_red, green);
-            let new_blue = (source & 0xff) as i32
+            let new_blue = (source & 0xff).cast_signed()
                 - color_delta(multipliers.green_to_blue, green)
                 - color_delta(multipliers.red_to_blue, red);
             *pixel =
@@ -682,7 +536,10 @@ pub(super) fn optimize_sampling(
 }
 
 /// Selects and applies libwebp's cross-color transform.
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "retain the complete VP8L cross-color selector for transform profiles that enable this stage"
+)]
 pub(super) fn select_and_apply(
     argb: &mut [u32],
     width: usize,

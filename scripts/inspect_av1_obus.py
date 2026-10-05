@@ -1345,6 +1345,7 @@ def parse_frame_header(
     )
     header["reduced_transform_set"] = bool(bits.bit())
     header["global_motion"] = read_global_motion(bits, header, references)
+    header["film_grain_start_bit"] = bits.position
     header["film_grain"] = read_film_grain(
         bits, sequence, header, references
     )

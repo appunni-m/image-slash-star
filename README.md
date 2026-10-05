@@ -63,7 +63,7 @@ encoding requires an explicit output format. Continue with [API usage](docs/USAG
 | `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp` | Yes | Selected decoding, encoding, and metadata operations |
 | `ico` | Yes | ICO/CUR; also enables PNG and BMP |
 | `avif` | No | Partial still-image decoder and container inspection; no supported encoder |
-| `jpeg-wide-color` | No | Optional SIMD JPEG color conversion |
+| `jpeg-wide-color` | No | Compatibility alias that enables `jpeg`; safe color kernels are part of the JPEG implementation |
 
 Disable unused formats with `default-features = false` and an explicit Cargo
 `features` list. See [supported formats and limitations](docs/MATURITY.md).

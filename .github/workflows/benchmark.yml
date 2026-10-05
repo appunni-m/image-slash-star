@@ -7,6 +7,11 @@ on:
       - 'benchmarks/jpeg-production/**'
       - 'scripts/setup_benchmark_oracle.py'
       - 'scripts/docs_evidence.py'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'Makefile'
+      - 'rust-toolchain.toml'
+      - 'src/**'
   workflow_dispatch:
   schedule:
     - cron: '59 3 * * 1'
@@ -46,3 +51,72 @@ jobs:
           name: benchmark-${{ github.run_id }}
           path: target/benchmarks/jpeg/
           if-no-files-found: error
+
+  x86-simd:
+    name: Paired x86 SSE2 and AVX2 measurements
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12.10'
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal
+      - name: Install the pinned SIMD benchmark oracle
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes cmake nasm
+          make bench-setup PYTHON=python3
+      - name: Measure the x86-64 SSE2 baseline
+        env:
+          RUSTFLAGS: -C target-cpu=x86-64
+        run: >-
+          make bench PYTHON=python3 BENCH_ROUNDS=5
+          BENCH_TARGET_DIR=target/jpeg-simd-x86_64-sse2
+          BENCH_OUTPUT=target/benchmarks/jpeg/simd-x86_64/sse2
+          TURBOJPEG_PREFIX=target/benchmark-oracle/3.2.0/install
+      - name: Measure AVX2 on the same host
+        env:
+          RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=+avx2
+        run: |
+          if ! grep -qw avx2 /proc/cpuinfo; then
+            echo "AVX2 is required for this runtime benchmark lane" >&2
+            exit 1
+          fi
+          make bench PYTHON=python3 BENCH_ROUNDS=5 \
+            BENCH_TARGET_DIR=target/jpeg-simd-x86_64-avx2 \
+            BENCH_OUTPUT=target/benchmarks/jpeg/simd-x86_64/avx2 \
+            TURBOJPEG_PREFIX=target/benchmark-oracle/3.2.0/install
+      - name: Confirm both builds produce identical public outputs
+        run: |
+          python3 - <<'PY'
+          import csv
+          from pathlib import Path
+
+          root = Path("target/benchmarks/jpeg/simd-x86_64")
+          fields = ("operation", "case", "rust_output_bytes", "rust_output_fnv1a", "input_fnv1a")
+          summaries = {}
+          for variant in ("sse2", "avx2"):
+              with (root / variant / "summary.csv").open(newline="", encoding="utf-8") as stream:
+                  summaries[variant] = {
+                      (row["operation"], row["case"]): tuple(row[field] for field in fields[2:])
+                      for row in csv.DictReader(stream)
+                  }
+          if summaries["sse2"] != summaries["avx2"]:
+              keys = sorted(set(summaries["sse2"]) | set(summaries["avx2"]))
+              mismatches = [key for key in keys if summaries["sse2"].get(key) != summaries["avx2"].get(key)]
+              raise SystemExit(f"SSE2/AVX2 public output mismatch: {mismatches}")
+          if len(summaries["sse2"]) != 40:
+              raise SystemExit(f"expected 40 encode/decode workloads, found {len(summaries['sse2'])}")
+          print("SSE2 and AVX2 output hashes and byte lengths match for all 40 workloads")
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: x86-simd-benchmarks-${{ github.run_id }}
+          path: target/benchmarks/jpeg/simd-x86_64/
+          if-no-files-found: error
+          retention-days: 90

@@ -32,7 +32,8 @@
 #![allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "RFC 6386 coefficient, probability, and frame-geometry bounds define the decoder arithmetic and narrowing"
 )]
 
 use super::byteorder_lite::{LittleEndian, ReadBytesExt};
@@ -1066,7 +1067,11 @@ impl<R: Read> Vp8Decoder<R> {
     }
 
     // The complete-partition size check makes the slice reader infallible.
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "the checked partition table fits its complete three-byte entries before slice decoding"
+    )]
     fn init_partitions(&mut self, n: usize) -> Result<(), DecodingError> {
         if n > 1 {
             // The two-bit partition count in the frame header limits `n` to
@@ -1366,7 +1371,10 @@ impl<R: Read> Vp8Decoder<R> {
     }
 
     // Residual storage is laid out as exact 16-coefficient blocks.
-    #[allow(clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_used,
+        reason = "the residual layout contains an exact sixteen-coefficient block for every luma subblock"
+    )]
     fn intra_predict_luma(&mut self, mbx: usize, mby: usize, mb: &MacroBlock, resdata: &[i32]) {
         let stride = 1usize + 16 + 4;
         let mw = self.mbwidth as usize;
@@ -1418,7 +1426,10 @@ impl<R: Read> Vp8Decoder<R> {
     }
 
     // Residual storage is laid out as exact 16-coefficient blocks.
-    #[allow(clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_used,
+        reason = "the residual layout contains exact sixteen-coefficient blocks for all chroma subblocks"
+    )]
     fn intra_predict_chroma(&mut self, mbx: usize, mby: usize, mb: &MacroBlock, resdata: &[i32]) {
         let stride = 1usize + 8;
 
@@ -1539,7 +1550,7 @@ impl<R: Read> Vp8Decoder<R> {
                 }
 
                 literal @ DCT_1..=DCT_4 => i16::from(literal),
-                c => panic!("unknown token: {c}"),
+                _ => return Err(DecodingError::BitStreamError),
             });
 
             skip = false;
@@ -1562,7 +1573,11 @@ impl<R: Read> Vp8Decoder<R> {
     }
 
     // Each iterator chunk is created with `chunks_exact_mut(16)`.
-    #[allow(clippy::unwrap_in_result, clippy::unwrap_used)]
+    #[allow(
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "fixed residual storage is divided into exact sixteen-coefficient blocks while bitstream errors remain propagated"
+    )]
     fn read_residual_data(
         &mut self,
         mb: &mut MacroBlock,
@@ -1998,591 +2013,6 @@ impl LumaMode {
     }
 }
 
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    struct ErrorReader;
-
-    impl std::io::Read for ErrorReader {
-        fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
-            Err(std::io::Error::from(std::io::ErrorKind::Other))
-        }
-    }
-
-    struct InterruptedReader {
-        interrupted: bool,
-    }
-
-    impl std::io::Read for InterruptedReader {
-        fn read(&mut self, _buf: &mut [u8]) -> std::io::Result<usize> {
-            if self.interrupted {
-                Ok(0)
-            } else {
-                self.interrupted = true;
-                Err(std::io::Error::from(std::io::ErrorKind::Interrupted))
-            }
-        }
-    }
-
-    macro_rules! with_take_decoder {
-        ($bytes:expr, |$decoder:ident| $body:block) => {{
-            let bytes: &[u8] = $bytes.as_ref();
-            let mut cursor = std::io::Cursor::new(bytes);
-            let mut $decoder = Vp8Decoder::new(cursor.by_ref().take(bytes.len() as u64));
-            $body
-        }};
-    }
-
-    macro_rules! with_cursor_decoder {
-        ($bytes:expr, |$decoder:ident| $body:block) => {{
-            let data = $bytes;
-            let bytes: &[u8] = data.as_ref();
-            let mut $decoder = Vp8Decoder::new(std::io::Cursor::new(bytes));
-            $body
-        }};
-    }
-
-    macro_rules! exercise_init_partitions {
-        ($bytes:expr, $partitions:expr) => {{
-            with_cursor_decoder!($bytes, |decoder| {
-                let _ = decoder.init_partitions($partitions);
-            });
-        }};
-    }
-
-    macro_rules! exercise_frame_header {
-        ($bytes:expr) => {{
-            with_cursor_decoder!($bytes, |decoder| {
-                let _ = decoder.read_frame_header();
-            });
-        }};
-    }
-
-    fn keyframe_with_first_partition(first_partition: &[u8], tail: &[u8]) -> Vec<u8> {
-        let first_partition_size = first_partition.len() as u32;
-        let tag = (first_partition_size << 5).to_le_bytes();
-
-        let mut keyframe = Vec::with_capacity(10 + first_partition.len() + tail.len());
-        keyframe.extend_from_slice(&tag[..3]);
-        keyframe.extend_from_slice(&[0x9d, 0x01, 0x2a, 16, 0, 16, 0]);
-        keyframe.extend_from_slice(first_partition);
-        keyframe.extend_from_slice(tail);
-        keyframe
-    }
-
-    fn force_plane_token<R: Read>(decoder: &mut Vp8Decoder<R>, plane: usize, token: i8) {
-        let token = 0x80 | token as u8;
-        for band in &mut decoder.token_probs[plane] {
-            for complexity in band {
-                complexity.fill(TreeNode {
-                    left: token,
-                    right: token,
-                    prob: 128,
-                    index: 0,
-                });
-            }
-        }
-    }
-
-    assert_eq!(LumaMode::B.into_intra(), None);
-    assert_eq!(init_top_macroblocks(17).len(), 2);
-
-    // The production decoder uses a bounded reader wrapper. Exercise the
-    // exact plain `Cursor<Vec<u8>>` specialization as a private model too, so
-    // the prediction routines are covered independently of that wrapper.
-    let mut cursor_vec_decoder = Vp8Decoder::new(std::io::Cursor::new(Vec::<u8>::new()));
-    cursor_vec_decoder.mbwidth = 1;
-    cursor_vec_decoder.mbheight = 1;
-    cursor_vec_decoder.frame.width = 16;
-    cursor_vec_decoder.frame.height = 16;
-    cursor_vec_decoder.frame.ybuf = vec![0; 16 * 16];
-    cursor_vec_decoder.frame.ubuf = vec![128; 8 * 8];
-    cursor_vec_decoder.frame.vbuf = vec![128; 8 * 8];
-    cursor_vec_decoder.top = init_top_macroblocks(1);
-    cursor_vec_decoder.left = MacroBlock::default();
-    cursor_vec_decoder.top_border_y = vec![127; 16 + 4 + 16];
-    cursor_vec_decoder.left_border_y = vec![129; 1 + 16];
-    cursor_vec_decoder.top_border_u = vec![127; 8];
-    cursor_vec_decoder.left_border_u = vec![129; 1 + 8];
-    cursor_vec_decoder.top_border_v = vec![127; 8];
-    cursor_vec_decoder.left_border_v = vec![129; 1 + 8];
-    let prediction_macroblock = MacroBlock {
-        luma_mode: LumaMode::DC,
-        chroma_mode: ChromaMode::DC,
-        ..MacroBlock::default()
-    };
-    let prediction_residuals = [0i32; 384];
-    let cursor_vec_decoder = std::hint::black_box(&mut cursor_vec_decoder);
-    cursor_vec_decoder.intra_predict_luma(0, 0, &prediction_macroblock, &prediction_residuals);
-    cursor_vec_decoder.intra_predict_chroma(0, 0, &prediction_macroblock, &prediction_residuals);
-    std::hint::black_box(cursor_vec_decoder);
-
-    let mut error_reader = ErrorReader;
-    let _ = std::io::Read::read(&mut error_reader, &mut [0u8; 1]);
-    let _ = Vp8Decoder::new(ErrorReader).init_partitions(1);
-    let mut interrupted_reader = InterruptedReader { interrupted: false };
-    let mut interrupted_partition = ArithmeticDecoder::new();
-    let _ = init_final_partition(&mut interrupted_reader, &mut interrupted_partition);
-
-    let frame = Frame {
-        width: 1,
-        height: 1,
-        ybuf: vec![0; 16 * 16],
-        ubuf: vec![128; 8 * 8],
-        vbuf: vec![128; 8 * 8],
-        ..Frame::default()
-    };
-    let mut rgb = [0u8; 3];
-    frame.fill_rgb(&mut rgb);
-    let mut rgba = [0u8; 4];
-    frame.fill_rgba(&mut rgba);
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.frame.keyframe = true;
-        decoder.frame.filter_level = 10;
-        decoder.frame.sharpness_level = 0;
-        decoder.segments_enabled = true;
-        decoder.segment[0].delta_values = true;
-        decoder.segment[0].loopfilter_level = 5;
-        decoder.loop_filter_adjustments_enabled = true;
-        decoder.ref_delta[0] = 2;
-        decoder.mode_delta[0] = 3;
-        let mb = MacroBlock {
-            luma_mode: LumaMode::B,
-            ..MacroBlock::default()
-        };
-        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-        decoder.frame.filter_level = 0;
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.frame.keyframe = true;
-        decoder.frame.filter_level = 50;
-        decoder.frame.sharpness_level = 5;
-        decoder.segments_enabled = true;
-        decoder.segment[0].delta_values = false;
-        decoder.segment[0].loopfilter_level = 45;
-        decoder.loop_filter_adjustments_enabled = true;
-        decoder.ref_delta[0] = 1;
-        decoder.mode_delta[0] = 1;
-        let mb = MacroBlock {
-            luma_mode: LumaMode::B,
-            ..MacroBlock::default()
-        };
-        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-        let mb = MacroBlock {
-            luma_mode: LumaMode::DC,
-            ..MacroBlock::default()
-        };
-        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-        decoder.frame.filter_level = 1;
-        decoder.frame.sharpness_level = 5;
-        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.frame.keyframe = true;
-        decoder.frame.filter_level = 10;
-        decoder.frame.sharpness_level = 0;
-        let mb = MacroBlock {
-            luma_mode: LumaMode::DC,
-            ..MacroBlock::default()
-        };
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (10, 10, 0));
-
-        decoder.frame.filter_level = 20;
-        decoder.frame.sharpness_level = 0;
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (20, 20, 1));
-
-        decoder.frame.filter_level = 4;
-        decoder.frame.sharpness_level = 1;
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
-
-        decoder.frame.filter_level = 1;
-        decoder.frame.sharpness_level = 1;
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
-
-        decoder.loop_filter_adjustments_enabled = true;
-        decoder.ref_delta[0] = 0;
-        decoder.mode_delta[0] = 0;
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (1, 1, 0));
-    });
-
-    let bytes = [0u8; 1];
-    with_take_decoder!(&bytes, |decoder| {
-        decoder.frame.keyframe = true;
-        decoder.frame.filter_level = 10;
-        decoder.segments_enabled = true;
-        decoder.segment[0].delta_values = true;
-        decoder.segment[0].loopfilter_level = 5;
-        decoder.loop_filter_adjustments_enabled = true;
-        decoder.ref_delta[0] = 1;
-        decoder.mode_delta[0] = 1;
-        let mb = MacroBlock {
-            luma_mode: LumaMode::B,
-            ..MacroBlock::default()
-        };
-        assert_ne!(decoder.calculate_filter_parameters(&mb), (0, 0, 0));
-
-        decoder.frame.filter_level = 4;
-        decoder.frame.sharpness_level = 1;
-        decoder.segments_enabled = false;
-        decoder.loop_filter_adjustments_enabled = false;
-        let mb = MacroBlock {
-            luma_mode: LumaMode::DC,
-            ..MacroBlock::default()
-        };
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
-
-        decoder.loop_filter_adjustments_enabled = true;
-        decoder.ref_delta[0] = 0;
-        decoder.mode_delta[0] = 0;
-        assert_eq!(decoder.calculate_filter_parameters(&mb), (4, 2, 0));
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.segments_enabled = true;
-        for segment in &mut decoder.segment {
-            segment.delta_values = true;
-            segment.quantizer_level = 120;
-        }
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_quantization_indices();
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.segments_enabled = true;
-        for segment in &mut decoder.segment {
-            segment.delta_values = false;
-            segment.quantizer_level = 120;
-        }
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_quantization_indices();
-
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_loop_filter_adjustments();
-
-        decoder.b.init(vec![[0; 4]; 8], 32);
-        let _ = decoder.read_loop_filter_adjustments();
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_segment_updates();
-        decoder.b.init(vec![[0; 4]; 8], 32);
-        let _ = decoder.read_segment_updates();
-    });
-
-    let bytes = [0xff; 32];
-    with_take_decoder!(&bytes, |decoder| {
-        decoder.segments_enabled = true;
-        for segment in &mut decoder.segment {
-            segment.delta_values = true;
-            segment.quantizer_level = 120;
-        }
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_quantization_indices();
-
-        decoder.segments_enabled = true;
-        for segment in &mut decoder.segment {
-            segment.delta_values = false;
-            segment.quantizer_level = 120;
-        }
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_quantization_indices();
-        decoder.b.init(vec![[0; 4]; 8], 32);
-        let _ = decoder.read_quantization_indices();
-
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_loop_filter_adjustments();
-
-        decoder.b.init(vec![[0; 4]; 8], 32);
-        let _ = decoder.read_loop_filter_adjustments();
-
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.read_segment_updates();
-
-        decoder.b.init(vec![[0; 4]; 8], 32);
-        let _ = decoder.read_segment_updates();
-
-        decoder.b.init(vec![[0xff; 4]; 8], 32);
-        let _ = decoder.update_token_probabilities();
-    });
-
-    exercise_init_partitions!(Vec::<u8>::new(), 1);
-    let empty_partition = [0u8; 0];
-    with_take_decoder!(&empty_partition, |decoder| {
-        let _ = decoder.init_partitions(1);
-    });
-    let short_partition_sizes = [0u8; 2];
-    with_take_decoder!(&short_partition_sizes, |decoder| {
-        let _ = decoder.init_partitions(2);
-    });
-    let short_second_partition = [1, 0, 0];
-    with_take_decoder!(&short_second_partition, |decoder| {
-        let _ = decoder.init_partitions(2);
-    });
-    exercise_init_partitions!(Vec::<u8>::new(), 2);
-    exercise_init_partitions!(vec![1, 0, 0], 2);
-    exercise_init_partitions!(vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 2);
-
-    exercise_frame_header!(Vec::<u8>::new());
-    exercise_frame_header!(vec![0, 0, 0]);
-    exercise_frame_header!(vec![0, 0, 0, 0x9d, 0x01, 0x2a]);
-    exercise_frame_header!(vec![0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0]);
-
-    let mut keyframe = vec![0x80, 0x00, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-    keyframe.extend_from_slice(&[0; 4]);
-    exercise_frame_header!(keyframe);
-
-    let mut keyframe = vec![0x00, 0x08, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-    keyframe.extend_from_slice(&[0; 96]);
-    exercise_frame_header!(keyframe);
-
-    let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-    keyframe.extend_from_slice(&[0, 4, 0, 0]);
-    keyframe.extend_from_slice(&[0; 28]);
-    exercise_frame_header!(keyframe);
-
-    exercise_frame_header!(vec![0x21, 0x00, 0x00, 0x00]);
-    exercise_frame_header!(keyframe_with_first_partition(&[0x00, 0x06], &[]));
-    exercise_frame_header!(keyframe_with_first_partition(
-        &[0x00, 0x01, 0x00, 0x00],
-        &[]
-    ));
-    exercise_frame_header!(keyframe_with_first_partition(
-        &[0x00, 0x00, 0x00, 0x00, 0x00, 0x19],
-        &[]
-    ));
-
-    let macroblock_header_eof = keyframe_with_first_partition(&[0; 6], &[]);
-    let _ = Vp8Decoder::decode_frame(std::io::Cursor::new(macroblock_header_eof.as_slice()));
-    with_take_decoder!(&macroblock_header_eof, |decoder| {
-        decoder.frame.keyframe = false;
-        let _ = decoder.decode_frame_();
-    });
-    let macroblock_header_error =
-        keyframe_with_first_partition(&[0x00, 0x00, 0x00, 0x00, 0x00, 0x03], &[]);
-    let _ = Vp8Decoder::decode_frame(std::io::Cursor::new(macroblock_header_error.as_slice()));
-    with_take_decoder!(&macroblock_header_error, |decoder| {
-        decoder.frame.keyframe = false;
-        let _ = decoder.decode_frame_();
-    });
-
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-            decoder.partitions[0].init(vec![[0; 4]], 4);
-            decoder.token_probs[0][1][0][0] = TreeNode {
-                left: 0x80 | 12,
-                right: 0x80 | 12,
-                prob: 128,
-                index: 0,
-            };
-            let mut block = [0; 16];
-            let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
-        });
-    }));
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.partitions[0].init(vec![[0; 4]; 8], 32);
-        decoder.token_probs[0][1][0][0] = TreeNode {
-            left: 0x80 | DCT_0 as u8,
-            right: 0x80 | DCT_0 as u8,
-            prob: 128,
-            index: 0,
-        };
-        let mut block = [0; 16];
-        let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.top = init_top_macroblocks(16);
-        decoder.partitions[0].init(Vec::<[u8; 4]>::new(), 0);
-        force_plane_token(&mut decoder, 1, DCT_1);
-        let mut mb = MacroBlock {
-            luma_mode: LumaMode::DC,
-            coeffs_skipped: false,
-            ..MacroBlock::default()
-        };
-        let _ = decoder.read_residual_data(&mut mb, 0, 0);
-    });
-    let y2_residual_eof = [0u8; 0];
-    with_take_decoder!(&y2_residual_eof, |decoder| {
-        decoder.top = init_top_macroblocks(16);
-        decoder.partitions[0].init(Vec::<[u8; 4]>::new(), 0);
-        force_plane_token(&mut decoder, 1, DCT_1);
-        let mut mb = MacroBlock {
-            luma_mode: LumaMode::DC,
-            coeffs_skipped: false,
-            ..MacroBlock::default()
-        };
-        let _ = decoder.read_residual_data(&mut mb, 0, 0);
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.top = init_top_macroblocks(16);
-        decoder.partitions[0].init(vec![[0; 4]], 2);
-        force_plane_token(&mut decoder, 3, DCT_EOB);
-        force_plane_token(&mut decoder, 2, DCT_1);
-        let mut mb = MacroBlock {
-            luma_mode: LumaMode::B,
-            coeffs_skipped: false,
-            ..MacroBlock::default()
-        };
-        let _ = decoder.read_residual_data(&mut mb, 0, 0);
-    });
-    let uv_residual_eof = [0u8; 2];
-    with_take_decoder!(&uv_residual_eof, |decoder| {
-        decoder.top = init_top_macroblocks(16);
-        decoder.partitions[0].init(vec![[0; 4]], 2);
-        force_plane_token(&mut decoder, 3, DCT_EOB);
-        force_plane_token(&mut decoder, 2, DCT_1);
-        let mut mb = MacroBlock {
-            luma_mode: LumaMode::B,
-            coeffs_skipped: false,
-            ..MacroBlock::default()
-        };
-        let _ = decoder.read_residual_data(&mut mb, 0, 0);
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.partitions[0].init(vec![[0; 4]; 8], 32);
-        decoder.token_probs[0][1][0][0] = TreeNode {
-            left: 0x80 | DCT_1 as u8,
-            right: 0x80 | DCT_1 as u8,
-            prob: 128,
-            index: 0,
-        };
-        let mut block = [0; 16];
-        let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
-        let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 1, 1);
-    });
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.partitions[0].init(vec![[0; 4]; 8], 32);
-        decoder.token_probs[1][0][0][0] = TreeNode {
-            left: 0x80 | DCT_1 as u8,
-            right: 0x80 | DCT_1 as u8,
-            prob: 128,
-            index: 0,
-        };
-        let mut block = [0; 16];
-        let _ = decoder.read_coefficients(&mut block, 0, 1, 0, 3, 5);
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.partitions[0].init(vec![[0xff; 4]; 8], 32);
-        decoder.token_probs[0][1][0][0] = TreeNode {
-            left: 0x80 | DCT_CAT1 as u8,
-            right: 0x80 | DCT_CAT1 as u8,
-            prob: 128,
-            index: 0,
-        };
-        let mut block = [0; 16];
-        let _ = decoder.read_coefficients(&mut block, 0, 0, 0, 1, 1);
-    });
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.b.init(vec![[0; 4]; 8], 32);
-        let _ = decoder.read_quantization_indices();
-    });
-
-    let mut interframe = vec![1, 4, 0];
-    interframe.extend_from_slice(&[0; 32]);
-    exercise_frame_header!(interframe);
-
-    let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-    keyframe.extend_from_slice(&[0xff; 32]);
-    exercise_frame_header!(keyframe);
-
-    let take_frame_cases = {
-        let mut cases = vec![
-            Vec::new(),
-            vec![0, 0, 0],
-            vec![0, 0, 0, 0x9d, 0x01, 0x2a],
-            vec![0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0],
-        ];
-
-        let mut keyframe = vec![0x80, 0x00, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-        keyframe.extend_from_slice(&[0; 4]);
-        cases.push(keyframe);
-
-        let mut keyframe = vec![0x00, 0x08, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-        keyframe.extend_from_slice(&[0; 96]);
-        cases.push(keyframe);
-
-        let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-        keyframe.extend_from_slice(&[0, 4, 0, 0]);
-        keyframe.extend_from_slice(&[0; 28]);
-        cases.push(keyframe);
-
-        cases.push(vec![0x21, 0x00, 0x00, 0x00]);
-        cases.push(keyframe_with_first_partition(&[0x00, 0x06], &[]));
-        cases.push(keyframe_with_first_partition(
-            &[0x00, 0x01, 0x00, 0x00],
-            &[],
-        ));
-        cases.push(keyframe_with_first_partition(
-            &[0x00, 0x00, 0x00, 0x00, 0x00, 0x19],
-            &[],
-        ));
-
-        let mut interframe = vec![1, 4, 0];
-        interframe.extend_from_slice(&[0; 32]);
-        cases.push(interframe);
-
-        let mut keyframe = vec![0x00, 0x04, 0x00, 0x9d, 0x01, 0x2a, 8, 0, 8, 0];
-        keyframe.extend_from_slice(&[0xff; 32]);
-        cases.push(keyframe);
-
-        cases
-    };
-    for bytes in &take_frame_cases {
-        with_take_decoder!(bytes, |decoder| {
-            let _ = decoder.read_frame_header();
-        });
-    }
-
-    with_cursor_decoder!(Vec::<u8>::new(), |decoder| {
-        decoder.frame.keyframe = true;
-        decoder.frame.width = 32;
-        decoder.frame.height = 32;
-        decoder.mbwidth = 2;
-        decoder.mbheight = 2;
-        decoder.frame.ybuf = vec![128; 32 * 32];
-        decoder.frame.ubuf = vec![128; 16 * 16];
-        decoder.frame.vbuf = vec![128; 16 * 16];
-        decoder.top = init_top_macroblocks(32);
-        decoder.left = MacroBlock::default();
-        decoder.frame.filter_level = 10;
-        decoder.frame.sharpness_level = 0;
-        decoder.frame.filter_type = true;
-        let mb = MacroBlock {
-            luma_mode: LumaMode::B,
-            non_zero_dct: true,
-            ..MacroBlock::default()
-        };
-        decoder.loop_filter(0, 0, &mb);
-        decoder.loop_filter(1, 1, &mb);
-
-        decoder.frame.filter_type = false;
-        decoder.loop_filter(1, 1, &mb);
-        let mb_with_rhs_subblocks = MacroBlock {
-            luma_mode: LumaMode::DC,
-            coeffs_skipped: false,
-            non_zero_dct: true,
-            ..MacroBlock::default()
-        };
-        decoder.loop_filter(1, 1, &mb_with_rhs_subblocks);
-        let mb_without_subblocks = MacroBlock {
-            luma_mode: LumaMode::DC,
-            coeffs_skipped: true,
-            non_zero_dct: false,
-            ..MacroBlock::default()
-        };
-        decoder.loop_filter(1, 1, &mb_without_subblocks);
-        decoder.frame.filter_level = 0;
-        decoder.loop_filter(0, 0, &mb);
-    });
-}
-
 fn init_top_macroblocks(width: usize) -> Vec<MacroBlock> {
     let mb_width = width.div_ceil(16);
 
@@ -2738,7 +2168,10 @@ fn avg2(this: u8, right: u8) -> u8 {
 // to enable SIMD and other optimizations.
 //
 // Clippy suggests the clamp method, but it seems to optimize worse as of rustc 1.82.0 nightly.
-#[allow(clippy::manual_clamp)]
+#[allow(
+    clippy::manual_clamp,
+    reason = "the explicit max/min form avoids the slower clamp lowering observed on rustc 1.82.0 nightly"
+)]
 fn add_residue(pblock: &mut [u8], rblock: &[i32; 16], y0: usize, x0: usize, stride: usize) {
     let mut pos = y0 * stride + x0;
     for row in rblock.chunks(4) {
@@ -2750,7 +2183,10 @@ fn add_residue(pblock: &mut [u8], rblock: &[i32; 16], y0: usize, x0: usize, stri
 }
 
 // Residual storage is laid out as exact 16-coefficient blocks.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "each residual slice is an exact sixteen-coefficient block in the fixed VP8 layout"
+)]
 fn predict_4x4(ws: &mut [u8], stride: usize, modes: &[IntraMode], resdata: &[i32]) {
     for sby in 0usize..4 {
         for sbx in 0usize..4 {
@@ -2829,7 +2265,10 @@ fn predict_dcpred(a: &mut [u8], size: usize, stride: usize, above: bool, left: b
 }
 
 // Clippy suggests the clamp method, but it seems to optimize worse as of rustc 1.82.0 nightly.
-#[allow(clippy::manual_clamp)]
+#[allow(
+    clippy::manual_clamp,
+    reason = "the explicit max/min form avoids the slower clamp lowering observed on rustc 1.82.0 nightly"
+)]
 fn predict_tmpred(a: &mut [u8], size: usize, x0: usize, y0: usize, stride: usize) {
     // The formula for tmpred is:
     // X_ij = L_i + A_j - P (i, j=0, 1, 2, 3)

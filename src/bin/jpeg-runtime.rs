@@ -1,4 +1,3 @@
-#![cfg_attr(coverage, feature(coverage_attribute))]
 #![doc = "Release-mode JPEG encode/decode runtime probe."]
 
 use std::error::Error;
@@ -10,7 +9,6 @@ use image_slash_star::{ColorType, DecodedImage, ImageFormat, decode, encode_defa
 #[cfg(any(feature = "jpeg", feature = "avif"))]
 use wide as _;
 
-#[cfg_attr(coverage, coverage(off))]
 fn make_rgb(width: u32, height: u32) -> Result<DecodedImage, Box<dyn Error>> {
     let width = usize::try_from(width)?;
     let height = usize::try_from(height)?;
@@ -34,7 +32,6 @@ fn make_rgb(width: u32, height: u32) -> Result<DecodedImage, Box<dyn Error>> {
     ))
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn summarize(label: &str, samples: &mut [Duration]) {
     if samples.is_empty() {
         println!("{label:24} no samples");
@@ -49,11 +46,8 @@ fn summarize(label: &str, samples: &mut [Duration]) {
     println!("{label:24} mean={mean:>10.3?} median={median:>10.3?} min={min:>10.3?}");
 }
 
-// This helper is a development-only timing wrapper. Its untestable branches
-// are host/allocator/API failure propagation, not codec behavior; the public
-// JPEG calls and workload are exercised by the unit test and the production
-// matrix harness below.
-#[cfg_attr(coverage, coverage(off))]
+// Keep input construction and warm-up outside the measured encode/decode
+// intervals so the probe reports complete public codec calls.
 fn time_size(width: u32, height: u32, rounds: usize) -> Result<(), Box<dyn std::error::Error>> {
     let image = make_rgb(width, height)?;
     let encoded = encode_default(black_box(&image), ImageFormat::Jpeg)?;
@@ -88,7 +82,6 @@ fn time_size(width: u32, height: u32, rounds: usize) -> Result<(), Box<dyn std::
     Ok(())
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rounds = std::env::var("ROUNDS")
         .ok()

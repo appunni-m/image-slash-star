@@ -44,8 +44,10 @@ pub(super) struct ScanInfo {
     pub(super) restart_interval: u16,
     pub(super) dc_huff_tables: Vec<Option<HuffTableStorage>>,
     pub(super) ac_huff_tables: Vec<Option<HuffTableStorage>>,
+    pub(super) component_quant_tables: Vec<Option<[u16; 64]>>,
 }
 
+/// Parsed JPEG frame metadata. `num_components` mirrors the SOF-derived component vector length.
 #[derive(Clone)]
 pub(super) struct JpegInfo {
     pub(super) width: u16,
@@ -64,7 +66,6 @@ pub(super) struct JpegInfo {
     pub(super) max_v_samp: u8,
     pub(super) progressive: bool,
     pub(super) scans: Vec<ScanInfo>,
-    pub(super) adobe_transform: Option<u8>,
     pub(super) metadata: Vec<crate::types::OpaqueMetadata>,
 }
 
@@ -357,6 +358,24 @@ pub(super) fn parse_dri(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
     Ok(restart_interval)
 }
 
+fn snapshot_scan_quant_tables(
+    scan_components: &[ScanComponent],
+    components: &[FrameComponent],
+    quant_tables: &[Option<[u16; 64]>],
+) -> Vec<Option<[u16; 64]>> {
+    let mut snapshots = vec![None; components.len()];
+    for scan_component in scan_components {
+        let Some(component) = components.get(scan_component.comp_index) else {
+            continue;
+        };
+        snapshots[scan_component.comp_index] = quant_tables
+            .get(usize::from(component.quant_tbl))
+            .copied()
+            .flatten();
+    }
+    snapshots
+}
+
 pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut pos = 0usize;
 
@@ -382,7 +401,6 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
     let mut saw_sos = false;
     let mut progressive = false;
     let mut scans: Vec<ScanInfo> = Vec::new();
-    let mut adobe_transform = None;
     let mut metadata = Vec::new();
 
     let eoi_pos = loop {
@@ -409,10 +427,21 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 saw_sof = true;
             }
             M_DQT => {
+                if !progressive && scans.len() == 1 && scans[0].component_quant_tables.is_empty() {
+                    scans[0].component_quant_tables = snapshot_scan_quant_tables(
+                        &scans[0].components,
+                        &components,
+                        &quant_tables,
+                    );
+                }
                 parse_dqt(data, &mut pos, &mut quant_tables)
                     .map_err(|error| error.at(marker_offset, "jpeg_dqt"))?;
             }
             M_DHT => {
+                if !progressive && scans.len() == 1 && scans[0].dc_huff_tables.is_empty() {
+                    scans[0].dc_huff_tables = dc_huff_tables.clone();
+                    scans[0].ac_huff_tables = ac_huff_tables.clone();
+                }
                 parse_dht(data, &mut pos, &mut dc_huff_tables, &mut ac_huff_tables)
                     .map_err(|error| error.at(marker_offset, "jpeg_dht"))?;
             }
@@ -434,12 +463,21 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                 entropy_has_restart_markers |= saw_restart_marker;
 
                 if !progressive {
-                    // Baseline JPEG has exactly one entropy-coded scan in this
-                    // parser: after SOS, we require EOI and break immediately.
-                    scan_components = comps.clone();
-                    entropy_start = scan_start;
+                    if !scans.is_empty() {
+                        if scans[0].dc_huff_tables.is_empty() {
+                            scans[0].dc_huff_tables = dc_huff_tables.clone();
+                            scans[0].ac_huff_tables = ac_huff_tables.clone();
+                        }
+                        if scans[0].component_quant_tables.is_empty() {
+                            scans[0].component_quant_tables = snapshot_scan_quant_tables(
+                                &scans[0].components,
+                                &components,
+                                &quant_tables,
+                            );
+                        }
+                    }
                     scans.push(ScanInfo {
-                        components: comps,
+                        components: comps.clone(),
                         entropy_start: scan_start,
                         entropy_end: scan_end,
                         ss,
@@ -447,17 +485,36 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                         ah,
                         al,
                         restart_interval,
-                        dc_huff_tables: Vec::new(),
-                        ac_huff_tables: Vec::new(),
+                        dc_huff_tables: if scans.is_empty() {
+                            Vec::new()
+                        } else {
+                            dc_huff_tables.clone()
+                        },
+                        ac_huff_tables: if scans.is_empty() {
+                            Vec::new()
+                        } else {
+                            ac_huff_tables.clone()
+                        },
+                        component_quant_tables: if scans.is_empty() {
+                            Vec::new()
+                        } else {
+                            snapshot_scan_quant_tables(&comps, &components, &quant_tables)
+                        },
                     });
                     saw_sos = true;
-                    break if data.get(scan_end..scan_end.saturating_add(2)) == Some(&[0xFF, 0xD9])
-                        && !saw_restart_marker
-                    {
-                        scan_end
-                    } else {
-                        find_eoi(data, pos).map_err(|error| error.at(marker_offset, "jpeg_sos"))?
-                    };
+                    if scan_components.is_empty() {
+                        scan_components = comps;
+                        entropy_start = scan_start;
+                    }
+
+                    if scan_end >= data.len() {
+                        break find_eoi(data, pos)
+                            .map_err(|error| error.at(marker_offset, "jpeg_sos"))?;
+                    }
+                    if data.get(scan_end..scan_end.saturating_add(2)) == Some(&[0xFF, 0xD9]) {
+                        break scan_end;
+                    }
+                    pos = scan_end;
                 } else {
                     scans.push(ScanInfo {
                         components: comps.clone(),
@@ -470,6 +527,7 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                         restart_interval,
                         dc_huff_tables: dc_huff_tables.clone(),
                         ac_huff_tables: ac_huff_tables.clone(),
+                        component_quant_tables: Vec::new(),
                     });
                     saw_sos = true;
                     if scan_components.is_empty() {
@@ -503,11 +561,6 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                     kind: vec![0xee],
                     data: data[pos..payload_end].to_vec(),
                 });
-                if data.get(pos..pos.saturating_add(5)) == Some(b"Adobe") && length >= 14 {
-                    // `payload_len >= 12` and the complete payload range was
-                    // validated above, so the transform byte is present.
-                    adobe_transform = Some(data[pos.saturating_add(11)]);
-                }
                 pos = payload_end;
             }
             0xFFE0..=0xFFEF | 0xFFFE => {
@@ -576,52 +629,6 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
         max_v_samp,
         progressive,
         scans,
-        adobe_transform,
         metadata,
     })
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let mut position = 0;
-    assert!(parse_sof0(&[], &mut position).is_err());
-    let mut position = 0;
-    assert!(parse_sof0(&[0, 2], &mut position).is_err());
-
-    let mut position = 0;
-    assert!(parse_dqt(&[], &mut position, &mut Vec::new()).is_err());
-    let mut position = 0;
-    assert!(parse_dqt(&[0, 3], &mut position, &mut Vec::new()).is_err());
-
-    let mut position = 0;
-    assert!(parse_dht(&[], &mut position, &mut Vec::new(), &mut Vec::new()).is_err());
-    let mut position = 0;
-    assert!(parse_dht(&[0, 3], &mut position, &mut Vec::new(), &mut Vec::new()).is_err());
-
-    let mut position = 0;
-    assert!(parse_dri(&[], &mut position).is_err());
-    let mut position = 0;
-    assert!(parse_dri(&[0, 4], &mut position).is_err());
-
-    let mut position = 0;
-    assert!(find_next_marker(&[0xff], &mut position).is_err());
-
-    for data in [&[0xff, 0x00][..], &[0xff, 0xff, 0xff, 0xd8]] {
-        let mut position = 0;
-        let _ = find_next_marker(data, &mut position);
-    }
-
-    for data in [
-        &[][..],
-        &[0, 0],
-        &[0xff, 0xd8, 0xff, 0xdd],
-        &[0xff, 0xd8, 0xff, 0xee],
-        &[0xff, 0xd8, 0xff, 0xd0],
-        &[0xff, 0xd8, 0xff, 0xe0],
-        &[0xff, 0xd8, 0xff, 0xc8, 0x00, 0x04, 0xaa, 0xbb, 0xff, 0xd9],
-        &[0xff, 0xd8, 0xff, 0xc8, 0x00, 0x01, 0xff, 0xd9],
-        &[0xff, 0xd8, 0xff, 0xc8, 0xff],
-    ] {
-        assert!(parse_jpeg(data).is_err());
-    }
 }

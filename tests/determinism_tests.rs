@@ -286,5 +286,8 @@ fn parse_golden(text: &str) -> Result<BTreeMap<String, String>, Box<dyn std::err
 }
 
 #[path = "support/json.rs"]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "The shared JSON support module keeps helpers used by the other manifest suites."
+)]
 mod support_json;

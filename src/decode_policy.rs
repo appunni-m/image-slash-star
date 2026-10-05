@@ -586,7 +586,10 @@ pub(crate) struct SequenceDecodeBudget {
             feature = "tiff",
             feature = "avif"
         )),
-        allow(dead_code)
+        allow(
+            dead_code,
+            reason = "Only enabled sequence decoders consume the per-frame byte limit."
+        )
     )]
     max_frame_bytes: Option<u64>,
     remaining_sequence_bytes: Option<u64>,
@@ -602,7 +605,10 @@ impl SequenceDecodeBudget {
     ))]
     #[cfg_attr(
         all(feature = "avif", not(feature = "gif"), not(coverage)),
-        allow(dead_code)
+        allow(
+            dead_code,
+            reason = "The default sequence budget constructor is used by the feature-gated GIF decoder."
+        )
     )]
     pub(crate) fn default_for(format: ImageFormat) -> Self {
         Self {
@@ -633,7 +639,10 @@ impl SequenceDecodeBudget {
             });
         }
         // The guard above proves primary <= maximum.
-        #[allow(clippy::arithmetic_side_effects)]
+        #[allow(
+            clippy::arithmetic_side_effects,
+            reason = "The preceding comparison proves primary does not exceed maximum."
+        )]
         let remaining = maximum - primary;
         self.remaining_sequence_bytes = Some(remaining);
         Ok(())
@@ -641,8 +650,17 @@ impl SequenceDecodeBudget {
 
     /// Reserve one later frame's decoded byte length before its pixel work.
     #[cfg_attr(
-        not(any(feature = "gif", feature = "png", feature = "webp", feature = "tiff")),
-        allow(dead_code)
+        not(any(
+            feature = "gif",
+            feature = "png",
+            feature = "webp",
+            feature = "tiff",
+            feature = "avif"
+        )),
+        allow(
+            dead_code,
+            reason = "Enabled sequence decoders call this reservation path through their codec feature."
+        )
     )]
     pub(crate) fn reserve_later_frame(
         &mut self,
@@ -677,67 +695,13 @@ impl SequenceDecodeBudget {
                 });
             }
             // The guard above proves bytes <= remaining.
-            #[allow(clippy::arithmetic_side_effects)]
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "The preceding comparison proves bytes do not exceed the remaining budget."
+            )]
             let remaining_after = remaining - bytes;
             self.remaining_sequence_bytes = Some(remaining_after);
         }
         Ok(())
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    use crate::{ImageFormat, ImageMode, SourceDescriptor};
-
-    let info = ImageInfo {
-        format: ImageFormat::Png,
-        width: 1,
-        height: 1,
-        mode: ImageMode::Rgb8,
-        bit_depth: 8,
-        palette: None,
-        is_animated: false,
-        frame_count: Some(1),
-        frame_count_complete: true,
-        cursor_hotspot: None,
-        source: SourceDescriptor::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let policy = DecodePolicy::default().with_max_frames(0);
-    // Operations outside the decode-policy call sites cannot observe a frame
-    // count and must remain unlimited.
-    for operation in [
-        CodecOperation::Detection,
-        CodecOperation::StillEncode,
-        CodecOperation::SequenceEncode,
-    ] {
-        let _ = policy.check_frame_count(&info, operation);
-    }
-    let mut unknown_count = info;
-    unknown_count.frame_count = None;
-    let _ = policy.check_frame_count(&unknown_count, CodecOperation::SequenceDecode);
-
-    // Exercise the unrepresentable-transfer-length error paths that fixtures
-    // cannot reach: the layout-overflow mutation rejects during inspection,
-    // before either budget method runs.
-    let mut overflow_budget = DecodePolicy::default()
-        .with_max_frame_decoded_bytes(u64::MAX)
-        .with_max_sequence_decoded_bytes(u64::MAX)
-        .sequence_budget(ImageFormat::Png);
-    let overflow_info = ImageInfo {
-        format: ImageFormat::Png,
-        width: u32::MAX,
-        height: u32::MAX,
-        mode: ImageMode::Rgb8,
-        bit_depth: 8,
-        palette: None,
-        is_animated: false,
-        frame_count: Some(1),
-        frame_count_complete: true,
-        cursor_hotspot: None,
-        source: SourceDescriptor::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = overflow_budget.charge_primary(&overflow_info);
-    let _ = overflow_budget.reserve_later_frame(ImageMode::Rgb8, u32::MAX, u32::MAX);
 }

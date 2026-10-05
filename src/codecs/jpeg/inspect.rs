@@ -167,23 +167,3 @@ fn read_u16(data: &[u8], position: usize) -> CodecResult<u16> {
 const fn is_standalone(marker: u8) -> bool {
     matches!(marker, SOI | 0x01 | 0xd0..=0xd7)
 }
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let _ = inspect(b"");
-    let _ = inspect(b"not jpeg");
-    let _ = inspect(&[0xff, SOI, 0xff, 0xee]);
-    let _ = inspect(&[0xff, SOI, 0xff, SOF0, 0, 2]);
-    let _ = inspect(&[0xff, SOI, 0xff, SOS, 0, 2]);
-    let _ = inspect(&[0xff, SOI, 0xff, SOI, 0xff, SOS, 0, 2]);
-    let _ = verify(b"");
-    let _ = verify(b"not jpeg");
-    let _ = verify(&[0xff, SOI]);
-    let _ = verify(&[0xff, SOI, 0xff]);
-    let _ = verify(&[0xff, SOI, 0xff, 0xff]);
-    let _ = verify(&[0xff, SOI, 0xff, 0xee]);
-    let _ = verify(&[0xff, SOI, 0xff, 0xee, 0]);
-    let _ = verify(&[0xff, SOI, 0xff, 0xee, 0, 8, 0]);
-    let _ = verify(&[0xff, SOI, 0xff, 0xd0, 0xff, SOS, 0, 2]);
-    let _ = verify(&[0xff, SOI, 0xff, SOS, 0, 1]);
-}

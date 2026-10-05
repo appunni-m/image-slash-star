@@ -1,8 +1,18 @@
 # Development and command reference
 
 Use GNU Make from the repository root. Rust 1.96.1 and the matching formatter,
-Clippy, and WASM targets are pinned in `rust-toolchain.toml`. Documentation
-uses Python 3.12.10 in CI and hash-locked MkDocs dependencies.
+Clippy, and WASM targets are pinned in `rust-toolchain.toml`. `make lint` also
+uses the pinned `nightly-2026-07-16` Clippy toolchain to check coverage-only
+code paths; install that nightly with its `clippy` component before running the
+full lint command. Documentation uses Python 3.12.10 in CI and hash-locked
+MkDocs dependencies.
+
+On hosts without the x86-64 Linux target installed, including ARM hosts, prepare
+the target before running `make lint-x86-simd`:
+
+```sh
+rustup target add x86_64-unknown-linux-gnu --toolchain 1.96.1
+```
 
 ## Common commands
 
@@ -12,7 +22,7 @@ uses Python 3.12.10 in CI and hash-locked MkDocs dependencies.
 | Build | `make build` | Compiles the locked default-feature crate |
 | Format / fix | `make fmt` / `make fmt-fix` | Checks / rewrites Rust formatting |
 | Contracts | `make verify` | Legal, fixture, capability, roadmap, coverage-origin, and release-tool checks |
-| Lint | `make lint` | Strict library and JPEG benchmark Clippy |
+| Lint | `make lint` | Strict debug/release, coverage-hook, and JPEG benchmark Clippy |
 | Tests | `make test` | Rustdoc, all-feature tests, and feature/target lanes |
 | Package example | `make example` | Executes the self-contained public PNG example |
 | Coverage | `make coverage` | Measures the full source denominator and enforces alpha floors |

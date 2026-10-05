@@ -16,7 +16,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
 /// Inspect only the logical screen and first proven image.
 ///
 /// Frame counting stops after the first image descriptor; the result reports
-/// `frame_count_complete` only when the next byte is the trailer.
+/// `frame_count_complete` when the next byte is the trailer or clean EOF.
 pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
     inspect_inner(data, true)
 }
@@ -44,7 +44,6 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     loop {
         if input.is_eof() {
             if first_mode.is_some() {
-                complete = false;
                 break;
             }
             return Err(CodecError::NeedMore {
@@ -120,7 +119,8 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
                     break;
                 }
                 if basic {
-                    complete = *input.data.get(input.position).unwrap_or(&0) == TRAILER;
+                    complete =
+                        input.is_eof() || *input.data.get(input.position).unwrap_or(&0) == TRAILER;
                     break;
                 }
             }
@@ -231,13 +231,4 @@ impl<'a> Input<'a> {
             self.skip(length)?;
         }
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let _ = inspect(b"GIF89a");
-    let mut image = b"GIF89a\x01\0\x01\0\0\0\0,\0\0\0\0\x01\0\x01\0\0\x02\0".to_vec();
-    assert!(inspect(&image).is_ok());
-    image.truncate(13);
-    let _ = inspect(&image);
 }

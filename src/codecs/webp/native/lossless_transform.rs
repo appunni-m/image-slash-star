@@ -21,7 +21,8 @@
 #![allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "VP8L transforms require byte wrapping, packed-index narrowing, and header-bounded geometry for format semantics"
 )]
 
 use std::ops::Range;
@@ -40,17 +41,6 @@ pub(crate) enum TransformType {
     ColorIndexingTransform {
         table_size: u16,
     },
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let mut image = vec![0u8; 16];
-    let predictor = vec![0, 255, 0, 0, 0, 255, 0, 0];
-    apply_predictor_transform(&mut image, 2, 2, 1, &predictor);
-
-    let mut empty = Vec::new();
-    apply_color_indexing_transform(&mut empty, 0, 0, 2, &[0, 0, 0, 0, 255, 255, 255, 255]);
-    apply_color_indexing_transform(&mut empty, 1, 0, 2, &[0, 0, 0, 0, 255, 255, 255, 255]);
 }
 
 pub(crate) fn apply_predictor_transform(
@@ -144,7 +134,10 @@ pub fn apply_predictor_transform_4(image_data: &mut [u8], range: Range<usize>, w
     }
 }
 // The four-byte predecessor slice is exact by the pixel-aligned range contract.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "the pixel-aligned predictor range provides a complete four-byte predecessor pixel"
+)]
 pub fn apply_predictor_transform_5(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
 
@@ -178,7 +171,10 @@ pub fn apply_predictor_transform_6(image_data: &mut [u8], range: Range<usize>, w
     }
 }
 // The four-byte predecessor slice is exact by the pixel-aligned range contract.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "the pixel-aligned predictor range provides a complete four-byte predecessor pixel"
+)]
 pub fn apply_predictor_transform_7(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
 
@@ -242,7 +238,10 @@ pub fn apply_predictor_transform_9(image_data: &mut [u8], range: Range<usize>, w
     }
 }
 // The four-byte predecessor slice is exact by the pixel-aligned range contract.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "the pixel-aligned predictor range provides a complete four-byte predecessor pixel"
+)]
 pub fn apply_predictor_transform_10(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
     let mut prev: [u8; 4] = old[range.start - 4..][..4].try_into().unwrap();
@@ -333,7 +332,10 @@ pub fn apply_predictor_transform_11(image_data: &mut [u8], range: Range<usize>, 
     }
 }
 // The four-byte predecessor slice is exact by the pixel-aligned range contract.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "the pixel-aligned predictor range provides a complete four-byte predecessor pixel"
+)]
 pub fn apply_predictor_transform_12(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
     let mut prev: [u8; 4] = old[range.start - 4..][..4].try_into().unwrap();
@@ -374,7 +376,10 @@ pub fn apply_predictor_transform_12(image_data: &mut [u8], range: Range<usize>, 
     }
 }
 // The four-byte predecessor slice is exact by the pixel-aligned range contract.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "the pixel-aligned predictor range provides a complete four-byte predecessor pixel"
+)]
 pub fn apply_predictor_transform_13(image_data: &mut [u8], range: Range<usize>, width: usize) {
     let (old, current) = image_data[..range.end].split_at_mut(range.start);
     let mut prev: [u8; 4] = old[range.start - 4..][..4].try_into().unwrap();
@@ -441,9 +446,9 @@ pub(crate) fn apply_color_transform(
                 let mut temp_red = u32::from(pixel[0]);
                 let mut temp_blue = u32::from(pixel[2]);
 
-                temp_red += color_transform_delta(green_to_red as i8, green as i8);
-                temp_blue += color_transform_delta(green_to_blue as i8, green as i8);
-                temp_blue += color_transform_delta(red_to_blue as i8, temp_red as i8);
+                temp_red += color_transform_delta(green_to_red.cast_signed(), green as i8);
+                temp_blue += color_transform_delta(green_to_blue.cast_signed(), green as i8);
+                temp_blue += color_transform_delta(red_to_blue.cast_signed(), temp_red as i8);
 
                 pixel[0] = (temp_red & 0xff) as u8;
                 pixel[2] = (temp_blue & 0xff) as u8;
@@ -461,7 +466,10 @@ pub(crate) fn apply_subtract_green_transform(image_data: &mut [u8]) {
 
 // `chunks_exact(4)` and the explicit 256-entry padding make every array
 // conversion in this dispatch exact.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "four-byte chunks and explicit 256-entry padding make every palette conversion exact"
+)]
 pub(crate) fn apply_color_indexing_transform(
     image_data: &mut [u8],
     width: u16,
@@ -524,7 +532,10 @@ pub(crate) fn apply_color_indexing_transform(
 // Helper function with const generics for W_BITS and EXP_ENTRY_SIZE
 // Const-generic entry sizes and four-byte pixel chunks make all array
 // conversions exact; out-of-range palette entries intentionally map to zero.
-#[allow(clippy::unwrap_used)]
+#[allow(
+    clippy::unwrap_used,
+    reason = "const-generic table sizes preserve exact four-byte chunks and palette misses deliberately map to zero"
+)]
 fn apply_color_indexing_transform_small_table<const W_BITS: u8, const EXP_ENTRY_SIZE: usize>(
     image_data: &mut [u8],
     width: u16,
@@ -642,14 +653,20 @@ fn average2_autovec(a: u8, b: u8) -> u8 {
 /// Clamp add subtract full on one part
 fn clamp_add_subtract_full(a: i16, b: i16, c: i16) -> u8 {
     // Clippy suggests the clamp method, but it seems to optimize worse as of rustc 1.82.0 nightly.
-    #![allow(clippy::manual_clamp)]
+    #![allow(
+        clippy::manual_clamp,
+        reason = "explicit max/min lowering avoids the slower clamp code generation observed in VP8L transform kernels"
+    )]
     (a + b - c).max(0).min(255) as u8
 }
 
 /// Clamp add subtract half on one part
 fn clamp_add_subtract_half(a: i16, b: i16) -> u8 {
     // Clippy suggests the clamp method, but it seems to optimize worse as of rustc 1.82.0 nightly.
-    #![allow(clippy::manual_clamp)]
+    #![allow(
+        clippy::manual_clamp,
+        reason = "explicit max/min lowering avoids the slower clamp code generation observed in VP8L transform kernels"
+    )]
     (a + (a - b) / 2).max(0).min(255) as u8
 }
 

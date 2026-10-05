@@ -48,8 +48,14 @@ pub(crate) struct WebPExtendedInfo {
 /// color, if provided. Then copies or blends the frame onto the canvas.
 // The decoder validates every frame rectangle against the canvas before this
 // compositor runs, so row/byte index arithmetic remains in bounds.
-#[allow(clippy::arithmetic_side_effects)]
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "the decoder validates frame rectangles against the canvas before compositing"
+)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "compositing uses canvas, current-frame, previous-frame, and blending state as independent inputs"
+)]
 pub(crate) fn composite_frame(
     canvas: &mut [u8],
     canvas_width: u32,
@@ -182,100 +188,12 @@ pub(crate) fn composite_frame(
     }
 }
 
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    use std::io::Cursor;
-
-    let frame = [1, 2, 3, 4];
-
-    let mut canvas = [0u8; 2 * 2 * 4];
-    composite_frame(
-        &mut canvas,
-        2,
-        2,
-        None,
-        &frame,
-        0,
-        1,
-        1,
-        1,
-        true,
-        false,
-        1,
-        1,
-        0,
-        0,
-    );
-    assert_eq!(&canvas[8..12], &frame);
-
-    let mut canvas = [0u8; 2 * 2 * 4];
-    composite_frame(
-        &mut canvas,
-        2,
-        2,
-        None,
-        &frame,
-        0,
-        0,
-        1,
-        1,
-        true,
-        false,
-        1,
-        1,
-        0,
-        0,
-    );
-    assert_eq!(&canvas[..4], &frame);
-
-    let _ = read_extended_header(&mut Cursor::new(Vec::<u8>::new()));
-    let _ = read_extended_header(&mut Cursor::new(vec![0u8; 1]));
-    let _ = read_extended_header(&mut Cursor::new(vec![0u8; 4]));
-    let _ = read_extended_header(&mut Cursor::new(vec![0u8; 7]));
-    let _ = read_extended_header(&mut Cursor::new(vec![
-        0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    ]));
-    let info = crate::coverage_support::require_ok(
-        read_extended_header(&mut Cursor::new(vec![0u8; 10])),
-        "coverage fixture: read_extended_header(&mut Cursor::new(vec![0u8; 10]))",
-    );
-    assert_eq!(info.canvas_width, 1);
-    assert_eq!(info.canvas_height, 1);
-    let _ = read_3_bytes(&mut Cursor::new(vec![1u8, 2]));
-
-    let _ = read_alpha_chunk(&mut Cursor::new(Vec::<u8>::new()), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0000_0001u8]), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0001_0000u8, 7]), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0010_0000u8]), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new(vec![0b0000_0010u8]), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8]), 1, 1);
-    let _ = read_alpha_chunk(&mut Cursor::new(vec![0u8, 7]), 1, 1);
-    let alpha = crate::coverage_support::require_ok(
-        super::encoder::encode_alpha(&[7], 1, 1, None),
-        "coverage fixture: super::encoder::encode_alpha(&[7], 1, 1, None)",
-    );
-    let chunk = crate::coverage_support::require_ok(
-        read_alpha_chunk(&mut Cursor::new(alpha), 1, 1),
-        "coverage fixture: read_alpha_chunk(&mut Cursor::new(alpha), 1, 1)",
-    );
-    assert_eq!(chunk.data, vec![7]);
-
-    let repeated_alpha = [7; 64];
-    let alpha = crate::coverage_support::require_ok(
-        super::encoder::encode_alpha(&repeated_alpha, 8, 8, None),
-        "coverage fixture: super::encoder::encode_alpha(&repeated_alpha, 8, 8, None)",
-    );
-    assert_eq!(alpha.first(), Some(&1));
-    let chunk = crate::coverage_support::require_ok(
-        read_alpha_chunk(&mut Cursor::new(alpha), 8, 8),
-        "coverage fixture: read_alpha_chunk(&mut Cursor::new(alpha), 8, 8)",
-    );
-    assert_eq!(chunk.data, repeated_alpha);
-}
-
 // Callers pass in-canvas coordinates and a four-byte-per-pixel image slice.
 // The branch structure excludes every underflowing neighbor calculation.
-#[allow(clippy::arithmetic_side_effects)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "in-canvas coordinates and edge branches prevent underflow in neighbor calculations"
+)]
 pub(crate) fn get_alpha_predictor(
     x: usize,
     y: usize,

@@ -96,6 +96,146 @@
       "sha256": "20847bd7cae767d053494ddc93827868af54c3751e0181c7144d176b03262d2d"
     },
     {
+      "bytes": 544,
+      "path": "high10_420_16x16/encoded.avif",
+      "sha256": "60c40a86c0409add22d7ab678b579ea4ccf979624bf3b127a4448d0a83e18d18"
+    },
+    {
+      "bytes": 768,
+      "path": "high10_420_16x16/pixels.bin",
+      "sha256": "55820e29e26b25634c402e57e8b743bb9560666861f5ea07c14a607f31eea38f"
+    },
+    {
+      "bytes": 768,
+      "path": "high10_420_16x16/planes.u16le",
+      "sha256": "f2dcb77828c77c2a12a08ff6e568998a33cd5dba593957f0d267ae411a4e51e6"
+    },
+    {
+      "bytes": 29473,
+      "path": "high10_420_16x16/replay.txt",
+      "sha256": "41f693e6094f1c10045c953a7a37811ee7574456af56d8787ed7e7b14617546d"
+    },
+    {
+      "bytes": 50962,
+      "path": "high10_420_16x16/replayed.jsonl.gz",
+      "sha256": "36897ef0ef36f33bdd6c19161f59b5b0aee958acc1300651ba48c72a8bdac0f4"
+    },
+    {
+      "bytes": 16576,
+      "path": "high10_420_16x16/syntax.json",
+      "sha256": "b0caaa00595bd8af4e141debc30856270700a572b336421cab3d70d3a1d52ddd"
+    },
+    {
+      "bytes": 50962,
+      "path": "high10_420_16x16/trace.jsonl.gz",
+      "sha256": "36897ef0ef36f33bdd6c19161f59b5b0aee958acc1300651ba48c72a8bdac0f4"
+    },
+    {
+      "bytes": 1653,
+      "path": "high10_420_alpha_lossless_16x16/encoded.avif",
+      "sha256": "8c3cb86055e1003d91897d986995dd2ee030d0278b82d3d7c9ddc783189eb76f"
+    },
+    {
+      "bytes": 1024,
+      "path": "high10_420_alpha_lossless_16x16/pixels.bin",
+      "sha256": "a3eec8f3c1e9539ccee71ec2e9d514a46d20d0b93a7b8e5d562379ef4a794dd9"
+    },
+    {
+      "bytes": 1280,
+      "path": "high10_420_alpha_lossless_16x16/planes.u16le",
+      "sha256": "fd0c9a3a4301e2927d73c37356556d07b4e130a96ce95abd247432807c475475"
+    },
+    {
+      "bytes": 170331,
+      "path": "high10_420_alpha_lossless_16x16/replay.txt",
+      "sha256": "da5df41add019c5451d9e01d2e66edbd4d57e72378231df92d7fc9ec53f2f617"
+    },
+    {
+      "bytes": 388021,
+      "path": "high10_420_alpha_lossless_16x16/replayed.jsonl.gz",
+      "sha256": "6f814ed2ed8cde678e421763064a8da4fc66614f60b02f6852fb2d5d1e4903fc"
+    },
+    {
+      "bytes": 32914,
+      "path": "high10_420_alpha_lossless_16x16/syntax.json",
+      "sha256": "dc071b71589a603d64ff90dc746a8f93df27c3027d973daaf3880566101ff245"
+    },
+    {
+      "bytes": 388021,
+      "path": "high10_420_alpha_lossless_16x16/trace.jsonl.gz",
+      "sha256": "6f814ed2ed8cde678e421763064a8da4fc66614f60b02f6852fb2d5d1e4903fc"
+    },
+    {
+      "bytes": 1901,
+      "path": "high10_422_alpha_lossless_16x16/encoded.avif",
+      "sha256": "eef1ffae7961354032dad642c1ebfc146cbcb28f7147c4dce6d9b8a4de17d392"
+    },
+    {
+      "bytes": 1024,
+      "path": "high10_422_alpha_lossless_16x16/pixels.bin",
+      "sha256": "b7731cca14b3da564883533a5cfd6ddc75aba189b60dbe7795de93711237a457"
+    },
+    {
+      "bytes": 1536,
+      "path": "high10_422_alpha_lossless_16x16/planes.u16le",
+      "sha256": "9712e18f0de85c91b9d30c171fadd3a67ebcd2b1d83d2cc5648dcae77c09eb2c"
+    },
+    {
+      "bytes": 207226,
+      "path": "high10_422_alpha_lossless_16x16/replay.txt",
+      "sha256": "1b54b14b9c128c04bab2b26618485918db6816d596b7cec1cc9883c418d3e8b1"
+    },
+    {
+      "bytes": 504636,
+      "path": "high10_422_alpha_lossless_16x16/replayed.jsonl.gz",
+      "sha256": "e7df385364e4789c1b17640e972758351cddf4c5ceba7312c08fb0a443418d87"
+    },
+    {
+      "bytes": 32914,
+      "path": "high10_422_alpha_lossless_16x16/syntax.json",
+      "sha256": "4bfc1fe88041ad08f2d2c69d54bc69f50ac48caef96db9a410c6bafc65d9fe31"
+    },
+    {
+      "bytes": 504636,
+      "path": "high10_422_alpha_lossless_16x16/trace.jsonl.gz",
+      "sha256": "e7df385364e4789c1b17640e972758351cddf4c5ceba7312c08fb0a443418d87"
+    },
+    {
+      "bytes": 1066,
+      "path": "high10_444_alpha_16x16/encoded.avif",
+      "sha256": "468bd5af2f96693582d6618572dc353cac4ee16719cebebb8e20ff7e81049548"
+    },
+    {
+      "bytes": 1024,
+      "path": "high10_444_alpha_16x16/pixels.bin",
+      "sha256": "02e871ddbaa576836e9d486cf36be09efce4f2fef164c7f66af2a579dfb1e67a"
+    },
+    {
+      "bytes": 2048,
+      "path": "high10_444_alpha_16x16/planes.u16le",
+      "sha256": "b6f27a7681aa46e297a2db2532dda188cb2bdaf2b9ca1a455394c9e134a37f4d"
+    },
+    {
+      "bytes": 79389,
+      "path": "high10_444_alpha_16x16/replay.txt",
+      "sha256": "027cfa86578ac62c76bb5b67ef83a0ceffea9d59b82ae96cc94ebeb48a7d06d2"
+    },
+    {
+      "bytes": 152266,
+      "path": "high10_444_alpha_16x16/replayed.jsonl.gz",
+      "sha256": "f158444da80d4e253d1ac4d51714dfe85cb0309eda276f359dbbe1d0ddafa460"
+    },
+    {
+      "bytes": 33014,
+      "path": "high10_444_alpha_16x16/syntax.json",
+      "sha256": "9d2e1268ed0a2953d6aab3e9c386a3eb3ebaec6aa540436e471a7229f547a3e6"
+    },
+    {
+      "bytes": 152266,
+      "path": "high10_444_alpha_16x16/trace.jsonl.gz",
+      "sha256": "f158444da80d4e253d1ac4d51714dfe85cb0309eda276f359dbbe1d0ddafa460"
+    },
+    {
       "bytes": 448,
       "path": "high12_422/encoded.avif",
       "sha256": "8b0ceb1d9ca87d861a8c863dc04b9bb7103c41e03b23d5dac60acd5bffa3e7b4"
@@ -169,6 +309,251 @@
       "bytes": 1141,
       "path": "instrumentation.patch",
       "sha256": "86c31518cbd44edd924e60838fee6f59602d23fb217175ffeeca94f36ab89a7f"
+    },
+    {
+      "bytes": 1352,
+      "path": "mono_limited_alpha_lossless_10bit_16x16/encoded.avif",
+      "sha256": "2497017931a998c26e7328b0e940b736ccbaaab5f3dfc4d3e6637ebb7e7168f2"
+    },
+    {
+      "bytes": 1024,
+      "path": "mono_limited_alpha_lossless_10bit_16x16/pixels.bin",
+      "sha256": "ed3fe784a495990c92c60ed29c188917e0c6c68c8672f3770e406b1fd7691dd9"
+    },
+    {
+      "bytes": 1024,
+      "path": "mono_limited_alpha_lossless_10bit_16x16/planes.u16le",
+      "sha256": "c4e06364af5da1df52723a4e307bb08047a77e11928a96174bf686e321b4dc01"
+    },
+    {
+      "bytes": 133516,
+      "path": "mono_limited_alpha_lossless_10bit_16x16/replay.txt",
+      "sha256": "5371f4b6066b68d749f626ade0db1995f3a042cc9e7d6bb6ad68a4742e464424"
+    },
+    {
+      "bytes": 283623,
+      "path": "mono_limited_alpha_lossless_10bit_16x16/replayed.jsonl.gz",
+      "sha256": "3209694f821d87ec8f17b3ea3805be5c79a5fc6e9b4aa72356fa9cd97ed79ab4"
+    },
+    {
+      "bytes": 32911,
+      "path": "mono_limited_alpha_lossless_10bit_16x16/syntax.json",
+      "sha256": "c0bcfbe41b6da37cbf75e7d7d91f21ea713755ef85ea945eabe7b1694818a27a"
+    },
+    {
+      "bytes": 283623,
+      "path": "mono_limited_alpha_lossless_10bit_16x16/trace.jsonl.gz",
+      "sha256": "3209694f821d87ec8f17b3ea3805be5c79a5fc6e9b4aa72356fa9cd97ed79ab4"
+    },
+    {
+      "bytes": 1587,
+      "path": "mono_limited_alpha_lossless_12bit_16x16/encoded.avif",
+      "sha256": "27aed8594e5d60179e6596dd950800fdf43f6809038ed30c0b86aaf4c20ac3c7"
+    },
+    {
+      "bytes": 1024,
+      "path": "mono_limited_alpha_lossless_12bit_16x16/pixels.bin",
+      "sha256": "ff702f5efd66fbe66bdbf67c5f683ac042ab5e3ae4067a40a3f6e14f8760ca09"
+    },
+    {
+      "bytes": 1024,
+      "path": "mono_limited_alpha_lossless_12bit_16x16/planes.u16le",
+      "sha256": "65a586fc566adf9b01a69f62422fb451036e24c737ed6854f813cf2a5cf93f1b"
+    },
+    {
+      "bytes": 155893,
+      "path": "mono_limited_alpha_lossless_12bit_16x16/replay.txt",
+      "sha256": "44c9961fb2fa47690dc6e2c66ebebd283ebb91b64e1ae689003f72373953fdc8"
+    },
+    {
+      "bytes": 357699,
+      "path": "mono_limited_alpha_lossless_12bit_16x16/replayed.jsonl.gz",
+      "sha256": "85ccbe3eb4ed5cb25afc5d017495e25e55fad8862531106ae093e987cbd026ac"
+    },
+    {
+      "bytes": 32912,
+      "path": "mono_limited_alpha_lossless_12bit_16x16/syntax.json",
+      "sha256": "feb5969d54477ddccc187461ed2a00afb1a575976a75f4fd6da047b2cf07599a"
+    },
+    {
+      "bytes": 357699,
+      "path": "mono_limited_alpha_lossless_12bit_16x16/trace.jsonl.gz",
+      "sha256": "85ccbe3eb4ed5cb25afc5d017495e25e55fad8862531106ae093e987cbd026ac"
+    },
+    {
+      "bytes": 1111,
+      "path": "mono_limited_alpha_lossless_16x16/encoded.avif",
+      "sha256": "b95edc757441fad6b2c051e1df78c888fab81aeab5c81e366d8fd4b5941a58fa"
+    },
+    {
+      "bytes": 1024,
+      "path": "mono_limited_alpha_lossless_16x16/pixels.bin",
+      "sha256": "aff3a7277b7b21f5ec06e4f4d85b1309eee554a086042cc52da99e2215f8f578"
+    },
+    {
+      "bytes": 1024,
+      "path": "mono_limited_alpha_lossless_16x16/planes.u16le",
+      "sha256": "5bfa4c569e1c41cc9073bd6209825efe7c477325af161d2455e99b48f854cced"
+    },
+    {
+      "bytes": 107895,
+      "path": "mono_limited_alpha_lossless_16x16/replay.txt",
+      "sha256": "9f8b4d703e67b854224fe2ebc6c04aa08474f0f11d7dddee1b67428eb68cc0e6"
+    },
+    {
+      "bytes": 208918,
+      "path": "mono_limited_alpha_lossless_16x16/replayed.jsonl.gz",
+      "sha256": "10c7d87ad169a5ff165bd7525a6f71748ef7c24282bf0475891bf47fb53f86e4"
+    },
+    {
+      "bytes": 32909,
+      "path": "mono_limited_alpha_lossless_16x16/syntax.json",
+      "sha256": "9be3bdb77737fbbfa1cb13102a15a24a4091f138c9f0879b46ff45bfa3c239d9"
+    },
+    {
+      "bytes": 208918,
+      "path": "mono_limited_alpha_lossless_16x16/trace.jsonl.gz",
+      "sha256": "10c7d87ad169a5ff165bd7525a6f71748ef7c24282bf0475891bf47fb53f86e4"
+    },
+    {
+      "bytes": 632,
+      "path": "mono_limited_bt2020_pq_lossless_16x16/encoded.avif",
+      "sha256": "ad3ce0e1171561690b156149fa8761fcc8adf26670507b0d64cc4294994d344b"
+    },
+    {
+      "bytes": 768,
+      "path": "mono_limited_bt2020_pq_lossless_16x16/pixels.bin",
+      "sha256": "81a84ee60e5a6b01ffeb8007cf087a5956fbb03da7e734b6f2326bb801750150"
+    },
+    {
+      "bytes": 512,
+      "path": "mono_limited_bt2020_pq_lossless_16x16/planes.u16le",
+      "sha256": "763437ba3a271c0bad8bfa0269f7a90a8c55ebc9472f41e02abaebbeb4d87ba2"
+    },
+    {
+      "bytes": 55590,
+      "path": "mono_limited_bt2020_pq_lossless_16x16/replay.txt",
+      "sha256": "979d39f6f4dffb122ef4f92b5b827c7545d08f4b3e512de59c9e67c1f66f41f2"
+    },
+    {
+      "bytes": 107539,
+      "path": "mono_limited_bt2020_pq_lossless_16x16/replayed.jsonl.gz",
+      "sha256": "b55e9b166d3511b9201e8c42fe477bbe6efe5eeeb1123c25f6ac280f644a669c"
+    },
+    {
+      "bytes": 16482,
+      "path": "mono_limited_bt2020_pq_lossless_16x16/syntax.json",
+      "sha256": "587aa7d54edf2c3cc1a9500808308d910960c35d938ce70a3ecf19cc8ed9ffb5"
+    },
+    {
+      "bytes": 107539,
+      "path": "mono_limited_bt2020_pq_lossless_16x16/trace.jsonl.gz",
+      "sha256": "b55e9b166d3511b9201e8c42fe477bbe6efe5eeeb1123c25f6ac280f644a669c"
+    },
+    {
+      "bytes": 759,
+      "path": "mono_limited_lossless_10bit_16x16/encoded.avif",
+      "sha256": "514a2b65aa84f2bd647a8c041cf20c7b59c8fb7e71f8303bc1a4a408defccd66"
+    },
+    {
+      "bytes": 768,
+      "path": "mono_limited_lossless_10bit_16x16/pixels.bin",
+      "sha256": "756fe3346d631980ef8ca651824dc321b5ec3a35deab90e8a43eca0b2945393c"
+    },
+    {
+      "bytes": 512,
+      "path": "mono_limited_lossless_10bit_16x16/planes.u16le",
+      "sha256": "b1c254ce51554a088318c18a3f772002e34e9a65726b087dded15bae999e95e4"
+    },
+    {
+      "bytes": 67887,
+      "path": "mono_limited_lossless_10bit_16x16/replay.txt",
+      "sha256": "6c977d2345807be962174e185059795bcfd7512974e780d2fb252883a4a3c419"
+    },
+    {
+      "bytes": 145571,
+      "path": "mono_limited_lossless_10bit_16x16/replayed.jsonl.gz",
+      "sha256": "eab195309f6073e2e5a844078a2c4aa2636ac26e7020d14a723b75fabde013b6"
+    },
+    {
+      "bytes": 16483,
+      "path": "mono_limited_lossless_10bit_16x16/syntax.json",
+      "sha256": "c21c4ea04c43c482a887a569731fb9288593ffeadacd9c01c39f86bf646a0c8f"
+    },
+    {
+      "bytes": 145571,
+      "path": "mono_limited_lossless_10bit_16x16/trace.jsonl.gz",
+      "sha256": "eab195309f6073e2e5a844078a2c4aa2636ac26e7020d14a723b75fabde013b6"
+    },
+    {
+      "bytes": 873,
+      "path": "mono_limited_lossless_12bit_16x16/encoded.avif",
+      "sha256": "3abcfd332dff4d6ccfc801b75430c1997e1738b1546006ab5590a6e1fcfd549e"
+    },
+    {
+      "bytes": 768,
+      "path": "mono_limited_lossless_12bit_16x16/pixels.bin",
+      "sha256": "e1cd06c4130804d0274ee4d76338cd4cab94f09195cd82515b13443ab932d57e"
+    },
+    {
+      "bytes": 512,
+      "path": "mono_limited_lossless_12bit_16x16/planes.u16le",
+      "sha256": "f4d522e7edf61c8b3756861e50619fea4c9c5f4dcec0cf8f0dbded1416dbc655"
+    },
+    {
+      "bytes": 78946,
+      "path": "mono_limited_lossless_12bit_16x16/replay.txt",
+      "sha256": "47628b939af577587a79ae7af9197176c8c32be2671e80810389ad8ee02eda25"
+    },
+    {
+      "bytes": 181668,
+      "path": "mono_limited_lossless_12bit_16x16/replayed.jsonl.gz",
+      "sha256": "7884eecbfb45a4b62eca276db389ca7e015d8af6900a8d3dce4b7ca26eaa3665"
+    },
+    {
+      "bytes": 16483,
+      "path": "mono_limited_lossless_12bit_16x16/syntax.json",
+      "sha256": "f8eb9bbbbf41acf7acf272412c70f5f185b362d5f61e9cf951430daae85fb200"
+    },
+    {
+      "bytes": 181668,
+      "path": "mono_limited_lossless_12bit_16x16/trace.jsonl.gz",
+      "sha256": "7884eecbfb45a4b62eca276db389ca7e015d8af6900a8d3dce4b7ca26eaa3665"
+    },
+    {
+      "bytes": 632,
+      "path": "mono_limited_lossless_16x16/encoded.avif",
+      "sha256": "e14c3cce9943b6f4f12ad3f0a93624c702678a73fa55101ba61e61aabe3168be"
+    },
+    {
+      "bytes": 768,
+      "path": "mono_limited_lossless_16x16/pixels.bin",
+      "sha256": "81a84ee60e5a6b01ffeb8007cf087a5956fbb03da7e734b6f2326bb801750150"
+    },
+    {
+      "bytes": 512,
+      "path": "mono_limited_lossless_16x16/planes.u16le",
+      "sha256": "763437ba3a271c0bad8bfa0269f7a90a8c55ebc9472f41e02abaebbeb4d87ba2"
+    },
+    {
+      "bytes": 55590,
+      "path": "mono_limited_lossless_16x16/replay.txt",
+      "sha256": "979d39f6f4dffb122ef4f92b5b827c7545d08f4b3e512de59c9e67c1f66f41f2"
+    },
+    {
+      "bytes": 107539,
+      "path": "mono_limited_lossless_16x16/replayed.jsonl.gz",
+      "sha256": "b55e9b166d3511b9201e8c42fe477bbe6efe5eeeb1123c25f6ac280f644a669c"
+    },
+    {
+      "bytes": 16482,
+      "path": "mono_limited_lossless_16x16/syntax.json",
+      "sha256": "c82148f059ec2f13d046f930c0b962c97271fc6e3d616bcbdabf6919cc4685fb"
+    },
+    {
+      "bytes": 107539,
+      "path": "mono_limited_lossless_16x16/trace.jsonl.gz",
+      "sha256": "b55e9b166d3511b9201e8c42fe477bbe6efe5eeeb1123c25f6ac280f644a669c"
     },
     {
       "bytes": 382,
@@ -450,12 +835,12 @@
       "-DAVIF_BUILD_TESTS=OFF"
     ],
     "binary_sha256": {
-      "encode-plain": "c6eca4070ba6643a8d6ff1251f32a0f6a26c5903c5f0933aca97c2ff2cfbe8a0",
-      "encode-trace": "f3a3b78e2a7f45dfb3792dcfade6bc1c71dcd89ba3cd40316b83cec41cda125c",
-      "libavif.a": "ef4e6b9dcd1d78a4aeacb7456cf1aa9b404cabf09e1bf075bbf7ee66def13226",
-      "plain": "cd3b8d1458ff59c44bdb228ab7e43f0c397ea90bff667c96912f6c3dc0db9b95",
+      "encode-plain": "f104f1aa48a6e5c1842acf25e7108f618ef31006ed1012ae77e4d4da9306d247",
+      "encode-trace": "e12add6219ad63a7e72782d1f80b9f72a5cf197160b5bf65fa0a49c621acd866",
+      "libavif.a": "f99d137871d9becaf1dd3795f9bfb91c8a3a6fbded5848811f72118e464cfd87",
+      "plain": "9a7731d2ce1c1eda6bd39a26b849e8354e7ef622097562693bf90427cb6d35b2",
       "replay": "3872e677d802be81d9d6d27a33502fb964b66b9fcdbe93ed309cfbd37a8f0fa8",
-      "trace": "909b4453c50c561758fdb1253a17f9bf57988f9262e2515e6a129fd38d542977"
+      "trace": "f0b3ccc045b3e9f8472132fc21f03cb27e3f90aa1187cf320d55cbde0e5e7b15"
     },
     "tools": {
       "cc": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin",
@@ -576,6 +961,504 @@
       "quality": 100,
       "quality_alpha": 100,
       "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 346,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 346,
+                "offset": 286
+              }
+            ],
+            "sha256": "1216ae855b07050e757f580c86a568cfd84ed7fad632325224881e5a7079ffc0",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "mono_limited_lossless_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 3282,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "limited",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": true,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 346,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 346,
+                "offset": 765
+              }
+            ],
+            "sha256": "1216ae855b07050e757f580c86a568cfd84ed7fad632325224881e5a7079ffc0",
+            "size_field": null
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_alpha",
+          "tile": {
+            "index": 0,
+            "length": 336,
+            "logical_offset": 14,
+            "physical_spans": [
+              {
+                "length": 336,
+                "offset": 412
+              }
+            ],
+            "sha256": "509c9703686715b2117324c49f30bf15d355cbd367d6468d8b64f87399af96f7",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGBA",
+      "depth": 8,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "mono_limited_alpha_lossless_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        },
+        {
+          "channel": 3,
+          "height": 16,
+          "offset": 512,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 6271,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "limited",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 473,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 473,
+                "offset": 286
+              }
+            ],
+            "sha256": "c68cc8e86751c5f7cdb0be2dae43650653ee1caccc4e2278e9d2f15fc75ccafb",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 10,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "mono_limited_lossless_10bit_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 4416,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "limited",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 587,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 587,
+                "offset": 286
+              }
+            ],
+            "sha256": "97b1072e477edcc40ec333e8b5fac96ba3a9a16689cb37b75491e47bfbf54ce1",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 12,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "mono_limited_lossless_12bit_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 5405,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "limited",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": true,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 473,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 473,
+                "offset": 879
+              }
+            ],
+            "sha256": "c68cc8e86751c5f7cdb0be2dae43650653ee1caccc4e2278e9d2f15fc75ccafb",
+            "size_field": null
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_alpha",
+          "tile": {
+            "index": 0,
+            "length": 450,
+            "logical_offset": 14,
+            "physical_spans": [
+              {
+                "length": 450,
+                "offset": 412
+              }
+            ],
+            "sha256": "3f0788fa4961ea86514aaf5da9459868a7db2963343e8bbba11028d2d1f7b598",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGBA",
+      "depth": 10,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "mono_limited_alpha_lossless_10bit_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        },
+        {
+          "channel": 3,
+          "height": 16,
+          "offset": 512,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 8586,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "limited",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": true,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 587,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 587,
+                "offset": 1000
+              }
+            ],
+            "sha256": "97b1072e477edcc40ec333e8b5fac96ba3a9a16689cb37b75491e47bfbf54ce1",
+            "size_field": null
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_alpha",
+          "tile": {
+            "index": 0,
+            "length": 571,
+            "logical_offset": 14,
+            "physical_spans": [
+              {
+                "length": 571,
+                "offset": 412
+              }
+            ],
+            "sha256": "0e4e08d42d3b5ee8149745bdf73c9a7d07e9041eabda36786c4778adfe8d2968",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGBA",
+      "depth": 12,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "mono_limited_alpha_lossless_12bit_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        },
+        {
+          "channel": 3,
+          "height": 16,
+          "offset": 512,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 10582,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "limited",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 346,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 346,
+                "offset": 286
+              }
+            ],
+            "sha256": "1216ae855b07050e757f580c86a568cfd84ed7fad632325224881e5a7079ffc0",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        9,
+        16,
+        9
+      ],
+      "decoded_mode": "RGB",
+      "depth": 8,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "mono_limited_bt2020_pq_lossless_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 3282,
+      "pixel_format": 4,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "limited",
       "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
       "speed": 6,
       "threads": 1,
@@ -861,6 +1744,372 @@
       "native_repetitions": 2,
       "operations": 728,
       "pixel_format": 3,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": false,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 242,
+            "logical_offset": 27,
+            "physical_spans": [
+              {
+                "length": 242,
+                "offset": 302
+              }
+            ],
+            "sha256": "ee5c06f013c6789bfe434bd25dccbf4f380fc7c16cdbcea56165af687359046a",
+            "size_field": null
+          },
+          "writer": 1
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGB",
+      "depth": 10,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "high10_420_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        },
+        {
+          "channel": 1,
+          "height": 8,
+          "offset": 512,
+          "width": 8
+        },
+        {
+          "channel": 2,
+          "height": 8,
+          "offset": 640,
+          "width": 8
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 1220,
+      "pixel_format": 3,
+      "quality": 75,
+      "quality_alpha": 75,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": true,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 740,
+            "logical_offset": 19,
+            "physical_spans": [
+              {
+                "length": 740,
+                "offset": 913
+              }
+            ],
+            "sha256": "1973207c72262857b11f3040f97d016fa493bd65c182e436859be08141762008",
+            "size_field": null
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_alpha",
+          "tile": {
+            "index": 0,
+            "length": 450,
+            "logical_offset": 14,
+            "physical_spans": [
+              {
+                "length": 450,
+                "offset": 444
+              }
+            ],
+            "sha256": "3f0788fa4961ea86514aaf5da9459868a7db2963343e8bbba11028d2d1f7b598",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGBA",
+      "depth": 10,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "high10_420_alpha_lossless_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        },
+        {
+          "channel": 1,
+          "height": 8,
+          "offset": 512,
+          "width": 8
+        },
+        {
+          "channel": 2,
+          "height": 8,
+          "offset": 640,
+          "width": 8
+        },
+        {
+          "channel": 3,
+          "height": 16,
+          "offset": 768,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 11026,
+      "pixel_format": 3,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": true,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 993,
+            "logical_offset": 18,
+            "physical_spans": [
+              {
+                "length": 993,
+                "offset": 908
+              }
+            ],
+            "sha256": "a9d490244bbaa974085486a8dae4405fa85f57dccfd2c847b532165eb7f2f4cb",
+            "size_field": null
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_alpha",
+          "tile": {
+            "index": 0,
+            "length": 450,
+            "logical_offset": 14,
+            "physical_spans": [
+              {
+                "length": 450,
+                "offset": 440
+              }
+            ],
+            "sha256": "3f0788fa4961ea86514aaf5da9459868a7db2963343e8bbba11028d2d1f7b598",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGBA",
+      "depth": 10,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "high10_422_alpha_lossless_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        },
+        {
+          "channel": 1,
+          "height": 16,
+          "offset": 512,
+          "width": 8
+        },
+        {
+          "channel": 2,
+          "height": 16,
+          "offset": 768,
+          "width": 8
+        },
+        {
+          "channel": 3,
+          "height": 16,
+          "offset": 1024,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 13388,
+      "pixel_format": 2,
+      "quality": 100,
+      "quality_alpha": 100,
+      "range": "full",
+      "scope": "standalone libavif/libaom encode; pinned Pillow/dav1d decode",
+      "speed": 6,
+      "threads": 1,
+      "tile_cols_log2": 0,
+      "tile_rows_log2": 0,
+      "uncommitted_writers": [],
+      "unmodified_replay_equal": true
+    },
+    {
+      "alpha": true,
+      "auto_tiling": false,
+      "bindings": [
+        {
+          "candidate_writers": [
+            1
+          ],
+          "sample_role": "item_color",
+          "tile": {
+            "index": 0,
+            "length": 414,
+            "logical_offset": 25,
+            "physical_spans": [
+              {
+                "length": 414,
+                "offset": 652
+              }
+            ],
+            "sha256": "ed6712fe484068f49ea4b77e453e9cb40a0f9ea874e0dfece549dd4e3ddacae2",
+            "size_field": null
+          },
+          "writer": 1
+        },
+        {
+          "candidate_writers": [
+            2
+          ],
+          "sample_role": "item_alpha",
+          "tile": {
+            "index": 0,
+            "length": 180,
+            "logical_offset": 17,
+            "physical_spans": [
+              {
+                "length": 180,
+                "offset": 447
+              }
+            ],
+            "sha256": "1b6ce490a7fdf529674d685fec4aa0b78019f5338d8e573f02cc3c43a41e8e3e",
+            "size_field": null
+          },
+          "writer": 2
+        }
+      ],
+      "cicp": [
+        1,
+        13,
+        6
+      ],
+      "decoded_mode": "RGBA",
+      "depth": 10,
+      "dimensions": [
+        16,
+        16
+      ],
+      "id": "high10_444_alpha_16x16",
+      "input_planes": [
+        {
+          "channel": 0,
+          "height": 16,
+          "offset": 0,
+          "width": 16
+        },
+        {
+          "channel": 1,
+          "height": 16,
+          "offset": 512,
+          "width": 16
+        },
+        {
+          "channel": 2,
+          "height": 16,
+          "offset": 1024,
+          "width": 16
+        },
+        {
+          "channel": 3,
+          "height": 16,
+          "offset": 1536,
+          "width": 16
+        }
+      ],
+      "instrumentation_noninterference": true,
+      "native_repetitions": 2,
+      "operations": 3267,
+      "pixel_format": 1,
       "quality": 75,
       "quality_alpha": 75,
       "range": "full",
@@ -1226,6 +2475,7 @@
       6,
       7,
       8,
+      9,
       10,
       11,
       13,
@@ -1235,22 +2485,24 @@
     "bool_q15_max": 16384,
     "bool_q15_min": 16384,
     "counts": {
-      "adaptation_15_16": 105,
-      "adaptation_31_32": 25,
-      "adaptation_32_32": 512,
-      "bool": 3099,
-      "carry_prefix_change": 89,
+      "adaptation_15_16": 389,
+      "adaptation_31_32": 160,
+      "adaptation_32_32": 12538,
+      "bool": 52493,
+      "carry_prefix_change": 422,
       "cdf": 7,
-      "finish": 12,
+      "finish": 29,
       "longest_carry_prefix_change": 2,
-      "normalization_flush": 252,
-      "start": 12,
-      "symbol": 5558
+      "normalization_flush": 1570,
+      "start": 29,
+      "symbol": 26855
     },
     "termination_appended_bytes": [
       1,
       2,
       3,
+      4,
+      5,
       6
     ]
   },
@@ -1286,6 +2538,46 @@
       "path": "high10_420/trace.jsonl.gz"
     },
     {
+      "expanded_bytes": 1026557,
+      "expanded_sha256": "66d6a150f88969d63beff13e831ed91a164afa6a5e6104f8fe84c523a5e83386",
+      "path": "high10_420_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 1026557,
+      "expanded_sha256": "66d6a150f88969d63beff13e831ed91a164afa6a5e6104f8fe84c523a5e83386",
+      "path": "high10_420_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 17321381,
+      "expanded_sha256": "aee39a55e4615d0084f9c92ca0dbce7e8f75cf7a11ee1e9cfae9ab80d2d54883",
+      "path": "high10_420_alpha_lossless_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 17321381,
+      "expanded_sha256": "aee39a55e4615d0084f9c92ca0dbce7e8f75cf7a11ee1e9cfae9ab80d2d54883",
+      "path": "high10_420_alpha_lossless_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 26434206,
+      "expanded_sha256": "a67f9ae8264044292c63f915a5acbcd051ff1ecaa3f7277c94d9a2a85b148d72",
+      "path": "high10_422_alpha_lossless_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 26434206,
+      "expanded_sha256": "a67f9ae8264044292c63f915a5acbcd051ff1ecaa3f7277c94d9a2a85b148d72",
+      "path": "high10_422_alpha_lossless_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 3363330,
+      "expanded_sha256": "5d3cf2ac09e23153874a1012f410111299ee85b2a842a5bf492360d1873cfdd2",
+      "path": "high10_444_alpha_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 3363330,
+      "expanded_sha256": "5d3cf2ac09e23153874a1012f410111299ee85b2a842a5bf492360d1873cfdd2",
+      "path": "high10_444_alpha_16x16/trace.jsonl.gz"
+    },
+    {
       "expanded_bytes": 510474,
       "expanded_sha256": "c1ff923d71d8d9bbc8808bb340e5ead4fbf7e55be36c115d513f9cd17f021f48",
       "path": "high12_422/replayed.jsonl.gz"
@@ -1304,6 +2596,76 @@
       "expanded_bytes": 597039,
       "expanded_sha256": "0536bece61da373b8f318507a5365f968464bb0374b395c14759b4be902a22f4",
       "path": "high12_444/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 10660300,
+      "expanded_sha256": "3443db85c26e3d5185718f3da2b9b937a9fafe942c2a99ae9f9a0c97ecb918be",
+      "path": "mono_limited_alpha_lossless_10bit_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 10660300,
+      "expanded_sha256": "3443db85c26e3d5185718f3da2b9b937a9fafe942c2a99ae9f9a0c97ecb918be",
+      "path": "mono_limited_alpha_lossless_10bit_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 15620785,
+      "expanded_sha256": "81f6ff4a5bf11ec72ddf76f31ceb049d2794a7a7befd9a800a970f7b4c11d0ac",
+      "path": "mono_limited_alpha_lossless_12bit_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 15620785,
+      "expanded_sha256": "81f6ff4a5bf11ec72ddf76f31ceb049d2794a7a7befd9a800a970f7b4c11d0ac",
+      "path": "mono_limited_alpha_lossless_12bit_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 6288744,
+      "expanded_sha256": "cf5cf6d7ce8505b05be3e2a871a5ebade4e8399fa18da663088f8b6bbc33f501",
+      "path": "mono_limited_alpha_lossless_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 6288744,
+      "expanded_sha256": "cf5cf6d7ce8505b05be3e2a871a5ebade4e8399fa18da663088f8b6bbc33f501",
+      "path": "mono_limited_alpha_lossless_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 3345505,
+      "expanded_sha256": "652645cbf548f5e55d6a1e0237439eb5f1718bba0dc2d3c63be9b726a6535c92",
+      "path": "mono_limited_bt2020_pq_lossless_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 3345505,
+      "expanded_sha256": "652645cbf548f5e55d6a1e0237439eb5f1718bba0dc2d3c63be9b726a6535c92",
+      "path": "mono_limited_bt2020_pq_lossless_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 5611912,
+      "expanded_sha256": "c297ac84ed4fd099acf9fdc39a7ef939fdf037a566fc19dd058302fbf1a70366",
+      "path": "mono_limited_lossless_10bit_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 5611912,
+      "expanded_sha256": "c297ac84ed4fd099acf9fdc39a7ef939fdf037a566fc19dd058302fbf1a70366",
+      "path": "mono_limited_lossless_10bit_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 8095039,
+      "expanded_sha256": "d8f080c6314375ff4b0be6dfea4cecf4a9e507f590e978d4ae139aa280fb746e",
+      "path": "mono_limited_lossless_12bit_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 8095039,
+      "expanded_sha256": "d8f080c6314375ff4b0be6dfea4cecf4a9e507f590e978d4ae139aa280fb746e",
+      "path": "mono_limited_lossless_12bit_16x16/trace.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 3345505,
+      "expanded_sha256": "652645cbf548f5e55d6a1e0237439eb5f1718bba0dc2d3c63be9b726a6535c92",
+      "path": "mono_limited_lossless_16x16/replayed.jsonl.gz"
+    },
+    {
+      "expanded_bytes": 3345505,
+      "expanded_sha256": "652645cbf548f5e55d6a1e0237439eb5f1718bba0dc2d3c63be9b726a6535c92",
+      "path": "mono_limited_lossless_16x16/trace.jsonl.gz"
     },
     {
       "expanded_bytes": 443300,
@@ -1369,11 +2731,11 @@
   "inputs": [
     {
       "path": "scripts/generate_av1_encoder_refs.py",
-      "sha256": "36b1be18fa2993a8f07db4f0eb61e68a2e53583111a7be690115dbe52b969e37"
+      "sha256": "8e0f0f07dfbdf358bfc61ae062585b8e0a3127d3ebefd95fead62eccc81852ea"
     },
     {
       "path": "scripts/av1_encoder_oracle/encode.c",
-      "sha256": "e7c26c047ccde9f15fdb203a825f7f767e8b7bbf19d97cf633944874605c86e6"
+      "sha256": "7283bce35a283960ba1e9ab1c29295ab00bf37d73c9ecca2407c755c9bd31f8a"
     },
     {
       "path": "scripts/av1_encoder_oracle/replay.c",
@@ -1397,7 +2759,7 @@
     },
     {
       "path": "scripts/generate_decode_refs.py",
-      "sha256": "cab218b7d067515b8eb03831bb42db00c67692593a787e775ac31fa549af0917"
+      "sha256": "520f8d3859dd7365559f75b347ccb71292b1d2805279b0c968e36af3e96d9cc8"
     },
     {
       "path": "scripts/generate_av1_sequence_refs.py",
@@ -1409,7 +2771,7 @@
     },
     {
       "path": "manifest.yaml",
-      "sha256": "72cba218c984eb7179d5efc984b0836f72610e22a8bcc49d979651c46e4478d2"
+      "sha256": "13e1ec0ac8fe17726880549a65c9c077fc58854fc51414664c2247c755861783"
     },
     {
       "path": "pillow-oracle.lock.yaml",

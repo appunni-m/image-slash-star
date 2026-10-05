@@ -34,9 +34,9 @@ include = [
 [lib]
 test = false
 
-# The fixture and coverage suites execute real codec work, including the
-# intentionally expensive GIF/WebP cases. An optimized test binary keeps that
-# validation representative without requiring callers to use a release build.
+# The public parity and coverage suites execute real codec work, including the
+# intentionally expensive GIF/WebP cases. Keep the private library unit-test
+# target disabled so coverage comes from observable codec inputs.
 [profile.test]
 opt-level = 2
 
@@ -60,8 +60,8 @@ wide = { version = "1.6.1", optional = true }
 [features]
 default = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico"]
 jpeg = ["dep:wide"]
-# Opt-in safe SIMD RGB conversion. The default encoder keeps the scalar
-# reference because the complete-path benchmark did not admit this candidate.
+# Compatibility alias for `jpeg`; safe SIMD color kernels are part of the
+# JPEG implementation and enabled by the `jpeg` feature.
 jpeg-wide-color = ["jpeg"]
 png = []
 gif = []
@@ -76,13 +76,21 @@ future-incompatible = { level = "deny", priority = -1 }
 nonstandard_style = { level = "deny", priority = -1 }
 unused = { level = "deny", priority = -1 }
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage)", "cfg(coverage_nightly)"] }
-unsafe_code = "deny"
+unsafe_code = "forbid"
 unused_crate_dependencies = "warn"
 dead_code = "deny"
 deprecated = "deny"
 missing_docs = "warn"
 
 [lints.clippy]
+allow_attributes_without_reason = "deny"
+# Keep Clippy's default correctness, style, complexity, and performance checks
+# explicit; the strict repository commands promote these warnings to errors.
+all = { level = "warn", priority = -1 }
+missing_errors_doc = "deny"
+missing_panics_doc = "deny"
+dbg_macro = "deny"
+unimplemented = "deny"
 unwrap_used = "deny"
 expect_used = "deny"
 unwrap_in_result = "deny"
@@ -98,4 +106,5 @@ needless_range_loop = "deny"
 unnecessary_cast = "deny"
 cast_possible_truncation = "warn"
 cast_sign_loss = "warn"
+cast_possible_wrap = "warn"
 arithmetic_side_effects = "warn"

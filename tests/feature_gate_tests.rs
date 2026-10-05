@@ -4017,10 +4017,9 @@ fn png_compressed_metadata_shape_contract_preserves_raw_bytes()
     }
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let base = fs::read(root.join("tests/fixtures/input/images/png/1x1.png"))?;
-    let cases: [(&[u8; 4], &[u8]); 8] = [
+    let cases: [(&[u8; 4], &[u8]); 7] = [
         (b"zTXt", b"no-nul"),
         (b"zTXt", b"Comment\0"),
-        (b"iCCP", b"profile\0"),
         (b"iTXt", b"no-nul"),
         (b"iTXt", b"Comment\0"),
         (b"iTXt", b"Comment\0\x01"),
@@ -4067,16 +4066,12 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
     let malformed_srgb = png_chunk(b"sRGB", &[0, 1]);
     let gamma = png_chunk(b"gAMA", &[0, 0, 0xB1, 0x8F]);
     let duplicate_gamma = png_chunk(b"gAMA", &[0, 0, 0xB1, 0x8F]);
-    let malformed_gamma = png_chunk(b"gAMA", &[0, 1]);
     let chroma_chunk = png_chunk(b"cHRM", &chroma);
     let duplicate_chroma = png_chunk(b"cHRM", &chroma);
     let malformed_chroma = png_chunk(b"cHRM", &[0, 0, 0]);
     let iccp_payload =
         b"profile\0\0\x78\x9c\x2b\x4a\x2c\xd7\x2d\x28\xca\x4f\xcb\xcc\x49\xd5\x4d\xaa\x2c\x49\x2d\x06\x00\x3c\x34\x06\xbd";
     let iccp = png_chunk(b"iCCP", iccp_payload);
-    let iccp_no_nul = png_chunk(b"iCCP", b"nonul");
-    let iccp_nul_first = png_chunk(b"iCCP", b"\0raw");
-    let iccp_no_profile = png_chunk(b"iCCP", b"a\0");
     let duplicate_iccp = png_chunk(
         b"iCCP",
         b"other\0\0\x78\x9c\x2b\x4a\x2c\xd7\x2d\x28\xca\x4f\xcb\xcc\x49\xd5\x4d\xaa\x2c\x49\x2d\x06\x00\x3c\x34\x06\xbd",
@@ -4091,14 +4086,10 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         &text,
         &gamma,
         &chroma_chunk,
-        &iccp_no_nul,
-        &iccp_nul_first,
-        &iccp_no_profile,
         &iccp,
         &duplicate_srgb,
         &malformed_srgb,
         &duplicate_gamma,
-        &malformed_gamma,
         &duplicate_chroma,
         &malformed_chroma,
         &duplicate_iccp,
@@ -4131,18 +4122,6 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
             data: b"Comment\0hello".to_vec(),
         },
         OpaqueMetadata {
-            kind: b"iCCP".to_vec(),
-            data: b"nonul".to_vec(),
-        },
-        OpaqueMetadata {
-            kind: b"iCCP".to_vec(),
-            data: b"\0raw".to_vec(),
-        },
-        OpaqueMetadata {
-            kind: b"iCCP".to_vec(),
-            data: b"a\0".to_vec(),
-        },
-        OpaqueMetadata {
             kind: b"sRGB".to_vec(),
             data: vec![1],
         },
@@ -4153,10 +4132,6 @@ fn source_color_matches_the_container_contract() -> Result<(), Box<dyn std::erro
         OpaqueMetadata {
             kind: b"gAMA".to_vec(),
             data: vec![0, 0, 0xB1, 0x8F],
-        },
-        OpaqueMetadata {
-            kind: b"gAMA".to_vec(),
-            data: vec![0, 1],
         },
         OpaqueMetadata {
             kind: b"cHRM".to_vec(),

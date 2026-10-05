@@ -95,7 +95,10 @@ pub(super) struct Intra16Candidate {
     pub(super) nonzero: u32,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Candidate evaluation consumes the fixed block context and encoder rate model directly."
+)]
 fn evaluate(
     mode: Intra16Mode,
     source: &[u8; 256],
@@ -252,7 +255,10 @@ fn evaluate(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The intra16 search passes its fixed block, neighbor, and rate inputs to candidate evaluation."
+)]
 pub(super) fn select(
     source: &[u8; 256],
     top: &[u8; 16],
@@ -273,7 +279,10 @@ pub(super) fn select(
 ) -> Intra16Candidate {
     let selected_mode = distortion_only.then(|| {
         // The complete intra16 mode set is statically non-empty.
-        #[allow(clippy::expect_used)]
+        #[allow(
+            clippy::expect_used,
+            reason = "Intra16Mode::ALL statically contains the complete non-empty prediction set."
+        )]
         Intra16Mode::ALL
             .into_iter()
             .min_by_key(|&mode| {
@@ -285,7 +294,10 @@ pub(super) fn select(
             .expect("VP8 always has intra16 candidates")
     });
     // `fixed_mode`, when present, is itself a member of this non-empty enum set.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "Intra16Mode::ALL statically contains the complete non-empty prediction set."
+    )]
     Intra16Mode::ALL
         .into_iter()
         .filter(|&mode| {
@@ -313,37 +325,4 @@ pub(super) fn select(
         })
         .min_by_key(|candidate| candidate.score)
         .expect("VP8 always has intra16 candidates")
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let source = [128u8; 256];
-    let top = [128u8; 16];
-    let left = [128u8; 16];
-    let matrices = super::quant::libwebp_segment_matrices(10, 0, 0);
-    let probabilities = [[[[128u8; 11]; 3]; 8]; 4];
-    let _ = select(
-        &source,
-        &top,
-        &left,
-        128,
-        false,
-        false,
-        [0; 4],
-        [0; 4],
-        0,
-        &matrices,
-        crate::coverage_support::require_ok(
-            u32::try_from(matrices.lambda_i16),
-            "fixture value must fit u32",
-        ),
-        crate::coverage_support::require_ok(
-            u32::try_from(matrices.texture_lambda),
-            "fixture value must fit u32",
-        ),
-        Some(Intra16Mode::Dc),
-        false,
-        &probabilities,
-        false,
-    );
 }

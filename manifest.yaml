@@ -53,6 +53,287 @@ reference_oracles:
       version: libavif 1.4.1 / dav1d 1.5.3 / libaom 3.13.2
       pillow_feature: avif
       pillow_feature_version: 1.4.1
+fault_contracts:
+  - id: avif_grid_cell_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:grid
+    fault:
+      point: av1.grid.cell_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_loop_filter_metadata_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_monochrome_split_groups
+    fault:
+      point: av1.frame.assembled_monochrome_loop_filter_metadata_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_cdef_active_map_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_monochrome_split_groups
+    fault:
+      point: av1.frame.assembled_monochrome_cdef_active_map_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_display_plane_copy_allocation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: av1.display_plane.reconstructed_copy_allocation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_temporal_motion_field_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: av1.temporal_motion_field.reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_sequence_frames_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_motion_chroma
+    fault:
+      point: avif.sequence_frames.output_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_superresolution_positions_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.superres.position_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_superresolution_plane_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.superres.plane_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_sgr_restoration_output_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.restoration.sgr_output_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_sgr_intermediate_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.restoration.sgr_intermediate_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_restoration_stripe_scratch_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:high_bitdepth
+    fault:
+      point: av1.restoration.stripe_scratch_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: jpeg_multiscan_coefficient_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: jpeg
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:jpeg:baseline_444_multiscan_duplicate_component
+    fault:
+      point: jpeg.multiscan.coefficient_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_monochrome_tile_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_monochrome_split_groups
+    fault:
+      point: av1.frame.monochrome_tile_state_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_color_tile_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_color_split_groups
+    fault:
+      point: av1.frame.color_tile_state_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_tile_cell_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: av1.frame.tile_cell_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_tile_block_metadata_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: av1.frame.tile_block_metadata_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_chroma_tile_cell_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: av1.frame.chroma_tile_cell_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_assembled_loop_filter_metadata_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_color_split_groups
+    fault:
+      point: av1.frame.assembled_loop_filter_metadata_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_partition_node_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: av1.partition_tree.node_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_projected_temporal_field_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_motion_chroma
+    fault:
+      point: av1.temporal_projection.field_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
 formats:
   jpeg:
     name: JPEG
@@ -77,10 +358,86 @@ formats:
       description: 4:4:4 chroma subsampling (no subsampling)
       test_assets:
       - baseline_444.jpg
+    - id: baseline_444_unused_custom_ac_table
+      description: Baseline 4:4:4 JPEG defines an unused AC DHT with standard luma code counts and a changed symbol order
+      test_assets:
+      - baseline_444_unused_custom_ac_table.jpg
+    - id: baseline_444_single_scan_trailing_dqt
+      description: Baseline 4:4:4 JPEG redefines a quantization table after its only entropy scan
+      test_assets:
+      - baseline_444_single_scan_trailing_dqt.jpg
+    - id: baseline_444_single_scan_empty_trailing_dqt
+      description: Baseline 4:4:4 JPEG has an empty trailing DQT segment accepted by Pillow
+      test_assets:
+      - baseline_444_single_scan_empty_trailing_dqt.jpg
+    - id: baseline_444_single_scan_dqt_marker_fill
+      description: Baseline 4:4:4 JPEG adds a fill byte before its trailing DQT marker
+      test_assets:
+      - baseline_444_single_scan_dqt_marker_fill.jpg
+    - id: baseline_444_multiscan_ss_nonzero
+      description: Baseline component scan has a nonzero Ss value tolerated by Pillow
+      test_assets:
+      - baseline_444_multiscan_ss_nonzero.jpg
+    - id: baseline_444_multiscan_duplicate_component
+      description: Baseline multi-scan JPEG scans component 2 twice and leaves Y at neutral samples
+      test_assets:
+      - baseline_444_multiscan_duplicate_component.jpg
+    - id: baseline_444_multiscan_missing_component
+      description: Baseline multi-scan JPEG ends after Y and Cb scans without a Cr scan
+      test_assets:
+      - baseline_444_multiscan_missing_component.jpg
+    - id: baseline_444_multiscan_empty_entropy
+      description: Baseline multi-scan JPEG has an empty first component scan accepted by Pillow
+      test_assets:
+      - baseline_444_multiscan_empty_entropy.jpg
+    - id: baseline_444_multiscan_final_empty_entropy
+      description: Baseline multi-scan JPEG has an empty final component scan immediately before EOI
+      test_assets:
+      - baseline_444_multiscan_final_empty_entropy.jpg
+    - id: baseline_444_multiscan_interleaved_restart
+      description: Baseline JPEG combines an interleaved component scan with one-MCU restart segments
+      test_assets:
+      - baseline_444_multiscan_interleaved_restart.jpg
+    - id: baseline_444_multiscan_restart_overrun
+      description: Baseline multi-scan JPEG has extra restart markers after the final MCU
+      test_assets:
+      - baseline_444_multiscan_restart_overrun.jpg
+    - id: baseline_444_multiscan_duplicate_component_dc_only
+      description: A repeated component scan preserves Pillow parity when every block has only DC coefficients
+      test_assets:
+      - baseline_444_multiscan_duplicate_component_dc_only.jpg
+    - id: baseline_444_three_sequential_scans
+      description: Baseline 4:4:4 JPEG encodes Cb, Y, and Cr in separate non-interleaved sequential scans
+      test_assets:
+      - baseline_444_three_sequential_scans.jpg
+    - id: baseline_444_single_component_scan_cb
+      description: Baseline 4:4:4 JPEG ends after a single Cb component scan accepted by Pillow
+      test_assets:
+      - baseline_444_single_component_scan_cb.jpg
+    - id: baseline_444_three_scans_dqt_redefined
+      description: Baseline 4:4:4 multi-scan JPEG redefines the Cb quantization table between component scans
+      test_assets:
+      - baseline_444_three_scans_dqt_redefined.jpg
+    - id: baseline_444_multiscan_duplicate_dht_after_snapshot
+      description: Baseline 4:4:4 multi-scan JPEG repeats Huffman-table markers between the first two component scans
+      test_assets:
+      - baseline_444_multiscan_duplicate_dht_after_snapshot.jpg
+    - id: baseline_444_multiscan_duplicate_dqt_after_snapshot
+      description: Baseline 4:4:4 multi-scan JPEG repeats a DQT marker after the first scan snapshots its tables
+      test_assets:
+      - baseline_444_multiscan_duplicate_dqt_after_snapshot.jpg
     - id: subsampling_422
       description: 4:2:2 horizontal chroma subsampling
       test_assets:
       - baseline_422.jpg
+    - id: baseline_422_entropy_truncated_tail_64
+      description: Baseline 4:2:2 JPEG with 64 entropy bytes removed before the end marker
+      test_assets:
+      - baseline_422_entropy_truncated_tail_64.jpg
+    - id: baseline_444_entropy_truncated_tail_64
+      description: Baseline 4:4:4 JPEG with 64 entropy bytes removed before the end marker
+      test_assets:
+      - baseline_444_entropy_truncated_tail_64.jpg
     - id: subsampling_420
       description: 4:2:0 chroma subsampling (most common)
       test_assets:
@@ -93,6 +450,22 @@ formats:
       description: Grayscale (no chroma components)
       test_assets:
       - baseline_gray.jpg
+    - id: idct_high_horizontal_frequencies
+      description: Restart-separated grayscale blocks isolate horizontal AC frequencies 3 through 7 and a vertical-only AC coefficient to exercise every scalar IDCT row shortcut outcome
+      test_assets:
+      - idct_high_horizontal_frequencies.jpg
+    - id: baseline_ac_pair_tail
+      description: Grayscale AC symbol run at the final coefficient exercises the fast lookup block-tail fallback with Pillow pixel parity
+      test_assets:
+      - baseline_ac_pair_tail.jpg
+    - id: baseline_reserved_ac_zero_size_eob
+      description: Grayscale reserved zero-size AC symbol follows Pillow's EOB behavior with exact pixel parity
+      test_assets:
+      - baseline_reserved_ac_zero_size_eob.jpg
+    - id: baseline_multiscan_reserved_ac_zero_size_eob
+      description: 4:4:4 multiscan reserved zero-size AC symbol exercises Pillow's EOB behavior in the scalar decoder
+      test_assets:
+      - baseline_multiscan_reserved_ac_zero_size_eob.jpg
     - id: color_ycbcr
       description: YCbCr color space (standard)
       test_assets:
@@ -105,6 +478,30 @@ formats:
       description: CMYK color space (Adobe)
       test_assets:
       - baseline_cmyk.jpg
+    - id: baseline_cmyk_partial_blocks
+      description: Odd-sized baseline CMYK image exercises partial MCU row interleave
+      test_assets:
+      - baseline_cmyk_13x9.jpg
+    - id: baseline_cmyk_single_component_scan
+      description: Four-component baseline CMYK JPEG ends after the first component scan and uses the safe reconstruction fallback
+      test_assets:
+      - baseline_cmyk_single_component_scan_c.jpg
+    - id: baseline_cmyk_height_partial_aligned_width
+      description: Baseline CMYK image with MCU-aligned width and partial final MCU row exercises the aligned-width height fallback
+      test_assets:
+      - baseline_cmyk_height_partial_8x9.jpg
+    - id: baseline_cmyk_entropy_truncated_tail_64
+      description: Baseline CMYK entropy data truncated by 64 bytes before EOI exercises the direct decoder fallback
+      test_assets:
+      - baseline_cmyk_entropy_truncated_tail_64.jpg
+    - id: baseline_cmyk_aligned_entropy_truncated_tail_64
+      description: 32x8 MCU-aligned baseline CMYK JPEG truncates 64 entropy bytes before EOI and exercises the aligned direct decoder's incomplete-data fallback
+      test_assets:
+      - baseline_cmyk_aligned_entropy_truncated_tail_64.jpg
+    - id: baseline_cmyk_restart_rows
+      description: Baseline CMYK JPEG with restart markers uses the checked component reconstruction path
+      test_assets:
+      - baseline_cmyk_restart_rows.jpg
     - id: color_cmyk_raw
       description: Four-component CMYK without Adobe APP14 inversion
       test_assets:
@@ -121,6 +518,10 @@ formats:
       description: Progressive JPEG (multiple scans)
       test_assets:
       - progressive.jpg
+    - id: progressive_dqt_redefined_between_scans
+      description: Progressive JPEG repeats the unchanged quantization tables between scans
+      test_assets:
+      - progressive_dqt_redefined_between_scans.jpg
     - id: quality_100
       description: Quality 100 (minimal compression)
       test_assets:
@@ -149,6 +550,49 @@ formats:
       test_assets:
       - 17x17.jpg
       - 33x33.jpg
+    - id: baseline_grayscale_partial_blocks
+      description: Odd-sized baseline grayscale image exercises right and bottom MCU edges
+      test_assets:
+      - baseline_gray_13x9.jpg
+    - id: grayscale_horizontal_sampling_fallback
+      description: Grayscale baseline JPEG with 2x1 sampling exercises direct-path fallback
+      test_assets:
+      - baseline_gray_sampling_2x1.jpg
+    - id: grayscale_vertical_sampling_fallback
+      description: Grayscale baseline JPEG with 1x2 sampling exercises direct-path fallback
+      test_assets:
+      - baseline_gray_sampling_1x2.jpg
+    - id: baseline_444_partial_blocks
+      description: Odd-sized baseline 4:4:4 image exercises right and bottom block edges
+      test_assets:
+      - baseline_444_13x9.jpg
+    - id: baseline_422_partial_blocks
+      description: Odd-sized baseline 4:2:2 image exercises right and bottom MCU edges
+      test_assets:
+      - baseline_422_17x9.jpg
+    - id: baseline_420_chroma_component_sampling_fallback
+      description: Pillow-valid 4:2:0 component factors exercise independent chroma crop dimensions
+      test_assets:
+      - baseline_420_cb_h2v1.jpg
+      - baseline_420_cb_h1v2.jpg
+      - baseline_420_cr_h2v1.jpg
+      - baseline_420_cr_h1v2.jpg
+    - id: baseline_420_singleton_chroma_width_fallback
+      description: Pillow-valid 1x1 4:2:0 with Cb 2x1 sampling routes Cr through singleton-width h2v2 upsampling
+      test_assets:
+      - baseline_420_singleton_cr_h2v2.jpg
+    - id: baseline_422_chroma_component_sampling_fallback
+      description: Pillow-valid 4:2:2 component factors exercise independent chroma crop dimensions
+      test_assets:
+      - baseline_422_cb_h2v1.jpg
+      - baseline_422_cb_h1v2.jpg
+      - baseline_422_cr_h2v1.jpg
+      - baseline_422_cr_h1v2.jpg
+    - id: baseline_cmyk_sampling_fallback
+      description: Pillow-valid CMYK 2x1 and 1x2 sampling factors exercise direct-path fallback
+      test_assets:
+      - baseline_cmyk_sampling_h2v1.jpg
+      - baseline_cmyk_sampling_h1v2.jpg
     - id: size_large
       description: Large image (4096x4096)
       test_assets:
@@ -174,6 +618,31 @@ formats:
       description: Restart markers every N MCUs
       test_assets:
       - restart.jpg
+    - id: baseline_420_restart_not_row_aligned
+      description: Pillow baseline 4:2:0 JPEG with DRI 3 takes the checked restart path because the interval is not an MCU-row multiple
+      test_assets:
+      - baseline_420_restart_blocks_3.jpg
+    - id: baseline_420_restart_row_aligned
+      description: Pillow baseline 4:2:0 JPEG with DRI 8 has one restart interval per MCU row
+      test_assets:
+      - baseline_420_restart_blocks_8.jpg
+    - id: baseline_420_restart_overrun
+      description: Pillow baseline 4:2:0 JPEG with DRI 8 has extra restart markers after the final MCU
+      test_assets:
+      - baseline_420_restart_overrun.jpg
+    - id: baseline_422_restart
+      description: Pillow baseline 4:2:2 JPEG with DRI 1 falls back from the direct decoder path
+      test_assets:
+      - baseline_422_restart_blocks_1.jpg
+    - id: baseline_444_restart
+      description: Pillow baseline 4:4:4 JPEG with DRI 1 falls back from the direct decoder path
+      test_assets:
+      - baseline_444_restart_blocks_1.jpg
+    - id: baseline_444_restart_marker_fill
+      description: Baseline 4:4:4 JPEG with legal 0xFF fill bytes before each restart marker
+      test_assets:
+      - baseline_444_restart_marker_fill.jpg
+      status: active
     - id: exif_orientation
       description: JPEG with EXIF orientation tag
       test_assets:
@@ -232,6 +701,7 @@ formats:
       - sof_bad_quant_table.jpg
       - sof_missing_quant_table.jpg
       - progressive_missing_quant_table.jpg
+      - progressive_dc_category_16.jpg
       - sof_sparse_quant_table.jpg
       - dqt_bad_table.jpg
       - dqt_no_length.jpg
@@ -298,6 +768,14 @@ formats:
       - entropy_truncated_tail_64.jpg
       - entropy_stuffed_ff_prefix.jpg
       - progressive_scan0_empty.jpg
+    - id: entropy_all_ones_huffman
+      description: Pillow decodes a stuffed all-ones entropy scan through JPEG Huffman recovery
+      test_assets:
+      - entropy_all_ones_huffman.jpg
+    - id: empty_dc_huffman_table
+      description: Pillow recovers a zero symbol from an empty JPEG DC Huffman table
+      test_assets:
+      - empty_dc_huffman_table.jpg
     - id: dqt_16bit
       description: Baseline JPEG using sixteen-bit quantization table entries
       test_assets:
@@ -306,6 +784,18 @@ formats:
       description: JPEG entropy stream without a final EOI marker
       test_assets:
       - missing_eoi.jpg
+      - missing_eoi_dangling_ff.jpg
+      - missing_eoi_stuffed_ff_tail.jpg
+      expect_error: true
+    - id: short_marker_missing_eoi
+      description: JPEG with a reserved marker whose segment length is below two bytes and no final EOI marker
+      test_assets:
+      - short_marker_missing_eoi.jpg
+      expect_error: true
+    - id: progressive_com_tail_junk
+      description: Progressive JPEG with a post-scan COM marker followed by non-marker bytes
+      test_assets:
+      - progressive_com_tail_junk.jpg
       expect_error: true
     - id: baseline_standard
       description: Baseline DCT sequential
@@ -315,15 +805,97 @@ formats:
       description: Progressive with spectral selection
       test_assets:
       - progressive_spectral.jpg
+    - id: progressive_dc_only_smoothing
+      description: One-scan progressive JPEG exercises DC-only block smoothing
+      test_assets:
+      - progressive_dc_only_smoothing.jpg
+    - id: progressive_dc_only_zero_quant
+      description: Pillow-tolerated zero DQT values exercise the DC-only smoothing guard
+      test_assets:
+      - progressive_dc_only_zero_quant.jpg
+    - id: progressive_dc_overflow_jcoef_narrowing
+      description: Accepted out-of-range DC Al=13 coefficient preserves pinned libjpeg-turbo/Pillow signed 16-bit JCOEF narrowing compatibility
+      test_assets:
+      - dc_overflow_progressive_al13.jpg
+    - id: progressive_ac_refinement_noise
+      description: Seeded high-entropy 4:4:4 scans exercise progressive AC refinement
+      test_assets:
+      - progressive_refinement_noise.jpg
+    - id: progressive_ac_refinement_se_out_of_range
+      description: Progressive AC refinement scan with spectral end beyond the 64-coefficient block
+      test_assets:
+      - progressive_refinement_se64.jpg
+      expect_error: true
+    - id: progressive_ac_refinement_ss_out_of_range
+      description: Progressive AC refinement scan with spectral start beyond the 64-coefficient block
+      test_assets:
+      - progressive_refinement_ss64.jpg
+      expect_error: true
+    - id: progressive_ac_refinement_long_scan
+      description: Larger seeded 4:4:4 scans exercise AC refinement through scan-band tails
+      test_assets:
+      - progressive_refinement_long_scan.jpg
+    - id: progressive_ac_refinement_eobrun
+      description: Constant grayscale progressive scans exercise AC refinement EOB runs
+      test_assets:
+      - progressive_refinement_eobrun.jpg
+    - id: progressive_ac_refinement_eobrun_correction_bit
+      description: Two 8x8 grayscale blocks exercise a nonzero correction bit in an AC-refinement EOBRUN
+      test_assets:
+      - progressive_refinement_eobrun_correction_bit.jpg
+    - id: progressive_ac_refinement_refine_zrl
+      description: Pillow progressive JPEG refinement scan emits a ZRL across sixteen zero AC coefficients
+      test_assets:
+      - progressive_refinement_refine_zrl.jpg
+    - id: progressive_ac_refinement_zrl_symbol
+      description: Valid progressive AC-refinement scan emits a ZRL before introducing a coefficient after sixteen zeros
+      test_assets:
+      - progressive_refinement_zrl_symbol.jpg
+    - id: progressive_ac_refinement_zrl_correction
+      description: Grayscale progressive AC refinement with late coefficients and correction bits
+      test_assets:
+      - progressive_refinement_zrl_correction.jpg
+    - id: progressive_ac_refinement_sparse_zrl
+      description: Sparse high-frequency coefficients target zero runs in progressive AC refinement
+      test_assets:
+      - progressive_refinement_zrl.jpg
+    - id: progressive_ac_refinement_zrl_duplicate_tail
+      description: Pillow pixel parity for a repeated final AC refinement scan with sparse high-frequency coefficients
+      test_assets:
+      - progressive_refinement_zrl_duplicate_tail.jpg
+    - id: progressive_ac_refinement_narrow_tail
+      description: Progressive AC refinement with a narrowed final spectral band
+      test_assets:
+      - progressive_refinement_narrow_tail.jpg
+    - id: progressive_ac_first_narrow_tail
+      description: One-block progressive AC-first scan whose zero run steps past its narrowed spectral end
+      test_assets:
+      - progressive_ac_first_narrow_tail.jpg
     - id: progressive_modes
       description: Progressive grayscale and CMYK component layouts
       test_assets:
       - progressive_gray.jpg
       - progressive_cmyk.jpg
+    - id: progressive_cmyk_no_app14
+      description: Progressive CMYK without Adobe APP14 inversion metadata
+      test_assets:
+      - progressive_cmyk_no_app14.jpg
+    - id: progressive_422_odd_edge
+      description: Odd-sized progressive 4:2:2 image exercises non-interleaved block geometry and horizontal chroma upsampling
+      test_assets:
+      - progressive_422_17x13.jpg
+    - id: progressive_422_single_column
+      description: Single-column progressive 4:2:2 image exercises the one-sample horizontal upsampling boundary
+      test_assets:
+      - progressive_422_1x8.jpg
     - id: progressive_restart
       description: Progressive scans with restart markers
       test_assets:
       - progressive_restart.jpg
+    - id: progressive_restart_overrun
+      description: Progressive JPEG with sequence-correct extra restart markers after scan 1 that form an empty segment and preserve Pillow pixels
+      test_assets:
+      - progressive_restart_overrun.jpg
     encode_edge_cases:
     - id: enc_error_retained_sequence_geometry
       description: A still JPEG cannot represent a retained frame offset or a larger sequence canvas
@@ -365,12 +937,81 @@ formats:
     - id: enc_sub_444
       description: 
       params: {'subsampling': '444'}
+    - id: enc_sub_444_unaligned_subthreshold
+      description: A 17x17 RGB source exercises baseline 4:4:4 independent entropy encoding below the row-streaming threshold
+      params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False}
+      source_asset: 17x17.jpg
+    - id: enc_sub_444_aligned_subthreshold
+      description: A 64x8 RGB source exercises the aligned baseline 4:4:4 row-streaming path below the pixel threshold
+      params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False}
+      source_asset: baseline_422_aligned_64x8.jpg
+    - id: enc_sub_444_streaming_exif_restart_rows
+      description: A 128x128 RGB source exercises baseline 4:4:4 row streaming with EXIF metadata and restart markers at every MCU row
+      params: {'subsampling': '444', 'quality': 85, 'progressive': False, 'optimize': False, 'restart_interval': 1, 'exif_hex': '4578696600004d4d002a00000008000000000000'}
+      source_asset: baseline_444.jpg
     - id: enc_sub_422
       description: 
       params: {'subsampling': '422'}
     - id: enc_sub_420
       description: 
       params: {'subsampling': '420'}
+    - id: enc_sub_420_odd_streaming_edge
+      description: Odd dimensions exercise partial MCU handling in the baseline 4:2:0 row encoder
+      params: {'subsampling': '420', 'quality': 85}
+      source_asset: 33x33.jpg
+    - id: enc_sub_420_horizontal_tail_streaming
+      description: A 49x32 RGB source reaches the partial horizontal 4:2:0 MCU pair in the baseline row encoder
+      params: {'subsampling': '420', 'quality': 85, 'progressive': false, 'optimize': false}
+      source_format: png
+      source_asset: rgb_49x32.png
+    - id: enc_sub_420_aligned_batch_fast_path
+      description: A small 16x2 source exercises the aligned fused 4:2:0 batch path below the streaming threshold
+      params: {'subsampling': '420', 'quality': 85}
+      source_asset: rgb_16x2.jpg
+    - id: enc_sub_420_aligned_odd_height
+      description: A 16x1 source keeps width aligned while exercising odd-height replication in the fused 4:2:0 path
+      params: {'subsampling': '420', 'quality': 85}
+      source_asset: rgb_16x1.jpg
+    - id: enc_sub_420_aligned_odd_height_streaming
+      description: A 32x33 source reaches the streaming 4:2:0 row converter with aligned width and odd height
+      params: {'subsampling': '420', 'quality': 85}
+      source_asset: rgb_32x33.jpg
+    - id: enc_sub_420_aligned_full_mcu_rows
+      description: A 32x32 source reaches the no-edge 4:2:0 converter with complete MCU rows
+      params: {'subsampling': '420', 'quality': 85}
+      source_asset: rgb_32x32.jpg
+    - id: enc_sub_420_unaligned_row_tail
+      description: A small odd-width source exercises complete and replicated-tail chroma packets in the fused 4:2:0 path
+      params: {'subsampling': '420', 'quality': 85}
+      source_asset: 17x17.jpg
+    - id: enc_sub_420_q10_small_image_threshold
+      description: A 17x17 RGB source exercises the low-quality 4:2:0 path below the 1024-pixel dispatch threshold
+      params: {'subsampling': '420', 'quality': 10, 'progressive': false, 'optimize': false}
+      source_asset: 17x17.jpg
+    - id: enc_sub_420_q10_odd_streaming_edge
+      description: A 33x33 RGB source exercises the low-quality fused-plane 4:2:0 streaming path with partial right and bottom MCU edges
+      params: {'subsampling': '420', 'quality': 10, 'progressive': false, 'optimize': false}
+      source_asset: 33x33.jpg
+    - id: enc_sub_420_unaligned_even_height
+      description: A 17x2 source exercises the even-height fallback with an odd-width chroma tail
+      params: {'subsampling': '420', 'quality': 85}
+      source_asset: rgb_17x2.jpg
+    - id: enc_sub_422_unaligned_batch_tail
+      description: A small odd-width 4:2:2 source exercises the generic RGB conversion batch and scalar tail
+      params: {'subsampling': '422', 'quality': 85}
+      source_asset: 17x17.jpg
+    - id: enc_sub_422_aligned_width_partial_height
+      description: A 64x1 source exercises the aligned-width 4:2:2 height false arm below the size threshold
+      params: {'subsampling': '422', 'quality': 85}
+      source_asset: baseline_422_aligned_64x1.jpg
+    - id: enc_sub_422_aligned_subthreshold
+      description: An aligned 64x8 source exercises baseline 4:2:2 streaming below the size threshold
+      params: {'subsampling': '422', 'quality': 85}
+      source_asset: baseline_422_aligned_64x8.jpg
+    - id: enc_sub_422_streaming_exif_restart_rows
+      description: An aligned 64x8 RGB source exercises baseline 4:2:2 row streaming with EXIF metadata and restart markers at every MCU row
+      params: {'subsampling': '422', 'quality': 85, 'progressive': False, 'optimize': False, 'restart_interval': 1, 'exif_hex': '4578696600004d4d002a00000008000000000000'}
+      source_asset: baseline_422_aligned_64x8.jpg
     - id: enc_error_subsampling_unknown
       description: Unknown JPEG subsampling names are rejected by Pillow
       params: {'subsampling': 'bogus'}
@@ -385,6 +1026,27 @@ formats:
       description: 
       params: {'grayscale': True}
       source_asset: baseline_gray.jpg
+    - id: enc_grayscale_small_fallback
+      description: Small unaligned grayscale source selects the generic baseline encoder fallback
+      params: {'grayscale': True, 'progressive': False, 'optimize': False}
+      source_asset: baseline_gray_13x9.jpg
+    - id: enc_grayscale_aligned_width_partial_height
+      description: Aligned-width 32x1 grayscale source exercises the streaming height-alignment false arm below the size threshold
+      params: {'grayscale': True, 'progressive': False, 'optimize': False}
+      source_asset: baseline_gray_aligned_32x1.jpg
+    - id: enc_grayscale_aligned_subthreshold
+      description: Aligned 32x8 grayscale source exercises baseline streaming below the size threshold
+      params: {'grayscale': True, 'progressive': False, 'optimize': False}
+      source_asset: baseline_gray_aligned_32x8.jpg
+    - id: enc_grayscale_optimized
+      description: Optimized baseline grayscale exercises the generic entropy path
+      params: {'grayscale': True, 'progressive': False, 'optimize': True}
+      source_asset: baseline_gray.jpg
+    - id: enc_optimize_huffman_length_limit
+      description: Optimized quality-1 grayscale input balances seventeen AC frequencies against EOB to force Huffman codes beyond the 16-bit JPEG limit
+      params: {'grayscale': True, 'quality': 1, 'progressive': False, 'optimize': True}
+      source_format: png
+      source_asset: jpeg_huffman_length_limiter.png
     - id: enc_rgb
       description: 
       params: {'grayscale': False}
@@ -393,6 +1055,47 @@ formats:
       description: Decode CMYK input and re-encode Pillow-compatible Adobe CMYK JPEG
       params: {'color': 'cmyk'}
       source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_optimized
+      description: Optimized baseline CMYK exercises the generic four-component Huffman path
+      params: {'color': 'cmyk', 'progressive': False, 'optimize': True}
+      source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_small_unaligned_fallback
+      description: Small unaligned CMYK image exercises the baseline encoder fallback
+      params: {'color': 'cmyk'}
+      source_asset: baseline_cmyk_13x9.jpg
+    - id: enc_cmyk_aligned_subthreshold
+      description: A 32x8 CMYK source takes the aligned baseline streaming path below the pixel threshold
+      params: {'color': 'cmyk'}
+      source_asset: baseline_cmyk_aligned_32x8.jpg
+    - id: enc_cmyk_aligned_width_partial_height
+      description: A 32x9 CMYK source reaches the aligned-width but partial-height baseline fallback
+      params: {'color': 'cmyk'}
+      source_asset: baseline_cmyk_aligned_32x9.jpg
+    - id: enc_cmyk_progressive
+      description: Progressive Adobe CMYK JPEG uses the generic four-component scan script
+      params: {'color': 'cmyk', 'progressive': True, 'optimize': False}
+      source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_restart_rows
+      description: Baseline CMYK streaming emits restart markers at each configured MCU row interval
+      params: {'color': 'cmyk', 'progressive': False, 'optimize': False, 'restart_interval': 1}
+      source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_restart_interval_clamped
+      description: Baseline CMYK JPEG encoding clamps an oversized restart interval to the DRI limit
+      params: {'color': 'cmyk', 'progressive': False, 'optimize': False, 'restart_interval': 4096}
+      source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_restart_rows_above_signed_limit
+      description: Baseline CMYK JPEG encoding omits DRI when restart rows exceed Pillow's signed limit
+      params: {'color': 'cmyk', 'progressive': False, 'optimize': False, 'restart_interval': 2147483648}
+      source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_exif_streaming
+      description: Baseline CMYK streaming JPEG encoding preserves EXIF APP1 metadata
+      params: {'color': 'cmyk', 'progressive': False, 'optimize': False, 'exif_hex': '45786966000049492a000800000000000000'}
+      source_asset: baseline_cmyk.jpg
+    - id: enc_cmyk_exif_oversized
+      description: Baseline CMYK streaming JPEG encoding rejects EXIF payloads beyond the APP1 length limit
+      params: {'color': 'cmyk', 'progressive': False, 'optimize': False, 'exif_payload_length': 65534}
+      source_asset: baseline_cmyk.jpg
+      expect_error: true
     - id: enc_error_rgba_png
       description: Pillow and Rust reject direct RGBA input because JPEG cannot represent alpha
       source_format: png
@@ -511,6 +1214,15 @@ formats:
       description: 4:2:0 chroma
       params:
         subsampling: '420'
+    - id: enc_subsample_422_tiny_edge
+      description: 1x8 4:2:2 encoding exercises scalar chroma edge replication outside the vector lane
+      source_format: jpeg
+      source_asset: 1x8_422.jpg
+      params:
+        quality: 85
+        subsampling: '422'
+        progressive: false
+        optimize: false
   png:
     name: PNG
     extensions:
@@ -599,6 +1311,14 @@ formats:
       - adam7.png
       - adam7_1x1.png
       - adam7_2x3.png
+    - id: interlace_adam7_gray_4bit
+      description: Adam7 packed 4-bit grayscale samples across all seven passes
+      test_assets:
+      - adam7_gray_4bit.png
+    - id: interlace_adam7_gray_16bit
+      description: Adam7 16-bit grayscale samples across all seven passes
+      test_assets:
+      - adam7_gray_16bit.png
     - id: filter_none
       description: No filter
       test_assets:
@@ -641,18 +1361,71 @@ formats:
       description: PNG with gAMA chunk (gamma)
       test_assets:
       - gama.png
+    - id: chunk_gama_duplicate
+      description: Duplicate gAMA chunks preserve the first Pillow-visible gamma
+      test_assets:
+      - gama_duplicate.png
     - id: chunk_srgb
       description: PNG with sRGB chunk
       test_assets:
       - srgb.png
+    - id: chunk_srgb_duplicate
+      description: Duplicate sRGB chunks preserve the first Pillow-visible intent
+      test_assets:
+      - srgb_duplicate.png
+    - id: chunk_srgb_invalid_intent
+      description: An out-of-range sRGB intent leaves Pillow pixels decodable
+      test_assets:
+      - srgb_invalid_intent.png
+    - id: pillow_tolerated_malformed_srgb_short
+      description: A two-byte sRGB payload is ignored while Pillow decodes the image
+      test_assets:
+      - srgb_short_payload.png
+    - id: chunk_chrm
+      description: PNG with cHRM chromaticities
+      test_assets:
+      - chrm.png
+    - id: chunk_chrm_duplicate
+      description: Duplicate cHRM chunks preserve the first Pillow-visible chromaticities
+      test_assets:
+      - chrm_duplicate.png
     - id: chunk_iccp
       description: PNG with iCCP color profile
       test_assets:
       - iccp.png
+    - id: chunk_iccp_duplicate
+      description: Duplicate iCCP chunks preserve Pillow-readable pixels and one profile
+      test_assets:
+      - iccp_duplicate.png
+    - id: pillow_tolerated_malformed_iccp_empty_keyword
+      description: An iCCP chunk with an empty keyword leaves pixels decodable
+      test_assets:
+      - iccp_empty_keyword.png
+    - id: pillow_tolerated_malformed_chrm_short
+      description: A short cHRM chunk is ignored while Pillow decodes the image
+      test_assets:
+      - chrm_short.png
     - id: chunk_text
       description: PNG with tEXt/zTXt/iTXt metadata
       test_assets:
       - text_chunks.png
+    - id: pillow_tolerated_malformed_text_metadata_edges
+      description: Pillow-tolerated compressed text edge metadata preserves pixels
+      test_assets:
+      - text_metadata_edges.png
+    - id: unknown_ancillary_reserved_bit
+      description: Unknown ancillary chunk with a lowercase reserved bit preserves decoded pixels
+      test_assets:
+      - unknown_ancillary_reserved_bit.png
+    - id: unknown_ancillary_after_idat
+      description: Unknown ancillary chunk after image data preserves decoded pixels
+      test_assets:
+      - unknown_ancillary_after_idat.png
+    - id: pillow_tolerated_post_idat_ancillary_bad_crc
+      description: Invalid CRC on an unknown post-IDAT ancillary chunk preserves Pillow pixels but fails verification
+      test_assets:
+      - unknown_ancillary_after_idat_bad_crc.png
+      rust_decode_with_metadata_limit: 78
     - id: chunk_time
       description: PNG with tIME chunk
       test_assets:
@@ -733,12 +1506,42 @@ formats:
       - adam7_giant_dimensions.png
       - palette_overlong_plte.png
       - idat_truncated_chunk_no_iend.png
+      - incomplete_image_data_no_iend.png
+      - apng_fdat_payload_before_idat.png
+      - fdat_without_actl_before_idat.png
       - ihdr_only.png
       - ihdr_trailing_byte.png
       - truncated_ancillary_chunk.png
       - actl_short.png
       - actl_after_idat_short.png
       - iend_without_idat.png
+      expect_error: true
+    - id: error_token_aware_reserved_deflate_distance
+      description: Token-aware PNG decode rejects a reserved DEFLATE distance symbol
+      test_assets:
+      - zlib_reserved_distance_symbol.png
+      expect_error: true
+      rust_decode_with_token: true
+    - id: error_malformed_iccp_fields
+      description: iCCP chunks without the required separator or compression method are rejected
+      test_assets:
+      - iccp_missing_nul_separator.png
+      - iccp_missing_compression_method.png
+      expect_error: true
+    - id: error_malformed_iccp_empty_keyword_unsupported_method
+      description: Pillow rejects an iCCP profile with an empty keyword and unsupported compression method
+      test_assets:
+      - iccp_empty_keyword_unsupported_method.png
+      expect_error: true
+    - id: error_malformed_gama_short_payload
+      description: Pillow rejects a gAMA chunk shorter than its four-byte integer
+      test_assets:
+      - gama_short_payload.png
+      expect_error: true
+    - id: error_malformed_ztxt_unsupported_method
+      description: Pillow rejects zTXt metadata with an unsupported compression method
+      test_assets:
+      - ztxt_unsupported_method.png
       expect_error: true
     - id: pillow_tolerated_malformed
       description: Malformed PNG structures tolerated by Pillow
@@ -758,6 +1561,22 @@ formats:
       - zlib_oversized_scanline.png
       - zlib_oversized_stored_scanline.png
       - zlib_oversized_backreference_scanline.png
+    - id: pillow_tolerated_post_idat_color_chunks
+      description: Pillow preserves RGB pixels when PLTE and tRNS follow IDAT
+      test_assets:
+      - plte_trns_after_idat.png
+    - id: pillow_tolerated_malformed_ztxt_invalid_compression
+      description: Invalid compressed zTXt metadata is ignored by Pillow while pixels load
+      test_assets:
+      - ztxt_invalid_compression.png
+    - id: pillow_tolerated_malformed_itxt_invalid_compression
+      description: Invalid compressed iTXt metadata is ignored by Pillow while pixels load
+      test_assets:
+      - itxt_invalid_compression.png
+    - id: pillow_tolerated_malformed_iccp_invalid_compression
+      description: Invalid compressed iCCP metadata is ignored by Pillow while pixels load
+      test_assets:
+      - iccp_invalid_compression.png
     - id: compression_dynamic_manual
       description: Minimal valid dynamic-Huffman zlib stream
       test_assets:
@@ -774,6 +1593,14 @@ formats:
       description: APNG with multiple frames
       test_assets:
       - apng_animated.png
+    - id: apng_empty_fdat_before_idat
+      description: An empty fdAT before IDAT preserves default-frame pixels while reaching the early APNG chunk guard
+      test_assets:
+      - apng_empty_fdat_before_idat.png
+    - id: apng_unknown_ancillary
+      description: APNG retains exact frames when an unknown ancillary chunk precedes the image data
+      test_assets:
+      - apng_unknown_ancillary.png
     - id: apng_sequence_controls
       description: APNG rendered canvases retain exact frame control and default-image semantics
       test_assets:
@@ -799,9 +1626,19 @@ formats:
       - apng_zero_frame_width.png
       - apng_zero_frame_height.png
       - apng_no_idat.png
-      - apng_fdat_without_fctl.png
       - apng_short_fdat_without_fctl.png
+      - apng_truncated_fdat_before_idat.png
       - apng_corrupt_default_data.png
+      expect_error: true
+    - id: apng_orphan_fdat_missing_control
+      description: Pillow decodes the default image but rejects animation playback when fdAT has no frame control
+      test_assets:
+      - apng_fdat_without_fctl.png
+      expect_sequence_error: true
+    - id: apng_orphan_fdat_invalid_sequence
+      description: APNG rejects orphan fdAT data with an invalid sequence number
+      test_assets:
+      - apng_fdat_without_fctl_bad_sequence.png
       expect_error: true
     - id: apng_sequence_later_error
       description: APNG structural errors encountered while seeking later frames
@@ -1191,6 +2028,7 @@ formats:
     edge_cases:
     - id: static_gif
       description: Single frame GIF
+      rust_decode_with_token: true
       test_assets:
       - static.gif
     - id: animated_gif
@@ -1217,9 +2055,11 @@ formats:
       - local_palette_only.gif
     - id: palette_absent
       description: Pillow exposes palette-less GIF samples as luminance bytes
+      rust_decode_with_metadata_limit: 13772
       test_assets:
       - no_palette.gif
       - animated_no_palette.gif
+      - animated_no_palette_second_frame_no_local_table.gif
     - id: ignored_extension
       description: Comment extension sub-blocks are skipped before image data
       test_assets:
@@ -1251,19 +2091,41 @@ formats:
       - out_of_range_transparency.gif
     - id: palette_index_leniency
       description: Pillow preserves palette sample bytes beyond the declared color table
+      rust_decode_with_metadata_limit: 33
       test_assets:
       - palette_index_out_of_range.gif
     - id: lzw_boundary_leniency
       description: KwKwK expansion, output clipping, missing EOI, and full dictionary behavior
+      rust_decode_with_token: true
       test_assets:
       - lzw_kwkwk.gif
       - lzw_kwkwk_clipped.gif
       - lzw_no_eoi.gif
       - lzw_dictionary_saturation.gif
+    - id: gif89a_exact_metadata_limit
+      description: A GIF89a frame decodes at its exact 39-byte metadata budget
+      rust_decode_with_metadata_limit: 39
+      test_assets:
+      - lzw_kwkwk.gif
+    - id: lzw_long_expansion_token_checkpoint
+      description: A valid long LZW phrase reaches the cancellable expansion checkpoint
+      rust_decode_with_token: true
+      test_assets:
+      - lzw_long_expansion_token_checkpoint.gif
     - id: size_1x1
       description: Single pixel GIF
       test_assets:
       - 1x1.gif
+    - id: size_1x1_local_palette_only
+      description: One-pixel GIF with a frame-local palette and no global color table
+      test_assets:
+      - 1x1_local_palette.gif
+    - id: valid_frame_missing_trailer
+      description: One complete still-image frame followed by clean EOF without the GIF trailer
+      rust_inspect_basic: true
+      rust_decode_with_metadata_limit: 32
+      test_assets:
+      - valid_frame_missing_trailer.gif
     - id: error_empty
       description: Empty file
       test_assets:
@@ -1311,13 +2173,33 @@ formats:
       - gce_recovery_subblock_truncated.gif
       - zero_frame_width.gif
       - zero_frame_height.gif
+      - bad_gce_terminator.gif
+      - lzw_truncated_output.gif
+      expect_error: true
+    - id: error_lzw_end_only_token_checkpoint
+      description: Token-aware decode preserves the Pillow error for an immediate GIF LZW end code
+      rust_decode_with_token: true
+      test_assets:
+      - lzw_end_only.gif
+      expect_error: true
+    - id: error_lzw_invalid_first_token_checkpoint
+      description: Token-aware decode preserves the Pillow error for an invalid first GIF LZW code
+      rust_decode_with_token: true
+      test_assets:
+      - lzw_invalid_first.gif
+      expect_error: true
+    - id: error_lzw_invalid_future_token_checkpoint
+      description: Token-aware decode preserves the Pillow error for a future GIF LZW dictionary reference
+      rust_decode_with_token: true
+      test_assets:
+      - lzw_invalid_future.gif
+      expect_error: true
+    - id: error_malformed_min_code_size
+      description: Token-aware GIF decoding rejects LZW minimum code sizes outside 2 through 8
+      rust_decode_with_token: true
+      test_assets:
       - min_code_one.gif
       - min_code_nine.gif
-      - bad_gce_terminator.gif
-      - lzw_invalid_first.gif
-      - lzw_end_only.gif
-      - lzw_invalid_future.gif
-      - lzw_truncated_output.gif
       expect_error: true
     encode_edge_cases:
     - id: enc_error_public_mode_contract
@@ -1333,6 +2215,9 @@ formats:
     - id: enc_static
       description: 
       params: {'animated': False}
+    - id: enc_static_finite_one_play
+      description: Encode a public one-play sequence without a GIF loop extension
+      params: {'animated': False, 'sequence_total_plays': 1}
     - id: enc_error_retained_source_blend
       description: GIF cannot reinterpret an uncomposited source rectangle carrying WebP or APNG blend semantics
       params: {'sequence_pixel_layout': 'source_rectangle', 'sequence_blend': 'over'}
@@ -1365,10 +2250,27 @@ formats:
       description: Re-encode animation whose frames request previous-frame disposal
       source_asset: gce_previous.gif
       params: {'animated': True, 'frames': 2, 'loop': 1, 'preserve_disposal': True}
+    - id: enc_animated_reserved_disposal
+      description: Preserve the legal reserved disposal value 4 from a two-frame GIF
+      source_asset: disposal_reserved.gif
+      params: {'animated': True, 'frames': 2, 'loop': 1, 'preserve_disposal': True}
+    - id: enc_animated_disposal_8_reserved_bits
+      description: Pillow shifts disposal value 8 into the reserved bits of each GIF graphic control extension
+      source_asset: disposal_reserved.gif
+      params: {'animated': True, 'frames': 2, 'loop': 1, 'disposal': 8}
+    - id: enc_animated_disposal_255_u8_limit
+      description: Pillow truncates the maximum u8 disposal value to the eight-bit GIF graphic control flags
+      source_asset: disposal_reserved.gif
+      params: {'animated': True, 'frames': 2, 'loop': 1, 'disposal': 255}
     - id: enc_animated_rgba
       description: Re-encode composited RGBA animation frames through Pillow's adaptive GIF palettes
       source_format: webp
       source_asset: animated_alpha.webp
+      params: {'animated': True, 'frames': 2}
+    - id: enc_animated_rgba_transparency_composite
+      description: Two RGBA TIFF frames mix transparent and opaque samples during GIF compositing
+      source_format: tiff
+      source_asset: rgba_animation_transparency.tiff
       params: {'animated': True, 'frames': 2}
     - id: enc_animated_rgba_opaque
       description: Re-encode RGBA animation with no fully transparent source samples
@@ -1464,11 +2366,31 @@ formats:
       source_format: png
       source_asset: gif_rgb.png
       params: {}
+    - id: enc_rgb_balanced_checkerboard_token_split
+      description: Balanced two-color RGB checkerboard exercises the token-aware median-cut split and differing-color backward-scan exit
+      source_format: png
+      source_asset: gif_rgb_balanced_checkerboard.png
+      params: {rust_encode_with_token: true}
     - id: enc_rgb_high_color
       description: RGB source with more than 256 colors quantized by Pillow median cut
       source_format: png
       source_asset: gif_rgb_high_color.png
       params: {}
+    - id: enc_rgb_high_color_token_checkpoint
+      description: RGB source with 1,089 colors crosses the token-aware median-cut checkpoint in all three pixel-mapping passes
+      source_format: png
+      source_asset: gif_rgb_high_color_token_checkpoint.png
+      params: {rust_encode_with_token: true}
+    - id: enc_rgb_skewed_high_color_split
+      description: Skewed 257-color RGB input drives the median-cut split to the final dominant color in ordinary and token-aware encodes
+      source_format: png
+      source_asset: gif_rgb_skewed_high_color_split.png
+      params: {rust_encode_with_token: true}
+    - id: enc_rgb_257_color_low_green_dominant
+      description: Skewed 257-color RGB input with a low-green dominant endpoint exercises token-aware palette quantization and exact public GIF parity
+      source_format: png
+      source_asset: gif_rgb_257_color_low_green_dominant.png
+      params: {rust_encode_with_token: true}
     - id: enc_grayscale
       description: Grayscale source encoded with Pillow's grayscale palette
       source_format: png
@@ -1485,30 +2407,55 @@ formats:
       source_asset: gif_rgba.png
       params: {}
     - id: enc_rgba_mixed
-      description: Mixed transparent and opaque RGBA colors exercise Pillow's transparent palette offset
+      description: Mixed transparent and opaque RGBA colors exercise Pillow's transparent palette offset and token-aware palette compaction
       source_format: png
       source_asset: gif_rgba_mixed.png
-      params: {}
+      params: {rust_encode_with_token: true}
+    - id: enc_rgba_mixed_token_compact_checkpoint
+      description: 33x33 repeated mixed-alpha RGBA source crosses the token-aware compact-palette remap checkpoint
+      source_format: png
+      source_asset: gif_rgba_mixed_token_compact_checkpoint.png
+      params: {rust_encode_with_token: true}
     - id: enc_rgba_high_color
       description: Transparent RGBA source with more than 255 opaque colors exercises Pillow's nearest palette mapping
       source_format: png
       source_asset: gif_rgba_high_color.png
       params: {}
+    - id: enc_rgba_high_color_token_checkpoint
+      description: Mixed transparent and opaque high-color RGBA crosses token-aware normalization checkpoints and checks both alpha outcomes
+      source_format: png
+      source_asset: gif_rgba_high_color_token_checkpoint.png
+      params: {rust_encode_with_token: true}
     - id: enc_rgba_octree
-      description: Dense RGBA source populates every Pillow FASTOCTREE bucket with varied frequencies
+      description: Dense RGBA source populates every Pillow FASTOCTREE bucket with varied frequencies; regular and token-aware encodes are compared with Pillow bytes
       source_format: png
       source_asset: gif_rgba_octree.png
-      params: {}
+      params: {rust_encode_with_token: true}
     - id: enc_rgba_octree_sorted
-      description: RGBA source presents all coarse FASTOCTREE buckets in descending frequency order
+      description: RGBA source presents all coarse FASTOCTREE buckets in descending frequency order; regular and token-aware encodes are compared with Pillow bytes
       source_format: png
       source_asset: gif_rgba_octree_sorted.png
-      params: {}
+      params: {rust_encode_with_token: true}
     - id: enc_rgba_opaque
       description: Opaque RGBA source quantized through Pillow's RGB path
       source_format: png
       source_asset: gif_rgba_opaque.png
       params: {}
+    - id: enc_animated_rgb_full_palette_token
+      description: Two-frame lossless RGB animation with 256 colors per frame exercises the token-aware full-palette coalescing boundary
+      source_format: webp
+      source_asset: animated_rgb_full_palette.webp
+      params: {animated: true, frames: 2, color_table: local, rust_encode_sequence_with_token: true}
+    - id: enc_animated_non_centisecond_delays
+      description: GIF frame delays truncate WebP's 17 ms and 33 ms source durations to Pillow's 10 ms and 30 ms centisecond values
+      source_format: webp
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {animated: true, frames: 2, preserve_duration: true}
+    - id: enc_animated_large_fraction_delay
+      description: An unreduced u64-max-over-u64-max one-second duration reaches GIF's wide scaling path and matches Pillow's 1,000 ms frame delay
+      source_format: webp
+      source_asset: animated_sequence_rgba_keyframes.webp
+      params: {animated: true, frames: 2, preserve_duration: true, sequence_duration_fraction: [18446744073709551615, 18446744073709551615]}
 
   bmp:
     name: BMP
@@ -1551,6 +2498,8 @@ formats:
       - 16bit.bmp
     - id: depth_24
       description: 24-bit RGB (most common)
+      rust_decode_with_metadata_limit: 54
+      rust_decode_with_token: true
       test_assets:
       - 24bit.bmp
     - id: depth_32
@@ -1640,6 +2589,11 @@ formats:
       - related_ic.bmp
       - related_pt.bmp
       expect_error: true
+    - id: error_unsupported_core_depth
+      description: Unsupported pixel depth in a complete OS/2 COREHEADER
+      test_assets:
+      - core_header_invalid_depth.bmp
+      expect_error: true
     - id: error_malformed
       description: Malformed BMP headers, palettes, and pixel payloads
       test_assets:
@@ -1670,6 +2624,7 @@ formats:
       - info_header_truncated_y_pels.bmp
       - info_header_truncated_colors_used.bmp
       - info_header_truncated_colors_important.bmp
+      - header64_compression4_truncated_header.bmp
       - bitfields_truncated_masks.bmp
       - bitfields_truncated_green_mask.bmp
       - bitfields_truncated_blue_mask.bmp
@@ -1695,6 +2650,31 @@ formats:
       - bitfields_zero_mask.bmp
       - bitfields_zero_red_mask.bmp
       - bitfields_zero_blue_mask.bmp
+      expect_error: true
+    - id: error_unsupported_windows_embedded_jpeg
+      description: Pillow rejects Windows BMP compression code 4 in a complete INFO header
+      test_assets:
+      - header40_compression4.bmp
+      expect_error: true
+    - id: error_unsupported_windows_embedded_png
+      description: Pillow rejects Windows BMP compression code 5 in a complete INFO header
+      test_assets:
+      - header40_compression5.bmp
+      expect_error: true
+    - id: error_unsupported_unknown_compression
+      description: Pillow rejects an unknown BMP compression code in a complete INFO header
+      test_assets:
+      - header40_compression6.bmp
+      expect_error: true
+    - id: error_unsupported_os2_huffman
+      description: Pillow rejects OS/2 1-bit Huffman compression as an unsupported bitfields layout
+      test_assets:
+      - os2_depth1_compression3.bmp
+      expect_error: true
+    - id: error_unsupported_os2_rle24
+      description: Pillow rejects OS/2 RLE24 compression in a complete INFO2 header
+      test_assets:
+      - header64_compression4.bmp
       expect_error: true
     encode_edge_cases:
     - id: enc_error_retained_sequence_geometry
@@ -1740,8 +2720,10 @@ formats:
       params: {'truncate_pixels': true}
       expect_error: true
     - id: enc_error_oversized_dimensions
-      description: BMP dimensions exceed Pillow's signed 32-bit encoder limit
-      params: {'source_dimensions': [2147483648, 1]}
+      description: A valid packed L1 source exceeds Pillow's signed 32-bit width limit
+      source_format: png
+      source_asset: 1bit.png
+      params: {'source_dimensions': [2147483648, 1], 'valid_l1_storage': true}
       expect_error: true
     - id: enc_error_oversized_height
       description: BMP height exceeds Pillow's signed 32-bit encoder limit
@@ -1797,6 +2779,11 @@ formats:
       description: 
       params: {'size': [17, 17]}
       source_asset: odd_width.bmp
+    - id: enc_wide_scanline_checkpoint
+      description: A 1,025-pixel RGB row reaches the encoder's 1,024-pixel cancellation checkpoint
+      source_format: bmp
+      source_asset: row_checkpoint_1025x1.bmp
+      params: {}
 
   webp:
     name: WebP
@@ -1828,6 +2815,25 @@ formats:
       - lossy_q100.webp
       - lossy_solid_17x19_q90_m0.webp
       - lossy_checker_17x19_q1_m0.webp
+      - lossy_y2_empty_ac_16x16_q90_m4.webp
+      - lossy_macroblock_residual_context_edges_32x16_q75_m4.webp
+      - lossy_intra_chroma_dc_32x32_q100_m4.webp
+    - id: lossy_q0_uvdc_clamp
+      description: VP8 quality-zero frame with UV DC dequantizer above the 132 clamp
+      test_assets:
+      - lossy_q0_uvdc_clamp_32x32.webp
+    - id: lossy_intra_chroma_predictor_modes
+      description: Lossy VP8 chroma prediction with horizontal, vertical, and planar neighboring blocks
+      test_assets:
+      - lossy_intra_chroma_modes_32x32_q100_m4.webp
+    - id: lossy_intra_chroma_horizontal_predictor
+      description: Lossy VP8 chroma blocks with a horizontal color gradient
+      test_assets:
+      - lossy_intra_chroma_horizontal_32x32_q100_m4.webp
+    - id: lossy_intra_chroma_vertical_predictor
+      description: Lossy VP8 chroma blocks with a vertical color gradient
+      test_assets:
+      - lossy_intra_chroma_vertical_32x32_q100_m4.webp
     - id: lossy_vp8_filter_variants
       description: libwebp 1.6.0 VP8 simple, strong, disabled, and single-segment filters
       test_assets:
@@ -1836,10 +2842,51 @@ formats:
       - lossy_filter_off.webp
       - lossy_segment_one.webp
       - lossy_partitions_eight.webp
+    - id: lossy_vp8_delta_segment_values
+      description: Four-segment VP8 frame encodes quantizer and filter strengths as deltas
+      test_assets:
+      - lossy_delta_segment.webp
+    - id: lossy_vp8_mode_filter_delta
+      description: Four-segment VP8 keyframe applies a +5 loop-filter delta to intra4x4 macroblocks
+      test_assets:
+      - lossy_mode_filter_delta.webp
+    - id: lossy_vp8_segmentation_feature_data_disabled_16x16
+      description: Opaque 16x16 VP8 keyframe enables segmentation without updating segment feature data
+      test_assets:
+      - segmentation_feature_data_disabled_16x16.webp
     - id: lossless_vp8l
       description: Lossless WebP (VP8L codec)
       test_assets:
       - lossless.webp
+    - id: lossless_subtract_green_rgb_fallback
+      description: Opaque 1x1 VP8L SubtractGreen transform uses the RGB fallback workspace
+      test_assets:
+      - lossless_subtract_green_rgb_fallback_1x1.webp
+    - id: lossless_rgba_singleton_color_cache
+      description: Alpha-bearing 1x1 VP8L singleton Huffman block inserts its pixel into the color cache
+      test_assets:
+      - lossless_rgba_singleton_color_cache_1x1.webp
+    - id: lossless_rgba_huffman_fallback
+      description: Still lossless VP8L RGBA with high-entropy channel symbols
+      test_assets:
+      - lossless_rgba_huffman_fallback_32x32.webp
+    - id: lossless_short_backreference
+      description: Lossless VP8L with short repeated RGB pixel runs
+      test_assets:
+      - lossless_short_backreference.webp
+    - id: lossless_single_symbol_copy_fallback
+      description: VP8L meta-Huffman RGBA block with a singleton green copy code and distance-one copy fallback
+      test_assets:
+      - lossless_single_symbol_copy_fallback_8x4.webp
+    - id: lossless_copy_out_of_bounds
+      description: VP8L copy length exceeds the pixels remaining in an 8x4 lossless image
+      test_assets:
+      - lossless_copy_out_of_bounds_8x4.webp
+      expect_error: true
+    - id: lossless_color_cache_lookahead
+      description: Lossless VP8L cached-color lookahead across a novel RGB literal
+      test_assets:
+      - lossless_palette_cache_512_final.webp
     - id: lossless_transform_variants
       description: VP8L predictor, palette, color, and subtract-green transform corpus
       test_assets:
@@ -1936,6 +2983,7 @@ formats:
       - odd.webp
     - id: icc_profile
       description: WebP with embedded ICC profile
+      rust_decode_with_metadata_limit: 69
       test_assets:
       - icc.webp
     - id: xmp_metadata
@@ -1951,15 +2999,83 @@ formats:
       test_assets:
       - truncated.webp
       expect_error: true
+    - id: error_truncated_riff_extent_metadata_preflight
+      description: Detected WebP RIFF extent exceeds the available bytes during metadata preflight
+      test_assets:
+      - riff_extent_truncated.webp
+      expect_error: true
+      rust_decode_with_metadata_limit: 0
+    - id: error_truncated_chunk_header_metadata_preflight
+      description: Extended WebP metadata and a one-byte RIFF tail leave an incomplete chunk header
+      test_assets:
+      - metadata_truncated_chunk_header.webp
+      expect_error: true
+      rust_decode_with_metadata_limit: 0
+    - id: error_chunk_exceeds_riff_metadata_preflight
+      description: The EXIF chunk extends past the RIFF extent during metadata preflight
+      test_assets:
+      - metadata_chunk_exceeds_riff.webp
+      expect_error: true
+      rust_decode_with_metadata_limit: 0
     - id: error_vp8_magic
       description: VP8 keyframe with an invalid start code
       test_assets:
       - bad_vp8_magic.webp
       expect_error: true
+    - id: error_vp8_color_space_invalid
+      description: VP8 keyframe with an invalid non-zero color-space bit
+      test_assets:
+      - vp8_color_space_invalid.webp
+      expect_error: true
     - id: error_animated_vp8_magic
       description: Animated VP8 frame with an invalid start code
       test_assets:
       - bad_animated_vp8_magic.webp
+      expect_error: true
+    - id: error_vp8l_width_mismatch
+      description: VP8X canvas width disagrees with the VP8L image header
+      test_assets:
+      - extended_vp8l_width_mismatch.webp
+      expect_error: true
+    - id: error_vp8l_height_mismatch
+      description: VP8X canvas height disagrees with the VP8L image header
+      test_assets:
+      - extended_vp8l_height_mismatch.webp
+      expect_error: true
+    - id: error_vp8_height_mismatch
+      description: VP8X canvas height disagrees with the VP8 keyframe header
+      test_assets:
+      - extended_vp8_height_mismatch.webp
+      expect_error: true
+    - id: error_animated_nested_vp8l_signature
+      description: Animated VP8L frame has an invalid nested bitstream signature
+      test_assets:
+      - animated_nested_vp8l_bad_signature.webp
+      expect_error: true
+    - id: error_animated_nested_vp8l_version
+      description: Animated VP8L frame declares an unsupported bitstream version
+      test_assets:
+      - animated_nested_vp8l_bad_version.webp
+      expect_error: true
+    - id: error_animated_vp8l_short_header
+      description: Animated VP8L chunk declares a four-byte payload, shorter than its frame header
+      test_assets:
+      - animated_vp8l_short_header.webp
+      expect_error: true
+    - id: error_animated_vp8l_short_header_oversized_width
+      description: Four-byte animated VP8L payload with an ANMF width above the decoder limit
+      test_assets:
+      - animated_vp8l_short_header_oversized_width.webp
+      expect_error: true
+    - id: error_animated_vp8l_frame_outside_right
+      description: Valid 64x64 VP8L animation frame starts at x=2 and extends past the right canvas edge
+      test_assets:
+      - animated_vp8l_frame_outside_right.webp
+      expect_error: true
+    - id: error_animated_vp8l_frame_outside_bottom
+      description: Valid 64x64 VP8L animation frame starts at y=2 and extends past the bottom canvas edge
+      test_assets:
+      - animated_vp8l_frame_outside_bottom.webp
       expect_error: true
     - id: error_malformed_container
       description: Malformed WebP container and codec headers
@@ -1982,6 +3098,7 @@ formats:
       - animated_short_anmf_header.webp
       - animated_missing_anim.webp
       - animated_missing_anmf.webp
+      - animated_all_frame_chunks_unrecognized.webp
       - animated_anim_payload_eof_after_anmf.webp
       - animated_alpha_missing_nested_vp8_header.webp
       - extended_vp8_dimension_mismatch.webp
@@ -1991,11 +3108,14 @@ formats:
       - bad_anmf_decode_size.webp
       - anim_chunk_too_small.webp
       - animated_frame_outside.webp
+      - animated_frame_bottom_outside.webp
       - animated_nested_chunk_too_large.webp
       - animated_alpha_chunk_too_large.webp
       - animated_alpha_vp8_too_large.webp
       - alpha_invalid_preprocessing.webp
       - alpha_invalid_compression.webp
+      - alpha_uncompressed_truncated_payload.webp
+      - alpha_lossy_gradient_empty_compressed_payload.webp
       - vp8l_alpha_header_only.webp
       - vp8l_short_header.webp
       - vp8l_truncated_6.webp
@@ -2072,6 +3192,11 @@ formats:
       - vp8_partition_31.webp
       - vp8_partition_32.webp
       expect_error: true
+    - id: error_lossless_vp8l_short_backreference_truncated_tail
+      description: Full RIFF WebP with a valid lossless header and short-copy stream truncated during pixel reconstruction
+      test_assets:
+      - lossless_short_backreference_truncated_tail.webp
+      expect_error: true
     - id: error_related_riff_containers
       description: Complete RIFF bytes whose form is WAVE or whose WEBP form begins with an unsupported chunk identifier
       test_assets:
@@ -2090,6 +3215,14 @@ formats:
       - alpha_missing_chunk.webp
       - vp8_missing_last_byte.webp
       - vp8l_unused_invalid_one_symbol.webp
+    - id: pillow_tolerated_malformed_animated_alpha_anmf_width_mismatch
+      description: Pillow composites the decoded alpha frame despite an oversized ANMF width declaration
+      test_assets:
+      - animated_alpha_anmf_width_mismatch.webp
+    - id: pillow_tolerated_malformed_animated_vp8l_anmf_width_mismatch
+      description: Pillow composites the nested VP8L frame despite an oversized ANMF width declaration
+      test_assets:
+      - animated_vp8l_anmf_width_mismatch.webp
     encode_edge_cases:
     - id: enc_sequence_lossy_rgb_keyframes
       description: Two rendered RGB canvases encode as exact full-canvas lossy WebP keyframes
@@ -2280,8 +3413,8 @@ formats:
       description: 
       params: {'lossless': False, 'quality': 80}
     - id: enc_lossy_q50
-      description: 
-      params: {'lossless': False, 'quality': 50}
+      description: Lossy RGB output at quality 50 also matches Pillow when encoded with a fresh cancellation token
+      params: {'lossless': False, 'quality': 50, 'rust_encode_with_token': true}
     - id: enc_lossy_q10
       description: 
       params: {'lossless': False, 'quality': 10}
@@ -2291,6 +3424,46 @@ formats:
     - id: enc_lossless
       description: 
       params: {'lossless': True}
+    - id: enc_lossless_sampling_checkpoint
+      description: A wide high-entropy RGB source checks token-aware lossless byte parity
+      source_format: png
+      source_asset: webp_lossless_sampling_checkpoint.png
+      params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_sampling_multi_group_checkpoint
+      description: Alternating red-only and green-only tile groups retain distinct VP8L histograms while token-aware sampling compares both tile rows and columns
+      source_format: png
+      source_asset: webp_lossless_sampling_groups_checkpoint.png
+      params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_sampling_equal_rows_checkpoint
+      description: Repeated multi-group VP8L tile rows reach the token-aware 1,024-comparison checks in histogram row and column sampling
+      source_format: png
+      source_asset: webp_lossless_sampling_equal_rows_checkpoint.png
+      params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_sampling_row_compaction_checkpoint
+      description: Tall multi-group VP8L input leaves multiple rows after histogram sampling so token-aware compaction checks cover nonzero rows
+      source_format: png
+      source_asset: webp_lossless_sampling_rows_checkpoint.png
+      params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_grayscale_alpha_predictor
+      description: Grayscale RGBA with varying alpha checks token-aware lossless predictor selection
+      source_format: png
+      source_asset: webp_lossless_gray_alpha_predictor.png
+      params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_rgba_red_green_mismatch
+      description: Partial-alpha RGBA lossless input exits grayscale scan on a red-green mismatch
+      source_format: png
+      source_asset: webp_lossless_rgba_red_green_mismatch.png
+      params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_rgba_green_blue_mismatch
+      description: Partial-alpha RGBA lossless input exits grayscale scan on a green-blue mismatch
+      source_format: png
+      source_asset: webp_lossless_rgba_green_blue_mismatch.png
+      params: {'lossless': True, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
+    - id: enc_lossless_luminance_alpha_opaque_token
+      description: Opaque grayscale-alpha input checks token-aware lossless predictor selection
+      source_format: png
+      source_asset: gray_alpha.png
+      params: {'lossless': True, 'color_type': 'LA', 'rust_encode_with_token': true}
     - id: enc_lossy_grayscale
       description: Lossy grayscale WebP converted through Pillow's RGB path
       source_format: png
@@ -2305,7 +3478,7 @@ formats:
       description: Lossy WebP clamps Pillow I;16 luminance samples to 8-bit RGB
       source_format: png
       source_asset: l16_clamp.png
-      params: {'lossless': False}
+      params: {'lossless': False, 'rust_encode_with_token': true}
     - id: enc_lossless_l16
       description: Lossless WebP clamps Pillow I;16 luminance samples to 8-bit RGB
       source_format: png
@@ -2330,7 +3503,7 @@ formats:
       description: Lossless indexed WebP expanded through Pillow's opaque palette path
       source_format: png
       source_asset: indexed.png
-      params: {'lossless': True, 'color_type': 'P'}
+      params: {'lossless': True, 'color_type': 'P', 'rust_encode_with_token': true}
     - id: enc_lossy_indexed_alpha
       description: Lossy indexed WebP expanded through Pillow's RGBA palette path
       source_format: png
@@ -2340,7 +3513,7 @@ formats:
       description: Lossless indexed WebP expanded through Pillow's RGBA palette path
       source_format: png
       source_asset: indexed_alpha.png
-      params: {'lossless': True, 'color_type': 'P'}
+      params: {'lossless': True, 'color_type': 'P', 'rust_encode_with_token': true}
     - id: enc_lossy_luminance_alpha
       description: Lossy opaque luminance-alpha WebP converted through Pillow's RGB path
       source_format: png
@@ -2366,6 +3539,21 @@ formats:
       source_format: png
       source_asset: alpha_partial.png
       params: {'lossless': False, 'alpha': True}
+    - id: enc_lossy_rgba_alpha_compressed
+      description: Lossy RGBA WebP encoding with a compressible alpha plane
+      source_format: png
+      source_asset: webp_rgba_alpha_compressible_checker.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_raw
+      description: Lossy RGBA WebP encoding with a seeded high-entropy alpha plane
+      source_format: png
+      source_asset: webp_rgba_alpha_noisy_seeded.png
+      params: {'lossless': False, 'quality': 80, 'method': 4}
+    - id: enc_lossy_rgba_alpha_size_tie
+      description: Lossy RGBA WebP prefers compressed alpha when raw and compressed sizes tie
+      source_format: png
+      source_asset: webp_rgba_alpha_size_tie_9x1.png
+      params: {'lossless': False, 'quality': 80, 'method': 4, 'rust_encode_with_token': true}
     - id: enc_lossy_opaque_rgba
       description: Lossy WebP strips an all-opaque alpha channel
       source_format: png
@@ -2375,7 +3563,12 @@ formats:
       description: Lossy transparent smoothing on partial edge macroblocks
       source_format: png
       source_asset: rgba_odd.png
-      params: {'lossless': False, 'alpha': True}
+      params: {'lossless': False, 'alpha': True, 'rust_encode_with_token': true}
+    - id: enc_lossy_alpha_bottom_edge_token
+      description: Token-aware lossy alpha cleanup on an aligned-width, partial-height macroblock edge
+      source_format: png
+      source_asset: rgba_bottom_edge_16x17.png
+      params: {'lossless': False, 'alpha': True, 'rust_encode_with_token': true}
     - id: enc_lossy_horizontal
       description: Lossy horizontal prediction structure
       source_format: webp
@@ -2391,6 +3584,11 @@ formats:
       source_format: webp
       source_asset: lossless_solid.webp
       params: {'lossless': False}
+    - id: enc_lossy_noise
+      description: Lossy encoding of a high-entropy lossless WebP source
+      source_format: webp
+      source_asset: lossless_noise.webp
+      params: {'lossless': False, 'rust_encode_with_token': true}
     - id: enc_lossless_alpha
       description: 
       source_format: png
@@ -2400,7 +3598,7 @@ formats:
       description: Lossy alpha WebP with EXIF metadata on an existing VP8X container
       source_format: png
       source_asset: alpha_partial.png
-      params: {'lossless': False, 'alpha': True, 'exif_hex': '45786966000049492a000800000000000000'}
+      params: {'lossless': False, 'alpha': True, 'exif_hex': '45786966000049492a000800000000000000', 'rust_encode_with_token': true}
     - id: enc_no_alpha
       description: 
       params: {'alpha': False}
@@ -2419,6 +3617,11 @@ formats:
     - id: enc_method_6
       description: 
       params: {'method': 6}
+    - id: enc_lossy_method_6_token_checkpoint
+      description: Token-aware lossy method-6 VP8 encoding matches Pillow bytes for the trellis quantization path
+      source_format: webp
+      source_asset: lossless.webp
+      params: {'lossless': False, 'method': 6, 'rust_encode_with_token': true}
     - id: enc_error_lossy_quality_above_max
       description: Pillow rejects lossy quality values above 100
       params: {'lossless': False, 'quality': 101}
@@ -2437,16 +3640,16 @@ formats:
       expect_error: true
     - id: enc_exif
       description: 
-      params: {'exif_hex': '45786966000049492a000800000000000000'}
+      params: {'exif_hex': '45786966000049492a000800000000000000', 'rust_encode_with_token': true}
     - id: enc_exif_mixed_hex_case
       description: Upper- and lower-case metadata nibbles produce exact EXIF bytes
       params: {'exif_hex': '45786966000049492A000800000000000000abCD'}
     - id: enc_xmp
       description: 
-      params: {'xmp_hex': '3c783a786d706d6574612f3e'}
+      params: {'xmp_hex': '3c783a786d706d6574612f3e', 'rust_encode_with_token': true}
     - id: enc_icc
       description: 
-      params: {'icc_hex': '70696c6c6f772d72732d696363'}
+      params: {'icc_hex': '70696c6c6f772d72732d696363', 'rust_encode_with_token': true}
     - id: enc_error_metadata_hex_odd
       description: Metadata hex with an incomplete byte is rejected
       params: {'icc_hex': 'f'}
@@ -2492,10 +3695,20 @@ formats:
       source_format: webp
       source_asset: lossless_solid.webp
       params: {'lossless': True}
+    - id: enc_lossless_palette16
+      description: Re-encode a 16-color lossless image using two packed palette indices per byte
+      source_format: webp
+      source_asset: lossless_palette16.webp
+      params: {'lossless': True}
     - id: enc_lossless_palette256
       description: Re-encode a full-palette lossless image
       source_format: webp
       source_asset: lossless_palette256.webp
+      params: {'lossless': True}
+    - id: enc_lossless_palette4_box_chain
+      description: A 4x4100 four-color source crosses the packed lossless box-chain match-length boundary
+      source_format: webp
+      source_asset: lossless_palette4_box_chain.webp
       params: {'lossless': True}
     - id: enc_lossless_predictor_sparse
       description: Re-encode sparse predictor residuals
@@ -2598,11 +3811,16 @@ formats:
       - lzw_trailing_code.tiff
       - lzw_kwkwk_clipped.tiff
       - lzw_dictionary_saturation.tiff
+      - lzw_long_phrase_checkpoint_1024.tiff
       - lzw_post_ifd_empty_count.tiff
+      - lzw_extra_zero_output_strip.tiff
     - id: compression_deflate
       description: Deflate/ZIP compression
       test_assets:
       - deflate.tiff
+      - deflate_predictor_checkpoint_343x2.tiff
+      - deflate_predictor_checkpoint_513x1_gray16.tiff
+      - deflate_predictor_checkpoint_257x1_gray32_signed.tiff
       - gray_deflate.tiff
       - rgb_deflate_predictor.tiff
       - gray16_deflate_predictor.tiff
@@ -2623,8 +3841,19 @@ formats:
       test_assets:
       - packbits.tiff
       - packbits_noop.tiff
+      - packbits_trailing_noop.tiff
       - packbits_literal_overrun.tiff
       - packbits_run_overrun.tiff
+      - packbits_zero_strip_byte_count.tiff
+    - id: error_packbits_short_output
+      description: PackBits no-op packet ends before producing the declared raster
+      test_assets:
+      - packbits_short_output.tiff
+      expect_error: true
+    - id: metadata_software_tag
+      description: Retain a known TIFF Software tag while matching Pillow pixels
+      test_assets:
+      - software_metadata.tiff
     - id: bilevel
       description: Black and white (PHOTOMETRIC_MINISWHITE/BLACK)
       test_assets:
@@ -2634,6 +3863,9 @@ formats:
       test_assets:
       - miniswhite_1bit.tiff
       - miniswhite_1bit_aligned.tiff
+      - miniswhite_checkpoint_128x64.tiff
+      - miniswhite_gray8_checkpoint_32x32.tiff
+      - miniswhite_gray2_checkpoint_32x32.tiff
       - miniswhite_8bit.tiff
       - miniswhite_2bit.tiff
       - miniswhite_4bit.tiff
@@ -2677,6 +3909,7 @@ formats:
       description: YCbCr
       test_assets:
       - ycbcr.tiff
+      - ycbcr_checkpoint_32x32.tiff
     - id: depth_1
       description: 1-bit
       test_assets:
@@ -2706,6 +3939,99 @@ formats:
       description: Striped organization
       test_assets:
       - stripped.tiff
+    - id: planar_separate_rgb
+      description: Separate RGB sample planes across multiple uncompressed strips
+      test_assets:
+      - planar_separate_rgb.tiff
+    - id: planar_separate_gray_single_sample
+      description: PlanarConfiguration 2 with one sample uses the ordinary grayscale strip path
+      test_assets:
+      - planar_separate_gray_single_sample.tiff
+    - id: planar_separate_rgb_deflate_predictor
+      description: Separate RGB sample planes across Deflate strips use per-plane horizontal prediction
+      test_assets:
+      - planar_separate_rgb_deflate_predictor.tiff
+    - id: planar_separate_rgb_deflate
+      description: Separate RGB Deflate strips without a predictor preserve their component planes
+      test_assets:
+      - planar_separate_rgb_deflate.tiff
+    - id: planar_separate_ycbcr
+      description: Separate 1:1 YCbCr strips retain three independently stored sample planes
+      test_assets:
+      - planar_separate_ycbcr.tiff
+    - id: planar_separate_rgb_tiled_edge
+      description: Separate RGB tiles interleave plane samples across partial right and bottom edge tiles
+      test_assets:
+      - planar_separate_rgb_tiled_edge.tiff
+    - id: planar_separate_rgb_tiled_deflate_predictor
+      description: Separate RGB Deflate tiles reverse horizontal prediction independently per plane
+      test_assets:
+      - planar_separate_rgb_tiled_deflate_predictor.tiff
+    - id: planar_separate_rgb_tiled_deflate
+      description: Separate RGB Deflate tiles decode without horizontal prediction
+      test_assets:
+      - planar_separate_rgb_tiled_deflate.tiff
+    - id: planar_separate_rgb_tiled_missing_tail_tile
+      description: Pillow zero-fills an omitted tile at the end of a separate RGB sample plane
+      test_assets:
+      - planar_separate_rgb_tiled_missing_tail_tile.tiff
+    - id: planar_separate_rgb_tiled_zero_dimensions
+      description: Separate RGB tile offset inspection avoids division by zero for zero tile dimensions
+      test_assets:
+      - planar_separate_rgb_tiled_zero_width.tiff
+      - planar_separate_rgb_tiled_zero_height.tiff
+      expect_error: true
+    - id: planar_separate_rgb_tiled_deflate_mismatched_counts
+      description: Separate RGB Deflate tiles reject a byte-count array shorter than the offsets
+      test_assets:
+      - planar_separate_rgb_tiled_deflate_mismatched_counts.tiff
+      expect_error: true
+    - id: planar_separate_rgb_tiled_oob_tile
+      description: Separate RGB tiled payload offsets outside the file are rejected by Pillow
+      test_assets:
+      - planar_separate_rgb_tiled_oob_tile.tiff
+      expect_error: true
+    - id: planar_separate_rgb_tiled_extra_offset
+      description: Pillow rejects a separate RGB tile-offset array longer than its geometry
+      test_assets:
+      - planar_separate_rgb_tiled_extra_offset.tiff
+      expect_error: true
+    - id: planar_separate_ycbcr_tiled
+      description: Separate 1:1 YCbCr tile planes return raw component triplets in RGB mode
+      test_assets:
+      - planar_separate_ycbcr_tiled.tiff
+    - id: planar_separate_rgb_rows_zero
+      description: Zero rows per strip remains inspectable but cannot be decoded
+      test_assets:
+      - planar_separate_rgb_rows_zero.tiff
+      expect_error: true
+    - id: planar_separate_rgb_missing_tail_strip
+      description: Pillow zero-fills the omitted final RGB sample-plane strip
+      test_assets:
+      - planar_separate_rgb_missing_tail_strip.tiff
+    - id: planar_separate_rgb_extra_offset
+      description: An extra plane strip offset is rejected as malformed by Pillow
+      test_assets:
+      - planar_separate_rgb_extra_offset.tiff
+      expect_error: true
+    - id: planar_separate_rgb_oob_strip
+      description: A separate-plane strip payload outside the file is rejected by Pillow
+      test_assets:
+      - planar_separate_rgb_oob_strip.tiff
+      expect_error: true
+    - id: planar_separate_rgb_invalid_planar
+      description: Unsupported PlanarConfiguration values are rejected when Pillow loads image pixels
+      test_assets:
+      - planar_separate_rgb_invalid_planar.tiff
+      expect_error: true
+    - id: planar_separate_rgb_deflate_byte_count_edges
+      description: Pillow rejects missing, empty, zero, and mismatched compressed plane strip byte counts
+      test_assets:
+      - planar_separate_rgb_deflate_mismatched_counts.tiff
+      - planar_separate_rgb_deflate_missing_counts.tiff
+      - planar_separate_rgb_deflate_no_counts.tiff
+      - planar_separate_rgb_deflate_zero_count.tiff
+      expect_error: true
     - id: stripped_leniency
       description: Pillow derives raw strip sizes and zero-fills omitted rows
       test_assets:
@@ -2716,8 +4042,52 @@ formats:
       description: Tiled organization
       test_assets:
       - tiled.tiff
+    - id: tiled_deflate_no_predictor
+      description: Deflate-compressed RGB tiles without horizontal prediction
+      test_assets:
+      - tiled_deflate_plain.tiff
+    - id: tiled_minisblack_1bit_edge
+      description: Packed 1-bit grayscale copied from clipped tile edges
+      test_assets:
+      - tiled_minisblack_1bit_edge.tiff
+    - id: tiled_minisblack_1bit_unaligned_edge
+      description: Pillow-accepted 9-pixel tile width shifts 1-bit grayscale samples off byte boundaries
+      test_assets:
+      - tiled_minisblack_1bit_unaligned_edge.tiff
+    - id: tiled_gray2_deflate_edge
+      description: Packed 2-bit grayscale reconstructed from Deflate-compressed clipped tiles
+      test_assets:
+      - tiled_gray2_deflate_edge.tiff
+    - id: tiled_gray2_deflate_short_tile
+      description: Deflate-compressed packed tile expands to fewer bytes than a raster row requires
+      test_assets:
+      - tiled_gray2_deflate_short_tile.tiff
+      expect_error: true
+    - id: tiled_gray2_unaligned_edge
+      description: Pillow-accepted 9-pixel tile width shifts 2-bit grayscale samples off byte boundaries
+      test_assets:
+      - tiled_gray2_unaligned_edge.tiff
+    - id: tiled_palette4_edge
+      description: Packed 4-bit palette indices copied across clipped tile edges
+      test_assets:
+      - tiled_palette4_edge.tiff
+    - id: tiled_palette4_oob_tile
+      description: Pillow opens but rejects loading a packed tile with an out-of-file offset
+      test_assets:
+      - tiled_palette4_oob_tile.tiff
+      expect_error: true
+    - id: tiled_palette4_unaligned_edge
+      description: Pillow-accepted 9-pixel tile width shifts clipped 4-bit palette samples off byte boundaries
+      test_assets:
+      - tiled_palette4_unaligned_edge.tiff
+    - id: tiled_rgb1_packed_multisample_rejected
+      description: Pillow rejects a packed 1-bit three-sample RGB tile as an unknown pixel mode
+      test_assets:
+      - tiled_rgb1_packed_multisample.tiff
+      expect_error: true
     - id: tiled_missing_byte_counts
       description: Pillow derives uncompressed tile lengths when TileByteCounts is empty
+      rust_decode_with_metadata_limit: 146
       test_assets:
       - empty_tile_byte_counts.tiff
     - id: tiled_predictor
@@ -2735,17 +4105,30 @@ formats:
       - compressed_empty_strip_counts.tiff
     - id: single_page
       description: Single IFD TIFF
+      rust_inspect_basic: true
       test_assets:
       - single.tiff
+      frame_request:
+        index: 1
+        expected_status: error
+        pillow_error_type: builtins.EOFError
+        rust_error_kind: parameter
     - id: multi_page
       description: Multi-page TIFF still decode reads page one while sequence decode retains every page
       test_assets:
       - multipage.tiff
+      - multipage_three.tiff
       - multipage_mixed.tiff
     - id: cyclic_ifd_leniency
       description: Pillow stops a self-referential IFD chain after the first unique page
       test_assets:
       - cyclic_ifd.tiff
+      rust_decode_with_metadata_limit: 140
+      frame_request:
+        index: 1
+        expected_status: error
+        pillow_error_type: builtins.EOFError
+        rust_error_kind: parameter
     - id: truncated_later_ifd_leniency
       description: Pillow counts a referenced truncated later IFD but sequence materialization returns its exact later-page error
       test_assets:
@@ -2758,7 +4141,6 @@ formats:
       - truncated_signature.tiff
       - truncated_magic.tiff
       - truncated_ifd_offset.tiff
-      - empty_ifd_chain.tiff
       - truncated_ifd_count.tiff
       - truncated_ifd_entry.tiff
       - oob_tag_value_offset.tiff
@@ -2766,6 +4148,7 @@ formats:
       - invalid_magic.tiff
       - zero_width.tiff
       - zero_height.tiff
+      - samples_per_pixel_zero.tiff
       - missing_height.tiff
       - decompression_bomb.tiff
       - empty_width.tiff
@@ -2780,12 +4163,13 @@ formats:
       - empty_strip_offsets.tiff
       - missing_strip_offsets.tiff
       - zero_tile_width.tiff
+      - zero_tile_height.tiff
       - missing_tile_width.tiff
       - missing_tile_height.tiff
+      - tile_byte_counts_without_offsets.tiff
       - empty_tile_offsets.tiff
       - compressed_empty_tile_byte_counts.tiff
       - miniswhite_gray_alpha.tiff
-      - lzw_invalid_first.tiff
       - lzw_invalid_future_code.tiff
       - lzw_clear_only.tiff
       - lzw_end_only.tiff
@@ -2803,6 +4187,18 @@ formats:
       - ascii_tile_width.tiff
       - ascii_tile_height.tiff
       - oversized_rgba_tile.tiff
+      expect_error: true
+    - id: error_empty_ifd_chain_metadata_policy
+      description: Metadata-limited public decode rejects a TIFF whose header points to no IFD
+      rust_decode_with_metadata_limit: 0
+      test_assets:
+      - empty_ifd_chain.tiff
+      expect_error: true
+    - id: error_lzw_invalid_first_token_checkpoint
+      description: Token-aware TIFF decode preserves the Pillow error for an invalid first LZW code
+      rust_decode_with_token: true
+      test_assets:
+      - lzw_invalid_first.tiff
       expect_error: true
     - id: error_deflate_stream
       description: Structurally valid TIFF strips containing malformed zlib or DEFLATE payloads
@@ -2953,6 +4349,10 @@ formats:
       description: Two RGB TIFF pages with uncompressed strips
       source_asset: multipage.tiff
       params: {'animated': true, 'frames': 2, 'compression': 'none'}
+    - id: enc_sequence_raw_final_aligned
+      description: Two 4x3 RGB TIFF pages whose encoded sequence ends on a 16-byte boundary
+      source_asset: multipage_aligned.tiff
+      params: {'animated': true, 'frames': 2, 'compression': 'none'}
     - id: enc_sequence_lzw
       description: Two RGB TIFF pages with LZW-compressed strips
       source_asset: multipage.tiff
@@ -2965,6 +4365,10 @@ formats:
       description: Two RGB TIFF pages with PackBits-compressed strips
       source_asset: multipage.tiff
       params: {'animated': true, 'frames': 2, 'compression': 'packbits'}
+    - id: enc_sequence_three_pages
+      description: Three RGB TIFF pages with differing dimensions and uncompressed strips
+      source_asset: multipage_three.tiff
+      params: {'animated': true, 'frames': 3, 'compression': 'none'}
     - id: enc_sequence_mixed_pages
       description: TIFF retains different dimensions and modes for each page
       source_asset: multipage_mixed.tiff
@@ -3104,6 +4508,7 @@ formats:
     edge_cases:
     - id: single_icon
       description: Single icon entry
+      rust_decode_with_metadata_limit: 22
       test_assets:
       - single.ico
     - id: multi_res
@@ -3130,6 +4535,14 @@ formats:
       description: Indexed BMP entry using the implicit full palette size
       test_assets:
       - bmp_default_palette.ico
+    - id: bmp_1bit_default_palette
+      description: One-bit BMP entry uses its implicit two-color palette when colors_used is zero
+      test_assets:
+      - bmp_1bit_default_palette.ico
+    - id: bmp_8bit_default_palette
+      description: Eight-bit BMP entry uses its implicit 256-color palette when colors_used is zero
+      test_assets:
+      - bmp_8bit_default_palette.ico
     - id: bmp_mask_transparency
       description: 24-bit BMP entry transparency supplied by the ICO AND mask
       test_assets:
@@ -3138,6 +4551,34 @@ formats:
       description: Packed one-bit BMP entry with a partial final source byte
       test_assets:
       - bmp_1bit_odd.ico
+    - id: bmp_4bpp_odd_width
+      description: Identity grayscale palette promotes the odd-width DIB to luminance bytes
+      test_assets:
+      - bmp_4bit_odd_width.ico
+    - id: bmp_4bpp_odd_width_gray_palette_control
+      description: Non-identity grayscale palette remains indexed at the partial final nibble
+      test_assets:
+      - bmp_4bit_odd_width_gray_control.ico
+    - id: bmp_4bpp_odd_width_binary_palette
+      description: Two-color black-and-white palette follows Pillow's one-bit raw interpretation
+      test_assets:
+      - bmp_4bit_odd_width_binary_gray.ico
+    - id: bmp_4bpp_odd_width_binary_palette_white_first
+      description: Black-and-white packed bits include a white first pixel
+      test_assets:
+      - bmp_4bit_odd_width_binary_gray_white_first.ico
+    - id: bmp_4bpp_two_entry_red_green_palette
+      description: Two-entry RGB palette rejects the black-and-white raw-mode predicate
+      test_assets:
+      - bmp_4bit_two_entry_red_green.ico
+    - id: bmp_4bpp_two_entry_near_gray_palette
+      description: Near-white second palette entry remains indexed rather than monochrome
+      test_assets:
+      - bmp_4bit_two_entry_near_gray.ico
+    - id: bmp_4bpp_missing_palette_index
+      description: Missing indexed palette references decode as black like Pillow
+      test_assets:
+      - bmp_4bit_missing_palette_index.ico
     - id: bmp_short_palette_leniency
       description: Pillow decodes an 8-bit ICO DIB whose explicit palette count is shorter than its stored indices
       test_assets:
@@ -3167,6 +4608,7 @@ formats:
       - zero_entry.ico
       - truncated_entry.ico
       - short_dib.ico
+      - short_dib_payload_below_eight.ico
       - bmp_32bit_truncated_pixels.ico
       - bmp_24bit_truncated_pixels.ico
       - bmp_8bit_truncated_pixels.ico
@@ -3188,6 +4630,12 @@ formats:
       - zero_offset.ico
       - too_many_entries.ico
       expect_error: true
+    - id: error_short_header_metadata_preflight
+      description: Detected ICO signature ends before the complete directory header during metadata preflight
+      test_assets:
+      - short_header.ico
+      expect_error: true
+      rust_decode_with_metadata_limit: 0
     encode_edge_cases:
     - id: enc_error_retained_sequence_geometry
       description: A still ICO cannot represent a retained frame offset or a larger sequence canvas
@@ -3326,10 +4774,218 @@ formats:
       test_assets:
       - baseline.avif
       status: active
+    - id: size_zero_top_level_free
+      description: A size-zero top-level free box consumes the remaining bytes through EOF
+      test_assets:
+      - size_zero_top_level_free.avif
+      status: active
+    - id: ipma_version_1_wide_item_ids
+      description: Still AVIF with a version-1 ipma box and a widened 32-bit primary item ID
+      test_assets:
+      - ipma_version_1_wide_item_ids.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: iloc_version_2_wide_item_ids
+      description: Still AVIF with version-2 item locations using widened 32-bit item count and ID fields
+      test_assets:
+      - iloc_version_2_wide_item_ids.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: ipma_wide_property_associations
+      description: Still AVIF with 16-bit ipma property association indices
+      test_assets:
+      - ipma_wide_associations.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: primary_item_irot
+      description: Primary-item 270-degree irot transform from the independently generated AVIF mux fixture
+      test_assets:
+      - primary_item_irot.avif
+      status: active
+    - id: primary_item_pasp_4x3
+      description: Primary-item 4:3 pixel aspect ratio property preserves Pillow's displayed pixels
+      test_assets:
+      - primary_item_irot_pasp_4x3.avif
+      status: active
+    - id: clap_zero_width_ignored
+      description: An essential clean-aperture property with a zero width numerator is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_zero_width_ignored.avif
+      status: active
+    - id: clap_zero_width_denominator_ignored
+      description: An essential clean-aperture property with a zero width denominator is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_zero_width_denominator_ignored.avif
+      status: active
+    - id: clap_zero_height_numerator_ignored
+      description: An essential clean-aperture property with a zero height numerator is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_zero_height_numerator_ignored.avif
+      status: active
+    - id: clap_zero_height_denominator_ignored
+      description: An essential clean-aperture property with a zero height denominator is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_zero_height_denominator_ignored.avif
+      status: active
+    - id: clap_zero_horizontal_offset_denominator_ignored
+      description: An essential clean-aperture property with a zero horizontal offset denominator is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_zero_horizontal_offset_denominator_ignored.avif
+      status: active
+    - id: clap_zero_vertical_offset_denominator_ignored
+      description: An essential clean-aperture property with a zero vertical offset denominator is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_zero_vertical_offset_denominator_ignored.avif
+      status: active
+    - id: clap_trailing_payload_byte_ignored
+      description: An essential clean-aperture property with one trailing payload byte is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_trailing_payload_byte_ignored.avif
+      status: active
+    - id: clap_trailing_payload_16_bytes_ignored
+      description: An essential clean-aperture property with 16 trailing payload bytes is ignored by Pillow and preserves the AVIF primary item pixels
+      test_assets:
+      - clap_trailing_payload_16_bytes_ignored.avif
+      status: active
+    - id: icc_profile
+      description: 4x4 4:4:4 still retaining an ICC profile from its PNG source
+      test_assets:
+      - icc_profile.avif
+      status: active
+    - id: icc_ricc_type
+      description: 4x4 portable still with Pillow-accepted rICC profile property
+      test_assets:
+      - icc_ricc_type.avif
+      status: active
+    - id: icc_mdcv
+      description: 4x4 4:4:4 ICC still with associated BT.2020/D65 mastering-display metadata
+      test_assets:
+      - icc_mdcv.avif
+      avif_mdcv:
+      - 34000
+      - 16000
+      - 13250
+      - 34500
+      - 7500
+      - 3000
+      - 15635
+      - 16450
+      - 10000000
+      - 50
+      status: active
+    - id: icc_mdcv_trailing
+      description: Pillow-accepted trailing byte in an associated mdcv property
+      test_assets:
+      - icc_mdcv_trailing.avif
+      avif_mdcv:
+      - 34000
+      - 16000
+      - 13250
+      - 34500
+      - 7500
+      - 3000
+      - 15635
+      - 16450
+      - 10000000
+      - 50
+      status: active
     - id: portable_lossless_a
       description: Minimal 4x4 lossless 4:4:4 key frame for portable AV1 reconstruction
       test_assets:
       - portable_lossless_a.avif
+    - id: portable_lossless_monochrome_1x1
+      description: 1x1 8-bit lossless monochrome key frame exercising cropped sub-4-pixel reconstruction
+      test_assets:
+      - portable_lossless_monochrome_1x1.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_limited_16x16
+      description: 16x16 8-bit lossless limited-range monochrome key frame covering luma range normalization
+      test_assets:
+      - portable_lossless_monochrome_limited_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_limited_10bit_16x16
+      description: 16x16 10-bit lossless limited-range monochrome key frame covering high-depth luma normalization
+      test_assets:
+      - portable_lossless_monochrome_limited_10bit_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_limited_12bit_16x16
+      description: 16x16 12-bit lossless limited-range monochrome key frame covering 12-bit luma normalization
+      test_assets:
+      - portable_lossless_monochrome_limited_12bit_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_limited_bt2020_pq_16x16
+      description: 16x16 8-bit lossless limited-range monochrome BT.2020/PQ still covering CICP-independent luma output
+      test_assets:
+      - portable_lossless_monochrome_limited_bt2020_pq_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_limited_alpha_16x16
+      description: 16x16 8-bit lossless limited-range monochrome key frame with a full-range auxiliary alpha item
+      test_assets:
+      - portable_lossless_monochrome_limited_alpha_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_limited_alpha_10bit_16x16
+      description: 16x16 10-bit lossless limited-range monochrome key frame with a 10-bit auxiliary alpha item
+      test_assets:
+      - portable_lossless_monochrome_limited_alpha_10bit_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_limited_alpha_12bit_16x16
+      description: 16x16 12-bit lossless limited-range monochrome key frame with a 12-bit auxiliary alpha item
+      test_assets:
+      - portable_lossless_monochrome_limited_alpha_12bit_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_monochrome_alpha_17x17
+      description: 17x17 8-bit lossless monochrome key frame with an auxiliary alpha plane
+      test_assets:
+      - portable_lossless_monochrome_alpha_17x17.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_i444_quality100_64x64
+      description: 64x64 8-bit quality-100 RGB 4:4:4 key frame with fixed 64-pixel partitions
+      test_assets:
+      - portable_i444_quality100_64x64.avif
+      status: active
+    - id: unknown_extended_size_uuid_box
+      description: Valid AVIF with an unknown top-level extended-size UUID box after the image data
+      test_assets:
+      - unknown_extended_size_uuid_box.avif
+      status: active
+    - id: portable_lossless_filmgrain_i444_64x64
+      description: 64x64 8-bit all-lossless 4:4:4 key frame exercising bounded full-resolution AV1 film grain
+      test_assets:
+      - portable_lossless_filmgrain_i444_64x64.avif
+      status: active
+    - id: portable_lossless_filmgrain_420_chroma_from_luma_64x64
+      description: 64x64 8-bit all-lossless 4:2:0 key frame using AV1 chroma scaling from luma for film grain
+      test_assets:
+      - portable_lossless_filmgrain_420_chroma_from_luma_64x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_filmgrain_420_zero_y_points_64x64
+      description: 64x64 8-bit all-lossless 4:2:0 key frame with update grain and zero Y points, omitting the conditional point and coefficient syntax
+      test_assets:
+      - portable_lossless_filmgrain_420_zero_y_points_64x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_filmgrain_monochrome_64x64
+      description: 64x64 8-bit all-lossless monochrome key frame exercising AV1 monochrome film-grain synthesis
+      test_assets:
+      - portable_lossless_filmgrain_monochrome_64x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: animated_filmgrain_reference_reuse_i444_64x64
+      description: Two-frame 64x64 8-bit I444 sequence whose inter frame reuses key-frame AV1 film-grain parameters with a new seed
+      test_assets:
+      - animated_filmgrain_reference_reuse_i444_64x64.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: portable_lossless_b
       description: Independent minimal 4x4 lossless 4:4:4 key frame preventing payload special-casing
       test_assets:
@@ -3632,6 +5288,18 @@ formats:
       description: 16x16 lossless 4:2:0 four-leaf square split with bottom-right luma and chroma DC residuals
       test_assets:
       - partitioned_square_420_16x16_g96.avif
+    - id: coverage_lossy_420_square8_four_leaves_01
+      description: 16x16 full-range lossy 4:2:0 quality-99 AVIF forced to four terminal Square8 leaves
+      test_assets:
+      - coverage_lossy_420_square8_four_leaves_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossy_420_square8_gradient
+      description: 16x16 full-range lossy 4:2:0 quality-99 gradient with four Square8 leaves and screen-content tools disabled
+      test_assets:
+      - portable_lossy_420_square8_gradient.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: portable_lossless_gray_32
       description: Minimal 4x4 lossless 4:4:4 key frame with nonzero luma and zero chroma residuals
       test_assets:
@@ -4566,6 +6234,12 @@ formats:
       description: 16x16 4:2:0 quality-24 speed-0 PARTITION_H4 witness with one following Horizontal16x4 leaf split into two TX8x4 luma transforms
       test_assets:
       - coverage_h16x4_tx8x4_split_01.avif
+    - id: coverage_h16x4_third_leaf_no_chroma_tx8x4_01
+      description: 16x16 4:2:0 quality-24 speed-0 PARTITION_H4 witness with two non-empty TX8x4 luma residuals in the third no-chroma H16x4 leaf
+      test_assets:
+      - coverage_h16x4_third_leaf_no_chroma_tx8x4_01.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: coverage_h16x4_filter_intra_tx8x4_split_01
       description: 16x16 4:2:0 quality-32 speed-0 PARTITION_H4 witness with a following Horizontal16x4 filter-intra mode-4 leaf split into two non-empty TX8x4 luma transforms
       test_assets:
@@ -4664,10 +6338,40 @@ formats:
       - high_bitdepth_still_10bit_444_lossless.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_10bit_420_lossy_16x16
+      description: Single-frame 10-bit profile-0 full-range lossy 4:2:0 AVIF decoded to Pillow RGB8 output
+      test_assets:
+      - high_bitdepth_still_10bit_420_lossy_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_10bit_420_alpha_lossless_16x16
+      description: Single-frame 10-bit full-range all-lossless 4:2:0 AVIF with an auxiliary 10-bit alpha plane
+      test_assets:
+      - high_bitdepth_still_10bit_420_alpha_lossless_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_10bit_422_alpha_lossless_16x16
+      description: Single-frame 10-bit full-range all-lossless 4:2:2 AVIF with an auxiliary 10-bit alpha plane
+      test_assets:
+      - high_bitdepth_still_10bit_422_alpha_lossless_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: high_bitdepth_still_10bit_444_alpha_lossy_16x16
+      description: Single-frame 10-bit full-range lossy 4:4:4 AVIF with an auxiliary 10-bit alpha plane
+      test_assets:
+      - high_bitdepth_still_10bit_444_alpha_lossy_16x16.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
     - id: high_bitdepth_still_12bit_444_lossless
       description: Single-frame 12-bit AV1 profile-2 full-range BT.601 SDR all-lossless 4:4:4 AVIF decoded to Pillow RGB8 output
       test_assets:
       - high_bitdepth_still_12bit_444_lossless.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: profile2_identity_12bit_444
+      description: Single-frame profile-2 12-bit full-range 4:4:4 AVIF with identity CICP matrix 0 decoded to Pillow RGB8 output
+      test_assets:
+      - profile2_identity_12bit_444.avif
       status: active
       pure_rust_work_item: AVF-SAMPLE-001
     - id: with_alpha
@@ -4697,6 +6401,11 @@ formats:
       test_assets:
       - malformed_mif1_ftyp_size.avif
       expect_error: true
+    - id: error_avif_major_brand_misaligned_ftyp_size
+      description: A 31-byte avif ftyp box leaves a non-word-aligned brand tail and is rejected as malformed
+      test_assets:
+      - malformed_avif_ftyp_size.avif
+      expect_error: true
     - id: error_oversized_ftyp
       description: Generic mif1 FileTypeBox whose declared end exceeds the complete input
       test_assets:
@@ -4718,11 +6427,326 @@ formats:
       - animated.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_opidc_0x101
+      description: Five-frame AVIF sequence with explicit temporal-0/spatial-0 operating-point headers and exact pixels and timing
+      test_assets:
+      - animated_opidc_0x101.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_error_resilient
       description: Two-frame pinned AV1-oracle sequence with frame ID numbers enabled, exact pixels and timing
       test_assets:
       - animated_error_resilient.avif
       status: active
+    - id: animated_lossless_inter_420_b16x16
+      description: Two-frame 16x16 4:2:0 all-lossless AVIF sequence with a translating 4x4 patch and a specialized inter leaf
+      test_assets:
+      - animated_lossless_inter_420_b16x16.avif
+      status: active
+    - id: animated_lossless_inter_420_b8x16
+      description: Two-frame 8x16 4:2:0 all-lossless AVIF sequence with a translated patch and a rectangular B8x16 inter transform
+      test_assets:
+      - animated_lossless_inter_420_b8x16.avif
+      status: active
+    - id: animated_lossless_inter_intra_i444_b8x8_20x20
+      description: Two-frame 20x20 8-bit 4:4:4 all-lossless AVIF sequence whose B8x8 inter-intra leaf exercises the size-group-1 context at clipped frame edges
+      test_assets:
+      - animated_lossless_inter_intra_i444_b8x8_20x20.avif
+      status: active
+    - id: animated_odd_dimensions_inter_intra_boundary_420
+      description: Two-frame 17x17 8-bit 4:2:0 AVIF sequence with a translated bottom-right patch and odd-edge inter/intra context
+      test_assets:
+      - animated_odd_dimensions_inter_intra_boundary_420.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_lossy_interintra_420_nowedge_b16x16_64x64
+      description: Three-frame 64x64 8-bit lossy 4:2:0 AVIF sequence with a B16x16 RD-selected smooth inter-intra blend and wedge blending disabled
+      test_assets:
+      - animated_lossy_interintra_420_nowedge_b16x16_64x64.avif
+      status: active
+    - id: animated_lossy_interintra_420_nowedge_mode1_b16x16_64x64
+      description: Three-frame 64x64 8-bit lossy 4:2:0 AVIF sequence selecting non-wedge B16x16 inter-intra mask mode 1
+      test_assets:
+      - animated_lossy_interintra_420_nowedge_mode1_b16x16_64x64.avif
+      status: active
+    - id: animated_lossy_interintra_420_nowedge_mode2_b16x16_64x64
+      description: Three-frame 64x64 8-bit lossy 4:2:0 AVIF sequence selecting non-wedge B16x16 inter-intra mask mode 2
+      test_assets:
+      - animated_lossy_interintra_420_nowedge_mode2_b16x16_64x64.avif
+      status: active
+    - id: animated_lossy_interintra_420_nowedge_mode3_b16x16_64x64
+      description: Three-frame 64x64 8-bit lossy 4:2:0 AVIF sequence selecting non-wedge B16x16 smooth inter-intra mask mode 3
+      test_assets:
+      - animated_lossy_interintra_420_nowedge_mode3_b16x16_64x64.avif
+      status: active
+    - id: animated_lossy_interintra_420_wedge_b16x16_64x64
+      description: Three-frame 64x64 8-bit lossy 4:2:0 AVIF sequence selecting a colored B16x16 inter-intra wedge block at index 4
+      test_assets:
+      - animated_lossy_interintra_420_wedge_b16x16_64x64.avif
+      status: active
+    - id: animated_lossy_split_inter_420_b16x16
+      description: Three-frame 16x16 lossy 4:2:0 AVIF sequence whose final inter B16x16 leaf has one TX16x16-to-TX8x8 split
+      test_assets:
+      - animated_lossy_split_inter_420_b16x16.avif
+      status: active
+    - id: animated_lossy_b16_mixed_topology_inter_420_b16x16
+      description: Three-frame 16x16 lossy 4:2:0 AVIF sequence whose final inter B16x16 has one TX8 child split and three unsplit children
+      test_assets:
+      - animated_lossy_b16_mixed_topology_inter_420_b16x16.avif
+      status: active
+    - id: animated_lossy_wide_monochrome_b128x128
+      description: Four-frame 8-bit monochrome AVIF sequence with lossy 128x128 inter blocks and transform splitting
+      test_assets:
+      - animated_lossy_wide_monochrome_b128x128.avif
+      status: active
+    - id: animated_lossy_wide_i444_b128x128
+      description: Two-frame 256x256 8-bit lossy 4:4:4 AVIF sequence with unsplit 128x128 inter blocks
+      test_assets:
+      - animated_lossy_wide_i444_b128x128.avif
+      status: active
+    - id: animated_lossy_wide_i444_mode2_unsplit_b128x128
+      description: Two-frame 256x256 8-bit lossy 4:4:4 AVIF sequence selecting an unsplit 128x128 inter transform in mode 2
+      test_assets:
+      - animated_lossy_wide_i444_mode2_unsplit_b128x128.avif
+      status: active
+    - id: animated_lossy_wide_i444_mode2_split32_b128x128
+      description: Two-frame 256x256 8-bit lossy 4:4:4 AVIF sequence whose four 128x128 inter leaves split TX64 roots once to TX32 in mode 2
+      test_assets:
+      - animated_lossy_wide_i444_mode2_split32_b128x128.avif
+      status: active
+    - id: animated_lossy_global_rotzoom_compound_i444_b128x128
+      description: Four-frame 256x256 8-bit lossy 4:4:4 AVIF sequence with non-identity global RotZoom references and compound GlobalGlobal spatial neighbors
+      test_assets:
+      - animated_lossy_global_rotzoom_compound_i444_b128x128.avif
+      status: active
+    - id: animated_lossy_global_halfblend_spatial_i444_b256x256
+      description: Four-frame 256x256 8-bit lossy 4:4:4 AVIF sequence with identity and RotZoom global references paired in compound spatial neighbors
+      test_assets:
+      - animated_lossy_global_halfblend_spatial_i444_b256x256.avif
+      status: active
+    - id: animated_lossless_inter_420_b32x32
+      description: Two-frame 32x32 4:2:0 all-lossless AVIF sequence with a translated patch and supported large inter transform grid
+      test_assets:
+      - animated_lossless_inter_420_b32x32.avif
+      status: active
+    - id: animated_lossless_inter_420_b32x32_10bit
+      description: Two-frame 32x32 10-bit full-range 4:2:0 all-lossless AVIF sequence with a translating patch and full-size B32x32 inter leaf
+      test_assets:
+      - animated_lossless_inter_420_b32x32_10bit.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: animated_lossless_inter_420_b32x32_10bit_64x64
+      description: Two-frame 64x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with fixed 32-pixel partitions and four full-size B32x32 inter leaves
+      test_assets:
+      - animated_lossless_inter_420_b32x32_10bit_64x64.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+    - id: animated_lossless_inter_420_clipped_b32x32_10bit_28x28
+      description: Two-frame 28x28 10-bit full-range 4:2:0 all-lossless AVIF sequence with edge-clipped B8x8 inter leaves
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_10bit_28x28.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: false
+      rust_expect_sequence_error: false
+    - id: animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64
+      description: Two-frame 28x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with fixed 32-pixel partitions and a translated patch in the padded left B32x32 leaf
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: false
+      rust_expect_sequence_error: false
+    - id: animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64
+      description: Two-frame 56x64 10-bit full-range 4:2:0 all-lossless AVIF sequence with fixed 32-pixel partitions and a translated textured patch in the 24-pixel right-edge B32x32 leaf
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64.avif
+      status: active
+      pure_rust_work_item: AVF-SAMPLE-001
+      expect_sequence_error: false
+      rust_expect_sequence_error: false
+    - id: animated_lossless_inter_420_clipped_b32x32_17x17
+      description: Two-frame 17x17 8-bit 4:2:0 all-lossless AVIF sequence with a diagonally translated 4x4 patch and bottom-right edge residual on a B32x32 inter grid clipped to the MI-padded frame edge
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_17x17.avif
+      status: active
+    - id: animated_lossless_inter_i422_clipped_b32x32_49x64
+      description: Two-frame odd-width 49x64 8-bit 4:2:2 all-lossless AVIF sequence with an edge-clipped B32x32 inter grid
+      test_assets:
+      - animated_lossless_inter_i422_clipped_b32x32_49x64.avif
+      status: active
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: unsupported
+      rust_sequence_error_reason: The pure-Rust AV1 sequence decoder rejects clipped all-lossless I422 B32 grids at odd frame widths because the final chroma sample geometry is not parity-safe.
+    - id: animated_lossless_inter_i444_clipped_b32x32_49x64
+      description: Two-frame 49x64 8-bit 4:4:4 all-lossless AVIF sequence with a one-pixel translated texture and a clipped 24x32 right-edge B32x32 inter grid
+      test_assets:
+      - animated_lossless_inter_i444_clipped_b32x32_49x64.avif
+      status: active
+    - id: animated_lossless_inter_i422_clipped_b32x32_52x64
+      description: Two-frame 52x64 8-bit 4:2:2 all-lossless AVIF sequence with a translated 16x16 patch and a clipped 20x32 right-edge B32x32 inter grid
+      test_assets:
+      - animated_lossless_inter_i422_clipped_b32x32_52x64.avif
+      status: active
+    - id: animated_lossless_inter_i444_clipped_b32x32_64x56
+      description: Two-frame 64x56 8-bit 4:4:4 all-lossless AVIF sequence with a translated lower texture and a clipped 32x24 bottom-edge B32x32 inter grid
+      test_assets:
+      - animated_lossless_inter_i444_clipped_b32x32_64x56.avif
+      status: active
+    - id: animated_lossless_inter_i422_clipped_b32x32_52x60
+      description: Two-frame 52x60 8-bit 4:2:2 all-lossless AVIF sequence with a translated lower-right texture and a B32x32 inter grid clipped to 20x28 luma and 10x28 chroma extents
+      test_assets:
+      - animated_lossless_inter_i422_clipped_b32x32_52x60.avif
+      status: active
+    - id: animated_lossless_inter_i444_clipped_b32x32_52x60
+      description: Two-frame 52x60 8-bit 4:4:4 all-lossless AVIF sequence with a translated lower-right texture and a B32x32 inter grid clipped to a 20x28 extent
+      test_assets:
+      - animated_lossless_inter_i444_clipped_b32x32_52x60.avif
+      status: active
+    - id: animated_lossless_inter_420_clipped_b32x32_60x64
+      description: Two-frame 60x64 8-bit 4:2:0 all-lossless AVIF sequence with a translated edge patch and a B32x32 inter grid clipped to a 28x32 visible extent
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_60x64.avif
+      status: active
+    - id: animated_lossless_inter_420_clipped_b32x32_64x60
+      description: Two-frame 64x60 8-bit 4:2:0 all-lossless AVIF sequence with a translated lower-edge patch exercising the bottom-edge frame crop
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_64x60.avif
+      status: active
+    - id: animated_lossless_inter_420_clipped_b32x32_184x64
+      description: Two-frame 184x64 8-bit 4:2:0 all-lossless AVIF sequence with a textured frame and a B32x32 inter grid clipped at the right edge
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_184x64.avif
+      status: active
+    - id: animated_lossless_inter_420_clipped_b32x32_185x64
+      description: Two-frame 185x64 8-bit 4:2:0 all-lossless AVIF sequence with a textured frame and a right-edge B32x32 inter grid clipped to 25 visible columns
+      test_assets:
+      - animated_lossless_inter_420_clipped_b32x32_185x64.avif
+      status: active
+    - id: animated_lossless_inter_420_clipped_b16x16_60x64
+      description: Two-frame 60x64 8-bit 4:2:0 all-lossless AVIF sequence with a one-column-shifted texture and a right-edge B16x16 inter block clipped to 12 visible columns
+      test_assets:
+      - animated_lossless_inter_420_clipped_b16x16_60x64.avif
+      status: active
+    - id: animated_lossless_inter_monochrome_b16x16
+      description: Two-frame 16x16 monochrome all-lossless AVIF sequence with a translating 4x4 patch
+      test_assets:
+      - animated_lossless_inter_monochrome_b16x16.avif
+      status: active
+    - id: intrabc_spatial_neighbor_monochrome_256
+      description: 256x256 all-lossless monochrome AVIF whose second adjacent 8x8 IntraBC leaf uses the first leaf as its spatial motion-vector neighbor
+      test_assets:
+      - intrabc_spatial_neighbor_monochrome_256.avif
+      status: active
+    - id: no_intrabc_repeated_patch_monochrome_256
+      description: 256x256 all-lossless monochrome AVIF with repeated patches and IntraBC disabled
+      test_assets:
+      - no_intrabc_repeated_patch_monochrome_256.avif
+      status: active
+    - id: animated_motion_chroma
+      description: Four-frame 4:2:0 AVIF sequence with a translating small block and chroma-boundary motion
+      test_assets:
+      - animated_motion_chroma.avif
+      status: active
+    - id: animated_has_chroma_4x4
+      description: Three-frame 4:2:0 sequence with forced 4x4 inter partitions and a small luma/chroma change
+      test_assets:
+      - animated_has_chroma_4x4.avif
+      status: active
+    - id: animated_motion_chroma_422
+      description: Four-frame 16x16 4:2:2 AVIF sequence moves a small block across horizontal chroma boundaries
+      test_assets:
+      - animated_motion_chroma_422.avif
+      status: active
+    - id: animated_lossy_inter_422_checker_random_b32x32
+      description: Two-frame 32x32 8-bit lossy 4:2:2 AVIF sequence with a jittered checker texture and a translated patch
+      test_assets:
+      - animated_lossy_inter_422_checker_random_b32x32.avif
+      status: active
+    - id: animated_lossy_inter_420_superres_sgr_8bit_160x56
+      description: Two-frame 8-bit full-range lossy 4:2:0 AVIF sequence with super-resolution, SGR restoration, and largest-transform mode on the inter frame
+      test_assets:
+      - animated_lossy_inter_420_superres_sgr_8bit_160x56.avif
+      status: active
+    - id: superres_equal_width_16x16
+      description: 16x16 lossy 4:2:0 AVIF still signals super-resolution denominator 9 while coded and upscaled widths remain equal
+      test_assets:
+      - superres_equal_width_16x16.avif
+      status: active
+    - id: superres_equal_width_i444_16x16
+      description: 16x16 lossy 4:4:4 AVIF still signals super-resolution denominator 9 while coded and upscaled widths remain equal
+      test_assets:
+      - superres_equal_width_i444_16x16.avif
+      status: active
+    - id: superres_actual_upscaled_i444_32x16
+      description: 32x16 lossy 4:4:4 AVIF still uses denominator 9 to resize luma and both full-resolution chroma planes
+      test_assets:
+      - superres_actual_upscaled_i444_32x16.avif
+      status: active
+    - id: superres_actual_upscaled_i422_33x17
+      description: 33x17 lossy 4:2:2 AVIF still uses denominator 9 with coded width 29 and restoration disabled, exercising generic super-resolution across odd luma and chroma edges
+      test_assets:
+      - superres_actual_upscaled_i422_33x17.avif
+      status: active
+    - id: animated_lossy_inter_420_superres_sgr_10bit_160x56
+      description: Two-frame 10-bit full-range lossy 4:2:0 AVIF sequence with super-resolution and SGR restoration on the inter frame
+      test_assets:
+      - animated_lossy_inter_420_superres_sgr_10bit_160x56.avif
+      status: active
+    - id: animated_lossy_inter_420_superres_select_10bit_160x56
+      description: Two-frame 10-bit full-range lossy 4:2:0 AVIF sequence with super-resolution and TX_MODE_SELECT without active restoration
+      test_assets:
+      - animated_lossy_inter_420_superres_select_10bit_160x56.avif
+      status: active
+    - id: animated_motion_chroma_wide
+      description: Four-frame 4:4:4 AVIF sequence with a translating full-frame chroma pattern
+      test_assets:
+      - animated_motion_chroma_wide.avif
+      status: active
+    - id: animated_lossy_inter_i444_mode2_b32x32
+      description: Three-frame 32x32 4:4:4 lossy AVIF sequence with transform-mode-2 inter frames and positive segment qindex
+      test_assets:
+      - animated_lossy_inter_i444_mode2_b32x32.avif
+      status: active
+    - id: animated_lossy_inter_i444_split_b16x32_mode2
+      description: Two-frame 32x32 4:4:4 lossy AVIF sequence with a mode-2 B16x32 inter transform split
+      test_assets:
+      - animated_lossy_inter_i444_split_b16x32_mode2.avif
+      status: active
+    - id: animated_lossy_inter_i444_obmc_mixed_b16x32
+      description: Three-frame 32x32 8-bit 4:4:4 AVIF sequence whose B16x32 uses a compound-neighbor reference lane and OBMC with mixed transform-split topology
+      test_assets:
+      - animated_lossy_inter_i444_obmc_mixed_b16x32.avif
+      status: active
+    - id: animated_motion_large_420
+      description: Four-frame 256x256 4:2:0 AVIF sequence with 128x128 inter blocks and changing regions
+      test_assets:
+      - animated_motion_large_420.avif
+      status: active
+    - id: animated_tx64_root_split_inter_420_64x64
+      description: Three-frame 64x64 4:2:0 sequence whose B64 inter root splits into TX32 children at both x offsets
+      test_assets:
+      - animated_tx64_root_split_inter_420_64x64.avif
+      status: active
+    - id: animated_motion_temporal_window_left_512x128
+      description: Four-frame 512x128 4:2:0 sequence moves a textured patch left far enough to miss its projected motion window
+      test_assets:
+      - animated_motion_temporal_window_left_512x128.avif
+      status: active
+    - id: animated_motion_temporal_window_right_512x128
+      description: Four-frame 512x128 4:2:0 sequence moves a textured patch right far enough to miss its projected motion window
+      test_assets:
+      - animated_motion_temporal_window_right_512x128.avif
+      status: active
+    - id: error_animated_compound_reference_context2_tail
+      description: AVIF sequence with a same-length final-sample mutation after an unchanged compound-reference prefix
+      test_assets:
+      - animated_compound_reference_context2_tail_error.avif
+      status: active
+      expect_sequence_error: true
+      rust_expect_sequence_error: true
+      rust_sequence_error_kind: malformed
+      rust_sequence_error_reason: The AV1 sequence decoder must return a structured malformed-input error for the corrupted animation without panicking or publishing a partial sequence.
     - id: error_animated_repeated_frame_id
       description: Error-resilient sequence whose first frame decodes independently and whose second frame repeats the previous current frame ID
       test_assets:
@@ -4742,6 +6766,11 @@ formats:
       test_assets:
       - animated_missing_stsz.avif
       expect_error: true
+    - id: error_animated_duplicate_sample_size
+      description: Animated AVIF has a duplicate sample-size box before an invalid chunk-offset table
+      test_assets:
+      - animated_duplicate_stsz.avif
+      expect_error: true
     - id: error_animated_missing_sample_table
       description: Animated avis track whose complete sample-table box is replaced by a same-size free box
       test_assets:
@@ -4751,6 +6780,41 @@ formats:
       description: Deterministic 256x128 AVIF with two independently sized tile columns
       test_assets:
       - multitile.avif
+    - id: multitile_color_split_groups
+      description: Two-tile color AVIF with tiles delivered in separate tile groups
+      test_assets:
+      - multitile_color_split_groups.avif
+    - id: multitile_skipped_cdef_color_alpha
+      description: Two-tile 128x64 RGBA AVIF with skipped 64x64 color and monochrome alpha blocks and enabled CDEF syntax
+      test_assets:
+      - multitile_skipped_cdef_color_alpha.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: uniform_tile_rows_monochrome_256
+      description: 256x256 constant grayscale AVIF with one uniform tile column and four tile rows
+      test_assets:
+      - uniform_tile_rows_monochrome_256.avif
+      status: active
+    - id: multitile_monochrome
+      description: Deterministic two-tile monochrome AVIF with a single complete tile group
+      test_assets:
+      - multitile_monochrome.avif
+    - id: multitile_monochrome_split_groups
+      description: Two-tile monochrome AVIF with tiles delivered in separate tile groups
+      test_assets:
+      - multitile_monochrome_split_groups.avif
+    - id: multitile_monochrome_alpha_cdef_disabled
+      description: Two-tile monochrome AV1 alpha item with CDEF disabled
+      test_assets:
+      - multitile_monochrome_alpha_cdef_disabled.avif
+    - id: multitile_monochrome_alpha_zero_loop_filter
+      description: Two-tile monochrome AV1 alpha plane with CDEF disabled and zero loop-filter levels
+      test_assets:
+      - multitile_monochrome_alpha_zero_loop_filter.avif
+    - id: multitile_monochrome_alpha_cdef_odd_width
+      description: Two-tile monochrome AV1 alpha item with CDEF and a partial odd-width edge block
+      test_assets:
+      - multitile_monochrome_alpha_cdef_odd_width.avif
     - id: error_invalid_tile_size
       description: Valid AVIF container and frame header whose first tile size crosses the OBU payload
       test_assets:
@@ -4760,6 +6824,11 @@ formats:
       description: Valid AVIF container and frame header whose only tile has no entropy payload
       test_assets:
       - empty_tile_payload.avif
+      expect_error: true
+    - id: error_tile_group_start_order
+      description: Two-tile AV1 frame whose second tile group repeats tile zero
+      test_assets:
+      - error_tile_group_start_order.avif
       expect_error: true
     - id: error_forbidden_422_partition
       description: Complete 12-bit 4:2:2 AVIF whose tile selects a partition forbidden for vertically unsampled chroma
@@ -4776,6 +6845,141 @@ formats:
       description: Structurally valid AVIF container whose AV1 sequence declares a reserved profile
       test_assets:
       - invalid_sequence_profile.avif
+      expect_error: true
+    - id: error_av1c_invalid_marker
+      description: AV1CodecConfigurationBox marker byte differs from the required 0x81 value
+      test_assets:
+      - error_av1c_invalid_marker.avif
+      expect_error: true
+    - id: error_av1c_twelve_bit_without_high_bit_depth
+      description: AV1CodecConfigurationBox sets twelve-bit depth without high-bit-depth support
+      test_assets:
+      - error_av1c_twelve_bit_without_high_bit_depth.avif
+      expect_error: true
+    - id: error_sequence_zero_timing_rate
+      description: AV1 sequence enables timing info but declares a zero num_units_in_tick value
+      test_assets:
+      - error_sequence_zero_timing_rate.avif
+      expect_error: true
+    - id: error_sequence_zero_time_scale
+      description: AV1 sequence declares a nonzero num_units_in_tick value and a zero time_scale
+      test_assets:
+      - error_sequence_zero_time_scale.avif
+      expect_error: true
+    - id: error_sequence_frame_id_width_exceeds_16
+      description: AV1 sequence declares a 17-bit frame ID, exceeding the 16-bit limit
+      test_assets:
+      - error_sequence_frame_id_width_exceeds_16.avif
+      expect_error: true
+    - id: error_sequence_identity_color_matrix_profile2_8bit
+      description: AV1 profile-2 8-bit 4:2:0 sequence declares an identity matrix that requires 12-bit 4:4:4
+      test_assets:
+      - error_sequence_identity_color_matrix_profile2_8bit.avif
+      expect_error: true
+    - id: error_inconsistent_operating_point_idc
+      description: AV1 sequence declares a nonzero operating-point IDC without temporal and spatial layer bits
+      test_assets:
+      - error_inconsistent_operating_point_idc.avif
+      expect_error: true
+    - id: error_inconsistent_operating_point_idc_low_byte
+      description: AV1 sequence declares operating-point IDC 0x100 with a zero low byte
+      test_assets:
+      - error_inconsistent_operating_point_idc_low_byte.avif
+      expect_error: true
+    - id: error_meta_first_child_not_hdlr
+      description: AVIF meta whose first child is not the required picture handler
+      test_assets:
+      - meta_first_child_not_hdlr.avif
+      - meta_pitm_before_handler_invalid_tile.avif
+      expect_error: true
+    - id: error_meta_nonzero_version
+      description: AVIF meta FullBox uses an unsupported nonzero version
+      test_assets:
+      - meta_nonzero_version.avif
+      expect_error: true
+    - id: error_meta_hdlr_non_pict
+      description: AVIF meta handler declares a non-picture handler type
+      test_assets:
+      - meta_hdlr_non_pict.avif
+      expect_error: true
+    - id: error_meta_duplicate_handler
+      description: AVIF meta contains a second handler box where a primary-item declaration belongs
+      test_assets:
+      - meta_duplicate_handler.avif
+      expect_error: true
+    - id: error_meta_duplicate_primary_item
+      description: AVIF meta contains a second primary-item declaration by interpreting the item-location box as pitm
+      test_assets:
+      - meta_duplicate_primary_item.avif
+      expect_error: true
+    - id: error_meta_duplicate_item_info
+      description: AVIF meta contains a second item-information table by interpreting the item-property box as iinf
+      test_assets:
+      - meta_duplicate_item_info.avif
+      expect_error: true
+    - id: error_meta_duplicate_item_location
+      description: AVIF meta contains a second item-location table by interpreting the item-information box as iloc
+      test_assets:
+      - meta_duplicate_item_location.avif
+      expect_error: true
+    - id: error_meta_duplicate_item_properties
+      description: AVIF meta contains a second item-property table
+      test_assets:
+      - meta_duplicate_item_properties.avif
+      expect_error: true
+    - id: error_meta_duplicate_item_references
+      description: AVIF meta contains a second item-reference table
+      test_assets:
+      - meta_duplicate_item_references.avif
+      expect_error: true
+    - id: iref_future_version
+      description: Empty version-2 AVIF item-reference box is ignored with exact Pillow output parity
+      test_assets:
+      - iref_future_version.avif
+    - id: error_meta_empty_item_data
+      description: AVIF meta contains an empty item-data box
+      test_assets:
+      - meta_empty_item_data.avif
+      expect_error: true
+    - id: error_meta_missing_primary_item
+      description: AVIF meta omits the required primary-item declaration
+      test_assets:
+      - meta_missing_primary_item.avif
+      expect_error: true
+    - id: error_meta_missing_item_info
+      description: AVIF meta omits the required item-information table
+      test_assets:
+      - meta_missing_item_info.avif
+      expect_error: true
+    - id: error_meta_missing_item_properties
+      description: AVIF meta omits the required item-property table
+      test_assets:
+      - meta_missing_item_properties.avif
+      expect_error: true
+    - id: error_meta_nested_zero_size_ipma
+      description: The final nested ipma box declares size zero and Pillow rejects the malformed structure
+      test_assets:
+      - nested_size_zero_ipma.avif
+      expect_error: true
+    - id: error_ispe_nonzero_version
+      description: AVIF ispe property uses an unsupported nonzero FullBox version
+      test_assets:
+      - ispe_nonzero_version.avif
+      expect_error: true
+    - id: error_ispe_zero_width
+      description: AVIF ispe property declares a zero image width
+      test_assets:
+      - ispe_zero_width.avif
+      expect_error: true
+    - id: error_ispe_zero_height
+      description: AVIF ispe property declares a zero image height
+      test_assets:
+      - ispe_zero_height.avif
+      expect_error: true
+    - id: error_iloc_version_3
+      description: AVIF iloc declares unsupported version 3
+      test_assets:
+      - iloc_version_3.avif
       expect_error: true
     encode_edge_cases:
     - id: enc_error_public_mode_contract

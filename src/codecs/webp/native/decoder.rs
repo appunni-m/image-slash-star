@@ -22,7 +22,8 @@
 #![allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "RIFF field widths and validated dimensions bound format-mandated offsets and geometry arithmetic"
 )]
 
 use super::byteorder_lite::{LittleEndian, ReadBytesExt};
@@ -69,7 +70,10 @@ impl From<io::Error> for DecodingError {
 }
 
 /// All possible RIFF chunks in a WebP image file
-#[allow(clippy::upper_case_acronyms)]
+#[allow(
+    clippy::upper_case_acronyms,
+    reason = "the enum variants preserve the uppercase WebP RIFF FourCC spellings"
+)]
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub(crate) enum WebPRiffChunk {
     RIFF,
@@ -227,7 +231,11 @@ impl<'a> WebPDecoder<'a> {
 
     // The VP8X validation predicate establishes the ANIM/ANMF map entries, and
     // the nonzero match arm establishes `NonZeroU16::new(n)`.
-    #[allow(clippy::expect_used, clippy::unwrap_used)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        reason = "VP8X validation establishes the animation chunks and nonzero loop-count match arm establishes NonZeroU16"
+    )]
     fn read_data(&mut self) -> Result<(), DecodingError> {
         let (WebPRiffChunk::RIFF, riff_size, _) = read_chunk_header(&mut self.r)? else {
             return Err(DecodingError::ChunkHeaderInvalid);
@@ -507,7 +515,11 @@ impl<'a> WebPDecoder<'a> {
     /// Fails with `ImageTooLarge` if `buf` has length different than `output_buffer_size()`
     // Construction guarantees ANMF for animation and exactly one VP8/VP8L
     // payload for still images.
-    #[allow(clippy::expect_used, clippy::unwrap_used)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        reason = "constructor validation guarantees the still-image payload or first animation-frame chunk before dispatch"
+    )]
     pub fn read_image(&mut self, buf: &mut [u8]) -> Result<(), DecodingError> {
         (buf.len() == self.output_buffer_size())
             .then_some(())
@@ -592,7 +604,11 @@ impl<'a> WebPDecoder<'a> {
     /// Panics if the image is not animated.
     // The public precondition and constructor validation guarantee extended
     // metadata; the local initialization guarantees a canvas before use.
-    #[allow(clippy::expect_used, clippy::unwrap_used)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        reason = "the animated precondition and constructor validation establish extended metadata and a frame canvas"
+    )]
     pub fn read_frame(&mut self, buf: &mut [u8]) -> Result<FrameInfo, DecodingError> {
         assert!(self.is_animated());
         assert_eq!(buf.len(), self.output_buffer_size());
@@ -648,9 +664,38 @@ impl<'a> WebPDecoder<'a> {
                 (rgb_frame, false)
             }
             WebPRiffChunk::VP8L => {
-                (frame_width <= 16384 && frame_height <= 16384)
-                    .then_some(())
-                    .ok_or(DecodingError::ImageTooLarge)?;
+                // ANMF's rectangle may disagree with the nested VP8L header.
+                // Pillow decodes and composites using the bitstream dimensions,
+                // so inspect the bounded five-byte header before allocating a
+                // frame buffer. VP8L dimensions are 14-bit fields and are
+                // validated again by `LosslessDecoder` during the full decode.
+                if chunk_size >= 5 {
+                    let header_start = self.r.position();
+                    let mut header = [0; 5];
+                    self.r.read_exact(&mut header)?;
+                    self.r.set_position(header_start);
+
+                    if header[0] != 0x2f {
+                        return Err(DecodingError::LosslessSignatureInvalid);
+                    }
+                    let dimensions =
+                        u32::from_le_bytes([header[1], header[2], header[3], header[4]]);
+                    if dimensions >> 29 != 0 {
+                        return Err(DecodingError::VersionNumberInvalid);
+                    }
+                    frame_width = (dimensions & 0x3fff) + 1;
+                    frame_height = ((dimensions >> 14) & 0x3fff) + 1;
+                } else {
+                    // Keep the existing oversized declaration failure for
+                    // truncated chunks that cannot contain a VP8L header.
+                    (frame_width <= 16384 && frame_height <= 16384)
+                        .then_some(())
+                        .ok_or(DecodingError::ImageTooLarge)?;
+                }
+
+                if frame_x + frame_width > self.width || frame_y + frame_height > self.height {
+                    return Err(DecodingError::FrameOutsideImage);
+                }
                 let reader = (&mut self.r).take(chunk_size);
                 let mut lossless_decoder = LosslessDecoder::new(Box::new(reader));
                 if self.has_alpha {
@@ -668,20 +713,15 @@ impl<'a> WebPDecoder<'a> {
                 }
             }
             WebPRiffChunk::ALPH => {
-                (frame_width <= 16384 && frame_height <= 16384)
-                    .then_some(())
-                    .ok_or(DecodingError::ImageTooLarge)?;
                 if chunk_size_rounded + 32 > anmf_size {
                     return Err(DecodingError::ChunkHeaderInvalid);
                 }
 
-                // read alpha
-                let next_chunk_start = self.r.position() + chunk_size_rounded;
-                let mut reader = (&mut self.r).take(chunk_size);
-                let alpha_chunk =
-                    read_alpha_chunk(&mut reader, frame_width as u16, frame_height as u16)?;
-
-                // read opaque
+                // The nested VP8 dimensions bound the decoded alpha workspace;
+                // ANMF dimensions can disagree with the bitstream and Pillow
+                // composites using the decoded dimensions in that case.
+                let alpha_chunk_start = self.r.position();
+                let next_chunk_start = alpha_chunk_start + chunk_size_rounded;
                 self.r.set_position(next_chunk_start);
                 let (_next_chunk, next_chunk_size, _) = read_chunk_header(&mut self.r)?;
                 if chunk_size + next_chunk_size + 32 > anmf_size {
@@ -689,6 +729,15 @@ impl<'a> WebPDecoder<'a> {
                 }
 
                 let frame = Vp8Decoder::decode_frame((&mut self.r).take(next_chunk_size))?;
+                frame_width = u32::from(frame.width);
+                frame_height = u32::from(frame.height);
+                (frame_width <= 16384 && frame_height <= 16384)
+                    .then_some(())
+                    .ok_or(DecodingError::ImageTooLarge)?;
+
+                self.r.set_position(alpha_chunk_start);
+                let mut reader = (&mut self.r).take(chunk_size);
+                let alpha_chunk = read_alpha_chunk(&mut reader, frame.width, frame.height)?;
 
                 let mut rgba_frame = vec![0; frame_width as usize * frame_height as usize * 4];
                 frame.fill_rgba(&mut rgba_frame);
@@ -792,434 +841,6 @@ impl<'a> WebPDecoder<'a> {
             blend_over: use_alpha_blending,
         })
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    for (chunk, fourcc) in [
-        (WebPRiffChunk::RIFF, *b"RIFF"),
-        (WebPRiffChunk::WEBP, *b"WEBP"),
-        (WebPRiffChunk::VP8, *b"VP8 "),
-        (WebPRiffChunk::VP8L, *b"VP8L"),
-        (WebPRiffChunk::VP8X, *b"VP8X"),
-        (WebPRiffChunk::ANIM, *b"ANIM"),
-        (WebPRiffChunk::ANMF, *b"ANMF"),
-        (WebPRiffChunk::ALPH, *b"ALPH"),
-        (WebPRiffChunk::ICCP, *b"ICCP"),
-        (WebPRiffChunk::EXIF, *b"EXIF"),
-        (WebPRiffChunk::XMP, *b"XMP "),
-        (WebPRiffChunk::Unknown(*b"ABCD"), *b"ABCD"),
-    ] {
-        assert_eq!(chunk.fourcc(), fourcc);
-    }
-
-    fn chunk(fourcc: &[u8; 4], payload: &[u8]) -> Vec<u8> {
-        let mut out =
-            Vec::with_capacity(8 + payload.len() + usize::from(!payload.len().is_multiple_of(2)));
-        out.extend_from_slice(fourcc);
-        out.extend_from_slice(&(payload.len() as u32).to_le_bytes());
-        out.extend_from_slice(payload);
-        if !payload.len().is_multiple_of(2) {
-            out.push(0);
-        }
-        out
-    }
-
-    fn chunk_declared(fourcc: &[u8; 4], declared_size: u32, physical_payload: &[u8]) -> Vec<u8> {
-        let mut out = Vec::with_capacity(8 + physical_payload.len());
-        out.extend_from_slice(fourcc);
-        out.extend_from_slice(&declared_size.to_le_bytes());
-        out.extend_from_slice(physical_payload);
-        out
-    }
-
-    fn riff(chunks: &[Vec<u8>]) -> Vec<u8> {
-        let payload_len = 4 + chunks.iter().map(Vec::len).sum::<usize>();
-        let mut out = Vec::with_capacity(8 + payload_len);
-        out.extend_from_slice(b"RIFF");
-        out.extend_from_slice(&(payload_len as u32).to_le_bytes());
-        out.extend_from_slice(b"WEBP");
-        for chunk in chunks {
-            out.extend_from_slice(chunk);
-        }
-        out
-    }
-
-    fn vp8x(flags: u8, width: u32, height: u32) -> Vec<u8> {
-        let mut payload = vec![flags, 0, 0, 0];
-        let width = width - 1;
-        let height = height - 1;
-        payload.extend_from_slice(&width.to_le_bytes()[..3]);
-        payload.extend_from_slice(&height.to_le_bytes()[..3]);
-        chunk(b"VP8X", &payload)
-    }
-
-    fn anmf_payload(
-        frame_x: u32,
-        frame_y: u32,
-        frame_width_minus_one: u32,
-        frame_height_minus_one: u32,
-        subchunk: &[u8; 4],
-    ) -> Vec<u8> {
-        let mut payload = Vec::new();
-        payload.extend_from_slice(&frame_x.to_le_bytes()[..3]);
-        payload.extend_from_slice(&frame_y.to_le_bytes()[..3]);
-        payload.extend_from_slice(&frame_width_minus_one.to_le_bytes()[..3]);
-        payload.extend_from_slice(&frame_height_minus_one.to_le_bytes()[..3]);
-        payload.extend_from_slice(&0u32.to_le_bytes()[..3]);
-        payload.push(0);
-        payload.extend_from_slice(subchunk);
-        payload.extend_from_slice(&0u32.to_le_bytes());
-        payload.resize(32, 0);
-        payload
-    }
-
-    fn exercise_animation_data(
-        stream: Vec<u8>,
-        dimensions: (u32, u32),
-        has_alpha: bool,
-        num_frames: u32,
-        next_frame: u32,
-        dispose_next_frame: bool,
-        read_count: usize,
-    ) {
-        let (width, height) = dimensions;
-
-        let mut decoder = WebPDecoder {
-            r: Cursor::new(stream.as_slice()),
-            width,
-            height,
-            extended: Some(WebPExtendedInfo {
-                alpha: has_alpha,
-                canvas_width: width,
-                canvas_height: height,
-                animation: true,
-                background_color: None,
-                background_color_hint: [0, 0, 0, 0],
-            }),
-            animation: AnimationState::default(),
-            has_alpha,
-            num_frames,
-            loop_count: LoopCount::Forever,
-            chunks: HashMap::new(),
-            metadata: Vec::new(),
-            opaque_blocks: Vec::new(),
-        };
-        decoder.animation.next_frame = next_frame;
-        decoder.animation.dispose_next_frame = dispose_next_frame;
-        let mut buf = vec![0; decoder.output_buffer_size()];
-        for _ in 0..read_count {
-            let _ = decoder.read_frame(&mut buf);
-        }
-    }
-
-    fn exercise_animation_state(
-        anmf: Vec<u8>,
-        width: u32,
-        height: u32,
-        has_alpha: bool,
-        next_frame: u32,
-        dispose_next_frame: bool,
-        read_count: usize,
-    ) {
-        exercise_animation_data(
-            chunk(b"ANMF", &anmf),
-            (width, height),
-            has_alpha,
-            1,
-            next_frame,
-            dispose_next_frame,
-            read_count,
-        );
-    }
-
-    fn exercise_animation(anmf: Vec<u8>, width: u32, height: u32, has_alpha: bool) {
-        exercise_animation_state(anmf, width, height, has_alpha, 0, false, 1);
-    }
-
-    fn exercise_new(data: Vec<u8>) {
-        let _ = WebPDecoder::new(Cursor::new(data.as_slice()));
-    }
-
-    exercise_new(Vec::new());
-    exercise_new(b"RIFF\x04\0\0\0WE".to_vec());
-    exercise_new(b"RIFF\x04\0\0\0WEBP".to_vec());
-    exercise_new(riff(&[chunk(b"JUNK", &[])]));
-
-    let vp8_zero_width = [0, 0, 0, 0x9d, 0x01, 0x2a, 0, 0, 1, 0];
-    exercise_new(riff(&[chunk(b"VP8 ", &vp8_zero_width)]));
-    let vp8_interframe = [1, 0, 0];
-    exercise_new(riff(&[chunk(b"VP8 ", &vp8_interframe)]));
-    let vp8_bad_magic = [0, 0, 0, 0, 0, 0];
-    exercise_new(riff(&[chunk(b"VP8 ", &vp8_bad_magic)]));
-    let vp8_missing_width = [0, 0, 0, 0x9d, 0x01, 0x2a];
-    exercise_new(riff(&[chunk(b"VP8 ", &vp8_missing_width)]));
-    let vp8_missing_height = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0];
-    exercise_new(riff(&[chunk(b"VP8 ", &vp8_missing_height)]));
-    let vp8_zero_height = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0, 0, 0];
-    exercise_new(riff(&[chunk(b"VP8 ", &vp8_zero_height)]));
-    let vp8_valid_header = [0, 0, 0, 0x9d, 0x01, 0x2a, 1, 0, 1, 0];
-    exercise_new(riff(&[chunk(b"VP8 ", &vp8_valid_header)]));
-
-    exercise_new(b"JUNK\x04\0\0\0WEBP".to_vec());
-    exercise_new(b"RIFF\x04\0\0\0JUNK".to_vec());
-    exercise_new(riff(&[chunk(b"VP8L", &[])]));
-    exercise_new(riff(&[chunk(b"VP8L", &[0])]));
-    exercise_new(riff(&[chunk(b"VP8L", &[0x2f])]));
-    let vp8l_bad_version = [0x2f, 0, 0, 0, 0x20];
-    exercise_new(riff(&[chunk(b"VP8L", &vp8l_bad_version)]));
-    let vp8l_no_alpha = [0x2f, 0, 0, 0, 0];
-    let vp8l_alpha = [0x2f, 0, 0, 0, 0x10];
-    exercise_new(riff(&[chunk(b"VP8L", &vp8l_no_alpha)]));
-    exercise_new(riff(&[chunk(b"VP8L", &vp8l_alpha)]));
-
-    exercise_new(riff(&[vp8x(0, 1, 1)]));
-    exercise_new(riff(&[
-        vp8x(0, 1, 1),
-        chunk(b"VP8 ", &[]),
-        chunk(b"VP8L", &[]),
-    ]));
-    exercise_new(riff(&[vp8x(0, 1, 1), chunk(b"VP8L", &[])]));
-    exercise_new(riff(&[vp8x(0, 1, 1), chunk(b"VP8 ", &[])]));
-    exercise_new(riff(&[
-        vp8x(0b0000_1100, 1, 1),
-        chunk(b"EXIF", &[]),
-        chunk(b"XMP ", &[]),
-        chunk(b"VP8L", &[]),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_1100, 1, 1),
-        chunk(b"EXIF", &[]),
-        chunk(b"VP8L", &[]),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0, 1, 1),
-        chunk(b"zzzz", &[]),
-        chunk(b"VP8L", &[]),
-    ]));
-    exercise_new(riff(&[vp8x(0b0000_1000, 1, 1)]));
-    exercise_new(riff(&[vp8x(0b0000_0100, 1, 1)]));
-    exercise_new(riff(&[vp8x(0b0000_0010, 1, 1), chunk(b"ANMF", &[0; 8])]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk_declared(b"ANMF", 24, &[0; 12]),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk_declared(b"ANMF", 24, &[0; 16]),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk(b"ANIM", &[0, 0, 0, 0, 0, 0]),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk(b"ANIM", &[0, 0, 0, 0, 0, 0]),
-        chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk(b"ANIM", &[0, 0, 0, 0]),
-        chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"VP8L")),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk(b"ANIM", &[0, 0, 0, 0, 7, 0]),
-        chunk(b"ANMF", &anmf_payload(0, 0, 0, 0, b"JUNK")),
-    ]));
-    exercise_new(riff(&[
-        vp8x(0b0000_0010, 1, 1),
-        chunk(b"ANIM", &[0, 0, 0, 0, 7, 0]),
-        chunk_declared(b"ANMF", 24, &[0; 20]),
-    ]));
-
-    let mut truncated = riff(&[vp8x(0, 1, 1)]);
-    truncated[4..8].copy_from_slice(&64u32.to_le_bytes());
-    truncated.extend_from_slice(b"VP");
-    exercise_new(truncated);
-
-    let mut no_trailing_chunks = riff(&[vp8x(0, 1, 1)]);
-    no_trailing_chunks[4..8].copy_from_slice(&10u32.to_le_bytes());
-    exercise_new(no_trailing_chunks);
-
-    exercise_animation_data(
-        chunk_declared(b"ANMF", 32, &[]),
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-    exercise_animation_data(
-        chunk_declared(b"ANMF", 32, &[0; 3]),
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-    exercise_animation_data(
-        chunk_declared(b"ANMF", 32, &[0; 8]),
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-    exercise_animation_data(
-        chunk_declared(b"ANMF", 32, &[0; 9]),
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-    exercise_animation_data(
-        chunk_declared(b"ANMF", 32, &[0; 14]),
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-    exercise_animation_data(
-        chunk_declared(b"ANMF", 32, &[0; 15]),
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-    exercise_animation_data(
-        chunk_declared(b"ANMF", 32, &[0; 16]),
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-
-    exercise_animation(vec![0; 31], 1, 1, true);
-    exercise_animation(anmf_payload(0, 0, 16_384, 0, b"VP8L"), 1, 1, true);
-    exercise_animation(anmf_payload(0, 0, 0, 16_384, b"VP8L"), 1, 1, true);
-    exercise_animation_state(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true, 0, true, 1);
-
-    let public_reader_vp8l_width_too_large =
-        chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"VP8L"));
-    exercise_animation_data(
-        public_reader_vp8l_width_too_large,
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-
-    exercise_animation(anmf_payload(0, 0, 16_384, 0, b"ALPH"), 1, 1, true);
-    exercise_animation(anmf_payload(0, 0, 0, 16_384, b"ALPH"), 1, 1, true);
-    exercise_animation(anmf_payload(0, 0, 0, 0, b"ALPH"), 1, 1, true);
-
-    let public_reader_alpha_width_too_large =
-        chunk(b"ANMF", &anmf_payload(0, 0, 16_384, 0, b"ALPH"));
-    exercise_animation_data(
-        public_reader_alpha_width_too_large,
-        (1, 1),
-        true,
-        1,
-        0,
-        false,
-        1,
-    );
-
-    let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
-    anmf[20..24].copy_from_slice(&16u32.to_le_bytes());
-    exercise_animation(anmf, 1, 1, true);
-
-    let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
-    anmf[20..24].copy_from_slice(&1u32.to_le_bytes());
-    exercise_animation(anmf, 1, 1, true);
-
-    let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
-    anmf[20..24].copy_from_slice(&2u32.to_le_bytes());
-    anmf.resize(42, 0);
-    anmf[26..30].copy_from_slice(b"VP8 ");
-    anmf[30..34].copy_from_slice(&9u32.to_le_bytes());
-    exercise_animation(anmf, 1, 1, true);
-
-    let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
-    anmf[20..24].copy_from_slice(&2u32.to_le_bytes());
-    anmf.resize(42, 0);
-    anmf[26..30].copy_from_slice(b"VP8 ");
-    anmf[30..34].copy_from_slice(&0u32.to_le_bytes());
-    exercise_animation(anmf, 1, 1, true);
-
-    let mut anmf = anmf_payload(0, 0, 0, 0, b"ALPH");
-    anmf[20..24].copy_from_slice(&2u32.to_le_bytes());
-    anmf.truncate(26);
-    exercise_animation(anmf, 1, 1, true);
-
-    let mut vp8l_solid_64 = anmf_payload(0, 0, 63, 63, b"VP8L");
-    vp8l_solid_64[20..24].copy_from_slice(&23u32.to_le_bytes());
-    vp8l_solid_64.truncate(24);
-    vp8l_solid_64.extend_from_slice(&[
-        47, 63, 192, 15, 0, 7, 208, 172, 70, 116, 185, 255, 1, 32, 33, 252, 127, 175, 69, 244, 63,
-        245, 3,
-    ]);
-    vp8l_solid_64.push(0);
-
-    exercise_animation(vp8l_solid_64.clone(), 1, 64, true);
-    exercise_animation(vp8l_solid_64.clone(), 64, 1, true);
-
-    let mut vp8l_solid_y_outside = vp8l_solid_64.clone();
-    vp8l_solid_y_outside[3..6].copy_from_slice(&1u32.to_le_bytes()[..3]);
-    let public_reader_y_outside = chunk(b"ANMF", &vp8l_solid_y_outside);
-    exercise_animation_data(public_reader_y_outside, (64, 64), true, 1, 0, false, 1);
-
-    exercise_animation(vp8l_solid_64.clone(), 64, 64, true);
-    super::lossless::FORCE_DECODE_FRAME_RGB_ERROR.store(true, std::sync::atomic::Ordering::Relaxed);
-    exercise_animation(vp8l_solid_64.clone(), 64, 64, false);
-    let mut invalid_opaque_vp8l = anmf_payload(0, 0, 0, 0, b"VP8L");
-    invalid_opaque_vp8l[20..24].copy_from_slice(&5u32.to_le_bytes());
-    invalid_opaque_vp8l.truncate(24);
-    invalid_opaque_vp8l.extend_from_slice(&vp8l_no_alpha);
-    invalid_opaque_vp8l.push(0);
-    exercise_animation(invalid_opaque_vp8l, 1, 1, false);
-
-    let first_frame = chunk(b"ANMF", &vp8l_solid_64);
-    let mut two_frames = first_frame.clone();
-    two_frames.extend_from_slice(&first_frame);
-    exercise_animation_data(two_frames, (64, 64), true, 2, 0, false, 2);
-
-    exercise_animation(anmf_payload(0, 0, 0, 0, b"JUNK"), 1, 1, false);
-    exercise_animation_state(anmf_payload(0, 0, 0, 0, b"VP8L"), 1, 1, true, 1, false, 1);
-
-    let empty = Vec::<u8>::new();
-    let mut decoder = WebPDecoder {
-        r: Cursor::new(empty.as_slice()),
-        width: 1,
-        height: 1,
-        extended: None,
-        animation: AnimationState::default(),
-        has_alpha: false,
-        num_frames: 0,
-        loop_count: LoopCount::Forever,
-        chunks: HashMap::from([(WebPRiffChunk::VP8L, 0..0)]),
-        metadata: Vec::new(),
-        opaque_blocks: Vec::new(),
-    };
-    let _ = decoder.read_image(&mut []);
 }
 
 /// Convert a validated chunk offset to `usize` without a host-width error

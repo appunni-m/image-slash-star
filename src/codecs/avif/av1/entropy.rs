@@ -112,7 +112,6 @@ impl<'data, 'input, 'spans> RangeDecoder<'data, 'input, 'spans> {
     }
 
     #[cfg(coverage)]
-    #[coverage(off)]
     pub(super) fn operation_trace(&self) -> Vec<crate::Av1EntropyOperationState> {
         self.operations.clone().unwrap_or_default()
     }
@@ -2170,6 +2169,10 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         } else {
             return Err(malformed("partition decoder called without a split edge"));
         };
+        // AV1 derives each chroma residual size from its partition child.
+        // These 4:2:2 partition forms can map to `BLOCK_INVALID` even when a
+        // simple aspect-ratio check would consider the resulting geometry
+        // acceptable.
         if !self.monochrome
             && self.subsampling_x
             && !self.subsampling_y
@@ -2193,7 +2196,17 @@ impl<'decoder, 'data, 'input, 'spans> PartitionWalker<'decoder, 'data, 'input, '
         if self.nodes.len() >= MAX_PARTITION_NODES {
             return Err(malformed("partition tree exceeds the safe node limit"));
         }
-        self.nodes.try_reserve(1).map_err(|_| {
+        #[cfg(coverage)]
+        let reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1PartitionNodeReservation,
+        ) {
+            usize::MAX
+        } else {
+            1
+        };
+        #[cfg(not(coverage))]
+        let reservation_count = 1;
+        self.nodes.try_reserve(reservation_count).map_err(|_| {
             CodecError::Dimensions("unable to allocate AV1 partition nodes".to_owned())
         })?;
         self.nodes.push(node);
@@ -2682,8 +2695,10 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         .frame_height
         .checked_add(7)
         .and_then(|value| (value / 8).checked_mul(2));
-    let dimensions_are_supported = context.frame_width >= 4
-        && context.frame_height >= 4
+    // The monochrome leaf decoder already crops its coded block to the visible
+    // canvas, including the one-pixel lossless still profile.
+    let dimensions_are_supported = context.frame_width != 0
+        && context.frame_height != 0
         && context.frame_width <= 128
         && context.frame_height <= 128
         && padded_block_width == Some(context.block_width)
@@ -2700,7 +2715,7 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
         && film_grain_supported
         && context.block_x == 0
         && context.block_y == 0
-        && context.level == 1
+        && matches!(context.level, 0 | 1)
         && dimensions_are_supported
         && context.restoration_types == [None; 3]
 }
@@ -2714,6 +2729,10 @@ fn complete_monochrome_reconstruction_context(context: &FirstBlockContext) -> bo
 /// layout.
 pub(super) struct Lossy420Reconstruction {
     pub(super) leaf: super::block::FirstLeaf,
+    /// Plane storage extent may include the padded coded tail used by AV1
+    /// super-resolution. `leaf.width` remains the visible coded width.
+    pub(super) source_width: u32,
+    pub(super) source_height: u32,
     pub(super) monochrome: bool,
     pub(super) subsampling_x: bool,
     pub(super) subsampling_y: bool,
@@ -2725,6 +2744,13 @@ pub(super) struct Lossy420Reconstruction {
     pub(super) cdef_parameters: Option<super::cdef::FrameParameters>,
     pub(super) restoration: Option<RestorationPlan>,
     pub(super) cdfs: Option<FrameCdfs>,
+}
+
+/// A color leaf after its tile-local pre-super-resolution filters have run.
+pub(super) struct FilteredColorLeaf {
+    pub(super) leaf: super::block::FirstLeaf,
+    pub(super) source_width: u32,
+    pub(super) source_height: u32,
 }
 
 #[derive(Clone, Copy)]
@@ -3155,15 +3181,24 @@ fn decode_compound_type(
 }
 
 fn inter_intra_context(neighbors: [Option<SpatialRefBlock>; 2]) -> usize {
-    let count = neighbors
-        .into_iter()
-        .flatten()
-        .filter(|block| block.is_intra())
-        .count();
-    match count {
-        2 => 3,
-        1 => 2,
-        _ => 0,
+    let [above, left] = neighbors;
+    if let (Some(above), Some(left)) = (above, left) {
+        // With both neighbors, AV1 maps intra counts 0, 1, 2 to contexts 0, 1, 3.
+        match (above.is_intra(), left.is_intra()) {
+            (false, false) => 0,
+            (true, false) | (false, true) => 1,
+            (true, true) => 3,
+        }
+    } else {
+        // One available intra neighbor selects context 2; an inter neighbor
+        // or no neighbor selects context 0.
+        if above.is_some_and(SpatialRefBlock::is_intra)
+            || left.is_some_and(SpatialRefBlock::is_intra)
+        {
+            2
+        } else {
+            0
+        }
     }
 }
 
@@ -4616,7 +4651,7 @@ fn interintra_allowed(block_size: BlockSize) -> bool {
 
 fn interintra_size_group(block_size: BlockSize) -> usize {
     match block_size {
-        BlockSize::B8x8 => 0,
+        BlockSize::B8x8 => 1,
         BlockSize::B8x16 | BlockSize::B16x8 => 1,
         BlockSize::B16x16 | BlockSize::B16x32 | BlockSize::B32x16 => 2,
         BlockSize::B32x32 => 3,
@@ -4833,147 +4868,6 @@ fn inter_lossy_i420_narrow_mode2_geometry_supported(
         && !quantization.segment_lossless
         && quantization.sample_depth.bits() == context.bit_depth
         && inter_single_transform_geometry_supported(node.block_size, layout)
-}
-
-/// Mode-0 lossy I420 leaves code one TX4X4 residual per luma cell while the
-/// chroma planes retain one maximum-size transform. Keep the first grid
-/// tranche bounded to complete 8..=64px leaves and matched 8/10/12-bit
-/// samples: 4px axes need cross-leaf chroma ownership, and 128px axes use
-/// AV1's 64px chunk-major traversal.
-fn inter_lossy_only_4x4_grid_geometry_supported(
-    block_size: BlockSize,
-    layout: PixelLayout,
-    visible_width: u32,
-    visible_height: u32,
-    bit_depth: u32,
-    quantization: super::block::LossyQuantization,
-    transform_mode: u32,
-) -> bool {
-    !quantization.segment_lossless
-        && layout == PixelLayout::I420
-        && matches!(bit_depth, 8 | 10 | 12)
-        && quantization.sample_depth.bits() == bit_depth
-        && transform_mode == 0
-        && matches!(
-            block_size,
-            BlockSize::B8x8
-                | BlockSize::B8x16
-                | BlockSize::B16x8
-                | BlockSize::B16x16
-                | BlockSize::B8x32
-                | BlockSize::B32x8
-                | BlockSize::B16x32
-                | BlockSize::B32x16
-                | BlockSize::B32x32
-                | BlockSize::B16x64
-                | BlockSize::B64x16
-                | BlockSize::B32x64
-                | BlockSize::B64x32
-                | BlockSize::B64x64
-        )
-        && (visible_width, visible_height) == block_size.pixel_dimensions()
-}
-
-/// Exact mode-0 lossy color grids for non-wide 4:2:2 and 4:4:4 leaves. The
-/// luma plane is always a causal TX4x4 grid; chroma either owns one maximum
-/// transform or a matching grid whose terminals inherit the luma cell at the
-/// same pixel origin. Keep this separate from the 4:2:0-only grid and the
-/// 64px chunk compositor because their chroma ownership and syntax differ.
-fn inter_lossy_color_mode0_grid_geometry_supported(
-    block_size: BlockSize,
-    layout: PixelLayout,
-    visible_width: u32,
-    visible_height: u32,
-    bit_depth: u32,
-    quantization: super::block::LossyQuantization,
-    transform_mode: u32,
-) -> bool {
-    !quantization.segment_lossless
-        && matches!(layout, PixelLayout::I422 | PixelLayout::I444)
-        && matches!(bit_depth, 8 | 10 | 12)
-        && quantization.sample_depth.bits() == bit_depth
-        && transform_mode == 0
-        && (visible_width, visible_height) == block_size.pixel_dimensions()
-        && matches!(
-            (layout, block_size),
-            (
-                PixelLayout::I422,
-                BlockSize::B4x8
-                    | BlockSize::B8x4
-                    | BlockSize::B8x8
-                    | BlockSize::B4x16
-                    | BlockSize::B16x4
-                    | BlockSize::B16x8
-                    | BlockSize::B16x16
-                    | BlockSize::B32x8
-                    | BlockSize::B32x16
-                    | BlockSize::B32x32
-                    | BlockSize::B64x16
-                    | BlockSize::B64x32
-                    | BlockSize::B8x16
-                    | BlockSize::B8x32
-                    | BlockSize::B16x32
-                    | BlockSize::B16x64
-                    | BlockSize::B32x64
-                    | BlockSize::B64x64
-            ) | (
-                PixelLayout::I444,
-                BlockSize::B4x4
-                    | BlockSize::B4x8
-                    | BlockSize::B8x4
-                    | BlockSize::B4x16
-                    | BlockSize::B16x4
-                    | BlockSize::B8x8
-                    | BlockSize::B8x16
-                    | BlockSize::B16x8
-                    | BlockSize::B16x16
-                    | BlockSize::B8x32
-                    | BlockSize::B32x8
-                    | BlockSize::B16x32
-                    | BlockSize::B32x16
-                    | BlockSize::B32x32
-                    | BlockSize::B16x64
-                    | BlockSize::B64x16
-                    | BlockSize::B32x64
-                    | BlockSize::B64x32
-                    | BlockSize::B64x64
-            )
-        )
-}
-
-/// Exact mode-0 geometry for wide leaves whose luma residuals are a fixed
-/// TX4x4 grid inside each 64x64 maximum-transform region. Chroma retains its
-/// adjusted maximum transform, so the wide compositor owns the chunk-major
-/// Y/U/V traversal rather than the existing flat small-grid path. The
-/// transform syntax and checked u16 reconstruction are depth-parametric for
-/// the AV1 8/10/12-bit sample classes.
-fn inter_lossy_wide_mode0_geometry_supported(
-    block_size: BlockSize,
-    layout: PixelLayout,
-    visible_width: u32,
-    visible_height: u32,
-    bit_depth: u32,
-    quantization: super::block::LossyQuantization,
-    transform_mode: u32,
-) -> bool {
-    !quantization.segment_lossless
-        && matches!(
-            (layout, block_size),
-            (
-                PixelLayout::I420,
-                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-            ) | (
-                PixelLayout::I422,
-                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-            ) | (
-                PixelLayout::I444,
-                BlockSize::B64x128 | BlockSize::B128x64 | BlockSize::B128x128
-            )
-        )
-        && matches!(bit_depth, 8 | 10 | 12)
-        && quantization.sample_depth.bits() == bit_depth
-        && transform_mode == 0
-        && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
 /// Mode-1 lossy 4:2:0 blocks wider or taller than one 64px transform are
@@ -5493,15 +5387,54 @@ fn inter_lossy_wide64_split_geometry_supported(
         && (visible_width, visible_height) == block_size.pixel_dimensions()
 }
 
-fn inter_lossless_grid_geometry_supported(
+#[derive(Clone, Copy)]
+struct InterLosslessGridGeometry {
     block_size: BlockSize,
     layout: PixelLayout,
     visible_width: u32,
     visible_height: u32,
+    frame_width: u32,
     bit_depth: u32,
+}
+
+fn inter_lossless_grid_clipped_b32_geometry_supported(geometry: InterLosslessGridGeometry) -> bool {
+    let InterLosslessGridGeometry {
+        block_size,
+        layout,
+        visible_width,
+        visible_height,
+        frame_width,
+        bit_depth,
+    } = geometry;
+    block_size == BlockSize::B32x32
+        && matches!(
+            layout,
+            PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+        )
+        && matches!(bit_depth, 8 | 10)
+        && visible_width != 0
+        && visible_height != 0
+        && visible_width <= 32
+        && visible_height <= 32
+        && visible_width.is_multiple_of(4)
+        && visible_height.is_multiple_of(4)
+        && (layout != PixelLayout::I422 || frame_width.is_multiple_of(2))
+        && (visible_width < 32 || visible_height < 32)
+}
+
+fn inter_lossless_grid_geometry_supported(
+    geometry: InterLosslessGridGeometry,
     quantization: super::block::LossyQuantization,
     transform_mode: u32,
 ) -> bool {
+    let InterLosslessGridGeometry {
+        block_size,
+        layout,
+        visible_width,
+        visible_height,
+        bit_depth,
+        ..
+    } = geometry;
     let luma_geometry_matches = inter_lossless_grid_wide_block_supported(block_size)
         || block_size.maximum_luma_tx().pixel_dimensions() == block_size.pixel_dimensions();
     quantization.segment_lossless
@@ -5548,7 +5481,8 @@ fn inter_lossless_grid_geometry_supported(
             layout,
             PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
         )
-        && (visible_width, visible_height) == block_size.pixel_dimensions()
+        && ((visible_width, visible_height) == block_size.pixel_dimensions()
+            || inter_lossless_grid_clipped_b32_geometry_supported(geometry))
 }
 
 /// Segment-lossless residuals in a mixed frame still follow the fixed WHT
@@ -5556,28 +5490,18 @@ fn inter_lossless_grid_geometry_supported(
 /// scoped to 8-bit color layouts; the ordinary helper above remains mode-0-only
 /// for existing monochrome and all other profiles.
 fn inter_mixed_8bit_color_lossless_grid_geometry_supported(
-    block_size: BlockSize,
-    layout: PixelLayout,
-    visible_width: u32,
-    visible_height: u32,
-    bit_depth: u32,
+    geometry: InterLosslessGridGeometry,
     quantization: super::block::LossyQuantization,
     transform_mode: u32,
 ) -> bool {
-    matches!(layout, PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444)
-        && bit_depth == 8
+    matches!(
+        geometry.layout,
+        PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+    ) && geometry.bit_depth == 8
         && matches!(transform_mode, 1 | 2)
         // Reuse the complete geometry/quantization proof while evaluating it
         // in its mode-0 form; only the frame-mode restriction differs here.
-        && inter_lossless_grid_geometry_supported(
-            block_size,
-            layout,
-            visible_width,
-            visible_height,
-            bit_depth,
-            quantization,
-            0,
-        )
+        && inter_lossless_grid_geometry_supported(geometry, quantization, 0)
 }
 
 /// High-depth mixed-segment blocks share the generic lossless-grid traversal
@@ -5585,29 +5509,19 @@ fn inter_mixed_8bit_color_lossless_grid_geometry_supported(
 /// sole owner of the 10/12-bit scope; this helper only proves the exact leaf
 /// geometry and per-segment zero-quantization state needed by the block path.
 fn inter_mixed_high_depth_lossless_grid_geometry_supported(
-    block_size: BlockSize,
-    layout: PixelLayout,
-    visible_width: u32,
-    visible_height: u32,
-    bit_depth: u32,
+    geometry: InterLosslessGridGeometry,
     quantization: super::block::LossyQuantization,
     transform_mode: u32,
 ) -> bool {
-    matches!(layout, PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444)
-        && matches!(bit_depth, 10 | 12)
+    matches!(
+        geometry.layout,
+        PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
+    ) && matches!(geometry.bit_depth, 10 | 12)
         && matches!(transform_mode, 1 | 2)
         // The ordinary helper is mode-0-only by design; evaluating its
         // remaining geometry/quantization proof here avoids broadening any
         // other inter profile.
-        && inter_lossless_grid_geometry_supported(
-            block_size,
-            layout,
-            visible_width,
-            visible_height,
-            bit_depth,
-            quantization,
-            0,
-        )
+        && inter_lossless_grid_geometry_supported(geometry, quantization, 0)
 }
 
 /// Monochrome mixed-segment blocks share the depth-parametric lossless grid
@@ -5615,26 +5529,14 @@ fn inter_mixed_high_depth_lossless_grid_geometry_supported(
 /// single-tile and neutral-filter bounds; this helper only adds the mode-1/2
 /// residual grammar to the exact-visible mode-0 geometry proof.
 fn inter_mixed_monochrome_lossless_grid_geometry_supported(
-    block_size: BlockSize,
-    layout: PixelLayout,
-    visible_width: u32,
-    visible_height: u32,
-    bit_depth: u32,
+    geometry: InterLosslessGridGeometry,
     quantization: super::block::LossyQuantization,
     transform_mode: u32,
 ) -> bool {
-    layout == PixelLayout::Monochrome
-        && matches!(bit_depth, 8 | 10 | 12)
+    geometry.layout == PixelLayout::Monochrome
+        && matches!(geometry.bit_depth, 8 | 10 | 12)
         && matches!(transform_mode, 1 | 2)
-        && inter_lossless_grid_geometry_supported(
-            block_size,
-            layout,
-            visible_width,
-            visible_height,
-            bit_depth,
-            quantization,
-            0,
-        )
+        && inter_lossless_grid_geometry_supported(geometry, quantization, 0)
 }
 
 fn inter_lossless_grid_large_block_supported(block_size: BlockSize) -> bool {
@@ -5737,42 +5639,100 @@ fn has_overlappable_neighbor(tile_state: &TileState, node: PartitionNode) -> Av1
         return Ok(false);
     }
     if let Some(y) = node.y.checked_sub(1) {
-        for offset in 0..width {
+        // AV1 tests overlappable candidates at 8x8 granularity. A 4x4 MI
+        // pair shares its metadata with the right-hand MI.
+        let mut offset = 0_u32;
+        while offset < width {
             let x = node
                 .x
                 .checked_add(offset)
                 .ok_or_else(|| malformed("overlappable-neighbor x overflows"))?;
-            if tile_state
-                .neighbor_at_checked(x, y)?
-                .is_some_and(|neighbor| neighbor.coding.inter().is_some())
-            {
+            let (neighbor, _, _) = obmc_top_neighbor(tile_state, x, y)?;
+            if neighbor.is_some_and(|neighbor| neighbor.coding.inter().is_some()) {
                 return Ok(true);
             }
+            offset = offset
+                .checked_add(2)
+                .ok_or_else(|| malformed("overlappable-neighbor x step overflows"))?;
         }
     }
     if let Some(x) = node.x.checked_sub(1) {
-        for offset in 0..height {
+        // The left-edge counterpart uses the lower MI's shared metadata.
+        let mut offset = 0_u32;
+        while offset < height {
             let y = node
                 .y
                 .checked_add(offset)
                 .ok_or_else(|| malformed("overlappable-neighbor y overflows"))?;
-            if tile_state
-                .neighbor_at_checked(x, y)?
-                .is_some_and(|neighbor| neighbor.coding.inter().is_some())
-            {
+            let (neighbor, _, _) = obmc_left_neighbor(tile_state, x, y)?;
+            if neighbor.is_some_and(|neighbor| neighbor.coding.inter().is_some()) {
                 return Ok(true);
             }
+            offset = offset
+                .checked_add(2)
+                .ok_or_else(|| malformed("overlappable-neighbor y step overflows"))?;
         }
     }
     Ok(false)
 }
 
+/// Read one OBMC edge neighbor using AV1's paired-MI rule for 4x4 blocks.
+/// The lower/right block in a 4x4 pair owns the shared chroma metadata, so
+/// select that MI and advance over the full 8-pixel pair.
+fn obmc_top_neighbor(
+    tile_state: &TileState,
+    x: u32,
+    y: u32,
+) -> Av1Result<(Option<NeighborMeta>, u32, u32)> {
+    let Some(neighbor) = tile_state.neighbor_at_checked(x, y)? else {
+        return Ok((None, x, 1));
+    };
+    let step = neighbor.block_size.mi_dimensions().0.min(16);
+    if step != 1 {
+        return Ok((Some(neighbor), x, step));
+    }
+    let pair_start_x = x & !1;
+    let metadata_x = pair_start_x
+        .checked_add(1)
+        .ok_or_else(|| malformed("OBMC paired top-neighbor x overflows"))?;
+    Ok((
+        tile_state.neighbor_at_checked(metadata_x, y)?,
+        pair_start_x,
+        2,
+    ))
+}
+
+/// Vertical counterpart to [`obmc_top_neighbor`].
+fn obmc_left_neighbor(
+    tile_state: &TileState,
+    x: u32,
+    y: u32,
+) -> Av1Result<(Option<NeighborMeta>, u32, u32)> {
+    let Some(neighbor) = tile_state.neighbor_at_checked(x, y)? else {
+        return Ok((None, y, 1));
+    };
+    let step = neighbor.block_size.mi_dimensions().1.min(16);
+    if step != 1 {
+        return Ok((Some(neighbor), y, step));
+    }
+    let pair_start_y = y & !1;
+    let metadata_y = pair_start_y
+        .checked_add(1)
+        .ok_or_else(|| malformed("OBMC paired left-neighbor y overflows"))?;
+    Ok((
+        tile_state.neighbor_at_checked(x, metadata_y)?,
+        pair_start_y,
+        2,
+    ))
+}
+
 /// Collect the causal inter neighbours used by AV1's single-reference OBMC
 /// predictor. The scan is deliberately MI-grid based: each query is O(1), a
-/// neighbour advances by its nominal edge width/height, and only admitted
-/// inter leaves occupy the bounded four-entry arrays. Compound neighbours are
-/// valid and contribute their first reference/MV exactly as the reference
-/// decoder does; intra and intra-BC leaves are skipped.
+/// neighbour advances by its nominal edge width/height, paired 4x4 blocks use
+/// AV1's lower/right metadata owner, and only admitted inter leaves occupy the
+/// bounded four-entry arrays. Compound neighbours are valid and contribute
+/// their first reference/MV exactly as the reference decoder does; intra and
+/// intra-BC leaves are skipped.
 fn collect_obmc_context<'a>(
     tile_state: &TileState,
     inter_context: &InterFrameContext<'a>,
@@ -5797,10 +5757,7 @@ fn collect_obmc_context<'a>(
                 .x
                 .checked_add(x)
                 .ok_or_else(|| malformed("OBMC top query x overflows"))?;
-            let neighbor = tile_state.neighbor_at_checked(query_x, top_y)?;
-            let step_b4 = neighbor.map_or(2, |neighbor| {
-                neighbor.block_size.mi_dimensions().0.clamp(2, 16)
-            });
+            let (neighbor, neighbor_x, step_b4) = obmc_top_neighbor(tile_state, query_x, top_y)?;
             if let Some(neighbor) = neighbor
                 && let Some(inter) = neighbor.coding.inter()
             {
@@ -5813,7 +5770,7 @@ fn collect_obmc_context<'a>(
                     >> 2;
                 let origin_x_b4 = tile_origin_b4_x
                     .checked_add(node.x)
-                    .and_then(|origin| origin.checked_add(x))
+                    .and_then(|origin| origin.checked_add(neighbor_x.checked_sub(node.x)?))
                     .ok_or_else(|| malformed("OBMC top origin x overflows"))?;
                 let origin_y_b4 = tile_origin_b4_y
                     .checked_add(node.y)
@@ -5848,10 +5805,7 @@ fn collect_obmc_context<'a>(
                 .y
                 .checked_add(y)
                 .ok_or_else(|| malformed("OBMC left query y overflows"))?;
-            let neighbor = tile_state.neighbor_at_checked(left_x, query_y)?;
-            let step_b4 = neighbor.map_or(2, |neighbor| {
-                neighbor.block_size.mi_dimensions().1.clamp(2, 16)
-            });
+            let (neighbor, neighbor_y, step_b4) = obmc_left_neighbor(tile_state, left_x, query_y)?;
             if let Some(neighbor) = neighbor
                 && let Some(inter) = neighbor.coding.inter()
             {
@@ -5862,7 +5816,7 @@ fn collect_obmc_context<'a>(
                     .ok_or_else(|| malformed("OBMC left origin x overflows"))?;
                 let origin_y_b4 = tile_origin_b4_y
                     .checked_add(node.y)
-                    .and_then(|origin| origin.checked_add(y))
+                    .and_then(|origin| origin.checked_add(neighbor_y.checked_sub(node.y)?))
                     .ok_or_else(|| malformed("OBMC left origin y overflows"))?;
                 left[admitted] = Some(super::block::ObmcNeighbor {
                     surface: reference.surface,
@@ -6308,12 +6262,19 @@ fn inter_compound_reference_contexts(neighbors: [Option<SpatialRefBlock>; 2]) ->
     ]
 }
 
-fn compound_mode_context(mode_context: u8) -> usize {
-    const COMPOUND_MODE_CONTEXT_MAP: [[usize; 5]; 3] =
-        [[0, 1, 1, 1, 1], [1, 2, 3, 4, 4], [4, 4, 5, 6, 7]];
-    let new_mv_context = usize::from(mode_context & 7).min(4);
-    let ref_mv_context = usize::from((mode_context >> 4) & 7).min(5);
-    COMPOUND_MODE_CONTEXT_MAP[ref_mv_context >> 1][new_mv_context]
+fn decode_compound_reference_bit<const GROUPS: usize, const CONTEXTS: usize>(
+    decoder: &mut RangeDecoder<'_, '_, '_>,
+    cdfs: &mut [[super::frame_cdfs::Cdf<2>; CONTEXTS]; GROUPS],
+    group: usize,
+    context: usize,
+) -> Av1Result<bool> {
+    let cdf = cdfs
+        // AV1 and dav1d lay out compound reference CDFs as [group][context].
+        // Keep the dimensions explicit: the backward family has only two groups.
+        .get_mut(group)
+        .and_then(|contexts| contexts.get_mut(context))
+        .ok_or_else(|| malformed("compound-reference CDF index is out of range"))?;
+    Ok(decoder.adaptive_bool(&mut cdf.0))
 }
 
 fn decode_inter_compound_references(
@@ -6325,48 +6286,78 @@ fn decode_inter_compound_references(
     let contexts = inter_compound_reference_contexts(neighbors);
     let bidirectional = decoder.adaptive_bool(&mut cdfs.inter.compound_direction[type_context].0);
     if bidirectional {
-        let first_group =
-            decoder.adaptive_bool(&mut cdfs.inter.compound_forward_reference[contexts[0]][0].0);
+        let first_group = decode_compound_reference_bit(
+            decoder,
+            &mut cdfs.inter.compound_forward_reference,
+            0,
+            contexts[0],
+        )?;
         let first = if first_group {
-            if decoder.adaptive_bool(&mut cdfs.inter.compound_forward_reference[contexts[2]][2].0) {
+            if decode_compound_reference_bit(
+                decoder,
+                &mut cdfs.inter.compound_forward_reference,
+                2,
+                contexts[2],
+            )? {
                 ReferenceFrame::Golden
             } else {
                 ReferenceFrame::Last3
             }
-        } else if decoder
-            .adaptive_bool(&mut cdfs.inter.compound_forward_reference[contexts[1]][1].0)
-        {
+        } else if decode_compound_reference_bit(
+            decoder,
+            &mut cdfs.inter.compound_forward_reference,
+            1,
+            contexts[1],
+        )? {
             ReferenceFrame::Last2
         } else {
             ReferenceFrame::Last
         };
-        let second_group =
-            decoder.adaptive_bool(&mut cdfs.inter.compound_backward_reference[contexts[3]][0].0);
+        let second_group = decode_compound_reference_bit(
+            decoder,
+            &mut cdfs.inter.compound_backward_reference,
+            0,
+            contexts[3],
+        )?;
         let second = if second_group {
             ReferenceFrame::Alt
-        } else if decoder
-            .adaptive_bool(&mut cdfs.inter.compound_backward_reference[contexts[4]][1].0)
-        {
+        } else if decode_compound_reference_bit(
+            decoder,
+            &mut cdfs.inter.compound_backward_reference,
+            1,
+            contexts[4],
+        )? {
             ReferenceFrame::Alt2
         } else {
             ReferenceFrame::Backward
         };
         Ok(ReferencePair::compound(first, second))
     } else {
-        let backward = decoder
-            .adaptive_bool(&mut cdfs.inter.compound_unidirectional_reference[contexts[5]][0].0);
+        let backward = decode_compound_reference_bit(
+            decoder,
+            &mut cdfs.inter.compound_unidirectional_reference,
+            0,
+            contexts[5],
+        )?;
         if backward {
             return Ok(ReferencePair::compound(
                 ReferenceFrame::Backward,
                 ReferenceFrame::Alt,
             ));
         }
-        let late_forward = decoder
-            .adaptive_bool(&mut cdfs.inter.compound_unidirectional_reference[contexts[6]][1].0);
+        let late_forward = decode_compound_reference_bit(
+            decoder,
+            &mut cdfs.inter.compound_unidirectional_reference,
+            1,
+            contexts[6],
+        )?;
         if late_forward {
-            return if decoder
-                .adaptive_bool(&mut cdfs.inter.compound_unidirectional_reference[contexts[7]][2].0)
-            {
+            return if decode_compound_reference_bit(
+                decoder,
+                &mut cdfs.inter.compound_unidirectional_reference,
+                2,
+                contexts[7],
+            )? {
                 Ok(ReferencePair::compound(
                     ReferenceFrame::Last,
                     ReferenceFrame::Golden,
@@ -6750,21 +6741,6 @@ enum InterTransformPlan {
     SplitB64Topology {
         child_splits: [[bool; 2]; 2],
     },
-    LossyOnly4x4Grid {
-        luma_width: u32,
-        luma_height: u32,
-        layout: PixelLayout,
-    },
-    LossyColorMode0Grid {
-        luma_width: u32,
-        luma_height: u32,
-        layout: PixelLayout,
-    },
-    LossyWideMode0Grid {
-        luma_width: u32,
-        luma_height: u32,
-        layout: PixelLayout,
-    },
     LossyWideChunked {
         luma_width: u32,
         luma_height: u32,
@@ -6839,6 +6815,8 @@ struct InterTransformContext {
     layout: PixelLayout,
     visible_width: u32,
     visible_height: u32,
+    frame_width: u32,
+    bit_depth: u32,
     eight_bit: bool,
     split_depth_supported: bool,
     split_b8_rect_supported: bool,
@@ -6851,9 +6829,6 @@ struct InterTransformContext {
     split_b32_supported: bool,
     split_b64_supported: bool,
     lossless_grid_geometry: bool,
-    lossy_grid_geometry: bool,
-    lossy_color_mode0_geometry: bool,
-    lossy_wide_mode0_geometry: bool,
     lossy_wide_chunk_geometry: bool,
     lossy_wide_mode2_geometry: bool,
     lossy_direct_chroma_grid_geometry: bool,
@@ -6873,6 +6848,8 @@ fn decode_inter_transform_size(
         layout,
         visible_width,
         visible_height,
+        frame_width,
+        bit_depth,
         eight_bit,
         split_depth_supported,
         split_b8_rect_supported,
@@ -6885,9 +6862,6 @@ fn decode_inter_transform_size(
         split_b32_supported,
         split_b64_supported,
         lossless_grid_geometry,
-        lossy_grid_geometry,
-        lossy_color_mode0_geometry,
-        lossy_wide_mode0_geometry,
         lossy_wide_chunk_geometry,
         lossy_wide_mode2_geometry,
         lossy_direct_chroma_grid_geometry,
@@ -6898,205 +6872,76 @@ fn decode_inter_transform_size(
     }: InterTransformContext,
 ) -> super::block::PortableResult<InterTransformPlan> {
     let max_tx = block_size.maximum_luma_tx();
+    let clipped_lossless_grid = lossless_grid_geometry
+        && inter_lossless_grid_clipped_b32_geometry_supported(InterLosslessGridGeometry {
+            block_size,
+            layout,
+            visible_width,
+            visible_height,
+            frame_width,
+            bit_depth,
+        });
     // Segment losslessness overrides the frame transform mode.  In a mixed
     // frame (mode 1/2), consume no transform-partition or transform-type
     // symbols and route the block through its fixed TX4x4 WHT grid before the
     // mode-specific lossy parser gets a chance to read any syntax.
-    if lossless_grid_geometry
-        && matches!(
-            block_size,
-            BlockSize::B4x4
-                | BlockSize::B4x8
-                | BlockSize::B8x4
-                | BlockSize::B4x16
-                | BlockSize::B16x4
-                | BlockSize::B8x8
-                | BlockSize::B16x16
-                | BlockSize::B8x16
-                | BlockSize::B16x8
-                | BlockSize::B8x32
-                | BlockSize::B32x8
-                | BlockSize::B16x32
-                | BlockSize::B32x16
-                | BlockSize::B32x32
-                | BlockSize::B16x64
-                | BlockSize::B64x16
-                | BlockSize::B32x64
-                | BlockSize::B64x32
-                | BlockSize::B64x64
-                | BlockSize::B64x128
-                | BlockSize::B128x64
-                | BlockSize::B128x128
-        )
-        && matches!(
-            layout,
-            PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-        )
-    {
-        let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
-        if exact_geometry {
-            if !eight_bit
-                || layout == PixelLayout::Monochrome
-                || inter_lossless_grid_block_supported(block_size)
-            {
-                let (luma_width, luma_height) = block_size.pixel_dimensions();
-                return Ok(InterTransformPlan::LosslessGrid {
-                    luma_width,
-                    luma_height,
-                    layout,
-                });
-            }
-            return Ok(match (block_size, layout) {
-                (BlockSize::B4x4, PixelLayout::I420) => InterTransformPlan::LosslessB4I420,
-                (BlockSize::B4x4, PixelLayout::I422) => InterTransformPlan::LosslessB4I422,
-                (BlockSize::B4x4, PixelLayout::I444) => InterTransformPlan::LosslessB4I444,
-                (BlockSize::B4x8, PixelLayout::I420) => InterTransformPlan::LosslessB4x8I420,
-                (BlockSize::B4x8, PixelLayout::I422) => InterTransformPlan::LosslessB4x8I422,
-                (BlockSize::B4x8, PixelLayout::I444) => InterTransformPlan::LosslessB4x8I444,
-                (BlockSize::B8x4, PixelLayout::I420) => InterTransformPlan::LosslessB8x4I420,
-                (BlockSize::B8x4, PixelLayout::I422) => InterTransformPlan::LosslessB8x4I422,
-                (BlockSize::B8x4, PixelLayout::I444) => InterTransformPlan::LosslessB8x4I444,
-                (BlockSize::B4x16, PixelLayout::I420) => InterTransformPlan::LosslessB4x16I420,
-                (BlockSize::B4x16, PixelLayout::I422) => InterTransformPlan::LosslessB4x16I422,
-                (BlockSize::B4x16, PixelLayout::I444) => InterTransformPlan::LosslessB4x16I444,
-                (BlockSize::B16x4, PixelLayout::I420) => InterTransformPlan::LosslessB16x4I420,
-                (BlockSize::B16x4, PixelLayout::I422) => InterTransformPlan::LosslessB16x4I422,
-                (BlockSize::B16x4, PixelLayout::I444) => InterTransformPlan::LosslessB16x4I444,
-                (BlockSize::B8x8, PixelLayout::I420) => InterTransformPlan::LosslessB8I420,
-                (BlockSize::B8x8, PixelLayout::I422) => InterTransformPlan::LosslessB8I422,
-                (BlockSize::B8x8, PixelLayout::I444) => InterTransformPlan::LosslessB8I444,
-                (BlockSize::B16x16, PixelLayout::I420) => InterTransformPlan::LosslessB16I420,
-                (BlockSize::B16x16, PixelLayout::I422) => InterTransformPlan::LosslessB16I422,
-                (BlockSize::B16x16, PixelLayout::I444) => InterTransformPlan::LosslessB16I444,
-                (BlockSize::B8x16, PixelLayout::I420) => InterTransformPlan::LosslessB8x16I420,
-                (BlockSize::B8x16, PixelLayout::I422) => InterTransformPlan::LosslessB8x16I422,
-                (BlockSize::B8x16, PixelLayout::I444) => InterTransformPlan::LosslessB8x16I444,
-                (BlockSize::B16x8, PixelLayout::I420) => InterTransformPlan::LosslessB16x8I420,
-                (BlockSize::B16x8, PixelLayout::I422) => InterTransformPlan::LosslessB16x8I422,
-                (BlockSize::B16x8, PixelLayout::I444) => InterTransformPlan::LosslessB16x8I444,
-                _ => return Err(super::block::PortableUnavailable),
+    if lossless_grid_geometry && !clipped_lossless_grid {
+        if !eight_bit
+            || layout == PixelLayout::Monochrome
+            || inter_lossless_grid_block_supported(block_size)
+        {
+            let (luma_width, luma_height) = block_size.pixel_dimensions();
+            return Ok(InterTransformPlan::LosslessGrid {
+                luma_width,
+                luma_height,
+                layout,
             });
         }
+        return Ok(match (block_size, layout) {
+            (BlockSize::B4x4, PixelLayout::I420) => InterTransformPlan::LosslessB4I420,
+            (BlockSize::B4x4, PixelLayout::I422) => InterTransformPlan::LosslessB4I422,
+            (BlockSize::B4x4, PixelLayout::I444) => InterTransformPlan::LosslessB4I444,
+            (BlockSize::B4x8, PixelLayout::I420) => InterTransformPlan::LosslessB4x8I420,
+            (BlockSize::B4x8, PixelLayout::I422) => InterTransformPlan::LosslessB4x8I422,
+            (BlockSize::B4x8, PixelLayout::I444) => InterTransformPlan::LosslessB4x8I444,
+            (BlockSize::B8x4, PixelLayout::I420) => InterTransformPlan::LosslessB8x4I420,
+            (BlockSize::B8x4, PixelLayout::I422) => InterTransformPlan::LosslessB8x4I422,
+            (BlockSize::B8x4, PixelLayout::I444) => InterTransformPlan::LosslessB8x4I444,
+            (BlockSize::B4x16, PixelLayout::I420) => InterTransformPlan::LosslessB4x16I420,
+            (BlockSize::B4x16, PixelLayout::I422) => InterTransformPlan::LosslessB4x16I422,
+            (BlockSize::B4x16, PixelLayout::I444) => InterTransformPlan::LosslessB4x16I444,
+            (BlockSize::B16x4, PixelLayout::I420) => InterTransformPlan::LosslessB16x4I420,
+            (BlockSize::B16x4, PixelLayout::I422) => InterTransformPlan::LosslessB16x4I422,
+            (BlockSize::B16x4, PixelLayout::I444) => InterTransformPlan::LosslessB16x4I444,
+            (BlockSize::B8x8, PixelLayout::I420) => InterTransformPlan::LosslessB8I420,
+            (BlockSize::B8x8, PixelLayout::I422) => InterTransformPlan::LosslessB8I422,
+            (BlockSize::B8x8, PixelLayout::I444) => InterTransformPlan::LosslessB8I444,
+            (BlockSize::B16x16, PixelLayout::I420) => InterTransformPlan::LosslessB16I420,
+            (BlockSize::B16x16, PixelLayout::I422) => InterTransformPlan::LosslessB16I422,
+            (BlockSize::B16x16, PixelLayout::I444) => InterTransformPlan::LosslessB16I444,
+            (BlockSize::B8x16, PixelLayout::I420) => InterTransformPlan::LosslessB8x16I420,
+            (BlockSize::B8x16, PixelLayout::I422) => InterTransformPlan::LosslessB8x16I422,
+            (BlockSize::B8x16, PixelLayout::I444) => InterTransformPlan::LosslessB8x16I444,
+            (BlockSize::B16x8, PixelLayout::I420) => InterTransformPlan::LosslessB16x8I420,
+            (BlockSize::B16x8, PixelLayout::I422) => InterTransformPlan::LosslessB16x8I422,
+            (BlockSize::B16x8, PixelLayout::I444) => InterTransformPlan::LosslessB16x8I444,
+            _ => return Err(super::block::PortableUnavailable),
+        });
     }
     if transform_mode == 0 {
-        // An all-lossless B8x8/B16x16 or rectangular B8x16/B16x8 leaf is a
-        // fixed TX4x4 grid; mode 0 carries no transform-partition sentence.
-        // Other mode-0 blocks retain the existing single-terminal checks.
-        if lossy_grid_geometry {
-            let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
-            if exact_geometry {
-                let (luma_width, luma_height) = block_size.pixel_dimensions();
-                return Ok(InterTransformPlan::LossyOnly4x4Grid {
-                    luma_width,
-                    luma_height,
-                    layout,
-                });
-            }
-        }
-        if lossy_color_mode0_geometry {
-            let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
-            if exact_geometry {
-                let (luma_width, luma_height) = block_size.pixel_dimensions();
-                return Ok(InterTransformPlan::LossyColorMode0Grid {
-                    luma_width,
-                    luma_height,
-                    layout,
-                });
-            }
-        }
-        if lossy_wide_mode0_geometry {
-            let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
-            if exact_geometry {
-                let (luma_width, luma_height) = block_size.pixel_dimensions();
-                return Ok(InterTransformPlan::LossyWideMode0Grid {
-                    luma_width,
-                    luma_height,
-                    layout,
-                });
-            }
-        }
-        if lossless_grid_geometry
-            && matches!(
-                block_size,
-                BlockSize::B4x4
-                    | BlockSize::B4x8
-                    | BlockSize::B8x4
-                    | BlockSize::B4x16
-                    | BlockSize::B16x4
-                    | BlockSize::B8x8
-                    | BlockSize::B16x16
-                    | BlockSize::B8x16
-                    | BlockSize::B16x8
-                    | BlockSize::B8x32
-                    | BlockSize::B32x8
-                    | BlockSize::B16x32
-                    | BlockSize::B32x16
-                    | BlockSize::B32x32
-                    | BlockSize::B16x64
-                    | BlockSize::B64x16
-                    | BlockSize::B32x64
-                    | BlockSize::B64x32
-                    | BlockSize::B64x64
-                    | BlockSize::B64x128
-                    | BlockSize::B128x64
-                    | BlockSize::B128x128
-            )
-            && matches!(
+        // Clipped lossless B32 grids need the fixed plan while passing through
+        // this mode-0 branch so skip syntax remains per TX4 terminal.
+        if clipped_lossless_grid {
+            let (luma_width, luma_height) = block_size.pixel_dimensions();
+            return Ok(InterTransformPlan::LosslessGrid {
+                luma_width,
+                luma_height,
                 layout,
-                PixelLayout::Monochrome | PixelLayout::I420 | PixelLayout::I422 | PixelLayout::I444
-            )
-        {
-            let exact_geometry = (visible_width, visible_height) == block_size.pixel_dimensions();
-            if exact_geometry {
-                if !eight_bit
-                    || layout == PixelLayout::Monochrome
-                    || inter_lossless_grid_block_supported(block_size)
-                {
-                    let (luma_width, luma_height) = block_size.pixel_dimensions();
-                    return Ok(InterTransformPlan::LosslessGrid {
-                        luma_width,
-                        luma_height,
-                        layout,
-                    });
-                }
-                return Ok(match (block_size, layout) {
-                    (BlockSize::B4x4, PixelLayout::I420) => InterTransformPlan::LosslessB4I420,
-                    (BlockSize::B4x4, PixelLayout::I422) => InterTransformPlan::LosslessB4I422,
-                    (BlockSize::B4x4, PixelLayout::I444) => InterTransformPlan::LosslessB4I444,
-                    (BlockSize::B4x8, PixelLayout::I420) => InterTransformPlan::LosslessB4x8I420,
-                    (BlockSize::B4x8, PixelLayout::I422) => InterTransformPlan::LosslessB4x8I422,
-                    (BlockSize::B4x8, PixelLayout::I444) => InterTransformPlan::LosslessB4x8I444,
-                    (BlockSize::B8x4, PixelLayout::I420) => InterTransformPlan::LosslessB8x4I420,
-                    (BlockSize::B8x4, PixelLayout::I422) => InterTransformPlan::LosslessB8x4I422,
-                    (BlockSize::B8x4, PixelLayout::I444) => InterTransformPlan::LosslessB8x4I444,
-                    (BlockSize::B4x16, PixelLayout::I420) => InterTransformPlan::LosslessB4x16I420,
-                    (BlockSize::B4x16, PixelLayout::I422) => InterTransformPlan::LosslessB4x16I422,
-                    (BlockSize::B4x16, PixelLayout::I444) => InterTransformPlan::LosslessB4x16I444,
-                    (BlockSize::B16x4, PixelLayout::I420) => InterTransformPlan::LosslessB16x4I420,
-                    (BlockSize::B16x4, PixelLayout::I422) => InterTransformPlan::LosslessB16x4I422,
-                    (BlockSize::B16x4, PixelLayout::I444) => InterTransformPlan::LosslessB16x4I444,
-                    (BlockSize::B8x8, PixelLayout::I420) => InterTransformPlan::LosslessB8I420,
-                    (BlockSize::B8x8, PixelLayout::I422) => InterTransformPlan::LosslessB8I422,
-                    (BlockSize::B8x8, PixelLayout::I444) => InterTransformPlan::LosslessB8I444,
-                    (BlockSize::B16x16, PixelLayout::I420) => InterTransformPlan::LosslessB16I420,
-                    (BlockSize::B16x16, PixelLayout::I422) => InterTransformPlan::LosslessB16I422,
-                    (BlockSize::B16x16, PixelLayout::I444) => InterTransformPlan::LosslessB16I444,
-                    (BlockSize::B8x16, PixelLayout::I420) => InterTransformPlan::LosslessB8x16I420,
-                    (BlockSize::B8x16, PixelLayout::I422) => InterTransformPlan::LosslessB8x16I422,
-                    (BlockSize::B8x16, PixelLayout::I444) => InterTransformPlan::LosslessB8x16I444,
-                    (BlockSize::B16x8, PixelLayout::I420) => InterTransformPlan::LosslessB16x8I420,
-                    (BlockSize::B16x8, PixelLayout::I422) => InterTransformPlan::LosslessB16x8I422,
-                    (BlockSize::B16x8, PixelLayout::I444) => InterTransformPlan::LosslessB16x8I444,
-                    _ => return Err(super::block::PortableUnavailable),
-                });
-            }
+            });
         }
-        // The generic high-depth frame profile may carry TX_MODE_ONLY_4X4,
-        // but only the explicit wide, color, and bounded I420 mode-0
-        // compositors own their fixed-grid traversal. Do not let an
-        // unsupported small/non-wide high-depth lossy leaf fall through to a
-        // fabricated single TX4 terminal; lossless grids remain admitted by
-        // their dedicated plan.
+        // Complete lossless grids return through the dedicated plans above.
+        // Unsupported high-depth partial leaves cannot use the 8-bit fixed
+        // terminal fallback.
         if !eight_bit && !lossless_grid_geometry {
             return Err(super::block::PortableUnavailable);
         }
@@ -8507,63 +8352,28 @@ fn decode_inter_leaf(
     )
     .ok_or_else(|| malformed("inter pixel layout is invalid"))?;
     let has_chroma = partition_node_has_chroma(context, node, false);
-    let lossless_grid_geometry = inter_lossless_grid_geometry_supported(
-        node.block_size,
+    let lossless_grid_geometry_inputs = InterLosslessGridGeometry {
+        block_size: node.block_size,
         layout,
         visible_width,
         visible_height,
-        context.bit_depth,
+        frame_width: context.frame_width,
+        bit_depth: context.bit_depth,
+    };
+    let lossless_grid_geometry = inter_lossless_grid_geometry_supported(
+        lossless_grid_geometry_inputs,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     ) || inter_mixed_8bit_color_lossless_grid_geometry_supported(
-        node.block_size,
-        layout,
-        visible_width,
-        visible_height,
-        context.bit_depth,
+        lossless_grid_geometry_inputs,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     ) || inter_mixed_high_depth_lossless_grid_geometry_supported(
-        node.block_size,
-        layout,
-        visible_width,
-        visible_height,
-        context.bit_depth,
+        lossless_grid_geometry_inputs,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     ) || inter_mixed_monochrome_lossless_grid_geometry_supported(
-        node.block_size,
-        layout,
-        visible_width,
-        visible_height,
-        context.bit_depth,
-        prepared_quantization.quantization,
-        context.frame_tools.transform_mode,
-    );
-    let lossy_grid_geometry = inter_lossy_only_4x4_grid_geometry_supported(
-        node.block_size,
-        layout,
-        visible_width,
-        visible_height,
-        context.bit_depth,
-        prepared_quantization.quantization,
-        context.frame_tools.transform_mode,
-    );
-    let lossy_color_mode0_geometry = inter_lossy_color_mode0_grid_geometry_supported(
-        node.block_size,
-        layout,
-        visible_width,
-        visible_height,
-        context.bit_depth,
-        prepared_quantization.quantization,
-        context.frame_tools.transform_mode,
-    );
-    let lossy_wide_mode0_geometry = inter_lossy_wide_mode0_geometry_supported(
-        node.block_size,
-        layout,
-        visible_width,
-        visible_height,
-        context.bit_depth,
+        lossless_grid_geometry_inputs,
         prepared_quantization.quantization,
         context.frame_tools.transform_mode,
     );
@@ -8873,8 +8683,6 @@ fn decode_inter_leaf(
             || lossy_i444_rect_split_geometry
             || lossy_square64_geometry
             || lossy_split64_geometry
-            || lossy_wide_mode0_geometry
-            || lossy_color_mode0_geometry
             || lossy_wide_chunk_geometry
             || lossy_thin64_split_geometry
             || lossy_wide64_split_geometry
@@ -8896,9 +8704,6 @@ fn decode_inter_leaf(
     }
     if !inter_single_transform_geometry_supported(node.block_size, layout)
         && !lossless_grid_geometry
-        && !lossy_grid_geometry
-        && !lossy_color_mode0_geometry
-        && !lossy_wide_mode0_geometry
         && !lossy_wide_chunk_geometry
         && !lossy_wide64_split_geometry
         && !lossy_wide_mode2_geometry
@@ -9006,7 +8811,7 @@ fn decode_inter_leaf(
         );
         let stack = find_reference_mvs(tile_state, request)?;
         let mode_symbol = decoder.adaptive_symbol(
-            &mut cdfs.inter.compound_mode[compound_mode_context(stack.context)].0,
+            &mut cdfs.inter.compound_mode[usize::from(stack.context)].0,
             7,
         );
         let mode = match mode_symbol {
@@ -9572,6 +9377,8 @@ fn decode_inter_leaf(
             layout,
             visible_width,
             visible_height,
+            frame_width: context.frame_width,
+            bit_depth: context.bit_depth,
             eight_bit: context.bit_depth == 8,
             split_depth_supported: lossy_split8_geometry,
             split_b8_rect_supported: matches!(context.bit_depth, 8 | 10 | 12)
@@ -9603,9 +9410,6 @@ fn decode_inter_leaf(
             split_b32_supported: lossy_split32_geometry,
             split_b64_supported: lossy_split64_geometry,
             lossless_grid_geometry,
-            lossy_grid_geometry,
-            lossy_color_mode0_geometry,
-            lossy_wide_mode0_geometry,
             lossy_wide_chunk_geometry,
             lossy_wide_mode2_geometry,
             lossy_direct_chroma_grid_geometry,
@@ -9707,213 +9511,155 @@ fn decode_inter_leaf(
         (None, None, None, None) => None,
         _ => return Ok(Err(super::block::PortableUnavailable)),
     };
-    let (tx_size, transform_split, lossless_transform, lossy_transform_grid, lossy_wide_chunked) =
-        match transform_plan {
-            InterTransformPlan::Single(tx_size) => (tx_size, false, false, false, false),
-            InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false, false),
-            InterTransformPlan::SplitB4x8 => (TxSize::Tx4x8, true, false, false, false),
-            InterTransformPlan::SplitB8x4 => (TxSize::Tx8x4, true, false, false, false),
-            InterTransformPlan::SplitB4x16 => (TxSize::Tx4x16, true, false, false, false),
-            InterTransformPlan::SplitB4x16Deep => (TxSize::Tx4x16, true, false, false, false),
-            InterTransformPlan::SplitB4x16Topology { .. } => {
-                (TxSize::Tx4x16, true, false, false, false)
+    let (tx_size, transform_split, lossless_transform, lossy_wide_chunked) = match transform_plan {
+        InterTransformPlan::Single(tx_size) => (tx_size, false, false, false),
+        InterTransformPlan::SplitB8 => (TxSize::Tx8x8, true, false, false),
+        InterTransformPlan::SplitB4x8 => (TxSize::Tx4x8, true, false, false),
+        InterTransformPlan::SplitB8x4 => (TxSize::Tx8x4, true, false, false),
+        InterTransformPlan::SplitB4x16 => (TxSize::Tx4x16, true, false, false),
+        InterTransformPlan::SplitB4x16Deep => (TxSize::Tx4x16, true, false, false),
+        InterTransformPlan::SplitB4x16Topology { .. } => (TxSize::Tx4x16, true, false, false),
+        InterTransformPlan::SplitB16x4 => (TxSize::Tx16x4, true, false, false),
+        InterTransformPlan::SplitB16x4Deep => (TxSize::Tx16x4, true, false, false),
+        InterTransformPlan::SplitB16x4Topology { .. } => (TxSize::Tx16x4, true, false, false),
+        InterTransformPlan::SplitB8x16 => (TxSize::Tx8x16, true, false, false),
+        InterTransformPlan::SplitB8x16Deep => (TxSize::Tx8x16, true, false, false),
+        InterTransformPlan::SplitB8x16Topology { .. } => (TxSize::Tx8x16, true, false, false),
+        InterTransformPlan::SplitB16x8 => (TxSize::Tx16x8, true, false, false),
+        InterTransformPlan::SplitB16x8Deep => (TxSize::Tx16x8, true, false, false),
+        InterTransformPlan::SplitB16x8Topology { .. } => (TxSize::Tx16x8, true, false, false),
+        InterTransformPlan::SplitB8x32Topology { .. } => (TxSize::Tx8x32, true, false, false),
+        InterTransformPlan::SplitB8x32 => (TxSize::Tx8x32, true, false, false),
+        InterTransformPlan::SplitB8x32Deep => (TxSize::Tx8x32, true, false, false),
+        InterTransformPlan::SplitB32x8Topology { .. } => (TxSize::Tx32x8, true, false, false),
+        InterTransformPlan::SplitB32x8 => (TxSize::Tx32x8, true, false, false),
+        InterTransformPlan::SplitB32x8Deep => (TxSize::Tx32x8, true, false, false),
+        InterTransformPlan::SplitB16x64Topology { .. } => (TxSize::Tx16x64, true, false, false),
+        InterTransformPlan::SplitB16x64 | InterTransformPlan::SplitB16x64Deep => {
+            (TxSize::Tx16x64, true, false, false)
+        }
+        InterTransformPlan::SplitB64x16Topology { .. } => (TxSize::Tx64x16, true, false, false),
+        InterTransformPlan::SplitB64x16 | InterTransformPlan::SplitB64x16Deep => {
+            (TxSize::Tx64x16, true, false, false)
+        }
+        InterTransformPlan::SplitB32x64Topology { .. } => (TxSize::Tx32x64, true, false, false),
+        InterTransformPlan::SplitB32x64 | InterTransformPlan::SplitB32x64Deep => {
+            (TxSize::Tx32x64, true, false, false)
+        }
+        InterTransformPlan::SplitB64x32Topology { .. } => (TxSize::Tx64x32, true, false, false),
+        InterTransformPlan::SplitB64x32 | InterTransformPlan::SplitB64x32Deep => {
+            (TxSize::Tx64x32, true, false, false)
+        }
+        InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, true, false, false),
+        InterTransformPlan::SplitB16
+        | InterTransformPlan::SplitB16Deep
+        | InterTransformPlan::SplitB16Topology { .. } => (TxSize::Tx16x16, true, false, false),
+        InterTransformPlan::SplitB16x32
+        | InterTransformPlan::SplitB16x32Deep
+        | InterTransformPlan::SplitB16x32Topology { .. } => (TxSize::Tx16x32, true, false, false),
+        InterTransformPlan::SplitB32x16
+        | InterTransformPlan::SplitB32x16Deep
+        | InterTransformPlan::SplitB32x16Topology { .. } => (TxSize::Tx32x16, true, false, false),
+        InterTransformPlan::SplitB32
+        | InterTransformPlan::SplitB32Deep
+        | InterTransformPlan::SplitB32Topology { .. } => (TxSize::Tx32x32, true, false, false),
+        InterTransformPlan::SplitB64 => (TxSize::Tx64x64, true, false, false),
+        InterTransformPlan::SplitB64Topology { .. } => (TxSize::Tx64x64, true, false, false),
+        InterTransformPlan::LossyWideChunked {
+            layout: plan_layout,
+            ..
+        } => {
+            if plan_layout != layout {
+                return Ok(Err(super::block::PortableUnavailable));
             }
-            InterTransformPlan::SplitB16x4 => (TxSize::Tx16x4, true, false, false, false),
-            InterTransformPlan::SplitB16x4Deep => (TxSize::Tx16x4, true, false, false, false),
-            InterTransformPlan::SplitB16x4Topology { .. } => {
-                (TxSize::Tx16x4, true, false, false, false)
+            (TxSize::Tx64x64, false, false, true)
+        }
+        InterTransformPlan::LossyWideDirectChromaGrid {
+            layout: plan_layout,
+            luma_tx,
+            ..
+        } => {
+            if plan_layout != layout {
+                return Ok(Err(super::block::PortableUnavailable));
             }
-            InterTransformPlan::SplitB8x16 => (TxSize::Tx8x16, true, false, false, false),
-            InterTransformPlan::SplitB8x16Deep => (TxSize::Tx8x16, true, false, false, false),
-            InterTransformPlan::SplitB8x16Topology { .. } => {
-                (TxSize::Tx8x16, true, false, false, false)
+            (luma_tx, false, false, false)
+        }
+        InterTransformPlan::LossyWideMode2Unsplit {
+            layout: plan_layout,
+            ..
+        } => {
+            if plan_layout != layout {
+                return Ok(Err(super::block::PortableUnavailable));
             }
-            InterTransformPlan::SplitB16x8 => (TxSize::Tx16x8, true, false, false, false),
-            InterTransformPlan::SplitB16x8Deep => (TxSize::Tx16x8, true, false, false, false),
-            InterTransformPlan::SplitB16x8Topology { .. } => {
-                (TxSize::Tx16x8, true, false, false, false)
+            (TxSize::Tx64x64, false, false, true)
+        }
+        InterTransformPlan::LossyWideMode2Split32 {
+            layout: plan_layout,
+            ..
+        } => {
+            if plan_layout != layout {
+                return Ok(Err(super::block::PortableUnavailable));
             }
-            InterTransformPlan::SplitB8x32Topology { .. } => {
-                (TxSize::Tx8x32, true, false, false, false)
+            (TxSize::Tx32x32, false, false, true)
+        }
+        InterTransformPlan::LossyWideMode2Deep16 {
+            layout: plan_layout,
+            ..
+        } => {
+            if plan_layout != layout {
+                return Ok(Err(super::block::PortableUnavailable));
             }
-            InterTransformPlan::SplitB8x32 => (TxSize::Tx8x32, true, false, false, false),
-            InterTransformPlan::SplitB8x32Deep => (TxSize::Tx8x32, true, false, false, false),
-            InterTransformPlan::SplitB32x8Topology { .. } => {
-                (TxSize::Tx32x8, true, false, false, false)
+            (TxSize::Tx16x16, false, false, true)
+        }
+        InterTransformPlan::LossyWideMode2Mixed {
+            layout: plan_layout,
+            ..
+        } => {
+            if plan_layout != layout {
+                return Ok(Err(super::block::PortableUnavailable));
             }
-            InterTransformPlan::SplitB32x8 => (TxSize::Tx32x8, true, false, false, false),
-            InterTransformPlan::SplitB32x8Deep => (TxSize::Tx32x8, true, false, false, false),
-            InterTransformPlan::SplitB16x64Topology { .. } => {
-                (TxSize::Tx16x64, true, false, false, false)
+            (TxSize::Tx16x16, false, false, true)
+        }
+        InterTransformPlan::LosslessB8I420
+        | InterTransformPlan::LosslessB8I422
+        | InterTransformPlan::LosslessB8I444 => (TxSize::Tx8x8, false, true, false),
+        InterTransformPlan::LosslessB16I420
+        | InterTransformPlan::LosslessB16I422
+        | InterTransformPlan::LosslessB16I444 => (TxSize::Tx16x16, false, true, false),
+        InterTransformPlan::LosslessB8x16I420
+        | InterTransformPlan::LosslessB8x16I422
+        | InterTransformPlan::LosslessB8x16I444 => (TxSize::Tx8x16, false, true, false),
+        InterTransformPlan::LosslessB16x8I420
+        | InterTransformPlan::LosslessB16x8I422
+        | InterTransformPlan::LosslessB16x8I444 => (TxSize::Tx16x8, false, true, false),
+        InterTransformPlan::LosslessB4I420
+        | InterTransformPlan::LosslessB4I422
+        | InterTransformPlan::LosslessB4I444 => (TxSize::Tx4x4, false, true, false),
+        InterTransformPlan::LosslessB4x8I420
+        | InterTransformPlan::LosslessB4x8I422
+        | InterTransformPlan::LosslessB4x8I444 => (TxSize::Tx4x8, false, true, false),
+        InterTransformPlan::LosslessB8x4I420
+        | InterTransformPlan::LosslessB8x4I422
+        | InterTransformPlan::LosslessB8x4I444 => (TxSize::Tx8x4, false, true, false),
+        InterTransformPlan::LosslessB4x16I420
+        | InterTransformPlan::LosslessB4x16I422
+        | InterTransformPlan::LosslessB4x16I444 => (TxSize::Tx4x16, false, true, false),
+        InterTransformPlan::LosslessB16x4I420
+        | InterTransformPlan::LosslessB16x4I422
+        | InterTransformPlan::LosslessB16x4I444 => (TxSize::Tx16x4, false, true, false),
+        InterTransformPlan::LosslessGrid {
+            luma_width,
+            luma_height,
+            layout: plan_layout,
+        } => {
+            if plan_layout != layout
+                || (luma_width, luma_height) != node.block_size.pixel_dimensions()
+            {
+                return Ok(Err(super::block::PortableUnavailable));
             }
-            InterTransformPlan::SplitB16x64 | InterTransformPlan::SplitB16x64Deep => {
-                (TxSize::Tx16x64, true, false, false, false)
-            }
-            InterTransformPlan::SplitB64x16Topology { .. } => {
-                (TxSize::Tx64x16, true, false, false, false)
-            }
-            InterTransformPlan::SplitB64x16 | InterTransformPlan::SplitB64x16Deep => {
-                (TxSize::Tx64x16, true, false, false, false)
-            }
-            InterTransformPlan::SplitB32x64Topology { .. } => {
-                (TxSize::Tx32x64, true, false, false, false)
-            }
-            InterTransformPlan::SplitB32x64 | InterTransformPlan::SplitB32x64Deep => {
-                (TxSize::Tx32x64, true, false, false, false)
-            }
-            InterTransformPlan::SplitB64x32Topology { .. } => {
-                (TxSize::Tx64x32, true, false, false, false)
-            }
-            InterTransformPlan::SplitB64x32 | InterTransformPlan::SplitB64x32Deep => {
-                (TxSize::Tx64x32, true, false, false, false)
-            }
-            InterTransformPlan::SplitB64Deep => (TxSize::Tx64x64, true, false, false, false),
-            InterTransformPlan::SplitB16
-            | InterTransformPlan::SplitB16Deep
-            | InterTransformPlan::SplitB16Topology { .. } => {
-                (TxSize::Tx16x16, true, false, false, false)
-            }
-            InterTransformPlan::SplitB16x32
-            | InterTransformPlan::SplitB16x32Deep
-            | InterTransformPlan::SplitB16x32Topology { .. } => {
-                (TxSize::Tx16x32, true, false, false, false)
-            }
-            InterTransformPlan::SplitB32x16
-            | InterTransformPlan::SplitB32x16Deep
-            | InterTransformPlan::SplitB32x16Topology { .. } => {
-                (TxSize::Tx32x16, true, false, false, false)
-            }
-            InterTransformPlan::SplitB32
-            | InterTransformPlan::SplitB32Deep
-            | InterTransformPlan::SplitB32Topology { .. } => {
-                (TxSize::Tx32x32, true, false, false, false)
-            }
-            InterTransformPlan::SplitB64 => (TxSize::Tx64x64, true, false, false, false),
-            InterTransformPlan::SplitB64Topology { .. } => {
-                (TxSize::Tx64x64, true, false, false, false)
-            }
-            InterTransformPlan::LossyOnly4x4Grid {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx4x4, false, false, true, false)
-            }
-            InterTransformPlan::LossyColorMode0Grid {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx4x4, false, false, true, false)
-            }
-            InterTransformPlan::LossyWideMode0Grid {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx4x4, false, false, false, true)
-            }
-            InterTransformPlan::LossyWideChunked {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx64x64, false, false, false, true)
-            }
-            InterTransformPlan::LossyWideDirectChromaGrid {
-                layout: plan_layout,
-                luma_tx,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (luma_tx, false, false, false, false)
-            }
-            InterTransformPlan::LossyWideMode2Unsplit {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx64x64, false, false, false, true)
-            }
-            InterTransformPlan::LossyWideMode2Split32 {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx32x32, false, false, false, true)
-            }
-            InterTransformPlan::LossyWideMode2Deep16 {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx16x16, false, false, false, true)
-            }
-            InterTransformPlan::LossyWideMode2Mixed {
-                layout: plan_layout,
-                ..
-            } => {
-                if plan_layout != layout {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (TxSize::Tx16x16, false, false, false, true)
-            }
-            InterTransformPlan::LosslessB8I420
-            | InterTransformPlan::LosslessB8I422
-            | InterTransformPlan::LosslessB8I444 => (TxSize::Tx8x8, false, true, false, false),
-            InterTransformPlan::LosslessB16I420
-            | InterTransformPlan::LosslessB16I422
-            | InterTransformPlan::LosslessB16I444 => (TxSize::Tx16x16, false, true, false, false),
-            InterTransformPlan::LosslessB8x16I420
-            | InterTransformPlan::LosslessB8x16I422
-            | InterTransformPlan::LosslessB8x16I444 => (TxSize::Tx8x16, false, true, false, false),
-            InterTransformPlan::LosslessB16x8I420
-            | InterTransformPlan::LosslessB16x8I422
-            | InterTransformPlan::LosslessB16x8I444 => (TxSize::Tx16x8, false, true, false, false),
-            InterTransformPlan::LosslessB4I420
-            | InterTransformPlan::LosslessB4I422
-            | InterTransformPlan::LosslessB4I444 => (TxSize::Tx4x4, false, true, false, false),
-            InterTransformPlan::LosslessB4x8I420
-            | InterTransformPlan::LosslessB4x8I422
-            | InterTransformPlan::LosslessB4x8I444 => (TxSize::Tx4x8, false, true, false, false),
-            InterTransformPlan::LosslessB8x4I420
-            | InterTransformPlan::LosslessB8x4I422
-            | InterTransformPlan::LosslessB8x4I444 => (TxSize::Tx8x4, false, true, false, false),
-            InterTransformPlan::LosslessB4x16I420
-            | InterTransformPlan::LosslessB4x16I422
-            | InterTransformPlan::LosslessB4x16I444 => (TxSize::Tx4x16, false, true, false, false),
-            InterTransformPlan::LosslessB16x4I420
-            | InterTransformPlan::LosslessB16x4I422
-            | InterTransformPlan::LosslessB16x4I444 => (TxSize::Tx16x4, false, true, false, false),
-            InterTransformPlan::LosslessGrid {
-                luma_width,
-                luma_height,
-                layout: plan_layout,
-            } => {
-                if plan_layout != layout
-                    || (luma_width, luma_height) != node.block_size.pixel_dimensions()
-                {
-                    return Ok(Err(super::block::PortableUnavailable));
-                }
-                (node.block_size.maximum_luma_tx(), false, true, false, false)
-            }
-        };
+            (node.block_size.maximum_luma_tx(), false, true, false)
+        }
+    };
     let lossy_direct_chroma_grid = matches!(
         transform_plan,
         InterTransformPlan::LossyWideDirectChromaGrid { .. }
@@ -9959,21 +9705,6 @@ fn decode_inter_leaf(
             luma_height,
             ..
         } => (luma_width, luma_height),
-        InterTransformPlan::LossyOnly4x4Grid {
-            luma_width,
-            luma_height,
-            ..
-        } => (luma_width, luma_height),
-        InterTransformPlan::LossyColorMode0Grid {
-            luma_width,
-            luma_height,
-            ..
-        } => (luma_width, luma_height),
-        InterTransformPlan::LossyWideMode0Grid {
-            luma_width,
-            luma_height,
-            ..
-        } => (luma_width, luma_height),
         InterTransformPlan::LossyWideChunked {
             luma_width,
             luma_height,
@@ -10006,10 +9737,6 @@ fn decode_inter_leaf(
         } => (luma_width, luma_height),
         _ => tx_size.pixel_dimensions(),
     };
-    let lossy_color_mode0_grid = matches!(
-        transform_plan,
-        InterTransformPlan::LossyColorMode0Grid { .. }
-    );
     let mut coefficient_contexts = super::block::InterCoefficientContexts {
         above: [[0x40; 32]; 3],
         left: [[0x40; 32]; 3],
@@ -10082,7 +9809,6 @@ fn decode_inter_leaf(
         let (chroma_tx_width, chroma_tx_height) = chroma_tx.pixel_dimensions();
         let (chroma_context_width, chroma_context_height) =
             if lossless_transform
-                || lossy_transform_grid
                 || lossy_wide_chunked
                 || lossy_direct_chroma_grid
                 || split_rect64_i444_chroma_grid
@@ -10172,7 +9898,7 @@ fn decode_inter_leaf(
     let luma_block_height = usize::try_from(node.block_size.pixel_dimensions().1)
         .map_err(|_| malformed("inter luma block height exceeds usize"))?;
     let (luma_txb_skipped, transform) =
-        if transform_split || lossless_transform || lossy_transform_grid || lossy_wide_chunked {
+        if transform_split || lossless_transform || lossy_wide_chunked {
             (true, super::block::Av1TransformType::DctDct)
         } else {
             let txb_skipped = block_decoder
@@ -10343,10 +10069,6 @@ fn decode_inter_leaf(
         } else {
             None
         };
-        let mode0 = matches!(
-            transform_plan,
-            InterTransformPlan::LossyWideMode0Grid { .. }
-        );
         let split32 = matches!(
             transform_plan,
             InterTransformPlan::LossyWideMode2Split32 { .. }
@@ -10404,7 +10126,6 @@ fn decode_inter_leaf(
                 block_skipped,
                 coefficient_contexts,
                 &mut decode_transform_type,
-                mode0,
                 mode2,
                 split32,
                 deep16,
@@ -10428,70 +10149,12 @@ fn decode_inter_leaf(
                 filters,
                 coefficient_contexts,
                 &mut decode_transform_type,
-                mode0,
                 mode2,
                 split32,
                 deep16,
                 topology,
                 wide_sampling,
                 wide_obmc,
-            )
-        }
-    } else if lossy_color_mode0_grid {
-        let sampling = block_chroma_sampling
-            .ok_or_else(|| malformed("inter color mode-0 chroma sampling is unavailable"))?;
-        let decode_transform_type = |decoder: &mut RangeDecoder<'_, '_, '_>, tx_size: TxSize| {
-            decode_inter_transform_type(
-                decoder,
-                cdfs,
-                tx_size,
-                context.frame_tools.reduced_transform_set,
-                quantization.segment_lossless,
-            )
-            .map_err(|_| super::block::PortableUnavailable)
-        };
-        if compound {
-            let second = second_state
-                .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
-            block_decoder.decode_inter_compound_translation_lossy_color_mode0_grid(
-                decoder,
-                node.block_size,
-                visible_width,
-                visible_height,
-                prepared_quantization,
-                tools,
-                [first_state.surface, second.surface],
-                [first_state.scale, second.scale],
-                context.tile_origin_b4_x.saturating_add(node.x),
-                context.tile_origin_b4_y.saturating_add(node.y),
-                motions,
-                compound_blend.ok_or_else(|| malformed("compound blend is missing"))?,
-                filters,
-                coefficient_contexts,
-                block_skipped,
-                sampling,
-                decode_transform_type,
-            )
-        } else {
-            block_decoder.decode_inter_translation_lossy_color_mode0_grid(
-                decoder,
-                node.block_size,
-                visible_width,
-                visible_height,
-                block_skipped,
-                prepared_quantization,
-                tools,
-                first_state.surface,
-                first_state.scale,
-                context.tile_origin_b4_x.saturating_add(node.x),
-                context.tile_origin_b4_y.saturating_add(node.y),
-                motions[0],
-                filters,
-                coefficient_contexts,
-                sampling,
-                decode_transform_type,
-                obmc,
-                inter_intra,
             )
         }
     } else if lossy_direct_chroma_grid {
@@ -10541,59 +10204,6 @@ fn decode_inter_leaf(
                 block_chroma_sampling
                     .ok_or_else(|| malformed("inter direct chroma sampling is unavailable"))?,
                 coefficient_contexts,
-                obmc,
-                inter_intra,
-            )
-        }
-    } else if lossy_transform_grid {
-        let decode_transform_type = |decoder: &mut RangeDecoder<'_, '_, '_>, tx_size: TxSize| {
-            decode_inter_transform_type(
-                decoder,
-                cdfs,
-                tx_size,
-                context.frame_tools.reduced_transform_set,
-                quantization.segment_lossless,
-            )
-            .map_err(|_| super::block::PortableUnavailable)
-        };
-        if compound {
-            let second = second_state
-                .ok_or_else(|| malformed("compound reconstruction omits second reference"))?;
-            block_decoder.decode_inter_compound_translation_lossy_only_4x4_grid(
-                decoder,
-                node.block_size,
-                visible_width,
-                visible_height,
-                prepared_quantization,
-                tools,
-                [first_state.surface, second.surface],
-                [first_state.scale, second.scale],
-                context.tile_origin_b4_x.saturating_add(node.x),
-                context.tile_origin_b4_y.saturating_add(node.y),
-                motions,
-                compound_blend.ok_or_else(|| malformed("compound blend is missing"))?,
-                filters,
-                coefficient_contexts,
-                block_skipped,
-                decode_transform_type,
-            )
-        } else {
-            block_decoder.decode_inter_translation_lossy_only_4x4_grid(
-                decoder,
-                node.block_size,
-                visible_width,
-                visible_height,
-                block_skipped,
-                prepared_quantization,
-                tools,
-                first_state.surface,
-                first_state.scale,
-                context.tile_origin_b4_x.saturating_add(node.x),
-                context.tile_origin_b4_y.saturating_add(node.y),
-                motions[0],
-                filters,
-                coefficient_contexts,
-                decode_transform_type,
                 obmc,
                 inter_intra,
             )
@@ -10745,9 +10355,11 @@ impl Lossy420Reconstruction {
     pub(super) fn into_filtered_leaf(
         self,
         striped_restoration: Option<(RestorationPlan, super::sample_depth::SampleDepth)>,
-    ) -> Av1Result<super::block::FirstLeaf> {
+    ) -> Av1Result<FilteredColorLeaf> {
         let Lossy420Reconstruction {
             mut leaf,
+            source_width,
+            source_height,
             monochrome,
             subsampling_x,
             subsampling_y,
@@ -10765,9 +10377,15 @@ impl Lossy420Reconstruction {
                 "monochrome reconstruction cannot enter the color filter path",
             ));
         }
-        let mut canvas =
-            super::raster::FrameCanvas::new(leaf.width, leaf.height, subsampling_x, subsampling_y)?;
-        canvas.place_planes(leaf.width, leaf.height, &leaf.planes, 0, 0)?;
+        let mut canvas = super::raster::FrameCanvas::new_padded(
+            leaf.width,
+            leaf.height,
+            source_width,
+            source_height,
+            subsampling_x,
+            subsampling_y,
+        )?;
+        canvas.place_planes(source_width, source_height, &leaf.planes, 0, 0)?;
         if let Some((plan, depth)) = striped_restoration {
             let deblocked = canvas.finish_with_filters(
                 loop_parameters,
@@ -10794,16 +10412,21 @@ impl Lossy420Reconstruction {
                 &cdef_indices,
                 &cdef_active,
             )?;
-            return super::restoration::restore_striped_leaf(
+            leaf = super::restoration::restore_striped_leaf(
                 leaf,
                 &deblocked,
                 plan,
                 depth,
                 subsampling_x,
                 subsampling_y,
-            );
+            )?;
+            return Ok(FilteredColorLeaf {
+                leaf,
+                source_width,
+                source_height,
+            });
         }
-        leaf.planes = canvas.finish_with_filters(
+        leaf.planes = canvas.finish_with_filters_preserving_padding(
             loop_parameters,
             &filter_blocks,
             None,
@@ -10812,7 +10435,11 @@ impl Lossy420Reconstruction {
             &cdef_indices,
             &cdef_active,
         )?;
-        Ok(leaf)
+        Ok(FilteredColorLeaf {
+            leaf,
+            source_width,
+            source_height,
+        })
     }
 
     /// Extract a complete monochrome plane from the shared walker result.
@@ -12025,6 +11652,9 @@ pub(super) fn validate_complete_lossy_420_partition(
                         .tile_origin_b4_y
                         .checked_add(node.y)
                         .ok_or_else(|| malformed("intraBC absolute y coordinate overflows"))?;
+                    let row_in_tile = absolute_y_b4
+                        .checked_sub(context.tile_origin_b4_y)
+                        .ok_or_else(|| malformed("intraBC block precedes its tile"))?;
                     let request = ReferenceMvRequest {
                         target: ReferenceMvTarget::IntraBc,
                         block_size: BlockSize::B8x8,
@@ -12050,10 +11680,6 @@ pub(super) fn validate_complete_lossy_420_partition(
                         temporal: None,
                     };
                     let stack = find_reference_mvs(&tile_state, request)?;
-                    let row_in_superblock = node
-                        .y
-                        .checked_sub(root_y)
-                        .ok_or_else(|| malformed("intraBC block precedes its superblock"))?;
                     let mut motion_vector = stack
                         .slot(0)
                         .map(|candidate| candidate.vectors[0])
@@ -12065,7 +11691,7 @@ pub(super) fn validate_complete_lossy_420_partition(
                                 .filter(|vector| *vector != MotionVector::ZERO)
                         })
                         .unwrap_or({
-                            if row_in_superblock < 16 {
+                            if row_in_tile < 16 {
                                 MotionVector { y: 0, x: -2560 }
                             } else {
                                 MotionVector { y: -512, x: 0 }
@@ -12187,7 +11813,13 @@ pub(super) fn validate_complete_lossy_420_partition(
                 };
                 let decoded = match decoded {
                     Ok(decoded) => decoded,
-                    Err(_) => {
+                    Err(error) => {
+                        if cfg!(debug_assertions) {
+                            eprintln!(
+                                "AV1 sequence debug: unsupported block ({}, {}) {:?}: {:?}",
+                                node.x, node.y, syntax_block_size, error
+                            );
+                        }
                         unsupported = true;
                         return Ok(PartitionVisitControl::Stop);
                     }
@@ -12359,7 +11991,11 @@ pub(super) fn validate_complete_lossy_420_partition(
             } else {
                 None
             };
-        let plane = if let Some(plan) = striped_plan {
+        let plane = if !context.single_tile && cdef_frame_parameters.is_some() {
+            let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
+                .ok_or_else(|| malformed("monochrome CDEF sample depth is unsupported"))?;
+            canvas.finish_monochrome_coded(depth)?
+        } else if let Some(plan) = striped_plan {
             let depth = super::sample_depth::SampleDepth::new(context.bit_depth)
                 .ok_or_else(|| malformed("monochrome restoration sample depth is unsupported"))?;
             if plan.units[1].is_some() || plan.units[2].is_some() {
@@ -12504,7 +12140,12 @@ pub(super) fn validate_complete_lossy_420_partition(
         let planes = [plane, empty_plane.clone(), empty_plane];
         (planes, true)
     } else {
-        (canvas.finish()?, false)
+        let planes = if context.superres_enabled {
+            canvas.finish_preserving_padding()?
+        } else {
+            canvas.finish()?
+        };
+        (planes, false)
     };
     if !segment_updates.is_empty() {
         let map = current_segment_map
@@ -12589,6 +12230,16 @@ pub(super) fn validate_complete_lossy_420_partition(
     };
     Ok(Some(Lossy420Reconstruction {
         leaf,
+        source_width: if context.superres_enabled && !context.monochrome {
+            padded_width
+        } else {
+            context.frame_width
+        },
+        source_height: if context.superres_enabled && !context.monochrome {
+            padded_height
+        } else {
+            context.frame_height
+        },
         monochrome,
         subsampling_x: context.subsampling_x,
         subsampling_y: context.subsampling_y,
@@ -12715,9 +12366,10 @@ fn bounded_restoration_geometry(context: &FirstBlockContext) -> bool {
 
 /// Shared bounded I420 restoration admission. Screen-enabled intra leaves may
 /// decode palette prediction; inter leaves use force-integer MV precision.
-/// Frame-level skip mode is admitted only with transform mode 1 because this
-/// legacy path cannot materialize the transform-mode-0 TX4x4 extent. IntraBC
-/// and intra/palette blocks within inter frames remain outside the profile.
+/// Frame-level skip mode is restricted to transform mode 1 in this profile;
+/// transform-mode-2 skip trees are outside the bounded restoration proof.
+/// IntraBC and intra/palette blocks within inter frames remain outside the
+/// profile.
 /// Restoration consumes only completed post-CDEF samples.
 fn bounded_restoration_common(context: &FirstBlockContext) -> bool {
     context.bit_depth == 8
@@ -12874,9 +12526,8 @@ fn complete_inter_420_reconstruction_context(
         && (context.superres_enabled || context.upscaled_width == context.frame_width)
         && !context.monochrome
         && !context.all_lossless
-        && (!context.skip_mode_enabled || matches!(context.frame_tools.transform_mode, 1 | 2))
         && !context.allow_intrabc
-        && matches!(context.frame_tools.transform_mode, 0..=2)
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && (inter_cdef_supported(context) || neutral_padded_i420_cdef_supported(context))
         && (context.restoration_types == [None; 3]
             || active_restoration
@@ -13781,11 +13432,10 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// depth-parametric motion-compensation core. Single-reference inter-intra is
 /// materialized for all three layouts; bounded depth-matched I422/I444 remains
 /// on its separate closed predicates when the generic profile does not apply.
-/// TX_MODE_ONLY_4X4 is admitted only through the
-/// explicit bounded I420/color grids and 64-pixel wide mode-0 compositor.
-/// The block engine retains samples in `u16`, but
-/// its inter path is intentionally limited to whole 8..=32-pixel transforms,
-/// plus exact 64-pixel mode-0 chunk roots and B8x8/B16x16/B32x32 mode-2
+/// Frame transform mode 0 is lossless-only and uses the dedicated lossless
+/// path. The block engine retains samples in `u16`, but its inter path is
+/// intentionally limited to whole 8..=32-pixel transforms and
+/// B8x8/B16x16/B32x32 mode-2
 /// splits in the supported 4:2:0/4:2:2/4:4:4 layouts and the exact B64x64
 /// mode-2 split whose
 /// TX4x4/TX8x8/TX16x16/TX32x32 luma terminals plus TX32x32 chroma grid are
@@ -13793,8 +13443,7 @@ fn complete_superres_lossy_444_intra_reconstruction_context(context: &FirstBlock
 /// Screen-content-enabled inter leaves are admitted through the parsed
 /// force-integer-MV precision path; intra blocks (including palette) and
 /// intraBC remain outside this profile. Frame-level skip mode is supported on
-/// transform modes 1/2 with fixed nearest-nearest average prediction; mode 0
-/// wide chunks retain their per-terminal skip syntax.
+/// transform modes 1/2 with fixed nearest-nearest average prediction.
 /// Update-map post-skip segmentation is admitted only for ALT_Q-only segments.
 /// TX_MODE_SELECT is admitted for an unsplit root and the exact B8x8 2x2
 /// TX4x4, B16x16 2x2 TX8x8, B32x32 2x2 TX16x16, or B64x64 2x2 TX32x32 split;
@@ -13965,10 +13614,9 @@ fn complete_high_depth_inter_reconstruction_context(
             || mixed_lossless_superres_restoration_postfilter
             || mixed_lossless_superres_restoration_postfilter_film_grain
             || mixed_lossless_superres_restoration)
-        // TX_MODE_ONLY_4X4 is depth-independent; the explicit bounded I420
-        // and color grids plus the wide mode-0 plan consume its high-depth
-        // raster without weakening unrelated single-terminal geometry.
-        && matches!(context.frame_tools.transform_mode, 0..=2)
+        // Lossy high-depth inter syntax uses TX_MODE_SELECT or
+        // TX_MODE_LARGEST; ONLY_4X4 belongs to the separate lossless path.
+        && matches!(context.frame_tools.transform_mode, 1 | 2)
         && !context.frame_tools.reduced_transform_set
         && context.frame_tools.quantization.is_some()
         && complete_high_depth_loop_filter_supported(context)
@@ -17570,14 +17218,21 @@ fn complete_monochrome_lossy_common(context: &FirstBlockContext) -> bool {
 }
 
 fn complete_monochrome_lossy_base(context: &FirstBlockContext) -> bool {
+    complete_monochrome_lossy_base_with_partial_edges(context, false)
+}
+
+fn complete_monochrome_lossy_base_with_partial_edges(
+    context: &FirstBlockContext,
+    allow_partial_visible_edges: bool,
+) -> bool {
     let padded_block_width = context.frame_width.div_ceil(8).checked_mul(2);
     let padded_block_height = context.frame_height.div_ceil(8).checked_mul(2);
     let dimensions_are_supported = context.frame_width >= 4
         && context.frame_height >= 4
         && context.frame_width <= 128
         && context.frame_height <= 128
-        && context.frame_width.is_multiple_of(4)
-        && context.frame_height.is_multiple_of(4)
+        && (allow_partial_visible_edges
+            || (context.frame_width.is_multiple_of(4) && context.frame_height.is_multiple_of(4)))
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && context.upscaled_width == context.frame_width;
@@ -17942,16 +17597,14 @@ fn complete_monochrome_single_tile_loop_restoration_reconstruction_context(
 /// reconstructed plane and local CDEF maps until `frame.rs` has assembled the
 /// full frame; applying CDEF here would make samples at a tile boundary depend
 /// on the tile partition rather than on the normative frame-wide source.
-/// Active restoration, film grain, and partial visible 8x8 blocks stay outside
-/// this tranche so the existing single-tile post-filter ordering remains
-/// unchanged.
+/// Rounded tile storage preserves samples beyond a partial visible edge until
+/// frame-wide CDEF completes; restoration and film grain remain outside this
+/// tranche so single-tile post-filter ordering stays unchanged.
 fn complete_monochrome_multitile_cdef_reconstruction_context(context: &FirstBlockContext) -> bool {
-    complete_monochrome_lossy_base(context)
+    complete_monochrome_lossy_base_with_partial_edges(context, true)
         && !context.single_tile
         && context.frame_width >= 8
         && context.frame_height >= 8
-        && context.frame_width.is_multiple_of(8)
-        && context.frame_height.is_multiple_of(8)
         && context.frame_tools.cdef.is_some()
         && complete_monochrome_cdef_supported(context)
         && !context.frame_tools.restoration_present
@@ -18009,9 +17662,12 @@ fn complete_monochrome_multitile_loop_filter_reconstruction_context(
 
 /// Admit the combined luma deblocking and CDEF profile for independently
 /// decoded monochrome tiles. Both filters are collected per tile but run once
-/// over the assembled frame in normative deblock-then-CDEF order. Keep this
-/// predicate distinct from the single-filter profiles so a frame cannot enter
-/// the shared direct-finish path with an incomplete ordering plan.
+/// over the assembled frame in normative deblock-then-CDEF order. Partial
+/// visible edge blocks retain their coded padding through both filters.
+/// Delta-Q is consumed by the tile-local block walker before coefficients are
+/// reconstructed, so the assembled samples already reflect their effective
+/// superblock quantizer. Delta-LF remains excluded because its filter-strength
+/// deltas are not materialized by this profile.
 fn complete_monochrome_multitile_loop_cdef_reconstruction_context(
     context: &FirstBlockContext,
 ) -> bool {
@@ -18021,8 +17677,6 @@ fn complete_monochrome_multitile_loop_cdef_reconstruction_context(
         && context.frame_height >= 8
         && context.frame_width <= 128
         && context.frame_height <= 128
-        && context.frame_width.is_multiple_of(8)
-        && context.frame_height.is_multiple_of(8)
         && padded_block_width == Some(context.block_width)
         && padded_block_height == Some(context.block_height)
         && context.upscaled_width == context.frame_width;
@@ -18036,7 +17690,6 @@ fn complete_monochrome_multitile_loop_cdef_reconstruction_context(
         && !context.frame_tools.segment_lossless
         && !context.skip_mode_enabled
         && !context.allow_intrabc
-        && !context.frame_tools.delta_q_present
         && !context.frame_tools.delta_lf_present
         && matches!(context.frame_tools.transform_mode, 1 | 2)
         && context.frame_tools.quantization.is_some()
@@ -18657,8 +18310,8 @@ fn lossless_nonsuperres_inter_restoration_supported(
 /// is assembled. A restoration header is allowed to be present when every
 /// plane type is `NONE`; the bounded single-tile color helper below also
 /// admits one active Wiener/SGR unit per selected plane. Super-resolution
-/// film grain is synthesized on the post-resize display leaf for I420/I422;
-/// I444 keeps the shared bounded display-dimension whitelist.
+/// film grain is synthesized on the post-resize display leaf; I444 uses the
+/// shared bounded display-dimension whitelist in both display paths.
 fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool {
     let Some(layout) = PixelLayout::from_sequence(
         context.monochrome,
@@ -18684,6 +18337,8 @@ fn complete_streamed_lossless_color_context(context: &FirstBlockContext) -> bool
         && resize_geometry_supported;
     let film_grain_supported = if context.superres_enabled {
         superres_color_film_grain_supported(context, layout)
+    } else if layout == PixelLayout::I444 {
+        bounded_i444_film_grain_supported(context)
     } else {
         no_unsupported_film_grain(context)
     };
@@ -18801,8 +18456,9 @@ fn complete_bounded_monochrome_intrabc_context(context: &FirstBlockContext) -> b
         && context.level == 1
         && matches!(context.bit_depth, 8 | 10 | 12)
         && !context.superres_enabled
-        && !context.subsampling_x
-        && !context.subsampling_y
+        // AV1 infers both flags as true for monochrome sequence headers.
+        && context.subsampling_x
+        && context.subsampling_y
         && context.all_lossless
         && context.frame_tools.segment_lossless
         && context.frame_tools.segment_qindex == 0
@@ -19126,6 +18782,10 @@ fn complete_lossless_inter_color_reconstruction_context(
         );
     let film_grain_supported = if superres_color {
         superres_color_film_grain_supported(context, layout)
+    } else if layout == PixelLayout::I444 {
+        // Full-resolution I444 keeps bounded display-only grain support even
+        // when its decoded reference samples are lossless.
+        bounded_i444_film_grain_supported(context)
     } else {
         !context.frame_tools.film_grain_present
     };
@@ -19879,6 +19539,8 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
                     | GlobalMotionType::Affine
             )
     });
+    // The frame header permits local-warp syntax; `decode_inter_leaf` checks
+    // whether each block actually selects a supported motion mode and geometry.
     !context.intra_frame
         && matches!(context.bit_depth, 10 | 12)
         && matches!(
@@ -19901,7 +19563,6 @@ fn complete_high_depth_lossless_inter_reconstruction_context(
         && !context.allow_intrabc
         && !context.skip_mode_enabled
         && inter_context.skip_mode_references.is_none()
-        && !inter_context.allow_warped_motion
         && context.frame_tools.cdef.is_none()
         && restoration_supported
         && film_grain_supported
@@ -21391,82 +21052,6 @@ fn monochrome_neighbors<'a>(
     })
 }
 
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_partition_walker_paths() {
-    for symbol in 0..=10 {
-        let kind = PartitionKind::from_symbol(symbol);
-        if let Ok(kind) = kind {
-            let _ = (kind.symbol(), kind.is_recursive());
-        }
-    }
-
-    let mut contexts = PartitionContexts {
-        origin_x: 1,
-        origin_y: 1,
-        above: vec![0; 32],
-        left: vec![0; 32],
-    };
-    let _ = contexts.cell(0, 1);
-    let _ = contexts.cell(100, 1);
-    let _ = contexts.context(5, 1, 1);
-    let _ = contexts.record(0, PartitionKind::Split, 1, 1, 2, 2);
-    let _ = contexts.record(1, PartitionKind::None, 1, 1, 2, 2);
-
-    let inputs = [0_u8, 1, 0x3f, 0x55, 0x80, 0xaa, 0xff];
-    for (width, height, level, monochrome, subsampling_y) in [
-        (32, 32, 0, false, false),
-        (32, 8, 1, true, false),
-        (8, 32, 1, true, true),
-        (8, 8, 1, false, true),
-        (4, 4, 4, false, true),
-    ] {
-        let mut context = coverage_context();
-        context.block_width = width;
-        context.block_height = height;
-        context.level = level;
-        context.monochrome = monochrome;
-        context.subsampling_y = subsampling_y;
-        for fill in inputs {
-            let input = [fill; 256];
-            let spans = [super::super::samples::ByteSpan {
-                start: 0,
-                end: input.len(),
-            }];
-            let data = crate::coverage_support::require_ok(
-                SegmentedData::new(&input, &spans),
-                "coverage fixture: SegmentedData::new(&input, &spans)",
-            );
-            let mut decoder = crate::coverage_support::require_ok(
-                RangeDecoder::new(&data, 0, input.len(), false),
-                "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
-            );
-            let _ = walk_partition_until_stop(&mut decoder, &context, |_decoder, _node| {
-                Ok(PartitionVisitControl::Continue)
-            });
-        }
-    }
-
-    let mut invalid = coverage_context();
-    invalid.level = 5;
-    let input = [0_u8; 32];
-    let spans = [super::super::samples::ByteSpan {
-        start: 0,
-        end: input.len(),
-    }];
-    let data = crate::coverage_support::require_ok(
-        SegmentedData::new(&input, &spans),
-        "coverage fixture: SegmentedData::new(&input, &spans)",
-    );
-    let mut decoder = crate::coverage_support::require_ok(
-        RangeDecoder::new(&data, 0, input.len(), false),
-        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
-    );
-    let _ = walk_partition_until_stop(&mut decoder, &invalid, |_decoder, _node| {
-        Ok(PartitionVisitControl::Continue)
-    });
-}
-
 // ✅ VERIFIED: dav1d 1.5.3 src/env.h:93-121.
 fn left_partition_probability(cdf: &[u16; 10], level: u32) -> u32 {
     let mut probability = u32::from(cdf[0])
@@ -21709,12 +21294,6 @@ fn closed_lossy_420_16x16_vertical_pair_context(context: &FirstBlockContext) -> 
         & (context.level == 3)
         & (context.block_width == 4)
         & (context.block_height == 4)
-        & (context.frame_width == 16)
-        & (context.frame_height == 16)
-}
-
-fn closed_lossy_420_square_split_context(context: &FirstBlockContext) -> bool {
-    closed_lossy_420_frame_context(context)
         & (context.frame_width == 16)
         & (context.frame_height == 16)
 }
@@ -22407,47 +21986,6 @@ pub(super) fn validate_first_partition(
                     );
                     return finish_closed_leaf(&decoder, reconstructed);
                 }
-                let reconstruct_lossy_420_square_split = (partition == 3)
-                    & closed_lossy_420_square_split_context(context)
-                    & (level == 3);
-                if reconstruct_lossy_420_square_split {
-                    // The safe lossy square path consumes all four terminal
-                    // payloads with one adaptive state. It is deliberately
-                    // gated to the checked 16x16 frame context until a wider
-                    // frame-canvas proof supplies all edge and filter state.
-                    let (mut child_cdf, child_symbol_count_minus_one) = square8_partition_cdf();
-                    if decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one) != 0 {
-                        return Ok(None);
-                    }
-                    let quantization = lossy_quantization_for_context(context)?;
-                    let reconstructed = super::block::decode_four_lossy_420_leaves(
-                        &mut decoder,
-                        context.frame_width,
-                        context.frame_height,
-                        quantization,
-                        super::block::BlockTools {
-                            sample_depth: super::sample_depth::SampleDepth::new(context.bit_depth)
-                                .ok_or_else(|| {
-                                    malformed("AV1 block sample depth is unsupported")
-                                })?,
-                            allow_screen_content_tools: context.allow_screen_content_tools,
-                            enable_filter_intra: context.enable_filter_intra,
-                            enable_intra_edge_filter: context.enable_intra_edge_filter,
-                            transform_mode: context.frame_tools.transform_mode,
-                            transform_context: 0,
-                            skip_context: 0,
-                            suppress_delta_q_when_skipped: false,
-                            palette_context: Default::default(),
-                        },
-                        |decoder| {
-                            (decoder.adaptive_symbol(&mut child_cdf, child_symbol_count_minus_one)
-                                == 0)
-                                .then_some(())
-                                .ok_or(super::block::PortableUnavailable)
-                        },
-                    );
-                    return finish_closed_leaf(&decoder, reconstructed);
-                }
                 let reconstruct_lossy_420_16x16_vertical_pair =
                     (partition == 2) & closed_lossy_420_16x16_vertical_pair_context(context);
                 if reconstruct_lossy_420_16x16_vertical_pair {
@@ -22698,7 +22236,6 @@ pub(super) fn validate_first_partition(
 }
 
 #[cfg(coverage)]
-#[coverage(off)]
 pub(super) fn reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>> {
     const INPUT: [u8; 32] = [
         0x00, 0xff, 0x81, 0x7e, 0x55, 0xaa, 0x13, 0xec, 0x42, 0xbd, 0x99, 0x66, 0x01, 0x80, 0xfe,
@@ -22889,8 +22426,7 @@ pub(super) fn reference_trace() -> CodecResult<Vec<crate::Av1EntropyTraceState>>
     Ok(records)
 }
 
-#[cfg(any(test, coverage))]
-#[cfg_attr(coverage, coverage(off))]
+#[cfg(test)]
 fn coverage_context() -> FirstBlockContext {
     FirstBlockContext {
         disable_cdf_update: false,
@@ -22949,246 +22485,6 @@ fn coverage_context() -> FirstBlockContext {
             segmentation: SegmentationContext::DISABLED,
         },
     }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_restoration_and_partition_paths() {
-    let input = [0_u8; 64];
-    let spans = [super::super::samples::ByteSpan {
-        start: 0,
-        end: input.len(),
-    }];
-    let data = crate::coverage_support::require_ok(
-        SegmentedData::new(&input, &spans),
-        "coverage fixture: SegmentedData::new(&input, &spans)",
-    );
-
-    let mut maximum_token = 0;
-    for fill in 0..=u8::MAX {
-        let input = [fill; 64];
-        let spans = [crate::codecs::avif::samples::ByteSpan {
-            start: 0,
-            end: input.len(),
-        }];
-        let data = crate::coverage_support::require_ok(
-            SegmentedData::new(&input, &spans),
-            "coverage fixture: SegmentedData::new(&input, &spans)",
-        );
-        let mut decoder = crate::coverage_support::require_ok(
-            RangeDecoder::new(&data, 0, input.len(), false),
-            "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
-        );
-        let mut cdf = [24_576, 16_384, 8192, 0];
-        maximum_token = maximum_token.max(decoder.high_token(&mut cdf));
-        for frame_type in [
-            RestorationType::Switchable,
-            RestorationType::Wiener,
-            RestorationType::SgrProjection,
-        ] {
-            for plane in 0..=1 {
-                let mut decoder = crate::coverage_support::require_ok(
-                    RangeDecoder::new(&data, 0, input.len(), false),
-                    "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
-                );
-                let mut cdfs = RestorationCdfs::defaults();
-                let mut reference = RestorationReference::defaults();
-                let _ = decode_restoration_unit(
-                    &mut decoder,
-                    &mut cdfs,
-                    &mut reference,
-                    plane,
-                    frame_type,
-                );
-            }
-        }
-    }
-    assert!(maximum_token >= 12);
-
-    let mut context = coverage_context();
-    context.restoration_types[0] = Some(RestorationType::Wiener);
-    context.restoration_unit_size_log2[0] = 3;
-    context.block_y = 1;
-    assert_eq!(
-        restoration_unit_starts_at_first_block(&context, 0),
-        Some(false)
-    );
-    context.restoration_unit_size_log2[0] = 3;
-    context.block_y = 2;
-    context.frame_height = 8;
-    assert_eq!(
-        restoration_unit_starts_at_first_block(&context, 0),
-        Some(false)
-    );
-    context.restoration_unit_size_log2[0] = 3;
-    context.block_y = 2;
-    context.frame_height = 64;
-    assert_eq!(
-        restoration_unit_starts_at_first_block(&context, 0),
-        Some(true)
-    );
-    context.block_y = 0;
-    context.frame_height = 64;
-    context.upscaled_width = 65;
-    assert_eq!(restoration_unit_starts_at_first_block(&context, 0), None);
-    context.upscaled_width = 64;
-    context.restoration_unit_size_log2[0] = 3;
-    context.block_x = 1;
-    assert_eq!(
-        restoration_unit_starts_at_first_block(&context, 0),
-        Some(false)
-    );
-    context.restoration_unit_size_log2[0] = 4;
-    context.block_x = 2;
-    context.frame_width = 8;
-    context.upscaled_width = 8;
-    assert_eq!(
-        restoration_unit_starts_at_first_block(&context, 0),
-        Some(false)
-    );
-    context.restoration_unit_size_log2[0] = 3;
-    context.block_x = 2;
-    context.frame_width = 64;
-    context.upscaled_width = 64;
-    assert_eq!(
-        restoration_unit_starts_at_first_block(&context, 0),
-        Some(true)
-    );
-    context.block_x = 0;
-    context.frame_width = 64;
-    context.upscaled_width = 64;
-    assert_eq!(
-        restoration_unit_starts_at_first_block(&context, 0),
-        Some(true)
-    );
-    let mut active_prefix = coverage_context();
-    active_prefix.restoration_types[0] = Some(RestorationType::Wiener);
-    active_prefix.restoration_unit_size_log2[0] = 3;
-    let mut decoder = crate::coverage_support::require_ok(
-        RangeDecoder::new(&data, 0, input.len(), false),
-        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
-    );
-    assert!(decode_restoration_prefix(&mut decoder, &active_prefix));
-    active_prefix.block_y = 1;
-    let mut decoder = crate::coverage_support::require_ok(
-        RangeDecoder::new(&data, 0, input.len(), false),
-        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
-    );
-    assert!(decode_restoration_prefix(&mut decoder, &active_prefix));
-    active_prefix.block_y = 0;
-    active_prefix.upscaled_width = 65;
-    let mut decoder = crate::coverage_support::require_ok(
-        RangeDecoder::new(&data, 0, input.len(), false),
-        "coverage fixture: RangeDecoder::new(&data, 0, input.len(), false)",
-    );
-    assert!(!decode_restoration_prefix(&mut decoder, &active_prefix));
-    assert_eq!(
-        validate_first_partition(&data, 0..input.len(), &active_prefix),
-        Ok(None)
-    );
-
-    assert!(default_partition_cdf(5).is_err());
-    let cdf = crate::coverage_support::require_ok(
-        default_partition_cdf(0),
-        "coverage fixture: default_partition_cdf(0)",
-    )
-    .0;
-    let _ = left_partition_probability(&cdf, 0);
-    let _ = top_partition_probability(&cdf, 0);
-
-    const FORBIDDEN_422: [u8; 77] = [
-        0xf8, 0x3f, 0x9f, 0xfd, 0x73, 0xc0, 0x2f, 0xa5, 0x59, 0x48, 0xfa, 0xc5, 0xe5, 0x74, 0x87,
-        0x85, 0xca, 0xc6, 0x00, 0x81, 0x5d, 0xa5, 0x3a, 0x6e, 0xfa, 0xf3, 0x7c, 0x24, 0x18, 0x0b,
-        0xfc, 0x69, 0x2c, 0x41, 0x07, 0x3b, 0x72, 0x2e, 0xcf, 0xff, 0xb0, 0x2a, 0x3b, 0x55, 0x45,
-        0x22, 0x47, 0xbb, 0x8c, 0x3c, 0x03, 0xb2, 0x19, 0xe9, 0xdf, 0x68, 0xca, 0xf0, 0x15, 0x6e,
-        0xc0, 0xe7, 0x9d, 0x21, 0xff, 0x54, 0xf6, 0xce, 0x30, 0x93, 0x63, 0x6f, 0x59, 0x97, 0x89,
-        0xba, 0x72,
-    ];
-    let spans = [super::super::samples::ByteSpan {
-        start: 0,
-        end: FORBIDDEN_422.len(),
-    }];
-    let forbidden_data = crate::coverage_support::require_ok(
-        SegmentedData::new(&FORBIDDEN_422, &spans),
-        "coverage fixture: SegmentedData::new(&FORBIDDEN_422, &spans)",
-    );
-    assert!(
-        validate_first_partition(&forbidden_data, 0..FORBIDDEN_422.len(), &coverage_context(),)
-            .is_err()
-    );
-
-    let mut horizontal_only = coverage_context();
-    horizontal_only.block_height = 8;
-    horizontal_only.monochrome = true;
-    let mut vertical_only = coverage_context();
-    vertical_only.block_width = 8;
-    let mut horizontal_422 = coverage_context();
-    horizontal_422.block_height = 8;
-    let mut vertical_444 = coverage_context();
-    vertical_444.block_width = 8;
-    vertical_444.subsampling_x = false;
-    let mut vertical_420 = coverage_context();
-    vertical_420.block_width = 8;
-    vertical_420.subsampling_y = true;
-    let mut accepted_vertical = false;
-    let mut rejected_vertical = false;
-    for fill in 0..=u8::MAX {
-        let input = [fill; 64];
-        let spans = [super::super::samples::ByteSpan {
-            start: 0,
-            end: input.len(),
-        }];
-        let data = crate::coverage_support::require_ok(
-            SegmentedData::new(&input, &spans),
-            "coverage fixture: SegmentedData::new(&input, &spans)",
-        );
-        let _ = validate_first_partition(&data, 0..input.len(), &horizontal_only);
-        let _ = validate_first_partition(&data, 0..input.len(), &horizontal_422);
-        let _ = validate_first_partition(&data, 0..input.len(), &vertical_444);
-        let _ = validate_first_partition(&data, 0..input.len(), &vertical_420);
-        if validate_first_partition(&data, 0..input.len(), &vertical_only).is_ok() {
-            accepted_vertical = true;
-        } else {
-            rejected_vertical = true;
-        }
-    }
-    assert!(accepted_vertical && rejected_vertical);
-
-    let mut no_partition = coverage_context();
-    no_partition.level = 4;
-    no_partition.block_width = 0;
-    no_partition.block_height = 0;
-    assert!(validate_first_partition(&data, 0..input.len(), &no_partition).is_err());
-    let mut invalid_level = coverage_context();
-    invalid_level.level = 5;
-    let _ = validate_first_partition(&data, 0..input.len(), &invalid_level);
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(super) fn __coverage_exercise_private_branches() {
-    let empty_spans = [];
-    let empty = crate::coverage_support::require_ok(
-        SegmentedData::new(&[], &empty_spans),
-        "coverage fixture: SegmentedData::new(&[], &empty_spans)",
-    );
-    let _ = RangeDecoder::new(&empty, 1, 0, false);
-    let _ = RangeDecoder::new(&empty, 0, 1, false);
-    // Deliberately reversed bounds exercise the malformed-partition path.
-    let reversed = std::ops::Range { start: 1, end: 0 };
-    let _ = validate_first_partition(&empty, reversed, &coverage_context());
-    let mut frozen = crate::coverage_support::require_ok(
-        RangeDecoder::new(&empty, 0, 0, true),
-        "coverage fixture: RangeDecoder::new(&empty, 0, 0, true)",
-    );
-    let mut bool_cdf = [16_384, 0];
-    let _ = frozen.adaptive_bool(&mut bool_cdf);
-    let _ = inverse_recenter(1, 3);
-    for value in 0..=3 {
-        let _ = RestorationType::from_bits(value);
-    }
-    coverage_restoration_and_partition_paths();
-    coverage_partition_walker_paths();
 }
 
 #[cfg(test)]

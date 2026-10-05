@@ -335,38 +335,3 @@ const fn capabilities_for(
         sequence_encode,
     }
 }
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let formats = [
-        ImageFormat::Jpeg,
-        ImageFormat::Png,
-        ImageFormat::Gif,
-        ImageFormat::Bmp,
-        ImageFormat::WebP,
-        ImageFormat::Tiff,
-        ImageFormat::Ico,
-        ImageFormat::Avif,
-    ];
-    for format in formats {
-        for target in [
-            CapabilityTarget::Native,
-            CapabilityTarget::Wasm32Wasi,
-            CapabilityTarget::Wasm32Unknown,
-        ] {
-            for enabled in [false, true] {
-                let capabilities = capabilities_for(format, enabled, target);
-                let _ = capabilities.format();
-                let _ = capabilities.target();
-                let _ = capabilities.feature_enabled();
-                for operation in CODEC_OPERATIONS {
-                    let capability = capabilities.operation(operation);
-                    let _ = capability.is_available();
-                    let _ = capability.is_restricted();
-                    let _ = capability.unavailable_reason();
-                    let _ = capability.restriction();
-                }
-            }
-        }
-    }
-}

@@ -60,6 +60,7 @@ struct NativeSequence {
     durations: Vec<img::FrameDuration>,
     milliseconds: Vec<u32>,
     native_loop: img::AnimationLoop,
+    rust_expect_sequence_error: bool,
 }
 
 fn bundle(relative: &str) -> PathBuf {
@@ -151,6 +152,7 @@ fn native_sequence(
             0 => img::AnimationLoop::Finite { total_plays: 1 },
             _ => panic!("unregistered repetition observation"),
         },
+        rust_expect_sequence_error: false,
     }
 }
 
@@ -160,6 +162,72 @@ fn animated() -> NativeSequence {
 
 fn error_resilient() -> NativeSequence {
     native_sequence("av1_sequence/error_resilient", (16, 16), (2, 0, 0, 2), -1)
+}
+
+fn matrix_sequence_case(row_id: &str) -> NativeSequence {
+    let project_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let matrix: Value = require_ok(
+        json::from_str(&require_ok(
+            fs::read_to_string(project_root.join("tests/fixtures/coverage_matrix.json")),
+            "coverage matrix",
+        )),
+        "coverage matrix JSON",
+    );
+    let formats: Value = field(&matrix, "formats");
+    let avif: Value = field(&formats, "avif");
+    let rows: Vec<Value> = field(&avif, "decode");
+    let row = require_some(
+        rows.iter().find(|row| field::<String>(row, "id") == row_id),
+        "registered AVIF decode parity row",
+    );
+    let asset: String = field(row, "asset");
+    let data = require_ok(
+        fs::read(
+            project_root
+                .join("tests/fixtures/input/images/avif")
+                .join(asset),
+        ),
+        "AVIF parity input",
+    );
+    let sequence: Value = field(row, "sequence");
+    let canvas_size: Vec<u32> = field(&sequence, "canvas_size");
+    assert_eq!(canvas_size.len(), 2);
+    let frames: Vec<Value> = field(&sequence, "frames");
+    let mut pixels = Vec::with_capacity(frames.len());
+    let mut durations = Vec::with_capacity(frames.len());
+    let mut milliseconds = Vec::with_capacity(frames.len());
+    for frame in frames {
+        assert_eq!(field::<String>(&frame, "ref_mode"), "Rgb8");
+        assert_eq!(field::<Vec<u32>>(&frame, "ref_size"), canvas_size);
+        let path: String = field(&frame, "ref_path");
+        let raw = require_ok(fs::read(project_root.join(path)), "Pillow frame reference");
+        assert_eq!(raw.len(), field::<usize>(&frame, "ref_bytes"));
+        assert_eq!(
+            sha256::digest_hex(&raw),
+            field::<String>(&frame, "ref_sha256")
+        );
+        let duration = img::FrameDuration {
+            numerator: field(&frame, "duration_num"),
+            denominator: field(&frame, "duration_den"),
+        };
+        milliseconds.push(require_ok(
+            duration.milliseconds_rounded(),
+            "rounded frame duration",
+        ));
+        pixels.push(raw);
+        durations.push(duration);
+    }
+    NativeSequence {
+        data,
+        width: canvas_size[0],
+        height: canvas_size[1],
+        mode: img::ImageMode::Rgb8,
+        pixels,
+        durations,
+        milliseconds,
+        native_loop: img::AnimationLoop::Infinite,
+        rust_expect_sequence_error: field(row, "rust_expect_sequence_error"),
+    }
 }
 
 fn wrapped_frame_ids() -> NativeSequence {
@@ -213,6 +281,7 @@ fn highdepth() -> NativeSequence {
         durations,
         milliseconds,
         native_loop: img::AnimationLoop::Infinite,
+        rust_expect_sequence_error: false,
     }
 }
 
@@ -423,7 +492,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
     assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
     let artifacts: Vec<Value> = field(&index, "artifacts");
-    assert_eq!(artifacts.len(), 41);
+    assert_eq!(artifacts.len(), 232);
     let mut artifact_paths = std::collections::HashSet::new();
     for artifact in artifacts {
         let path: String = field(&artifact, "path");
@@ -443,8 +512,61 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     let cases: Vec<Value> = field(&index, "cases");
     let expected_names = [
         "animated",
+        "opidc_0x101",
         "error_resilient",
+        "filmgrain_reference_reuse_i444_64x64",
+        "lossless_inter_420_b16x16",
+        "lossless_inter_420_b8x16",
+        "lossless_inter_intra_i444_b8x8_20x20",
+        "odd_dimensions_inter_intra_boundary_420",
+        "lossy_interintra_420_nowedge_b16x16_64x64",
+        "lossy_interintra_420_nowedge_mode1_b16x16_64x64",
+        "lossy_interintra_420_nowedge_mode2_b16x16_64x64",
+        "lossy_interintra_420_nowedge_mode3_b16x16_64x64",
+        "lossy_interintra_420_wedge_b16x16_64x64",
+        "lossless_inter_420_b32x32",
+        "lossless_inter_420_b32x32_10bit",
+        "lossless_inter_420_b32x32_10bit_64x64",
+        "lossless_inter_420_clipped_b32x32_10bit_28x28",
+        "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64",
+        "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
+        "lossless_inter_420_clipped_b32x32_17x17",
+        "lossless_inter_i444_clipped_b32x32_49x64",
+        "lossless_inter_i422_clipped_b32x32_49x64",
+        "lossless_inter_i422_clipped_b32x32_52x64",
+        "lossless_inter_i444_clipped_b32x32_64x56",
+        "lossless_inter_i422_clipped_b32x32_52x60",
+        "lossless_inter_i444_clipped_b32x32_52x60",
+        "lossless_inter_420_clipped_b32x32_60x64",
+        "lossless_inter_420_clipped_b32x32_64x60",
+        "lossless_inter_420_clipped_b32x32_184x64",
+        "lossless_inter_420_clipped_b32x32_185x64",
+        "lossless_inter_420_clipped_b16x16_60x64",
+        "lossless_inter_monochrome_b16x16",
+        "lossy_split_inter_420_b16x16",
+        "lossy_b16_mixed_topology_inter_420_b16x16",
+        "lossy_wide_monochrome_b128x128",
+        "lossy_wide_i444_b128x128",
+        "lossy_wide_i444_mode2_unsplit_b128x128",
+        "lossy_wide_i444_mode2_split32_b128x128",
+        "lossy_global_rotzoom_compound_i444_b128x128",
+        "lossy_global_halfblend_spatial_i444_b256x256",
+        "motion_chroma",
+        "has_chroma_4x4",
+        "motion_chroma_422",
+        "lossy_inter_422_checker_random_b32x32",
+        "motion_chroma_wide",
+        "tx64_root_split_inter_420_64x64",
+        "motion_temporal_window_left_512x128",
+        "motion_temporal_window_right_512x128",
+        "lossy_inter_i444_mode2_b32x32",
+        "lossy_inter_i444_split_b16x32_mode2",
+        "lossy_inter_i444_obmc_mixed_b16x32",
+        "motion_large_420",
         "highdepth",
+        "lo8_superres_sgr_inter_160x56",
+        "hi10_superres_sgr_inter_160x56",
+        "hi10_superres_select_inter_160x56",
         "no_edit_list",
         "no_edit_list_zero_duration",
         "nonrepeating_zero_duration",
@@ -512,8 +634,151 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         assert_eq!(field::<Option<u32>>(&pillow, "loop_key"), None);
         let mut expected = match field::<String>(case, "source").as_str() {
             "animated" => animated(),
+            "opidc_0x101" => matrix_sequence_case("animated_opidc_0x101"),
             "error_resilient" => error_resilient(),
+            "filmgrain_reference_reuse_i444_64x64" => {
+                matrix_sequence_case("animated_filmgrain_reference_reuse_i444_64x64")
+            }
+            "lossless_inter_420_b16x16" => {
+                matrix_sequence_case("animated_lossless_inter_420_b16x16")
+            }
+            "lossless_inter_420_b8x16" => matrix_sequence_case("animated_lossless_inter_420_b8x16"),
+            "lossless_inter_intra_i444_b8x8_20x20" => {
+                matrix_sequence_case("animated_lossless_inter_intra_i444_b8x8_20x20")
+            }
+            "odd_dimensions_inter_intra_boundary_420" => {
+                matrix_sequence_case("animated_odd_dimensions_inter_intra_boundary_420")
+            }
+            "lossy_interintra_420_nowedge_b16x16_64x64" => {
+                matrix_sequence_case("animated_lossy_interintra_420_nowedge_b16x16_64x64")
+            }
+            "lossy_interintra_420_nowedge_mode1_b16x16_64x64" => {
+                matrix_sequence_case("animated_lossy_interintra_420_nowedge_mode1_b16x16_64x64")
+            }
+            "lossy_interintra_420_nowedge_mode2_b16x16_64x64" => {
+                matrix_sequence_case("animated_lossy_interintra_420_nowedge_mode2_b16x16_64x64")
+            }
+            "lossy_interintra_420_nowedge_mode3_b16x16_64x64" => {
+                matrix_sequence_case("animated_lossy_interintra_420_nowedge_mode3_b16x16_64x64")
+            }
+            "lossy_interintra_420_wedge_b16x16_64x64" => {
+                matrix_sequence_case("animated_lossy_interintra_420_wedge_b16x16_64x64")
+            }
+            "lossless_inter_420_b32x32" => {
+                matrix_sequence_case("animated_lossless_inter_420_b32x32")
+            }
+            "lossless_inter_420_b32x32_10bit" => {
+                matrix_sequence_case("animated_lossless_inter_420_b32x32_10bit")
+            }
+            "lossless_inter_420_b32x32_10bit_64x64" => {
+                matrix_sequence_case("animated_lossless_inter_420_b32x32_10bit_64x64")
+            }
+            "lossless_inter_420_clipped_b32x32_10bit_28x28" => {
+                matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_10bit_28x28")
+            }
+            "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64" => matrix_sequence_case(
+                "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64",
+            ),
+            "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64" => matrix_sequence_case(
+                "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
+            ),
+            "lossless_inter_420_clipped_b32x32_17x17" => {
+                matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_17x17")
+            }
+            "lossless_inter_i422_clipped_b32x32_49x64" => {
+                matrix_sequence_case("animated_lossless_inter_i422_clipped_b32x32_49x64")
+            }
+            "lossless_inter_i444_clipped_b32x32_49x64" => {
+                matrix_sequence_case("animated_lossless_inter_i444_clipped_b32x32_49x64")
+            }
+            "lossless_inter_i422_clipped_b32x32_52x64" => {
+                matrix_sequence_case("animated_lossless_inter_i422_clipped_b32x32_52x64")
+            }
+            "lossless_inter_i444_clipped_b32x32_64x56" => {
+                matrix_sequence_case("animated_lossless_inter_i444_clipped_b32x32_64x56")
+            }
+            "lossless_inter_i422_clipped_b32x32_52x60" => {
+                matrix_sequence_case("animated_lossless_inter_i422_clipped_b32x32_52x60")
+            }
+            "lossless_inter_i444_clipped_b32x32_52x60" => {
+                matrix_sequence_case("animated_lossless_inter_i444_clipped_b32x32_52x60")
+            }
+            "lossless_inter_420_clipped_b32x32_60x64" => {
+                matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_60x64")
+            }
+            "lossless_inter_420_clipped_b32x32_64x60" => {
+                matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_64x60")
+            }
+            "lossless_inter_420_clipped_b32x32_184x64" => {
+                matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_184x64")
+            }
+            "lossless_inter_420_clipped_b32x32_185x64" => {
+                matrix_sequence_case("animated_lossless_inter_420_clipped_b32x32_185x64")
+            }
+            "lossless_inter_420_clipped_b16x16_60x64" => {
+                matrix_sequence_case("animated_lossless_inter_420_clipped_b16x16_60x64")
+            }
+            "lossless_inter_monochrome_b16x16" => {
+                matrix_sequence_case("animated_lossless_inter_monochrome_b16x16")
+            }
+            "lossy_split_inter_420_b16x16" => {
+                matrix_sequence_case("animated_lossy_split_inter_420_b16x16")
+            }
+            "lossy_b16_mixed_topology_inter_420_b16x16" => {
+                matrix_sequence_case("animated_lossy_b16_mixed_topology_inter_420_b16x16")
+            }
+            "lossy_wide_monochrome_b128x128" => {
+                matrix_sequence_case("animated_lossy_wide_monochrome_b128x128")
+            }
+            "lossy_wide_i444_b128x128" => matrix_sequence_case("animated_lossy_wide_i444_b128x128"),
+            "lossy_wide_i444_mode2_unsplit_b128x128" => {
+                matrix_sequence_case("animated_lossy_wide_i444_mode2_unsplit_b128x128")
+            }
+            "lossy_wide_i444_mode2_split32_b128x128" => {
+                matrix_sequence_case("animated_lossy_wide_i444_mode2_split32_b128x128")
+            }
+            "lossy_global_rotzoom_compound_i444_b128x128" => {
+                matrix_sequence_case("animated_lossy_global_rotzoom_compound_i444_b128x128")
+            }
+            "lossy_global_halfblend_spatial_i444_b256x256" => {
+                matrix_sequence_case("animated_lossy_global_halfblend_spatial_i444_b256x256")
+            }
+            "motion_chroma" => matrix_sequence_case("animated_motion_chroma"),
+            "has_chroma_4x4" => matrix_sequence_case("animated_has_chroma_4x4"),
+            "motion_chroma_422" => matrix_sequence_case("animated_motion_chroma_422"),
+            "lossy_inter_422_checker_random_b32x32" => {
+                matrix_sequence_case("animated_lossy_inter_422_checker_random_b32x32")
+            }
+            "motion_chroma_wide" => matrix_sequence_case("animated_motion_chroma_wide"),
+            "tx64_root_split_inter_420_64x64" => {
+                matrix_sequence_case("animated_tx64_root_split_inter_420_64x64")
+            }
+            "motion_temporal_window_left_512x128" => {
+                matrix_sequence_case("animated_motion_temporal_window_left_512x128")
+            }
+            "motion_temporal_window_right_512x128" => {
+                matrix_sequence_case("animated_motion_temporal_window_right_512x128")
+            }
+            "lossy_inter_i444_mode2_b32x32" => {
+                matrix_sequence_case("animated_lossy_inter_i444_mode2_b32x32")
+            }
+            "lossy_inter_i444_split_b16x32_mode2" => {
+                matrix_sequence_case("animated_lossy_inter_i444_split_b16x32_mode2")
+            }
+            "lossy_inter_i444_obmc_mixed_b16x32" => {
+                matrix_sequence_case("animated_lossy_inter_i444_obmc_mixed_b16x32")
+            }
+            "motion_large_420" => matrix_sequence_case("animated_motion_large_420"),
             "highdepth" => highdepth(),
+            "lo8_superres_sgr_inter_160x56" => {
+                matrix_sequence_case("animated_lossy_inter_420_superres_sgr_8bit_160x56")
+            }
+            "hi10_superres_sgr_inter_160x56" => {
+                matrix_sequence_case("animated_lossy_inter_420_superres_sgr_10bit_160x56")
+            }
+            "hi10_superres_select_inter_160x56" => {
+                matrix_sequence_case("animated_lossy_inter_420_superres_select_10bit_160x56")
+            }
             source => panic!("unregistered loop source {source}"),
         };
         assert_eq!(
@@ -541,6 +806,28 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         for (frame, bytes) in frames.iter().zip(&expected.pixels) {
             assert_eq!(field::<String>(frame, "sha256"), sha256::digest_hex(bytes));
             assert_eq!(field::<usize>(frame, "bytes"), bytes.len());
+        }
+        if expected.rust_expect_sequence_error {
+            let actual = img::decode_sequence(&data);
+            assert!(
+                matches!(
+                    &actual,
+                    Err(img::ImageError::Unsupported {
+                        format: Some(img::ImageFormat::Avif),
+                        reason: Some(img::UnsupportedReason::NotImplemented),
+                        message,
+                        ..
+                    }) if !message.trim().is_empty()
+                ),
+                "Rust-only sequence limitation changed for {expected_name}: {actual:?}"
+            );
+            assert_eq!(
+                require_ok(img::decode(&data), "loop independent image")
+                    .content
+                    .pixels,
+                expected.pixels[0]
+            );
+            continue;
         }
         let actual = require_ok(img::decode_sequence(&data), "native loop sequence");
         assert_frames(&actual.content, &expected);

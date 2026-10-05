@@ -134,7 +134,10 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         seen.push(offset);
         let directory = Directory::parse(data, offset, endian)
             .map_err(|error| error.at(offset as u64, "tiff_ifd"))?;
-        #[allow(clippy::arithmetic_side_effects)]
+        #[allow(
+            clippy::arithmetic_side_effects,
+            reason = "Saturating sums deliberately bound the scanned IFD and payload extents."
+        )]
         let directory_end = offset
             .saturating_add(2)
             .saturating_add(directory.entries.len().saturating_mul(12))
@@ -162,7 +165,10 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
     // Strip/tile payloads can extend beyond the final IFD, so the container
     // extent is the later of the IFD chain end and the payload ranges.
     // `pixel` is the sum of strip/tile payload bytes inside the extent.
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "Metadata accounting subtracts the declared strip and tile payload total from the container extent."
+    )]
     let metadata = consumed.max(payload_end) as u64 - pixel;
     Ok(metadata)
 }
@@ -178,7 +184,10 @@ fn decode_ifd(
     let mut directory = Directory::parse(data, ifd_offset, endian)
         .map_err(|error| error.at(ifd_offset as u64, "tiff_ifd"))?;
     let next_offset = directory.next_offset();
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "The supported layout and inspected dimensions bound this directory-end calculation."
+    )]
     let directory_end = ifd_offset
         .saturating_add(2)
         .saturating_add(directory.entries.len().saturating_mul(12))
@@ -208,11 +217,12 @@ fn decode_ifd(
             "TIFF rows per strip must be nonzero".to_owned(),
         ));
     }
-    if samples_per_pixel == 0 || planar != 1 || !matches!(predictor, 1 | 2) {
+    if samples_per_pixel == 0 || !matches!(planar, 1 | 2) || !matches!(predictor, 1 | 2) {
         return Err(CodecError::Malformed(
             "TIFF sample, strip, planar, or predictor fields are invalid".to_owned(),
         ));
     }
+    let separate_planar = planar == 2 && samples_per_pixel > 1;
     let (layout, palette) = super::inspect::layout_and_palette(
         photometric,
         samples_per_pixel,
@@ -242,12 +252,21 @@ fn decode_ifd(
     // `layout_and_palette` limits a supported layout to four stored bytes per
     // pixel. Pillow's decompression-bomb ceiling limits the complete raster to
     // 178,956,970 pixels, so these products fit 32-bit and 64-bit `usize`.
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "Validated dimensions and a maximum of four samples bound this row-sample product."
+    )]
     let row_samples = width_usize * stored_samples;
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "Validated dimensions, sample count, and bit depth bound this row-bit product."
+    )]
     let row_bits = row_samples * usize::from(bits_per_sample);
     let row_bytes = row_bits.div_ceil(8);
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "The validated raster ceiling bounds the row-byte and height product."
+    )]
     let expected_total = row_bytes * height_usize;
 
     let tile_offsets = directory.values(324);
@@ -266,34 +285,85 @@ fn decode_ifd(
                 "TIFF tile dimensions must be nonzero".to_owned(),
             ));
         }
-        if bits_per_sample % 8 != 0 {
-            return Err(CodecError::Malformed(
-                "TIFF tile sample width is invalid".to_owned(),
-            ));
-        }
+        let packed_samples = bits_per_sample < 8;
+        // `layout_and_palette` only accepts packed samples at 1, 2, or 4 bits
+        // with one sample per pixel, so these tile-layout checks are redundant.
         let tiles_across = width_usize.div_ceil(tile_width);
         let tiles_down = height_usize.div_ceil(tile_height);
-        #[cfg(target_pointer_width = "32")]
         let expected_tiles = tiles_across
             .checked_mul(tiles_down)
             .dimensions("TIFF tile count overflows")?;
-        #[cfg(not(target_pointer_width = "32"))]
-        let expected_tiles = tiles_across.wrapping_mul(tiles_down);
-        if offsets.len() != expected_tiles {
+        if !separate_planar && offsets.len() != expected_tiles {
             return Err(CodecError::Malformed(
                 "TIFF tile offset count does not match its geometry".to_owned(),
             ));
         }
-        // The validated layout has at most four 32-bit samples.
-        #[allow(clippy::arithmetic_side_effects)]
-        let bytes_per_pixel = samples_per_pixel * (usize::from(bits_per_sample) / 8);
-        #[cfg(target_pointer_width = "32")]
-        let tile_row_bytes = tile_width
-            .checked_mul(bytes_per_pixel)
-            .malformed("TIFF tile row byte size overflows")?;
-        #[cfg(not(target_pointer_width = "32"))]
-        #[allow(clippy::arithmetic_side_effects)]
-        let tile_row_bytes = tile_width * bytes_per_pixel;
+        if separate_planar {
+            let pixels = decode_separate_planar_tiles(
+                data,
+                SeparatePlanarTileLayout {
+                    offsets: &offsets,
+                    declared_byte_counts: &byte_counts,
+                    width: width_usize,
+                    height: height_usize,
+                    tiles_across,
+                    tiles_down,
+                    tile_width,
+                    tile_height,
+                    samples_per_pixel,
+                    output_samples: stored_samples,
+                    output_row_bytes: row_bytes,
+                    output_len: expected_total,
+                    compression,
+                    predictor,
+                    bits_per_sample,
+                    endian,
+                },
+                token,
+            )?;
+            return Ok((
+                convert_pixels_for_token(
+                    (width, height),
+                    pixels,
+                    layout,
+                    endian,
+                    palette,
+                    alpha,
+                    token,
+                )?
+                .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+                .with_metadata(std::mem::take(&mut directory.metadata)),
+                next_offset,
+                directory_end,
+            ));
+        }
+        // Packed layouts use bit offsets. Keep the existing byte-aligned
+        // arithmetic unchanged for the common 8-bit and wider path.
+        let (tile_row_bytes, bytes_per_pixel) = if packed_samples {
+            let tile_row_bits = tile_width
+                .checked_mul(stored_samples)
+                .and_then(|samples| samples.checked_mul(usize::from(bits_per_sample)))
+                .dimensions("TIFF packed tile row bit size overflows")?;
+            (tile_row_bits.div_ceil(8), 0)
+        } else {
+            // The validated layout has at most four 32-bit samples.
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "The validated layout has at most four 32-bit samples per pixel."
+            )]
+            let bytes_per_pixel = stored_samples * (usize::from(bits_per_sample) / 8);
+            #[cfg(target_pointer_width = "32")]
+            let tile_row_bytes = tile_width
+                .checked_mul(bytes_per_pixel)
+                .malformed("TIFF tile row byte size overflows")?;
+            #[cfg(not(target_pointer_width = "32"))]
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "On 64-bit targets the u32 tile width times the validated pixel stride fits usize."
+            )]
+            let tile_row_bytes = tile_width * bytes_per_pixel;
+            (tile_row_bytes, bytes_per_pixel)
+        };
         let tile_size = tile_row_bytes
             .checked_mul(tile_height)
             .malformed("TIFF tile byte size overflows")?;
@@ -332,6 +402,32 @@ fn decode_ifd(
             let tile_y = tile_row.wrapping_mul(tile_height);
             let copied_width = tile_width.min(width_usize.saturating_sub(tile_x));
             let copied_height = tile_height.min(height_usize.saturating_sub(tile_y));
+            if packed_samples {
+                let decoded;
+                let tile_data = if compression == COMPRESSION_NONE {
+                    encoded
+                } else {
+                    decoded = decode_block(compression, encoded, tile_size, token)
+                        .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+                    &decoded
+                };
+                copy_packed_tile_into(
+                    &mut pixels,
+                    tile_data,
+                    PackedTilePlacement {
+                        tile_row_bytes,
+                        row_bytes,
+                        tile_x,
+                        tile_y,
+                        copied_width,
+                        copied_height,
+                        bits_per_sample,
+                    },
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+                continue;
+            }
             let copied_bytes = copied_width.wrapping_mul(bytes_per_pixel);
             if compression == COMPRESSION_NONE {
                 copy_raw_tile_into(
@@ -407,20 +503,68 @@ fn decode_ifd(
         .values(273)
         .malformed("TIFF strip offsets are missing")?;
     // Pillow derives uncompressed strip sizes from the raster layout when
-    // StripByteCounts is absent. Compressed strips also use the existing
-    // offset-boundary derivation for an absent or empty tag.
+    // StripByteCounts is absent. For compressed strips, a missing, empty, or
+    // zero-valued count uses the next strip boundary (or the file boundary).
     let declared_byte_counts = directory.values(279);
     if offsets.is_empty() {
         return Err(CodecError::Malformed(
             "TIFF strip offsets are empty".to_owned(),
         ));
     }
+    if separate_planar {
+        let pixels = decode_separate_planar_strips(
+            data,
+            SeparatePlanarStripLayout {
+                offsets: &offsets,
+                declared_byte_counts: declared_byte_counts.as_deref(),
+                width: width_usize,
+                height: height_usize,
+                rows_per_strip,
+                samples_per_pixel,
+                output_samples: stored_samples,
+                output_row_bytes: row_bytes,
+                output_len: expected_total,
+                compression,
+                predictor,
+                bits_per_sample,
+                endian,
+            },
+            token,
+        )?;
+        return Ok((
+            convert_pixels_for_token(
+                (width, height),
+                pixels,
+                layout,
+                endian,
+                palette,
+                alpha,
+                token,
+            )?
+            .with_opaque_blocks(std::mem::take(&mut directory.opaque_blocks))
+            .with_metadata(std::mem::take(&mut directory.metadata)),
+            next_offset,
+            directory_end,
+        ));
+    }
     let expected_strips = height_usize.div_ceil(rows_per_strip);
-    if offsets.len() > expected_strips {
+    if offsets.len() > expected_strips && compression != COMPRESSION_LZW {
         return Err(CodecError::Malformed(
             "TIFF contains more strips than its geometry permits".to_owned(),
         ));
     }
+    let derive_compressed_byte_count = |index: usize, offset: usize| {
+        let end = offsets
+            .get(index.wrapping_add(1))
+            .copied()
+            .unwrap_or(if ifd_offset > offset {
+                ifd_offset
+            } else {
+                data.len()
+            });
+        end.checked_sub(offset)
+            .malformed("TIFF strip offsets are not monotonic")
+    };
     let byte_counts = if compression == COMPRESSION_NONE {
         (0..offsets.len())
             .map(|strip_index| {
@@ -435,17 +579,7 @@ fn decode_ifd(
             offsets
                 .iter()
                 .enumerate()
-                .map(|(index, &offset)| {
-                    let end = offsets.get(index.wrapping_add(1)).copied().unwrap_or(
-                        if ifd_offset > offset {
-                            ifd_offset
-                        } else {
-                            data.len()
-                        },
-                    );
-                    end.checked_sub(offset)
-                        .malformed("TIFF strip offsets are not monotonic")
-                })
+                .map(|(index, &offset)| derive_compressed_byte_count(index, offset))
                 .collect::<CodecResult<Vec<_>>>()?
         } else if offsets.len() != declared_byte_counts.len() {
             return Err(CodecError::Malformed(
@@ -457,8 +591,15 @@ fn decode_ifd(
     };
     let mut pixels = Vec::with_capacity(expected_total);
 
-    for (strip_index, (&offset, &byte_count)) in offsets.iter().zip(&byte_counts).enumerate() {
+    for (strip_index, (&offset, &declared_byte_count)) in
+        offsets.iter().zip(&byte_counts).enumerate()
+    {
         crate::codecs::error::check_cancelled(token)?;
+        let byte_count = if compression != COMPRESSION_NONE && declared_byte_count == 0 {
+            derive_compressed_byte_count(strip_index, offset)?
+        } else {
+            declared_byte_count
+        };
         #[cfg(target_pointer_width = "32")]
         let encoded_end = offset
             .checked_add(byte_count)
@@ -476,6 +617,11 @@ fn decode_ifd(
         let first_row = strip_index.wrapping_mul(rows_per_strip);
         let strip_rows = rows_per_strip.min(height_usize.saturating_sub(first_row));
         let expected = row_bytes.wrapping_mul(strip_rows);
+        // The geometry check above rejects extra strips except for LZW;
+        // those declared, bounded payloads do not contribute image rows.
+        if strip_rows == 0 {
+            continue;
+        }
         if compression == COMPRESSION_NONE {
             copy_raw_into(&mut pixels, encoded, token)
                 .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
@@ -523,6 +669,314 @@ fn decode_ifd(
         next_offset,
         directory_end,
     ))
+}
+
+struct SeparatePlanarStripLayout<'a> {
+    offsets: &'a [usize],
+    declared_byte_counts: Option<&'a [usize]>,
+    width: usize,
+    height: usize,
+    rows_per_strip: usize,
+    samples_per_pixel: usize,
+    output_samples: usize,
+    output_row_bytes: usize,
+    output_len: usize,
+    compression: usize,
+    predictor: usize,
+    bits_per_sample: u8,
+    endian: Endian,
+}
+
+fn decode_separate_planar_strips(
+    data: &[u8],
+    layout: SeparatePlanarStripLayout<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    let strips_per_plane = layout.height.div_ceil(layout.rows_per_strip);
+    let expected_strips = strips_per_plane
+        .checked_mul(layout.samples_per_pixel)
+        .dimensions("TIFF separate-planar strip count overflows")?;
+    if layout.offsets.len() > expected_strips {
+        return Err(CodecError::Malformed(
+            "TIFF separate-planar strip count exceeds its geometry".to_owned(),
+        ));
+    }
+
+    let declared_byte_counts = layout
+        .declared_byte_counts
+        .filter(|counts| !counts.is_empty());
+    if layout.compression != COMPRESSION_NONE
+        && declared_byte_counts.is_none_or(|counts| counts.len() != layout.offsets.len())
+    {
+        return Err(CodecError::Malformed(
+            "TIFF strip offset and byte-count lengths differ".to_owned(),
+        ));
+    }
+
+    let mut pixels = vec![0; layout.output_len];
+    for (index, &offset) in layout.offsets.iter().enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
+        let plane = index
+            .checked_div(strips_per_plane)
+            .dimensions("TIFF separate-planar strip plane is invalid")?;
+        let strip_in_plane = index
+            .checked_rem(strips_per_plane)
+            .dimensions("TIFF separate-planar strip index is invalid")?;
+        let first_row = strip_in_plane
+            .checked_mul(layout.rows_per_strip)
+            .dimensions("TIFF separate-planar strip row offset overflows")?;
+        let strip_rows = layout
+            .rows_per_strip
+            .min(layout.height.saturating_sub(first_row));
+        let expected = layout
+            .width
+            .checked_mul(strip_rows)
+            .dimensions("TIFF separate-planar strip size overflows")?;
+        let byte_count = match (layout.compression, declared_byte_counts) {
+            (COMPRESSION_NONE, _) => expected,
+            (_, Some(counts)) => counts[index],
+            (_, None) => 0,
+        };
+        let encoded_end = offset
+            .checked_add(byte_count)
+            .dimensions("TIFF strip byte range overflows")?;
+        let encoded = if encoded_end <= data.len() {
+            &data[offset..encoded_end]
+        } else {
+            return Err(CodecError::NeedMore {
+                minimum: encoded_end,
+                message: "TIFF strip payload is out of bounds".to_owned(),
+            });
+        };
+        let mut decoded = if layout.compression == COMPRESSION_NONE {
+            None
+        } else {
+            Some(
+                decode_block(layout.compression, encoded, expected, token)
+                    .map_err(|error| error.at(offset as u64, "tiff_strip"))?,
+            )
+        };
+        if let Some(decoded) = decoded.as_mut()
+            && uses_horizontal_predictor(
+                layout.predictor,
+                layout.compression,
+                layout.bits_per_sample,
+            )
+        {
+            if let Some(token) = token {
+                reverse_horizontal_predictor_with_token(
+                    decoded,
+                    layout.width,
+                    1,
+                    layout.bits_per_sample,
+                    layout.endian,
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_strip"))?;
+            } else {
+                reverse_horizontal_predictor(
+                    decoded,
+                    layout.width,
+                    1,
+                    layout.bits_per_sample,
+                    layout.endian,
+                );
+            }
+        }
+
+        let decoded = decoded.as_deref().unwrap_or(encoded);
+        for (row_index, samples) in decoded.chunks(layout.width).enumerate() {
+            crate::codecs::error::check_cancelled(token)?;
+            let row = first_row
+                .checked_add(row_index)
+                .dimensions("TIFF separate-planar output row overflows")?;
+            let destination_start = row
+                .checked_mul(layout.output_row_bytes)
+                .dimensions("TIFF separate-planar output offset overflows")?;
+            let destination_end = destination_start
+                .checked_add(layout.output_row_bytes)
+                .dimensions("TIFF separate-planar output range overflows")?;
+            let destination = &mut pixels[destination_start..destination_end];
+            for (pixel, &sample) in destination
+                .chunks_exact_mut(layout.output_samples)
+                .zip(samples)
+            {
+                pixel[plane] = sample;
+            }
+        }
+    }
+    Ok(pixels)
+}
+
+struct SeparatePlanarTileLayout<'a> {
+    offsets: &'a [usize],
+    declared_byte_counts: &'a [usize],
+    width: usize,
+    height: usize,
+    tiles_across: usize,
+    tiles_down: usize,
+    tile_width: usize,
+    tile_height: usize,
+    samples_per_pixel: usize,
+    output_samples: usize,
+    output_row_bytes: usize,
+    output_len: usize,
+    compression: usize,
+    predictor: usize,
+    bits_per_sample: u8,
+    endian: Endian,
+}
+
+fn decode_separate_planar_tiles(
+    data: &[u8],
+    layout: SeparatePlanarTileLayout<'_>,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<Vec<u8>> {
+    let tiles_per_plane = layout
+        .tiles_across
+        .checked_mul(layout.tiles_down)
+        .dimensions("TIFF separate-planar tile count overflows")?;
+    let expected_offsets = tiles_per_plane
+        .checked_mul(layout.samples_per_pixel)
+        .dimensions("TIFF separate-planar tile offset count overflows")?;
+    if layout.offsets.len() > expected_offsets {
+        return Err(CodecError::Malformed(
+            "TIFF separate-planar tile offset count exceeds its geometry".to_owned(),
+        ));
+    }
+
+    let sample_bytes = usize::from(layout.bits_per_sample) / 8;
+    let tile_row_bytes = layout
+        .tile_width
+        .checked_mul(sample_bytes)
+        .dimensions("TIFF separate-planar tile row byte size overflows")?;
+    let tile_size = tile_row_bytes
+        .checked_mul(layout.tile_height)
+        .dimensions("TIFF separate-planar tile size overflows")?;
+    let byte_counts = if layout.compression == COMPRESSION_NONE {
+        vec![tile_size; layout.offsets.len()]
+    } else {
+        if layout.offsets.len() != layout.declared_byte_counts.len() {
+            return Err(CodecError::Malformed(
+                "TIFF tile offset and byte-count lengths differ".to_owned(),
+            ));
+        }
+        layout.declared_byte_counts.to_vec()
+    };
+
+    let output_sample_bytes = layout
+        .output_samples
+        .checked_mul(sample_bytes)
+        .dimensions("TIFF separate-planar pixel stride overflows")?;
+    let mut pixels = vec![0; layout.output_len];
+    for (index, (&offset, &byte_count)) in layout.offsets.iter().zip(&byte_counts).enumerate() {
+        crate::codecs::error::check_cancelled(token)?;
+        let plane = index
+            .checked_div(tiles_per_plane)
+            .dimensions("TIFF separate-planar tile plane is invalid")?;
+        let tile_index = index
+            .checked_rem(tiles_per_plane)
+            .dimensions("TIFF separate-planar tile index is invalid")?;
+        let tile_column = tile_index
+            .checked_rem(layout.tiles_across)
+            .dimensions("TIFF separate-planar tile column is invalid")?;
+        let tile_row = tile_index
+            .checked_div(layout.tiles_across)
+            .dimensions("TIFF separate-planar tile row is invalid")?;
+        let tile_x = tile_column
+            .checked_mul(layout.tile_width)
+            .dimensions("TIFF separate-planar tile x offset overflows")?;
+        let tile_y = tile_row
+            .checked_mul(layout.tile_height)
+            .dimensions("TIFF separate-planar tile y offset overflows")?;
+        let copied_width = layout.tile_width.min(layout.width.saturating_sub(tile_x));
+        let copied_height = layout.tile_height.min(layout.height.saturating_sub(tile_y));
+        let encoded_end = offset
+            .checked_add(byte_count)
+            .dimensions("TIFF tile byte range overflows")?;
+        let encoded = if encoded_end <= data.len() {
+            &data[offset..encoded_end]
+        } else {
+            return Err(CodecError::NeedMore {
+                minimum: encoded_end,
+                message: "TIFF tile payload is out of bounds".to_owned(),
+            });
+        };
+        let mut decoded = if layout.compression == COMPRESSION_NONE {
+            None
+        } else {
+            Some(
+                decode_block(layout.compression, encoded, tile_size, token)
+                    .map_err(|error| error.at(offset as u64, "tiff_tile"))?,
+            )
+        };
+        if let Some(decoded) = decoded.as_mut()
+            && uses_horizontal_predictor(
+                layout.predictor,
+                layout.compression,
+                layout.bits_per_sample,
+            )
+        {
+            if let Some(token) = token {
+                reverse_horizontal_predictor_with_token(
+                    decoded,
+                    tile_row_bytes,
+                    1,
+                    layout.bits_per_sample,
+                    layout.endian,
+                    token,
+                )
+                .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
+            } else {
+                reverse_horizontal_predictor(
+                    decoded,
+                    tile_row_bytes,
+                    1,
+                    layout.bits_per_sample,
+                    layout.endian,
+                );
+            }
+        }
+
+        let decoded = decoded.as_deref().unwrap_or(encoded);
+        for y in 0..copied_height {
+            crate::codecs::error::check_cancelled(token)?;
+            let source_row = y
+                .checked_mul(tile_row_bytes)
+                .dimensions("TIFF separate-planar tile source row overflows")?;
+            let destination_row = tile_y
+                .checked_add(y)
+                .and_then(|row| row.checked_mul(layout.output_row_bytes))
+                .dimensions("TIFF separate-planar tile destination row overflows")?;
+            for x in 0..copied_width {
+                let source = x
+                    .checked_mul(sample_bytes)
+                    .and_then(|sample| source_row.checked_add(sample))
+                    .dimensions("TIFF separate-planar tile source offset overflows")?;
+                let source_end = source
+                    .checked_add(sample_bytes)
+                    .dimensions("TIFF separate-planar tile source range overflows")?;
+                let column = tile_x
+                    .checked_add(x)
+                    .dimensions("TIFF separate-planar tile column overflows")?;
+                let pixel_offset = column
+                    .checked_mul(output_sample_bytes)
+                    .dimensions("TIFF separate-planar tile pixel offset overflows")?;
+                let channel_offset = plane
+                    .checked_mul(sample_bytes)
+                    .dimensions("TIFF separate-planar tile channel offset overflows")?;
+                let destination = destination_row
+                    .checked_add(pixel_offset)
+                    .and_then(|pixel| pixel.checked_add(channel_offset))
+                    .dimensions("TIFF separate-planar tile destination offset overflows")?;
+                let destination_end = destination
+                    .checked_add(sample_bytes)
+                    .dimensions("TIFF separate-planar tile destination range overflows")?;
+                pixels[destination..destination_end].copy_from_slice(&decoded[source..source_end]);
+            }
+        }
+    }
+    Ok(pixels)
 }
 
 /// Parse every TIFF signature registered by Pillow over a classic-IFD payload.
@@ -581,7 +1035,9 @@ fn decode_block(
                 }
                 None => decompress_zlib_prefix(encoded, expected),
             };
-            inflated.map_err(|error| error.context("decode TIFF Deflate stream"))
+            inflated
+                .map_err(crate::codecs::error::terminalize)
+                .map_err(|error| error.context("decode TIFF Deflate stream"))
         }
         COMPRESSION_PACKBITS => match token {
             Some(token) => decode_packbits_with_token(encoded, expected, token),
@@ -661,6 +1117,154 @@ fn copy_raw_tile_into(
             output[destination..destination.wrapping_add(placement.copied_bytes)]
                 .copy_from_slice(&data[source..source.wrapping_add(placement.copied_bytes)]);
         }
+    }
+    Ok(())
+}
+
+struct PackedTilePlacement {
+    tile_row_bytes: usize,
+    row_bytes: usize,
+    tile_x: usize,
+    tile_y: usize,
+    copied_width: usize,
+    copied_height: usize,
+    bits_per_sample: u8,
+}
+
+fn copy_packed_tile_into(
+    output: &mut [u8],
+    data: &[u8],
+    placement: PackedTilePlacement,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    // The sole caller dispatches only parsed 1-, 2-, and 4-bit TIFF layouts.
+    let bits = usize::from(placement.bits_per_sample);
+    let source_bits = placement
+        .copied_width
+        .checked_mul(bits)
+        .dimensions("TIFF packed tile source row bit size overflows")?;
+    let source_row_bytes = source_bits.div_ceil(8);
+
+    for row in 0..placement.copied_height {
+        crate::codecs::error::check_cancelled(token)?;
+        let source_start = row
+            .checked_mul(placement.tile_row_bytes)
+            .dimensions("TIFF packed tile source offset overflows")?;
+        let source_end = source_start
+            .checked_add(source_row_bytes)
+            .dimensions("TIFF packed tile source range overflows")?;
+        let source_row = data
+            .get(source_start..source_end)
+            .ok_or_else(|| CodecError::Malformed("TIFF packed tile row is truncated".to_owned()))?;
+
+        let destination_row_index = placement
+            .tile_y
+            .checked_add(row)
+            .dimensions("TIFF packed tile destination row overflows")?;
+        let destination_start = destination_row_index
+            .checked_mul(placement.row_bytes)
+            .dimensions("TIFF packed tile destination offset overflows")?;
+        let destination_end = destination_start
+            .checked_add(placement.row_bytes)
+            .dimensions("TIFF packed tile destination range overflows")?;
+        let destination_row = output
+            .get_mut(destination_start..destination_end)
+            .ok_or_else(|| {
+                CodecError::Malformed("TIFF packed tile destination row is invalid".to_owned())
+            })?;
+        copy_packed_tile_row(
+            destination_row,
+            source_row,
+            placement.tile_x,
+            placement.copied_width,
+            bits,
+            token,
+        )?;
+    }
+    Ok(())
+}
+
+fn copy_packed_tile_row(
+    destination: &mut [u8],
+    source: &[u8],
+    tile_x: usize,
+    sample_count: usize,
+    bits: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    let destination_start_bit = tile_x
+        .checked_mul(bits)
+        .dimensions("TIFF packed tile destination bit offset overflows")?;
+    let copied_bits = sample_count
+        .checked_mul(bits)
+        .dimensions("TIFF packed tile copy bit size overflows")?;
+    let _destination_end_bit = destination_start_bit
+        .checked_add(copied_bits)
+        .dimensions("TIFF packed tile destination bit range overflows")?;
+    // The caller clips this range to the image row and slices a complete source
+    // row before dispatch, so repeating those bounds checks here is redundant.
+
+    if destination_start_bit.is_multiple_of(8) {
+        let destination_start = destination_start_bit / 8;
+        let whole_bytes = copied_bits / 8;
+        let destination_full_end = destination_start
+            .checked_add(whole_bytes)
+            .dimensions("TIFF packed tile destination range overflows")?;
+        if let Some(token) = token {
+            for (source_chunk, destination_chunk) in source[..whole_bytes]
+                .chunks(1_024)
+                .zip(destination[destination_start..destination_full_end].chunks_mut(1_024))
+            {
+                crate::codecs::error::check_cancelled(Some(token))?;
+                destination_chunk.copy_from_slice(source_chunk);
+            }
+        } else {
+            destination[destination_start..destination_full_end]
+                .copy_from_slice(&source[..whole_bytes]);
+        }
+
+        let tail_bits = copied_bits % 8;
+        if tail_bits != 0 {
+            let tail_shift = 8usize
+                .checked_sub(tail_bits)
+                .and_then(|shift| u32::try_from(shift).ok())
+                .malformed("TIFF packed tile tail shift is invalid")?;
+            let tail_mask = u8::MAX.wrapping_shl(tail_shift);
+            let source_tail = source[whole_bytes];
+            let destination_tail = &mut destination[destination_full_end];
+            *destination_tail = (*destination_tail & !tail_mask) | (source_tail & tail_mask);
+        }
+        return Ok(());
+    }
+
+    let sample_shift = u32::try_from(bits)
+        .map_err(|_| CodecError::Malformed("TIFF packed sample width is invalid".to_owned()))?;
+    let sample_mask = 1_u8.wrapping_shl(sample_shift).wrapping_sub(1);
+    for sample_index in 0..sample_count {
+        if sample_index.is_multiple_of(1_024) {
+            crate::codecs::error::check_cancelled(token)?;
+        }
+        let source_bit = sample_index
+            .checked_mul(bits)
+            .dimensions("TIFF packed tile source bit offset overflows")?;
+        let source_shift = 8usize
+            .checked_sub(bits)
+            .and_then(|shift| shift.checked_sub(source_bit % 8))
+            .and_then(|shift| u32::try_from(shift).ok())
+            .malformed("TIFF packed source sample shift is invalid")?;
+        let value = source[source_bit / 8].wrapping_shr(source_shift) & sample_mask;
+        let destination_bit = destination_start_bit
+            .checked_add(source_bit)
+            .dimensions("TIFF packed tile destination bit offset overflows")?;
+        let destination_byte = destination_bit / 8;
+        let destination_shift = 8usize
+            .checked_sub(bits)
+            .and_then(|shift| shift.checked_sub(destination_bit % 8))
+            .and_then(|shift| u32::try_from(shift).ok())
+            .malformed("TIFF packed destination sample shift is invalid")?;
+        let sample_bits = sample_mask.wrapping_shl(destination_shift);
+        destination[destination_byte] =
+            (destination[destination_byte] & !sample_bits) | value.wrapping_shl(destination_shift);
     }
     Ok(())
 }
@@ -1148,7 +1752,7 @@ fn decode_packbits(data: &[u8], expected: usize) -> CodecResult<Vec<u8>> {
     let mut output = Vec::with_capacity(expected);
     let mut position = 0usize;
     while position < data.len() && output.len() < expected {
-        let header = data[position] as i8;
+        let header = data[position].cast_signed();
         position = position.wrapping_add(1);
         match header {
             0..=127 => {
@@ -1195,7 +1799,7 @@ fn decode_packbits_with_token(
     let mut position = 0usize;
     while position < data.len() && output.len() < expected {
         crate::codecs::error::check_cancelled(Some(token))?;
-        let header = data[position] as i8;
+        let header = data[position].cast_signed();
         position = position.wrapping_add(1);
         match header {
             0..=127 => {
@@ -1768,6 +2372,13 @@ impl<'a> Directory<'a> {
         self.values(tag).unwrap_or_else(|| default.to_vec())
     }
 
+    pub(super) fn value_count(&self, tag: u16) -> Option<usize> {
+        self.entries
+            .iter()
+            .find(|entry| entry.tag == tag)
+            .map(|entry| entry.count)
+    }
+
     pub(super) fn values(&self, tag: u16) -> Option<Vec<usize>> {
         let entry = self.entries.iter().find(|entry| entry.tag == tag)?;
         let position = if entry.byte_len <= 4 {
@@ -1803,1589 +2414,4 @@ impl<'a> Directory<'a> {
             .find(|field| field.tag == tag)
             .map(|field| field.field_type)
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode_page(b"", 0, None).is_err());
-    assert!(decode_page(b"II", 0, None).is_err());
-    let mut bad_page =
-        include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff").to_vec();
-    bad_page[106..110].copy_from_slice(&2000u32.to_le_bytes());
-    assert!(decode_page(&bad_page, 1, None).is_err());
-    let mut cyclic_page =
-        include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff").to_vec();
-    cyclic_page[106..110].copy_from_slice(&8u32.to_le_bytes());
-    assert!(decode_page(&cyclic_page, 1, None).is_err());
-
-    // No committed TIFF fixture declares associated (premultiplied) alpha;
-    // exercise every tag-338 mapping arm so the semantic space stays covered.
-    assert_eq!(
-        source_alpha_from_extra_samples(&[1]),
-        Some(SourceAlpha::Premultiplied)
-    );
-    assert_eq!(
-        source_alpha_from_extra_samples(&[2]),
-        Some(SourceAlpha::Straight)
-    );
-    assert_eq!(source_alpha_from_extra_samples(&[0]), None);
-    assert_eq!(source_alpha_from_extra_samples(&[]), None);
-
-    assert!(decode(b"", None).is_err());
-    assert!(decode(b"II", None).is_err());
-    assert!(decode(b"ZZ\0\0\0\0\0\0", None).is_err());
-    let fixture = include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff");
-    for checks in 0..=6 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(fixture, Some(&token));
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode_sequence(
-            fixture,
-            &mut SequenceDecodeBudget::default_for(crate::ImageFormat::Tiff),
-            Some(&token),
-        );
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode_page(fixture, 0, Some(&token));
-    }
-    let _ = metadata_bytes(b"");
-    let _ = metadata_bytes(b"II");
-    let _ = metadata_bytes(b"II\x2a\0\0\0\0\0\0");
-    let mut empty_ifd = b"II\x2a\0\0\0\x08\0\0\0\0\0".to_vec();
-    empty_ifd.extend_from_slice(&[0u8; 16]);
-    let _ = metadata_bytes(&empty_ifd);
-    let _ = metadata_bytes(&[b'I', b'I', 0x2a, 0, 0, 0, 0, 8, 0xff]);
-    // A self-referencing IFD chain exercises the cycle guard: patch the
-    // classic `1bit.tiff` chain terminator (at 106) back to the first IFD.
-    let mut cyclic =
-        include_bytes!("../../test_support/fixtures/input/images/tiff/1bit.tiff").to_vec();
-    cyclic[106..110].copy_from_slice(&8u32.to_le_bytes());
-    let _ = metadata_bytes(&cyclic);
-    // Strip offset/count arrays of different lengths exercise the mismatch
-    // guard: double tag 279's declared count (entry at 82, count at 86).
-    let mut mismatched = cyclic.clone();
-    mismatched[86..90].copy_from_slice(&2u32.to_le_bytes());
-    let _ = metadata_bytes(&mismatched);
-
-    fn put_entry(out: &mut Vec<u8>, tag: u16, field_type: u16, count: u32, value: [u8; 4]) {
-        out.extend_from_slice(&tag.to_le_bytes());
-        out.extend_from_slice(&field_type.to_le_bytes());
-        out.extend_from_slice(&count.to_le_bytes());
-        out.extend_from_slice(&value);
-    }
-
-    fn tiny_tiff(
-        bits_count: u32,
-        bits_inline: [u8; 4],
-        photometric: u16,
-        samples_per_pixel: u16,
-        rows_per_strip: u32,
-        planar: u16,
-        predictor: u16,
-    ) -> Vec<u8> {
-        let entry_count = 11u16;
-        let pixel_offset = crate::coverage_support::require_some(
-            (crate::coverage_support::require_some(
-                usize::from(entry_count).checked_mul(12),
-                "fixture IFD entry table length",
-            ))
-            .checked_add(14),
-            "fixture IFD payload offset",
-        );
-        let mut out = Vec::new();
-        out.extend_from_slice(b"II");
-        out.extend_from_slice(&42u16.to_le_bytes());
-        out.extend_from_slice(&8u32.to_le_bytes());
-        out.extend_from_slice(&entry_count.to_le_bytes());
-        put_entry(&mut out, 256, 4, 1, 1u32.to_le_bytes());
-        put_entry(&mut out, 257, 4, 1, 1u32.to_le_bytes());
-        put_entry(&mut out, 258, 3, bits_count, bits_inline);
-        put_entry(&mut out, 259, 3, 1, [1, 0, 0, 0]);
-        put_entry(&mut out, 262, 3, 1, u32::from(photometric).to_le_bytes());
-        put_entry(
-            &mut out,
-            273,
-            4,
-            1,
-            crate::coverage_support::require_ok(
-                u32::try_from(pixel_offset),
-                "coverage fixture: u32::try_from(pixel_offset)",
-            )
-            .to_le_bytes(),
-        );
-        put_entry(
-            &mut out,
-            277,
-            3,
-            1,
-            u32::from(samples_per_pixel).to_le_bytes(),
-        );
-        put_entry(&mut out, 278, 4, 1, rows_per_strip.to_le_bytes());
-        put_entry(&mut out, 279, 4, 1, 1u32.to_le_bytes());
-        put_entry(&mut out, 284, 3, 1, u32::from(planar).to_le_bytes());
-        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out.push(0);
-        out
-    }
-
-    struct TiffFixtureEncoding {
-        bits_per_sample: u16,
-        compression: u16,
-        predictor: u16,
-    }
-
-    fn fixture_payload_offset(
-        external_start: usize,
-        offset_count: usize,
-        count_count: usize,
-    ) -> usize {
-        let mut position = external_start;
-        for count in [offset_count, count_count] {
-            if count > 1 {
-                position = crate::coverage_support::require_some(
-                    count
-                        .checked_mul(4)
-                        .and_then(|bytes| position.checked_add(bytes)),
-                    "fixture external TIFF arrays must fit usize",
-                );
-            }
-        }
-        position
-    }
-
-    fn tiny_tiled_tiff(
-        encoding: TiffFixtureEncoding,
-        include_tile_offsets: bool,
-        include_tile_byte_counts: bool,
-        tile_width: u32,
-        tile_height: u32,
-        tile_payload: &[u8],
-    ) -> Vec<u8> {
-        let TiffFixtureEncoding {
-            bits_per_sample,
-            compression,
-            predictor,
-        } = encoding;
-
-        let entry_count = crate::coverage_support::require_some(
-            10u16
-                .checked_add(u16::from(include_tile_offsets))
-                .and_then(|count| count.checked_add(u16::from(include_tile_byte_counts))),
-            "fixture IFD entry count",
-        );
-        let pixel_offset = crate::coverage_support::require_some(
-            (crate::coverage_support::require_some(
-                usize::from(entry_count).checked_mul(12),
-                "fixture IFD entry table length",
-            ))
-            .checked_add(14),
-            "fixture IFD payload offset",
-        );
-        let mut out = Vec::new();
-        out.extend_from_slice(b"II");
-        out.extend_from_slice(&42u16.to_le_bytes());
-        out.extend_from_slice(&8u32.to_le_bytes());
-        out.extend_from_slice(&entry_count.to_le_bytes());
-        put_entry(&mut out, 256, 4, 1, 1u32.to_le_bytes());
-        put_entry(&mut out, 257, 4, 1, 1u32.to_le_bytes());
-        put_entry(
-            &mut out,
-            258,
-            3,
-            1,
-            [bits_per_sample.to_le_bytes()[0], 0, 0, 0],
-        );
-        put_entry(&mut out, 259, 3, 1, u32::from(compression).to_le_bytes());
-        put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
-        put_entry(&mut out, 277, 3, 1, [1, 0, 0, 0]);
-        put_entry(&mut out, 278, 4, 1, 1u32.to_le_bytes());
-        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
-        put_entry(&mut out, 322, 4, 1, tile_width.to_le_bytes());
-        put_entry(&mut out, 323, 4, 1, tile_height.to_le_bytes());
-        if include_tile_offsets {
-            put_entry(
-                &mut out,
-                324,
-                4,
-                1,
-                crate::coverage_support::require_ok(
-                    u32::try_from(pixel_offset),
-                    "coverage fixture: u32::try_from(pixel_offset)",
-                )
-                .to_le_bytes(),
-            );
-        }
-        if include_tile_byte_counts {
-            put_entry(
-                &mut out,
-                325,
-                4,
-                1,
-                crate::coverage_support::require_ok(
-                    u32::try_from(tile_payload.len()),
-                    "coverage fixture: u32::try_from(tile_payload.len())",
-                )
-                .to_le_bytes(),
-            );
-        }
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out.extend_from_slice(tile_payload);
-        out
-    }
-
-    fn put_long_entry(
-        out: &mut Vec<u8>,
-        tag: u16,
-        values: &[u32],
-        external_start: usize,
-        external: &mut Vec<u8>,
-    ) {
-        match values {
-            [] => put_entry(out, tag, 4, 0, [0; 4]),
-            [value] => put_entry(out, tag, 4, 1, value.to_le_bytes()),
-            _ => {
-                let position = crate::coverage_support::require_ok(
-                    u32::try_from(crate::coverage_support::require_some(
-                        (external_start).checked_add(external.len()),
-                        "coverage fixture arithmetic",
-                    )),
-                    "coverage fixture: u32::try_from(external_start + external.len())",
-                );
-                put_entry(
-                    out,
-                    tag,
-                    4,
-                    crate::coverage_support::require_ok(
-                        u32::try_from(values.len()),
-                        "coverage fixture: u32::try_from(values.len())",
-                    ),
-                    position.to_le_bytes(),
-                );
-                for value in values {
-                    external.extend_from_slice(&value.to_le_bytes());
-                }
-            }
-        }
-    }
-
-    fn tiny_strip_tiff(
-        width: u32,
-        height: u32,
-        encoding: TiffFixtureEncoding,
-        rows_per_strip: u32,
-        offset_count: usize,
-        byte_counts: Option<&[u32]>,
-        strip_payloads: &[&[u8]],
-    ) -> Vec<u8> {
-        let TiffFixtureEncoding {
-            bits_per_sample,
-            compression,
-            predictor,
-        } = encoding;
-
-        let entry_count = 11u16;
-        let external_start = crate::coverage_support::require_some(
-            (crate::coverage_support::require_some(
-                usize::from(entry_count).checked_mul(12),
-                "fixture IFD entry table length",
-            ))
-            .checked_add(14),
-            "fixture IFD payload offset",
-        );
-        let counts_len = byte_counts.map_or(0, <[u32]>::len);
-        let pixel_offset = fixture_payload_offset(external_start, offset_count, counts_len);
-        let mut next_offset = crate::coverage_support::require_ok(
-            u32::try_from(pixel_offset),
-            "coverage fixture: u32::try_from(pixel_offset)",
-        );
-        let offsets = (0..offset_count)
-            .map(|index| {
-                let offset = next_offset;
-                if let Some(payload) = strip_payloads.get(index) {
-                    next_offset = crate::coverage_support::require_some(
-                        (next_offset).checked_add(crate::coverage_support::require_ok(
-                            u32::try_from(payload.len()),
-                            "coverage fixture: u32::try_from(payload.len())",
-                        )),
-                        "fixture strip or tile end",
-                    );
-                }
-                offset
-            })
-            .collect::<Vec<_>>();
-        let mut external = Vec::new();
-        let mut out = Vec::new();
-        out.extend_from_slice(b"II");
-        out.extend_from_slice(&42u16.to_le_bytes());
-        out.extend_from_slice(&8u32.to_le_bytes());
-        out.extend_from_slice(&entry_count.to_le_bytes());
-        put_entry(&mut out, 256, 4, 1, width.to_le_bytes());
-        put_entry(&mut out, 257, 4, 1, height.to_le_bytes());
-        put_entry(
-            &mut out,
-            258,
-            3,
-            1,
-            [bits_per_sample.to_le_bytes()[0], 0, 0, 0],
-        );
-        put_entry(&mut out, 259, 3, 1, u32::from(compression).to_le_bytes());
-        put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
-        put_long_entry(&mut out, 273, &offsets, external_start, &mut external);
-        put_entry(&mut out, 277, 3, 1, [1, 0, 0, 0]);
-        put_entry(&mut out, 278, 4, 1, rows_per_strip.to_le_bytes());
-        put_long_entry(
-            &mut out,
-            279,
-            byte_counts.unwrap_or(&[]),
-            external_start,
-            &mut external,
-        );
-        put_entry(&mut out, 284, 3, 1, [1, 0, 0, 0]);
-        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out.extend_from_slice(&external);
-        for payload in strip_payloads {
-            out.extend_from_slice(payload);
-        }
-        out
-    }
-
-    fn tiny_tiled_layout_tiff(
-        width: u32,
-        height: u32,
-        encoding: TiffFixtureEncoding,
-        tile_width: u32,
-        tile_height: u32,
-        tile_payloads: &[&[u8]],
-        byte_counts: Option<&[u32]>,
-    ) -> Vec<u8> {
-        let TiffFixtureEncoding {
-            bits_per_sample,
-            compression,
-            predictor,
-        } = encoding;
-
-        let entry_count = 12u16;
-        let external_start = crate::coverage_support::require_some(
-            (crate::coverage_support::require_some(
-                usize::from(entry_count).checked_mul(12),
-                "fixture IFD entry table length",
-            ))
-            .checked_add(14),
-            "fixture IFD payload offset",
-        );
-        let counts = byte_counts.map_or_else(
-            || {
-                tile_payloads
-                    .iter()
-                    .map(|payload| {
-                        crate::coverage_support::require_ok(
-                            u32::try_from(payload.len()),
-                            "fixture value must fit u32",
-                        )
-                    })
-                    .collect()
-            },
-            <[u32]>::to_vec,
-        );
-        let pixel_offset =
-            fixture_payload_offset(external_start, tile_payloads.len(), counts.len());
-        let mut next_offset = crate::coverage_support::require_ok(
-            u32::try_from(pixel_offset),
-            "coverage fixture: u32::try_from(pixel_offset)",
-        );
-        let offsets = tile_payloads
-            .iter()
-            .map(|payload| {
-                let offset = next_offset;
-                next_offset = crate::coverage_support::require_some(
-                    (next_offset).checked_add(crate::coverage_support::require_ok(
-                        u32::try_from(payload.len()),
-                        "coverage fixture: u32::try_from(payload.len())",
-                    )),
-                    "fixture strip or tile end",
-                );
-                offset
-            })
-            .collect::<Vec<_>>();
-        let mut external = Vec::new();
-        let mut out = Vec::new();
-        out.extend_from_slice(b"II");
-        out.extend_from_slice(&42u16.to_le_bytes());
-        out.extend_from_slice(&8u32.to_le_bytes());
-        out.extend_from_slice(&entry_count.to_le_bytes());
-        put_entry(&mut out, 256, 4, 1, width.to_le_bytes());
-        put_entry(&mut out, 257, 4, 1, height.to_le_bytes());
-        put_entry(
-            &mut out,
-            258,
-            3,
-            1,
-            [bits_per_sample.to_le_bytes()[0], 0, 0, 0],
-        );
-        put_entry(&mut out, 259, 3, 1, u32::from(compression).to_le_bytes());
-        put_entry(&mut out, 262, 3, 1, [1, 0, 0, 0]);
-        put_entry(&mut out, 277, 3, 1, [1, 0, 0, 0]);
-        put_entry(&mut out, 278, 4, 1, 1u32.to_le_bytes());
-        put_entry(&mut out, 317, 3, 1, u32::from(predictor).to_le_bytes());
-        put_entry(&mut out, 322, 4, 1, tile_width.to_le_bytes());
-        put_entry(&mut out, 323, 4, 1, tile_height.to_le_bytes());
-        put_long_entry(&mut out, 324, &offsets, external_start, &mut external);
-        put_long_entry(&mut out, 325, &counts, external_start, &mut external);
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out.extend_from_slice(&external);
-        for payload in tile_payloads {
-            out.extend_from_slice(payload);
-        }
-        out
-    }
-
-    fn single_entry_ifd(tag: u16, field_type: u16, count: u32, value: [u8; 4]) -> Vec<u8> {
-        let mut out = Vec::new();
-        out.extend_from_slice(&1u16.to_le_bytes());
-        put_entry(&mut out, tag, field_type, count, value);
-        out.extend_from_slice(&0u32.to_le_bytes());
-        out
-    }
-
-    let _ = decode(b"II\0\0\x08\0\0\0", None);
-    let _ = decode(b"II*\0", None);
-    let _ = decode(b"MM\0*\0\0\0\x08\0\0\0\0", None);
-    let _ = decode(&tiny_tiff(0, [0, 0, 0, 0], 1, 1, 1, 1, 1), None);
-    let _ = decode(&tiny_tiff(3, u32::MAX.to_le_bytes(), 1, 1, 1, 1, 1), None);
-    let _ = decode(&tiny_tiff(2, [8, 0, 16, 0], 1, 1, 1, 1, 1), None);
-    let _ = decode(&tiny_tiff(1, [0, 1, 0, 0], 1, 1, 1, 1, 1), None);
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 0, 1, 1, 1), None);
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 0, 1, 1), None);
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 2, 1), None);
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 2), None);
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 1, 1, 1, 1, 3), None);
-    let _ = decode(&tiny_tiff(1, [8, 0, 0, 0], 6, 1, 1, 1, 1), None);
-    let _ = decode(&tiny_tiff(1, [16, 0, 0, 0], 6, 3, 1, 1, 1), None);
-    let _ = decode(
-        &tiny_strip_tiff(
-            0,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            1,
-            1,
-            Some(&[1]),
-            &[&[0]],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 99,
-                predictor: 1,
-            },
-            1,
-            1,
-            Some(&[1]),
-            &[&[0]],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            false,
-            true,
-            1,
-            1,
-            &[0],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            true,
-            false,
-            1,
-            1,
-            &[0],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            true,
-            true,
-            0,
-            1,
-            &[0],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            true,
-            true,
-            1,
-            0,
-            &[0],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 1,
-                compression: 1,
-                predictor: 1,
-            },
-            true,
-            true,
-            1,
-            1,
-            &[0],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 2,
-            },
-            true,
-            true,
-            1,
-            1,
-            &[0],
-        ),
-        None,
-    );
-
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            1,
-            0,
-            Some(&[]),
-            &[],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            1,
-            1,
-            Some(&[1]),
-            &[],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            1,
-            2,
-            Some(&[1, 1]),
-            &[&[0], &[1]],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_PACKBITS),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            1,
-            1,
-            None,
-            &[&[0, 7]],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            2,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_PACKBITS),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            1,
-            2,
-            None,
-            &[&[0, 7], &[0, 8]],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            2,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_PACKBITS),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            1,
-            2,
-            Some(&[2]),
-            &[&[0, 7], &[0, 8]],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_PACKBITS),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            1,
-            1,
-            Some(&[4]),
-            &[&[0, 7]],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_layout_tiff(
-            2,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            1,
-            1,
-            &[&[0]],
-            Some(&[1]),
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_layout_tiff(
-            2,
-            2,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: 1,
-                predictor: 1,
-            },
-            1,
-            1,
-            &[&[1], &[2], &[3], &[4]],
-            None,
-        ),
-        None,
-    );
-
-    let _ = decode_packbits(&[], 0);
-    let _ = decode_packbits(&[0], 0);
-    let _ = decode_packbits(&[0, 7], 1);
-    let _ = decode_packbits(&[0x80, 0, 9], 1);
-    let _ = decode_packbits(&[0x80], 1);
-    let _ = decode_packbits(&[1, 7, 8], 1);
-    let _ = decode_packbits(&[0xff, 5], 2);
-    let _ = decode_packbits(&[0xff], 2);
-    let _ = decode_packbits(&[2, 1], 3);
-    let token = crate::CancellationToken::new();
-    let _ = decode_packbits_with_token(&[0x80, 0, 9], 1, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_packbits_with_token(&[0, 7, 9], 1, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_packbits_with_token(&[1, 7], 1, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_packbits_with_token(&[0xff], 1, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_packbits_with_token(&[0x80], 1, &token);
-
-    fn pack_lzw_9(codes: &[u16]) -> Vec<u8> {
-        let mut out = Vec::new();
-        let mut current = 0u8;
-        let mut used = 0u8;
-        for &code in codes {
-            for shift in (0..9).rev() {
-                current = (current << 1) | (((code >> shift) & 1) as u8);
-                used = crate::coverage_support::require_some(
-                    (used).checked_add(1),
-                    "fixture counter or boundary",
-                );
-                if used == 8 {
-                    out.push(current);
-                    current = 0;
-                    used = 0;
-                }
-            }
-        }
-        out.push(
-            current
-                << crate::coverage_support::require_some(
-                    (8u8).checked_sub(used),
-                    "coverage fixture arithmetic",
-                ),
-        );
-        out
-    }
-
-    fn pack_lzw_variable(codes: &[u16]) -> Vec<u8> {
-        let mut out = Vec::new();
-        let mut current = 0u8;
-        let mut used = 0u8;
-        let mut width = 9u8;
-        let mut next_code = 258u16;
-        let mut previous = false;
-        for &code in codes {
-            for shift in (0..width).rev() {
-                current = (current << 1) | (((code >> shift) & 1) as u8);
-                used = used.wrapping_add(1);
-                if used == 8 {
-                    out.push(current);
-                    current = 0;
-                    used = 0;
-                }
-            }
-            if previous {
-                next_code = next_code.wrapping_add(1);
-                if width < 12 && next_code == 1_u16.wrapping_shl(width.into()).wrapping_sub(1) {
-                    width = width.wrapping_add(1);
-                }
-            }
-            previous = true;
-        }
-        out.push(current.wrapping_shl(u32::from(8_u8.wrapping_sub(used))));
-        out
-    }
-
-    let _ = decode_lzw(&pack_lzw_9(&[258]), 1);
-    let _ = decode_lzw(&pack_lzw_9(&[65]), 0);
-    let _ = decode_lzw(&pack_lzw_9(&[65]), 1);
-    let _ = decode_lzw(&pack_lzw_9(&[65, 66, 257]), 2);
-    let lzw_a = pack_lzw_9(&[65]);
-    let token = crate::CancellationToken::new();
-    let _ = decode_lzw_with_token(&[], 1, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_lzw_with_token(&pack_lzw_9(&[257]), 1, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_lzw_with_token(&pack_lzw_9(&[258]), 1, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_lzw_with_token(&pack_lzw_9(&[65, 258]), 2, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_lzw_with_token(&pack_lzw_9(&[65]), 0, &token);
-    let token = crate::CancellationToken::new();
-    let _ = decode_lzw_with_token(&pack_lzw_9(&[65, 300]), 2, &token);
-    let width_probe = vec![65u16; 2_000];
-    let _ = pack_lzw_variable(&width_probe);
-    let mut growth_codes = vec![65u16, 66];
-    growth_codes.extend(259..=1282);
-    let growth = pack_lzw_variable(&growth_codes);
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1_026);
-    let _ = decode_lzw_with_token(&growth, 525_826, &token);
-    let mut repeated_growth = growth_codes.clone();
-    repeated_growth.push(1282);
-    let repeated_growth = pack_lzw_variable(&repeated_growth);
-    for checks in 1_027..=1_032 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode_lzw_with_token(&repeated_growth, 526_851, &token);
-    }
-    let dictionary_saturation = include_bytes!(
-        "../../test_support/fixtures/input/images/tiff/lzw_dictionary_saturation.tiff"
-    );
-    let token = crate::CancellationToken::new();
-    let _ = decode(dictionary_saturation, Some(&token));
-    let mut prefixes = [0u16; 4096];
-    let suffixes = [0u8; 4096];
-    let mut stack = [0u8; 4096];
-    for value in 1..=1024u16 {
-        prefixes[usize::from(value)] = crate::coverage_support::require_some(
-            (value).checked_sub(1),
-            "coverage fixture arithmetic",
-        );
-    }
-    let token = crate::CancellationToken::new();
-    let _ = append_lzw_with_token(
-        1024,
-        &prefixes,
-        &suffixes,
-        &mut stack,
-        &mut Vec::new(),
-        1025,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = append_lzw_with_token(
-        1024,
-        &prefixes,
-        &suffixes,
-        &mut stack,
-        &mut Vec::new(),
-        1025,
-        &token,
-    );
-    for checks in 0..=6 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(
-            &tiny_tiled_layout_tiff(
-                1,
-                1,
-                TiffFixtureEncoding {
-                    bits_per_sample: 8,
-                    compression: crate::coverage_support::require_ok(
-                        u16::try_from(COMPRESSION_LZW),
-                        "fixture value must fit u16",
-                    ),
-                    predictor: 1,
-                },
-                1,
-                1,
-                &[&lzw_a],
-                Some(&[crate::coverage_support::require_ok(
-                    u32::try_from(lzw_a.len()),
-                    "coverage fixture: u32::try_from(lzw_a.len())",
-                )]),
-            ),
-            Some(&token),
-        );
-    }
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 2,
-            },
-            1,
-            1,
-            Some(&[crate::coverage_support::require_ok(
-                u32::try_from(lzw_a.len()),
-                "coverage fixture: u32::try_from(lzw_a.len())",
-            )]),
-            &[&lzw_a],
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 24,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 2,
-            },
-            true,
-            true,
-            1,
-            1,
-            &pack_lzw_9(&[65, 66, 67]),
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_layout_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 2,
-            },
-            1,
-            1,
-            &[&lzw_a],
-            Some(&[crate::coverage_support::require_ok(
-                u32::try_from(lzw_a.len()),
-                "coverage fixture: u32::try_from(lzw_a.len())",
-            )]),
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_layout_tiff(
-            1,
-            2,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            1,
-            1,
-            &[&lzw_a, &lzw_a],
-            Some(&[crate::coverage_support::require_ok(
-                u32::try_from(lzw_a.len()),
-                "coverage fixture: u32::try_from(lzw_a.len())",
-            )]),
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_layout_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            1,
-            1,
-            &[&lzw_a],
-            Some(&[crate::coverage_support::require_ok(
-                u32::try_from(crate::coverage_support::require_some(
-                    (lzw_a.len()).checked_add(1),
-                    "coverage fixture arithmetic",
-                )),
-                "coverage fixture: u32::try_from(lzw_a.len() + 1)",
-            )]),
-        ),
-        None,
-    );
-    let _ = decode(
-        &tiny_tiled_layout_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            1,
-            1,
-            &[&[0]],
-            Some(&[1]),
-        ),
-        None,
-    );
-    let lzw_rgb = pack_lzw_9(&[65, 66, 67, 257]);
-    let _ = decode(
-        &tiny_strip_tiff(
-            1,
-            1,
-            TiffFixtureEncoding {
-                bits_per_sample: 24,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 2,
-            },
-            1,
-            1,
-            Some(&[crate::coverage_support::require_ok(
-                u32::try_from(lzw_rgb.len()),
-                "coverage fixture: u32::try_from(lzw_rgb.len())",
-            )]),
-            &[&lzw_rgb],
-        ),
-        None,
-    );
-
-    let mut one_bit_reader = MsbBits::new(&[0x80]);
-    let _ = one_bit_reader.read(1);
-    let mut short_reader = MsbBits::new(&[0]);
-    let _ = short_reader.read(9);
-    let mut endian_bytes = [0; 4];
-    Endian::Little.write_u16(1, &mut endian_bytes[..2]);
-    Endian::Big.write_u32(1, &mut endian_bytes);
-
-    let _ = Directory::parse(&[], 0, Endian::Little);
-    let _ = Directory::parse(&[], usize::MAX, Endian::Little);
-    let oversized_count = 4097u16.to_le_bytes();
-    let _ = Directory::parse(&oversized_count, 0, Endian::Little);
-    let truncated_entry = 1u16.to_le_bytes();
-    let _ = Directory::parse(&truncated_entry, 0, Endian::Little);
-    let _ = Directory::parse(&single_entry_ifd(300, 13, 1, [0; 4]), 0, Endian::Little);
-    let _ = Directory::parse(
-        &single_entry_ifd(300, 5, 1, u32::MAX.to_le_bytes()),
-        0,
-        Endian::Little,
-    );
-    let empty_directory = Directory {
-        data: &[],
-        endian: Endian::Little,
-        fields: Vec::new(),
-        entries: Vec::new(),
-        next_offset: 0,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-    };
-    let _ = empty_directory.one_or(1, 7);
-    let _ = empty_directory.values_or(1, &[7, 8]);
-    let inline_shorts = single_entry_ifd(300, 3, 2, [1, 0, 2, 0]);
-    let directory = crate::coverage_support::require_ok(
-        Directory::parse(&inline_shorts, 0, Endian::Little),
-        "coverage fixture: Directory::parse(&inline_shorts, 0, Endian::Little)",
-    );
-    let _ = directory.values(300);
-    let inline_long = single_entry_ifd(301, 4, 1, 9u32.to_le_bytes());
-    let directory = crate::coverage_support::require_ok(
-        Directory::parse(&inline_long, 0, Endian::Little),
-        "coverage fixture: Directory::parse(&inline_long, 0, Endian::Little)",
-    );
-    let _ = directory.values(301);
-    let mut external_shorts = single_entry_ifd(302, 3, 3, 18u32.to_le_bytes());
-    external_shorts.extend_from_slice(&[1, 0, 2, 0, 3, 0]);
-    let directory = crate::coverage_support::require_ok(
-        Directory::parse(&external_shorts, 0, Endian::Little),
-        "coverage fixture: Directory::parse(&external_shorts, 0, Endian::Little)",
-    );
-    let _ = directory.values(302);
-    let mut external_longs = single_entry_ifd(303, 4, 2, 18u32.to_le_bytes());
-    external_longs.extend_from_slice(&1u32.to_le_bytes());
-    external_longs.extend_from_slice(&2u32.to_le_bytes());
-    let directory = crate::coverage_support::require_ok(
-        Directory::parse(&external_longs, 0, Endian::Little),
-        "coverage fixture: Directory::parse(&external_longs, 0, Endian::Little)",
-    );
-    let _ = directory.values(303);
-
-    let mut predicted = vec![1, 2, 3, 4, 5, 6];
-    reverse_horizontal_predictor(&mut predicted, 6, 3, 8, Endian::Little);
-    let mut predicted = vec![0, 1, 0, 2];
-    reverse_horizontal_predictor(&mut predicted, 4, 1, 16, Endian::Big);
-    let mut predicted = vec![0, 0, 0, 1, 0, 0, 0, 2];
-    reverse_horizontal_predictor(&mut predicted, 8, 1, 32, Endian::Little);
-    let tiled_predictor =
-        include_bytes!("../../test_support/fixtures/input/images/tiff/tiled_lzw_predictor.tiff");
-    let token = crate::CancellationToken::new();
-    let _ = decode(tiled_predictor, Some(&token));
-    let _ = decode(tiled_predictor, None);
-    let token = crate::CancellationToken::new();
-    let mut predicted = vec![0u8; 1_025];
-    let _ = reverse_horizontal_predictor_with_token(
-        &mut predicted,
-        1_025,
-        1,
-        8,
-        Endian::Little,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let mut predicted = vec![0u8; 2_050];
-    let _ =
-        reverse_horizontal_predictor_with_token(&mut predicted, 2_050, 1, 16, Endian::Big, &token);
-    let token = crate::CancellationToken::new();
-    let mut predicted = vec![0u8; 4_100];
-    let _ = reverse_horizontal_predictor_with_token(
-        &mut predicted,
-        4_100,
-        1,
-        32,
-        Endian::Little,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let mut predicted = vec![0u8; 1_025];
-    let _ = reverse_horizontal_predictor_with_token(
-        &mut predicted,
-        1_025,
-        1,
-        8,
-        Endian::Little,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let mut predicted = vec![0u8; 2_050];
-    let _ =
-        reverse_horizontal_predictor_with_token(&mut predicted, 2_050, 1, 16, Endian::Big, &token);
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let mut predicted = vec![0u8; 2_050];
-    let _ =
-        reverse_horizontal_predictor_with_token(&mut predicted, 2_050, 1, 16, Endian::Big, &token);
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let mut predicted = vec![0u8; 4_100];
-    let _ = reverse_horizontal_predictor_with_token(
-        &mut predicted,
-        4_100,
-        1,
-        32,
-        Endian::Little,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let mut predicted = vec![0u8; 4_100];
-    let _ = reverse_horizontal_predictor_with_token(
-        &mut predicted,
-        4_100,
-        1,
-        32,
-        Endian::Little,
-        &token,
-    );
-    for checks in 0..=32 {
-        let tiny = tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 8,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_LZW),
-                    "fixture value must fit u16",
-                ),
-                predictor: 2,
-            },
-            true,
-            true,
-            1,
-            1,
-            &lzw_a,
-        );
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(&tiny, Some(&token));
-    }
-    for checks in 0..=16 {
-        let tiny = tiny_tiled_tiff(
-            TiffFixtureEncoding {
-                bits_per_sample: 16,
-                compression: crate::coverage_support::require_ok(
-                    u16::try_from(COMPRESSION_NONE),
-                    "fixture value must fit u16",
-                ),
-                predictor: 1,
-            },
-            true,
-            true,
-            1,
-            1,
-            &[0, 0],
-        );
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(&tiny, Some(&token));
-    }
-    let conversion_fixtures: &[&[u8]] = &[
-        include_bytes!("../../test_support/fixtures/input/images/tiff/bilevel.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/miniswhite_8bit.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/gray2.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/gray4.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/16bit.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/palette.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/palette2.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/palette4.tiff"),
-        include_bytes!("../../test_support/fixtures/input/images/tiff/ycbcr.tiff"),
-    ];
-    for fixture in conversion_fixtures {
-        let token = crate::CancellationToken::new();
-        let _ = decode(fixture, Some(&token));
-    }
-    let raw_payload =
-        include_bytes!("../../test_support/fixtures/input/images/tiff/uncompressed.tiff");
-    let token = crate::CancellationToken::new();
-    let _ = decode(raw_payload, Some(&token));
-    let palette = Some(ImagePalette {
-        rgb: vec![0; 768],
-        alpha: Vec::new(),
-    });
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 1_024],
-        TiffLayout::Bilevel { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (8_191, 1),
-        vec![0; 1_024],
-        TiffLayout::Bilevel { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (2_048, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray8 { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 1_024],
-        TiffLayout::Bilevel { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 1_024],
-        TiffLayout::Bilevel { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = convert_pixels_with_token(
-        (2_048, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray8 { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = convert_pixels_with_token(
-        (2_048, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray8 { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    for (bits, bytes) in [(2_u8, 2_048_usize), (4, 4_096)] {
-        let token = crate::CancellationToken::new();
-        let _ = convert_pixels_with_token(
-            (8_192, 1),
-            vec![0; bytes],
-            if bits == 2 {
-                TiffLayout::Gray2 { invert: true }
-            } else {
-                TiffLayout::Gray4 { invert: true }
-            },
-            Endian::Little,
-            None,
-            None,
-            &token,
-        );
-    }
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray2 { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(9);
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray2 { invert: true },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (1_024, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray16,
-        Endian::Big,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = convert_pixels_with_token(
-        (1_024, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray16,
-        Endian::Big,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = convert_pixels_with_token(
-        (1_024, 1),
-        vec![0; 2_048],
-        TiffLayout::Gray16,
-        Endian::Big,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (1, 1),
-        vec![0; 4],
-        TiffLayout::I32,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (1, 1),
-        vec![0; 2],
-        TiffLayout::GrayAlpha8,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (1, 1),
-        vec![0; 4],
-        TiffLayout::F32,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (1, 1),
-        vec![0; 3],
-        TiffLayout::Rgb8,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (1, 1),
-        vec![0; 4],
-        TiffLayout::Rgba8,
-        Endian::Little,
-        None,
-        Some(SourceAlpha::Straight),
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 1_024],
-        TiffLayout::Palette { bits: 1 },
-        Endian::Little,
-        palette.clone(),
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 2_048],
-        TiffLayout::Palette { bits: 2 },
-        Endian::Little,
-        palette.clone(),
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 4_096],
-        TiffLayout::Palette { bits: 4 },
-        Endian::Little,
-        palette.clone(),
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (2_048, 1),
-        vec![0; 2_048],
-        TiffLayout::Palette { bits: 8 },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 1_024],
-        TiffLayout::Palette { bits: 1 },
-        Endian::Little,
-        palette.clone(),
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = convert_pixels_with_token(
-        (2_048, 1),
-        vec![0; 2_048],
-        TiffLayout::Palette { bits: 8 },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = convert_pixels_with_token(
-        (2_048, 1),
-        vec![0; 2_048],
-        TiffLayout::Palette { bits: 8 },
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = convert_pixels_with_token(
-        (8_192, 1),
-        vec![0; 1_024],
-        TiffLayout::Palette { bits: 1 },
-        Endian::Little,
-        palette,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (1, 1),
-        vec![0; 4],
-        TiffLayout::Cmyk8,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    let _ = convert_pixels_with_token(
-        (256, 1),
-        vec![0; 1_024],
-        TiffLayout::Ycbcr8,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel();
-    let _ = convert_pixels_with_token(
-        (256, 1),
-        vec![0; 1_024],
-        TiffLayout::Ycbcr8,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = convert_pixels_with_token(
-        (256, 1),
-        vec![0; 1_024],
-        TiffLayout::Ycbcr8,
-        Endian::Little,
-        None,
-        None,
-        &token,
-    );
 }

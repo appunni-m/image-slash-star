@@ -19,9 +19,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
-TARGET = ROOT / "target" / "jpeg-production-matrix"
+_DEFAULT_TARGET = ROOT / "target" / "jpeg-production-matrix"
+TARGET = Path(os.environ.get("JPEG_PRODUCTION_TARGET_DIR", _DEFAULT_TARGET))
+if not TARGET.is_absolute():
+    TARGET = ROOT / TARGET
+TARGET = TARGET.resolve()
 RUST_MANIFEST = HERE / "rust" / "Cargo.toml"
-RUST_BINARY = TARGET / "release" / "jpeg-production-matrix-rust"
+CARGO_BUILD_TARGET = os.environ.get("CARGO_BUILD_TARGET")
+if CARGO_BUILD_TARGET:
+    target_path = Path(CARGO_BUILD_TARGET)
+    if (
+        target_path.is_absolute()
+        or len(target_path.parts) != 1
+        or target_path.name in {".", ".."}
+    ):
+        raise ValueError("CARGO_BUILD_TARGET must be a target triple")
+    CARGO_OUTPUT = TARGET / target_path
+else:
+    CARGO_OUTPUT = TARGET
+RUST_BINARY = CARGO_OUTPUT / "release" / "jpeg-production-matrix-rust"
 TURBO_BINARY = TARGET / "turbojpeg-matrix"
 INPUT_DIR = TARGET / "inputs"
 
@@ -225,7 +241,74 @@ def summarize(case: dict[str, object], operation: str, records: list[dict[str, o
     }
 
 
+def cpu_brand() -> str:
+    if platform.system() == "Darwin":
+        return capture(["sysctl", "-n", "machdep.cpu.brand_string"])
+
+    try:
+        for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+            key, separator, value = line.partition(":")
+            if separator and key.strip() in {"model name", "Hardware", "Processor"}:
+                return value.strip()
+    except OSError:
+        pass
+    return "unavailable: CPU brand was not exposed by the host"
+
+
+def hardware_model() -> str:
+    if platform.system() == "Darwin":
+        return capture(["sysctl", "-n", "hw.model"])
+
+    try:
+        return Path("/sys/devices/virtual/dmi/id/product_name").read_text(encoding="utf-8").strip()
+    except OSError:
+        return "unavailable: hardware model was not exposed by the host"
+
+
+def memory_bytes() -> str:
+    if platform.system() == "Darwin":
+        return capture(["sysctl", "-n", "hw.memsize"])
+
+    try:
+        for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+            key, separator, value = line.partition(":")
+            if separator and key == "MemTotal":
+                kibibytes = int(value.split()[0])
+                return str(kibibytes * 1024)
+    except (OSError, ValueError, IndexError):
+        pass
+    return "unavailable: memory size was not exposed by the host"
+
+
+def dynamic_linkage(binary: Path) -> str:
+    if platform.system() == "Darwin":
+        return capture(["otool", "-L", str(binary)])
+    if platform.system() == "Linux":
+        return capture(["ldd", str(binary)])
+    return "unavailable: dynamic linkage inspection is unsupported on this host"
+
+
 def metadata(prefix: Path, commands: dict[str, object], rounds: int) -> dict[str, object]:
+    build_environment_keys = (
+        "RUSTFLAGS",
+        "CARGO_ENCODED_RUSTFLAGS",
+        "CARGO_BUILD_TARGET",
+        "CARGO_PROFILE_RELEASE_OPT_LEVEL",
+        "CARGO_PROFILE_RELEASE_LTO",
+        "CARGO_PROFILE_RELEASE_CODEGEN_UNITS",
+        "CARGO_PROFILE_RELEASE_PANIC",
+        "CARGO_PROFILE_RELEASE_DEBUG",
+    )
+    build_environment = {
+        key: os.environ[key] for key in build_environment_keys if key in os.environ
+    }
+    compiler_flags_note = (
+        "ordinary Cargo --release; C harness -O3; no LTO, target-cpu, PGO, "
+        "or disabled TurboJPEG SIMD"
+        if not build_environment
+        else "Cargo release settings are recorded in build_environment; "
+        "C harness -O3; TurboJPEG SIMD enabled"
+    )
     return {
         "schema": 1,
         "timestamp_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -237,21 +320,39 @@ def metadata(prefix: Path, commands: dict[str, object], rounds: int) -> dict[str
         "python": sys.version,
         "uname": capture(["uname", "-a"]),
         "macos": capture(["sw_vers"]),
-        "cpu_brand": capture(["sysctl", "-n", "machdep.cpu.brand_string"]),
-        "hardware_model": capture(["sysctl", "-n", "hw.model"]),
-        "memory_bytes": capture(["sysctl", "-n", "hw.memsize"]),
+        "cpu_brand": cpu_brand(),
+        "hardware_model": hardware_model(),
+        "memory_bytes": memory_bytes(),
         "rustc": capture(["rustc", "-Vv"]),
         "cargo": capture(["cargo", "-V"]),
         "cc": capture([os.environ.get("CC", "cc"), "--version"]),
         "turbojpeg_prefix": str(prefix),
-        "turbojpeg_linkage": capture(["otool", "-L", str(TURBO_BINARY)]),
+        "turbojpeg_linkage": dynamic_linkage(TURBO_BINARY),
+        "build_environment": build_environment,
         "rounds": rounds,
         "case_count": len(CASES),
         "build_commands": commands,
-        "compiler_flags_note": "ordinary Cargo --release; C harness -O3; no LTO, target-cpu, PGO, or disabled TurboJPEG SIMD",
+        "compiler_flags_note": compiler_flags_note,
         "threading": "single-threaded operation loops",
         "initial_load_average": os.getloadavg(),
     }
+
+
+def validate_native_build_target(parser: argparse.ArgumentParser) -> None:
+    if not CARGO_BUILD_TARGET:
+        return
+
+    rustc_details = invoke(["rustc", "-Vv"])
+    host_target = next(
+        (line.removeprefix("host: ") for line in rustc_details.splitlines() if line.startswith("host: ")),
+        None,
+    )
+    if host_target is None:
+        parser.error("rustc -Vv did not report the compiler host target")
+    if CARGO_BUILD_TARGET != host_target:
+        parser.error(
+            "CARGO_BUILD_TARGET must match the rustc host target because the runner executes the built binary"
+        )
 
 
 def main() -> None:
@@ -271,6 +372,7 @@ def main() -> None:
     args.output.mkdir(parents=True, exist_ok=True)
     if shutil.which("cargo") is None or shutil.which("cc") is None:
         parser.error("cargo and cc are required")
+    validate_native_build_target(parser)
 
     commands = build(args.turbojpeg_prefix)
     (args.output / "metadata.json").write_text(

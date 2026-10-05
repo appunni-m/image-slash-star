@@ -72,7 +72,10 @@ fn mulhi(v: u8, coeff: u16) -> i32 {
 /// }
 /// ```
 // Clippy suggests the clamp method, but it seems to optimize worse as of rustc 1.82.0 nightly.
-#[allow(clippy::manual_clamp)]
+#[allow(
+    clippy::manual_clamp,
+    reason = "the explicit max/min form avoids the slower clamp lowering observed on rustc 1.82.0 nightly"
+)]
 fn clip(v: i32) -> u8 {
     const YUV_FIX2: i32 = 6;
     (v >> YUV_FIX2).max(0).min(255).to_le_bytes()[0]

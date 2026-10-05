@@ -12,27 +12,27 @@
 //   (nb << 8) | symbol      for codes ≤ HUFF_LOOKAHEAD
 //   (HUFF_LOOKAHEAD+1) << 8  for codes > HUFF_LOOKAHEAD
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 use super::super::encode::huffman::{STD_AC_CHROMA, STD_AC_LUMA};
 use super::bit_reader::BitReader;
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 use super::bit_reader::FastBitReader;
 use crate::codecs::{CodecError, CodecResult};
 use std::sync::{Arc, OnceLock};
 
 const HUFF_LOOKAHEAD: u32 = 10;
 const HUFF_LOOKAHEAD_SENTINEL: u16 = 0x0B00;
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const AC_PAIR_LOOKAHEAD: u32 = 12;
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const AC_PAIR_TABLE_SIZE: usize = 1 << AC_PAIR_LOOKAHEAD;
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 type AcGeneralPairTable = [u32; AC_PAIR_TABLE_SIZE];
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const STD_AC_LUMA_GENERAL_PAIR_TABLE: AcGeneralPairTable =
     build_ac_general_pair_table(&STD_AC_LUMA.0, &STD_AC_LUMA.1);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const STD_AC_CHROMA_GENERAL_PAIR_TABLE: AcGeneralPairTable =
     build_ac_general_pair_table(&STD_AC_CHROMA.0, &STD_AC_CHROMA.1);
 
@@ -52,7 +52,7 @@ pub(super) struct HuffTable {
     /// Two complete nonzero AC symbols decoded from one twelve-bit window.
     /// This is attached only to the exact standard luminance/chrominance AC
     /// tables; custom tables continue through the ordinary decoder.
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
     general_pair_table: Option<&'static AcGeneralPairTable>,
 }
 
@@ -116,7 +116,7 @@ impl HuffTable {
     /// `values` = symbol values in the order they appear in the DHT segment.
     pub(super) fn build(counts: &[u8; 16], values: &[u8]) -> Self {
         let numsymbols = values.len();
-        #[cfg(target_arch = "aarch64")]
+        #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
         let general_pair_table = standard_ac_general_pair_table(counts, values);
 
         // ── Generate Huffman codes (Figure F.15: code generation) ──
@@ -190,7 +190,7 @@ impl HuffTable {
             values: values.to_vec(),
             maxcode,
             valoffset,
-            #[cfg(target_arch = "aarch64")]
+            #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
             general_pair_table,
         }
     }
@@ -204,7 +204,7 @@ impl HuffTable {
             values: vec![0],
             maxcode,
             valoffset: [0i32; 18],
-            #[cfg(target_arch = "aarch64")]
+            #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
             general_pair_table: None,
         }
     }
@@ -248,8 +248,8 @@ impl HuffTable {
     }
 
     /// Decode through the fully inlined marker-aware reader used by the
-    /// AArch64 baseline fast path.
-    #[cfg(target_arch = "aarch64")]
+    /// baseline fast path on AArch64 and x86_64.
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
     #[inline(always)]
     pub(super) fn decode_fast(&self, br: &mut FastBitReader) -> CodecResult<u8> {
         if br.bits_left() < HUFF_LOOKAHEAD {
@@ -272,7 +272,7 @@ impl HuffTable {
     /// Peek two complete nonzero AC symbols. A miss leaves the reader
     /// untouched so custom tables and short entropy tails retain the normal
     /// one-symbol behavior.
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
     #[inline(always)]
     pub(super) fn peek_general_pair_fast(
         &self,
@@ -343,13 +343,10 @@ impl HuffTable {
         }
 
         if l > 16 {
-            // ✅ FIX: Match libjpeg-turbo jdhuff.c `jpeg_huff_decode`.
-            //    With garbage entropy, IJG consumes through the sentinel
-            //    length, warns, and returns a fake zero symbol instead of
-            //    aborting the image. Keep synthetic empty tables fatal; those
-            //    represent invalid DHT input that libjpeg rejects before
-            //    entropy decode.
-            return if self.maxcode[1..=16].iter().any(|&max| max >= 0) {
+            // IJG returns a fake zero for an overlong code, including a valid
+            // DHT entry with no symbols. Keep the synthetic invalid-table
+            // sentinel distinct; HuffTable::empty stores one placeholder value.
+            return if self.values.is_empty() || self.maxcode[1..=16].iter().any(|&max| max >= 0) {
                 Ok(0)
             } else {
                 Err(CodecError::Malformed(
@@ -369,7 +366,7 @@ impl HuffTable {
         }
     }
 
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
     #[inline(always)]
     fn decode_slow_fast(&self, br: &mut FastBitReader, min_bits: u32) -> CodecResult<u8> {
         let min = min_bits.max(1);
@@ -378,7 +375,7 @@ impl HuffTable {
                 "truncated JPEG Huffman code".to_owned(),
             ));
         }
-        let mut code = br.get_bits(min) as i32;
+        let mut code = br.get_bits(min).cast_signed();
         let mut length = min as usize;
         while code > self.maxcode[length] {
             // The initial ensure pads an exhausted entropy segment to the
@@ -386,11 +383,11 @@ impl HuffTable {
             // every continuation bit is available without another fallible
             // boundary; this matches the scalar decoder's padding rule.
             br.ensure(1);
-            code = code.wrapping_shl(1) | br.get_bits(1) as i32;
+            code = code.wrapping_shl(1) | br.get_bits(1).cast_signed();
             length = length.saturating_add(1);
         }
         if length > 16 {
-            return if self.maxcode[1..=16].iter().any(|&max| max >= 0) {
+            return if self.values.is_empty() || self.maxcode[1..=16].iter().any(|&max| max >= 0) {
                 Ok(0)
             } else {
                 Err(CodecError::Malformed(
@@ -405,7 +402,7 @@ impl HuffTable {
     }
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 fn standard_ac_general_pair_table(
     counts: &[u8; 16],
     values: &[u8],
@@ -437,7 +434,7 @@ fn standard_ac_general_pair_table(
 
 /// Build a compact standard-table lookup for two consecutive nonzero AC
 /// symbols, including their amplitude payloads.
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
@@ -540,95 +537,5 @@ fn wrapping_usize(value: i32) -> usize {
     #[cfg(target_pointer_width = "32")]
     {
         usize::from_le_bytes(value.to_le_bytes())
-    }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let empty = [];
-    let mut table = HuffTable {
-        lookup: [HUFF_LOOKAHEAD_SENTINEL; 1 << HUFF_LOOKAHEAD],
-        values: Vec::new(),
-        maxcode: {
-            let mut maxcode = [-1; 18];
-            maxcode[1] = 0;
-            maxcode[17] = 0x7FFFFF;
-            maxcode
-        },
-        valoffset: [0; 18],
-        #[cfg(target_arch = "aarch64")]
-        general_pair_table: None,
-    };
-
-    let mut br = BitReader::new(&empty, 0, 0);
-    assert!(table.decode_slow(&mut br, 64).is_err());
-
-    let data = [0x00];
-    let mut br = BitReader::new(&data, 0, data.len());
-    assert!(table.decode_slow(&mut br, 1).is_err());
-
-    table.values.push(0);
-    // A leading one keeps the synthetic table on the sentinel path.  Using
-    // 0xFF here would be interpreted as a marker by BitReader's JPEG padding
-    // rules and would never reach the scalar `l > 16` compatibility branch.
-    let mut br = BitReader::new(&[0x80], 0, 1);
-    assert_eq!(table.decode_slow(&mut br, 1), Ok(0));
-    let empty_table = HuffTable::build(&[0; 16], &[]);
-    let mut br = BitReader::new(&[0xFF; 16], 0, 16);
-    assert!(empty_table.decode_slow(&mut br, 1).is_err());
-
-    use super::super::encode::huffman::{STD_AC_CHROMA, STD_AC_LUMA, STD_DC_CHROMA, STD_DC_LUMA};
-    let _ = build_huff_table(0, &STD_DC_LUMA.0, &STD_DC_LUMA.1);
-    let _ = build_huff_table(0, &STD_DC_CHROMA.0, &STD_DC_CHROMA.1);
-    let _ = build_huff_table(1, &STD_AC_LUMA.0, &STD_AC_LUMA.1);
-    let _ = build_huff_table(1, &STD_AC_CHROMA.0, &STD_AC_CHROMA.1);
-    let _ = build_huff_table(2, &STD_DC_LUMA.0, &STD_DC_LUMA.1);
-    let mut wrong_dc_luma_values = STD_DC_LUMA.1;
-    wrong_dc_luma_values[0] ^= 1;
-    let mut wrong_dc_chroma_values = STD_DC_CHROMA.1;
-    wrong_dc_chroma_values[0] ^= 1;
-    let mut wrong_ac_luma_values = STD_AC_LUMA.1;
-    wrong_ac_luma_values[0] ^= 1;
-    let mut wrong_ac_chroma_values = STD_AC_CHROMA.1;
-    wrong_ac_chroma_values[0] ^= 1;
-    let _ = build_huff_table(0, &STD_DC_LUMA.0, &wrong_dc_luma_values);
-    let _ = build_huff_table(0, &STD_DC_CHROMA.0, &wrong_dc_chroma_values);
-    let _ = build_huff_table(1, &STD_AC_LUMA.0, &wrong_ac_luma_values);
-    let _ = build_huff_table(1, &STD_AC_CHROMA.0, &wrong_ac_chroma_values);
-
-    #[cfg(target_arch = "aarch64")]
-    {
-        use super::bit_reader::FastBitReader;
-
-        let mut fast_empty = FastBitReader::new(&[], 0, 0);
-        assert!(table.decode_slow_fast(&mut fast_empty, 50).is_err());
-
-        let mut sentinel_maxcode = [-1; 18];
-        sentinel_maxcode[1] = 0;
-        sentinel_maxcode[17] = 0x7FFFFF;
-        let sentinel_table = HuffTable {
-            lookup: [HUFF_LOOKAHEAD_SENTINEL; 1 << HUFF_LOOKAHEAD],
-            values: Vec::new(),
-            maxcode: sentinel_maxcode,
-            valoffset: [0; 18],
-            general_pair_table: None,
-        };
-        let mut fast = FastBitReader::new(&[0; 16], 0, 16);
-        assert_eq!(sentinel_table.decode_slow_fast(&mut fast, 11), Ok(0));
-
-        let mut missing_symbol = FastBitReader::new(&[0; 2], 0, 2);
-        assert!(
-            sentinel_table
-                .decode_slow_fast(&mut missing_symbol, 1)
-                .is_err()
-        );
-
-        assert!(standard_ac_general_pair_table(&STD_AC_LUMA.0, &STD_AC_LUMA.1).is_some());
-        assert!(standard_ac_general_pair_table(&STD_AC_CHROMA.0, &STD_AC_CHROMA.1).is_some());
-        assert!(standard_ac_general_pair_table(&STD_AC_LUMA.0, &wrong_ac_luma_values).is_none());
-        assert!(
-            standard_ac_general_pair_table(&STD_AC_CHROMA.0, &wrong_ac_chroma_values).is_none()
-        );
-        assert!(standard_ac_general_pair_table(&[0; 16], &[]).is_none());
     }
 }

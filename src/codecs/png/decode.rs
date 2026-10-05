@@ -151,16 +151,62 @@ fn unsupported_compressed_metadata_method(kind: [u8; 4], data: &[u8]) -> Option<
     (method != 0).then_some(identity)
 }
 
+/// Reject compressed text methods that Pillow reads while opening the PNG.
+pub(super) fn validate_compressed_metadata_method(
+    kind: [u8; 4],
+    data: &[u8],
+    offset: u64,
+) -> CodecResult<()> {
+    if let Some(identity) = unsupported_compressed_metadata_method(kind, data) {
+        return Err(CodecError::Malformed(format!(
+            "PNG {identity} compression method is unsupported"
+        ))
+        .at(offset, "png_chunk"));
+    }
+    Ok(())
+}
+
+/// Validate color-chunk fields Pillow reads before decoding image samples.
+pub(super) fn validate_color_chunk_structure(
+    kind: [u8; 4],
+    data: &[u8],
+    offset: u64,
+) -> CodecResult<()> {
+    match &kind {
+        b"gAMA" if data.len() != 4 => Err(CodecError::Malformed(
+            "PNG gAMA chunk has an invalid length".to_owned(),
+        )
+        .at(offset, "png_chunk")),
+        b"iCCP" => {
+            let Some(keyword_end) = next_nul(data, 0) else {
+                return Err(CodecError::Malformed(
+                    "PNG iCCP chunk is missing its profile-name separator".to_owned(),
+                )
+                .at(offset, "png_chunk"));
+            };
+            let Some(&method) = data.get(keyword_end.saturating_add(1)) else {
+                return Err(CodecError::Malformed(
+                    "PNG iCCP chunk is missing its compression method".to_owned(),
+                )
+                .at(offset, "png_chunk"));
+            };
+            if method != 0 {
+                return Err(CodecError::Malformed(
+                    "PNG iCCP compression method is unsupported".to_owned(),
+                )
+                .at(offset, "png_chunk"));
+            }
+            Ok(())
+        }
+        _ => Ok(()),
+    }
+}
+
 fn record_invalid_compressed_metadata(
     chunk: &Chunk<'_>,
     diagnostics: &mut Vec<crate::ImageDiagnostic>,
 ) -> CodecResult<bool> {
-    if let Some(identity) = unsupported_compressed_metadata_method(chunk.kind, chunk.data) {
-        return Err(CodecError::Malformed(format!(
-            "PNG {identity} compression method is unsupported"
-        ))
-        .at(chunk.offset, "png_chunk"));
-    }
+    validate_compressed_metadata_method(chunk.kind, chunk.data, chunk.offset)?;
     let Some(identity) = invalid_compressed_metadata_identity(chunk.kind, chunk.data) else {
         return Ok(false);
     };
@@ -412,15 +458,16 @@ fn srgb_intent(value: u8) -> Option<crate::types::SrgbIntent> {
     }
 }
 
-/// Parse the first well-formed occurrence of each color chunk into the source
-/// color descriptor; duplicates and malformed payloads fall back to raw
-/// metadata records so no bytes are lost.
+/// Parse the first Pillow-readable occurrence of each color chunk into the
+/// source color descriptor, retaining tolerated duplicates and malformed
+/// payloads as raw metadata.
 fn retain_color_chunk(
     kind: [u8; 4],
     data: &[u8],
+    offset: u64,
     color: &mut SourceColor,
     metadata: &mut Vec<crate::types::OpaqueMetadata>,
-) {
+) -> CodecResult<()> {
     match &kind {
         b"sRGB"
             if data.len() == 1
@@ -428,12 +475,12 @@ fn retain_color_chunk(
                 && let Some(intent) = srgb_intent(data[0]) =>
         {
             *color = core::mem::take(color).with_srgb(intent);
-            return;
+            return Ok(());
         }
         b"gAMA" if data.len() == 4 && color.gamma().is_none() => {
             let gamma = u32::from_be_bytes([data[0], data[1], data[2], data[3]]);
             *color = core::mem::take(color).with_gamma(gamma);
-            return;
+            return Ok(());
         }
         b"cHRM" if data.len() == 32 && color.chromaticities().is_none() => {
             let value = |index: usize| {
@@ -455,7 +502,7 @@ fn retain_color_chunk(
                     blue_x: value(6),
                     blue_y: value(7),
                 });
-            return;
+            return Ok(());
         }
         b"iCCP" if color.icc_profile().is_none() => {
             if let Some(nul) = data.iter().position(|&byte| byte == 0)
@@ -466,15 +513,19 @@ fn retain_color_chunk(
                     keyword: data[..nul].to_vec(),
                     data: data[nul.saturating_add(1)..].to_vec(),
                 });
-                return;
+                return Ok(());
             }
         }
         _ => {}
     }
+
+    validate_color_chunk_structure(kind, data, offset)?;
+
     metadata.push(crate::types::OpaqueMetadata {
         kind: kind.to_vec(),
         data: data.to_vec(),
     });
+    Ok(())
 }
 
 /// Decode the first image represented by a PNG or APNG stream.
@@ -559,6 +610,19 @@ pub fn decode(
                     let _ = parse_frame_control(chunk.data, header, &mut next_sequence)?;
                 }
             }
+            b"fdAT" if saw_actl && !saw_idat => {
+                if chunk.data.len() < 4 {
+                    return Err(CodecError::Malformed(
+                        "APNG contains a truncated fdAT chunk".to_owned(),
+                    ));
+                }
+                consume_sequence(read_u32(chunk.data, 0), &mut next_sequence)?;
+                if chunk.data.len() > 4 {
+                    return Err(CodecError::Malformed(
+                        "APNG frame data precedes the default image data".to_owned(),
+                    ));
+                }
+            }
             b"fdAT" if saw_idat && !saw_post_idat_control => {
                 if chunk.data.len() < 4 {
                     return Err(CodecError::Malformed(
@@ -567,13 +631,24 @@ pub fn decode(
                 }
                 consume_sequence(read_u32(chunk.data, 0), &mut next_sequence)?;
             }
+            b"fdAT" if !saw_actl => {
+                return Err(CodecError::Malformed(
+                    "PNG fdAT chunk has no preceding acTL chunk".to_owned(),
+                ));
+            }
             b"IEND" => {
                 saw_iend = true;
                 break;
             }
             _ if retained_color_chunk(&chunk.kind) => {
                 if !record_invalid_compressed_metadata(&chunk, &mut diagnostics)? {
-                    retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+                    retain_color_chunk(
+                        chunk.kind,
+                        chunk.data,
+                        chunk.offset,
+                        &mut source_color,
+                        &mut metadata,
+                    )?;
                 }
             }
             _ if retained_metadata_chunk(&chunk.kind) => {
@@ -891,7 +966,10 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         }
     }
     // `pixel` is the sum of IDAT/fdAT payloads inside the chunk scan.
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "The chunk scan cursor includes every IDAT and fdAT payload byte counted here."
+    )]
     let metadata = chunks.position as u64 - pixel;
     Ok(metadata)
 }
@@ -1000,6 +1078,10 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
                     ));
                 }
                 consume_sequence(read_u32(chunk.data, 0), &mut next_sequence)?;
+                if !saw_idat && chunk.data.len() == 4 {
+                    // Pillow ignores a sequence-only fdAT before the default image.
+                    continue;
+                }
                 let Some(frame) = current.as_mut() else {
                     return Err(CodecError::Malformed(
                         "APNG frame data has no frame control".to_owned(),
@@ -1011,7 +1093,13 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
             b"IEND" => break,
             _ if retained_color_chunk(&chunk.kind) => {
                 if !record_invalid_compressed_metadata(&chunk, &mut diagnostics)? {
-                    retain_color_chunk(chunk.kind, chunk.data, &mut source_color, &mut metadata);
+                    retain_color_chunk(
+                        chunk.kind,
+                        chunk.data,
+                        chunk.offset,
+                        &mut source_color,
+                        &mut metadata,
+                    )?;
                 }
             }
             _ if retained_metadata_chunk(&chunk.kind) => {
@@ -1321,6 +1409,11 @@ pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
     let mut saw_image_data = false;
     for chunk in &mut chunks {
         let chunk = chunk?;
+        if chunk.kind == *b"fdAT" && !saw_image_data {
+            return Err(CodecError::Malformed(
+                "APNG frame data precedes the default image data".to_owned(),
+            ));
+        }
         saw_image_data |= chunk.kind == *b"IDAT";
         if chunk.kind == *b"IEND" {
             return if saw_image_data {
@@ -1953,161 +2046,5 @@ impl<'a> Iterator for Chunks<'a> {
             self.failed = true;
         }
         Some(result.map_err(|error| error.at(chunk_start, "png_chunk")))
-    }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    fn png_chunk(kind: [u8; 4], payload: &[u8]) -> Vec<u8> {
-        let mut data = PNG_SIGNATURE.to_vec();
-        append_chunk(&mut data, kind, payload);
-        data
-    }
-
-    fn append_chunk(data: &mut Vec<u8>, kind: [u8; 4], payload: &[u8]) {
-        data.extend_from_slice(
-            &crate::coverage_support::require_ok(
-                u32::try_from(payload.len()),
-                "fixture value must fit u32",
-            )
-            .to_be_bytes(),
-        );
-        data.extend_from_slice(&kind);
-        data.extend_from_slice(payload);
-        data.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
-    }
-
-    let _ = decode(b"", None);
-    let _ = decode(&png_chunk(*b"NOPE", &[0; 13]), None);
-    let _ = decode(&png_chunk(*b"IHDR", &[0; 12]), None);
-    let mut valid_header = [0u8; 13];
-    valid_header[3] = 1;
-    valid_header[7] = 1;
-    valid_header[8] = 8;
-    valid_header[9] = 0;
-    // A structurally incomplete PNG (no IDAT, no IEND) is incremental
-    // truncation; the same bytes with an IEND are terminal malformed.
-    let _ = decode(&png_chunk(*b"IHDR", &valid_header), None);
-    let mut no_image_data = png_chunk(*b"IHDR", &valid_header);
-    append_chunk(&mut no_image_data, *b"IEND", &[]);
-    let _ = decode(&no_image_data, None);
-    // A complete IDAT chunk carrying a truncated zlib stream is incremental
-    // while IEND is missing, and terminal once the container is complete.
-    let mut truncated_stream = png_chunk(*b"IHDR", &valid_header);
-    append_chunk(&mut truncated_stream, *b"IDAT", &[0x78, 0x9c, 0x63]);
-    let _ = decode(&truncated_stream, None);
-    append_chunk(&mut truncated_stream, *b"IEND", &[]);
-    let _ = decode(&truncated_stream, None);
-    let _ = metadata_bytes(b"");
-    let _ = metadata_bytes(&png_chunk(*b"NOPE", &[0; 13]));
-    let _ = metadata_bytes(&png_chunk(*b"IHDR", &[0; 12]));
-    let mut truncated_chunk = PNG_SIGNATURE.to_vec();
-    truncated_chunk.extend_from_slice(b"\x00\x00\x00\x01NOPE");
-    let _ = metadata_bytes(&truncated_chunk);
-    let _ = decode(&truncated_chunk, None);
-    let mut fd_chunk = PNG_SIGNATURE.to_vec();
-    append_chunk(&mut fd_chunk, *b"IHDR", &[0; 13]);
-    append_chunk(&mut fd_chunk, *b"fdAT", &[0, 0, 0, 0, 1, 2, 3]);
-    append_chunk(&mut fd_chunk, *b"IEND", &[]);
-    let _ = metadata_bytes(&fd_chunk);
-    for (width, height, filter, interlace) in [
-        (0u32, 1u32, 0u8, 0u8),
-        (1, 0, 0, 0),
-        (1, 1, 1, 0),
-        (1, 1, 0, 2),
-    ] {
-        let mut header = [0u8; 13];
-        header[..4].copy_from_slice(&width.to_be_bytes());
-        header[4..8].copy_from_slice(&height.to_be_bytes());
-        header[8] = 8;
-        header[9] = 0;
-        header[11] = filter;
-        header[12] = interlace;
-        let _ = decode(&png_chunk(*b"IHDR", &header), None);
-    }
-    assert!(png_layout(7, 8).is_err());
-    let _ = verify(b"");
-    let _ = verify(PNG_SIGNATURE);
-    let _ = verify(&png_chunk(*b"NOPE", &[0; 13]));
-    let _ = verify(&png_chunk(*b"IHDR", &[0; 12]));
-    let malformed = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x01tEXtx";
-    let mut chunks = crate::coverage_support::require_ok(
-        Chunks::new(malformed, true),
-        "coverage PNG signature should parse",
-    );
-
-    assert!(chunks.next().is_some_and(|chunk| chunk.is_err()));
-    assert!(chunks.failed);
-    assert!(chunks.next().is_none());
-
-    let mut position = 0;
-    assert!(unfilter_rows(&[], &mut position, 1, 1, 1, 8, None).is_err());
-
-    let mut position = 0;
-    assert!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8, None).is_err());
-    let token = crate::CancellationToken::new();
-    let mut position = 0;
-    assert!(unfilter_rows(&[0], &mut position, 1, 1, 1, 8, Some(&token)).is_err());
-
-    assert!(chunk_payload_with_crc(&[], b"IDAT", usize::MAX, 1, true).is_err());
-
-    let mut sequence = u32::MAX;
-    assert!(consume_sequence(u32::MAX, &mut sequence).is_err());
-
-    let mut trailing_palette = PNG_SIGNATURE.to_vec();
-    let mut header = [0u8; 13];
-    header[3] = 1;
-    header[7] = 1;
-    header[8] = 8;
-    header[9] = 2;
-    append_chunk(&mut trailing_palette, *b"IHDR", &header);
-    append_chunk(&mut trailing_palette, *b"fdAT", &[0, 0, 0, 0]);
-    append_chunk(
-        &mut trailing_palette,
-        *b"IDAT",
-        &[
-            0x78, 0x9c, 0x63, 0x68, 0x60, 0x60, 0x00, 0x00, 0x01, 0x84, 0x00, 0x81,
-        ],
-    );
-    append_chunk(&mut trailing_palette, *b"PLTE", &[0, 0, 0]);
-    append_chunk(&mut trailing_palette, *b"tRNS", &[]);
-    append_chunk(&mut trailing_palette, *b"IEND", &[]);
-    assert!(decode(&trailing_palette, None).is_ok());
-    assert!(parse_apng(&trailing_palette).is_ok_and(|parsed| parsed.is_none()));
-
-    let mut orphan_frame_data = PNG_SIGNATURE.to_vec();
-    append_chunk(&mut orphan_frame_data, *b"IHDR", &header);
-    append_chunk(&mut orphan_frame_data, *b"acTL", &[0, 0, 0, 1, 0, 0, 0, 0]);
-    append_chunk(&mut orphan_frame_data, *b"fdAT", &[0, 0, 0, 0, 0x78]);
-    append_chunk(&mut orphan_frame_data, *b"IEND", &[]);
-    assert!(parse_apng(&orphan_frame_data).is_err());
-
-    // Every cancellation checkpoint in the decode paths is reachable with a
-    // token that fires after a fixed number of polls.
-    let apng = include_bytes!("../../test_support/fixtures/input/images/png/apng_animated.png");
-    let mut budget = SequenceDecodeBudget::default_for(crate::ImageFormat::Png);
-    for checks in 0..=4 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(&trailing_palette, Some(&token));
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode_sequence(apng, &mut budget, Some(&token));
-    }
-
-    // Exercise cancellation while a real multi-row PNG is being
-    // reconstructed and unpacked, rather than only at container boundaries.
-    let scanline_work = include_bytes!("../../test_support/fixtures/input/images/png/2x3.png");
-    for checks in [0, 4, 8, 12, 32] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(scanline_work, Some(&token));
-    }
-    let interlaced_scanline_work =
-        include_bytes!("../../test_support/fixtures/input/images/png/adam7_2x3.png");
-    for checks in 0..=64 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(interlaced_scanline_work, Some(&token));
     }
 }

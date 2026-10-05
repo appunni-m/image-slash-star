@@ -23,11 +23,9 @@
 #![allow(
     clippy::arithmetic_side_effects,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    reason = "bounded codec histograms and fixed-point reference formulas define the required wrapping and narrowing"
 )]
-
-#[cfg(coverage)]
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::backward_refs::{self, Token};
 use super::{channels, length_to_symbol};
@@ -46,38 +44,11 @@ const MAX_RETAINED_PAIR_QUEUE: usize = 4_096;
 type CheckpointToken<'a> = Option<&'a crate::CancellationToken>;
 type CheckpointResult<T> = Result<T, super::EncodingError>;
 
-#[cfg(coverage)]
-static COVERAGE_CHECKPOINT_REMAINING: [AtomicUsize; 11] =
-    [const { AtomicUsize::new(usize::MAX) }; 11];
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_record_checkpoint(index: usize, token: CheckpointToken<'_>) {
-    if let Some(remaining) = token.and_then(crate::CancellationToken::coverage_remaining_checks) {
-        let _ = COVERAGE_CHECKPOINT_REMAINING[index].compare_exchange(
-            usize::MAX,
-            remaining,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        );
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_checkpoint_count(index: usize) -> Option<usize> {
-    match COVERAGE_CHECKPOINT_REMAINING[index].load(Ordering::Relaxed) {
-        usize::MAX => None,
-        remaining => Some(usize::MAX.saturating_sub(remaining)),
-    }
-}
-
 #[inline]
 fn checkpoint(token: CheckpointToken<'_>) -> CheckpointResult<()> {
     super::check_token(token)
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[inline]
 fn checkpoint_without_cancellation(token: CheckpointToken<'_>) {
     let _ = checkpoint(token);
@@ -482,7 +453,7 @@ fn add_threshold(
     let Some((cost, _)) = combined_costs(a, b, limit, token)? else {
         return Ok(None);
     };
-    Ok(Some(cost as i64 - a.bit_cost as i64))
+    Ok(Some(cost.cast_signed() - a.bit_cost.cast_signed()))
 }
 
 #[derive(Clone)]
@@ -544,7 +515,7 @@ fn update_pair(
     };
     pair.cost_combo = cost;
     pair.costs = costs;
-    pair.cost_diff = cost as i64 - sum as i64;
+    pair.cost_diff = cost.cast_signed() - sum.cast_signed();
     Ok(true)
 }
 
@@ -603,8 +574,6 @@ fn entropy_bin_combine(
     merge: &mut Histogram,
     token: CheckpointToken<'_>,
 ) -> CheckpointResult<()> {
-    #[cfg(coverage)]
-    coverage_record_checkpoint(0, token);
     checkpoint(token)?;
     let mut minima = [u64::MAX; 3];
     let mut maxima = [0; 3];
@@ -613,8 +582,6 @@ fn entropy_bin_combine(
     // bounded while retaining the existing no-token algorithm and data.
     for (index, histogram) in histograms.iter().enumerate() {
         if (index + 1).is_multiple_of(CLUSTER_CHECKPOINT_HISTOGRAMS) {
-            #[cfg(coverage)]
-            coverage_record_checkpoint(1, token);
             checkpoint(token)?;
         }
         for (range, channel) in [0, 1, 2].into_iter().enumerate() {
@@ -624,8 +591,6 @@ fn entropy_bin_combine(
     }
     for (index, histogram) in histograms.iter_mut().enumerate() {
         if (index + 1).is_multiple_of(CLUSTER_CHECKPOINT_HISTOGRAMS) {
-            #[cfg(coverage)]
-            coverage_record_checkpoint(2, token);
             checkpoint(token)?;
         }
         let mut bin = 0;
@@ -645,8 +610,6 @@ fn entropy_bin_combine(
     let mut failures = [0_u16; BIN_SIZE];
     let mut index = 0;
     while index < histograms.len() {
-        #[cfg(coverage)]
-        coverage_record_checkpoint(3, token);
         checkpoint(token)?;
         let bin = histograms[index].bin_id;
         let Some(first_index) = first[bin] else {
@@ -654,11 +617,9 @@ fn entropy_bin_combine(
             index += 1;
             continue;
         };
-        let threshold = -(((histograms[index].bit_cost * 16 + 50) / 100) as i64);
+        let threshold = -((histograms[index].bit_cost * 16 + 50) / 100).cast_signed();
         let sum = histograms[first_index].bit_cost + histograms[index].bit_cost;
         let limit = threshold.saturating_add_unsigned(sum);
-        #[cfg(coverage)]
-        coverage_record_checkpoint(4, token);
         let Some((cost, costs)) =
             combined_costs(&histograms[first_index], &histograms[index], limit, token)?
         else {
@@ -673,8 +634,6 @@ fn entropy_bin_combine(
             && histograms[first_index].trivial[1..4].contains(&NON_TRIVIAL);
         if trivial_combo || nontrivial_pair || failures[bin] >= 32 {
             merge.copy_from(&histograms[index]);
-            #[cfg(coverage)]
-            coverage_record_checkpoint(5, token);
             merge.add_assign_with_checkpoint(&histograms[first_index], token)?;
             merge.costs = costs;
             merge.bit_cost = cost;
@@ -757,8 +716,6 @@ fn stochastic_combine(
             if touches_first || touches_second {
                 fix_pair(&mut queue[index], second, first);
                 let mut pair = queue[index].clone();
-                #[cfg(coverage)]
-                coverage_record_checkpoint(6, token);
                 if !update_pair(histograms, &mut pair, 0, token)? {
                     queue.swap_remove(index);
                     continue;
@@ -789,8 +746,6 @@ fn greedy_combine(
         }
         for second in first + 1..histograms.len() {
             if second.is_multiple_of(64) {
-                #[cfg(coverage)]
-                coverage_record_checkpoint(7, token);
                 checkpoint(token)?;
             }
             push_pair(queue, maximum, histograms, first, second, 0, token)?;
@@ -871,8 +826,6 @@ pub(super) fn cluster<'a>(
                 y += 1;
                 rows_advanced += 1;
                 if rows_advanced.is_multiple_of(CLUSTER_CHECKPOINT_ROWS) {
-                    #[cfg(coverage)]
-                    coverage_record_checkpoint(8, Some(token));
                     checkpoint(Some(token))?;
                 }
             }
@@ -906,8 +859,6 @@ pub(super) fn cluster<'a>(
     if let Some(token) = token {
         for (index, histogram) in scratch.originals.iter().enumerate() {
             if (index + 1).is_multiple_of(CLUSTER_CHECKPOINT_HISTOGRAMS) {
-                #[cfg(coverage)]
-                coverage_record_checkpoint(9, Some(token));
                 checkpoint(Some(token))?;
             }
             if histogram.used.iter().any(|&used| used) {
@@ -932,8 +883,6 @@ pub(super) fn cluster<'a>(
     scratch.clusters.truncate(cluster_count);
     scratch.merge.reset(cache_bits);
     if scratch.clusters.len() > 2 * BIN_SIZE && quality < 100 {
-        #[cfg(coverage)]
-        coverage_record_checkpoint(10, token);
         entropy_bin_combine(&mut scratch.clusters, &mut scratch.merge, token)?;
     }
     let threshold = 1 + div_round(
@@ -983,284 +932,4 @@ pub(super) fn cluster<'a>(
         }
     }
     Ok((&mut scratch.symbols, &scratch.remapped))
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_run_cluster_many(token: &crate::CancellationToken) -> CheckpointResult<()> {
-    let tokens = (0..(2 * BIN_SIZE + 1))
-        .map(|index| Token::Literal(0xff00_0000 | index as u32))
-        .collect::<Vec<_>>();
-    let mut scratch = HistogramScratch::default();
-    cluster(
-        &tokens,
-        (tokens.len(), 1),
-        0,
-        99,
-        0,
-        &mut scratch,
-        Some(token),
-    )
-    .map(|_| ())
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_run_cluster_rows(token: &crate::CancellationToken) -> CheckpointResult<()> {
-    let tokens = [Token::Copy {
-        distance: 1,
-        length: 256,
-    }];
-    let mut scratch = HistogramScratch::default();
-    cluster(&tokens, (1, 256), 0, 100, 0, &mut scratch, Some(token)).map(|_| ())
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_run_greedy_second_checkpoint(token: &crate::CancellationToken) -> CheckpointResult<()> {
-    let mut histograms = Vec::new();
-    for index in 0..65_u32 {
-        let mut histogram = Histogram::new(0);
-        histogram.add_token(Token::Literal(0xff00_0000 | index), 65);
-        histogram.analyze();
-        histograms.push(histogram);
-    }
-    let mut merge = Histogram::new(0);
-    let mut queue = Vec::new();
-    greedy_combine(&mut histograms, &mut merge, &mut queue, Some(token))
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_run_stochastic_update_pair(token: &crate::CancellationToken) -> CheckpointResult<()> {
-    let mut histograms = Vec::new();
-    for index in 0..24_u32 {
-        let mut histogram = Histogram::new(0);
-        for offset in 0..64_u32 {
-            histogram.add_token(
-                Token::Literal(0xff00_0000 | index.wrapping_mul(0x045d_9f3b) | offset),
-                1,
-            );
-        }
-        histogram.analyze();
-        histograms.push(histogram);
-    }
-    let mut merge = Histogram::new(0);
-    let mut queue = Vec::new();
-    stochastic_combine(&mut histograms, 1, &mut merge, &mut queue, Some(token)).map(|_| ())
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_replay_checkpoint(
-    index: usize,
-    run: fn(&crate::CancellationToken) -> CheckpointResult<()>,
-) {
-    let Some(checks) = coverage_checkpoint_count(index) else {
-        return;
-    };
-    let token = crate::CancellationToken::new();
-    token.cancel_after(checks);
-    let _ = std::hint::black_box(run(&token));
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_replay_checkpoint_window(
-    index: usize,
-    run: fn(&crate::CancellationToken) -> CheckpointResult<()>,
-) {
-    let Some(checks) = coverage_checkpoint_count(index) else {
-        return;
-    };
-    for attempt in [checks.saturating_sub(1), checks, checks.saturating_add(1)] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(attempt);
-        let _ = std::hint::black_box(run(&token));
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_instrumented_checkpoint_errors() {
-    for slot in &COVERAGE_CHECKPOINT_REMAINING {
-        slot.store(usize::MAX, Ordering::Relaxed);
-    }
-    for run in [coverage_run_cluster_many, coverage_run_cluster_rows] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(run(&token));
-    }
-    for index in [0, 1, 2, 3, 4, 5, 6, 7, 9] {
-        if index == 6 {
-            coverage_replay_checkpoint_window(index, coverage_run_cluster_many);
-        } else {
-            coverage_replay_checkpoint(index, coverage_run_cluster_many);
-        }
-    }
-    coverage_replay_checkpoint(10, coverage_run_cluster_many);
-    coverage_replay_checkpoint(8, coverage_run_cluster_rows);
-    COVERAGE_CHECKPOINT_REMAINING[6].store(usize::MAX, Ordering::Relaxed);
-    let token = crate::CancellationToken::new();
-    token.cancel_after(usize::MAX);
-    let _ = std::hint::black_box(coverage_run_stochastic_update_pair(&token));
-    coverage_replay_checkpoint(6, coverage_run_stochastic_update_pair);
-
-    COVERAGE_CHECKPOINT_REMAINING[7].store(usize::MAX, Ordering::Relaxed);
-    let token = crate::CancellationToken::new();
-    token.cancel_after(usize::MAX);
-    let _ = std::hint::black_box(coverage_run_greedy_second_checkpoint(&token));
-    coverage_replay_checkpoint(7, coverage_run_greedy_second_checkpoint);
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let mut a = Histogram::new(0);
-    let mut b = Histogram::new(0);
-    let mut merge = Histogram::default();
-    let mut pair_queue = Vec::new();
-    a.add_token(Token::Literal(0xff00_0000), 1);
-    b.add_token(Token::Literal(0xff00_00ff), 1);
-    a.analyze();
-    b.analyze();
-    assert!(matches!(combined_costs(&a, &b, 0, None), Ok(None)));
-
-    let histograms = vec![a, b];
-    let mut queue = vec![Pair {
-        first: 0,
-        second: 1,
-        cost_diff: 0,
-        cost_combo: 0,
-        costs: [0; 5],
-    }];
-    let _ = push_pair(&mut queue, 1, &histograms, 0, 1, -1, None);
-
-    let mut equal_bins = vec![Histogram::new(0), Histogram::new(0)];
-    for histogram in &mut equal_bins {
-        histogram.analyze();
-    }
-    let _ = entropy_bin_combine(&mut equal_bins, &mut merge, None);
-    let mut rejected_same_bin = vec![Histogram::new(0), Histogram::new(0)];
-    for histogram in &mut rejected_same_bin {
-        histogram.costs = [0; 5];
-        histogram.trivial = [0; 5];
-        histogram.used = [false; 5];
-        histogram.bit_cost = 0;
-    }
-    let _ = entropy_bin_combine(&mut rejected_same_bin, &mut merge, None);
-
-    let mut no_pairs = vec![
-        Histogram::new(0),
-        Histogram::new(0),
-        Histogram::new(0),
-        Histogram::new(0),
-    ];
-    for histogram in &mut no_pairs {
-        histogram.analyze();
-    }
-    let _ = stochastic_combine(&mut no_pairs, 4, &mut merge, &mut pair_queue, None);
-
-    let mut mergeable = Vec::new();
-    for _ in 0..24 {
-        let mut histogram = Histogram::new(0);
-        histogram.add_token(Token::Literal(0xff00_0000), 1);
-        histogram.analyze();
-        mergeable.push(histogram);
-    }
-    let _ = stochastic_combine(&mut mergeable, 1, &mut merge, &mut pair_queue, None);
-    let mut large_mergeable = Vec::new();
-    for _ in 0..64 {
-        let mut histogram = Histogram::new(0);
-        histogram.add_token(Token::Literal(0xff00_0000), 1);
-        histogram.analyze();
-        large_mergeable.push(histogram);
-    }
-    let _ = stochastic_combine(&mut large_mergeable, 1, &mut merge, &mut pair_queue, None);
-
-    let mut distinct = Vec::new();
-    for index in 0..8 {
-        let mut histogram = Histogram::new(0);
-        histogram.add_token(Token::Literal(0xff00_0000 | index), 1);
-        histogram.analyze();
-        distinct.push(histogram);
-    }
-    let _ = stochastic_combine(&mut distinct, 1, &mut merge, &mut pair_queue, None);
-
-    let mut high_entropy = Vec::new();
-    let mut high_entropy_tokens = Vec::new();
-    for histogram_index in 0_u32..24 {
-        let mut histogram = Histogram::new(0);
-        for token_index in 0_u32..64 {
-            let seed = histogram_index * 1000 + token_index * 37;
-            let pixel = 0xff00_0000
-                | (((seed * 73) & 0xff) << 16)
-                | (((seed * 151) & 0xff) << 8)
-                | ((seed * 199) & 0xff);
-            let token = Token::Literal(pixel);
-            histogram.add_token(token, 1);
-            high_entropy_tokens.push(token);
-        }
-        histogram.analyze();
-        high_entropy.push(histogram);
-    }
-    assert!(matches!(
-        stochastic_combine(&mut high_entropy, 1, &mut merge, &mut pair_queue, None),
-        Ok(false)
-    ));
-    let mut scratch = HistogramScratch::default();
-    let _ = cluster(
-        &high_entropy_tokens,
-        (high_entropy_tokens.len(), 1),
-        0,
-        0,
-        6,
-        &mut scratch,
-        None,
-    );
-
-    let small_tokens = [
-        Token::Literal(0xff00_0000),
-        Token::Literal(0xff00_0001),
-        Token::Literal(0xff00_0002),
-        Token::Literal(0xff00_0003),
-    ];
-    let _ = cluster(&small_tokens, (4, 1), 0, 100, 0, &mut scratch, None);
-    let _ = cluster(&small_tokens, (4, 1), 0, 0, 0, &mut scratch, None);
-
-    let many_tokens = (0..(2 * BIN_SIZE + 1))
-        .map(|index| Token::Literal(0xff00_0000 | index as u32))
-        .collect::<Vec<_>>();
-    let _ = cluster(
-        &many_tokens,
-        (many_tokens.len(), 1),
-        0,
-        99,
-        0,
-        &mut scratch,
-        None,
-    );
-    let _ = cluster(
-        &many_tokens,
-        (many_tokens.len(), 1),
-        0,
-        100,
-        0,
-        &mut scratch,
-        None,
-    );
-    let many_distinct = (0..(4 * BIN_SIZE))
-        .map(|index| {
-            Token::Literal(0xff00_0000 | (((index as u32).wrapping_mul(0x045d_9f3b)) & 0x00ff_ffff))
-        })
-        .collect::<Vec<_>>();
-    let _ = cluster(
-        &many_distinct,
-        (many_distinct.len(), 1),
-        0,
-        100,
-        0,
-        &mut scratch,
-        None,
-    );
 }

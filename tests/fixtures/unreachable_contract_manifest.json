@@ -6,6 +6,128 @@
     "matrix": "tests/fixtures/coverage_matrix.json",
     "reason": "Pillow does not return the Rust-only fields, tokens, targets, sinks, or typed results asserted by these contracts."
   },
+  "fault_contract_cases": [
+    {
+      "id": "avif_display_plane_copy_allocation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_display_plane_copy_allocation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_temporal_motion_field_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_temporal_motion_field_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_sequence_frames_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_sequence_frames_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_superresolution_positions_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_superresolution_positions_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_superresolution_plane_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_superresolution_plane_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_sgr_restoration_output_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_sgr_restoration_output_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "jpeg_multiscan_coefficient_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_tile_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_tile_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_color_tile_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_color_tile_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_sgr_intermediate_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_sgr_intermediate_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_restoration_stripe_scratch_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_tile_cell_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_tile_cell_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_tile_block_metadata_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_tile_block_metadata_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_chroma_tile_cell_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_chroma_tile_cell_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_assembled_loop_filter_metadata_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_partition_node_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_partition_node_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_projected_temporal_field_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_projected_temporal_field_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_grid_cell_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_grid_cell_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_loop_filter_metadata_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
+      "id": "avif_monochrome_cdef_active_map_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    }
+  ],
   "categories": [
     {
       "id": "decode-encode-policy-limits",
@@ -23,7 +145,14 @@
             "sequence_frame_limit_manifest_matches_the_public_contract",
             "sequence_byte_limits_reject_before_every_sequence_codec_materializes_later_frames"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "decode_policy_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "decode_policy_tests"
+          ]
         },
         {
           "kind": "integration_contract",
@@ -33,7 +162,14 @@
             "encoded_output_policy_is_a_non_parity_result_contract",
             "incremental_decode_policy_variants_apply_limits"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         }
       ],
       "planned_reason": null,
@@ -55,7 +191,14 @@
             "encode_cancellation_is_a_non_parity_contract",
             "encode_work_budget_is_a_non_parity_result_contract"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         }
       ],
       "planned_reason": null,
@@ -77,7 +220,14 @@
             "partial_structural_sink_write_preserves_prefix_without_flush",
             "partial_structural_sink_write_preserves_prefix_across_available_encoders"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         }
       ],
       "planned_reason": null,
@@ -98,7 +248,14 @@
             "destination_buffers_match_the_output_size_contract",
             "tiff_capability_and_destination_failures_are_structured"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         }
       ],
       "planned_reason": null,
@@ -121,7 +278,14 @@
             "avif_item_properties_match_the_non_parity_contract",
             "source_color_matches_the_container_contract"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         }
       ],
       "planned_reason": null,
@@ -141,14 +305,24 @@
           "tests": [
             "diagnostic_manifest_matches_the_non_parity_contract"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         },
         {
           "kind": "fixture_verifier",
           "path": "scripts/verify_diagnostic_provenance.py",
           "fixture": "tests/fixtures/diagnostic_manifest.json",
           "tests": [],
-          "command": ["python3", "scripts/verify_diagnostic_provenance.py"]
+          "command": [
+            "python3",
+            "scripts/verify_diagnostic_provenance.py"
+          ]
         }
       ],
       "planned_reason": null,
@@ -169,7 +343,14 @@
             "manifest_inputs_obey_the_exact_feature_and_target_contract",
             "unsupported_reasons_are_non_parity_capability_contracts"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         },
         {
           "kind": "integration_contract",
@@ -178,7 +359,15 @@
           "tests": [
             "emit_runtime_capability_table"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests", "emit_runtime_capability_table"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests",
+            "emit_runtime_capability_table"
+          ]
         }
       ],
       "planned_reason": null,
@@ -201,7 +390,14 @@
             "owned_source_verification_is_thread_safe_for_shared_success_and_failure",
             "borrowed_view_verification_is_thread_safe_for_shared_clones"
           ],
-          "command": ["cargo", "test", "--locked", "--all-features", "--test", "feature_gate_tests"]
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--all-features",
+            "--test",
+            "feature_gate_tests"
+          ]
         }
       ],
       "planned_reason": null,
@@ -219,7 +415,10 @@
           "path": "scripts/verify_package_surface.py",
           "fixture": "tests/fixtures/package_surface_manifest.json",
           "tests": [],
-          "command": ["python3", "scripts/verify_package_surface.py"]
+          "command": [
+            "python3",
+            "scripts/verify_package_surface.py"
+          ]
         }
       ],
       "planned_reason": null,

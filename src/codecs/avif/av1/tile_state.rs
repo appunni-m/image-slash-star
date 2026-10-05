@@ -256,8 +256,18 @@ impl TileState {
             .filter(|&count| count != 0)
             .ok_or_else(|| malformed("tile state has an invalid extent"))?;
         let mut cells = Vec::new();
+        #[cfg(coverage)]
+        let cell_reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1TileCellReservation,
+        ) {
+            usize::MAX
+        } else {
+            cell_count
+        };
+        #[cfg(not(coverage))]
+        let cell_reservation_count = cell_count;
         cells
-            .try_reserve_exact(cell_count)
+            .try_reserve_exact(cell_reservation_count)
             .map_err(|_| CodecError::Dimensions("unable to allocate AV1 tile cells".to_owned()))?;
         cells.resize(cell_count, TileCell::default());
         let chroma_width = if subsampling_x {
@@ -275,8 +285,18 @@ impl TileState {
             .filter(|&count| count != 0)
             .ok_or_else(|| malformed("tile chroma state has an invalid extent"))?;
         let mut chroma_cells = Vec::new();
+        #[cfg(coverage)]
+        let chroma_cell_reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1ChromaTileCellReservation,
+        ) {
+            usize::MAX
+        } else {
+            chroma_cell_count
+        };
+        #[cfg(not(coverage))]
+        let chroma_cell_reservation_count = chroma_cell_count;
         chroma_cells
-            .try_reserve_exact(chroma_cell_count)
+            .try_reserve_exact(chroma_cell_reservation_count)
             .map_err(|_| {
                 CodecError::Dimensions("unable to allocate AV1 chroma tile cells".to_owned())
             })?;
@@ -764,9 +784,21 @@ impl TileState {
             |cells| cells[0],
         );
 
-        self.blocks.try_reserve(1).map_err(|_| {
-            CodecError::Dimensions("unable to allocate AV1 tile block metadata".to_owned())
-        })?;
+        #[cfg(coverage)]
+        let block_reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1TileBlockMetadataReservation,
+        ) {
+            usize::MAX
+        } else {
+            1
+        };
+        #[cfg(not(coverage))]
+        let block_reservation_count = 1;
+        self.blocks
+            .try_reserve(block_reservation_count)
+            .map_err(|_| {
+                CodecError::Dimensions("unable to allocate AV1 tile block metadata".to_owned())
+            })?;
         self.blocks.push(DecodedBlockMeta {
             origin_x: node.x,
             origin_y: node.y,

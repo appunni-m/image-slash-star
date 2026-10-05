@@ -16,6 +16,8 @@ use super::sample_depth::SampleDepth;
 use super::{Av1Result, malformed};
 use crate::codecs::CodecError;
 
+const DISPLAY_PLANE_ALLOCATION_ERROR: &str = "unable to allocate AV1 display plane";
+
 /// A checked immutable row-major view over one retained plane.
 #[derive(Clone, Copy)]
 pub(super) struct PlaneView<'a> {
@@ -168,9 +170,17 @@ impl FramePlane {
             return Err(malformed("retained display plane has invalid geometry"));
         }
         let mut samples = Vec::new();
-        samples.try_reserve_exact(length).map_err(|_| {
-            CodecError::Dimensions("unable to allocate AV1 display plane".to_owned())
-        })?;
+        #[cfg(coverage)]
+        if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::Av1DisplayPlaneCopyAllocation,
+        ) {
+            return Err(CodecError::Dimensions(
+                DISPLAY_PLANE_ALLOCATION_ERROR.to_owned(),
+            ));
+        }
+        samples
+            .try_reserve_exact(length)
+            .map_err(|_| CodecError::Dimensions(DISPLAY_PLANE_ALLOCATION_ERROR.to_owned()))?;
         for row in 0..height {
             let start = row
                 .checked_mul(self.stride)

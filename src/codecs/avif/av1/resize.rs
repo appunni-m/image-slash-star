@@ -18,6 +18,18 @@ const RS_SCALE_EXTRA_BITS: i64 = 8;
 const RS_SCALE_EXTRA_OFF: i64 = 1_i64 << (RS_SCALE_EXTRA_BITS - 1);
 const FILTER_BITS: i64 = 7;
 
+/// Logical dimensions used for placement and physical dimensions used for
+/// reading the retained coded plane storage.
+#[derive(Clone, Copy)]
+pub(super) struct ResizeGeometry {
+    pub(super) coded_width: u32,
+    pub(super) source_width: u32,
+    pub(super) source_height: u32,
+    pub(super) output_width: u32,
+    pub(super) output_height: u32,
+    pub(super) superres_denominator: u32,
+}
+
 // Conventional libaom sign convention: each phase sums to +128 and the
 // rounded result is (sum + 64) >> 7. The table is intentionally kept local so
 // the scalar path remains the parity authority for any future SIMD kernel.
@@ -95,21 +107,10 @@ const RESIZE_FILTER: [[i16; 8]; 64] = [
 /// failures cannot publish a partial surface or mutate pending frame state.
 pub(super) fn upscale_i420_leaf(
     leaf: FirstLeaf,
-    coded_width: u32,
-    upscaled_width: u32,
-    frame_height: u32,
-    superres_denominator: u32,
+    geometry: ResizeGeometry,
     depth: SampleDepth,
 ) -> Av1Result<FirstLeaf> {
-    upscale_subsampled_leaf(
-        leaf,
-        coded_width,
-        upscaled_width,
-        frame_height,
-        superres_denominator,
-        depth,
-        (true, true),
-    )
+    upscale_subsampled_leaf(leaf, geometry, depth, (true, true))
 }
 
 /// Apply AV1's horizontal super-resolution step to a complete I422 leaf.
@@ -120,21 +121,10 @@ pub(super) fn upscale_i420_leaf(
 /// horizontal-only compositor.
 pub(super) fn upscale_i422_leaf(
     leaf: FirstLeaf,
-    coded_width: u32,
-    upscaled_width: u32,
-    frame_height: u32,
-    superres_denominator: u32,
+    geometry: ResizeGeometry,
     depth: SampleDepth,
 ) -> Av1Result<FirstLeaf> {
-    upscale_subsampled_leaf(
-        leaf,
-        coded_width,
-        upscaled_width,
-        frame_height,
-        superres_denominator,
-        depth,
-        (true, false),
-    )
+    upscale_subsampled_leaf(leaf, geometry, depth, (true, false))
 }
 
 /// Apply AV1's horizontal super-resolution step to a complete I444 leaf.
@@ -144,21 +134,10 @@ pub(super) fn upscale_i422_leaf(
 /// I422 plane-height/width assumption from entering the full-resolution path.
 pub(super) fn upscale_i444_leaf(
     leaf: FirstLeaf,
-    coded_width: u32,
-    upscaled_width: u32,
-    frame_height: u32,
-    superres_denominator: u32,
+    geometry: ResizeGeometry,
     depth: SampleDepth,
 ) -> Av1Result<FirstLeaf> {
-    upscale_subsampled_leaf(
-        leaf,
-        coded_width,
-        upscaled_width,
-        frame_height,
-        superres_denominator,
-        depth,
-        (false, false),
-    )
+    upscale_subsampled_leaf(leaf, geometry, depth, (false, false))
 }
 
 /// Apply AV1's horizontal super-resolution step to a complete monochrome
@@ -185,64 +164,80 @@ pub(super) fn upscale_monochrome_plane(
         frame_height,
         superres_denominator,
     )?;
-    resize_plane(plane, coded_width, upscaled_width, frame_height, depth)
+    resize_plane(
+        plane,
+        coded_width,
+        coded_width,
+        frame_height,
+        upscaled_width,
+        frame_height,
+        depth,
+    )
 }
 
 fn upscale_subsampled_leaf(
     mut leaf: FirstLeaf,
-    coded_width: u32,
-    upscaled_width: u32,
-    frame_height: u32,
-    superres_denominator: u32,
+    geometry: ResizeGeometry,
     depth: SampleDepth,
     (subsampling_x, subsampling_y): (bool, bool),
 ) -> Av1Result<FirstLeaf> {
+    let ResizeGeometry {
+        coded_width,
+        source_width,
+        source_height,
+        output_width,
+        output_height,
+        superres_denominator,
+    } = geometry;
     validate_header_geometry(
         leaf.width,
         leaf.height,
         coded_width,
-        upscaled_width,
-        frame_height,
+        output_width,
+        output_height,
         superres_denominator,
     )?;
-    if upscaled_width == coded_width {
-        validate_plane(&leaf.planes[0], coded_width, frame_height, depth)?;
-        let chroma_width = if subsampling_x {
-            coded_width.div_ceil(2)
-        } else {
-            coded_width
-        };
-        let chroma_height = if subsampling_y {
-            frame_height.div_ceil(2)
-        } else {
-            frame_height
-        };
-        validate_plane(&leaf.planes[1], chroma_width, chroma_height, depth)?;
-        validate_plane(&leaf.planes[2], chroma_width, chroma_height, depth)?;
-        return Ok(leaf);
-    }
-
     let chroma_coded_width = if subsampling_x {
         coded_width.div_ceil(2)
     } else {
         coded_width
     };
-    let chroma_upscaled_width = if subsampling_x {
-        upscaled_width.div_ceil(2)
+    let chroma_source_width = if subsampling_x {
+        source_width.div_ceil(2)
     } else {
-        upscaled_width
+        source_width
+    };
+    let chroma_upscaled_width = if subsampling_x {
+        output_width.div_ceil(2)
+    } else {
+        output_width
     };
     let chroma_height = if subsampling_y {
-        frame_height.div_ceil(2)
+        output_height.div_ceil(2)
     } else {
-        frame_height
+        output_height
+    };
+    let chroma_source_height = if subsampling_y {
+        source_height.div_ceil(2)
+    } else {
+        source_height
     };
     let [luma, chroma_u, chroma_v] = leaf.planes;
     let planes = [
-        resize_plane(luma, coded_width, upscaled_width, frame_height, depth)?,
+        resize_plane(
+            luma,
+            coded_width,
+            source_width,
+            source_height,
+            output_width,
+            output_height,
+            depth,
+        )?,
         resize_plane(
             chroma_u,
             chroma_coded_width,
+            chroma_source_width,
+            chroma_source_height,
             chroma_upscaled_width,
             chroma_height,
             depth,
@@ -250,12 +245,14 @@ fn upscale_subsampled_leaf(
         resize_plane(
             chroma_v,
             chroma_coded_width,
+            chroma_source_width,
+            chroma_source_height,
             chroma_upscaled_width,
             chroma_height,
             depth,
         )?,
     ];
-    leaf.width = upscaled_width;
+    leaf.width = output_width;
     leaf.planes = planes;
     Ok(leaf)
 }
@@ -326,30 +323,78 @@ fn validate_plane(
 fn resize_plane(
     source: ReconstructedPlane,
     input_width: u32,
+    source_width: u32,
+    source_height: u32,
     output_width: u32,
-    height: u32,
+    output_height: u32,
     depth: SampleDepth,
 ) -> Av1Result<ReconstructedPlane> {
-    validate_plane(&source, input_width, height, depth)?;
-    if input_width == output_width {
-        return Ok(source);
-    }
-    if input_width == 0 || output_width == 0 || input_width > output_width {
+    validate_plane(&source, source_width, source_height, depth)?;
+    if input_width == 0
+        || source_width < input_width
+        || output_width == 0
+        || input_width > output_width
+        || output_height == 0
+        || source_height < output_height
+    {
         return Err(malformed("resize plane has invalid horizontal geometry"));
     }
     let input_width =
         usize::try_from(input_width).map_err(|_| malformed("resize input width exceeds usize"))?;
+    let source_width = usize::try_from(source_width)
+        .map_err(|_| malformed("resize source width exceeds usize"))?;
+    let source_height = usize::try_from(source_height)
+        .map_err(|_| malformed("resize source height exceeds usize"))?;
     let output_width = usize::try_from(output_width)
         .map_err(|_| malformed("resize output width exceeds usize"))?;
-    let height = usize::try_from(height).map_err(|_| malformed("resize height exceeds usize"))?;
+    let output_height = usize::try_from(output_height)
+        .map_err(|_| malformed("resize output height exceeds usize"))?;
     let length = output_width
-        .checked_mul(height)
+        .checked_mul(output_height)
         .ok_or_else(|| malformed("resize output extent overflows usize"))?;
+    if input_width == output_width {
+        if source_width == input_width && source_height == output_height {
+            return Ok(source);
+        }
+        let mut samples = source.samples;
+        for row in 0..output_height {
+            let source_start = row
+                .checked_mul(source_width)
+                .ok_or_else(|| malformed("resize crop row offset overflows"))?;
+            let source_end = source_start
+                .checked_add(input_width)
+                .ok_or_else(|| malformed("resize crop row end overflows"))?;
+            let destination_start = row
+                .checked_mul(input_width)
+                .ok_or_else(|| malformed("resize crop destination offset overflows"))?;
+            let destination_end = destination_start
+                .checked_add(input_width)
+                .ok_or_else(|| malformed("resize crop destination end overflows"))?;
+            if samples.get(source_start..source_end).is_none() || destination_end > length {
+                return Err(malformed("resize crop exceeds source plane"));
+            }
+            samples.copy_within(source_start..source_end, destination_start);
+        }
+        samples.truncate(length);
+        return Ok(ReconstructedPlane { samples });
+    }
     let (step, x0) = resize_position(input_width, output_width)?;
     let mut positions = Vec::new();
-    positions.try_reserve_exact(output_width).map_err(|_| {
-        CodecError::Dimensions("unable to allocate AV1 super-resolution positions".to_owned())
-    })?;
+    #[cfg(coverage)]
+    let position_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
+    ) {
+        usize::MAX
+    } else {
+        output_width
+    };
+    #[cfg(not(coverage))]
+    let position_reservation_count = output_width;
+    positions
+        .try_reserve_exact(position_reservation_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 super-resolution positions".to_owned())
+        })?;
     for output_x in 0..output_width {
         let output_x = i64::try_from(output_x)
             .map_err(|_| malformed("resize output coordinate exceeds i64"))?;
@@ -370,12 +415,24 @@ fn resize_plane(
     }
 
     let mut samples = Vec::new();
-    samples.try_reserve_exact(length).map_err(|_| {
-        CodecError::Dimensions("unable to allocate AV1 super-resolution plane".to_owned())
-    })?;
-    for row in 0..height {
+    #[cfg(coverage)]
+    let sample_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1SuperResolutionPlaneReservation,
+    ) {
+        usize::MAX
+    } else {
+        length
+    };
+    #[cfg(not(coverage))]
+    let sample_reservation_count = length;
+    samples
+        .try_reserve_exact(sample_reservation_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate AV1 super-resolution plane".to_owned())
+        })?;
+    for row in 0..output_height {
         let source_row = row
-            .checked_mul(input_width)
+            .checked_mul(source_width)
             .ok_or_else(|| malformed("resize source row offset overflows"))?;
         for &(center, phase) in &positions {
             let mut sum = 0_i64;
@@ -393,8 +450,8 @@ fn resize_plane(
                 let sample_x = if sample_x <= 0 {
                     0
                 } else {
-                    usize::try_from(sample_x).map_or(input_width.saturating_sub(1), |value| {
-                        value.min(input_width.saturating_sub(1))
+                    usize::try_from(sample_x).map_or(source_width.saturating_sub(1), |value| {
+                        value.min(source_width.saturating_sub(1))
                     })
                 };
                 let index = source_row

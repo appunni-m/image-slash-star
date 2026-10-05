@@ -520,6 +520,41 @@ fn decode_ico_bmp_8bpp(
 }
 
 /// Decode a 4-bit indexed ICO BMP entry.
+#[derive(Clone, Copy)]
+pub(super) enum Ico4BitPaletteInterpretation {
+    Indexed,
+    LuminanceBytes,
+    MonochromeBits,
+}
+
+pub(super) fn ico_4bit_palette_interpretation(
+    palette_bgrx: &[u8],
+    palette_len: usize,
+) -> Ico4BitPaletteInterpretation {
+    let grayscale_entry_matches = |index: usize, gray: u8| {
+        index
+            .checked_mul(4)
+            .and_then(|start| start.checked_add(3).map(|end| (start, end)))
+            .and_then(|(start, end)| palette_bgrx.get(start..end))
+            .is_some_and(|entry| entry == [gray; 3])
+    };
+
+    if palette_len == 2 && grayscale_entry_matches(0, 0) && grayscale_entry_matches(1, u8::MAX) {
+        return Ico4BitPaletteInterpretation::MonochromeBits;
+    }
+
+    // The ICO parser supplies a non-empty palette (an omitted count becomes 16).
+    let is_identity_grayscale = palette_len != 2
+        && (0..palette_len).all(|index| {
+            u8::try_from(index).is_ok_and(|gray| grayscale_entry_matches(index, gray))
+        });
+    if is_identity_grayscale {
+        Ico4BitPaletteInterpretation::LuminanceBytes
+    } else {
+        Ico4BitPaletteInterpretation::Indexed
+    }
+}
+
 fn decode_ico_bmp_4bpp(
     data: &[u8],
     width: u32,
@@ -550,15 +585,19 @@ fn decode_ico_bmp_4bpp(
     // The validated XOR plane begins at `palette_end`, so reaching it proves
     // the complete preceding palette range is present.
     let palette_raw = &data[header_size..palette_end];
-    let mut palette = Vec::with_capacity(color_count);
-    for i in 0..color_count {
+    // A 4-bpp pixel can address at most 16 entries. Pillow's indexed BMP
+    // decoder renders references beyond a shorter palette as black, so the
+    // zero-initialized tail is both the compatibility fallback and a direct
+    // lookup that avoids validating the full pixel plane before expansion.
+    let mut palette = [[0_u8; 3]; 16];
+    for (i, color) in palette.iter_mut().enumerate().take(color_count.min(16)) {
         let offset = i.wrapping_mul(4);
         let b = palette_raw[offset];
         let g = palette_raw[offset.wrapping_add(1)];
         let r = palette_raw[offset.wrapping_add(2)];
-        palette.push([r, g, b]);
+        *color = [r, g, b];
     }
-    validate_4bit_palette_references(pixels_raw, width, height, padded_row, color_count)?;
+    let palette_interpretation = ico_4bit_palette_interpretation(palette_raw, color_count);
 
     let mut pixels = Vec::with_capacity(
         (width as usize)
@@ -567,31 +606,81 @@ fn decode_ico_bmp_4bpp(
     );
     let (mask, mask_row_size) = ico_and_mask_after_xor(data, width, height);
 
-    for y in (0..height as usize).rev() {
-        crate::codecs::error::check_cancelled(token)?;
-        let row_start = y.wrapping_mul(padded_row);
-        let row_end = row_start.wrapping_add(row_bytes);
-        let row = &pixels_raw[row_start..row_end];
-
-        let mut col = 0;
-        for &byte in row {
-            let hi = (byte >> 4) & 0x0F;
-            let lo = byte & 0x0F;
-            // The complete XOR plane was validated against this palette above.
-            let color = palette[hi as usize];
-            pixels.push(color[0]);
-            pixels.push(color[1]);
-            pixels.push(color[2]);
-            pixels.push(mask_alpha(mask, mask_row_size, col, y));
-            col = col.wrapping_add(1);
-            if col < width as usize {
-                let color = palette[lo as usize];
-                pixels.push(color[0]);
-                pixels.push(color[1]);
-                pixels.push(color[2]);
-                pixels.push(mask_alpha(mask, mask_row_size, col, y));
+    match palette_interpretation {
+        Ico4BitPaletteInterpretation::LuminanceBytes => {
+            let width = width as usize;
+            if width > padded_row {
+                return Err(CodecError::Malformed(
+                    "4-bit grayscale ICO row exceeds its luminance stride".to_owned(),
+                ));
             }
-            col = col.wrapping_add(1);
+            for y in (0..height as usize).rev() {
+                crate::codecs::error::check_cancelled(token)?;
+                let row_start = y.wrapping_mul(padded_row);
+                let row = pixels_raw
+                    .get(row_start..row_start.saturating_add(width))
+                    .malformed("truncated grayscale 4-bit ICO bitmap")?;
+                for (col, gray) in row.iter().copied().enumerate() {
+                    pixels.extend_from_slice(&[
+                        gray,
+                        gray,
+                        gray,
+                        mask_alpha(mask, mask_row_size, col, y),
+                    ]);
+                }
+            }
+        }
+        Ico4BitPaletteInterpretation::MonochromeBits => {
+            for y in (0..height as usize).rev() {
+                crate::codecs::error::check_cancelled(token)?;
+                let row_start = y.wrapping_mul(padded_row);
+                for col in 0..width as usize {
+                    let byte_index = row_start.wrapping_add(col / 8);
+                    let byte = *pixels_raw
+                        .get(byte_index)
+                        .malformed("truncated monochrome 4-bit ICO bitmap")?;
+                    let gray = if byte & (0x80 >> (col % 8)) == 0 {
+                        0
+                    } else {
+                        u8::MAX
+                    };
+                    pixels.extend_from_slice(&[
+                        gray,
+                        gray,
+                        gray,
+                        mask_alpha(mask, mask_row_size, col, y),
+                    ]);
+                }
+            }
+        }
+        Ico4BitPaletteInterpretation::Indexed => {
+            for y in (0..height as usize).rev() {
+                crate::codecs::error::check_cancelled(token)?;
+                let row_start = y.wrapping_mul(padded_row);
+                let row_end = row_start.wrapping_add(row_bytes);
+                let row = &pixels_raw[row_start..row_end];
+
+                let mut col = 0;
+                for &byte in row {
+                    let hi = (byte >> 4) & 0x0F;
+                    let lo = byte & 0x0F;
+                    // The complete XOR plane was validated against this palette above.
+                    let color = palette[usize::from(hi)];
+                    pixels.push(color[0]);
+                    pixels.push(color[1]);
+                    pixels.push(color[2]);
+                    pixels.push(mask_alpha(mask, mask_row_size, col, y));
+                    col = col.wrapping_add(1);
+                    if col < width as usize {
+                        let color = palette[usize::from(lo)];
+                        pixels.push(color[0]);
+                        pixels.push(color[1]);
+                        pixels.push(color[2]);
+                        pixels.push(mask_alpha(mask, mask_row_size, col, y));
+                    }
+                    col = col.wrapping_add(1);
+                }
+            }
         }
     }
 
@@ -673,29 +762,6 @@ fn decode_ico_bmp_1bpp(
     Ok(DecodedImage::new(width, height, pixels, ColorType::Rgba8))
 }
 
-pub(super) fn validate_4bit_palette_references(
-    pixels: &[u8],
-    width: u32,
-    height: u32,
-    padded_row: usize,
-    palette_len: usize,
-) -> CodecResult<()> {
-    for y in 0..height as usize {
-        let row_start = y.wrapping_mul(padded_row);
-        let row = &pixels[row_start..row_start.wrapping_add(padded_row)];
-        for x in 0..width as usize {
-            let byte = row[x / 2];
-            let index = if x % 2 == 0 { byte >> 4 } else { byte & 0x0f };
-            if usize::from(index) >= palette_len {
-                return Err(CodecError::Malformed(
-                    "4-bit ICO pixel references a missing palette entry".to_owned(),
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
 pub(super) fn validate_1bit_palette_references(
     pixels: &[u8],
     width: u32,
@@ -751,239 +817,4 @@ fn ico_palette_bytes(color_count: usize) -> CodecResult<usize> {
 fn mask_alpha(mask: &[u8], row_size: usize, x: usize, y: usize) -> u8 {
     let transparent = mask[y.wrapping_mul(row_size).wrapping_add(x / 8)] & (0x80 >> (x % 8)) != 0;
     if transparent { 0 } else { 255 }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode(b"", None).is_err());
-    assert!(decode(&[1, 0, 1, 0, 1, 0], None).is_err());
-    assert!(decode(&[0, 0, 0, 0, 1, 0], None).is_err());
-    assert!(decode(&[0, 0, 1, 0, 0, 0], None).is_err());
-    let _ = metadata_bytes(b"");
-    let _ = metadata_bytes(&[0, 0, 1, 0, 2, 0]);
-
-    let mut too_many = Vec::new();
-    too_many.extend_from_slice(&0u16.to_le_bytes());
-    too_many.extend_from_slice(&1u16.to_le_bytes());
-    too_many.extend_from_slice(&256u16.to_le_bytes());
-    assert!(decode(&too_many, None).is_err());
-
-    let mut two_entries = Vec::new();
-    two_entries.extend_from_slice(&0u16.to_le_bytes());
-    two_entries.extend_from_slice(&1u16.to_le_bytes());
-    two_entries.extend_from_slice(&2u16.to_le_bytes());
-    two_entries.extend_from_slice(&[16, 16, 0, 0]);
-    two_entries.extend_from_slice(&1u16.to_le_bytes());
-    two_entries.extend_from_slice(&32u16.to_le_bytes());
-    two_entries.extend_from_slice(&1u32.to_le_bytes());
-    two_entries.extend_from_slice(&38u32.to_le_bytes());
-    two_entries.extend_from_slice(&[8, 8, 0, 0]);
-    two_entries.extend_from_slice(&1u16.to_le_bytes());
-    two_entries.extend_from_slice(&32u16.to_le_bytes());
-    two_entries.extend_from_slice(&1u32.to_le_bytes());
-    two_entries.extend_from_slice(&38u32.to_le_bytes());
-    two_entries.push(0);
-    assert!(decode(&two_entries, None).is_err());
-    let fixture = include_bytes!("../../test_support/fixtures/input/images/ico/16x16.ico");
-    for checks in 0..=4 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(fixture, Some(&token));
-    }
-
-    let mut zero_size = two_entries.clone();
-    zero_size[14..18].copy_from_slice(&0u32.to_le_bytes());
-    assert!(decode_entry(&zero_size, 0, false, None).is_err());
-    let mut zero_offset = two_entries.clone();
-    zero_offset[18..22].copy_from_slice(&0u32.to_le_bytes());
-    assert!(decode_entry(&zero_offset, 0, false, None).is_err());
-
-    let short_payload = &two_entries[..39];
-    assert!(decode_entry(short_payload, 0, false, None).is_err());
-    assert!(decode_cur_bmp(&[], 0).is_err());
-    assert!(decode_cur_bmp(&[39, 0, 0, 0], 4).is_err());
-    assert!(decode_cur_bmp(&[40, 0, 0, 0], 4).is_err());
-    let cur_dib = indexed_dib(1, 1, 8, 2, &[1]);
-    assert!(
-        decode_cur_bmp(
-            &cur_dib,
-            crate::coverage_support::require_ok(
-                u32::try_from(cur_dib.len()),
-                "fixture value must fit u32"
-            )
-        )
-        .is_ok()
-    );
-    let mut cur_oversized_palette = vec![0u8; 40];
-    cur_oversized_palette[0..4].copy_from_slice(&40u32.to_le_bytes());
-    cur_oversized_palette[8..12].copy_from_slice(&2i32.to_le_bytes());
-    cur_oversized_palette[14..16].copy_from_slice(&8u16.to_le_bytes());
-    cur_oversized_palette[32..36].copy_from_slice(&u32::MAX.to_le_bytes());
-    assert!(
-        decode_cur_bmp(
-            &cur_oversized_palette,
-            crate::coverage_support::require_ok(
-                u32::try_from(cur_oversized_palette.len()),
-                "fixture value must fit u32"
-            )
-        )
-        .is_err()
-    );
-
-    for (width, stored_height) in [(0u32, 2u32), (1, 0), (16_385, 2), (1, 32_770)] {
-        let mut dib = vec![0u8; 40];
-        dib[0..4].copy_from_slice(&40u32.to_le_bytes());
-        dib[4..8].copy_from_slice(&width.to_le_bytes());
-        dib[8..12].copy_from_slice(&stored_height.to_le_bytes());
-        dib[14..16].copy_from_slice(&32u16.to_le_bytes());
-        assert!(decode_ico_bmp(&dib, &[], None).is_err());
-    }
-
-    let dib24 = dib24(1, 1, &[0, 0, 255], &[0x80]);
-    assert!(decode_ico_bmp_24bpp(&dib24, 1, 1, None).is_ok());
-
-    let dib8 = indexed_dib(1, 1, 8, 3, &[0]);
-    assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3, None).is_ok());
-    let dib8_masked = indexed_dib_with_mask(2, 1, 8, 3, &[0, 1], &[0x40]);
-    assert!(decode_ico_bmp_8bpp(&dib8_masked, 2, 1, 3, None).is_ok());
-    let dib8_default_palette = indexed_dib(1, 1, 8, 256, &[0]);
-    assert!(decode_ico_bmp_8bpp(&dib8_default_palette, 1, 1, 0, None).is_ok());
-
-    let dib4 = indexed_dib(3, 1, 4, 3, &[0x12, 0]);
-    assert!(decode_ico_bmp_4bpp(&dib4, 3, 1, 3, None).is_ok());
-    let dib4_even = indexed_dib(4, 1, 4, 3, &[0x12, 0x10]);
-    assert!(decode_ico_bmp_4bpp(&dib4_even, 4, 1, 3, None).is_ok());
-    let dib4_masked = indexed_dib_with_mask(2, 1, 4, 3, &[0x12], &[0x40]);
-    assert!(decode_ico_bmp_4bpp(&dib4_masked, 2, 1, 3, None).is_ok());
-    let dib4_default_palette = indexed_dib(1, 1, 4, 16, &[0]);
-    assert!(decode_ico_bmp_4bpp(&dib4_default_palette, 1, 1, 0, None).is_ok());
-
-    let dib1 = indexed_dib(1, 1, 1, 2, &[0x80]);
-    assert!(decode_ico_bmp_1bpp(&dib1, 1, 1, 2, None).is_ok());
-    let dib1_masked = indexed_dib_with_mask(2, 1, 1, 2, &[0x80], &[0x40]);
-    assert!(decode_ico_bmp_1bpp(&dib1_masked, 2, 1, 2, None).is_ok());
-    let dib1_default_palette = indexed_dib(1, 1, 1, 2, &[0x80]);
-    assert!(decode_ico_bmp_1bpp(&dib1_default_palette, 1, 1, 0, None).is_ok());
-
-    // Exercise the indexed row checkpoint's cancellation edge for every
-    // palette depth; the public fixture matrix covers the successful rows.
-    let cancelled = crate::CancellationToken::new();
-    cancelled.cancel();
-    assert!(decode_ico_bmp_8bpp(&dib8, 1, 1, 3, Some(&cancelled)).is_err());
-    assert!(decode_ico_bmp_4bpp(&dib4, 3, 1, 3, Some(&cancelled)).is_err());
-    assert!(decode_ico_bmp_1bpp(&dib1, 1, 1, 2, Some(&cancelled)).is_err());
-}
-
-#[cfg(coverage)]
-fn indexed_dib(width: u32, height: u32, bpp: u16, colors: u32, xor: &[u8]) -> Vec<u8> {
-    indexed_dib_with_mask(width, height, bpp, colors, xor, &[])
-}
-
-#[cfg(coverage)]
-fn indexed_dib_with_mask(
-    width: u32,
-    height: u32,
-    bpp: u16,
-    colors: u32,
-    xor: &[u8],
-    and_mask: &[u8],
-) -> Vec<u8> {
-    let palette_entries =
-        crate::coverage_support::require_ok(usize::try_from(colors), "coverage palette fits usize");
-    let row_bytes = crate::coverage_support::require_some(
-        (width as usize).checked_mul(usize::from(bpp)),
-        "coverage fixture arithmetic",
-    )
-    .div_ceil(8);
-    let padded_row = crate::coverage_support::require_some(
-        (row_bytes).checked_add(3),
-        "coverage fixture arithmetic",
-    ) & !3;
-    let mask_row = crate::coverage_support::require_some(
-        ((width as usize).div_ceil(32)).checked_mul(4),
-        "coverage fixture arithmetic",
-    );
-    let mut dib = vec![0u8; 40];
-    dib[0..4].copy_from_slice(&40u32.to_le_bytes());
-    dib[4..8].copy_from_slice(&width.to_le_bytes());
-    dib[8..12].copy_from_slice(
-        &crate::coverage_support::require_some(
-            (height).checked_mul(2),
-            "coverage fixture arithmetic",
-        )
-        .to_le_bytes(),
-    );
-    dib[12..14].copy_from_slice(&1u16.to_le_bytes());
-    dib[14..16].copy_from_slice(&bpp.to_le_bytes());
-    dib[32..36].copy_from_slice(&colors.to_le_bytes());
-    for index in 0..palette_entries {
-        let value = crate::coverage_support::require_ok(
-            u8::try_from(index),
-            "coverage palette value fits u8",
-        );
-        dib.extend_from_slice(&[value, value, value, 0]);
-    }
-    let mut xor_plane = vec![
-        0u8;
-        crate::coverage_support::require_some(
-            (padded_row).checked_mul(height as usize),
-            "coverage fixture arithmetic"
-        )
-    ];
-    xor_plane[..xor.len()].copy_from_slice(xor);
-    dib.extend_from_slice(&xor_plane);
-    let mut mask_plane = vec![
-        0u8;
-        crate::coverage_support::require_some(
-            (mask_row).checked_mul(height as usize),
-            "coverage fixture arithmetic"
-        )
-    ];
-    mask_plane[..and_mask.len()].copy_from_slice(and_mask);
-    dib.extend_from_slice(&mask_plane);
-    dib
-}
-
-#[cfg(coverage)]
-fn dib24(width: u32, height: u32, xor: &[u8], and_mask: &[u8]) -> Vec<u8> {
-    let row_bytes = width as usize * 3;
-    let padded_row = crate::coverage_support::require_some(
-        (row_bytes).checked_add(3),
-        "coverage fixture arithmetic",
-    ) & !3;
-    let mask_row = crate::coverage_support::require_some(
-        ((width as usize).div_ceil(32)).checked_mul(4),
-        "coverage fixture arithmetic",
-    );
-    let mut dib = vec![0u8; 40];
-    dib[0..4].copy_from_slice(&40u32.to_le_bytes());
-    dib[4..8].copy_from_slice(&width.to_le_bytes());
-    dib[8..12].copy_from_slice(
-        &crate::coverage_support::require_some(
-            (height).checked_mul(2),
-            "coverage fixture arithmetic",
-        )
-        .to_le_bytes(),
-    );
-    dib[12..14].copy_from_slice(&1u16.to_le_bytes());
-    dib[14..16].copy_from_slice(&24u16.to_le_bytes());
-    let mut xor_plane = vec![
-        0u8;
-        crate::coverage_support::require_some(
-            (padded_row).checked_mul(height as usize),
-            "coverage fixture arithmetic"
-        )
-    ];
-    xor_plane[..xor.len()].copy_from_slice(xor);
-    dib.extend_from_slice(&xor_plane);
-    let mut mask_plane = vec![
-        0u8;
-        crate::coverage_support::require_some(
-            (mask_row).checked_mul(height as usize),
-            "coverage fixture arithmetic"
-        )
-    ];
-    mask_plane[..and_mask.len()].copy_from_slice(and_mask);
-    dib.extend_from_slice(&mask_plane);
-    dib
 }

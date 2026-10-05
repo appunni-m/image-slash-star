@@ -7,17 +7,336 @@ generation provenance follow.
 | Local file | Upstream file | Tag / commit | SHA-256 | License |
 | --- | --- | --- | --- | --- |
 | `baseline.avif` | Pillow `Tests/images/avif/hopper.avif` | Pillow 12.2.0 / `3c41c09` | `d4327b7ab11ed8f11d86978258fc04e5505bcfe511ca2c4efa4838c85d226fd2` | MIT-CMU (`third_party/pillow/LICENSE`) |
+| `ipma_version_1_wide_item_ids.avif` | Baseline still with a version-1 `ipma` FullBox and widened 32-bit item ID | `scripts/generate_test_assets.py`; Pillow 12.2.0; 2-byte box growth with relocated `iloc` extent | `90ac8f0230ddede24a72b73fb120bd46680962d4c0a7facab31e77b088cd82c5` | MIT/Apache-2.0 (repository-generated mutation) |
+| `iloc_version_2_wide_item_ids.avif` | Baseline still with version-2 item locations, 32-bit item count/ID, and file-backed construction method | `scripts/generate_test_assets.py`; Pillow 12.2.0; exact decoded pixels and image info match baseline; 6-byte box growth with relocated extent | `39a494da43edb3e25dcc60c1c51c987452c66a2590e5ac9563d416d922199d87` | MIT/Apache-2.0 (repository-generated mutation) |
+| `ipma_wide_associations.avif` | Baseline still with 16-bit `ipma` property-association indices | `scripts/generate_test_assets.py`; Pillow 12.2.0; 4-byte box growth with relocated `iloc` extent | `7bef3a5c1db6196b199c03406719f5dcd4b0bb6a7320de44b39a7daa52e6116b` | MIT/Apache-2.0 (repository-generated mutation) |
+| `primary_item_irot_pasp_4x3.avif` | `primary_item_irot.avif` with an associated 4:3 pixel-aspect-ratio property | `scripts/generate_test_assets.py`; Pillow 12.2.0; 17-byte metadata growth with relocated `iloc` extent | `2acc2e59572718a5fd1247aef7d18ab7666943533f068c221117df05378c4564` | MIT/Apache-2.0 (repository-generated mutation) |
+| `icc_profile.avif` | Repository-generated 4x4 RGB portable-pattern still using the profile from `png/iccp.png` | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 8, 4:4:4, one thread, CICP 1/13/6, autotiling disabled | `a59749aa4985d4954cb8ef8f513e17b40f1051f969374eff7a654aeb0a629d95` | MIT/Apache-2.0 (repository-generated) |
+| `icc_ricc_type.avif` | Full-file `prof` to `rICC` property-type variant; Pillow accepts the same profile bytes and RGB pixels | Pillow 12.2.0; one four-byte AVIF property mutation | `36e07c9ec8afd80be79396196b3fec7397caec1cec3bc5f89e0064d98a87ea9b` | MIT/Apache-2.0 (repository-generated) |
+| `icc_mdcv.avif` | ICC still with one associated BT.2020/D65 mastering-display property | Pillow 12.2.0; deterministic `mdcv` property/association insertion with relocated item extent | `d06f268e6f7341d67e1bf62510681375bc40ea4815a27b6aa4e38172dde01882` | MIT/Apache-2.0 (repository-generated) |
+| `icc_mdcv_trailing.avif` | ICC still whose associated `mdcv` property has one trailing byte | Pillow 12.2.0; deterministic bounded property extension with relocated item extent | `956465627904603da6df5c6ce0419cb401156dff57cf2a5ab28a332009d0e946` | MIT/Apache-2.0 (repository-generated) |
 | `alpha.avif` | Pillow `Tests/images/avif/transparency.avif` | Pillow 12.2.0 / `3c41c09` | `b19f57d9421bbd3d0b0706c8fe79cef802aebf106afefa6bddde9de1a07509c9` | MIT-CMU (`third_party/pillow/LICENSE`) |
 | `10bit.avif` | libavif `tests/data/colors-animated-12bpc-keyframes-0-2-3.avif` | libavif 1.4.1 / `6543b22` | `3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
 | `high_bitdepth_still_12bit_444_lossless.avif` | Deterministic 16x16 RGB source encoded as a single-frame 12-bit 4:4:4 witness | libavif 1.4.1 / `6543b22`; libaom 3.13.2 fixture build | `8645ee1ecc437868c5842248444ea6c8400d983a03bcfe75710bb0a424915abd` | MIT/Apache-2.0 (repository-generated) |
+| `profile2_identity_12bit_444.avif` | Deterministic 16x16 RGB source encoded as a profile-2 12-bit full-range 4:4:4 identity-CICP still | `scripts/generate_avif_profile2_identity.py`; libavif 1.4.1 / libaom 3.13.2; `--qcolor 100 --cicp 1/13/0 --range full --speed 8 --jobs 1` | `1ce2aae5539074e3a65092f185c4db34537462d637859d4fd85449bb15557931` | MIT/Apache-2.0 (repository-generated) |
+| `high_bitdepth_still_10bit_420_lossy_16x16.avif` | Deterministic 16x16 planar 10-bit I420 source encoded as a single-frame lossy profile-0 AVIF | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `60c40a86c0409add22d7ab678b579ea4ccf979624bf3b127a4448d0a83e18d18` | MIT/Apache-2.0 (repository-generated) |
+| `high_bitdepth_still_10bit_420_alpha_lossless_16x16.avif` | Deterministic 16x16 planar 10-bit YUV420 still with a monochrome 10-bit auxiliary alpha item; both AV1 frames all-lossless | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `8c3cb86055e1003d91897d986995dd2ee030d0278b82d3d7c9ddc783189eb76f` | MIT/Apache-2.0 (repository-generated) |
+| `high_bitdepth_still_10bit_422_alpha_lossless_16x16.avif` | Deterministic 16x16 planar 10-bit YUV422 still with a monochrome 10-bit auxiliary alpha item; both AV1 frames all-lossless | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `eef1ffae7961354032dad642c1ebfc146cbcb28f7147c4dce6d9b8a4de17d392` | MIT/Apache-2.0 (repository-generated) |
+| `high_bitdepth_still_10bit_444_alpha_lossy_16x16.avif` | Deterministic 16x16 planar 10-bit YUV444 still with a monochrome 10-bit auxiliary alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980` | `468bd5af2f96693582d6618572dc353cac4ee16719cebebb8e20ff7e81049548` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_b32x32_10bit.avif` | Deterministic two-frame full-range 10-bit I420 lossless sequence with a translated patch | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64.avif` | Deterministic two-frame 28x64 full-range 10-bit I420 lossless sequence with a translated textured 24x24 patch in the padded left B32x32 leaf | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64.avif` | Deterministic two-frame 56x64 full-range 10-bit I420 lossless sequence with fixed 32-pixel partitions and a translated textured patch in the clipped 24x32 right-edge B32x32 leaf | `scripts/generate_avif_10bit_lossless_inter_fixture.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; timestamp-normalized | `a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_inter_420_superres_sgr_10bit_160x56.avif` | Deterministic two-frame full-range 10-bit I420 lossy sequence; frame 1 uses super-resolution and SGR restoration | `scripts/generate_avif_hi10_superres_restoration.py`; libavif 1.4.1 / libaom 3.13.2; timestamp-normalized | `016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_inter_420_superres_sgr_8bit_160x56.avif` | Deterministic two-frame full-range 8-bit I420 lossy sequence; frame 1 uses super-resolution and SGR restoration with largest-transform mode and 16x16 partitions | `scripts/generate_avif_8bit_superres_restoration.py`; patched pinned fixture encoder; libavif 1.4.1 / libaom 3.13.2; timestamp-normalized | `c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7` | MIT/Apache-2.0 (repository-generated) |
+| `superres_equal_width_16x16.avif` | Deterministic 16x16 full-range 8-bit I420 lossy still; AV1 signals super-resolution denominator 9 while minimum coded width leaves the coded and upscaled widths equal | `scripts/generate_avif_equal_width_superres.py`; patched pinned fixture encoder; libavif 1.4.1 / libaom 3.13.2 | `2de74d720f8863be43049a3df776337c1cde494122a57093ffad532cea19a004` | MIT/Apache-2.0 (repository-generated) |
+| `superres_equal_width_i444_16x16.avif` | Deterministic 16x16 full-range 8-bit I444 lossy still; AV1 signals super-resolution denominator 9 with equal coded and upscaled widths, exercising full-resolution chroma planes | `scripts/generate_avif_equal_width_superres.py --chroma 444`; patched pinned fixture encoder; libavif 1.4.1 / libaom 3.13.2 | `cd02b86f213b96f9d58bec3781f8855f325aa7b4c867a6fbf76f5802886420a4` | MIT/Apache-2.0 (repository-generated) |
+| `superres_actual_upscaled_i444_32x16.avif` | Deterministic 32x16 full-range 8-bit I444 lossy still; AV1 signals denominator 9 and coded width 28, exercising real resizing of luma and both full-resolution chroma planes | `scripts/generate_avif_equal_width_superres.py --chroma 444-actual`; patched pinned fixture encoder; libavif 1.4.1 / libaom 3.13.2 | `c976ff5f3a4669557d6dc45780743ab462f1766de732c7914d5094663e323948` | MIT/Apache-2.0 (repository-generated) |
+| `superres_actual_upscaled_i422_33x17.avif` | Deterministic 33x17 full-range 8-bit I422 lossy still; AV1 signals denominator 9 and coded width 29, with restoration disabled to exercise the generic I422 super-resolution path across odd visible edges | `scripts/generate_avif_equal_width_superres.py --chroma 422-actual`; patched pinned fixture encoder; libavif 1.4.1 / libaom 3.13.2 | `9095580af62e5003fcb8f68d62da1b6b0cbb6205578a2828d05a87ee2f367c1f` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_inter_420_superres_select_10bit_160x56.avif` | Deterministic two-frame full-range 10-bit I420 lossy sequence; frame 1 uses super-resolution and TX_MODE_SELECT without active restoration | `scripts/generate_avif_hi10_superres_select.py`; libavif 1.4.1 / libaom 3.13.2; timestamp-normalized | `04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_1x1.avif` | Deterministic 1x1 8-bit monochrome Luma still with sample 127 | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, 4:0:0, CICP 1/13/6 | `6c4212de07ead445c0b468c39b77f099cc8555e99edd6460806407d7536be305` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_limited_16x16.avif` | Deterministic 16x16 8-bit lossless 4:0:0 luma still with limited-range samples | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `e14c3cce9943b6f4f12ad3f0a93624c702678a73fa55101ba61e61aabe3168be` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_limited_10bit_16x16.avif` | Deterministic 16x16 10-bit lossless 4:0:0 luma still with limited-range samples | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `514a2b65aa84f2bd647a8c041cf20c7b59c8fb7e71f8303bc1a4a408defccd66` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_limited_12bit_16x16.avif` | Deterministic 16x16 12-bit lossless 4:0:0 luma still with limited-range samples | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `3abcfd332dff4d6ccfc801b75430c1997e1738b1546006ab5590a6e1fcfd549e` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_limited_bt2020_pq_16x16.avif` | Deterministic 16x16 8-bit lossless limited-range 4:0:0 still with BT.2020/PQ CICP 9/16/9 | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread | `ad3ce0e1171561690b156149fa8761fcc8adf26670507b0d64cc4294994d344b` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_limited_alpha_16x16.avif` | Deterministic 16x16 8-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `b95edc757441fad6b2c051e1df78c888fab81aeab5c81e366d8fd4b5941a58fa` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_limited_alpha_10bit_16x16.avif` | Deterministic 16x16 10-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `2497017931a998c26e7328b0e940b736ccbaaab5f3dfc4d3e6637ebb7e7168f2` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_monochrome_limited_alpha_12bit_16x16.avif` | Deterministic 16x16 12-bit lossless limited-range 4:0:0 luma still with a full-range alpha item | `scripts/generate_av1_encoder_refs.py`; libavif 1.4.1 / `6543b22`; libaom 3.13.2 / `ad44980`; quality 100, speed 6, one thread, CICP 1/13/6 | `27aed8594e5d60179e6596dd950800fdf43f6809038ed30c0b86aaf4c20ac3c7` | MIT/Apache-2.0 (repository-generated) |
+| `portable_i444_quality100_64x64.avif` | Deterministic 64x64 8-bit quality-100 RGB 4:4:4 key frame with fixed 64-pixel partitions | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 64-pixel partitions, CICP 1/13/6 | `5ceb66b47bda43bec5c421222eeb3ef858c62702bc41833986fdf678f6867737` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_filmgrain_i444_64x64.avif` | Seeded 64x64 8-bit all-lossless RGB 4:4:4 key frame with film grain | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 64-pixel partitions, DCT only, CICP 1/13/6, film-grain test enabled | `5e40ca71068fdd232d11f356103f53c1fdd7b94356fa91b0004d7307de4cbd25` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_filmgrain_420_chroma_from_luma_64x64.avif` | Seeded 64x64 8-bit all-lossless I420 key frame using chroma scaling from luma for film grain | `scripts/generate_avif_filmgrain_chroma_from_luma_420.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, CICP 1/13/6, film-grain test enabled | `80c3a157f32f190a787588c48232113c4bbe915abd80812c5e0d1d62fd51c893` | MIT/Apache-2.0 (repository-generated) |
+| `portable_lossless_filmgrain_420_zero_y_points_64x64.avif` | Seeded 64x64 8-bit all-lossless I420 key frame whose update-grain syntax has zero Y points and omits conditional U/V points and coefficients | `scripts/generate_avif_filmgrain_zero_y_420.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; deterministic film-grain header rewrite | `c76ede4ac45599b182d023f8425744f09dc27e4011742d6295d3ec50e172ed9f` | MIT/Apache-2.0 (repository-generated) |
+| `animated_filmgrain_reference_reuse_i444_64x64.avif` | Deterministic two-frame 64x64 I444 sequence whose inter frame reuses key-frame film-grain parameters with a new seed | `scripts/generate_avif_filmgrain_reference_reuse.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; timestamp-normalized | `bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34` | MIT/Apache-2.0 (repository-generated) |
 | `hdr.avif` | libavif `tests/data/colors_hdr_rec2020.avif` | libavif 1.4.1 / `6543b22` | `9980e58ddf718a923f1738c34aad1c72f8e5795ec07e68f1a5f9bd216ca19740` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
 | `grid.avif` | libavif `tests/data/color_grid_alpha_nogrid.avif` | libavif 1.4.1 / `6543b22` | `bae56368b348b1d847e2bfb662522599f0c63dfe62fb68826c9e42a300ff405d` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
 | `animated.avif` | libavif `tests/data/colors-animated-8bpc.avif` | libavif 1.4.1 / `6543b22` | `2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d` | BSD-2-Clause (`third_party/libavif/LICENSE`) |
+| `animated_lossless_inter_420_clipped_b32x32_17x17.avif` | Deterministic two-frame 17x17 RGB sequence encoded as an MI-clipped lossless AV1 4:2:0 inter-grid witness | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 8, one thread | `b29bedb6d7486dae5bed2abb74986a65e47bc737bfd26f85b1f69fa8bd666819` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_i422_clipped_b32x32_49x64.avif` | Deterministic two-frame odd-width 49x64 RGB 4:2:2 sequence selecting a clipped lossless AV1 B32x32 edge grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `fd18cdcef915327fd4aab6992c901e27f2efc1411d1d2d01eee93dd3f277d7b1` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_i444_clipped_b32x32_49x64.avif` | Deterministic two-frame 49x64 RGB 4:4:4 sequence selecting a clipped 24x32 lossless AV1 B32x32 edge grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `d45defceb497272879b1093f76e6a6c645f0bde8a6d10a1903e2322af422caae` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_i422_clipped_b32x32_52x64.avif` | Deterministic two-frame 52x64 RGB 4:2:2 sequence selecting a clipped 20x32 lossless AV1 B32x32 edge grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_i444_clipped_b32x32_64x56.avif` | Deterministic two-frame 64x56 RGB 4:4:4 sequence selecting a clipped 32x24 lossless AV1 B32x32 bottom-edge grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_i422_clipped_b32x32_52x60.avif` | Deterministic two-frame 52x60 RGB 4:2:2 sequence selecting a simultaneously right-and-bottom-clipped 20x28 luma, 10x28 chroma lossless AV1 B32x32 grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `53e06d79c586151d920b94cc6173eebcc1f9869ebb0f1fa5bec673df11c45e50` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_i444_clipped_b32x32_52x60.avif` | Deterministic two-frame 52x60 RGB 4:4:4 sequence selecting a simultaneously right-and-bottom-clipped 20x28 lossless AV1 B32x32 grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions, timestamp-normalized | `9fdd099eb28fed9eaff2760b154e42d91933758fd6b01e532e441646f564993a` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_clipped_b32x32_60x64.avif` | Deterministic two-frame 60x64 RGB sequence with a translated patch selecting a partially visible lossless AV1 4:2:0 B32x32 inter grid | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 8, one thread | `a60dde64c6b7bf9f6fbb3afe7e75a74374d446f8106613b00837300df4963bbc` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_clipped_b32x32_64x60.avif` | Deterministic two-frame 64x60 RGB sequence with a translated lower-edge patch for bottom-edge frame cropping | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 8, one thread | `7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_clipped_b32x32_184x64.avif` | Deterministic two-frame textured 184x64 RGB sequence selecting a clipped lossless AV1 4:2:0 B32x32 inter grid at the right edge | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 32x32 partitions | `0a8c935fe67694fe576e7f21064eec4c428cffc2a05a3ff2d0be33e401a20c1d` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossless_inter_420_clipped_b16x16_60x64.avif` | Deterministic two-frame 60x64 RGB texture shifted one column to select a right-edge lossless AV1 4:2:0 B16x16 inter block clipped to 12 columns | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 100, speed 0, one thread, fixed 16x16 partitions | `7c8bd0f88cd6654fb1150d2220ecb33c6ec5874b26a2250909b51cab4ed2e17f` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_b16_mixed_topology_inter_420_b16x16.avif` | Deterministic three-frame 16x16 4:2:0 sequence whose final B16x16 inter block splits only its top-right TX8 child to TX4 | `scripts/generate_avif_b16_mixed_topology_fixture.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 99, speed 0, one thread, fixed 16x16 partitions, timestamp-normalized | `3264482e2a50d80bd39be178b843fdfe9997e947d54b4466c745751837821d74` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_inter_i444_obmc_mixed_b16x32.avif` | Deterministic 32x32 checker sequence encoded as an AV1 4:4:4 inter-prediction edge-case witness | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 75, speed 0, one thread, partitions 16–32 | `71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_inter_422_checker_random_b32x32.avif` | Deterministic two-frame 32x32 jittered-checker sequence encoded as a lossy AV1 4:2:2 inter-prediction witness | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 75, speed 0, one thread, partitions 16–32 | `e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_global_rotzoom_compound_i444_b128x128.avif` | Deterministic four-frame 256x256 4:4:4 affine-motion sequence encoded as a global-motion edge-case witness | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 80, speed 0, one thread | `14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_global_halfblend_spatial_i444_b256x256.avif` | Deterministic four-frame 256x256 4:4:4 sequence with identity and RotZoom global references paired in compound spatial neighbors | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 80, speed 0, one thread | `ec2f145f64fa87c5b7c255b13b6009fb58760be06070724ed367cd4ccd9a6d7b` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_wide_i444_mode2_split32_b128x128.avif` | Deterministic two-frame 256x256 I444 sequence selecting TX64-to-TX32 splits in each 128x128 mode-2 inter leaf | `scripts/generate_avif_mode2_split32_fixture.py`; Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 80, speed 0, one thread, fixed 128-pixel partitions | `f48a6d235c7ab245e8d57aedcc6135b897cea1bcbc579c3d630aa7c20e1a61aa` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_interintra_420_nowedge_mode3_b16x16_64x64.avif` | Deterministic three-frame 64x64 4:2:0 smooth inter-intra mode-3 witness | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 50, speed 0, one thread | `7e035cef7293dfff72e50ff8c729bc0fad360ee14d7bf80d663b82b96ca7c4d7` | MIT/Apache-2.0 (repository-generated) |
+| `animated_lossy_interintra_420_wedge_b16x16_64x64.avif` | Deterministic colored three-frame 64x64 4:2:0 sequence whose final B16x16 block selects AV1 inter-intra wedge index 4 and exercises chroma-mask downsampling | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 50, speed 0, one thread | `1510b764d7e642f2caf02fff53e6dc966cfb92df8eca2e8f2d91c0b3bead1791` | MIT/Apache-2.0 (repository-generated) |
+| `animated_tx64_root_split_inter_420_64x64.avif` | Deterministic three-frame 64x64 4:2:0 sequence with a TX64 root split and two TX32 child offsets | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 80, speed 0, one thread, fixed 64x64 partitions | `9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c` | MIT/Apache-2.0 (repository-generated) |
+| `animated_motion_temporal_window_left_512x128.avif` | Deterministic four-frame 512x128 4:2:0 translated-patch sequence that misses the projected motion window on the left | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 95, speed 0, one thread | `29e856c6c8a117c764bb0a176ccc1d82bac982fdf7287eb461f827ebdc31b399` | MIT/Apache-2.0 (repository-generated) |
+| `animated_motion_temporal_window_right_512x128.avif` | Deterministic four-frame 512x128 4:2:0 translated-patch sequence that misses the projected motion window on the right | Pillow 12.2.0 / libavif 1.4.1 / libaom 3.13.2; quality 95, speed 0, one thread | `10d8e5514c1d8d9cad355f9a912b3e3075bf8bd661ee6af5ce44a9ce62d7cad2` | MIT/Apache-2.0 (repository-generated) |
 
 The upstream libavif test-data README identifies the copied libavif files as
 covered by libavif's own license. `10bit.avif` retains its historical manifest
 name but is a 12-bit high-bit-depth animation; the manifest description states
 the exact depth.
+
+`animated_lossless_inter_420_b32x32_10bit.avif` is generated by
+`scripts/generate_avif_10bit_lossless_inter_fixture.py` and its C helper in
+`scripts/avif_fixture_oracle/encode_lossless_inter_10bit.c`. Pillow's bundled
+AOM cannot encode 10-bit AVIF, so the generator validates clean local source
+checkouts at libaom `ad44980d7f3c7a2605c25d51ea96946949000841` and libavif
+`6543b22b5bc706c53f038a16fe515f921556d9b3`, including their retained license
+files, then builds both under a fresh ignored `target/oracle-staging` directory.
+Create or provide those checkouts and run:
+
+```sh
+git clone https://aomedia.googlesource.com/aom target/oracle-staging/libaom
+git -C target/oracle-staging/libaom checkout ad44980d7f3c7a2605c25d51ea96946949000841
+git clone https://github.com/AOMediaCodec/libavif target/oracle-staging/libavif
+git -C target/oracle-staging/libavif checkout 6543b22b5bc706c53f038a16fe515f921556d9b3
+.oracle-venv/bin/python scripts/generate_avif_10bit_lossless_inter_fixture.py \
+  --aom-source target/oracle-staging/libaom \
+  --libavif-source target/oracle-staging/libavif
+```
+
+The generator runs the native encoder twice, zeroes version-one `mvhd`, `tkhd`,
+and `mdhd` timestamps, and requires byte-identical normalized outputs with the
+listed hash. It also checks the two-frame 10-bit 4:2:0 key/inter all-lossless
+bitstream shape and Pillow 12.2.0 RGB frame references. Each frame is 3,072
+bytes, with SHA-256 values
+`0a9a2996f570e2959cbd25e68991ceb2fbd153485af10d4ebfb2fed8fe3170a7` and
+`a9346f58b101a9c058ad8271404b371773b0fea8fc3255c8c8befcf7104c4345`.
+
+The 28x64 companion forces 32x32 partitions. AV1 pads this frame to 32 luma
+columns for its partition tree, and its translated 24x24 patch stays inside the
+left B32x32 leaf. The generator verifies key/inter frame types, repeatable AV1
+samples, and exact Pillow 12.2.0 frame pixels. Its normalized file SHA-256 is
+`8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f`; the
+frame hashes are
+`3dc1cdc564be835c5afbd6cac356fcda1b5f8c7b58be38b18331a5b1deec0f9e` and
+`15b9ec6a29475ae276ce6c118088943f352ac2b383f83218a0ce133cbd0ac420`.
+
+The 56x64 companion fixes partitions to 32x32 and places its translated
+16x24 textured patch inside the right-edge B32x32 leaf, which has a 24x32
+visible extent. Its normalized file SHA-256 is
+`a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe`; the
+Pillow frame hashes are
+`8d14c698d8415e0e22c67a43b245c4a645cecd3e048ec1e8dcbf0bba1f112100` and
+`3b24a0b82c7f7572d0fbf148d3eb205fdc251650f8d73258fbf16e4b371ef5b6`.
+
+`animated_lossy_inter_420_superres_sgr_10bit_160x56.avif` is generated by
+`scripts/generate_avif_hi10_superres_restoration.py` from two deterministic
+160x56 full-range 10-bit I420 frames. The key frame is flat at sample 512; the
+inter frame alternates 448/576 samples in 8x8 tiles. The generator requires
+`avifenc` built with libavif 1.4.1 and libaom 3.13.2, double-encodes the
+sequence, normalizes movie timestamps, and checks the AV1 syntax and exact
+Pillow 12.2.0 RGB frames. Run it with the pinned encoder binary:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_hi10_superres_restoration.py \
+  --avifenc target/oracle-staging/libavif-superres-build/avifenc
+```
+
+The inter frame is coded at 128x56 and super-resolved to 160x56 with SGR
+restoration on all three planes. The normalized input hashes to
+`016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11`; the two
+Pillow RGB frame hashes are
+`69db76fd576323ba0a068072e8473ed16740c868e8c8c7199063056f97b4f9ed` and
+`199a031bed1879efe5b17d90bacd44226ec2c05da120f4e981326695e6d493d0`.
+Its super-resolution encoder controls require the fixture-only compatibility
+patch and build recipe in
+[`scripts/avif_fixture_oracle/README.md`](../../../../../scripts/avif_fixture_oracle/README.md).
+
+`animated_lossy_inter_420_superres_sgr_8bit_160x56.avif` exercises the same
+inter-frame super-resolution and SGR restoration profile in 8-bit I420. Its
+key frame is flat at sample 128; the inter frame alternates 112/144 samples in
+8x8 tiles. The generator fixes 16x16 partitions and disables TX size search,
+which selects the largest transform mode required by this decoder path. It
+normalizes BMFF timestamps, double-encodes the input, and checks AV1 syntax
+plus Pillow 12.2.0 frame pixels. The pinned libavif fixture-controls patch and
+build steps are documented in
+[`scripts/avif_fixture_oracle/README.md`](../../../../../scripts/avif_fixture_oracle/README.md).
+Regenerate it with:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_8bit_superres_restoration.py \
+  --avifenc target/oracle-staging/libavif-superres-build/avifenc
+```
+
+The normalized asset hash is
+`c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7`; Pillow
+RGB frame hashes are
+`69db76fd576323ba0a068072e8473ed16740c868e8c8c7199063056f97b4f9ed` and
+`0bb7e3278f7cad0535a87e433d644434074b207396bf668ab3f5007dfca98061`.
+
+`animated_lossy_inter_420_superres_select_10bit_160x56.avif` uses the same
+deterministic source frames but a pinned quality-39, speed-5 encode. The inter
+frame is coded at 128x56, super-resolved to 160x56, and uses TX_MODE_SELECT
+with no active restoration. Run
+`.oracle-venv/bin/python scripts/generate_avif_hi10_superres_select.py` with
+the same pinned `avifenc` binary:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_hi10_superres_select.py \
+  --avifenc target/oracle-staging/libavif-superres-build/avifenc
+```
+
+The normalized asset hashes to
+`04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e`; Pillow
+RGB frame hashes are
+`69db76fd576323ba0a068072e8473ed16740c868e8c8c7199063056f97b4f9ed` and
+`7aa2455358aa4a1d51b3a4a263a425229b1be524efd68979a26dad18c8250fef`.
+
+`animated_lossy_inter_i444_obmc_mixed_b16x32.avif` is a retained 32x32,
+three-frame, 8-bit 4:4:4 candidate from the deterministic `checker` seed-490
+AV1 search recipe. It uses quality 75, speed 0, one encoder thread, 16–32
+pixel partitions, and disables AQ, delta-Q, CDEF, restoration, and loopfilter
+control. Its terminal B16x32 combines a single-reference target matching the
+second lane of a compound spatial neighbor with OBMC and mixed transform-split
+topology. The exact encoded witness is retained at the listed SHA-256; the
+three pinned Pillow RGB frame references are recorded by the decode manifest.
+
+`animated_lossy_global_rotzoom_compound_i444_b128x128.avif` is a retained
+256x256, four-frame, 8-bit 4:4:4 affine-motion candidate from the deterministic
+global-motion search. It uses quality 80, speed 0, and one encoder thread. Its
+AV1 frame headers carry non-identity global RotZoom references, and frame 3
+contains four 128x128 compound GlobalGlobal blocks. The exact encoded witness
+is retained at the listed SHA-256; pinned Pillow RGB frames, durations, and
+independent libavif loop evidence are recorded by the decode manifest and AVIF
+loop bundle.
+
+`animated_lossy_global_halfblend_spatial_i444_b256x256.avif` is a retained
+256x256 four-frame 8-bit 4:4:4 sequence generated from seeded rectangles,
+small rotations, and a half blend. The pinned encoder produces a compound
+spatial neighbor whose identity-reference lane has no affine vector while the
+RotZoom lane does. This reaches both outcomes of the public motion projection
+condition. The generator double-encodes the sequence, normalizes movie
+timestamps, and checks the exact input hash; Pillow frame outputs and
+independent libavif loop evidence are recorded with the decode matrix.
+
+`animated_lossy_wide_i444_mode2_split32_b128x128.avif` is generated by
+`scripts/generate_avif_mode2_split32_fixture.py`. Its flat gray key frame is
+followed by a row-alternating, 32-pixel grayscale sinusoid. With fixed
+128-pixel partitions, the inter frame splits each TX64 root once to TX32 and
+leaves the TX32 children unsplit in all four 128x128 I444 blocks. The generator
+checks deterministic timestamp-normalized bytes and both pinned Pillow frame
+hashes; public decode and complete-file loop references are retained.
+
+`animated_lossy_interintra_420_nowedge_mode3_b16x16_64x64.avif` extends the
+non-wedge smooth inter-intra sequence to mask mode 3. Its final frame contains
+a deterministic 16x16 grayscale patch generated from the smooth mask weights.
+Pinned dav1d syntax tracing confirms mode 3 on the final-frame B16x16 at
+`(16,16)`. All three public Rust RGB frames and their 100ms durations match
+Pillow exactly. The normalized input hash is
+`7e035cef7293dfff72e50ff8c729bc0fad360ee14d7bf80d663b82b96ca7c4d7`.
+
+`animated_lossy_interintra_420_wedge_b16x16_64x64.avif` uses a colored
+reference and final-frame wedge ramp so 4:2:0 chroma-mask downsampling affects
+decoded pixels. Pinned dav1d syntax tracing confirms wedge index 4 on the final
+B16x16 at `(16,16)`. The three public Rust RGB frames and their 100ms durations
+match Pillow exactly. Its normalized input hash is
+`1510b764d7e642f2caf02fff53e6dc966cfb92df8eca2e8f2d91c0b3bead1791`.
+
+`animated_lossy_inter_422_checker_random_b32x32.avif` is generated by
+`scripts/generate_test_assets.py` from two 32x32 RGB frames with per-frame
+seeded checker jitter and a translated patch. It uses Pillow 12.2.0, libavif
+1.4.1, libaom 3.13.2, quality 75, speed 0, one thread, 16–32 pixel
+partitions, and timestamp-normalized AVIF sequence boxes. The generator
+double-encodes the sequence and checks the exact input hash. The two Pillow RGB
+references are each 3,072 bytes, with hashes
+`64a05a10f3a33ccd351e0c529f56cff96fabb33e0fc81a5f96f43c3f4c1c6c6e` and
+`c98fa755c2b5a8ba48a7e821d9ecad46d4ebbc4cc59535b70c24255d3ffe2437`.
+
+`animated_tx64_root_split_inter_420_64x64.avif` uses a deterministic low-range
+luma texture with two larger checkerboard changes. Pinned AOM selects a B64
+inter root split into two TX32 children, and public Rust decoding reaches both
+child x offsets. The generator fixes the encoder settings, normalizes sequence
+timestamps, double-encodes the source, and checks the listed input hash.
+
+`animated_motion_temporal_window_left_512x128.avif` and
+`animated_motion_temporal_window_right_512x128.avif` use a deterministic
+96x64 textured patch on a flat 512x128 background. The four-frame patch path
+alternates between x=192 and x=32; reversing the path gives the second file.
+The pinned encoder selects temporal motion candidates whose projected sample
+falls left of the window in the first fixture and at or beyond its right edge
+in the second. Both retain exact Pillow frame references and native AVIF loop
+observations; the generator double-encodes and checks each normalized hash.
+
+`animated_lossless_inter_420_clipped_b32x32_17x17.avif` is generated by
+`scripts/generate_test_assets.py` from two 17x17 RGB frames with a diagonally
+translated 4x4 patch. Pinned Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 encode
+it at quality 100, speed 8, and one thread as 8-bit lossless 4:2:0. The
+inter-frame B32x32 residual grid exercises the spec's MI-padded 24x24 boundary
+while Pillow's exact two-frame RGB output is retained in the decode manifest.
+The generator double-encodes the input and checks the exact SHA-256 above.
+
+`animated_lossless_inter_i444_clipped_b32x32_49x64.avif` uses a deterministic
+49x64 RGB texture and a second frame shifted left by one pixel. Pillow
+12.2.0/libavif 1.4.1/libaom 3.13.2 encode it losslessly at quality 100 and
+speed 0 as 4:4:4 with fixed 32x32 partitions. The second frame's clipped
+right-edge B32x32 block has a 24x32 visible extent. The generator encodes the
+sequence twice, zeroes version-one movie timestamps, and checks the listed
+hash; the decode manifest retains exact Pillow pixels for both frames.
+
+`animated_lossless_inter_i422_clipped_b32x32_49x64.avif` is generated from a
+flat 49x64 RGB key frame and a second frame with a 16x16 patch at `(32,40)`.
+Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 encode it losslessly at quality 100
+and speed 0 as 4:2:2 with fixed 32x32 partitions. Its right-edge B32x32 block
+touches the final column of an odd-width frame. The key frame has exact
+Rust-to-Pillow pixel parity; Rust sequence decoding retains an explicit
+Unsupported/NotImplemented expectation because the final chroma sample
+geometry is not parity-safe for this layout. The generator encodes the input
+twice, zeroes version-one movie timestamps, and checks the listed hash.
+
+`animated_lossless_inter_i422_clipped_b32x32_52x64.avif` is generated from a
+flat 52x64 RGB key frame and a second frame with a 16x16 patch at `(36,40)`.
+Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 encode it losslessly at quality 100
+and speed 0 as 4:2:2 with fixed 32x32 partitions. Its right-edge B32x32 block
+has a 20x32 visible luma extent; the generator encodes it twice, zeroes
+version-one movie timestamps, and checks the listed hash.
+
+`animated_lossless_inter_i444_clipped_b32x32_64x56.avif` uses a deterministic
+64x56 RGB texture below a flat top half, with the second frame's lower texture
+shifted upward by one row. Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 encode it
+losslessly at quality 100 and speed 0 as 4:4:4 with fixed 32x32 partitions.
+The bottom B32x32 inter block has a 32x24 visible extent. The generator
+double-encodes the sequence, zeroes version-one movie timestamps, and checks
+the listed hash; exact Pillow pixels for both frames are retained.
+
+The two `animated_lossless_inter_{i422,i444}_clipped_b32x32_52x60.avif`
+fixtures use the same deterministic lower-right RGB texture in 4:2:2 and
+4:4:4. Their final B32x32 block is clipped on both axes to 20x28 luma; I422
+also uses 10x28 chroma. The second frame shifts the texture upward by one row.
+Both variants use Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 at quality 100
+and speed 0 with fixed 32x32 partitions. Their generators double-encode,
+zero version-one movie timestamps, and verify the listed hashes; exact Pillow
+pixels for both frames are retained.
+
+`animated_lossless_inter_420_clipped_b32x32_60x64.avif` is generated from two
+60x64 RGB frames whose 28x32 edge patch moves one pixel left. The pinned
+libavif/libaom encoder deterministically selects an inter B32x32 leaf at
+pixel `(32,32)` in frame 1, with a 28x32 visible extent at the right edge.
+This adds a larger clipped-grid boundary to the 17x17 MI-padded witness; the
+decode manifest retains Pillow's exact frame pixels.
+
+`animated_lossless_inter_420_clipped_b32x32_64x60.avif` is generated from two
+64x60 RGB frames whose 32x28 lower-edge patch moves upward by one pixel. The
+pinned libavif/libaom encoder runs at quality 100 and speed 8, and exact Pillow
+frame pixels are retained in the decode manifest. A selected Rust coverage run
+with these settings reached the bottom-only clipped B32 geometry predicate.
+
+`animated_lossless_inter_420_clipped_b32x32_184x64.avif` is generated by
+`scripts/generate_test_assets.py` from two deterministic 184x64 RGB textures.
+Pinned Pillow 12.2.0/libavif 1.4.1/libaom 3.13.2 encode it at quality 100,
+speed 0, and one thread with fixed 32x32 partitions. The final-frame inter
+B32x32 leaf at `(160,0)` has a 24x32 visible extent and selects the clipped
+lossless transform plan. The generator double-encodes the input, normalizes
+sequence timestamps, and checks the exact SHA-256 above; exact Pillow RGB frame
+hashes are retained by the decode manifest and native AVIF loop bundle.
+
+`animated_lossless_inter_420_clipped_b16x16_60x64.avif` fixes 16x16
+partitions and shifts deterministic 60x64 texture one column left between
+frames. The pinned libavif/libaom encoder selects an inter B16x16 leaf at
+`(48,16)` in frame 1; only its leftmost 12 columns are visible. The generator
+double-encodes the sequence, normalizes its timestamps, and checks the exact
+SHA-256 above.
 
 `animated_track_only.avif` is deterministically derived from the pinned
 `animated.avif` input by changing its one top-level `meta` box type to `free`
@@ -38,6 +357,76 @@ still-picture, one tile, all-lossless, with base qindex 0. The exact Pillow
 `avifenc` and its native libraries are fixture-generation tools only; the
 crate's runtime path remains pure safe Rust with no native AVIF dependency.
 
+`profile2_identity_12bit_444.avif` uses the same deterministic 16x16 RGB
+pattern but selects identity CICP 1/13/0. Its AV1 sequence declares profile 2,
+12-bit, full-range 4:4:4, for which the Y, Cb, and Cr planes carry G, B, and R
+samples directly. `scripts/generate_avif_profile2_identity.py` checks the
+sequence declaration and Pillow 12.2.0 open/verify/load behavior. Pillow
+returns 768 RGB8 bytes with SHA-256
+`45114693c3cde135ae810d49fbfb8bcf54204da4b9bf11fa3094b5e177686343`.
+Generate it with the pinned local `avifenc` build:
+
+```sh
+.oracle-venv/bin/python scripts/generate_avif_profile2_identity.py \
+  --avifenc target/oracle-staging/avif-profile-probe/libavif-build/avifenc
+```
+
+The existing `error_sequence_identity_color_matrix_profile2_8bit.avif` is a
+separate malformed case: it mutates the pinned sequence to profile 2, 8-bit,
+4:2:0, identity CICP. Pillow opens and verifies its container, then reports a
+decode error when loading the frame. Its generator checks that the original
+sequence has 8-bit 4:2:0 color planes before applying those mutations.
+
+`high_bitdepth_still_10bit_420_lossy_16x16.avif` is the
+`high10_420_16x16` deterministic planar-input case in
+`scripts/generate_av1_encoder_refs.py`. Its 16x16 Y plane and 8x8 U and V
+planes use the generator's fixed arithmetic sample pattern. The pinned native
+encoder uses quality 75, speed 6, one thread, full range, CICP 1/13/6, and one
+tile. The fixture is one still-picture AV1 item, profile 0, 10-bit 4:2:0;
+plain and instrumented encoders and two native repetitions produce identical
+AVIF bytes. Generate the candidate with a clean libaom checkout at
+`ad44980d7f3c7a2605c25d51ea96946949000841` and the pinned libavif checkout:
+
+```sh
+.oracle-venv/bin/python scripts/generate_av1_encoder_refs.py \
+  --aom-source target/oracle-staging/libaom \
+  --libavif-source target/oracle-staging/libavif \
+  --output target/oracle-staging/av1-encoder-run
+```
+
+Copy `high10_420_16x16/encoded.avif` from that generated bundle into the
+fixture directory. Pillow 12.2.0 decodes it to 16x16 RGB8 (768 bytes), with
+SHA-256 `55820e29e26b25634c402e57e8b743bb9560666861f5ea07c14a607f31eea38f`.
+The encoder collector independently pins libaom/libavif source identity and
+the Pillow decoder wheel; it records native repeat parity and the exact AVIF
+and pixel-plane digests in its generated index.
+
+`high_bitdepth_still_10bit_422_alpha_lossless_16x16.avif` is the
+`high10_422_alpha_lossless_16x16` case from the same collector. It has 16x16
+10-bit Y, 8x16 U/V, and 16x16 alpha planes, encoded as full-range profile 2
+4:2:2 plus a profile 0 monochrome alpha item. Both frame headers declare
+all-lossless with base qindex 0. The collector's plain and instrumented
+outputs and two native repetitions agree byte-for-byte. The AVIF input hash
+is `eef1ffae7961354032dad642c1ebfc146cbcb28f7147c4dce6d9b8a4de17d392`;
+Pillow 12.2.0 returns RGBA8 bytes with SHA-256
+`b7731cca14b3da564883533a5cfd6ddc75aba189b60dbe7795de93711237a457`.
+The complete tile, trace, replay, and plane evidence is retained under
+`tests/fixtures/outputs/av1_encoder/high10_422_alpha_lossless_16x16/`.
+
+The active 10-bit alpha stills extend that same collector with 4:2:0 and
+4:4:4 color planes. The 4:2:0 case is all-lossless; the 4:4:4 case uses
+quality 75 to exercise the full-resolution 10-bit alpha conversion. The
+collector validates full-range CICP 1/13/6 color declarations and 10-bit
+monochrome alpha items, then checks plain/instrumented output, two native
+repetitions, Pillow pixels, and replayed entropy traces. Their input hashes
+are `8c3cb86055e1003d91897d986995dd2ee030d0278b82d3d7c9ddc783189eb76f` and
+`468bd5af2f96693582d6618572dc353cac4ee16719cebebb8e20ff7e81049548`; their
+1,024-byte Pillow RGBA8 output hashes are
+`a3eec8f3c1e9539ccee71ec2e9d514a46d20d0b93a7b8e5d562379ef4a794dd9` and
+`02e871ddbaa576836e9d486cf36be09efce4f2fef164c7f66af2a579dfb1e67a`.
+Their planes and full AV1 evidence are under
+`tests/fixtures/outputs/av1_encoder/`.
+
 `forbidden_422_partition.avif` is deterministically derived from the pinned
 BSD-2-Clause `10bit.avif` input. It replaces only the 14-byte first color-item
 tile with the same-length prefix from the independently pinned scalar dav1d
@@ -55,6 +444,30 @@ is deterministically generated by
 `scripts/generate_test_assets.py` with the pinned Pillow 12.2.0/libavif
 1.4.1/libaom 3.13.2 oracle. It is a 256x128 RGB source encoded with two tile
 columns, quality 75, speed 6, and one encoder thread.
+`multitile_color_split_groups.avif`
+(`654ef88dd8ebc71a554c03f721ad97581fcf2d2df0d825020d267939eb8f5e34`)
+uses `scripts/generate_avif_color_tile_split_fixture.py` to preserve that
+source's frame header and tile payloads while delivering each color tile in
+its own OBU tile group. Pinned Pillow 12.2.0 produces the same image metadata
+and RGB pixels as `multitile.avif`; the separate groups exercise incremental
+color-tile state retention.
+
+`multitile_skipped_cdef_color_alpha.avif`
+(`36c83e5e5104e74a8b3474b3ee313645a7bf86381d1578087e5cef3453d289eb`)
+is an original 128×64 RGBA raster with every component equal to 128.
+`scripts/generate_avif_color_tile_split_fixture.py --profile cdef-skipped-square64`
+builds its two-column color and monochrome-alpha container using the pinned
+Pillow/libavif/libaom oracle, then replaces the tile payloads with independent
+libaom default-CDF entropy construction from
+`scripts/avif_fixture_oracle/encode_skipped_square64.c`. Each tile selects an
+unpartitioned 64×64 DC-predicted block with skipped transforms. The frame
+headers retain enabled CDEF syntax with zero strengths; skipped blocks omit
+the CDEF region index. The generator checks identical repetitions, container
+extents, frame controls, and Pillow's exact 32,768 RGBA bytes (SHA-256
+`67d47633eeb4ab9211bfaddc84e6d5c09a958588867dcdc4b2169ad74b73fa0e`).
+The original raster and generated file use the repository's MIT/Apache
+licensing. This is an ordinary public parity input without fault injection.
+
 `invalid_tile_size.avif`
 (`82a07a29a8631d60a2d83bd9973afac0e494882580d3542bb953875817eb0f67`)
 differs only in the most-significant byte of the first tile's little-endian
@@ -98,6 +511,128 @@ constant 4x4 RGB inputs `(17, 91, 203)` and `(199, 37, 83)`. Encoding is pinned
 to Pillow 12.2.0, libavif 1.4.1, libaom 3.13.2, quality 100, speed 8, one
 thread, 4:4:4 subsampling, and disabled autotiling. The generator encodes each
 fixture twice and refuses differing bytes.
+
+`portable_lossless_monochrome_1x1.avif` is generated as a one-pixel Pillow
+`L` image with sample 127. The pinned AVIF encoder uses quality 100, speed 0,
+one thread, 4:0:0 subsampling, CICP 1/13/6, and disabled warped motion. The
+pure-Rust monochrome reconstruction crops the coded lossless block to this
+nonzero sub-4-pixel canvas; Pillow's exact RGB output is `7f7f7f` (SHA-256
+`4977021028c4a74c2bca8061786cd88afc96837ef6007265acc4f8cda2d945e0`). The
+generator double-encodes the input and checks its listed hash.
+
+`portable_lossless_monochrome_limited_16x16.avif` uses the
+`mono_limited_lossless_16x16` case in `scripts/generate_av1_encoder_refs.py`.
+The deterministic Y plane is mapped to limited-range codes, then encoded as
+lossless 8-bit 4:0:0 with CICP 1/13/6. The collector verifies the limited-range
+sequence flag, plain/instrumented byte equality, repeat encoding, replayed
+entropy, and Pillow RGB output. Pillow's 768-byte result has SHA-256
+`81a84ee60e5a6b01ffeb8007cf087a5956fbb03da7e734b6f2326bb801750150`; the
+complete input planes and trace evidence are under
+`tests/fixtures/outputs/av1_encoder/mono_limited_lossless_16x16/`.
+
+The companion 10-bit and 12-bit RGB fixtures use the same full-file collector
+to check depth-scaled studio ranges. Three paired RGBA fixtures add full-range
+8-bit, 10-bit, or 12-bit alpha planes. For RGB, pinned libavif normalizes and
+rounds limited-range luma; for RGBA it uses the limited-range I400 matrix for
+color while converting alpha over the full sample range. The five additional
+Pillow output hashes are `756fe3346d631980ef8ca651824dc321b5ec3a35deab90e8a43eca0b2945393c`,
+`e1cd06c4130804d0274ee4d76338cd4cab94f09195cd82515b13443ab932d57e`,
+`aff3a7277b7b21f5ec06e4f4d85b1309eee554a086042cc52da99e2215f8f578`,
+`ed3fe784a495990c92c60ed29c188917e0c6c68c8672f3770e406b1fd7691dd9`, and
+`ff702f5efd66fbe66bdbf67c5f683ac042ab5e3ae4067a40a3f6e14f8760ca09`.
+
+`portable_lossless_monochrome_limited_bt2020_pq_16x16.avif` changes the
+limited-range RGB witness to BT.2020 primaries, PQ transfer, and BT.2020
+non-constant-luminance matrix coefficients (CICP 9/16/9). Its Pillow RGB8
+output is byte-identical to the BT.709/sRGB/BT.601 case, confirming that the
+monochrome luma conversion does not depend on the chroma matrix.
+
+`portable_i444_quality100_64x64.avif` uses deterministic RGB pixels
+`((4x) mod 256, (4y) mod 256, (2(x+y)) mod 256)` over a 64×64 canvas. Pillow
+12.2.0's AOM encoder uses quality 100, speed 0, one thread, 4:4:4
+subsampling, fixed 64×64 partitions, CICP 1/13/6, intra DCT only, and disabled
+CDEF, restoration, AQ, and delta-Q. The generator encodes it twice and checks
+the pinned input hash. The decoder's RGB bytes match Pillow exactly: the
+12,288-byte output has SHA-256
+`5e74b862ca69314d8ae9a3aa4b8f3af5651dfbd238ce922a7973c193e338f64a`.
+
+`portable_lossless_filmgrain_i444_64x64.avif` uses deterministic random RGB
+pixels from seed `0x21108` over a 64×64 canvas. Pillow 12.2.0's AOM encoder
+uses quality 100, speed 0, one thread, fixed 64×64 partitions, DCT-only
+transforms, CICP 1/13/6, and its film-grain test mode. The AV1 item is 8-bit
+full-resolution 4:4:4 and all-lossless. Its 12,288 Pillow RGB bytes have
+SHA-256 `44f85ee642e036ae8646b40b2a71643f1e74a27d2a5a6af719c938d8aba2dceb`.
+
+`portable_lossless_filmgrain_420_chroma_from_luma_64x64.avif` starts from
+deterministic random RGB pixels (seed `0x4672`) encoded losslessly as I420 by
+Pillow 12.2.0's AOM encoder with film-grain test mode. Its AV1 frame header is
+rewritten to set `chroma_scaling_from_luma`, omit the independent U/V point
+tables and their scaling parameters, and preserve the original tile payload. A
+valid padding OBU keeps the AV1 item extent unchanged. The pinned generator
+verifies the syntax with the OBU inspector, repeats the mutation deterministically, and
+checks Pillow's RGB output. The 7,715-byte AVIF has SHA-256
+`80c3a157f32f190a787588c48232113c4bbe915abd80812c5e0d1d62fd51c893`; its
+12,288 Pillow RGB bytes have SHA-256
+`ee0b8557ef74499434382e1776a76492adc857b142f0481f4ef29c4e5a9d82cd`.
+
+`portable_lossless_filmgrain_420_zero_y_points_64x64.avif` uses the same
+pinned lossless I420 source. Its AV1 header keeps `apply_grain` set, sets
+`num_y_points` to zero, and clears chroma-from-luma; 4:2:0 syntax therefore
+omits U/V points, all AR coefficients, and U/V scaling parameters. The
+generator preserves the key-frame prefix and tile payload, verifies the
+rewritten syntax with the independent OBU inspector, and pins repeatable
+Pillow 12.2.0 output. The 7,715-byte AVIF has SHA-256
+`c76ede4ac45599b182d023f8425744f09dc27e4011742d6295d3ec50e172ed9f`; its
+12,288 Pillow RGB bytes have SHA-256
+`5d35ab50438b9f1536ef7de3cbca8ac3d01360efa9d77446dfe0d69786d2fb62`.
+
+`animated_filmgrain_reference_reuse_i444_64x64.avif` starts from a pinned
+two-frame Pillow 12.2.0 I444 sequence, then updates the inter-frame AV1 header
+to reuse film-grain parameters from reference slot 0 with a new seed. The
+generator validates the inter-frame syntax with the independent OBU inspector,
+preserves the sample extent with a valid padding OBU, normalizes BMFF
+timestamps, and checks Pillow's decoded RGB bytes for both frames. Its 18,004
+bytes have SHA-256
+`bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34`; frame
+RGB hashes are `a4e4fa07369777b09a15c680d4812441a5509a7662740c039127a998bdf3d9ab`
+and `d9902750b3685e4c451df39a76c6f18848dc7bb6cb01055174d34d8d0def0052`.
+
+`portable_lossless_filmgrain_monochrome_64x64.avif` uses grayscale RGB pixels
+uses `scripts/generate_avif_monochrome_filmgrain.py`, seeded grayscale RGB
+pixels, and Pillow 12.2.0's AOM encoder with quality 100, speed 0, one thread,
+4:0:0 subsampling, fixed 64×64 partitions, DCT-only transforms, CICP 1/13/6,
+and film-grain test mode. The AV1 item is 8-bit all-lossless monochrome with
+luma film grain. Its 6,210 AVIF bytes have SHA-256
+`0bc3fe81f320d7f55853d53ec7b7fa20f099bf8af7e5e7ccbaa69556ccd980d4`; its
+12,288 Pillow RGB bytes have SHA-256
+`853bfb557b4ab4960d708f4ecfeda145ed9feab8c987214d82ee6a20665e93f4`.
+
+`icc_profile.avif` is deterministically generated from a 4x4 RGB still using
+the ICC profile in the existing `png/iccp.png` source and CICP 1/13/6 values
+matching the portable AV1 subset. The generator double-encodes the still,
+checks its pinned input hash, and reopens it with Pillow to verify the profile
+survives. The AVIF decode parity row compares Pillow's RGB pixels and retained
+profile metadata.
+
+`icc_ricc_type.avif` changes only the `colr` property type from `prof` to
+`rICC` in that complete AVIF file. The pinned Pillow oracle accepts it, returns
+the same profile payload, and produces the same RGB pixels. This row covers
+the second ICC property spelling without claiming the marker payload is a
+color-conversion profile.
+
+`icc_mdcv.avif` starts from the same ICC still and inserts a non-essential
+primary-image `mdcv` property with BT.2020 primaries and a D65 white point.
+The generator updates the property association and file-based item extent,
+then checks the pinned SHA-256. Pillow accepts the result, preserves the ICC
+profile, and returns pixels identical to the control. Pillow does not expose
+`mdcv` in `Image.info`, so its ten exact 16-bit coordinate and 32-bit luminance
+fields are asserted against the ISO/IEC 23008-12 property definition while the
+pixel/profile assertions retain Pillow provenance.
+
+`icc_mdcv_trailing.avif` appends one bounded byte to that associated property.
+Pillow 12.2.0 still verifies and decodes it to the same pixels and profile.
+The Rust parser retains the fixed `mdcv` fields and ignores that bounded tail,
+matching the oracle's behavior without changing image samples.
 
 `portable_lossless_420_a.avif`
 (`640d19800ff27dbd1cd28e881736e923a48eb46e8223bed9d52bfb624b85e6a7`),
@@ -396,6 +931,30 @@ children.
 | `portable_lossless_420_square_16x16_a.avif` | `(17,91,203)` | `bde1f73324f6b1bd1ec41ed68ecf9a15d0ada9d7e3508ef70e54fe9216ebd73a` |
 | `partitioned_square_420_16x16_rgb_delta.avif` | replacement `(22,96,208)` | `9cb30c2c2391c414c5dfef0a0ed27d9409089f88cdd05aad45103e720b6b12f7` |
 | `partitioned_square_420_16x16_g96.avif` | replacement `(17,96,203)` | `7e66769bff63133cbab59a6d93aa143f4d2f0982fa142567dfc4727783c3330a` |
+| `coverage_lossy_420_square8_four_leaves_01.avif` | same lower-right replacement, quality 99 | `c0465a00209870571f58be71cb122d5c42ae8d19e91ae001d8f3b706e7205255` |
+
+`coverage_lossy_420_square8_four_leaves_01.avif` is generated by
+`scripts/generate_avif_lossy_420_square8.py` with pinned libavif 1.4.1 and
+libaom 3.13.2. The generator encodes the listed quadrant source as lossy
+4:2:0 at quality 99, speed 8, one thread, and fixed minimum and maximum
+partition sizes of 8 pixels. Two encodes must match the pinned AVIF hash; the
+generator also checks the AV1 profile/frame controls and exact Pillow RGB
+output (`a8e0fdcf9fc9fde209db6dbb71c23dae9a25996b6cef24808e64e03ff5e38e64`).
+Pinned scalar dav1d 1.5.3 confirms the root split and four terminal Square8
+leaves. Regenerate it with
+`.oracle-venv/bin/python scripts/generate_avif_lossy_420_square8.py --avifenc target/oracle-staging/libavif-superres-build/avifenc`.
+
+`portable_lossy_420_square8_gradient.avif` uses the same generator with
+`--profile gradient`. Its original 16×16 RGB source is
+`(24 + 5*x + 2*y, 40 + 3*y + x, 180 - 2*x - 3*y)` for coordinates
+`0 <= x,y < 16`. The same pinned encoder, quality, subsampling, partition
+limits, and single-thread settings produce a 381-byte AVIF with SHA-256
+`8e7e7bcdfc9cd34e88e49c0b18b0e010529d62d3c526266d286cf32746f41671`.
+The generator checks two identical encodes, disabled screen-content tools and
+intra-block copy, the lossy frame controls, and Pillow's exact 16×16 RGB
+output SHA-256
+`82bc76a521907851c6cd20dace4a458d98387a5786b1e9551add7c0cec14d3f3`.
+The default `quadrant` profile preserves the earlier fixture.
 
 These rasters and encoded files are original project material under the
 repository's MIT/Apache licensing. The generated AV1 behavior is verified

@@ -28,7 +28,11 @@ static CONST2: i64 = 35468;
 // VP8 supplies bounded transform coefficients. The i64 intermediates prevent
 // overflow, while the final narrowing reproduces the reference transform's
 // signed 32-bit storage exactly.
-#[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "VP8 coefficient bounds keep i64 intermediates safe and the final narrowing matches signed 32-bit reference storage"
+)]
 pub(crate) fn idct4x4(block: &mut [i32]) {
     // The intermediate results may overflow the types, so we stretch the type.
     fn fetch(block: &[i32], idx: usize) -> i64 {
@@ -79,7 +83,10 @@ pub(crate) fn idct4x4(block: &mut [i32]) {
 // VP8 coefficient bounds make these signed additions and subtractions
 // representable; retaining the reference expressions keeps the transform
 // directly auditable against the specification.
-#[allow(clippy::arithmetic_side_effects)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "VP8 coefficient bounds keep the inverse WHT sums and differences representable in i32"
+)]
 pub(crate) fn iwht4x4(block: &mut [i32]) {
     // Perform one length check up front to avoid subsequent bounds checks in this function
     assert!(block.len() >= 16);

@@ -344,6 +344,10 @@ pub(super) fn apply_monochrome(
         ));
     }
     validate_parameters(params)?;
+    if params.y_points.is_empty() {
+        return Ok(plane);
+    }
+
     let y_lut = generate_luma_lut(params, bit_depth, token)?;
     let y_scaling = generate_scaling(&params.y_points)?;
     plane.samples = apply_plane(
@@ -415,6 +419,12 @@ fn apply_with_sampling(
         return Err(malformed("film-grain display planes have invalid extents"));
     }
     validate_parameters(params)?;
+    if params.y_points.is_empty()
+        && params.uv_points.iter().all(Vec::is_empty)
+        && !params.chroma_scaling_from_luma
+    {
+        return Ok(leaf);
+    }
 
     let y_lut = generate_luma_lut(params, bit_depth, token)?;
     let y_scaling = generate_scaling(&params.y_points)?;
@@ -481,27 +491,33 @@ fn apply_with_sampling(
             )
         })
         .transpose()?;
-    let y_output = apply_plane(
-        (&leaf.planes[0].samples, (width, height)),
-        PlaneGrain {
-            chroma: false,
-            sampling: GrainSampling::I444,
-            lut: &y_lut,
-            scaling: &y_scaling,
-            index: 0,
-        },
-        params,
-        (&[], (0, 0)),
-        bit_depth,
-        token,
-    )?;
+    let y_output = if params.y_points.is_empty() {
+        None
+    } else {
+        Some(apply_plane(
+            (&leaf.planes[0].samples, (width, height)),
+            PlaneGrain {
+                chroma: false,
+                sampling: GrainSampling::I444,
+                lut: &y_lut,
+                scaling: &y_scaling,
+                index: 0,
+            },
+            params,
+            (&[], (0, 0)),
+            bit_depth,
+            token,
+        )?)
+    };
     if let Some(output) = u_output {
         leaf.planes[1].samples = output;
     }
     if let Some(output) = v_output {
         leaf.planes[2].samples = output;
     }
-    leaf.planes[0].samples = y_output;
+    if let Some(output) = y_output {
+        leaf.planes[0].samples = output;
+    }
     Ok(leaf)
 }
 
@@ -610,6 +626,12 @@ fn generate_luma_lut(
     bit_depth: u32,
     token: Option<&CancellationToken>,
 ) -> Av1Result<GrainLut> {
+    if params.y_points.is_empty() {
+        // An empty Y point list defines a zero scaling curve and omits the Y
+        // AR coefficients. Keep a zero LUT for any chroma consumer without
+        // generating grain samples that cannot affect the displayed image.
+        return GrainLut::new(GRAIN_WIDTH, GRAIN_HEIGHT);
+    }
     let mut lut = GrainLut::new(GRAIN_WIDTH, GRAIN_HEIGHT)?;
     let mut seed = params.seed;
     let shift = 12_u32

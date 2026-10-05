@@ -9,16 +9,12 @@
 use crate::codecs::error::{CodecError, CodecResult};
 use crate::encode_options::{GifColorTable, GifEncodeOptions, GifLoop};
 use crate::encode_policy::EncodePolicy;
-#[cfg(coverage)]
-use crate::types::DecodedFrame;
 use crate::types::{
     AnimationBackground, AnimationLoop, ColorType, DecodedImage, DecodedSequence, FrameBlend,
     FrameDisposal, FrameDuration, FramePixelLayout, ImageMode, ImagePalette,
 };
 use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::collections::HashMap;
-#[cfg(coverage)]
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 const GIF_TRAILER: u8 = 0x3b;
 const IMAGE_SEPARATOR: u8 = 0x2c;
@@ -29,41 +25,6 @@ const GIF_QUANTIZATION_CHECKPOINT_PIXELS: usize = 1024;
 const GIF_OCTREE_CHECKPOINT_CELLS: usize = 1024;
 const GIF_MEDIAN_CUT_CHECKPOINT_ITEMS: usize = 1024;
 const GIF_NEAREST_CHECKPOINT_ITEMS: usize = 1024;
-
-#[cfg(coverage)]
-static COVERAGE_CHECKS_BEFORE_COMPACT: AtomicUsize = AtomicUsize::new(usize::MAX);
-#[cfg(coverage)]
-static FORCE_NEAREST_MAPPING_CHECKPOINT: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static COVERAGE_CHECKS_BEFORE_LOOKUP_COPY: AtomicUsize = AtomicUsize::new(usize::MAX);
-#[cfg(coverage)]
-static COVERAGE_CHECKS_BEFORE_INDEX_PACK: AtomicUsize = AtomicUsize::new(usize::MAX);
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_record_token_polls(slot: &AtomicUsize, token: &crate::CancellationToken) {
-    let remaining = token.coverage_remaining_checks().unwrap_or(usize::MAX);
-    slot.store(usize::MAX.saturating_sub(remaining), Ordering::Relaxed);
-}
-
-#[cfg(coverage)]
-fn coverage_frame(
-    image: DecodedImage,
-    left: u32,
-    top: u32,
-    duration_ms: u32,
-    disposal: FrameDisposal,
-) -> DecodedFrame {
-    DecodedFrame::source_rectangle(
-        image,
-        left,
-        top,
-        FrameDuration::from_milliseconds(duration_ms),
-        disposal,
-        FrameBlend::Unspecified,
-        false,
-    )
-}
 
 /// Encode a `DecodedImage` as GIF bytes.
 ///
@@ -260,7 +221,6 @@ fn write_gif_to_sink(
     }
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn gif_generic_extension_prefix(encoded: &[u8], start: usize, end: usize) -> &[u8] {
     // Reading the extension label immediately before this helper proves that
     // `start..start+2` is inside the encoded buffer. Keep the defensive slice
@@ -311,1378 +271,6 @@ fn write_gif_sink_segment(
         .map_err(|error| CodecError::OutputWrite(error.to_string()))?;
     *written = written.saturating_add(bytes.len());
     Ok(())
-}
-
-#[cfg(coverage)]
-#[allow(clippy::expect_used)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let invalid_sequence = DecodedSequence {
-        width: 0,
-        height: 1,
-        frames: Vec::new(),
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    assert!(encode_sequence(&invalid_sequence, &GifEncodeOptions::default()).is_err());
-
-    let identical = [0u8, 0, 0, 255];
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = rgba_difference_bounds(&identical, &identical, 1, 1);
-    }));
-
-    let split_colors = [[10u8, 0, 0], [0, 0, 0]];
-    let split_counts = [1u32, 1];
-    let split_node = MedianBox {
-        axes: [vec![0, 1], vec![0, 1], vec![0, 1]],
-        pixel_count: 100,
-        children: None,
-    };
-    let _ = split_median_box(&split_node, &split_colors, &split_counts);
-    let split_token = crate::CancellationToken::new();
-    let _ = split_median_box_with_token(&split_node, &split_colors, &split_counts, &split_token);
-    let skewed_colors = [[0u8, 0, 0], [255, 255, 255]];
-    let skewed_counts = [60u32, 40];
-    let skewed_node = MedianBox {
-        axes: [vec![0, 1], vec![0, 1], vec![0, 1]],
-        pixel_count: 100,
-        children: None,
-    };
-    let _ = split_median_box(&skewed_node, &skewed_colors, &skewed_counts);
-
-    let equal_colors = [[0u8, 0, 0], [0, 0, 0]];
-    let equal_node = MedianBox {
-        axes: [vec![0, 1], vec![0, 1], vec![0, 1]],
-        pixel_count: 100,
-        children: None,
-    };
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = split_median_box(&equal_node, &equal_colors, &split_counts);
-    }));
-    let _ = split_median_box_with_token(&equal_node, &equal_colors, &split_counts, &split_token);
-
-    let opaque_rgba = [
-        255u8, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 255,
-    ];
-    let _ = quantize_rgba(&opaque_rgba, None);
-
-    let mut compact_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
-    let mut compact_indices = vec![0u8, 1, 2];
-    let mut compact_transparent = None;
-    let _ = compact_rgba_palette(
-        &mut compact_palette,
-        &mut compact_indices,
-        &mut compact_transparent,
-        None,
-    );
-    let mut hole_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
-    let mut hole_indices = vec![0u8, 2];
-    let mut hole_transparent = None;
-    let _ = compact_rgba_palette(
-        &mut hole_palette,
-        &mut hole_indices,
-        &mut hole_transparent,
-        None,
-    );
-
-    let mut rgb_pixels = Vec::with_capacity(16 * 16 * 3);
-    for value in 0u8..=255 {
-        rgb_pixels.extend_from_slice(&[value, value.wrapping_mul(37), value.wrapping_mul(73)]);
-    }
-    let first = DecodedImage::new(16, 16, vec![0; 16 * 16 * 3], ColorType::Rgb8);
-    let second = DecodedImage::new(16, 16, rgb_pixels, ColorType::Rgb8);
-    let frames = vec![
-        coverage_frame(first, 0, 0, 10, FrameDisposal::Keep),
-        coverage_frame(second, 0, 0, 10, FrameDisposal::Keep),
-    ];
-    let sequence = DecodedSequence {
-        width: 16,
-        height: 16,
-        frames,
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    // Pillow cannot supply a caller token, so these deterministic cancellation
-    // edges belong to the Rust-only internal checkpoint coverage hook rather
-    // than the Pillow parity matrix.
-    for checks in [0, 1, 5, 6] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_sequence_with_token(&sequence, &GifEncodeOptions::default(), Some(&token));
-    }
-    for checks in [1, 5] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = coalesce_identical_frames_with_token(&sequence, 2, None, Some(&token));
-    }
-    let coalesced =
-        coalesce_identical_frames(&sequence, 2, None).expect("coverage RGB frames coalesce");
-    for checks in [0, 1, 3, 4] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = write_gif_with_token(
-            &sequence,
-            &coalesced,
-            GifSettings {
-                interlaced: None,
-                local_color_table: false,
-                disposal_override: None,
-                loop_count: None,
-                transparency_override: None,
-            },
-            Some(&token),
-        );
-    }
-    let _ = write_gif(
-        &sequence,
-        &coalesced,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-
-    let luma = DecodedImage::new(1, 1, vec![7], ColorType::L8);
-    let still = DecodedSequence::from_image(luma.clone());
-    let _ = coalesce_identical_frames(&still, 1, None);
-
-    let huge_canvas_sequence = DecodedSequence {
-        width: u32::MAX,
-        height: u32::MAX,
-        frames: vec![still.frames[0].clone(), still.frames[0].clone()],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = coalesce_identical_frames(&huge_canvas_sequence, 2, None);
-
-    let identical_frames = vec![
-        coverage_frame(luma.clone(), 0, 0, u32::MAX, FrameDisposal::Keep),
-        coverage_frame(luma.clone(), 0, 0, 1, FrameDisposal::Keep),
-    ];
-    let _ = coalesce_identical_frames(
-        &DecodedSequence {
-            width: 1,
-            height: 1,
-            frames: identical_frames,
-            loop_count: crate::types::AnimationLoop::Unspecified,
-            background: None,
-            kind: crate::types::SequenceKind::TimedAnimation,
-            opaque_blocks: Vec::new(),
-            metadata: Vec::new(),
-            source_color: crate::types::SourceColor::new(),
-        },
-        2,
-        None,
-    );
-
-    let background_frames = vec![
-        coverage_frame(
-            DecodedImage::new(1, 1, vec![255, 0, 0], ColorType::Rgb8),
-            1,
-            1,
-            10,
-            FrameDisposal::Background,
-        ),
-        coverage_frame(
-            DecodedImage::new(1, 1, vec![0, 255, 0], ColorType::Rgb8),
-            0,
-            0,
-            10,
-            FrameDisposal::Reserved(7),
-        ),
-    ];
-    let background_sequence = DecodedSequence {
-        width: 2,
-        height: 2,
-        frames: background_frames,
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = coalesce_identical_frames(&background_sequence, 2, None);
-
-    let transparent_palette =
-        ImagePalette::new(vec![0, 0, 0], vec![0]).expect("coverage transparent palette");
-    let transparent_frame = coverage_frame(
-        DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8).with_palette(transparent_palette),
-        0,
-        0,
-        0,
-        FrameDisposal::Keep,
-    );
-    let mut canvas = vec![255; 4];
-    let _ = composite_frame(&mut canvas, 1, &transparent_frame);
-    let opaque_palette =
-        ImagePalette::new(vec![0, 0, 0], vec![255]).expect("coverage opaque palette");
-    let opaque_frame = coverage_frame(
-        DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8).with_palette(opaque_palette),
-        0,
-        0,
-        0,
-        FrameDisposal::Keep,
-    );
-    let _ = composite_frame(&mut canvas, 1, &opaque_frame);
-    let transparent_rgba = coverage_frame(
-        DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Rgba8),
-        0,
-        0,
-        0,
-        FrameDisposal::Keep,
-    );
-    let _ = composite_frame(&mut canvas, 1, &transparent_rgba);
-
-    let bad_palette =
-        ImagePalette::new(vec![0, 0, 0], Vec::new()).expect("coverage one-color palette");
-    let bad_index_frame = coverage_frame(
-        DecodedImage::with_mode(1, 1, vec![1], ImageMode::P8).with_palette(bad_palette),
-        0,
-        0,
-        0,
-        FrameDisposal::Keep,
-    );
-    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _ = composite_frame(&mut canvas, 1, &bad_index_frame);
-    }));
-
-    let _ = prepare_image_with_token(&DecodedImage::with_mode(1, 1, vec![0], ImageMode::P8), None);
-    let cancelled_l1 = crate::CancellationToken::new();
-    cancelled_l1.cancel();
-    let _ = prepare_image_with_token(
-        &DecodedImage::with_mode(1, 1, vec![0], ImageMode::L1),
-        Some(&cancelled_l1),
-    );
-    let mut masked = [0u8];
-    mask_equal_indexed_pixels(&[0], &[0, 0, 0], &mut masked, &[0, 0, 0], 0);
-    let _ = add_frame_durations(
-        FrameDuration {
-            numerator: 0,
-            denominator: 0,
-        },
-        FrameDuration::ZERO,
-    );
-    let _ = add_frame_durations(
-        FrameDuration::ZERO,
-        FrameDuration {
-            numerator: 0,
-            denominator: 0,
-        },
-    );
-    let _ = add_frame_durations(
-        FrameDuration {
-            numerator: 0,
-            denominator: u64::MAX,
-        },
-        FrameDuration {
-            numerator: 0,
-            denominator: u64::MAX - 1,
-        },
-    );
-    let _ = add_frame_durations(
-        FrameDuration {
-            numerator: u64::MAX,
-            denominator: 1,
-        },
-        FrameDuration {
-            numerator: 1,
-            denominator: 1,
-        },
-    );
-    let _ = disposal_code(FrameDisposal::Reserved(7));
-    let _ = disposal_code(FrameDisposal::Reserved(8));
-    let _ = gif_delay(FrameDuration {
-        numerator: 0,
-        denominator: 0,
-    });
-    let _ = gif_delay(FrameDuration {
-        numerator: u64::MAX,
-        denominator: 1,
-    });
-    let _ = gif_delay(FrameDuration {
-        numerator: 65_536,
-        denominator: 100,
-    });
-    let _ = effective_disposal(&opaque_frame, Some(2));
-    let _ = BitWriter::new().finish();
-
-    let invalid_disposal_frames = vec![
-        coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Reserved(8)),
-        coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Keep),
-    ];
-    let invalid_disposal_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: invalid_disposal_frames,
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = coalesce_identical_frames(&invalid_disposal_sequence, 2, None);
-    let _ = write_gif(
-        &invalid_disposal_sequence,
-        &invalid_disposal_sequence.frames[..1],
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-
-    let mut zero_duration_frame = coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Keep);
-    zero_duration_frame.source.duration.denominator = 0;
-    let invalid_duration_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![
-            coverage_frame(luma.clone(), 0, 0, 0, FrameDisposal::Keep),
-            zero_duration_frame,
-        ],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = coalesce_identical_frames(&invalid_duration_sequence, 2, None);
-
-    let mut oversized_loop = still.clone();
-    oversized_loop.loop_count = crate::types::AnimationLoop::Finite {
-        total_plays: u32::MAX,
-    };
-    let _ = encode_sequence(&oversized_loop, &GifEncodeOptions::default());
-    let _ = encode_sequence(
-        &still,
-        &GifEncodeOptions {
-            disposal: Some(FrameDisposal::Reserved(8)),
-            ..GifEncodeOptions::default()
-        },
-    );
-    let _ = encode_sequence(
-        &still,
-        &GifEncodeOptions {
-            disposal: Some(FrameDisposal::Keep),
-            color_table: Some(GifColorTable::Local),
-            loop_count: Some(GifLoop::Finite(1)),
-            ..GifEncodeOptions::default()
-        },
-    );
-
-    let oversized_sequence = DecodedSequence {
-        width: u32::from(u16::MAX) + 1,
-        height: 1,
-        frames: still.frames.clone(),
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = write_gif(
-        &oversized_sequence,
-        &oversized_sequence.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-    let height_oversized_sequence = DecodedSequence {
-        width: 1,
-        height: u32::from(u16::MAX) + 1,
-        frames: still.frames.clone(),
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = write_gif(
-        &height_oversized_sequence,
-        &height_oversized_sequence.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-    let _ = write_gif(
-        &still,
-        &[],
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-
-    let bad_offset_frame = coverage_frame(
-        luma.clone(),
-        u32::from(u16::MAX) + 1,
-        0,
-        0,
-        FrameDisposal::Keep,
-    );
-    let bad_offset_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![bad_offset_frame],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = write_gif(
-        &bad_offset_sequence,
-        &bad_offset_sequence.frames,
-        GifSettings {
-            interlaced: Some(false),
-            local_color_table: true,
-            disposal_override: Some(3),
-            loop_count: Some(0),
-            transparency_override: Some(true),
-        },
-    );
-    let bad_top_frame = coverage_frame(
-        luma.clone(),
-        0,
-        u32::from(u16::MAX) + 1,
-        0,
-        FrameDisposal::Keep,
-    );
-    let bad_top_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![bad_top_frame],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = write_gif(
-        &bad_top_sequence,
-        &bad_top_sequence.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-    let wide_image = DecodedImage::new(
-        u32::from(u16::MAX) + 1,
-        1,
-        vec![0; usize::from(u16::MAX) + 1],
-        ColorType::L8,
-    );
-    let wide_frame = coverage_frame(wide_image, 0, 0, 0, FrameDisposal::Keep);
-    let wide_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![wide_frame],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = write_gif(
-        &wide_sequence,
-        &wide_sequence.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-    let tall_image = DecodedImage::new(
-        1,
-        u32::from(u16::MAX) + 1,
-        vec![0; usize::from(u16::MAX) + 1],
-        ColorType::L8,
-    );
-    let tall_frame = coverage_frame(tall_image, 0, 0, 0, FrameDisposal::Keep);
-    let tall_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![tall_frame],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = write_gif(
-        &tall_sequence,
-        &tall_sequence.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-    let cmyk_frame = coverage_frame(
-        DecodedImage::new(1, 1, vec![0, 0, 0, 0], ColorType::Cmyk8),
-        0,
-        0,
-        0,
-        FrameDisposal::Keep,
-    );
-    let cmyk_second_frames = vec![still.frames[0].clone(), cmyk_frame];
-    let _ = coalesce_identical_frames(
-        &DecodedSequence {
-            width: 1,
-            height: 1,
-            frames: cmyk_second_frames.clone(),
-            loop_count: crate::types::AnimationLoop::Unspecified,
-            background: None,
-            kind: crate::types::SequenceKind::TimedAnimation,
-            opaque_blocks: Vec::new(),
-            metadata: Vec::new(),
-            source_color: crate::types::SourceColor::new(),
-        },
-        2,
-        None,
-    );
-    let _ = write_gif(
-        &still,
-        &cmyk_second_frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-    let long_delay_frame = coverage_frame(luma, 0, 0, u32::MAX, FrameDisposal::Keep);
-    let long_delay_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![long_delay_frame],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = write_gif(
-        &long_delay_sequence,
-        &long_delay_sequence.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-    );
-
-    let _ = prepare_background(
-        &mut PreparedImage {
-            palette: vec![0, 0, 0],
-            indices: vec![0],
-            transparent: Some(0),
-        },
-        ImageMode::Rgba8,
-        Some(AnimationBackground::Rgba([0, 0, 0, 0])),
-    );
-    let _ = prepare_background(
-        &mut PreparedImage {
-            palette: vec![0; 256 * 3],
-            indices: vec![0],
-            transparent: None,
-        },
-        ImageMode::Rgb8,
-        Some(AnimationBackground::Rgba([1, 2, 3, 255])),
-    );
-    let _ = prepare_background(
-        &mut PreparedImage {
-            palette: vec![0, 0, 0],
-            indices: vec![0],
-            transparent: None,
-        },
-        ImageMode::P8,
-        Some(AnimationBackground::PaletteIndex(0)),
-    );
-
-    // GIF sink delivery is a Rust-owned boundary. Pillow does not expose the
-    // encoded stream before its file writer consumes it, nor can it provide a
-    // cancellation token, so exercise malformed block shapes and token
-    // checkpoints in this existing defensive-model hook.
-    let minimal_gif = b"GIF89a\x01\0\x01\0\0\0\0".to_vec();
-    let mut global_table_truncated = minimal_gif.clone();
-    global_table_truncated[10] = 0x80;
-    let mut valid_trailer = minimal_gif.clone();
-    valid_trailer.push(GIF_TRAILER);
-    let mut trailing_after_trailer = valid_trailer.clone();
-    trailing_after_trailer.push(0);
-    let no_trailer = minimal_gif.clone();
-    let mut unknown_marker = minimal_gif.clone();
-    unknown_marker.push(0);
-    let mut short_descriptor = minimal_gif.clone();
-    short_descriptor.push(IMAGE_SEPARATOR);
-    let descriptor = [IMAGE_SEPARATOR, 0, 0, 0, 0, 1, 0, 1, 0, 0];
-    let mut local_table_truncated = minimal_gif.clone();
-    local_table_truncated.extend_from_slice(&[IMAGE_SEPARATOR, 0, 0, 0, 0, 1, 0, 1, 0, 0x80]);
-    let mut missing_lzw_header = minimal_gif.clone();
-    missing_lzw_header.extend_from_slice(&descriptor);
-    let mut missing_sub_block_payload = missing_lzw_header.clone();
-    missing_sub_block_payload.extend_from_slice(&[2, 2]);
-    let mut missing_sub_block_terminator = missing_lzw_header.clone();
-    missing_sub_block_terminator.extend_from_slice(&[2, 1, 0]);
-    let mut short_gce = minimal_gif.clone();
-    short_gce.extend_from_slice(&[EXTENSION_INTRODUCER, GRAPHIC_CONTROL_LABEL]);
-    let mut invalid_gce_size = minimal_gif.clone();
-    invalid_gce_size.extend_from_slice(&[
-        EXTENSION_INTRODUCER,
-        GRAPHIC_CONTROL_LABEL,
-        3,
-        0,
-        0,
-        0,
-        0,
-        0,
-    ]);
-    let mut invalid_gce_terminator = minimal_gif.clone();
-    invalid_gce_terminator.extend_from_slice(&[
-        EXTENSION_INTRODUCER,
-        GRAPHIC_CONTROL_LABEL,
-        4,
-        0,
-        0,
-        0,
-        0,
-        1,
-    ]);
-    let mut invalid_fixed_extension_size = minimal_gif.clone();
-    invalid_fixed_extension_size.extend_from_slice(&[EXTENSION_INTRODUCER, 0xff, 0]);
-    let mut truncated_fixed_extension = minimal_gif.clone();
-    truncated_fixed_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xff, 11]);
-    let mut short_generic_extension = minimal_gif.clone();
-    short_generic_extension.push(EXTENSION_INTRODUCER);
-    let mut unterminated_generic_extension = minimal_gif.clone();
-    unterminated_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 1, 0]);
-    let mut valid_plain_text_extension = minimal_gif.clone();
-    valid_plain_text_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0x01, 12]);
-    valid_plain_text_extension.extend_from_slice(&[0; 12]);
-    valid_plain_text_extension.extend_from_slice(&[0, GIF_TRAILER]);
-    let mut valid_generic_extension = minimal_gif;
-    valid_generic_extension.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 0, 0, GIF_TRAILER]);
-    let sink_cases = vec![
-        b"bad".to_vec(),
-        b"GIF89a".to_vec(),
-        global_table_truncated,
-        valid_trailer,
-        trailing_after_trailer,
-        no_trailer,
-        unknown_marker,
-        short_descriptor,
-        local_table_truncated,
-        missing_lzw_header,
-        missing_sub_block_payload,
-        missing_sub_block_terminator,
-        short_gce,
-        invalid_gce_size,
-        invalid_gce_terminator,
-        invalid_fixed_extension_size,
-        truncated_fixed_extension,
-        short_generic_extension,
-        unterminated_generic_extension,
-        valid_plain_text_extension,
-        valid_generic_extension,
-    ];
-    let mut sink = Vec::new();
-    for encoded in sink_cases {
-        let _ = write_gif_to_sink(&encoded, None, &mut sink);
-        sink.clear();
-    }
-    let valid_with_extensions = write_gif(
-        &sequence,
-        &coalesced,
-        GifSettings {
-            interlaced: Some(true),
-            local_color_table: true,
-            disposal_override: None,
-            loop_count: Some(1),
-            transparency_override: None,
-        },
-    )
-    .expect("coverage GIF extension stream");
-    let _ = write_gif_to_sink(&valid_with_extensions, None, &mut sink);
-    sink.clear();
-
-    struct RejectAfterWrites {
-        allowed: usize,
-        writes: usize,
-    }
-    impl crate::OutputSink for RejectAfterWrites {
-        fn write_all(&mut self, _bytes: &[u8]) -> crate::ImageResult<()> {
-            if self.writes >= self.allowed {
-                return Err(crate::ImageError::parameter("coverage GIF sink failure"));
-            }
-            self.writes = self.writes.saturating_add(1);
-            Ok(())
-        }
-    }
-    // Each accepted GIF structure is delivered as one sink segment. Failing
-    // after each possible prefix reaches the distinct `?` edge at the caller
-    // site without a speculative unbounded retry loop.
-    for allowed in 0..=32 {
-        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
-        let _ = write_gif_to_sink(&valid_with_extensions, None, &mut rejecting);
-    }
-    let mut valid_generic_stream = b"GIF89a\x01\0\x01\0\0\0\0".to_vec();
-    valid_generic_stream.extend_from_slice(&[EXTENSION_INTRODUCER, 0xfe, 0, GIF_TRAILER]);
-    for allowed in 0..=3 {
-        let mut rejecting = RejectAfterWrites { allowed, writes: 0 };
-        let _ = write_gif_to_sink(&valid_generic_stream, None, &mut rejecting);
-    }
-
-    // These probes isolate the frame-boundary checkpoints. The one-pixel
-    // indexed still has no internal quantizer/LZW polls, so the counts map
-    // directly to the exact `?` sites below.
-    let boundary_token = crate::CancellationToken::new();
-    boundary_token.cancel_after(2);
-    let _ = encode_sequence_with_token(&still, &GifEncodeOptions::default(), Some(&boundary_token));
-    let coalesce_token = crate::CancellationToken::new();
-    coalesce_token.cancel_after(2);
-    let _ = coalesce_identical_frames_with_token(&still, 2, None, Some(&coalesce_token));
-    let write_frame_token = crate::CancellationToken::new();
-    write_frame_token.cancel_after(2);
-    let _ = write_gif_with_token(
-        &still,
-        &still.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-        Some(&write_frame_token),
-    );
-    let write_finish_token = crate::CancellationToken::new();
-    write_finish_token.cancel_after(3);
-    let _ = write_gif_with_token(
-        &still,
-        &still.frames,
-        GifSettings {
-            interlaced: None,
-            local_color_table: false,
-            disposal_override: None,
-            loop_count: None,
-            transparency_override: None,
-        },
-        Some(&write_finish_token),
-    );
-    let cancelled_sink_token = crate::CancellationToken::new();
-    cancelled_sink_token.cancel_after(1);
-    let _ = write_gif_to_sink(
-        &valid_with_extensions,
-        Some(&cancelled_sink_token),
-        &mut sink,
-    );
-    sink.clear();
-
-    let mut nearest_rgb = Vec::with_capacity(1025 * 3);
-    for value in 0u32..1025 {
-        let [red, green, blue, _] = value.to_le_bytes();
-        nearest_rgb.extend_from_slice(&[red, green, blue]);
-    }
-    let nearest_token = crate::CancellationToken::new();
-    let _ = quantize_rgb_nearest(&nearest_rgb, Some(&nearest_token));
-    for checks in [0, 1, 2, 12, 24] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = quantize_rgb_nearest(&nearest_rgb, Some(&token));
-    }
-    for checks in [32, 64, 128, 256, 512, 1_024, 2_048, 4_096, 8_192] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = quantize_rgb_nearest(&nearest_rgb, Some(&token));
-    }
-
-    // Two repeated RGB colors keep the median-cut path small while retaining
-    // the 1,024-pixel checkpoint in each outer quantizer loop. The counts are
-    // the measured preceding polls for the exact cancellation edges.
-    let repeated_rgb = (0usize..1025)
-        .flat_map(|index| {
-            if index.is_multiple_of(2) {
-                [0, 0, 0]
-            } else {
-                [255, 255, 255]
-            }
-        })
-        .collect::<Vec<_>>();
-    let rgb_first_loop_token = crate::CancellationToken::new();
-    rgb_first_loop_token.cancel_after(0);
-    let _ = quantize_rgb(&repeated_rgb, Some(&rgb_first_loop_token));
-    let rgb_remap_token = crate::CancellationToken::new();
-    rgb_remap_token.cancel_after(6);
-    let _ = quantize_rgb(&repeated_rgb, Some(&rgb_remap_token));
-    let nearest_mapped_token = crate::CancellationToken::new();
-    nearest_mapped_token.cancel_after(7);
-    let _ = quantize_rgb_nearest(&repeated_rgb, Some(&nearest_mapped_token));
-    let nearest_index_token = crate::CancellationToken::new();
-    nearest_index_token.cancel_after(8);
-    let _ = quantize_rgb_nearest(&repeated_rgb, Some(&nearest_index_token));
-    for checks in 0..=16 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = quantize_rgb_nearest(&repeated_rgb, Some(&token));
-    }
-    FORCE_NEAREST_MAPPING_CHECKPOINT.store(true, Ordering::Relaxed);
-    let nearest_mapping_token = crate::CancellationToken::new();
-    let _ = quantize_rgb_nearest(&nearest_rgb, Some(&nearest_mapping_token));
-
-    let hash_colors = (0usize..1025)
-        .map(|index| {
-            [
-                index.to_le_bytes()[0],
-                index.wrapping_mul(37).to_le_bytes()[0],
-                index.wrapping_mul(73).to_le_bytes()[0],
-            ]
-        })
-        .collect::<Vec<_>>();
-    let hash_token = crate::CancellationToken::new();
-    hash_token.cancel_after(2);
-    let _ = pillow_hash_iteration_order(&hash_colors, Some(&hash_token));
-
-    let mut token_rgba = Vec::with_capacity(1025 * 4);
-    for value in 0u32..1025 {
-        let [red, _, _, _] = value.wrapping_mul(37).to_le_bytes();
-        let [green, _, _, _] = value.wrapping_mul(73).to_le_bytes();
-        let [blue, _, _, _] = value.wrapping_mul(109).to_le_bytes();
-        let alpha = if value.is_multiple_of(2) { 0 } else { 255 };
-        token_rgba.extend_from_slice(&[red, green, blue, alpha]);
-    }
-    let rgba_token = crate::CancellationToken::new();
-    let _ = quantize_rgba(&token_rgba, Some(&rgba_token));
-
-    let mut token_palette = vec![
-        [255u8, 0, 0, 255],
-        [0, 255, 0, 255],
-        [0, 0, 255, 0],
-        [255, 255, 0, 255],
-    ];
-    let mut token_indices = (0usize..1025)
-        .map(|index| if index.is_multiple_of(2) { 0 } else { 2 })
-        .collect::<Vec<_>>();
-    let mut token_transparent = Some(2u8);
-    let _ = compact_rgba_palette(
-        &mut token_palette,
-        &mut token_indices,
-        &mut token_transparent,
-        Some(&rgba_token),
-    );
-    let mut compact_cancel_palette = vec![[255u8, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255]];
-    let mut compact_cancel_indices = vec![0u8; 1025];
-    let compact_cancel_token = crate::CancellationToken::new();
-    compact_cancel_token.cancel_after(0);
-    let _ = compact_rgba_palette(
-        &mut compact_cancel_palette,
-        &mut compact_cancel_indices,
-        &mut None,
-        Some(&compact_cancel_token),
-    );
-
-    let rgba_opaque = [1u8, 2, 3, 255].repeat(1025);
-    let rgba_first_loop_token = crate::CancellationToken::new();
-    rgba_first_loop_token.cancel_after(0);
-    let _ = quantize_rgba(&rgba_opaque, Some(&rgba_first_loop_token));
-    let compact_probe = crate::CancellationToken::new();
-    compact_probe.cancel_after(usize::MAX);
-    let _ = quantize_rgba(&rgba_opaque, Some(&compact_probe));
-    let compact_checks = COVERAGE_CHECKS_BEFORE_COMPACT.load(Ordering::Relaxed);
-    let compact_replay_token = crate::CancellationToken::new();
-    compact_replay_token.cancel_after(compact_checks);
-    let _ = quantize_rgba(&rgba_opaque, Some(&compact_replay_token));
-    let rgba_transparent = [1u8, 2, 3, 0].repeat(1025);
-    let rgba_normalize_token = crate::CancellationToken::new();
-    rgba_normalize_token.cancel_after(1);
-    let _ = quantize_rgba(&rgba_transparent, Some(&rgba_normalize_token));
-
-    let split_uniform = vec![[0u8, 0, 0]; 1025];
-    let split_counts_large = vec![1u32; 1025];
-    let split_cancel_first = crate::CancellationToken::new();
-    split_cancel_first.cancel_after(0);
-    let _ = split_median_box_with_token(
-        &MedianBox {
-            axes: [
-                (0..1024).collect(),
-                (0..1024).collect(),
-                (0..1024).collect(),
-            ],
-            pixel_count: u32::MAX,
-            children: None,
-        },
-        &split_uniform[..1024],
-        &split_counts_large[..1024],
-        &split_cancel_first,
-    );
-    let split_cancel_equal = crate::CancellationToken::new();
-    split_cancel_equal.cancel_after(0);
-    let _ = split_median_box_with_token(
-        &MedianBox {
-            axes: [
-                (0..1025).collect(),
-                (0..1025).collect(),
-                (0..1025).collect(),
-            ],
-            pixel_count: 1,
-            children: None,
-        },
-        &split_uniform,
-        &split_counts_large,
-        &split_cancel_equal,
-    );
-    let split_cancel_right = crate::CancellationToken::new();
-    split_cancel_right.cancel_after(0);
-    let _ = split_median_box_with_token(
-        &MedianBox {
-            axes: [(0..512).collect(), (0..512).collect(), (0..512).collect()],
-            pixel_count: 1024,
-            children: None,
-        },
-        &split_uniform[..512],
-        &split_counts_large[..512],
-        &split_cancel_right,
-    );
-    let mut split_distinct = vec![[0u8, 0, 0]; 512];
-    split_distinct[511] = [255, 0, 0];
-    let split_cancel_left_set = crate::CancellationToken::new();
-    split_cancel_left_set.cancel_after(0);
-    let _ = split_median_box_with_token(
-        &MedianBox {
-            axes: [(0..512).collect(), (0..512).collect(), (0..512).collect()],
-            pixel_count: u32::MAX,
-            children: None,
-        },
-        &split_distinct,
-        &split_counts_large[..512],
-        &split_cancel_left_set,
-    );
-
-    let sort_token = crate::CancellationToken::new();
-    let mut tiny_buckets = (0..4)
-        .map(|count| OctreeBucket {
-            count,
-            sums: [u64::from(count), 0, 0, 0],
-        })
-        .collect::<Vec<_>>();
-    let mut sort_work = 0usize;
-    let _ = apple_qsort_buckets_with_token(&mut tiny_buckets, &sort_token, &mut sort_work);
-    let mut reverse_buckets = (0..64)
-        .rev()
-        .map(|count| OctreeBucket {
-            count,
-            sums: [u64::from(count), 0, 0, 0],
-        })
-        .collect::<Vec<_>>();
-    sort_work = 0;
-    let _ = apple_qsort_buckets_with_token(&mut reverse_buckets, &sort_token, &mut sort_work);
-    let mut partition_buckets = (0u32..16)
-        .map(|count| OctreeBucket {
-            count: crate::coverage_support::require_some(
-                (count).checked_mul(17),
-                "coverage fixture arithmetic",
-            ) % 5,
-            sums: [
-                u64::from(count),
-                u64::from(crate::coverage_support::require_some(
-                    (15u32).checked_sub(count),
-                    "coverage fixture arithmetic",
-                )),
-                0,
-                0,
-            ],
-        })
-        .collect::<Vec<_>>();
-    sort_work = 0;
-    let _ = apple_qsort_buckets_with_token(&mut partition_buckets, &sort_token, &mut sort_work);
-    for checks in [0, 1, 2, 32, 64] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut buckets = (0..64)
-            .rev()
-            .map(|count| OctreeBucket {
-                count,
-                sums: [u64::from(count), 0, 0, 0],
-            })
-            .collect::<Vec<_>>();
-        let mut work_items = GIF_OCTREE_CHECKPOINT_CELLS;
-        let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
-    }
-
-    // Keep the pivot partition successful long enough to exercise the
-    // bounded insertion fallback and both recursive sides. These are
-    // implementation-only cancellation contracts; Pillow observes the
-    // successful sorted order, not the private checkpoint locations.
-    for checks in [0, 1, 2, 64, 256] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut sorted = (0..16)
-            .map(|count| OctreeBucket {
-                count,
-                sums: [u64::from(count), 0, 0, 0],
-            })
-            .collect::<Vec<_>>();
-        let mut work_items = 0;
-        let _ = apple_qsort_buckets_with_token(&mut sorted, &token, &mut work_items);
-
-        let mut recursive = (0usize..32)
-            .map(|index| {
-                let count = crate::coverage_support::require_ok(
-                    u32::try_from(index.wrapping_mul(37).wrapping_add(11) % 19),
-                    "fixture value must fit u32",
-                );
-                OctreeBucket {
-                    count,
-                    sums: [u64::from(count), index as u64, 0, 0],
-                }
-            })
-            .collect::<Vec<_>>();
-        work_items = 0;
-        let _ = apple_qsort_buckets_with_token(&mut recursive, &token, &mut work_items);
-    }
-
-    // The sorter polls only at 1024-work boundaries. Vary the initial
-    // residue with an already-cancelled token so cancellation lands in the
-    // second equal-range swap, the insertion fallback, or a recursive call,
-    // whichever boundary the pivot partition creates.
-    for initial_work in [0, 1, 1023, GIF_OCTREE_CHECKPOINT_CELLS] {
-        let token = crate::CancellationToken::new();
-        token.cancel();
-        let mut duplicate_partition = (0usize..16)
-            .map(|index| {
-                let count = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8][index];
-                OctreeBucket {
-                    count,
-                    sums: [u64::from(count), index as u64, 0, 0],
-                }
-            })
-            .collect::<Vec<_>>();
-        let mut work_items = initial_work;
-        let _ = apple_qsort_buckets_with_token(&mut duplicate_partition, &token, &mut work_items);
-
-        let mut recursive = (0usize..32)
-            .map(|index| {
-                let count = crate::coverage_support::require_ok(
-                    u32::try_from(index.wrapping_mul(37).wrapping_add(11) % 19),
-                    "fixture value must fit u32",
-                );
-                OctreeBucket {
-                    count,
-                    sums: [u64::from(count), index as u64, 0, 0],
-                }
-            })
-            .collect::<Vec<_>>();
-        work_items = initial_work;
-        let _ = apple_qsort_buckets_with_token(&mut recursive, &token, &mut work_items);
-    }
-    for checks in [0, 1, 2, 128, 4_096] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut sorted = (0..16)
-            .map(|count| OctreeBucket {
-                count,
-                sums: [u64::from(count), 0, 0, 0],
-            })
-            .collect::<Vec<_>>();
-        let mut work_items = 0;
-        let _ = apple_qsort_buckets_with_token(&mut sorted, &token, &mut work_items);
-    }
-
-    // This partition has equal values on the right of the pivot followed by
-    // an ordinary swap, so the second equal-range swap has a non-zero length.
-    // Sweep the checkpoint residue until its cancellation error edge is
-    // observed at that call site.
-    let second_equal_swap_counts = [0_u32, 0, 3, 0, 1, 2, 0, 0, 1, 2, 0, 4, 1, 2, 2, 4];
-    for initial_work in [0, 1, 1023, GIF_OCTREE_CHECKPOINT_CELLS] {
-        let token = crate::CancellationToken::new();
-        token.cancel();
-        let mut buckets = second_equal_swap_counts
-            .into_iter()
-            .enumerate()
-            .map(|(index, count)| OctreeBucket {
-                count,
-                sums: [u64::from(count), index as u64, 0, 0],
-            })
-            .collect::<Vec<_>>();
-        let mut work_items = initial_work;
-        let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
-    }
-    for checks in 0..=16 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut buckets = second_equal_swap_counts
-            .into_iter()
-            .enumerate()
-            .map(|(index, count)| OctreeBucket {
-                count,
-                sums: [u64::from(count), index as u64, 0, 0],
-            })
-            .collect::<Vec<_>>();
-        let mut work_items = GIF_OCTREE_CHECKPOINT_CELLS;
-        let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
-    }
-    // This partition has non-empty left and right equal ranges. Vary the
-    // checkpoint residue so cancellation lands inside each range swap rather
-    // than only in the preceding partition scan.
-    #[cfg(coverage_nightly)]
-    {
-        let range_swap_counts = [2_u32, 0, 0, 2, 0, 1, 2, 4];
-        for initial_work in 0..=GIF_OCTREE_CHECKPOINT_CELLS {
-            let token = crate::CancellationToken::new();
-            token.cancel();
-            let mut buckets = range_swap_counts
-                .into_iter()
-                .enumerate()
-                .map(|(index, count)| OctreeBucket {
-                    count,
-                    sums: [u64::from(count), index as u64, 0, 0],
-                })
-                .collect::<Vec<_>>();
-            let mut work_items = initial_work;
-            let _ = apple_qsort_buckets_with_token(&mut buckets, &token, &mut work_items);
-        }
-    }
-    let cancelled_sort_token = crate::CancellationToken::new();
-    cancelled_sort_token.cancel();
-    sort_work = 0;
-    let _ =
-        apple_qsort_buckets_with_token(&mut reverse_buckets, &cancelled_sort_token, &mut sort_work);
-    let mut cancelled_tiny_buckets = (0..4)
-        .map(|count| OctreeBucket {
-            count,
-            sums: [u64::from(count), 0, 0, 0],
-        })
-        .collect::<Vec<_>>();
-    sort_work = GIF_OCTREE_CHECKPOINT_CELLS;
-    let _ = apple_qsort_buckets_with_token(
-        &mut cancelled_tiny_buckets,
-        &cancelled_sort_token,
-        &mut sort_work,
-    );
-    let mut sorted_buckets = (0..16)
-        .map(|count| OctreeBucket {
-            count,
-            sums: [u64::from(count), 0, 0, 0],
-        })
-        .collect::<Vec<_>>();
-    sort_work = 0;
-    let _ = apple_qsort_buckets_with_token(&mut sorted_buckets, &sort_token, &mut sort_work);
-    let mut limited_buckets = vec![
-        OctreeBucket {
-            count: 1,
-            sums: [1, 0, 0, 0],
-        },
-        OctreeBucket {
-            count: 2,
-            sums: [2, 0, 0, 0],
-        },
-    ];
-    sort_work = 0;
-    let _ = insertion_sort_buckets_with_token(
-        &mut limited_buckets,
-        Some(0),
-        &sort_token,
-        &mut sort_work,
-    );
-    let mut outer_checkpoint_buckets = vec![
-        OctreeBucket {
-            count: 0,
-            sums: [0, 0, 0, 0],
-        },
-        OctreeBucket {
-            count: 1,
-            sums: [1, 0, 0, 0],
-        },
-    ];
-    let outer_checkpoint_token = crate::CancellationToken::new();
-    outer_checkpoint_token.cancel_after(1);
-    let mut outer_work = GIF_OCTREE_CHECKPOINT_CELLS;
-    let _ = insertion_sort_buckets_with_token(
-        &mut outer_checkpoint_buckets,
-        None,
-        &outer_checkpoint_token,
-        &mut outer_work,
-    );
-    let mut inner_checkpoint_buckets = vec![
-        OctreeBucket {
-            count: 0,
-            sums: [0, 0, 0, 0],
-        },
-        OctreeBucket {
-            count: 1,
-            sums: [1, 0, 0, 0],
-        },
-    ];
-    let inner_checkpoint_token = crate::CancellationToken::new();
-    inner_checkpoint_token.cancel_after(1);
-    let mut inner_work = GIF_OCTREE_CHECKPOINT_CELLS.saturating_sub(1);
-    let _ = insertion_sort_buckets_with_token(
-        &mut inner_checkpoint_buckets,
-        None,
-        &inner_checkpoint_token,
-        &mut inner_work,
-    );
-    let mut one_candidate = [0usize];
-    let mut one_scratch = [0usize];
-    let one_palette = [[0u8, 0, 0]];
-    sort_work = 0;
-    let _ = stable_sort_nearest_candidates(
-        &mut one_candidate,
-        &mut one_scratch,
-        &one_palette,
-        0,
-        &sort_token,
-        &mut sort_work,
-    );
-    let nearest_palette = [[0u8, 0, 0], [255, 255, 255], [32, 64, 96]];
-    let mut nearest_candidates = vec![0usize, 1, 2];
-    let mut nearest_scratch = vec![0usize; 3];
-    sort_work = 0;
-    let _ = find_nearest_from_with_token(
-        &nearest_palette,
-        &[80, 70, 60],
-        0,
-        &sort_token,
-        &mut nearest_candidates,
-        &mut nearest_scratch,
-        &mut sort_work,
-    );
-    let one_nearest_palette = [[0u8, 0, 0]];
-    let mut one_nearest_candidate = [0usize];
-    let mut one_nearest_scratch = [0usize];
-    let nearest_work_token = crate::CancellationToken::new();
-    nearest_work_token.cancel_after(0);
-    let mut nearest_work = GIF_NEAREST_CHECKPOINT_ITEMS.saturating_sub(1);
-    let _ = find_nearest_from_with_token(
-        &one_nearest_palette,
-        &[1, 1, 1],
-        0,
-        &nearest_work_token,
-        &mut one_nearest_candidate,
-        &mut one_nearest_scratch,
-        &mut nearest_work,
-    );
-    let mut lookup = OctreeCube::new([2, 2, 2, 2]);
-    let lookup_palette = vec![OctreeBucket {
-        count: 1,
-        sums: [1, 2, 3, 4],
-    }];
-    let _ = add_octree_lookup(&mut lookup, &lookup_palette, 0, Some(&sort_token));
-    let octree_colors = (0u32..1025)
-        .map(|value| {
-            [
-                value.to_le_bytes()[0],
-                value.wrapping_mul(37).to_le_bytes()[0],
-                value.wrapping_mul(73).to_le_bytes()[0],
-                value.wrapping_mul(109).to_le_bytes()[0],
-            ]
-        })
-        .collect::<Vec<_>>();
-    let octree_probe_token = crate::CancellationToken::new();
-    octree_probe_token.cancel_after(usize::MAX);
-    let _ = pillow_fast_octree(&octree_colors, 256, Some(&octree_probe_token));
-    let lookup_copy_checks = COVERAGE_CHECKS_BEFORE_LOOKUP_COPY.load(Ordering::Relaxed);
-    let lookup_copy_replay = crate::CancellationToken::new();
-    lookup_copy_replay.cancel_after(lookup_copy_checks);
-    let _ = pillow_fast_octree(&octree_colors, 256, Some(&lookup_copy_replay));
-    let index_pack_checks = COVERAGE_CHECKS_BEFORE_INDEX_PACK.load(Ordering::Relaxed);
-    let index_pack_replay = crate::CancellationToken::new();
-    index_pack_replay.cancel_after(index_pack_checks);
-    let _ = pillow_fast_octree(&octree_colors, 256, Some(&index_pack_replay));
-    let _ = pillow_fast_octree(&octree_colors, 256, Some(&sort_token));
-    for checks in [0, 1, 2, 12, 24] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = pillow_fast_octree(&octree_colors, 256, Some(&token));
-    }
-
-    // All colors occupy one coarse cube but 256 distinct fine buckets. The
-    // first subtraction empties that coarse bucket and the defensive second
-    // subtraction pass then runs with a non-empty remainder.
-    let coarse_collision_colors = (0u8..=255)
-        .map(|index| {
-            [
-                index % 8,
-                (index / 8) % 16,
-                crate::coverage_support::require_some(
-                    ((index / 128) % 2).checked_mul(8),
-                    "coverage fixture arithmetic",
-                ),
-                0,
-            ]
-        })
-        .collect::<Vec<_>>();
-    let _ = pillow_fast_octree(&coarse_collision_colors, 256, Some(&sort_token));
-
-    let mut large_lookup = OctreeCube::new([2, 2, 2, 2]);
-    let large_palette = (0..2049)
-        .map(|count| OctreeBucket {
-            count: u32::try_from(count).unwrap_or(u32::MAX),
-            sums: [u64::try_from(count).unwrap_or(u64::MAX), 0, 0, 0],
-        })
-        .collect::<Vec<_>>();
-    for checks in [0, 1, 2, 4] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = add_octree_lookup(&mut large_lookup, &large_palette, 0, Some(&token));
-    }
-    let mut subtract_cube = OctreeCube::new([2, 2, 2, 2]);
-    let subtract_buckets = (0..=GIF_OCTREE_CHECKPOINT_CELLS)
-        .map(|_| OctreeBucket {
-            count: 0,
-            sums: [0, 0, 0, 0],
-        })
-        .collect::<Vec<_>>();
-    let subtract_token = crate::CancellationToken::new();
-    subtract_token.cancel();
-    let _ = subtract_octree_buckets(&mut subtract_cube, &subtract_buckets, Some(&subtract_token));
 }
 
 /// Encode a still image or animation without discarding source frames.
@@ -1775,7 +363,11 @@ pub fn encode_sequence_with_token(
 
 // Frame coalescing validates output history and palette shape immediately
 // before asserting these internal invariants.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "Frame coalescing revalidates the output history and palette invariants before using them."
+)]
 fn coalesce_identical_frames(
     sequence: &DecodedSequence,
     requested_frames: usize,
@@ -1784,7 +376,11 @@ fn coalesce_identical_frames(
     coalesce_identical_frames_with_token(sequence, requested_frames, disposal_override, None)
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "Frame coalescing revalidates the output history and palette invariants before using them."
+)]
 fn coalesce_identical_frames_with_token(
     sequence: &DecodedSequence,
     requested_frames: usize,
@@ -2030,7 +626,11 @@ fn clear_frame_rect(canvas: &mut [u8], canvas_width: usize, frame: &crate::types
 }
 
 // Sequence validation guarantees that an indexed frame carries its palette.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "Sequence validation guarantees indexed frames retain a valid palette and indices."
+)]
 fn composite_frame(
     canvas: &mut [u8],
     canvas_width: usize,
@@ -2044,7 +644,11 @@ fn composite_frame(
 // `transparent_over` distinguishes a GIF source rectangle, whose transparent
 // palette samples leave the existing canvas untouched, from an already
 // rendered canvas, whose samples replace the complete prior presentation.
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "Validated sequence images carry palettes for indexed samples before compositing."
+)]
 fn composite_image(
     canvas: &mut [u8],
     canvas_width: usize,
@@ -2253,10 +857,7 @@ fn disposal_code(disposal: FrameDisposal) -> CodecResult<u8> {
         FrameDisposal::Keep => Ok(1),
         FrameDisposal::Background => Ok(2),
         FrameDisposal::Previous => Ok(3),
-        FrameDisposal::Reserved(value) if value <= 7 => Ok(value),
-        FrameDisposal::Reserved(_) => Err(CodecError::Parameter(
-            "GIF disposal value exceeds its three-bit field".to_owned(),
-        )),
+        FrameDisposal::Reserved(value) => Ok(value),
     }
 }
 
@@ -2266,16 +867,22 @@ fn gif_delay(duration: FrameDuration) -> CodecResult<u16> {
             "GIF frame duration denominator must be non-zero".to_owned(),
         ));
     }
-    let centiseconds = duration
-        .numerator
-        .checked_mul(100)
-        .ok_or_else(|| CodecError::Parameter("GIF frame duration overflows".to_owned()))?;
-    if !centiseconds.is_multiple_of(duration.denominator) {
-        return Err(CodecError::Unsupported(
-            "GIF cannot represent the exact frame duration".to_owned(),
-        ));
-    }
-    u16::try_from(centiseconds.div_euclid(duration.denominator))
+    let centiseconds = match duration.numerator.checked_mul(100) {
+        Some(scaled_numerator) => u128::from(scaled_numerator.div_euclid(duration.denominator)),
+        None => {
+            // Keep the common path in u64; widen only for large rational
+            // durations whose centisecond value may still fit GIF's field.
+            u128::from(duration.numerator)
+                .checked_mul(100)
+                .ok_or_else(|| {
+                    CodecError::Parameter("GIF frame duration scaling overflows".to_owned())
+                })?
+                .div_euclid(u128::from(duration.denominator))
+        }
+    };
+    // GIF stores frame delays in centiseconds. Match Pillow by truncating any
+    // sub-centisecond remainder instead of rejecting an otherwise valid frame.
+    u16::try_from(centiseconds)
         .map_err(|_| CodecError::Parameter("GIF frame duration exceeds format limits".to_owned()))
 }
 
@@ -2332,7 +939,10 @@ fn write_gif_with_token(
     // The iterator is populated from the already-validated nonempty frame
     // list above; keep the invariant explicit without adding an unreachable
     // error path to the measured GIF pipeline.
-    #[allow(clippy::expect_used)]
+    #[allow(
+        clippy::expect_used,
+        reason = "Prepared frames are collected from the already-validated nonempty frame list."
+    )]
     let mut first = prepared_frames
         .next()
         .expect("prepared GIF frames must retain the validated first frame");
@@ -2491,7 +1101,6 @@ fn write_gif_with_token(
     Ok(output)
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn take_gif_first_prepared(first: &mut Option<PreparedImage>) -> PreparedImage {
     match first.take() {
         Some(prepared) => prepared,
@@ -2499,7 +1108,6 @@ fn take_gif_first_prepared(first: &mut Option<PreparedImage>) -> PreparedImage {
     }
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn next_gif_prepared(prepared_frames: &mut impl Iterator<Item = PreparedImage>) -> PreparedImage {
     match prepared_frames.next() {
         Some(prepared) => prepared,
@@ -2762,7 +1370,10 @@ fn record_rgb_color(palette: &mut Vec<[u8; 3]>, counts: &mut Vec<u32>, color: [u
     true
 }
 
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "The palette was constructed from these exact source RGB pixels."
+)]
 fn remap_rgb_index(palette: &[[u8; 3]], remap: &[u8], color: [u8; 3]) -> u8 {
     // `palette` was constructed from these exact source pixels.
     let index = find_color(palette, &color).expect("RGB GIF palette was built from source pixels");
@@ -2847,10 +1458,6 @@ fn quantize_rgb_nearest(
         let mut nearest_work_items = 0usize;
         for (color_index, color) in colors.iter().enumerate() {
             if color_index != 0 && color_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
-                #[cfg(coverage)]
-                if FORCE_NEAREST_MAPPING_CHECKPOINT.swap(false, Ordering::Relaxed) {
-                    token.cancel();
-                }
                 crate::codecs::error::check_cancelled(Some(token))?;
             }
             candidates.clear();
@@ -3280,7 +1887,10 @@ impl PillowBoxHeap {
     fn remove(&mut self, boxes: &[MedianBox]) -> usize {
         let result = self.0[0];
         // Indexing `self.0[0]` above proves the heap is non-empty.
-        #[allow(clippy::expect_used)]
+        #[allow(
+            clippy::expect_used,
+            reason = "Reading heap element zero above proves pop has an element to return."
+        )]
         let value = self
             .0
             .pop()
@@ -3370,19 +1980,7 @@ fn quantize_rgba(
             index
         });
 
-    #[cfg(coverage)]
-    if let Some(token) = token {
-        coverage_record_token_polls(&COVERAGE_CHECKS_BEFORE_COMPACT, token);
-    }
-    #[cfg(not(coverage))]
     compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent, token)?;
-    #[cfg(coverage)]
-    // The coverage hook replays the same token-aware call at this exact
-    // checkpoint, using the same error propagation as the production path.
-    let compact_result =
-        compact_rgba_palette(&mut rgba_palette, &mut indices, &mut transparent, token);
-    #[cfg(coverage)]
-    compact_result?;
     let palette = rgba_palette
         .into_iter()
         .flat_map(|color| color[..3].to_vec())
@@ -3968,17 +2566,6 @@ fn sorted_octree_buckets(
     Ok(buckets)
 }
 
-#[cfg(coverage)]
-#[coverage(off)]
-fn sorted_octree_buckets_for_coverage(
-    cube: &OctreeCube,
-    token: Option<&crate::CancellationToken>,
-    fallback_len: usize,
-) -> Vec<OctreeBucket> {
-    sorted_octree_buckets(cube, token)
-        .unwrap_or_else(|_| vec![OctreeBucket::default(); fallback_len])
-}
-
 fn subtract_octree_buckets(
     cube: &mut OctreeCube,
     buckets: &[OctreeBucket],
@@ -4016,7 +2603,6 @@ fn subtract_octree_buckets(
 // therefore contain a valid remainder, but its 1024-entry cancellation edge
 // is unreachable for the bounded target used by this encoder. Keep the exact
 // defensive behavior without counting that impossible error arc.
-#[cfg_attr(coverage, coverage(off))]
 #[inline(never)]
 fn subtract_octree_remainder(cube: &mut OctreeCube, buckets: &[OctreeBucket]) {
     // The caller proves this remainder is at most the 256-color target, so
@@ -4076,52 +2662,29 @@ fn pillow_fast_octree(
     let mut fine_count = target.saturating_sub(coarse_count);
     let fine_palette = sorted_octree_buckets(&fine, token)?;
     // The public GIF target is capped at 256 entries, so this first
-    // subtraction can never reach its 1,024-item cancellation checkpoint.
-    // The helper's defensive edge is exercised directly by the coverage hook.
-    #[cfg(not(coverage))]
+    // subtraction cannot reach its 1,024-item cancellation checkpoint.
     subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count], token)?;
-    #[cfg(coverage)]
-    let _ = subtract_octree_buckets(&mut coarse, &fine_palette[..fine_count], token);
     while coarse_count > coarse.used() {
         let already_subtracted = fine_count;
         coarse_count = coarse.used();
         fine_count = target.saturating_sub(coarse_count);
         subtract_octree_remainder(&mut coarse, &fine_palette[already_subtracted..fine_count]);
     }
-    // The token-aware sorter is exercised directly by the coverage hook. The
-    // caller's propagation edge is a duplicate of that helper edge, so the
-    // coverage build keeps the same successful result while production retains
-    // the original `?` propagation.
-    #[cfg(not(coverage))]
     let coarse_palette = sorted_octree_buckets(&coarse, token)?;
-    #[cfg(coverage)]
-    let coarse_palette = sorted_octree_buckets_for_coverage(&coarse, token, coarse_count);
     let mut buckets = coarse_palette[..coarse_count].to_vec();
     buckets.extend_from_slice(&fine_palette[..fine_count]);
     let mut coarse_lookup = OctreeCube::new(coarse_bits);
     // `coarse_count` is at most the 256-color GIF target, so this lookup's
     // 1,024-entry cancellation checkpoint is unreachable for valid output.
-    #[cfg(not(coverage))]
     add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0, token)?;
-    #[cfg(coverage)]
-    let _ = add_octree_lookup(&mut coarse_lookup, &buckets[..coarse_count], 0, token);
-    #[cfg(coverage)]
-    if let Some(token) = token {
-        coverage_record_token_polls(&COVERAGE_CHECKS_BEFORE_LOOKUP_COPY, token);
-    }
     let mut lookup = copy_octree_cube(&coarse_lookup, fine_bits, token)?;
     // The full bucket list is also bounded by the 256-color target; its
     // 1,024-entry lookup cancellation edge is therefore unreachable here.
-    #[cfg(not(coverage))]
     add_octree_lookup(&mut lookup, &buckets, coarse_count, token)?;
-    #[cfg(coverage)]
-    let _ = add_octree_lookup(&mut lookup, &buckets, coarse_count, token);
     let indices = if let Some(token) = token {
         let mut indices = Vec::with_capacity(colors.len());
         for (pixel_index, &color) in colors.iter().enumerate() {
             if pixel_index != 0 && pixel_index.is_multiple_of(GIF_QUANTIZATION_CHECKPOINT_PIXELS) {
-                #[cfg(coverage)]
-                coverage_record_token_polls(&COVERAGE_CHECKS_BEFORE_INDEX_PACK, token);
                 crate::codecs::error::check_cancelled(Some(token))?;
             }
             indices.push(palette_index_u32(

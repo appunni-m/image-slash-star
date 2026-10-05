@@ -71,7 +71,10 @@ fn blend_pixel_nonpremult(src: u32, dst: u32) -> u32 {
         let blend_a = u32::from(src_a).wrapping_add(dst_factor_a);
         // `src_a != 0`, so the divisor is nonzero.
         let scale = {
-            #[allow(clippy::arithmetic_side_effects)]
+            #[allow(
+                clippy::arithmetic_side_effects,
+                reason = "the source-alpha early return guarantees the blend denominator is nonzero"
+            )]
             {
                 1u32.wrapping_shl(24) / blend_a
             }

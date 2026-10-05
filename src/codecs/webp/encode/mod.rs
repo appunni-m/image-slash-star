@@ -9,70 +9,11 @@ use crate::types::{
 };
 use crate::{CodecOperation, ImageFormat, OutputSink};
 use std::borrow::Cow;
-#[cfg(coverage)]
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 pub mod vp8;
 
 const PREPARE_CHECKPOINT_PIXELS: usize = 1_024;
 const OUTPUT_COPY_CHECKPOINT_BYTES: usize = 1_024;
-
-#[cfg(coverage)]
-static FORCE_RIFF_SIZE_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_PAYLOAD_LEN_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_CHUNK_PAYLOAD_CALL: AtomicUsize = AtomicUsize::new(usize::MAX);
-#[cfg(coverage)]
-static FORCE_SINK_OUTPUT_END_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_EXISTING_END_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_METADATA_START_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_ALPHA_SCAN_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_RGB_EXTRACTION_ERROR: AtomicBool = AtomicBool::new(false);
-#[cfg(coverage)]
-static FORCE_WRITE_CHUNK_IN_PLACE_CALL: AtomicUsize = AtomicUsize::new(usize::MAX);
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_should_fail_chunk_payload_call() -> bool {
-    let remaining = FORCE_CHUNK_PAYLOAD_CALL.load(Ordering::Relaxed);
-    if remaining == usize::MAX {
-        return false;
-    }
-    if remaining == 0 {
-        FORCE_CHUNK_PAYLOAD_CALL.store(usize::MAX, Ordering::Relaxed);
-        true
-    } else {
-        FORCE_CHUNK_PAYLOAD_CALL.store(remaining.saturating_sub(1), Ordering::Relaxed);
-        false
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_should_fail_write_chunk_in_place() -> bool {
-    let remaining = FORCE_WRITE_CHUNK_IN_PLACE_CALL.load(Ordering::Relaxed);
-    if remaining == usize::MAX {
-        return false;
-    }
-    if remaining == 0 {
-        FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(usize::MAX, Ordering::Relaxed);
-        true
-    } else {
-        FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(remaining.saturating_sub(1), Ordering::Relaxed);
-        false
-    }
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn coverage_should_fail_alpha_scan() -> bool {
-    FORCE_ALPHA_SCAN_ERROR.swap(false, Ordering::Relaxed)
-}
 
 fn extend_with_output_checkpoint(
     output: &mut Vec<u8>,
@@ -555,10 +496,6 @@ impl PreparedPixels<'_> {
         &self,
         token: Option<&crate::CancellationToken>,
     ) -> CodecResult<bool> {
-        #[cfg(coverage)]
-        if coverage_should_fail_alpha_scan() {
-            return Err(CodecError::Cancelled);
-        }
         if self.color != super::native::ColorType::Rgba8 {
             return Ok(false);
         }
@@ -586,10 +523,6 @@ impl PreparedPixels<'_> {
         &self,
         token: Option<&crate::CancellationToken>,
     ) -> CodecResult<Vec<u8>> {
-        #[cfg(coverage)]
-        if FORCE_RGB_EXTRACTION_ERROR.swap(false, Ordering::Relaxed) {
-            return Err(CodecError::Cancelled);
-        }
         if let Some(token) = token {
             let mut rgb = Vec::with_capacity(self.bytes.len().saturating_div(4).saturating_mul(3));
             let mut pixels_until_checkpoint = PREPARE_CHECKPOINT_PIXELS;
@@ -955,7 +888,8 @@ fn attach_metadata(
         crate::codecs::error::check_cancelled(token)?;
     }
     crate::codecs::error::check_cancelled(token)?;
-    finish_riff_with_options(output, opts)
+    let output_len = output.len();
+    finish_riff(output, output_len)
 }
 
 // Metadata is inserted after the VP8X header, so an ordinary still encode can
@@ -1026,19 +960,8 @@ fn attach_metadata_reusing_output(
     }
     debug_assert_eq!(offset, output_len);
 
-    finish_riff_with_options(encoded, opts)
-}
-
-fn finish_riff_with_options(output: Vec<u8>, _opts: &WebPEncodeOptions) -> CodecResult<Vec<u8>> {
-    #[cfg(coverage)]
-    let output_len = if _opts.force_riff_size_overflow() {
-        usize::MAX
-    } else {
-        output.len()
-    };
-    #[cfg(not(coverage))]
-    let output_len = output.len();
-    finish_riff(output, output_len)
+    let output_len = encoded.len();
+    finish_riff(encoded, output_len)
 }
 
 fn chunk_storage_len(payload: &[u8]) -> CodecResult<usize> {
@@ -1052,12 +975,6 @@ fn write_chunk_in_place(
     name: &[u8; 4],
     payload: &[u8],
 ) -> CodecResult<()> {
-    #[cfg(coverage)]
-    if coverage_should_fail_write_chunk_in_place() {
-        return Err(CodecError::Malformed(
-            "coverage-forced WebP in-place chunk failure".to_owned(),
-        ));
-    }
     let chunk_len = chunk_storage_len(payload)?;
     let end = webp_chunk_payload_len(*offset, chunk_len)?;
     let chunk = output.get_mut(*offset..end).ok_or_else(|| {
@@ -1195,14 +1112,7 @@ fn low_u32(value: usize) -> u32 {
     }
 }
 
-#[cfg_attr(all(coverage, target_pointer_width = "64"), coverage(off))]
 fn webp_riff_size_from_len(encoded_len: usize) -> CodecResult<u32> {
-    #[cfg(coverage)]
-    if FORCE_RIFF_SIZE_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Dimensions(
-            "coverage-forced WebP RIFF size failure".to_owned(),
-        ));
-    }
     u32::try_from(encoded_len.saturating_sub(8)).map_err(|_| {
         CodecError::Dimensions("WebP RIFF output exceeds its 32-bit size field".to_owned())
     })
@@ -1236,663 +1146,31 @@ fn expand_l16_to_rgb(
     })
 }
 
-#[cfg_attr(all(coverage, target_pointer_width = "64"), coverage(off))]
 fn webp_payload_len_from_u32(value: u32) -> CodecResult<usize> {
-    #[cfg(coverage)]
-    if FORCE_PAYLOAD_LEN_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Dimensions(
-            "coverage-forced WebP chunk size failure".to_owned(),
-        ));
-    }
     usize::try_from(value)
         .map_err(|_| CodecError::Dimensions("WebP chunk size does not fit usize".to_owned()))
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn webp_chunk_payload_len(prefix_len: usize, payload_len: usize) -> CodecResult<usize> {
-    #[cfg(coverage)]
-    if coverage_should_fail_chunk_payload_call() {
-        return Err(CodecError::Dimensions(
-            "coverage-forced WebP chunk payload failure".to_owned(),
-        ));
-    }
     prefix_len.checked_add(payload_len).ok_or_else(|| {
         CodecError::Dimensions("WebP chunk payload exceeds addressable size".to_owned())
     })
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn webp_sink_output_end(written: usize, bytes: usize) -> CodecResult<usize> {
-    #[cfg(coverage)]
-    if FORCE_SINK_OUTPUT_END_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Dimensions(
-            "coverage-forced WebP sink output failure".to_owned(),
-        ));
-    }
     written
         .checked_add(bytes)
         .ok_or_else(|| CodecError::Dimensions("WebP sink output length overflows".to_owned()))
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn webp_existing_end(start: usize, length: usize) -> CodecResult<usize> {
-    #[cfg(coverage)]
-    if FORCE_EXISTING_END_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Dimensions(
-            "coverage-forced WebP existing chunk end failure".to_owned(),
-        ));
-    }
     start.checked_add(length).ok_or_else(|| {
         CodecError::Dimensions("WebP encoded chunks exceed addressable size".to_owned())
     })
 }
 
-#[cfg_attr(coverage, coverage(off))]
 fn webp_metadata_start(icc_len: usize) -> CodecResult<usize> {
-    #[cfg(coverage)]
-    if FORCE_METADATA_START_ERROR.swap(false, Ordering::Relaxed) {
-        return Err(CodecError::Dimensions(
-            "coverage-forced WebP metadata start failure".to_owned(),
-        ));
-    }
     30usize
         .checked_add(icc_len)
         .ok_or_else(|| CodecError::Dimensions("WebP metadata exceeds addressable size".to_owned()))
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    vp8::__coverage_exercise_private_branches();
-
-    // These are defensive container and source-normalization states. They are
-    // real Rust contracts, but Pillow cannot manufacture malformed RIFF
-    // output, caller tokens, or an owned output sink for them.
-    let mut sink = Vec::new();
-    for malformed in [
-        Vec::new(),
-        b"not a RIFF".to_vec(),
-        b"NOPE\0\0\0\0WEBP".to_vec(),
-        b"RIFF\0\0\0\0WEBP".to_vec(),
-        b"RIFF\0\0\0\0NOPE".to_vec(),
-        b"RIFF\x0c\0\0\0WEBPVP8 ".to_vec(),
-        b"RIFF\x08\0\0\0WEBPVP8 ".to_vec(),
-        b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\x01".to_vec(),
-        b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\x04\0\0\0\0".to_vec(),
-    ] {
-        let _ = write_riff_to_sink(&malformed, None, &mut sink);
-        sink.clear();
-    }
-    let mut zero_chunk = b"RIFF\x0c\0\0\0WEBPVP8 \0\0\0\0".to_vec();
-    let _ = write_riff_to_sink(&zero_chunk, None, &mut sink);
-    sink.clear();
-    zero_chunk[4..8].copy_from_slice(&20u32.to_le_bytes());
-    let _ = write_riff_to_sink(&zero_chunk, None, &mut sink);
-    sink.clear();
-    let mut extended = b"RIFF\x14\0\0\0WEBP".to_vec();
-    extended.extend_from_slice(&1u32.to_be_bytes());
-    extended.extend_from_slice(b"VP8 ");
-    extended.extend_from_slice(&16u64.to_be_bytes());
-    let _ = write_riff_to_sink(&extended, None, &mut sink);
-    sink.clear();
-    let mut extended_short = b"RIFF\x0c\0\0\0WEBP".to_vec();
-    extended_short.extend_from_slice(&1u32.to_be_bytes());
-    extended_short.extend_from_slice(b"VP8 ");
-    let _ = write_riff_to_sink(&extended_short, None, &mut sink);
-    sink.clear();
-    let mut extended_overflow = b"RIFF\x14\0\0\0WEBP".to_vec();
-    extended_overflow.extend_from_slice(&1u32.to_be_bytes());
-    extended_overflow.extend_from_slice(b"VP8 ");
-    extended_overflow.extend_from_slice(&u64::MAX.to_be_bytes());
-    let _ = write_riff_to_sink(&extended_overflow, None, &mut sink);
-    let mut too_short = [0u8; 12];
-    let mut offset = too_short.len();
-    let _ = write_chunk_in_place(&mut too_short, &mut offset, b"TEST", &[1]);
-    let mut copied = Vec::new();
-    let _ = extend_with_output_checkpoint(&mut copied, &[0; OUTPUT_COPY_CHECKPOINT_BYTES], None);
-    let cancelled_copy = crate::CancellationToken::new();
-    cancelled_copy.cancel();
-    let _ = extend_with_output_checkpoint(
-        &mut copied,
-        &[0; OUTPUT_COPY_CHECKPOINT_BYTES],
-        Some(&cancelled_copy),
-    );
-
-    let opaque_rgba = PreparedPixels {
-        bytes: Cow::Owned(vec![0, 0, 0, u8::MAX]),
-        color: super::native::ColorType::Rgba8,
-    };
-    let transparent_rgba = PreparedPixels {
-        bytes: Cow::Owned(vec![0, 0, 0, 0]),
-        color: super::native::ColorType::Rgba8,
-    };
-    let token = crate::CancellationToken::new();
-    let _ = opaque_rgba.has_nonopaque_alpha_with_token(Some(&token));
-    let _ = transparent_rgba.has_nonopaque_alpha_with_token(Some(&token));
-    let _ = opaque_rgba.rgb_without_alpha_with_token(Some(&token));
-
-    let bilevel = DecodedImage::with_mode(8, 1, vec![0b1010_1010], ImageMode::L1);
-    let indexed_opaque = DecodedImage::with_mode(2, 1, vec![0, 1], ImageMode::P8).with_palette(
-        crate::coverage_support::require_ok(
-            crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX]),
-            "coverage palette should be valid",
-        ),
-    );
-    let indexed_alpha = indexed_opaque
-        .clone()
-        .with_palette(crate::coverage_support::require_ok(
-            crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, 0]),
-            "coverage alpha palette should be valid",
-        ));
-    let la_opaque = DecodedImage::new(1, 1, vec![7, u8::MAX], crate::types::ColorType::La8);
-    let la_alpha = DecodedImage::new(1, 1, vec![7, 0], crate::types::ColorType::La8);
-    let cmyk = DecodedImage::new(1, 1, vec![1, 2, 3, 4], crate::types::ColorType::Cmyk8);
-    for image in [
-        &bilevel,
-        &indexed_opaque,
-        &indexed_alpha,
-        &la_opaque,
-        &la_alpha,
-        &cmyk,
-    ] {
-        let token = crate::CancellationToken::new();
-        let _ = prepare_pixels(image, Some(&token));
-    }
-    let _ = cmyk_to_rgb(&cmyk.pixels, Some(&crate::CancellationToken::new()));
-    let _ = encode_error(super::native::EncodingError::Cancelled);
-
-    // Large mode-specific inputs reach the 1,024-pixel preparation polls.
-    // Small parity images intentionally stay below those Rust-only
-    // cancellation boundaries, so exercise each branch with a bounded
-    // cancellation point here.
-    let large_l1 = DecodedImage::with_mode(1_024, 1, vec![0; 128], ImageMode::L1);
-    let large_l8 = DecodedImage::new(1_024, 1, vec![0; 1_024], crate::types::ColorType::L8);
-    let large_l16 = DecodedImage::with_mode(
-        1_024,
-        1,
-        (0u16..1_024)
-            .flat_map(|pixel| [pixel.to_le_bytes()[0], u8::from(pixel % 2 != 0)])
-            .collect(),
-        ImageMode::L16,
-    );
-    let large_cmyk =
-        DecodedImage::new(1_024, 1, vec![0; 1_024 * 4], crate::types::ColorType::Cmyk8);
-    let large_la_alpha = DecodedImage::new(
-        1_024,
-        1,
-        (0..1_024).flat_map(|_| [7, 0]).collect(),
-        crate::types::ColorType::La8,
-    );
-    let large_la_opaque = DecodedImage::new(
-        1_024,
-        1,
-        (0..1_024).flat_map(|_| [7, u8::MAX]).collect(),
-        crate::types::ColorType::La8,
-    );
-    let large_palette = crate::coverage_support::require_ok(
-        crate::types::ImagePalette::new(vec![255, 0, 0, 0, 255, 0], vec![u8::MAX, u8::MAX]),
-        "coverage palette should be valid",
-    );
-    let large_indexed = DecodedImage::with_mode(1_024, 1, vec![0; 1_024], ImageMode::P8)
-        .with_palette(large_palette);
-    for image in [
-        &large_l1,
-        &large_l8,
-        &large_l16,
-        &large_cmyk,
-        &large_la_alpha,
-        &large_la_opaque,
-    ] {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(0);
-        let _ = prepare_pixels(image, Some(&token));
-    }
-    let token = crate::CancellationToken::new();
-    token.cancel_after(0);
-    let _ = prepare_pixels(&large_indexed, Some(&token));
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = prepare_pixels(&large_indexed, Some(&token));
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = prepare_pixels(&large_la_alpha, Some(&token));
-    let token = crate::CancellationToken::new();
-    token.cancel_after(1);
-    let _ = prepare_pixels(&large_la_opaque, Some(&token));
-    let large_prepared_alpha = PreparedPixels {
-        bytes: Cow::Owned((0..1_024).flat_map(|_| [0, 0, 0, u8::MAX]).collect()),
-        color: super::native::ColorType::Rgba8,
-    };
-    let token = crate::CancellationToken::new();
-    token.cancel_after(0);
-    let _ = large_prepared_alpha.has_nonopaque_alpha_with_token(Some(&token));
-    let token = crate::CancellationToken::new();
-    token.cancel_after(0);
-    let _ = large_prepared_alpha.rgb_without_alpha_with_token(Some(&token));
-
-    let mut metadata = WebPEncodeOptions::default();
-    metadata.icc = Some(vec![0]);
-    metadata.exif = Some(b"Exif\0\0metadata".to_vec());
-    metadata.xmp = Some(vec![1, 2, 3]);
-    let rgba = DecodedImage::new(1, 1, vec![1, 2, 3, 0], crate::types::ColorType::Rgba8);
-    let metadata_token = crate::CancellationToken::new();
-    let _ = encode_with_token(&rgba, &metadata, Some(&metadata_token));
-    let _ = attach_metadata(
-        b"RIFF\0\0\0\0WEBPVP8 \0\0\0\0".to_vec(),
-        1,
-        1,
-        false,
-        &metadata,
-        None,
-    );
-    let _ = attach_metadata(
-        b"RIFF\0\0\0\0WEBPVP8 \0\0\0\0".to_vec(),
-        1,
-        1,
-        false,
-        &metadata,
-        Some(&metadata_token),
-    );
-    let mut existing_vp8x = b"RIFF\0\0\0\0WEBPVP8X".to_vec();
-    existing_vp8x.extend_from_slice(&18u32.to_le_bytes());
-    existing_vp8x.extend_from_slice(&[0; 10]);
-    let _ = attach_metadata(existing_vp8x, 1, 1, false, &metadata, None);
-    let _ = attach_metadata(
-        b"RIFF\0\0\0\0WEBPVP8X".to_vec(),
-        1,
-        1,
-        false,
-        &metadata,
-        None,
-    );
-    let _ = attach_metadata(b"short".to_vec(), 1, 1, false, &metadata, None);
-
-    // Exercise each independently optional token-aware metadata chunk and
-    // the short existing-VP8X defensive shape. These are caller-owned Rust
-    // metadata controls, not synthetic Pillow parity rows.
-    let metadata_input = b"RIFF\0\0\0\0WEBPVP8 \0\0\0\0".to_vec();
-    let metadata_cases = [
-        {
-            let mut options = WebPEncodeOptions::default();
-            options.icc = Some(vec![1]);
-            options
-        },
-        {
-            let mut options = WebPEncodeOptions::default();
-            options.exif = Some(b"Exif\0\0x".to_vec());
-            options
-        },
-        {
-            let mut options = WebPEncodeOptions::default();
-            options.xmp = Some(vec![2]);
-            options
-        },
-    ];
-    for options in &metadata_cases {
-        let token = crate::CancellationToken::new();
-        let _ = attach_metadata(metadata_input.clone(), 1, 1, true, options, Some(&token));
-    }
-
-    let mut animation = DecodedSequence::from_image(rgba.clone());
-    animation.frames.push(animation.frames[0].clone());
-    animation.kind = crate::types::SequenceKind::TimedAnimation;
-    let _ = encode_sequence_with_token(&animation, &WebPEncodeOptions::default(), Some(&token));
-    let animation_token = crate::CancellationToken::new();
-    let _ = encode_sequence_with_token(
-        &animation,
-        &WebPEncodeOptions::default(),
-        Some(&animation_token),
-    );
-    let animation_probe = crate::CancellationToken::new();
-    animation_probe.cancel_after(usize::MAX);
-    let _ = encode_sequence_with_token(
-        &animation,
-        &WebPEncodeOptions::default(),
-        Some(&animation_probe),
-    );
-    let animation_checks = usize::MAX.saturating_sub(
-        animation_probe
-            .coverage_remaining_checks()
-            .unwrap_or(usize::MAX),
-    );
-    for checks in 0..=animation_checks {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_sequence_with_token(&animation, &WebPEncodeOptions::default(), Some(&token));
-    }
-    let _ = encode_sequence(&animation, &WebPEncodeOptions::default());
-
-    let mut invalid_keyframe = DecodedSequence::from_image(rgba.clone());
-    invalid_keyframe.frames[0].source.interlaced = true;
-    let _ = encode_sequence_with_token(
-        &invalid_keyframe,
-        &WebPEncodeOptions::default(),
-        Some(&crate::CancellationToken::new()),
-    );
-    let mut invalid_sequence_sink = Vec::new();
-    let _ = encode_sequence_to_sink(
-        &invalid_keyframe,
-        &WebPEncodeOptions::default(),
-        EncodePolicy::default(),
-        CodecOperation::SequenceEncode,
-        None,
-        &mut invalid_sequence_sink,
-    );
-    let mut invalid_duration = DecodedSequence::from_image(rgba.clone());
-    invalid_duration.frames[0].source.duration = crate::types::FrameDuration {
-        numerator: 1,
-        denominator: 3,
-    };
-    let _ = encode_sequence_with_token(
-        &invalid_duration,
-        &WebPEncodeOptions::default(),
-        Some(&crate::CancellationToken::new()),
-    );
-
-    let mut opts = WebPEncodeOptions::default();
-    opts.icc = Some(vec![0]);
-    opts.set_force_riff_size_overflow();
-    let _ = attach_metadata(b"RIFF\0\0\0\0WEBP".to_vec(), 1, 1, false, &opts, None);
-
-    let simple_rgb = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
-    let valid_encoded = crate::coverage_support::require_ok(
-        encode(&simple_rgb, &WebPEncodeOptions::default()),
-        "coverage WebP input must encode",
-    );
-    let valid_metadata_token = crate::CancellationToken::new();
-    let _ = attach_metadata(
-        valid_encoded.clone(),
-        1,
-        1,
-        false,
-        &metadata,
-        Some(&valid_metadata_token),
-    );
-    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
-    for call in [0, 2, 3] {
-        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
-        let token = crate::CancellationToken::new();
-        let _ = attach_metadata(valid_encoded.clone(), 1, 1, false, &metadata, Some(&token));
-    }
-    FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(usize::MAX, Ordering::Relaxed);
-    FORCE_CHUNK_PAYLOAD_CALL.store(17, Ordering::Relaxed);
-    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
-    FORCE_RIFF_SIZE_ERROR.store(true, Ordering::Relaxed);
-    let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
-    for call in 0..=2 {
-        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
-        let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
-        sink.clear();
-    }
-    FORCE_PAYLOAD_LEN_ERROR.store(true, Ordering::Relaxed);
-    let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
-    FORCE_SINK_OUTPUT_END_ERROR.store(true, Ordering::Relaxed);
-    let _ = write_riff_to_sink(&valid_encoded, None, &mut sink);
-    sink.clear();
-
-    for call in 0..=2 {
-        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
-        let token = crate::CancellationToken::new();
-        let _ = encode_sequence_with_token(&animation, &WebPEncodeOptions::default(), Some(&token));
-    }
-    for call in 0..=2 {
-        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
-        let _ = encode_sequence(&animation, &WebPEncodeOptions::default());
-    }
-
-    FORCE_EXISTING_END_ERROR.store(true, Ordering::Relaxed);
-    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
-    FORCE_METADATA_START_ERROR.store(true, Ordering::Relaxed);
-    let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
-    for call in [0, 2, 4, 6] {
-        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
-        let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
-    }
-    FORCE_CHUNK_PAYLOAD_CALL.store(0, Ordering::Relaxed);
-    let _ = chunk_storage_len(&[0]);
-    let mut in_place_buffer = vec![0; 64];
-    for call in [0, 2, 3] {
-        let mut in_place_offset = 12;
-        FORCE_CHUNK_PAYLOAD_CALL.store(call, Ordering::Relaxed);
-        let _ = write_chunk_in_place(&mut in_place_buffer, &mut in_place_offset, b"TEST", &[1, 2]);
-    }
-    for call in 0..=3 {
-        FORCE_WRITE_CHUNK_IN_PLACE_CALL.store(call, Ordering::Relaxed);
-        let _ = attach_metadata_reusing_output(valid_encoded.clone(), 1, 1, false, &metadata);
-    }
-
-    let mut lossless_alpha_options = WebPEncodeOptions::default();
-    lossless_alpha_options.lossless = Some(true);
-    let alpha_pipeline_token = crate::CancellationToken::new();
-    FORCE_ALPHA_SCAN_ERROR.store(true, Ordering::Relaxed);
-    let mut alpha_pipeline_encoder = super::native::WebPEncoder::new();
-    let _ = encode_pixels(
-        &rgba,
-        &lossless_alpha_options,
-        &mut alpha_pipeline_encoder,
-        Some(&alpha_pipeline_token),
-    );
-
-    let mut alpha_lossless_encoder = super::native::WebPEncoder::new();
-    let alpha_lossy_token = crate::CancellationToken::new();
-    alpha_lossy_token.cancel_after(0);
-    let _ = encode_lossy(
-        &large_prepared_alpha,
-        1_024,
-        1,
-        &WebPEncodeOptions::default(),
-        &mut alpha_lossless_encoder,
-        Some(&alpha_lossy_token),
-    );
-    FORCE_RGB_EXTRACTION_ERROR.store(true, Ordering::Relaxed);
-    let mut forced_rgb_encoder = super::native::WebPEncoder::new();
-    let _ = encode_lossy(
-        &opaque_rgba,
-        1,
-        1,
-        &WebPEncodeOptions::default(),
-        &mut forced_rgb_encoder,
-        Some(&crate::CancellationToken::new()),
-    );
-    let opaque_rgb_token = crate::CancellationToken::new();
-    opaque_rgb_token.cancel_after(2_047);
-    let mut opaque_rgb_encoder = super::native::WebPEncoder::new();
-    let _ = encode_lossy(
-        &large_prepared_alpha,
-        1_024,
-        1,
-        &WebPEncodeOptions::default(),
-        &mut opaque_rgb_encoder,
-        Some(&opaque_rgb_token),
-    );
-    let opaque_lossy_probe = crate::CancellationToken::new();
-    opaque_lossy_probe.cancel_after(usize::MAX);
-    let mut opaque_lossless_encoder = super::native::WebPEncoder::new();
-    let _ = encode_lossy(
-        &opaque_rgba,
-        1,
-        1,
-        &WebPEncodeOptions::default(),
-        &mut opaque_lossless_encoder,
-        Some(&opaque_lossy_probe),
-    );
-    let opaque_lossy_checks = usize::MAX.saturating_sub(
-        opaque_lossy_probe
-            .coverage_remaining_checks()
-            .unwrap_or(usize::MAX),
-    );
-    for checks in 0..=opaque_lossy_checks {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut encoder = super::native::WebPEncoder::new();
-        let _ = encode_lossy(
-            &opaque_rgba,
-            1,
-            1,
-            &WebPEncodeOptions::default(),
-            &mut encoder,
-            Some(&token),
-        );
-    }
-    let encode_pixels_probe = crate::CancellationToken::new();
-    encode_pixels_probe.cancel_after(usize::MAX);
-    let mut encode_pixels_encoder = super::native::WebPEncoder::new();
-    let _ = encode_pixels(
-        &rgba,
-        &WebPEncodeOptions::default(),
-        &mut encode_pixels_encoder,
-        Some(&encode_pixels_probe),
-    );
-    let encode_pixels_checks = usize::MAX.saturating_sub(
-        encode_pixels_probe
-            .coverage_remaining_checks()
-            .unwrap_or(usize::MAX),
-    );
-    for checks in 0..=encode_pixels_checks {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut encoder = super::native::WebPEncoder::new();
-        let _ = encode_pixels(
-            &rgba,
-            &WebPEncodeOptions::default(),
-            &mut encoder,
-            Some(&token),
-        );
-    }
-    let write_probe = crate::CancellationToken::new();
-    write_probe.cancel_after(usize::MAX);
-    let mut write_probe_sink = Vec::new();
-    let _ = write_riff_to_sink(&valid_encoded, Some(&write_probe), &mut write_probe_sink);
-    let write_checks = usize::MAX.saturating_sub(
-        write_probe
-            .coverage_remaining_checks()
-            .unwrap_or(usize::MAX),
-    );
-    for checks in 0..=write_checks {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut sink = Vec::new();
-        let _ = write_riff_to_sink(&valid_encoded, Some(&token), &mut sink);
-    }
-    struct FailingSink;
-    impl OutputSink for FailingSink {
-        fn write_all(&mut self, _bytes: &[u8]) -> crate::ImageResult<()> {
-            Err(crate::ImageError::parameter("coverage sink failure"))
-        }
-    }
-    let mut failing_sink = FailingSink;
-    let _ = write_riff_to_sink(&valid_encoded, None, &mut failing_sink);
-
-    let mut metadata_sweep_opts = WebPEncodeOptions::default();
-    metadata_sweep_opts.icc = Some(vec![1; 1_025]);
-    metadata_sweep_opts.exif = Some(b"Exif\0\0coverage".to_vec());
-    metadata_sweep_opts.xmp = Some(vec![2, 3, 4]);
-    let metadata_probe = crate::CancellationToken::new();
-    metadata_probe.cancel_after(usize::MAX);
-    let _ = attach_metadata(
-        valid_encoded.clone(),
-        1,
-        1,
-        false,
-        &metadata_sweep_opts,
-        Some(&metadata_probe),
-    );
-    let metadata_checks = usize::MAX.saturating_sub(
-        metadata_probe
-            .coverage_remaining_checks()
-            .unwrap_or(usize::MAX),
-    );
-    for checks in 0..=metadata_checks {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = attach_metadata(
-            valid_encoded.clone(),
-            1,
-            1,
-            false,
-            &metadata_sweep_opts,
-            Some(&token),
-        );
-    }
-
-    let zero_width = DecodedImage::new(0, 1, Vec::new(), crate::types::ColorType::Rgb8);
-    let mut opts = WebPEncodeOptions::default();
-    opts.lossless = Some(true);
-    let _ = encode(&zero_width, &opts);
-
-    let unsupported = DecodedImage::new(1, 1, vec![0; 8], crate::types::ColorType::Rgb32F);
-    let _ = encode(&unsupported, &opts);
-    let _ = encode(&unsupported, &WebPEncodeOptions::default());
-
-    // Pillow has no caller-controlled token. Keep these checkpoint exercises
-    // in the Rust-only private coverage hook rather than the parity matrix.
-    let mut sequence = DecodedSequence::from_image(DecodedImage::new(
-        1,
-        1,
-        vec![0, 0, 0],
-        crate::types::ColorType::Rgb8,
-    ));
-    sequence.frames.push(sequence.frames[0].clone());
-    sequence.kind = crate::types::SequenceKind::TimedAnimation;
-    for checks in 0..=16 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_sequence_with_token(&sequence, &WebPEncodeOptions::default(), Some(&token));
-    }
-
-    // Sweep the still checkpoints, including metadata assembly, without
-    // turning caller-controlled cancellation into a Pillow parity row.
-    let still = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
-    let default_opts = WebPEncodeOptions::default();
-    for checks in 0..=8 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&still, &default_opts, Some(&token));
-    }
-
-    let mut metadata_opts = WebPEncodeOptions::default();
-    metadata_opts.icc = Some(vec![0]);
-    metadata_opts.exif = Some(b"Exif\0\0metadata".to_vec());
-    metadata_opts.xmp = Some(b"xmp".to_vec());
-    for checks in 0..=14 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = encode_with_token(&still, &metadata_opts, Some(&token));
-    }
-
-    #[cfg(coverage_nightly)]
-    {
-        // Measure each complete public pipeline, then cancel at every poll
-        // boundary. The fixed prefix above is cheap for ordinary coverage;
-        // this nightly-only sweep reaches the later metadata and animation
-        // assembly `?` edges without guessing their checkpoint counts.
-        let sweep_still = |image: &DecodedImage, options: &WebPEncodeOptions| {
-            let probe = crate::CancellationToken::new();
-            probe.cancel_after(usize::MAX);
-            let _ = encode_with_token(image, options, Some(&probe));
-            let checks =
-                usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-            for checks in 0..=checks {
-                let token = crate::CancellationToken::new();
-                token.cancel_after(checks);
-                let _ = encode_with_token(image, options, Some(&token));
-            }
-        };
-        sweep_still(&still, &default_opts);
-        sweep_still(&rgba, &default_opts);
-        sweep_still(&still, &metadata_opts);
-
-        let mut sweep_sequence = DecodedSequence::from_image(still.clone());
-        sweep_sequence.frames.push(sweep_sequence.frames[0].clone());
-        sweep_sequence.kind = crate::types::SequenceKind::TimedAnimation;
-        let probe = crate::CancellationToken::new();
-        probe.cancel_after(usize::MAX);
-        let _ = encode_sequence_with_token(&sweep_sequence, &default_opts, Some(&probe));
-        let checks =
-            usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-        for checks in 0..=checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = encode_sequence_with_token(&sweep_sequence, &default_opts, Some(&token));
-        }
-    }
 }

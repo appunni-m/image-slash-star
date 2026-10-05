@@ -58,7 +58,11 @@ impl HuffmanTreeNode {
     }
 
     #[inline]
-    #[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        reason = "packed node tags reserve the high bit for branches and bound leaf symbols to u16"
+    )]
     fn kind(self) -> HuffmanTreeNodeKind {
         match self.0 {
             0 => HuffmanTreeNodeKind::Empty,
@@ -77,7 +81,6 @@ impl HuffmanTreeNode {
 // tree far below the branch tag. Preserve the defensive error contract for a
 // corrupted/private state, but exclude this unmaterializable guard from the
 // executable coverage denominator.
-#[cfg_attr(coverage, coverage(off))]
 #[inline(never)]
 fn checked_huffman_branch_offset(offset: usize) -> Result<u32, DecodingError> {
     let stored_offset = u32::try_from(offset).map_err(|_| DecodingError::HuffmanError)?;
@@ -87,13 +90,11 @@ fn checked_huffman_branch_offset(offset: usize) -> Result<u32, DecodingError> {
     Ok(stored_offset)
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[inline]
 fn valid_huffman_child_offset(offset: u32) -> usize {
     usize::try_from(offset).unwrap_or_default()
 }
 
-#[cfg_attr(coverage, coverage(off))]
 #[inline]
 fn valid_huffman_branch_offset(offset: usize) -> u32 {
     checked_huffman_branch_offset(offset).unwrap_or_default()
@@ -149,7 +150,8 @@ impl HuffmanTree {
     #[allow(
         clippy::arithmetic_side_effects,
         clippy::cast_possible_truncation,
-        clippy::cast_sign_loss
+        clippy::cast_sign_loss,
+        reason = "WebP code lengths and symbol alphabets bound canonical-table arithmetic and packed fields"
     )]
     pub(crate) fn build_implicit(code_lengths: &[u16]) -> Result<Self, DecodingError> {
         // Count symbols and build histogram
@@ -368,11 +370,6 @@ impl HuffmanTree {
         Self(HuffmanTreeInner::TwoNode { zero, one })
     }
 
-    #[cfg(coverage)]
-    pub(crate) fn is_single_node(&self) -> bool {
-        matches!(self.0, HuffmanTreeInner::Single(_))
-    }
-
     pub(crate) const fn single_symbol(&self) -> Option<u16> {
         match &self.0 {
             HuffmanTreeInner::Single(symbol) => Some(*symbol),
@@ -387,7 +384,10 @@ impl HuffmanTree {
     #[inline(never)]
     // Tree offsets and depth increments were constructed by `build_implicit`
     // and cannot escape their backing table.
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "tree offsets and depth increments are bounded by the table built in build_implicit"
+    )]
     fn read_symbol_slowpath<R: BufRead>(
         storage: &[u32],
         tree_start: usize,
@@ -419,7 +419,11 @@ impl HuffmanTree {
     /// detect the end of the stream and return a bitstream error.
     // The primary entry packs a <=15-bit length above a u16 symbol. The reader
     // intentionally selects only the low 16 bits of its lookahead.
-    #[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        clippy::cast_possible_truncation,
+        reason = "primary entries pack at most 15 length bits with a u16 symbol, and lookahead intentionally uses its low 16 bits"
+    )]
     pub(crate) fn read_symbol<R: BufRead>(
         &self,
         bit_reader: &mut BitReader<R>,
@@ -478,7 +482,10 @@ impl HuffmanTree {
     /// Returns a tuple of the codelength and symbol value. This function may return wrong
     /// information if there aren't enough bits in the bit reader to read the next symbol.
     // Packed table fields have the same bounded representation as `read_symbol`.
-    #[allow(clippy::cast_possible_truncation)]
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "primary-table fields use the same bounded packed lengths and u16 symbols as read_symbol"
+    )]
     pub(crate) fn peek_symbol<R: BufRead>(&self, bit_reader: &BitReader<R>) -> Option<(u8, u16)> {
         match &self.0 {
             HuffmanTreeInner::Tree {
@@ -516,187 +523,4 @@ impl HuffmanTree {
             HuffmanTreeInner::Single(symbol) => Some((0, *symbol)),
         }
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let default_tree = HuffmanTree::default();
-    assert!(default_tree.is_single_node());
-    assert_eq!(
-        HuffmanTree::build_single_node(7).peek_symbol(&BitReader::__coverage_new(
-            std::io::Cursor::new(Vec::<u8>::new())
-        )),
-        Some((0, 7))
-    );
-    let two = HuffmanTree::build_two_node(1, 2);
-    assert!(!two.is_single_node());
-    let mut one_reader = BitReader::__coverage_new(std::io::Cursor::new([1u8; 5]));
-    crate::coverage_support::require_ok(one_reader.fill(), "coverage reader should fill");
-    assert_eq!(two.peek_symbol(&one_reader), Some((1, 2)));
-    let mut zero_reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    crate::coverage_support::require_ok(zero_reader.fill(), "coverage reader should fill");
-    let _ = two.read_symbol(&mut zero_reader);
-    let mut one_reader = BitReader::__coverage_new(std::io::Cursor::new([1u8; 5]));
-    crate::coverage_support::require_ok(one_reader.fill(), "coverage reader should fill");
-    let _ = two.read_symbol(&mut one_reader);
-    let boxed_reader: Box<dyn BufRead> = Box::new(std::io::Cursor::new([1u8; 5]));
-    let mut boxed_reader = BitReader::__coverage_new(boxed_reader);
-    crate::coverage_support::require_ok(boxed_reader.fill(), "boxed coverage reader should fill");
-    let _ = two.peek_symbol(&boxed_reader);
-    assert!(HuffmanTree::build_implicit(&[1, 1]).is_ok());
-    assert!(HuffmanTree::build_implicit(&[1, 1, 1]).is_err());
-    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    assert!(
-        HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::EMPTY.0], 0, 0, 0, &mut reader)
-            .is_err()
-    );
-    let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    crate::coverage_support::require_ok(reader.fill(), "coverage reader should fill");
-    let _ = HuffmanTree::read_symbol_slowpath(
-        &[
-            HuffmanTreeNode::branch(1).0,
-            HuffmanTreeNode::leaf(3).0,
-            HuffmanTreeNode::EMPTY.0,
-        ],
-        0,
-        0,
-        0,
-        &mut reader,
-    );
-    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    let _ = HuffmanTree::read_symbol_slowpath(&[HuffmanTreeNode::leaf(9).0], 0, 0, 0, &mut reader);
-    let tree = HuffmanTree(HuffmanTreeInner::Tree {
-        storage: vec![
-            1,
-            HuffmanTreeNode::branch(1).0,
-            HuffmanTreeNode::leaf(5).0,
-            HuffmanTreeNode::EMPTY.0,
-        ],
-        table_mask: 0,
-    });
-    let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    crate::coverage_support::require_ok(reader.fill(), "coverage reader should fill");
-    let _ = tree.read_symbol(&mut reader);
-    let reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    let _ = tree.peek_symbol(&reader);
-    let bytes = [0u8; 5];
-    let reader = BitReader::__coverage_new(std::io::Cursor::new(&bytes[..]));
-    let _ = tree.peek_symbol(&reader);
-    let fast_tree = HuffmanTree(HuffmanTreeInner::Tree {
-        storage: vec![(1 << 16) | 7],
-        table_mask: 0,
-    });
-    let fast_tree_reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    assert_eq!(fast_tree.peek_symbol(&fast_tree_reader), Some((1, 7)));
-    let mut single_reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    crate::coverage_support::require_ok(single_reader.fill(), "coverage reader should fill");
-    let _ = default_tree.read_symbol(&mut single_reader);
-    let fast_consume_error = HuffmanTree(HuffmanTreeInner::Tree {
-        storage: vec![(1 << 16) | 4],
-        table_mask: 0,
-    });
-    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    let _ = fast_consume_error.read_symbol(&mut reader);
-    let mut fast_success_reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    crate::coverage_support::require_ok(fast_success_reader.fill(), "coverage reader should fill");
-    let _ = fast_consume_error.read_symbol(&mut fast_success_reader);
-
-    let inline4_consume_error = HuffmanTree(HuffmanTreeInner::InlineTable4([2_u32 << 16; 4]));
-    let mut inline4_reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    let _ = std::hint::black_box(inline4_consume_error.read_symbol(&mut inline4_reader));
-    let inline8_consume_error = HuffmanTree(HuffmanTreeInner::InlineTable8([3_u32 << 16; 8]));
-    let mut inline8_reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    let _ = std::hint::black_box(inline8_consume_error.read_symbol(&mut inline8_reader));
-    let inline4_box = HuffmanTree(HuffmanTreeInner::InlineTable4([2_u32 << 16; 4]));
-    let mut inline4_box_reader = BitReader::__coverage_new(Box::new(std::io::Cursor::new(
-        Vec::<u8>::new(),
-    )) as Box<dyn BufRead>);
-    let _ = std::hint::black_box(inline4_box.read_symbol(&mut inline4_box_reader));
-    let inline8_box = HuffmanTree(HuffmanTreeInner::InlineTable8([3_u32 << 16; 8]));
-    let mut inline8_box_reader = BitReader::__coverage_new(Box::new(std::io::Cursor::new(
-        Vec::<u8>::new(),
-    )) as Box<dyn BufRead>);
-    let _ = std::hint::black_box(inline8_box.read_symbol(&mut inline8_box_reader));
-    let inline4_array = HuffmanTree(HuffmanTreeInner::InlineTable4([2_u32 << 16; 4]));
-    let mut inline4_array_reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    let _ = std::hint::black_box(inline4_array.read_symbol(&mut inline4_array_reader));
-    let inline8_array = HuffmanTree(HuffmanTreeInner::InlineTable8([3_u32 << 16; 8]));
-    let mut inline8_array_reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    let _ = std::hint::black_box(inline8_array.read_symbol(&mut inline8_array_reader));
-
-    // The secondary-tree path consumes more bits than an empty reader has;
-    // exercise that concrete generic instantiation's `consume` error arm as
-    // well as the successful path above.
-    let boxed_empty: Box<dyn BufRead> = Box::new(std::io::Cursor::new(Vec::<u8>::new()));
-    let mut boxed_empty = BitReader::__coverage_new(boxed_empty);
-    let _ = std::hint::black_box(tree.read_symbol(&mut boxed_empty));
-    let mut cursor_empty = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-    let _ = std::hint::black_box(tree.read_symbol(&mut cursor_empty));
-
-    let mut reader = BitReader::__coverage_new(std::io::Cursor::new(vec![0u8; 5]));
-    crate::coverage_support::require_ok(reader.fill(), "coverage reader should fill");
-    let _ = tree.read_symbol(&mut reader);
-    let bytes = [0u8; 5];
-    let mut cursor = std::io::Cursor::new(&bytes[..]);
-    let mut take = std::io::Read::take(std::io::Read::by_ref(&mut cursor), 5);
-    let mut reader = BitReader::__coverage_new(&mut take);
-    crate::coverage_support::require_ok(reader.fill(), "coverage reader should fill");
-    let _ = HuffmanTree::read_symbol_slowpath(
-        &[
-            HuffmanTreeNode::branch(1).0,
-            HuffmanTreeNode::leaf(7).0,
-            HuffmanTreeNode::EMPTY.0,
-        ],
-        0,
-        0,
-        0,
-        &mut reader,
-    );
-    let mut unfilled_cursor = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-    let _ = std::hint::black_box(HuffmanTree::read_symbol_slowpath(
-        &[
-            HuffmanTreeNode::branch(1).0,
-            HuffmanTreeNode::leaf(7).0,
-            HuffmanTreeNode::EMPTY.0,
-        ],
-        0,
-        0,
-        0,
-        &mut unfilled_cursor,
-    ));
-    let bytes = [0u8; 5];
-    let mut unfilled_cursor = std::io::Cursor::new(&bytes[..]);
-    let mut unfilled_take = std::io::Read::take(std::io::Read::by_ref(&mut unfilled_cursor), 5);
-    let mut unfilled_take_reader = BitReader::__coverage_new(&mut unfilled_take);
-    let _ = std::hint::black_box(HuffmanTree::read_symbol_slowpath(
-        &[
-            HuffmanTreeNode::branch(1).0,
-            HuffmanTreeNode::leaf(7).0,
-            HuffmanTreeNode::EMPTY.0,
-        ],
-        0,
-        0,
-        0,
-        &mut unfilled_take_reader,
-    ));
-    // Exercise each compact primary-table representation.  These forms are
-    // selected by valid canonical trees and are not necessarily all emitted
-    // by the Pillow fixture corpus.
-    for lengths in [vec![2_u16; 4], vec![3_u16; 8], vec![4_u16; 16]] {
-        let tree = HuffmanTree::build_implicit(&lengths).unwrap_or_default();
-        let mut reader = BitReader::__coverage_new(std::io::Cursor::new([0u8; 5]));
-        crate::coverage_support::require_ok(reader.fill(), "coverage reader should fill");
-        let _ = tree.read_symbol(&mut reader);
-        let _ = tree.peek_symbol(&reader);
-    }
-    for lengths in [vec![2_u16; 4], vec![3_u16; 8]] {
-        let tree = HuffmanTree::build_implicit(&lengths).unwrap_or_default();
-        let mut reader = BitReader::__coverage_new(std::io::Cursor::new(Vec::<u8>::new()));
-        let _ = tree.read_symbol(&mut reader);
-    }
-    let bytes = [0u8; 5];
-    let mut cursor = std::io::Cursor::new(&bytes[..]);
-    let mut take = std::io::Read::take(std::io::Read::by_ref(&mut cursor), 5);
-    let reader = BitReader::__coverage_new(&mut take);
-    let _ = tree.peek_symbol(&reader);
 }

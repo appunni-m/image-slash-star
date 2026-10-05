@@ -165,7 +165,7 @@ impl<'a> BitReader<'a> {
 /// small hot operations inlinable across a complete MCU. All cursor and bit
 /// widths are checked before indexing or shifting; the wrapping arithmetic is
 /// used only after those bounds have been established.
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 pub(super) struct FastBitReader<'a> {
     data: &'a [u8],
     pos: usize,
@@ -175,7 +175,7 @@ pub(super) struct FastBitReader<'a> {
     insufficient_data: bool,
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 impl<'a> FastBitReader<'a> {
     pub(super) fn new(data: &'a [u8], start: usize, end: usize) -> Self {
         Self {
@@ -283,66 +283,4 @@ impl<'a> FastBitReader<'a> {
 fn low_u32(value: u64) -> u32 {
     let bytes = value.to_le_bytes();
     u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]])
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    use std::panic::{AssertUnwindSafe, catch_unwind};
-
-    let marker_padded = [0xFF, 0xFF, 0xD9];
-    let mut br = BitReader::new(&marker_padded, 0, marker_padded.len());
-    br.fill(1);
-    assert!(br.insufficient_data());
-
-    let data = [0b1010_0000];
-    let mut br = BitReader::new(&data, 0, data.len());
-    br.fill(1);
-    assert!(catch_unwind(AssertUnwindSafe(|| br.peek_bits(0))).is_err());
-    let overread_bits = crate::coverage_support::require_some(
-        br.bits_left().checked_add(1),
-        "coverage overread count must fit",
-    );
-    assert!(catch_unwind(AssertUnwindSafe(|| br.peek_bits(overread_bits))).is_err());
-
-    let mut br = BitReader::new(&data, 0, data.len());
-    br.fill(1);
-    assert!(catch_unwind(AssertUnwindSafe(|| br.get_bits(0))).is_err());
-    let overread_bits = crate::coverage_support::require_some(
-        br.bits_left().checked_add(1),
-        "coverage overread count must fit",
-    );
-    assert!(catch_unwind(AssertUnwindSafe(|| br.get_bits(overread_bits))).is_err());
-
-    let mut optional = BitReader::new(&[], 0, 0);
-    assert_eq!(optional.read_padded_bits_optional(50), None);
-
-    #[cfg(target_arch = "aarch64")]
-    {
-        let mut fast = FastBitReader::new(&data, 0, data.len());
-        fast.fill(1);
-        let _ = fast.peek_bits(1);
-        let _ = fast.get_bits(1);
-        fast.drop_bits(0);
-        assert!(catch_unwind(AssertUnwindSafe(|| fast.peek_bits(0))).is_err());
-        let overread_bits = crate::coverage_support::require_some(
-            fast.bits_left().checked_add(1),
-            "coverage overread count must fit",
-        );
-        assert!(catch_unwind(AssertUnwindSafe(|| fast.peek_bits(overread_bits))).is_err());
-
-        let mut fast = FastBitReader::new(&data, 0, data.len());
-        fast.fill(1);
-        assert!(catch_unwind(AssertUnwindSafe(|| fast.get_bits(0))).is_err());
-        let overread_bits = crate::coverage_support::require_some(
-            fast.bits_left().checked_add(1),
-            "coverage overread count must fit",
-        );
-        assert!(catch_unwind(AssertUnwindSafe(|| fast.get_bits(overread_bits))).is_err());
-        fast.drop_bits(0);
-
-        let mut stuffed = FastBitReader::new(&[0xFF, 0xFF, 0x00], 0, 3);
-        assert_eq!(stuffed.read_entropy_byte(), Some(0xFF));
-        let mut marker = FastBitReader::new(&[0xFF, 0xD9], 0, 2);
-        assert_eq!(marker.read_entropy_byte(), None);
-    }
 }

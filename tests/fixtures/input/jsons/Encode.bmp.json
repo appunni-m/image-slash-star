@@ -462,10 +462,10 @@
     },
     {
       "id": "enc_error_oversized_dimensions",
-      "source_asset": "24bit.bmp",
-      "source_format": "bmp",
-      "source_mode": "Rgb8",
-      "source_sha256": "9c6c25fdbcf952d250b595935fe775658e9f147dd53dec473f536a49a623c795",
+      "source_asset": "1bit.png",
+      "source_format": "png",
+      "source_mode": "1",
+      "source_sha256": "f8366b944f05c2c6aca458f7c771abeda67316900cd948d70f65cb9a3ce90f38",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [
@@ -503,11 +503,12 @@
         "source_dimensions": [
           2147483648,
           1
-        ]
+        ],
+        "valid_l1_storage": true
       },
       "expect_error": true,
       "pillow_call": {
-        "open": "tests/fixtures/input/images/bmp/24bit.bmp",
+        "open": "tests/fixtures/input/images/png/1bit.png",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
         "kwargs": {},
@@ -1308,6 +1309,49 @@
       },
       "pillow_call": {
         "open": "tests/fixtures/input/images/bmp/odd_width.bmp",
+        "method": "PIL.Image.Image.save",
+        "format": "BMP",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_wide_scanline_checkpoint",
+      "source_asset": "row_checkpoint_1025x1.bmp",
+      "source_format": "bmp",
+      "source_mode": "Rgb8",
+      "source_sha256": "2f88896959682f64f68fdc25d35ffd4b087e584f510a4b996e9ded657185d2fb",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/bmp/row_checkpoint_1025x1.bmp",
         "method": "PIL.Image.Image.save",
         "format": "BMP",
         "kwargs": {},

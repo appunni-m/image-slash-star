@@ -158,21 +158,31 @@ fn coverage_matrix() -> Option<&'static CoverageMatrix> {
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Summary fields are used by whole-matrix consistency checks."
+)]
 struct CoverageMatrix {
     formats: HashMap<String, FormatData>,
+    fault_contracts: Vec<FaultContractRow>,
     summary: Summary,
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Both operation lists are deserialized for format-wide parity."
+)]
 struct FormatData {
     decode: Vec<DecodeRow>,
     encode: Vec<EncodeRow>,
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Rows mirror the full manifest schema used by selected assertions."
+)]
 struct DecodeRow {
     id: String,
     row_type: String,
@@ -191,6 +201,9 @@ struct DecodeRow {
     error_contracts: HashMap<String, ErrorContractRef>,
     expect_error: Option<bool>,
     expect_sequence_error: bool,
+    rust_decode_with_token: bool,
+    rust_inspect_basic: bool,
+    rust_decode_with_metadata_limit: Option<u64>,
     rust_expect_sequence_error: bool,
     rust_sequence_error_kind: Option<String>,
     rust_sequence_error_reason: Option<String>,
@@ -222,6 +235,8 @@ struct DecodeRow {
     decoded_palette: Option<PaletteParityRef>,
     decoded_source_byte_order: Option<String>,
     decoded_source_byte_order_origin: Option<String>,
+    decoded_source_color: Option<SourceColorParityRef>,
+    avif_mdcv: Option<Vec<u32>>,
     ref_path: Option<String>,
     ref_bytes: Option<usize>,
     ref_sha256: Option<String>,
@@ -230,6 +245,8 @@ struct DecodeRow {
     sequence_error_message: Option<String>,
     sequence_error_kind: Option<String>,
     sequence: Option<SequenceParityRef>,
+    frame_request: Option<FrameRequestContractRef>,
+    frame_request_result: Option<FrameRequestResultRef>,
 }
 
 #[derive(Debug)]
@@ -241,6 +258,22 @@ struct SequenceParityRef {
     loop_evidence: Option<AvifLoopEvidence>,
     background: Option<BackgroundParityRef>,
     frames: Vec<FrameParityRef>,
+}
+
+#[derive(Debug)]
+struct FrameRequestContractRef {
+    index: u32,
+    expected_status: String,
+    pillow_error_type: String,
+    rust_error_kind: String,
+}
+
+#[derive(Debug)]
+struct FrameRequestResultRef {
+    index: u32,
+    status: String,
+    error_type: Option<String>,
+    error_message: Option<String>,
 }
 
 #[derive(Debug)]
@@ -296,6 +329,14 @@ struct PaletteParityRef {
 }
 
 #[derive(Debug)]
+struct SourceColorParityRef {
+    srgb: Option<u32>,
+    gamma: Option<u32>,
+    chromaticities: Option<Vec<u32>>,
+    icc_profile_present: bool,
+}
+
+#[derive(Debug)]
 struct ExecutionRef {
     target: String,
     features: Vec<String>,
@@ -313,7 +354,10 @@ struct ErrorContractRef {
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Rows mirror fields consumed by selected encode assertions."
+)]
 struct EncodeRow {
     id: String,
     row_type: String,
@@ -352,7 +396,10 @@ struct EncodeRow {
 }
 
 #[derive(Debug)]
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "Matrix counts drive whole-matrix row-total assertions."
+)]
 struct Summary {
     total_rows: usize,
     decode_rows: usize,
@@ -364,10 +411,48 @@ struct Summary {
     encode_not_wired: usize,
 }
 
+#[derive(Debug)]
+#[allow(
+    dead_code,
+    reason = "Fault-contract rows are read only by the cfg(coverage) integration runner."
+)]
+struct FaultContractRow {
+    id: String,
+    row_type: String,
+    operation: String,
+    format: String,
+    status: String,
+    requirements: Vec<String>,
+    verification: String,
+    input: FaultContractInput,
+    fault: FaultContractSpec,
+    oracle_status: String,
+}
+
+#[derive(Debug)]
+#[allow(
+    dead_code,
+    reason = "Fault-contract input references are read only by the cfg(coverage) runner."
+)]
+struct FaultContractInput {
+    source_case: String,
+}
+
+#[derive(Debug)]
+#[allow(
+    dead_code,
+    reason = "Injected fault metadata is read only by the cfg(coverage) runner."
+)]
+struct FaultContractSpec {
+    point: String,
+    contract: String,
+}
+
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum MatrixOperation {
     Decode,
     Encode,
+    FaultContract,
 }
 
 impl MatrixOperation {
@@ -375,6 +460,7 @@ impl MatrixOperation {
         match self {
             Self::Decode => "decode",
             Self::Encode => "encode",
+            Self::FaultContract => "fault-contract",
         }
     }
 }
@@ -645,9 +731,10 @@ fn parse_matrix_row_key(raw: &str) -> Result<ParsedMatrixRowKey, String> {
     let operation = match operation {
         "decode" => MatrixOperation::Decode,
         "encode" => MatrixOperation::Encode,
+        "fault-contract" => MatrixOperation::FaultContract,
         other => {
             return Err(format!(
-                "unknown matrix row selector operation {other:?} in {raw:?}; expected decode or encode"
+                "unknown matrix row selector operation {other:?} in {raw:?}; expected decode, encode, or fault-contract"
             ));
         }
     };
@@ -743,8 +830,25 @@ fn matrix_row_catalog(matrix: &CoverageMatrix) -> Result<Vec<MatrixCatalogRow>, 
                         )?;
                     }
                 }
+                MatrixOperation::FaultContract => {
+                    return Err(
+                        "fault-contract rows must be indexed from the dedicated fault-contract list"
+                            .to_owned(),
+                    );
+                }
             }
         }
+    }
+    for row in &matrix.fault_contracts {
+        append_matrix_catalog_row(
+            &mut catalog,
+            &mut known_keys,
+            MatrixOperation::FaultContract,
+            &row.format,
+            &row.format,
+            &row.id,
+            &row.status,
+        )?;
     }
     Ok(catalog)
 }
@@ -835,7 +939,16 @@ fn matrix_row_selection(
             return Ok(MatrixRowSelection::All);
         }
         let catalog = matrix_row_catalog(matrix)?;
-        resolve_matrix_row_keys(&requested_keys, &catalog).map(MatrixRowSelection::Selected)
+        let selection = resolve_matrix_row_keys(&requested_keys, &catalog)?;
+        if !cfg!(coverage)
+            && selection
+                .rows
+                .iter()
+                .any(|row| row.operation == MatrixOperation::FaultContract)
+        {
+            return Err("fault-contract selectors require the cfg(coverage) harness".to_owned());
+        }
+        Ok(MatrixRowSelection::Selected(selection))
     });
     match result {
         Ok(selection) => {
@@ -897,12 +1010,421 @@ fn try_claim_selected_matrix_dispatch(claimed: &AtomicBool) -> bool {
         .is_ok()
 }
 
-#[allow(clippy::arithmetic_side_effects)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "Generated fixture row counts are bounded."
+)]
 fn assert_coverage_matrix_summary(matrix: &CoverageMatrix) {
     let s = &matrix.summary;
     assert!(s.total_rows > 0, "Matrix must have rows");
     assert_eq!(s.total_rows, s.decode_rows + s.encode_rows);
 }
+
+#[cfg(coverage)]
+fn execute_fault_contract(
+    manifest_dir: &Path,
+    matrix: &CoverageMatrix,
+    row: &FaultContractRow,
+) -> Result<(), String> {
+    if row.row_type != "fault-contract"
+        || row.operation != "decode"
+        || !matches!(row.format.as_str(), "avif" | "jpeg")
+        || row.status != "active"
+        || row.verification != "fault-contract"
+        || row.oracle_status != "not_applicable"
+        || row.requirements.as_slice() != ["structured-diagnostics"]
+    {
+        return Err(format!(
+            "{}: row is not a valid target-only decode fault contract",
+            row.id
+        ));
+    }
+    let (fault_point, sequence_decode, expected_format, expected_stage) =
+        match (row.fault.point.as_str(), row.fault.contract.as_str()) {
+            (
+                "av1.display_plane.reconstructed_copy_allocation",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1DisplayPlaneCopyAllocation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.temporal_motion_field.reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1TemporalMotionFieldReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "av1.temporal_projection.field_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1ProjectedTemporalFieldReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "avif.sequence_frames.output_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifSequenceFrameReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.superres.position_reservation", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1SuperResolutionPositionReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.superres.plane_reservation", "sequence_decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1SuperResolutionPlaneReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.restoration.sgr_output_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1SgrRestorationOutputReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.restoration.sgr_intermediate_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1SgrIntermediateReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
+                "av1.restoration.stripe_scratch_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1RestorationStripeScratchReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            ("av1.frame.monochrome_tile_state_reservation", "decode_error_then_retry_succeeds") => {
+                (
+                    img::CoverageFaultPoint::Av1MonochromeTileReservation,
+                    false,
+                    img::ImageFormat::Avif,
+                    img::ImageErrorStage::StillDecode,
+                )
+            }
+            ("av1.frame.color_tile_state_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1ColorTileReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.grid.cell_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1GridCellReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "av1.frame.assembled_monochrome_loop_filter_metadata_reservation",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1AssembledMonochromeLoopFilterMetadataReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "av1.frame.assembled_monochrome_cdef_active_map_reservation",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1AssembledMonochromeCdefActiveMapReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.frame.tile_cell_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1TileCellReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.frame.chroma_tile_cell_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1ChromaTileCellReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.frame.tile_block_metadata_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1TileBlockMetadataReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "av1.frame.assembled_loop_filter_metadata_reservation",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1AssembledLoopFilterMetadataReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("av1.partition_tree.node_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1PartitionNodeReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("jpeg.multiscan.coefficient_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::JpegCoefficientBufferReservation,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            _ => {
+                return Err(format!(
+                    "{}: fault point or public contract is not allow-listed",
+                    row.id
+                ));
+            }
+        };
+    let expected_message = match row.fault.point.as_str() {
+        "av1.temporal_motion_field.reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 temporal motion field")
+        }
+        "av1.temporal_projection.field_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate AV1 projected temporal field",
+        ),
+        "av1.frame.color_tile_state_reservation" => Some(
+            "decode: AVIF AV1 validation failed: unable to reserve reconstructed AV1 tile state",
+        ),
+        "av1.grid.cell_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to reserve AVIF grid cells")
+        }
+        "av1.frame.assembled_monochrome_loop_filter_metadata_reservation" => Some(
+            "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome loop-filter metadata",
+        ),
+        "av1.frame.assembled_monochrome_cdef_active_map_reservation" => Some(
+            "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome CDEF active map",
+        ),
+        "av1.frame.tile_cell_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 tile cells")
+        }
+        "av1.frame.chroma_tile_cell_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 chroma tile cells")
+        }
+        "av1.frame.tile_block_metadata_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 tile block metadata")
+        }
+        "av1.frame.assembled_loop_filter_metadata_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 loop-filter metadata")
+        }
+        "av1.partition_tree.node_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate AV1 partition nodes")
+        }
+        "av1.restoration.sgr_output_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate AV1 SGR output",
+        ),
+        "av1.restoration.sgr_intermediate_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate AV1 SGR intermediates",
+        ),
+        "av1.restoration.stripe_scratch_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate AV1 restoration stripe",
+        ),
+        _ => None,
+    };
+
+    let source_key = parse_matrix_row_key(&row.input.source_case)?;
+    if source_key.operation != MatrixOperation::Decode || source_key.format != row.format {
+        return Err(format!(
+            "{}: source_case must identify a decode row in the same format",
+            row.id
+        ));
+    }
+    let source = matrix
+        .formats
+        .get(&source_key.format)
+        .and_then(|format| {
+            format
+                .decode
+                .iter()
+                .find(|candidate| candidate.id == source_key.id)
+        })
+        .ok_or_else(|| format!("{}: source_case is missing from the parity index", row.id))?;
+    if source.status != "active" || source.oracle_status.as_deref() != Some("ok") {
+        return Err(format!(
+            "{}: source_case must be an active Pillow parity row",
+            row.id
+        ));
+    }
+    let asset = source
+        .asset
+        .as_deref()
+        .ok_or_else(|| format!("{}: source_case has no input asset", row.id))?;
+    let asset_path = manifest_dir
+        .join("tests/fixtures/input/images")
+        .join(&source_key.format)
+        .join(asset);
+    let bytes = fs::read(&asset_path)
+        .map_err(|error| format!("{}: cannot read source input: {error}", row.id))?;
+    assert_sha256(
+        &bytes,
+        source.asset_sha256.as_deref(),
+        "fault-contract source asset",
+    )?;
+
+    let injected = img::__coverage_with_fault_point(fault_point, || {
+        if sequence_decode {
+            img::decode_sequence(&bytes).map(|_| ())
+        } else {
+            img::decode(&bytes).map(|_| ())
+        }
+    });
+    match injected {
+        Err(img::ImageError::Dimensions {
+            format: Some(actual_format),
+            message,
+            stage: Some(stage),
+            ..
+        }) if actual_format == expected_format
+            && stage == expected_stage
+            && expected_message.is_none_or(|expected| message == expected) => {}
+        Err(error) => {
+            return Err(format!(
+                "{}: injected operation returned the wrong public error: {error:?}",
+                row.id
+            ));
+        }
+        Ok(_) => {
+            return Err(format!(
+                "{}: injected operation unexpectedly succeeded",
+                row.id
+            ));
+        }
+    }
+
+    if sequence_decode {
+        let retry = img::decode_sequence(&bytes)
+            .map_err(|error| format!("{}: sequence decode retry failed: {error:?}", row.id))?;
+        if retry.format != expected_format {
+            return Err(format!(
+                "{}: retry decoded as {:?}, expected {:?}",
+                row.id, retry.format, expected_format
+            ));
+        }
+        let expected_sequence = source
+            .sequence
+            .as_ref()
+            .ok_or_else(|| format!("{}: source parity row has no sequence", row.id))?;
+        let expected_width = expected_sequence
+            .canvas_size
+            .first()
+            .copied()
+            .ok_or_else(|| format!("{}: source sequence has no canvas width", row.id))?;
+        let expected_height = expected_sequence
+            .canvas_size
+            .get(1)
+            .copied()
+            .ok_or_else(|| format!("{}: source sequence has no canvas height", row.id))?;
+        if retry.content.width != expected_width
+            || retry.content.height != expected_height
+            || retry.content.frames.len() != expected_sequence.frames.len()
+        {
+            return Err(format!(
+                "{}: retry returned {}x{} with {} frames, expected {}x{} with {} frames",
+                row.id,
+                retry.content.width,
+                retry.content.height,
+                retry.content.frames.len(),
+                expected_width,
+                expected_height,
+                expected_sequence.frames.len()
+            ));
+        }
+        let reference = img::decode_sequence(&bytes)
+            .map_err(|error| format!("{}: reference sequence retry failed: {error:?}", row.id))?;
+        if retry != reference {
+            return Err(format!(
+                "{}: sequence retry differs from a fresh uninjected decode",
+                row.id
+            ));
+        }
+    } else {
+        let retry = img::decode(&bytes)
+            .map_err(|error| format!("{}: decode retry failed: {error:?}", row.id))?;
+        if retry.format != expected_format {
+            return Err(format!(
+                "{}: retry decoded as {:?}, expected {:?}",
+                row.id, retry.format, expected_format
+            ));
+        }
+        let reference = img::decode(&bytes)
+            .map_err(|error| format!("{}: reference decode retry failed: {error:?}", row.id))?;
+        if retry != reference {
+            return Err(format!(
+                "{}: retry differs from a fresh uninjected decode",
+                row.id
+            ));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(coverage)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "Fault-contract counters are bounded by the generated case list."
+)]
+fn run_fault_contract_matrix() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let matrix = require_some(
+        coverage_matrix(),
+        "coverage_matrix.json is required; run scripts/generate_decode_refs.py to regenerate it",
+    );
+    let Some(selection) = matrix_row_selection_for_test(matrix) else {
+        return;
+    };
+
+    let mut selected = 0usize;
+    let mut executed = 0usize;
+    let mut passed = 0usize;
+    let mut failed = 0usize;
+    let mut planned_not_executed = 0usize;
+    for row in &matrix.fault_contracts {
+        if !selection.contains(MatrixOperation::FaultContract, &row.format, &row.id) {
+            continue;
+        }
+        selected += 1;
+        if row.status == "planned" {
+            planned_not_executed += 1;
+            continue;
+        }
+        executed += 1;
+        match execute_fault_contract(manifest_dir, matrix, row) {
+            Ok(()) => passed += 1,
+            Err(message) => {
+                failed += 1;
+                eprintln!("  FAIL [fault-contract:{}]: {message}", row.id);
+            }
+        }
+    }
+    eprintln!(
+        "Fault contracts: selected={selected} executed={executed} passed={passed} failed={failed} planned-not-executed={planned_not_executed} oracle=not_applicable"
+    );
+    assert_eq!(failed, 0, "fault-contract cases failed");
+}
+
+#[cfg(not(coverage))]
+fn run_fault_contract_matrix() {}
 
 fn dispatch_selected_matrix(run_full: impl FnOnce()) {
     if av1_fixture_selector_requested() {
@@ -921,6 +1443,7 @@ fn dispatch_selected_matrix(run_full: impl FnOnce()) {
         if try_claim_selected_matrix_dispatch(&SELECTED_MATRIX_DISPATCH_CLAIMED) {
             run_decode_matrix(None);
             run_encode_matrix(None, None);
+            run_fault_contract_matrix();
         }
         return;
     }
@@ -1433,8 +1956,32 @@ macro_rules! json_object {
     };
 }
 
-json_object!(CoverageMatrix { formats, summary });
+json_object!(CoverageMatrix {
+    formats,
+    fault_contracts,
+    summary,
+});
 json_object!(FormatData { decode, encode });
+json_object!(FaultContractInput { source_case });
+json_object!(FaultContractSpec { point, contract });
+
+impl FromJson for FaultContractRow {
+    fn from_json(value: Value) -> Result<Self, support::json::Error> {
+        let mut object = Object::new(value)?;
+        Ok(Self {
+            id: object.take("id")?,
+            row_type: object.take("type")?,
+            operation: object.take("operation")?,
+            format: object.take("format")?,
+            status: object.take("status")?,
+            requirements: object.take("requirements")?,
+            verification: object.take("verification")?,
+            input: object.take("input")?,
+            fault: object.take("fault")?,
+            oracle_status: object.take("oracle_status")?,
+        })
+    }
+}
 
 impl FromJson for DecodeRow {
     fn from_json(value: Value) -> Result<Self, support::json::Error> {
@@ -1457,6 +2004,9 @@ impl FromJson for DecodeRow {
             error_contracts: object.take_or_default("error_contracts")?,
             expect_error: object.take("expect_error")?,
             expect_sequence_error: object.take_or_default("expect_sequence_error")?,
+            rust_decode_with_token: object.take_or_default("rust_decode_with_token")?,
+            rust_inspect_basic: object.take_or_default("rust_inspect_basic")?,
+            rust_decode_with_metadata_limit: object.take("rust_decode_with_metadata_limit")?,
             rust_expect_sequence_error: object.take_or_default("rust_expect_sequence_error")?,
             rust_sequence_error_kind: object.take("rust_sequence_error_kind")?,
             rust_sequence_error_reason: object.take("rust_sequence_error_reason")?,
@@ -1488,6 +2038,8 @@ impl FromJson for DecodeRow {
             decoded_palette: object.take("decoded_palette")?,
             decoded_source_byte_order: object.take("decoded_source_byte_order")?,
             decoded_source_byte_order_origin: object.take("decoded_source_byte_order_origin")?,
+            decoded_source_color: object.take("decoded_source_color")?,
+            avif_mdcv: object.take("avif_mdcv")?,
             ref_path: object.take("ref_path")?,
             ref_bytes: object.take("ref_bytes")?,
             ref_sha256: object.take("ref_sha256")?,
@@ -1496,10 +2048,24 @@ impl FromJson for DecodeRow {
             sequence_error_message: object.take("sequence_error_message")?,
             sequence_error_kind: object.take("sequence_error_kind")?,
             sequence: object.take("sequence")?,
+            frame_request: object.take("frame_request")?,
+            frame_request_result: object.take("frame_request_result")?,
         })
     }
 }
 
+json_object!(FrameRequestContractRef {
+    index,
+    expected_status,
+    pillow_error_type,
+    rust_error_kind,
+});
+json_object!(FrameRequestResultRef {
+    index,
+    status,
+    error_type,
+    error_message,
+});
 json_object!(SequenceParityRef {
     canvas_size,
     canvas_origin,
@@ -1552,6 +2118,12 @@ json_object!(PaletteParityRef {
     alpha_path,
     alpha_bytes,
     alpha_sha256,
+});
+json_object!(SourceColorParityRef {
+    srgb,
+    gamma,
+    chromaticities,
+    icc_profile_present,
 });
 json_object!(ExecutionRef {
     target,
@@ -1942,7 +2514,12 @@ fn run_counted_public_encode_call<T>(
     }
 }
 
-fn legacy_encode_options(format: &str, params: &HashMap<String, Value>) -> Vec<(String, String)> {
+const MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH: u64 = 65_534;
+
+fn legacy_encode_options(
+    format: &str,
+    params: &HashMap<String, Value>,
+) -> Result<Vec<(String, String)>, String> {
     let keys: &[&str] = match format {
         "jpeg" => &[
             "quality",
@@ -2006,11 +2583,29 @@ fn legacy_encode_options(format: &str, params: &HashMap<String, Value>) -> Vec<(
         ],
         _ => &[],
     };
-    params
+    let mut options: Vec<(String, String)> = params
         .iter()
         .filter(|(key, _)| keys.contains(&key.as_str()))
         .map(|(key, value)| (key.clone(), option_text(value)))
-        .collect()
+        .collect();
+    if let Some(payload_length) = params.get("exif_payload_length") {
+        if format != "jpeg" {
+            return Err("exif_payload_length is only supported for JPEG".to_owned());
+        }
+        let payload_length = payload_length
+            .as_u64()
+            .ok_or_else(|| "EXIF payload length must be a non-negative integer".to_owned())?;
+        if payload_length > MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH {
+            return Err(format!(
+                "EXIF payload length must not exceed \
+                 {MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH} bytes"
+            ));
+        }
+        let payload_length = usize::try_from(payload_length)
+            .map_err(|_| "EXIF payload length must fit the host address space".to_owned())?;
+        options.push(("exif_hex".to_owned(), "00".repeat(payload_length)));
+    }
+    Ok(options)
 }
 
 fn advanced_encode_options(params: &HashMap<String, Value>) -> Vec<img::AvifAdvancedOption> {
@@ -2256,7 +2851,9 @@ fn assert_bmp_contract(params: &HashMap<String, Value>, encoded: &[u8]) -> Resul
         return Err("encoded BMP is missing BM signature".to_owned());
     }
     let header_size = read_le_u32(encoded, 14).ok_or("BMP header is truncated")?;
-    let height = read_le_u32(encoded, 22).ok_or("BMP height is truncated")? as i32;
+    let height = read_le_u32(encoded, 22)
+        .ok_or("BMP height is truncated")?
+        .cast_signed();
     let depth = read_le_u16(encoded, 28).ok_or("BMP depth is truncated")?;
     let compression = read_le_u32(encoded, 30).ok_or("BMP compression is truncated")?;
 
@@ -2713,6 +3310,8 @@ fn assert_sha256(bytes: &[u8], expected: Option<&str>, label: &str) -> Result<()
 fn assert_execution_contract(expected: Option<&ExecutionRef>) -> Result<(), String> {
     let expected = expected.ok_or_else(|| "execution contract is missing".to_owned())?;
     let all_features = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"];
+    // `execution.target` records the oracle capture host; parity also runs on
+    // supported targets such as x86-64 SIMD CI.
     if expected.target != "aarch64-apple-darwin"
         || expected.suite != "native_all_features"
         || expected
@@ -2722,8 +3321,6 @@ fn assert_execution_contract(expected: Option<&ExecutionRef>) -> Result<(), Stri
             .collect::<Vec<_>>()
             != all_features
         || !cfg!(all(
-            target_arch = "aarch64",
-            target_os = "macos",
             feature = "jpeg",
             feature = "png",
             feature = "gif",
@@ -3058,6 +3655,102 @@ fn assert_palette_parity(
             || expected.alpha_sha256.is_some())
     {
         return Err(format!("{label} non-table palette retains byte references"));
+    }
+    Ok(())
+}
+
+fn assert_source_color_parity(
+    expected: &SourceColorParityRef,
+    origin: Option<&str>,
+    actual: &img::SourceColor,
+) -> Result<(), String> {
+    if origin != Some("pillow_fixture") {
+        return Err("source-color evidence must come from Pillow".to_owned());
+    }
+    let srgb = match expected.srgb {
+        None => None,
+        Some(0) => Some(img::SrgbIntent::Perceptual),
+        Some(1) => Some(img::SrgbIntent::RelativeColorimetric),
+        Some(2) => Some(img::SrgbIntent::Saturation),
+        Some(3) => Some(img::SrgbIntent::AbsoluteColorimetric),
+        Some(value) => return Err(format!("Pillow sRGB intent {value} is invalid")),
+    };
+    let chromaticities = match expected.chromaticities.as_deref() {
+        None => None,
+        Some(
+            [
+                white_x,
+                white_y,
+                red_x,
+                red_y,
+                green_x,
+                green_y,
+                blue_x,
+                blue_y,
+            ],
+        ) => Some(img::SourceChromaticities {
+            white_x: *white_x,
+            white_y: *white_y,
+            red_x: *red_x,
+            red_y: *red_y,
+            green_x: *green_x,
+            green_y: *green_y,
+            blue_x: *blue_x,
+            blue_y: *blue_y,
+        }),
+        Some(values) => {
+            return Err(format!(
+                "Pillow chromaticity evidence has {} values instead of 8",
+                values.len()
+            ));
+        }
+    };
+    if actual.srgb() != srgb
+        || actual.gamma() != expected.gamma
+        || actual.chromaticities() != chromaticities
+        || actual.icc_profile().is_some() != expected.icc_profile_present
+    {
+        return Err(format!(
+            "source-color metadata differs from Pillow: actual {:?}, expected {:?}",
+            actual, expected
+        ));
+    }
+    Ok(())
+}
+
+fn assert_avif_mdcv_parity(
+    expected: &[u32],
+    origin: Option<&str>,
+    actual: &img::SourceColor,
+) -> Result<(), String> {
+    if origin != Some("specification_reference") {
+        return Err("AVIF mdcv evidence must come from the specification".to_owned());
+    }
+    if expected.len() != 10 {
+        return Err(format!(
+            "AVIF mdcv evidence has {} values instead of 10",
+            expected.len()
+        ));
+    }
+    let Some(actual) = actual.avif_mastering_display_color_volume() else {
+        return Err("AVIF source color has no mdcv declaration".to_owned());
+    };
+    let actual_values = [
+        u32::from(actual.red_x()),
+        u32::from(actual.red_y()),
+        u32::from(actual.green_x()),
+        u32::from(actual.green_y()),
+        u32::from(actual.blue_x()),
+        u32::from(actual.blue_y()),
+        u32::from(actual.white_point_x()),
+        u32::from(actual.white_point_y()),
+        actual.max_display_mastering_luminance(),
+        actual.min_display_mastering_luminance(),
+    ];
+    if expected != actual_values.as_slice() {
+        return Err(format!(
+            "AVIF mdcv metadata differs: actual {actual_values:?}, expected {expected:?}"
+        ));
     }
     Ok(())
 }
@@ -3721,7 +4414,7 @@ fn assert_sequence_reference_parity(
     Ok(())
 }
 
-fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
+fn assert_sequence_base(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
     let operation = operation_status(&row.operations, "decode_sequence")?;
     if row.rust_expect_sequence_error {
         if operation != "error" {
@@ -3831,7 +4524,152 @@ fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> 
         &actual,
         expected_format,
         data,
-    )
+    )?;
+
+    // These multi-page rows provide exact Pillow references for every page.
+    // Exercise both public source wrappers against those same references so
+    // selected-page TIFF decoding cannot drift from sequence decoding.
+    if row.format == "tiff" && row.id.starts_with("multi_page") {
+        let owned = img::EncodedImage::new(data.to_vec())
+            .map_err(|error| format!("owned TIFF source construction failed: {error}"))?;
+        let view = img::EncodedImageView::new(data)
+            .map_err(|error| format!("borrowed TIFF source construction failed: {error}"))?;
+        if view.info() != owned.info() || view.format() != expected_format {
+            return Err("borrowed TIFF metadata differs from the owned source".to_owned());
+        }
+        let owned_decoded_bytes = owned
+            .info()
+            .decoded_bytes()
+            .map_err(|error| format!("owned TIFF decoded-byte query failed: {error}"))?;
+        let view_decoded_bytes = view
+            .decoded_bytes()
+            .map_err(|error| format!("borrowed TIFF decoded-byte query failed: {error}"))?;
+        let owned_transfer_layout = owned
+            .info()
+            .transfer_layout()
+            .map_err(|error| format!("owned TIFF transfer-layout query failed: {error}"))?;
+        let view_transfer_layout = view
+            .transfer_layout()
+            .map_err(|error| format!("borrowed TIFF transfer-layout query failed: {error}"))?;
+        if view_decoded_bytes != owned_decoded_bytes
+            || view_transfer_layout != owned_transfer_layout
+        {
+            return Err("borrowed TIFF transfer metadata differs from the owned source".to_owned());
+        }
+        let frame_limit = u32::try_from(actual.frames.len())
+            .map_err(|error| format!("TIFF frame count exceeds u32: {error}"))?;
+        let policy = img::DecodePolicy::default()
+            .with_allowed_formats(img::DecodeFormatSet::only(expected_format))
+            .with_max_encoded_bytes(data.len() as u64)
+            .with_max_width(actual.width)
+            .with_max_height(actual.height)
+            .with_max_frames(frame_limit)
+            .with_max_sequence_decoded_bytes(u64::MAX)
+            .with_max_work_units(u64::MAX);
+        let format_policy = img::DecodePolicy::default()
+            .with_allowed_formats(img::DecodeFormatSet::only(expected_format))
+            .with_max_encoded_bytes(data.len() as u64);
+
+        let owned_default_sequence = owned
+            .decode_sequence_with_policy(&img::DecodePolicy::default())
+            .map_err(|error| {
+                format!("owned TIFF default-policy sequence decode failed: {error}")
+            })?;
+        let view_default_sequence = view
+            .decode_sequence_with_policy(&img::DecodePolicy::default())
+            .map_err(|error| {
+                format!("borrowed TIFF default-policy sequence decode failed: {error}")
+            })?;
+        let view_compatibility_sequence = view
+            .decode_sequence()
+            .map_err(|error| format!("borrowed TIFF sequence decode failed: {error}"))?;
+        let owned_policy_sequence =
+            owned
+                .decode_sequence_with_policy(&policy)
+                .map_err(|error| {
+                    format!("owned TIFF bounded-policy sequence decode failed: {error}")
+                })?;
+        let owned_format_policy_sequence = owned
+            .decode_sequence_with_policy(&format_policy)
+            .map_err(|error| format!("owned TIFF format-policy sequence decode failed: {error}"))?;
+        let view_policy_sequence = view.decode_sequence_with_policy(&policy).map_err(|error| {
+            format!("borrowed TIFF bounded-policy sequence decode failed: {error}")
+        })?;
+        if owned_default_sequence.content != actual
+            || view_default_sequence.content != actual
+            || view_compatibility_sequence.content != actual
+            || owned_policy_sequence.content != actual
+            || owned_format_policy_sequence.content != actual
+            || view_policy_sequence.content != actual
+        {
+            return Err(
+                "TIFF source policy APIs differ from Pillow-checked sequence decode".to_owned(),
+            );
+        }
+
+        let first_frame = actual
+            .frames
+            .first()
+            .ok_or_else(|| "TIFF multi-page source has no first frame".to_owned())?;
+        let view_compatibility_image = view
+            .decode()
+            .map_err(|error| format!("borrowed TIFF image decode failed: {error}"))?;
+        let cloned_view_image = view
+            .clone()
+            .decode()
+            .map_err(|error| format!("cloned borrowed TIFF image decode failed: {error}"))?;
+        let owned_policy_image = owned
+            .decode_with_policy(&policy)
+            .map_err(|error| format!("owned TIFF bounded-policy image decode failed: {error}"))?;
+        let owned_cached_policy_image = owned
+            .decode_with_policy(&policy)
+            .map_err(|error| format!("owned TIFF cached-policy image decode failed: {error}"))?;
+        let view_policy_image = view.decode_with_policy(&policy).map_err(|error| {
+            format!("borrowed TIFF bounded-policy image decode failed: {error}")
+        })?;
+        if view_compatibility_image.content != first_frame.image
+            || cloned_view_image.content != first_frame.image
+            || owned_policy_image.content != first_frame.image
+            || owned_cached_policy_image.content != first_frame.image
+            || view_policy_image.content != first_frame.image
+        {
+            return Err(
+                "TIFF source policy APIs differ from Pillow-checked first frame".to_owned(),
+            );
+        }
+
+        for expected_frame in &expected.frames {
+            if expected_frame.pixel_assertion != "exact" {
+                return Err(format!(
+                    "TIFF frame {} lacks exact Pillow pixel evidence",
+                    expected_frame.index
+                ));
+            }
+            let frame_index = u32::try_from(expected_frame.index)
+                .map_err(|error| format!("TIFF frame index is out of range: {error}"))?;
+            let sequence_frame = actual
+                .frames
+                .get(expected_frame.index)
+                .ok_or_else(|| format!("TIFF frame {} is missing", expected_frame.index))?;
+            let owned_frame = owned
+                .decode_frame(frame_index)
+                .map_err(|error| format!("owned TIFF frame decode failed: {error}"))?;
+            let view_frame = view
+                .decode_frame(frame_index)
+                .map_err(|error| format!("borrowed TIFF frame decode failed: {error}"))?;
+
+            if &owned_frame != sequence_frame || &view_frame != sequence_frame {
+                return Err(format!(
+                    "TIFF frame {} source API differs from sequence decode",
+                    expected_frame.index
+                ));
+            }
+            assert_sequence_frame_pixels(manifest_dir, &row.id, expected_frame, &owned_frame)?;
+            assert_sequence_frame_pixels(manifest_dir, &row.id, expected_frame, &view_frame)?;
+        }
+    }
+
+    Ok(())
 }
 
 // ── Decode Tests ─────────────────────────────────────────────────────────
@@ -4198,7 +5036,10 @@ fn test_avif_planned_gaps_are_explicit_safe_rust_contracts() {
     }
 }
 
-#[allow(clippy::arithmetic_side_effects)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "Decode fixture rows fit in u32 counters."
+)]
 fn run_decode_matrix(format_filter: Option<&str>) {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let matrix = require_some(
@@ -4278,10 +5119,19 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     )
                 })
                 .and_then(|()| {
-                    assert_operation_contract(
-                        &row.operations,
-                        &["detect", "inspect", "verify", "decode", "decode_sequence"],
-                    )
+                    let required_operations: &[&str] = if row.frame_request.is_some() {
+                        &[
+                            "detect",
+                            "inspect",
+                            "verify",
+                            "decode",
+                            "decode_sequence",
+                            "decode_frame",
+                        ]
+                    } else {
+                        &["detect", "inspect", "verify", "decode", "decode_sequence"]
+                    };
+                    assert_operation_contract(&row.operations, required_operations)
                 })
                 .and_then(|()| {
                     assert_error_contracts(&row.operations, &row.error_contracts, fmt_name)
@@ -4452,11 +5302,128 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 continue;
             }
 
+            if row.rust_inspect_basic {
+                let basic_inspected = img::inspect_basic(&data);
+                let matches_complete_inspection = match (&basic_inspected, &inspected) {
+                    (Ok(basic), Ok(full)) => {
+                        basic == full
+                            && basic.frame_count == row.ref_frame_count
+                            && basic.frame_count_complete
+                    }
+                    _ => false,
+                };
+                if !matches_complete_inspection {
+                    eprintln!(
+                        "  FAIL [{}]: basic inspection does not prove the complete one-frame EOF boundary ({basic_inspected:?} versus {inspected:?})",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+
+            if fmt_name == "webp"
+                && row.inspect_status == "ok"
+                && row.ref_is_animated == Some(false)
+            {
+                let basic_inspected = img::inspect_basic(&data);
+                let matches_full_inspection = match (&basic_inspected, &inspected) {
+                    (Ok(basic), Ok(full)) => {
+                        // A VP8X animation declaration leaves basic inspection's
+                        // frame count incomplete, even when Pillow tolerates a
+                        // malformed animation as a still image.
+                        !basic.frame_count_complete || !full.frame_count_complete || basic == full
+                    }
+                    _ => false,
+                };
+                if !matches_full_inspection {
+                    eprintln!(
+                        "  FAIL [{}]: basic WebP inspection differs from the Pillow-validated inspection ({basic_inspected:?} versus {inspected:?})",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+
+            if fmt_name == "webp"
+                && matches!(
+                    row.asset.as_deref(),
+                    Some("extended_vp8_dimension_mismatch.webp")
+                        | Some("extended_vp8_height_mismatch.webp")
+                        | Some("extended_vp8l_width_mismatch.webp")
+                        | Some("extended_vp8l_height_mismatch.webp")
+                )
+            {
+                let basic_inspected = img::inspect_basic(&data);
+                if !result_matches_oracle(
+                    &basic_inspected,
+                    &row.inspect_status,
+                    row.inspect_error_kind.as_deref(),
+                    expected_format,
+                ) || assert_result_error_contract(
+                    &basic_inspected,
+                    &row.error_contracts,
+                    "inspect",
+                )
+                .is_err()
+                {
+                    eprintln!(
+                        "  FAIL [{}]: basic WebP inspection does not match the Pillow error contract ({basic_inspected:?})",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+
             let decoded = img::decode(&data);
             let decode_operation_status = require_ok(
                 operation_status(&row.operations, "decode"),
                 "decode operation status",
             );
+            let token_decoded = if fmt_name == "tiff" {
+                let token = img::CancellationToken::new();
+                let result = img::decode_with_token(&data, &token);
+                let prefix_result = img::decode_prefix(&data);
+                // The token-aware and prefix APIs share resumable input
+                // semantics. Compare their exact retry minima, then apply the
+                // Pillow parity contract only to terminal results.
+                let token_minimum = result
+                    .as_ref()
+                    .err()
+                    .and_then(img::ImageError::minimum_input);
+                let prefix_minimum = prefix_result
+                    .as_ref()
+                    .err()
+                    .and_then(img::ImageError::minimum_input);
+                let input_status_matches = token_minimum == prefix_minimum;
+                let terminal_contract_matches = input_status_matches
+                    && if token_minimum.is_some() {
+                        true
+                    } else {
+                        result_matches_oracle(
+                            &result,
+                            decode_operation_status,
+                            row.oracle_error_kind.as_deref(),
+                            expected_format,
+                        ) && assert_result_error_contract(&result, &row.error_contracts, "decode")
+                            .is_ok()
+                    };
+                if !terminal_contract_matches
+                    || !result_has_status(&result, decode_operation_status)
+                {
+                    eprintln!(
+                        "  FAIL [{}]: token-aware TIFF decode violates its prefix or terminal contract (token={result:?}, prefix={prefix_result:?})",
+                        row.id,
+                    );
+                    failed += 1;
+                    continue;
+                }
+                Some(result)
+            } else {
+                None
+            };
             let verify_result =
                 img::EncodedImage::new(Arc::<[u8]>::from(data.clone())).and_then(|source| {
                     if source.verification_scope() != expected_verification_scope {
@@ -4470,7 +5437,7 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                             identity: None,
                         });
                     }
-                    let result = source.verify();
+                    let result = source.verify_with_scope(expected_verification_scope);
                     assert!(
                         !source.is_decoded(),
                         "verify must not populate decode cache"
@@ -4503,12 +5470,46 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 failed += 1;
                 continue;
             }
+            // Reuse the multi-page TIFF's exact Pillow verification contract
+            // to check the borrowed source entry point against the same scope.
+            if row.format == "tiff" && row.id == "multi_page" {
+                let view_result = img::EncodedImageView::new(&data).and_then(|source| {
+                    if source.verification_scope() != expected_verification_scope {
+                        return Err(img::ImageError::Parameter {
+                            format: Some(expected_format),
+                            message:
+                                "borrowed source verification capability differs from the manifest"
+                                    .to_owned(),
+                            stage: None,
+                            offset: None,
+                            identity: None,
+                        });
+                    }
+                    source.verify_with_scope(expected_verification_scope)
+                });
+                if !result_matches_oracle(
+                    &view_result,
+                    &row.verify_status,
+                    row.verify_error_kind.as_deref(),
+                    expected_format,
+                ) || !result_has_status(&view_result, verify_operation_status)
+                    || assert_result_error_contract(&view_result, &row.error_contracts, "verify")
+                        .is_err()
+                {
+                    eprintln!(
+                        "  FAIL [{}]: borrowed verify result differs from Pillow ({view_result:?})",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
             if !result_has_status(&decoded, decode_operation_status)
                 || assert_result_error_contract(&decoded, &row.error_contracts, "decode").is_err()
             {
                 eprintln!(
-                    "  FAIL [{}]: decode result violates its operation contract",
-                    row.id
+                    "  FAIL [{}]: decode result violates its operation contract: {decoded:?}",
+                    row.id,
                 );
                 failed += 1;
                 continue;
@@ -4545,6 +5546,43 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     row.oracle_error_kind.as_deref(),
                     expected_format,
                 );
+                let metadata_limited_error =
+                    if let Some(maximum) = row.rust_decode_with_metadata_limit {
+                        let policy = img::DecodePolicy::default().with_max_metadata_bytes(maximum);
+                        let policy_result = img::decode_with_policy(&data, &policy);
+                        result_matches_oracle(
+                            &policy_result,
+                            "error",
+                            row.oracle_error_kind.as_deref(),
+                            expected_format,
+                        ) && assert_result_error_contract(
+                            &policy_result,
+                            &row.error_contracts,
+                            "decode",
+                        )
+                        .is_ok()
+                    } else {
+                        true
+                    };
+                let token_aware_error = if row.rust_decode_with_token {
+                    let token = img::CancellationToken::new();
+                    let token_result = img::decode_with_token(&data, &token);
+                    result_has_status(&token_result, decode_operation_status)
+                        && result_matches_oracle(
+                            &token_result,
+                            "error",
+                            row.oracle_error_kind.as_deref(),
+                            expected_format,
+                        )
+                        && assert_result_error_contract(
+                            &token_result,
+                            &row.error_contracts,
+                            "decode",
+                        )
+                        .is_ok()
+                } else {
+                    true
+                };
                 let source_error_is_stable =
                     match img::EncodedImage::new(Arc::<[u8]>::from(data.clone())) {
                         Err(error) => {
@@ -4578,14 +5616,21 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                                 && !source.is_decoded()
                         }
                     };
-                if structured_error && sequence_rejected && source_error_is_stable {
+                if structured_error
+                    && metadata_limited_error
+                    && token_aware_error
+                    && sequence_rejected
+                    && source_error_is_stable
+                {
                     matrix_success!("  OK   [{}] rejected as Pillow does", row.id);
                     passed += 1;
                 } else {
                     eprintln!(
-                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, sequence_rejected={}, source_error_is_stable={})",
+                        "  FAIL [{}]: invalid input lifecycle mismatch (auto={}, metadata_limited_error={}, token_aware_error={}, sequence_rejected={}, source_error_is_stable={})",
                         row.id,
                         decoded.is_ok(),
+                        metadata_limited_error,
+                        token_aware_error,
                         sequence_rejected,
                         source_error_is_stable
                     );
@@ -4631,8 +5676,24 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     failed += 1;
                     continue;
                 }
-                if let Err(error) = source.verify() {
-                    eprintln!("  FAIL [{}]: encoded source verify failed: {error}", row.id);
+                let source_verify_result = source.verify();
+                if !result_matches_oracle(
+                    &source_verify_result,
+                    &row.verify_status,
+                    row.verify_error_kind.as_deref(),
+                    expected_format,
+                ) || !result_has_status(&source_verify_result, verify_operation_status)
+                    || assert_result_error_contract(
+                        &source_verify_result,
+                        &row.error_contracts,
+                        "verify",
+                    )
+                    .is_err()
+                {
+                    eprintln!(
+                        "  FAIL [{}]: encoded source verify result differs from Pillow ({source_verify_result:?})",
+                        row.id
+                    );
                     failed += 1;
                     continue;
                 }
@@ -4698,6 +5759,95 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 continue;
             }
             let decoded = decoded.into_inner();
+            if row.id == "metadata_software_tag" {
+                // TIFF stores tag 305 as its two little-endian bytes; the
+                // ASCII value includes its trailing NUL in the raw metadata.
+                let expected_metadata = vec![img::OpaqueMetadata {
+                    kind: vec![0x31, 0x01],
+                    data: b"coverage-witness\0".to_vec(),
+                }];
+                if decoded.metadata != expected_metadata {
+                    eprintln!(
+                        "  FAIL [{}]: retained TIFF Software metadata differs from Pillow's tag bytes: {:?}",
+                        row.id, decoded.metadata
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+            let source_color_origin = row
+                .assertion_origins
+                .get("decoded_source_color")
+                .map(String::as_str);
+            if fmt_name == "png" {
+                if let Some(expected_source_color) = row.decoded_source_color.as_ref() {
+                    if let Err(message) = assert_source_color_parity(
+                        expected_source_color,
+                        source_color_origin,
+                        &decoded.source_color,
+                    ) {
+                        eprintln!("  FAIL [{}]: {message}", row.id);
+                        failed += 1;
+                        continue;
+                    }
+                } else if source_color_origin.is_some() {
+                    eprintln!(
+                        "  FAIL [{}]: PNG source-color origin has no asserted value",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            } else if fmt_name == "avif" {
+                if let Some(expected_source_color) = row.decoded_source_color.as_ref() {
+                    if let Err(message) = assert_source_color_parity(
+                        expected_source_color,
+                        source_color_origin,
+                        &decoded.source_color,
+                    ) {
+                        eprintln!("  FAIL [{}]: {message}", row.id);
+                        failed += 1;
+                        continue;
+                    }
+                } else if source_color_origin.is_some() {
+                    eprintln!(
+                        "  FAIL [{}]: AVIF source-color origin has no asserted value",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                let avif_mdcv_origin = row.assertion_origins.get("avif_mdcv").map(String::as_str);
+                if let Some(expected_mdcv) = row.avif_mdcv.as_deref() {
+                    if let Err(message) = assert_avif_mdcv_parity(
+                        expected_mdcv,
+                        avif_mdcv_origin,
+                        &decoded.source_color,
+                    ) {
+                        eprintln!("  FAIL [{}]: {message}", row.id);
+                        failed += 1;
+                        continue;
+                    }
+                } else if avif_mdcv_origin.is_some() {
+                    eprintln!(
+                        "  FAIL [{}]: AVIF mdcv origin has no asserted value",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            } else if row.decoded_source_color.is_some()
+                || source_color_origin.is_some()
+                || row.avif_mdcv.is_some()
+                || row.assertion_origins.contains_key("avif_mdcv")
+            {
+                eprintln!(
+                    "  FAIL [{}]: decoded source-color evidence is invalid for {}",
+                    row.id, fmt_name
+                );
+                failed += 1;
+                continue;
+            }
             if matches!(
                 fmt_name.as_str(),
                 "png" | "jpeg" | "gif" | "bmp" | "webp" | "tiff" | "ico" | "avif"
@@ -4714,6 +5864,28 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 let expected_is_animated = row
                     .ref_is_animated
                     .unwrap_or(row.ref_frame_count.is_some_and(|count| count > 1));
+                if fmt_name == "avif" {
+                    let avif_mdcv_origin =
+                        row.assertion_origins.get("avif_mdcv").map(String::as_str);
+                    if let Some(expected_mdcv) = row.avif_mdcv.as_deref() {
+                        if let Err(message) = assert_avif_mdcv_parity(
+                            expected_mdcv,
+                            avif_mdcv_origin,
+                            &info.source_color,
+                        ) {
+                            eprintln!("  FAIL [{}]: inspect {message}", row.id);
+                            failed += 1;
+                            continue;
+                        }
+                    } else if avif_mdcv_origin.is_some() {
+                        eprintln!(
+                            "  FAIL [{}]: AVIF inspect mdcv origin has no asserted value",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                }
                 if let Err(message) = assert_palette_parity(
                     manifest_dir,
                     row.inspect_palette.as_ref(),
@@ -4796,6 +5968,167 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                 eprintln!("  FAIL [{}]: {message}", row.id);
                 failed += 1;
                 continue;
+            }
+
+            if row.rust_decode_with_token {
+                let token = img::CancellationToken::new();
+                let token_decoded = match img::decode_with_token(&data, &token) {
+                    Ok(decoded) => decoded,
+                    Err(error) => {
+                        eprintln!("  FAIL [{}]: token-aware decode failed: {error}", row.id);
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if token_decoded.format != expected_format {
+                    eprintln!(
+                        "  FAIL [{}]: token-aware format {:?} differs from {:?}",
+                        row.id, token_decoded.format, expected_format
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_pixel_parity(&expected, &token_decoded.content) {
+                    eprintln!("  FAIL [{}]: token-aware decode: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            }
+
+            if let Some(Ok(token_decoded)) = token_decoded.as_ref() {
+                if token_decoded.format != expected_format {
+                    eprintln!(
+                        "  FAIL [{}]: token-aware TIFF format {:?} differs from {:?}",
+                        row.id, token_decoded.format, expected_format
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_pixel_parity(&expected, &token_decoded.content) {
+                    eprintln!("  FAIL [{}]: token-aware TIFF decode: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            }
+
+            if fmt_name == "png" && row.id == "size_1x1" {
+                // This 69-byte fixture has 12 IDAT payload bytes, so its
+                // exact non-pixel metadata extent is 57 bytes.
+                let policy = img::DecodePolicy::default().with_max_metadata_bytes(57);
+                let policy_decoded = match img::decode_with_policy(&data, &policy) {
+                    Ok(decoded) if decoded.format == expected_format => decoded,
+                    Ok(decoded) => {
+                        eprintln!(
+                            "  FAIL [{}]: metadata-policy PNG format {:?} differs from {:?}",
+                            row.id, decoded.format, expected_format
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: exact-metadata-policy PNG decode failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if let Err(message) = assert_pixel_parity(&expected, &policy_decoded.content) {
+                    eprintln!(
+                        "  FAIL [{}]: exact-metadata-policy PNG parity: {message}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+
+            if let Some(maximum) = row.rust_decode_with_metadata_limit {
+                let policy = img::DecodePolicy::default().with_max_metadata_bytes(maximum);
+                let policy_decoded = match img::decode_with_policy(&data, &policy) {
+                    Ok(decoded) if decoded.format == expected_format => decoded,
+                    Ok(decoded) => {
+                        eprintln!(
+                            "  FAIL [{}]: metadata-policy decode format {:?} differs from {:?}",
+                            row.id, decoded.format, expected_format
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: metadata-policy decode with bound {maximum} failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if let Err(message) = assert_pixel_parity(&expected, &policy_decoded.content) {
+                    eprintln!(
+                        "  FAIL [{}]: metadata-policy decode pixel parity: {message}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+
+            if fmt_name == "jpeg" {
+                let token = img::CancellationToken::new();
+                let token_decoded = match img::decode_with_token(&data, &token) {
+                    Ok(decoded) => decoded,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: token-aware JPEG decode failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if token_decoded.format != expected_format {
+                    eprintln!(
+                        "  FAIL [{}]: token-aware JPEG format {:?} differs from {:?}",
+                        row.id, token_decoded.format, expected_format
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_pixel_parity(&expected, &token_decoded.content) {
+                    eprintln!("  FAIL [{}]: token-aware JPEG decode: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            }
+
+            if fmt_name == "png" {
+                let token = img::CancellationToken::new();
+                let token_decoded = match img::decode_with_token(&data, &token) {
+                    Ok(decoded) => decoded,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: token-aware PNG decode failed: {error}",
+                            row.id
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if token_decoded.format != expected_format {
+                    eprintln!(
+                        "  FAIL [{}]: token-aware PNG format {:?} differs from {:?}",
+                        row.id, token_decoded.format, expected_format
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_pixel_parity(&expected, &token_decoded.content) {
+                    eprintln!("  FAIL [{}]: token-aware PNG decode: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
             }
 
             match assert_pixel_parity(&expected, &decoded)
@@ -4933,7 +6266,10 @@ fn test_encode_matrix_avif() {
     dispatch_selected_matrix(|| run_encode_matrix(Some("avif"), None));
 }
 
-#[allow(clippy::arithmetic_side_effects)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "Encode fixture rows fit in u32 counters."
+)]
 fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usize, usize)>) {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let matrix = require_some(
@@ -5121,6 +6457,7 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                             | "sequence_default_image"
                             | "sequence_pixel_layout"
                             | "sequence_loop_count"
+                            | "sequence_total_plays"
                             | "sequence_clear_loop"
                             | "sequence_background_rgba"
                             | "sequence_background_palette"
@@ -5367,6 +6704,18 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         }
                     };
                 }
+                if let Some(total_plays) = row
+                    .params
+                    .get("sequence_total_plays")
+                    .and_then(Value::as_u64)
+                {
+                    decoded.loop_count = img::AnimationLoop::Finite {
+                        total_plays: require_ok(
+                            u32::try_from(total_plays),
+                            "sequence total plays must fit u32",
+                        ),
+                    };
+                }
                 if row
                     .params
                     .get("sequence_clear_loop")
@@ -5437,7 +6786,14 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                     continue;
                 }
             };
-            let legacy_pairs = legacy_encode_options(fmt_name, &row.params);
+            let legacy_pairs = match legacy_encode_options(fmt_name, &row.params) {
+                Ok(options) => options,
+                Err(error) => {
+                    eprintln!("  FAIL [{}]: {error}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            };
             let Some(mut opts) = run_counted_public_encode_call(
                 &mut public_encode_calls,
                 &mut public_encode_panics,
@@ -5616,6 +6972,21 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                             )),
                             "source height must fit u32",
                         );
+                        if row.params.get("valid_l1_storage").and_then(Value::as_bool) == Some(true)
+                        {
+                            assert_eq!(
+                                malformed.mode,
+                                img::ImageMode::L1,
+                                "valid_l1_storage requires a packed L1 source image"
+                            );
+                            let pixel_bytes = require_ok(
+                                malformed
+                                    .mode
+                                    .expected_bytes(malformed.width, malformed.height),
+                                "packed L1 storage length must be representable",
+                            );
+                            malformed.pixels = vec![0; pixel_bytes];
+                        }
                         match run_counted_public_encode_call(
                             &mut public_encode_calls,
                             &mut public_encode_panics,
@@ -5846,6 +7217,177 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                 failed += 1;
                 continue;
             }
+            // Exercise each successful row through the public sink API that
+            // matches its shape; TIFF uses its sequence sink for both one and
+            // multiple pages so both dispatch paths retain Pillow parity.
+            let sink_parity_is_still = if direct_still {
+                None
+            } else if fmt_name == "tiff" {
+                Some(false)
+            } else {
+                Some(decoded.frames.len() == 1)
+            };
+            if let Some(sink_parity_is_still) = sink_parity_is_still {
+                let options = require_ok(opts.as_ref(), "sink parity options");
+                let mut sink = Vec::new();
+                let Some(sink_result) = run_counted_public_encode_call(
+                    &mut public_encode_calls,
+                    &mut public_encode_panics,
+                    &format!("encode:{fmt_name}:{}:sink-parity", row.id),
+                    || {
+                        if sink_parity_is_still {
+                            img::encode_to_sink(
+                                require_some(
+                                    decoded.first_image(),
+                                    "encoded sequence must have a first frame",
+                                ),
+                                format,
+                                options,
+                                &mut sink,
+                            )
+                        } else {
+                            img::encode_sequence_to_sink(decoded, format, options, &mut sink)
+                        }
+                    },
+                ) else {
+                    failed += 1;
+                    continue;
+                };
+                let written = match sink_result {
+                    Ok(written) => written,
+                    Err(error) => {
+                        eprintln!("  FAIL [{}]: sink encode failed: {error}", row.id);
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if written != sink.len() {
+                    eprintln!(
+                        "  FAIL [{}]: sink reported {written} bytes but wrote {}",
+                        row.id,
+                        sink.len()
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &sink) {
+                    eprintln!("  FAIL [{}]: sink and Pillow reference: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_encoded_byte_parity(&encoded, &sink) {
+                    eprintln!("  FAIL [{}]: regular and sink encoders: {message}", row.id);
+                    failed += 1;
+                    continue;
+                }
+            }
+            let token_parity_requested = row
+                .params
+                .get("rust_encode_with_token")
+                .and_then(Value::as_bool)
+                == Some(true);
+            if fmt_name == "jpeg" || token_parity_requested {
+                let image = require_some(
+                    decoded.first_image(),
+                    "JPEG parity row must have a first image",
+                );
+                let options = require_ok(opts.as_ref(), "JPEG parity row must have typed options");
+                let token = img::CancellationToken::new();
+                let Some(token_encoded) = run_counted_public_encode_call(
+                    &mut public_encode_calls,
+                    &mut public_encode_panics,
+                    &format!("encode:{fmt_name}:{}:token-parity", row.id),
+                    || img::encode_with_token(image, format, options, &token),
+                ) else {
+                    failed += 1;
+                    continue;
+                };
+                let token_encoded = match token_encoded {
+                    Ok(bytes) => bytes,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: token-aware {fmt_name} encode failed: {error}",
+                            row.id,
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &token_encoded)
+                {
+                    eprintln!(
+                        "  FAIL [{}]: token-aware {fmt_name} encode: {message}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_encoded_byte_parity(&encoded, &token_encoded) {
+                    eprintln!(
+                        "  FAIL [{}]: ordinary/token {fmt_name} encode: {message}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
+            let sequence_token_parity_requested = row
+                .params
+                .get("rust_encode_sequence_with_token")
+                .and_then(Value::as_bool)
+                == Some(true);
+            if sequence_token_parity_requested {
+                if decoded.frames.len() < 2 {
+                    eprintln!(
+                        "  FAIL [{}]: sequence-token parity requires multiple decoded frames",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                let options = require_ok(
+                    opts.as_ref(),
+                    "sequence-token parity row must have typed options",
+                );
+                let token = img::CancellationToken::new();
+                let Some(token_encoded) = run_counted_public_encode_call(
+                    &mut public_encode_calls,
+                    &mut public_encode_panics,
+                    &format!("encode:{fmt_name}:{}:sequence-token-parity", row.id),
+                    || img::encode_sequence_with_token(decoded, format, options, &token),
+                ) else {
+                    failed += 1;
+                    continue;
+                };
+                let token_encoded = match token_encoded {
+                    Ok(bytes) => bytes,
+                    Err(error) => {
+                        eprintln!(
+                            "  FAIL [{}]: token-aware {fmt_name} sequence encode failed: {error}",
+                            row.id,
+                        );
+                        failed += 1;
+                        continue;
+                    }
+                };
+                if let Err(message) = assert_encoded_byte_parity(&expected_encoded, &token_encoded)
+                {
+                    eprintln!(
+                        "  FAIL [{}]: token-aware {fmt_name} sequence encode: {message}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+                if let Err(message) = assert_encoded_byte_parity(&encoded, &token_encoded) {
+                    eprintln!(
+                        "  FAIL [{}]: ordinary/token {fmt_name} sequence encoders: {message}",
+                        row.id
+                    );
+                    failed += 1;
+                    continue;
+                }
+            }
             if let Some(expected_sequence) = &row.sequence {
                 match img::decode_sequence(&encoded) {
                     Ok(decoded) => {
@@ -5916,6 +7458,40 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
                         }
                         match assert_pixel_parity(&expected, &redecoded) {
                             Ok(()) => {
+                                if fmt_name == "jpeg" {
+                                    let token = img::CancellationToken::new();
+                                    let token_redecoded = match img::decode_with_token(
+                                        &encoded, &token,
+                                    ) {
+                                        Ok(decoded) if decoded.format == format => decoded,
+                                        Ok(decoded) => {
+                                            eprintln!(
+                                                "  FAIL [{}]: token-aware JPEG format {:?} differs from {:?}",
+                                                row.id, decoded.format, format
+                                            );
+                                            failed += 1;
+                                            continue;
+                                        }
+                                        Err(error) => {
+                                            eprintln!(
+                                                "  FAIL [{}]: token-aware JPEG re-decode failed: {error}",
+                                                row.id
+                                            );
+                                            failed += 1;
+                                            continue;
+                                        }
+                                    };
+                                    if let Err(message) =
+                                        assert_pixel_parity(&expected, &token_redecoded.content)
+                                    {
+                                        eprintln!(
+                                            "  FAIL [{}]: token-aware JPEG re-decode: {message}",
+                                            row.id
+                                        );
+                                        failed += 1;
+                                        continue;
+                                    }
+                                }
                                 matrix_success!(
                                     "  OK   [{}] {}B, re-decoded {}x{} pixel-parity (mode={})",
                                     row.id,
@@ -5961,15 +7537,6 @@ fn run_encode_matrix(format_filter: Option<&str>, active_row_range: Option<(usiz
     if failed > 0 {
         panic!("{failed} encode test(s) failed");
     }
-}
-
-#[cfg(coverage)]
-#[test]
-fn test_internal_coverage_hooks() {
-    if matrix_selection_is_filtered() {
-        return;
-    }
-    img::__coverage_exercise_private_branches();
 }
 
 #[cfg(coverage)]
@@ -6070,54 +7637,6 @@ fn avif_reconstruction_fixture_is_planned(fixture: &str) -> bool {
                 .iter()
                 .any(|row| row.status == "planned" && row.asset.as_deref() == Some(fixture))
         })
-}
-
-#[cfg(coverage)]
-#[test]
-fn test_partitioned_square_444_fixtures_materialize() {
-    if matrix_selection_is_filtered() {
-        return;
-    }
-    let fixtures = [
-        "partitioned_square_12x12_g96_direct_tokens.avif",
-        "partitioned_square_12x12_midpoint_g96_ac.avif",
-        "partitioned_square_12x12_top_left_luma_eob4.avif",
-        "partitioned_square_12x12_top_left_luma_eob12_control.avif",
-        "partitioned_square_12x12_luma_eob1.avif",
-        "partitioned_square_12x12_luma_eob2_control.avif",
-        "partitioned_square_12x12_luma_eob4_control.avif",
-        "partitioned_square_12x12_luma_eob6_control.avif",
-        "partitioned_square_12x12_luma_eob9_control.avif",
-        "partitioned_square_12x12_luma_eob10_control.avif",
-        "partitioned_square_12x12_luma_eob12_control.avif",
-        "partitioned_square_12x12_luma_eob15_control.avif",
-    ];
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/input/images/avif");
-    for fixture in fixtures {
-        let input = require_ok(fs::read(root.join(fixture)), "partitioned-square fixture");
-        let actual = require_ok(
-            img::__coverage_av1_reconstruction(&input),
-            "partitioned-square reconstruction",
-        );
-        assert!(
-            actual.is_some(),
-            "partitioned 12x12 4:4:4 fixture must materialize: {fixture}"
-        );
-    }
-}
-
-#[cfg(coverage)]
-fn assert_av1_reconstruction_candidate(fixture: &str) {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/input/images/avif");
-    let input = require_ok(fs::read(root.join(fixture)), "AV1 reconstruction candidate");
-    let actual = require_ok(
-        img::__coverage_av1_reconstruction(&input),
-        "AV1 reconstruction candidate reconstruction",
-    );
-    assert!(
-        actual.is_some(),
-        "AV1 reconstruction candidate must materialize: {fixture}"
-    );
 }
 
 #[cfg(coverage)]
@@ -6683,20 +8202,6 @@ fn assert_i444_square8_case(
             "AV1 I444 Square8 must not claim a nonzero palette: {}",
             case.fixture
         );
-    }
-}
-
-#[cfg(coverage)]
-#[test]
-fn test_av1_reconstruction_candidates_materialize() {
-    if matrix_selection_is_filtered() {
-        return;
-    }
-    for candidate in 1..=10 {
-        assert_av1_reconstruction_candidate(&format!(
-            "coverage_entropy_mosaic_{candidate:02}.avif"
-        ));
-        assert_av1_reconstruction_candidate(&format!("coverage_i444_square8_{candidate:02}.avif"));
     }
 }
 
@@ -13015,6 +14520,12 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
 
 // ── Manifest Coverage ────────────────────────────────────────────────────
 
+#[cfg(coverage)]
+#[test]
+fn test_fault_contract_matrix() {
+    dispatch_selected_matrix(run_fault_contract_matrix);
+}
+
 #[test]
 fn test_coverage_matrix() {
     dispatch_selected_matrix(|| {
@@ -13064,4 +14575,107 @@ fn ci_probe_public_hdr_parity() {
         (200, 200, img::ImageMode::Rgb8)
     );
     assert_eq!(actual.content.pixels, expected);
+}
+
+fn assert_frame_request_parity(row: &DecodeRow, data: &[u8]) -> Result<(), String> {
+    let request = row
+        .frame_request
+        .as_ref()
+        .ok_or("frame-request contract is missing")?;
+    let reference = row
+        .frame_request_result
+        .as_ref()
+        .ok_or("Pillow frame-request reference is missing")?;
+    if request.expected_status != "error" || reference.status != request.expected_status {
+        return Err(format!(
+            "frame request {} status is {:?}, expected {:?}",
+            request.index, reference.status, request.expected_status
+        ));
+    }
+    if reference.index != request.index
+        || reference.error_type.as_deref() != Some(request.pillow_error_type.as_str())
+        || reference.error_message.as_deref().is_none_or(str::is_empty)
+    {
+        return Err(format!(
+            "Pillow frame request {} lacks its declared error evidence: {:?}",
+            request.index, reference.error_type
+        ));
+    }
+    let contract = row
+        .error_contracts
+        .get("decode_frame")
+        .ok_or("decode_frame error contract is missing")?;
+    if contract.rust_kind != request.rust_error_kind {
+        return Err(format!(
+            "decode_frame Rust error kind {:?} differs from the frame request {:?}",
+            contract.rust_kind, request.rust_error_kind
+        ));
+    }
+    let expected_format = format_from_name(&row.format)
+        .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+    let owned = img::EncodedImage::new(data.to_vec())
+        .map_err(|error| format!("owned frame-request source construction failed: {error}"))?;
+    let view = img::EncodedImageView::new(data)
+        .map_err(|error| format!("borrowed frame-request source construction failed: {error}"))?;
+    if owned.format() != expected_format || view.format() != expected_format {
+        return Err("frame-request source format differs from the manifest".to_owned());
+    }
+    let owned_result = owned.decode_frame(request.index);
+    assert_result_error_contract(&owned_result, &row.error_contracts, "decode_frame")?;
+    let view_result = view.decode_frame(request.index);
+    assert_result_error_contract(&view_result, &row.error_contracts, "decode_frame")?;
+    Ok(())
+}
+
+fn assert_sequence_parity(manifest_dir: &Path, row: &DecodeRow, data: &[u8]) -> Result<(), String> {
+    assert_sequence_base(manifest_dir, row, data)?;
+    if row.frame_request.is_some() {
+        assert_frame_request_parity(row, data)?;
+    }
+    if row.format != "png" || row.id != "apng_animated" {
+        return Ok(());
+    }
+
+    let expected = row
+        .sequence
+        .as_ref()
+        .ok_or("animated APNG row must retain exact frame references")?;
+    let expected_format = format_from_name(&row.format)
+        .ok_or_else(|| format!("unsupported manifest format {}", row.format))?;
+    let exact_limit = img::DecodePolicy::default().with_max_metadata_bytes(169);
+    let bounded = img::decode_sequence_with_policy(data, &exact_limit)
+        .map_err(|error| format!("exact-metadata-policy APNG decode failed: {error}"))?;
+    if bounded.format != expected_format {
+        return Err(format!(
+            "metadata-policy APNG format mismatch: actual {:?}, expected {expected_format:?}",
+            bounded.format
+        ));
+    }
+    assert_sequence_reference_parity(
+        manifest_dir,
+        &row.id,
+        expected,
+        &bounded.content,
+        expected_format,
+        data,
+    )
+    .map_err(|message| format!("exact-metadata-policy APNG parity: {message}"))?;
+
+    let below_limit = img::DecodePolicy::default().with_max_metadata_bytes(168);
+    match img::decode_sequence_with_policy(data, &below_limit) {
+        Err(img::ImageError::LimitExceeded {
+            format: Some(img::ImageFormat::Png),
+            operation: img::CodecOperation::SequenceDecode,
+            resource: img::ResourceLimit::MetadataBytes,
+            maximum: 168,
+            observed: 169,
+        }) => {}
+        Ok(_) => return Err("APNG decode accepted a 168-byte metadata limit".to_owned()),
+        Err(error) => {
+            return Err(format!(
+                "APNG metadata limit returned the wrong structured error: {error:?}"
+            ));
+        }
+    }
+    Ok(())
 }

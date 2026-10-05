@@ -183,13 +183,16 @@ fn inspect_icon_dib(data: &[u8]) -> CodecResult<ImageInfo> {
     let payload = need_slice(data, 0, required, "truncated ICO bitmap payload")?;
     let pixels = &payload[pixel_start..];
     if bits == 4 {
-        super::decode::validate_4bit_palette_references(
-            pixels,
-            width,
-            height,
-            padded_row,
-            palette_entries,
-        )?;
+        let palette = &payload[40..pixel_start];
+        if matches!(
+            super::decode::ico_4bit_palette_interpretation(palette, palette_entries),
+            super::decode::Ico4BitPaletteInterpretation::LuminanceBytes
+        ) && bounded_usize(width) > padded_row
+        {
+            return Err(CodecError::Malformed(
+                "4-bit grayscale ICO row exceeds its luminance stride".to_owned(),
+            ));
+        }
     } else if bits == 1 {
         super::decode::validate_1bit_palette_references(
             pixels,
@@ -225,23 +228,4 @@ fn bounded_usize(value: u32) -> usize {
     {
         usize::from_le_bytes(value.to_le_bytes())
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let _ = inspect(b"");
-    for header in [
-        [1, 0, 1, 0, 1, 0],
-        [0, 0, 0, 0, 1, 0],
-        [0, 0, 1, 0, 0, 0],
-        [0, 0, 1, 0, 0, 1],
-    ] {
-        let _ = inspect(&header);
-    }
-    // A complete ICO directory entry whose declared PNG payload is itself
-    // truncated proves that nested incremental status is terminalized.
-    let mut truncated_png_ico = vec![0, 0, 1, 0, 1, 0];
-    truncated_png_ico.extend_from_slice(&[0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 22, 0, 0, 0]);
-    truncated_png_ico.extend_from_slice(b"\x89PNG\r");
-    let _ = inspect(&truncated_png_ico);
 }

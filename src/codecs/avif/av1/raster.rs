@@ -47,6 +47,8 @@ pub(in crate::codecs::avif) struct FrameCanvas {
 /// claiming completeness merely because a color-shaped scratch canvas was
 /// filled.
 pub(super) struct MonochromeFrameCanvas {
+    visible_width: usize,
+    visible_height: usize,
     width: usize,
     height: usize,
     samples: Vec<u16>,
@@ -55,14 +57,36 @@ pub(super) struct MonochromeFrameCanvas {
 
 impl MonochromeFrameCanvas {
     pub(super) fn new(width: u32, height: u32) -> Av1Result<Self> {
-        let width = usize::try_from(width).map_err(|_| malformed("alpha width exceeds usize"))?;
-        let height =
-            usize::try_from(height).map_err(|_| malformed("alpha height exceeds usize"))?;
-        if width == 0 || height == 0 {
+        Self::new_padded(width, height, width, height)
+    }
+
+    pub(super) fn new_padded(
+        visible_width: u32,
+        visible_height: u32,
+        coded_width: u32,
+        coded_height: u32,
+    ) -> Av1Result<Self> {
+        let visible_width = usize::try_from(visible_width)
+            .map_err(|_| malformed("visible alpha width exceeds usize"))?;
+        let visible_height = usize::try_from(visible_height)
+            .map_err(|_| malformed("visible alpha height exceeds usize"))?;
+        let width = usize::try_from(coded_width)
+            .map_err(|_| malformed("coded alpha width exceeds usize"))?;
+        let height = usize::try_from(coded_height)
+            .map_err(|_| malformed("coded alpha height exceeds usize"))?;
+        if visible_width == 0
+            || visible_height == 0
+            || width == 0
+            || height == 0
+            || visible_width > width
+            || visible_height > height
+        {
             return Err(malformed("alpha canvas has an empty extent"));
         }
         let dimensions = (width, height);
         Ok(Self {
+            visible_width,
+            visible_height,
             width,
             height,
             samples: allocate_zeroed(dimensions, "alpha canvas")?,
@@ -234,8 +258,20 @@ impl MonochromeFrameCanvas {
     }
 
     pub(super) fn finish(self, sample_depth: SampleDepth) -> Av1Result<ReconstructedPlane> {
-        if self.written.iter().any(|written| !written) {
-            return Err(malformed("alpha canvas is missing reconstructed samples"));
+        for row in 0..self.visible_height {
+            let start = row
+                .checked_mul(self.width)
+                .ok_or_else(|| malformed("alpha canvas row offset overflows"))?;
+            let end = start
+                .checked_add(self.visible_width)
+                .ok_or_else(|| malformed("alpha canvas row end overflows"))?;
+            if self
+                .written
+                .get(start..end)
+                .is_none_or(|coverage| coverage.iter().any(|written| !written))
+            {
+                return Err(malformed("alpha canvas is missing reconstructed samples"));
+            }
         }
         if self
             .samples
@@ -244,9 +280,11 @@ impl MonochromeFrameCanvas {
         {
             return Err(malformed("alpha canvas contains an out-of-range sample"));
         }
-        Ok(ReconstructedPlane {
-            samples: self.samples,
-        })
+        crop_canvas_plane(
+            self.samples,
+            (self.width, self.height),
+            (self.visible_width, self.visible_height),
+        )
     }
 
     /// Run the shared luma-only CDEF kernel over an assembled monochrome
@@ -262,8 +300,8 @@ impl MonochromeFrameCanvas {
         sample_depth: SampleDepth,
     ) -> Av1Result<ReconstructedPlane> {
         let canvas = FrameCanvas {
-            visible_width: self.width,
-            visible_height: self.height,
+            visible_width: self.visible_width,
+            visible_height: self.visible_height,
             width: self.width,
             height: self.height,
             subsampling_x: false,
@@ -1389,6 +1427,11 @@ impl FrameCanvas {
         self.finish_after_cdef(None, None)
     }
 
+    /// Finish a complete coded canvas without cropping its padded samples.
+    pub(super) fn finish_preserving_padding(self) -> Av1Result<[ReconstructedPlane; 3]> {
+        self.finish_with_filters_preserving_padding(None, &[], None, None, None, &[], &[])
+    }
+
     /// Finish a luma-only canvas without requiring dummy chroma coverage.
     ///
     /// Monochrome AV1 frames still travel through the shared block walker so
@@ -1417,6 +1460,28 @@ impl FrameCanvas {
         }
         let [luma, _, _] = self.planes;
         crop_canvas_plane(luma, coded_dimensions, visible_dimensions)
+    }
+
+    /// Preserve the coded monochrome samples until frame-wide CDEF has run.
+    /// A final partial 8x8 block can extend beyond the visible crop, and those
+    /// reconstructed samples are inputs to the normative filter.
+    pub(super) fn finish_monochrome_coded(
+        self,
+        sample_depth: SampleDepth,
+    ) -> Av1Result<ReconstructedPlane> {
+        if self.written[0].iter().any(|written| !written) {
+            return Err(malformed(
+                "monochrome canvas is missing reconstructed coded samples",
+            ));
+        }
+        if self.planes[0]
+            .iter()
+            .any(|&sample| sample_depth.validate(sample).is_none())
+        {
+            return Err(malformed("monochrome canvas sample exceeds bit depth"));
+        }
+        let [luma, _, _] = self.planes;
+        Ok(ReconstructedPlane { samples: luma })
     }
 
     /// Finish a monochrome canvas after applying luma-only deblocking. The
@@ -1776,12 +1841,18 @@ impl FrameCanvas {
         )
     }
 
+    /// Finish the canvas while retaining its complete coded plane extents.
+    ///
+    /// AV1 super-resolution scales from the visible coded width but filters
+    /// against reconstructed samples through the padded block boundary. This
+    /// path is only used by the single-tile super-resolution pipeline; normal
+    /// frame assembly continues to publish the visible crop.
     #[expect(
         clippy::too_many_arguments,
-        reason = "filter application needs the independent loop-filter, CDEF, and block metadata inputs"
+        reason = "the canvas filter API keeps independent filter maps explicit"
     )]
-    pub(super) fn finish_with_filters(
-        mut self,
+    pub(super) fn finish_with_filters_preserving_padding(
+        self,
         loop_parameters: Option<filter::Parameters>,
         filter_blocks: &[filter::Block],
         luma_parameters: Option<CdefParameters>,
@@ -1790,6 +1861,59 @@ impl FrameCanvas {
         cdef_indices: &[Option<usize>],
         cdef_active: &[bool],
     ) -> Av1Result<[ReconstructedPlane; 3]> {
+        self.finish_with_filters_inner(
+            loop_parameters,
+            filter_blocks,
+            luma_parameters,
+            chroma_parameters,
+            frame_parameters,
+            cdef_indices,
+            cdef_active,
+            true,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "filter application needs the independent loop-filter, CDEF, and block metadata inputs"
+    )]
+    pub(super) fn finish_with_filters(
+        self,
+        loop_parameters: Option<filter::Parameters>,
+        filter_blocks: &[filter::Block],
+        luma_parameters: Option<CdefParameters>,
+        chroma_parameters: Option<CdefParameters>,
+        frame_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+    ) -> Av1Result<[ReconstructedPlane; 3]> {
+        self.finish_with_filters_inner(
+            loop_parameters,
+            filter_blocks,
+            luma_parameters,
+            chroma_parameters,
+            frame_parameters,
+            cdef_indices,
+            cdef_active,
+            false,
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "filter application needs the independent filter inputs and output extent"
+    )]
+    fn finish_with_filters_inner(
+        mut self,
+        loop_parameters: Option<filter::Parameters>,
+        filter_blocks: &[filter::Block],
+        luma_parameters: Option<CdefParameters>,
+        chroma_parameters: Option<CdefParameters>,
+        frame_parameters: Option<cdef::FrameParameters>,
+        cdef_indices: &[Option<usize>],
+        cdef_active: &[bool],
+        preserve_padding: bool,
+    ) -> Av1Result<[ReconstructedPlane; 3]> {
         let visible_dimensions = self.visible_plane_dimensions();
         let filters_present = loop_parameters.is_some()
             || frame_parameters.is_some()
@@ -1797,7 +1921,7 @@ impl FrameCanvas {
             || chroma_parameters.is_some();
         for (plane, &visible_dimensions) in visible_dimensions.iter().enumerate() {
             let coded_dimensions = self.plane_dimensions(plane);
-            let (required_width, required_height) = if filters_present {
+            let (required_width, required_height) = if filters_present || preserve_padding {
                 coded_dimensions
             } else {
                 visible_dimensions
@@ -1849,6 +1973,9 @@ impl FrameCanvas {
             self.plane_dimensions(1),
             self.plane_dimensions(2),
         ];
+        if preserve_padding {
+            return Ok(self.planes.map(|samples| ReconstructedPlane { samples }));
+        }
         let [luma, chroma_u, chroma_v] = self.planes;
         Ok([
             crop_canvas_plane(luma, coded_dimensions[0], visible_dimensions[0])?,
@@ -2345,128 +2472,6 @@ fn allocate_zeroed<T: Clone + Default>(
         .map_err(|_| CodecError::Dimensions(format!("unable to allocate {label}")))?;
     values.resize_with(length, T::default);
     Ok(values)
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(super) fn __coverage_exercise_private_branches() {
-    let _ = FrameCanvas::new(0, 4, false, false);
-    let _ = FrameCanvas::new(4, 0, false, false);
-    let _ = allocate_zeroed::<u8>((usize::MAX, 2), "overflow");
-    assert!(rectangles_overlap((0, 0), (2, 2), (1, 1), (2, 2)));
-    assert!(!rectangles_overlap((0, 0), (1, 1), (1, 1), (2, 2)));
-
-    let plane = |width: usize, height: usize, value: u16| ReconstructedPlane {
-        samples: vec![value; width.saturating_mul(height)],
-    };
-    let valid = [plane(2, 2, 1), plane(1, 1, 2), plane(1, 1, 3)];
-
-    let mut empty =
-        crate::coverage_support::require_ok(FrameCanvas::new(4, 4, true, true), "coverage canvas");
-    let empty_cell = CellPlacement {
-        source_width: 0,
-        source_height: 2,
-        visible_width: 0,
-        visible_height: 2,
-        planes: &valid,
-        x: 0,
-        y: 0,
-    };
-    let _ = empty.place_cells(std::slice::from_ref(&empty_cell));
-
-    let too_visible = CellPlacement {
-        source_width: 2,
-        source_height: 2,
-        visible_width: 3,
-        visible_height: 2,
-        planes: &valid,
-        x: 0,
-        y: 0,
-    };
-    let _ = empty.place_cells(std::slice::from_ref(&too_visible));
-
-    let misaligned_x = CellPlacement {
-        source_width: 2,
-        source_height: 2,
-        visible_width: 2,
-        visible_height: 2,
-        planes: &valid,
-        x: 1,
-        y: 0,
-    };
-    let _ = empty.place_cells(std::slice::from_ref(&misaligned_x));
-    let misaligned_y = CellPlacement {
-        y: 1,
-        ..misaligned_x
-    };
-    let _ = empty.place_cells(std::slice::from_ref(&misaligned_y));
-
-    let bad_luma = [plane(1, 1, 1), plane(1, 1, 2), plane(1, 1, 3)];
-    let bad_luma_cell = CellPlacement {
-        source_width: 2,
-        source_height: 2,
-        visible_width: 2,
-        visible_height: 2,
-        planes: &bad_luma,
-        x: 0,
-        y: 0,
-    };
-    let _ = empty.place_cells(std::slice::from_ref(&bad_luma_cell));
-
-    let bad_chroma = [plane(2, 2, 1), plane(2, 2, 2), plane(1, 1, 3)];
-    let bad_chroma_cell = CellPlacement {
-        planes: &bad_chroma,
-        ..bad_luma_cell
-    };
-    let _ = empty.place_cells(std::slice::from_ref(&bad_chroma_cell));
-
-    let outside = CellPlacement {
-        planes: &valid,
-        x: 4,
-        y: 0,
-        ..left_cell(2, 2, &valid)
-    };
-    let _ = empty.place_cells(std::slice::from_ref(&outside));
-
-    let left = left_cell(2, 2, &valid);
-    let overlapping = CellPlacement { x: 1, ..left };
-    let _ = empty.place_cells(&[left, overlapping]);
-
-    let complete_left_planes = [plane(2, 2, 1), plane(2, 2, 2), plane(2, 2, 3)];
-    let complete_right_planes = [plane(2, 2, 4), plane(2, 2, 5), plane(2, 2, 6)];
-    let left = CellPlacement {
-        planes: &complete_left_planes,
-        ..left_cell(2, 2, &complete_left_planes)
-    };
-    let right = CellPlacement {
-        planes: &complete_right_planes,
-        x: 2,
-        ..left_cell(2, 2, &complete_right_planes)
-    };
-    let mut complete = crate::coverage_support::require_ok(
-        FrameCanvas::new(4, 2, false, false),
-        "coverage canvas",
-    );
-    let _ = complete.place_cells(&[left, right]);
-    let _ = complete.finish();
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-fn left_cell<'a>(
-    width: u32,
-    height: u32,
-    planes: &'a [ReconstructedPlane; 3],
-) -> CellPlacement<'a> {
-    CellPlacement {
-        source_width: width,
-        source_height: height,
-        visible_width: width,
-        visible_height: height,
-        planes,
-        x: 0,
-        y: 0,
-    }
 }
 
 #[cfg(test)]

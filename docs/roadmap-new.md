@@ -9,9 +9,12 @@ is not evidence that a later fix failed. No entry is silently removed here.
 ## Current pure-Rust AVIF cutover
 
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
-Its recorded baseline test counts are 45/45 matrix tests and 66/66 feature-gate tests.
+The latest complete all-feature run passed 57/57 matrix tests and 68/68
+feature-gate tests, along with all 483 AVIF decode rows and all 20 target-only
+fault contracts. The LLVM percentages below remain the historical measured
+baseline; the latest local full report is recorded in [Evidence](EVIDENCE.md).
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The coverage-origin verifier passes for 543 exact `cfg(coverage)` guards across 89 files.
+The origin verifier passes for 135 exact `cfg(coverage)` guards across 20 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -27,9 +30,9 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 343 rows total, 343 active, 0 explicit planned gaps.
+- AVIF decode/inspect/verify: 483 rows total, 483 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 1,567 rows total, 1170 active decode rows, 365 active encode rows, 0 planned decode rows, and 32 planned encode rows.
+- Whole matrix: 1,995 rows total, 1532 active decode rows, 431 active encode rows, 0 planned decode rows, and 32 planned encode rows. The twenty typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 
@@ -42,7 +45,7 @@ native runtime path or count a planned row as parity. The remaining planned work
 
 ## Executed AVIF decode evidence — 2026-09-20
 
-All 343 AVIF matrix rows now execute exact operation-specific comparisons.
+All 351 AVIF reference-producing rows now execute exact operation-specific comparisons.
 The previously planned HDR, high-depth and animation inputs pass pinned Pillow
 output checks. Independent native witnesses also pass for every displayed frame,
 frame timing and loop metadata of the two larger animations and the small
@@ -213,12 +216,12 @@ roadmap/provenance checks pass; no Rust runtime result is inferred from them.
 ## AV1 encoder entropy oracle
 
 The [native encoder corpus](../tests/fixtures/outputs/av1_encoder/index.json)
-now retains ten complete standalone libavif/libaom files and twelve uniquely
+now retains eleven complete standalone libavif/libaom files and thirteen uniquely
 bound tile-writer traces. It covers monochrome and all three chroma layouts,
 alpha, multiple tiles, lossless output and 8/10/12-bit samples. Instrumented
 and original encodes repeat exactly; unmodified native entropy replay matches
 logical state, adaptive CDFs and final bytes. Pinned Pillow/dav1d supplies
-decoded pixels. The 76 hashed artifacts total 1,468,557 bytes, including
+decoded pixels. The 83 hashed artifacts total 1,618,610 bytes, including
 losslessly compressed traces with expanded hashes.
 
 Committed tile evidence includes real normalization flushes and two-byte
@@ -228,7 +231,9 @@ termination. These files are not Pillow `save()` parity evidence. The next
 implementation must derive entropy contexts from semantic block/transform
 decisions; trace events remain fixture inputs, never a production token log.
 Rust entropy serialization, tile syntax, analysis and compression remain open.
-All 32 encode rows stay planned and behavioral/coverage execution stays deferred.
+The 10-bit I420 sample also backs an active [public AVIF decoder parity row](../tests/fixtures/coverage_matrix.json), which does not change AV1
+encoder status. All 32 encode rows stay planned; Rust AV1 encoder behavior and
+managed encoder coverage remain deferred.
 
 ## Complete open-task inventory
 
@@ -2099,7 +2104,7 @@ Next recorded action: Replace public catch-all options, sort any retained opaque
 
 Status at ledger review: **open**.
 
-Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. The WebP VP8L map now records 98 named Pillow witnesses, 84 successful structural checks, 40 malformed parser checks, 16 witnessed properties, 79 distinct active WebP rows, and the exact boundary of what Pillow proves.
+Corpus growth is counted in rows, not unique parser states/properties; many rows may exercise the same structural class. The WebP VP8L map now records 98 named Pillow witnesses, 84 successful structural checks, 41 malformed parser checks, 16 witnessed properties, 79 distinct active WebP rows, and the exact boundary of what Pillow proves.
 
 Next recorded action: Extend the same map discipline to each codec and replace candidate-only VP8L entries with independently checked structural witnesses before claiming state coverage.
 

@@ -40,14 +40,28 @@ AVIF_OPTIONS = ["-DCMAKE_BUILD_TYPE=Release", "-DBUILD_SHARED_LIBS=OFF",
                 "-DAVIF_CODEC_AOM=SYSTEM", "-DAVIF_CODEC_AOM_DECODE=OFF",
                 "-DAVIF_CODEC_DAV1D=OFF", "-DAVIF_LIBYUV=OFF",
                 "-DAVIF_BUILD_APPS=OFF", "-DAVIF_BUILD_TESTS=OFF"]
-# name, width, height, depth, AVIF pixel format, alpha, quality, speed, column log2
+# name, width, height, depth, AVIF pixel format, alpha, quality, speed,
+# column log2, optional full-range flag (defaults to full range), and optional
+# CICP triple (defaults to BT.709/sRGB/BT.601)
 CASES = [
     ("mono_tiny", 2, 3, 8, 4, 0, 75, 6, 0),
     ("mono_lossless", 8, 8, 8, 4, 0, 100, 6, 0),
+    ("mono_limited_lossless_16x16", 16, 16, 8, 4, 0, 100, 6, 0, 0),
+    ("mono_limited_alpha_lossless_16x16", 16, 16, 8, 4, 1, 100, 6, 0, 0),
+    ("mono_limited_lossless_10bit_16x16", 16, 16, 10, 4, 0, 100, 6, 0, 0),
+    ("mono_limited_lossless_12bit_16x16", 16, 16, 12, 4, 0, 100, 6, 0, 0),
+    ("mono_limited_alpha_lossless_10bit_16x16", 16, 16, 10, 4, 1, 100, 6, 0, 0),
+    ("mono_limited_alpha_lossless_12bit_16x16", 16, 16, 12, 4, 1, 100, 6, 0, 0),
+    ("mono_limited_bt2020_pq_lossless_16x16", 16, 16, 8, 4, 0, 100, 6, 0,
+     0, 9, 16, 9),
     ("yuv420", 17, 13, 8, 3, 0, 75, 6, 0),
     ("yuv422", 17, 13, 8, 2, 0, 75, 6, 0),
     ("yuv444", 8, 8, 8, 1, 0, 75, 6, 0),
     ("high10_420", 9, 7, 10, 3, 0, 75, 6, 0),
+    ("high10_420_16x16", 16, 16, 10, 3, 0, 75, 6, 0),
+    ("high10_420_alpha_lossless_16x16", 16, 16, 10, 3, 1, 100, 6, 0),
+    ("high10_422_alpha_lossless_16x16", 16, 16, 10, 2, 1, 100, 6, 0),
+    ("high10_444_alpha_16x16", 16, 16, 10, 1, 1, 75, 6, 0),
     ("high12_422", 9, 7, 12, 2, 0, 75, 6, 0),
     ("high12_444", 9, 7, 12, 1, 0, 75, 6, 0),
     ("alpha", 8, 8, 8, 1, 1, 75, 6, 0),
@@ -215,6 +229,7 @@ def replay(binaries, directory, records):
 
 def planes(case):
     name, width, height, depth, fmt, alpha, *_ = case
+    full_range = case[9] if len(case) > 9 else 1
     descriptions, output = [], bytearray()
     for channel in range(4):
         if (channel in (1, 2) and fmt == 4) or (channel == 3 and not alpha): continue
@@ -226,6 +241,8 @@ def planes(case):
                 # Two flat but distinct tiles avoid enormous per-symbol buffer histories.
                 value = (47 if x < 64 else 193) if name == "two_tiles" else (
                     29 + x * 37 + y * 61 + channel * 73 + x * y * 7) % 256
+                if not full_range and fmt == 4 and channel == 0:
+                    value = 16 + value * 219 // 255
                 value = (value << (depth - 8)) | ((x * 3 + y * 5 + channel) & ((1 << (depth - 8)) - 1))
                 output.extend(struct.pack("<H", value))
     return output, descriptions
@@ -257,7 +274,13 @@ def collect(binaries, bundle, work):
     cases = []
     all_records = []
     for case in CASES:
-        name, width, height, depth, fmt, alpha, quality, speed, columns = case
+        name, width, height, depth, fmt, alpha, quality, speed, columns, *extra = case
+        full_range = extra[0] if extra else 1
+        cicp = extra[1:4] if len(extra) == 4 else [1, 13, 6]
+        if len(extra) not in (0, 1, 4) or full_range not in (0, 1):
+            raise RuntimeError(f"invalid color-range setting for {name}")
+        if len(cicp) != 3:
+            raise RuntimeError(f"invalid CICP setting for {name}")
         directory = bundle / name
         directory.mkdir()
         raw, descriptions = planes(case)
@@ -265,7 +288,7 @@ def collect(binaries, bundle, work):
         plane_path.write_bytes(raw)
         native = directory / "encoded.avif"
         trace_path = directory / "trace.jsonl"
-        settings = list(map(str, case[1:]))
+        settings = list(map(str, (*case[1:9], full_range, *cicp)))
         for repetition in range(2):
             plain = work / f"{name}-plain-{repetition}.avif"
             traced = work / f"{name}-trace-{repetition}.avif"
@@ -293,13 +316,16 @@ def collect(binaries, bundle, work):
             header = headers[0]
             monochrome = sample["role"] == "item_alpha" or fmt == 4
             sampling = (1, 1) if monochrome else {1: (0, 0), 2: (1, 0), 3: (1, 1)}[fmt]
+            expected_range = 1 if sample["role"] == "item_alpha" else full_range
             expected = {"bit_depth": depth, "max_width": width, "max_height": height,
                         "monochrome": monochrome, "subsampling_x": sampling[0],
-                        "subsampling_y": sampling[1], "color_range": 1}
-            if any(header[key] != value for key, value in expected.items()):
-                raise RuntimeError("native sequence declarations differ from input")
+                        "subsampling_y": sampling[1], "color_range": expected_range}
+            mismatches = {key: (header[key], value) for key, value in expected.items()
+                          if header[key] != value}
+            if mismatches:
+                raise RuntimeError(f"native sequence declarations differ for {name}/{sample['role']}: {mismatches}")
             if sample["role"] == "item_color" and [header[k] for k in
-                    ("color_primaries", "transfer_characteristics", "matrix_coefficients")] != [1, 13, 6]:
+                    ("color_primaries", "transfer_characteristics", "matrix_coefficients")] != cicp:
                 raise RuntimeError("native color declaration differs from input")
         if sum(b["sample_role"] == "item_color" for b in bindings) != 1 << columns:
             raise RuntimeError("requested tiling differs from actual color tiles")
@@ -316,7 +342,8 @@ def collect(binaries, bundle, work):
                       "pixel_format": fmt, "alpha": bool(alpha), "quality": quality,
                       "quality_alpha": quality, "speed": speed, "tile_cols_log2": columns,
                       "tile_rows_log2": 0, "auto_tiling": False, "threads": 1,
-                      "range": "full", "cicp": [1, 13, 6], "input_planes": descriptions,
+                      "range": "full" if full_range else "limited",
+                      "cicp": cicp, "input_planes": descriptions,
                       "decoded_mode": mode, "bindings": bindings, "uncommitted_writers": discarded,
                       "operations": len(records), "native_repetitions": 2,
                       "instrumentation_noninterference": True, "unmodified_replay_equal": True,

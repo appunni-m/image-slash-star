@@ -43,7 +43,10 @@ def matrix_rows(document: object) -> list[dict]:
 
     def visit(value: object) -> None:
         if isinstance(value, dict):
-            if {"id", "format", "type", "status"}.issubset(value):
+            if (
+                {"id", "format", "type", "status"}.issubset(value)
+                and value.get("type") in {"decode", "encode"}
+            ):
                 rows.append(value)
             for child in value.values():
                 visit(child)
@@ -407,7 +410,7 @@ def verify() -> str:
         fail("ImageError::message rustdoc must define diagnostic prose as non-contractual")
     exact_match(
         (ROOT / "docs" / "EVIDENCE.md").read_text(encoding="utf-8"),
-        rf"contains {matrix_state['total_rows']:,} total rows: {matrix_state['decode_rows']:,} decode /\s+inspect / verify rows and {matrix_state['encode_rows']:,} encode rows\. Of those, {matrix_state['decode_active']:,} decode rows",
+        rf"contains {matrix_state['total_rows']:,} total rows: {matrix_state['decode_rows']:,} decode /\s+inspect /\s+verify rows and {matrix_state['encode_rows']:,} encode rows\.\s+Of those, {matrix_state['decode_active']:,} decode rows",
         "public evidence matrix count",
     )
     current_section = roadmap.split("## Current pure-Rust AVIF cutover", 1)[1].split(

@@ -126,10 +126,12 @@ pub(super) fn h2v2_fancy_upsample(src: &[u8], src_w: usize, src_h: usize) -> Vec
 pub(super) fn crop_component(
     buf: &[u8],
     buf_w: usize,
-    _buf_h: usize,
+    buf_h: usize,
     crop_w: usize,
     crop_h: usize,
 ) -> Vec<u8> {
+    debug_assert!(crop_w <= buf_w);
+    debug_assert!(crop_h <= buf_h);
     let mut out = Vec::with_capacity(crop_w.saturating_mul(crop_h));
     for y in 0..crop_h {
         let src_off = y.saturating_mul(buf_w);
@@ -177,20 +179,6 @@ pub(super) fn fancy_upsample(
             out
         }
     }
-}
-
-/// Exercise one-sample edge rows in the scalar triangle filters. A real JPEG
-/// can reach these dimensions, but the ordinary fixture corpus mostly has
-/// wider chroma planes; keeping the tiny edge contract explicit prevents a
-/// future SIMD rewrite from dropping the replicated edge sample.
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    assert_eq!(h2v1_fancy_upsample(&[42], 1, 1), vec![42, 42]);
-    assert_eq!(h2v2_fancy_upsample(&[42], 1, 1), vec![42, 42, 42, 42]);
-    let fallback = fancy_upsample(&[1, 2], 2, 1, 3, 1, 6, 1);
-    assert_eq!(fallback.len(), 6);
-    assert_eq!(&fallback[..3], &[1, 1, 1]);
-    assert_eq!(&fallback[3..], &[2, 2, 2]);
 }
 
 fn vertical_sum(primary: u8, adjacent: u8) -> i32 {

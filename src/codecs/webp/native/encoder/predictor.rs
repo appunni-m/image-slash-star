@@ -163,8 +163,14 @@ fn update_histogram(histogram: &mut [u32; HISTOGRAM_SIZE], pixel: u32) {
 
 // Dimensions and tile origins come from validated encoder geometry. Keeping
 // direct index arithmetic here mirrors libwebp's tile traversal.
-#[allow(clippy::arithmetic_side_effects)]
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "validated encoder dimensions and tile origins keep the reference traversal indices in bounds"
+)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "tile geometry, mode, reusable row buffers, and cancellation are independent inputs to the reference histogram scan"
+)]
 fn tile_histogram(
     source: &[u32],
     width: usize,
@@ -243,7 +249,11 @@ fn tile_histogram(
 
 // Both inputs are fixed 4×256 arrays, so every plane conversion is exact.
 // Cost arithmetic is intentionally signed and bounded by four histograms.
-#[allow(clippy::arithmetic_side_effects, clippy::unwrap_used)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::unwrap_used,
+    reason = "fixed-size histogram arrays bound the cost arithmetic and make each four-plane conversion exact"
+)]
 fn spatial_cost(
     accumulated: &[u32; HISTOGRAM_SIZE],
     tile: &[u32; HISTOGRAM_SIZE],
@@ -258,7 +268,7 @@ fn spatial_cost(
             .try_into()
             .unwrap();
         cost += prediction_bias(tile_plane, 1, 94);
-        cost += combined_shannon_entropy(tile_plane, accumulated_plane) as i64;
+        cost += combined_shannon_entropy(tile_plane, accumulated_plane).cast_signed();
     }
     if left_mode == Some(mode) {
         cost -= 15_i64 << 23;
@@ -271,7 +281,10 @@ fn spatial_cost(
 
 // The caller validates `width * height == source.len()` and constructs the
 // matching mode grid before entering this reference traversal.
-#[allow(clippy::arithmetic_side_effects)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    reason = "the caller validates the source length and matching mode grid before this reference traversal"
+)]
 fn apply_modes(
     source: &mut [u32],
     width: usize,
@@ -374,10 +387,17 @@ fn apply_modes(
 
 /// Selects and applies libwebp's predictor transform for Pillow's method-four
 /// lossless profile.
-#[allow(dead_code)]
+#[allow(
+    dead_code,
+    reason = "retain the complete method-four predictor selector for profiles that enable spatial prediction"
+)]
 // Geometry is validated by the lossless encoder; selected modes are in 0..14,
 // so the stored u32 mode byte is representable.
-#[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "validated encoder geometry bounds tile arithmetic and the selected mode fits its stored byte"
+)]
 pub(crate) fn select_and_apply(
     source: &mut [u32],
     width: usize,
@@ -445,7 +465,11 @@ pub(crate) fn select_and_apply(
 
 // Encoder geometry and the caller-selected predictor mode satisfy the same
 // invariants as `select_and_apply`.
-#[allow(clippy::arithmetic_side_effects, clippy::cast_possible_truncation)]
+#[allow(
+    clippy::arithmetic_side_effects,
+    clippy::cast_possible_truncation,
+    reason = "validated encoder geometry bounds tile arithmetic and the caller-selected mode fits its stored byte"
+)]
 pub(crate) fn apply_fixed(
     source: &mut [u32],
     width: usize,
@@ -474,72 +498,4 @@ pub(crate) fn apply_fixed(
             * ((height + (1 << best_bits) - 1) >> best_bits),
     );
     Ok(best_bits)
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let mut scratch = PredictorScratch::default();
-    let mut upper = Vec::new();
-    let mut current = Vec::new();
-    let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
-    let _ = select_and_apply(&mut source, 2, 2, 1, &mut scratch, None);
-    let source = vec![0xff00_0000, 0x0000_0001];
-    let _ = tile_histogram(&source, 2, 1, 0, 1, 1, 0, &mut upper, &mut current, None);
-    let source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
-    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, &mut upper, &mut current, None);
-    let source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
-    let _ = tile_histogram(&source, 2, 2, 0, 0, 2, 0, &mut upper, &mut current, None);
-    let mut source = vec![0xff00_0000, 0xff00_0001, 0x0000_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
-    let mut source = vec![0xff00_0000, 0x0000_0001, 0xff00_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
-    let mut source = vec![0x0000_0000, 0xff00_0001, 0xff00_0002, 0xff00_0003];
-    let _ = apply_fixed(&mut source, 2, 2, 1, 0, &mut scratch, None);
-
-    let predictor_probe_source = (0..2_048)
-        .map(|index| {
-            let value = crate::coverage_support::require_ok(
-                u32::try_from(index),
-                "fixture value must fit u32",
-            );
-            0xff00_0000
-                | ((value & 0xff) << 16)
-                | ((crate::coverage_support::require_some(
-                    (value).checked_mul(3),
-                    "coverage fixture arithmetic",
-                ) & 0xff)
-                    << 8)
-                | value
-        })
-        .collect::<Vec<_>>();
-
-    let mut tile_scratch_upper = Vec::new();
-    let mut tile_scratch_current = Vec::new();
-    let tile_source = predictor_probe_source[..1_024].to_vec();
-    for checks in 0..=6 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = tile_histogram(
-            &tile_source,
-            1_024,
-            1,
-            0,
-            0,
-            1_024,
-            0,
-            &mut tile_scratch_upper,
-            &mut tile_scratch_current,
-            Some(&token),
-        );
-    }
-
-    for checks in 0..=8 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let mut source = predictor_probe_source.clone();
-        let mut scratch = PredictorScratch::default();
-        scratch.modes.resize(512, ARGB_BLACK);
-        let _ = apply_modes(&mut source, 1_024, 2, 1, &mut scratch, Some(&token));
-    }
 }

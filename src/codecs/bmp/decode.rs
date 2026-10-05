@@ -339,7 +339,10 @@ fn decode_rle(
 // ---------------------------------------------------------------------------
 
 // Palette bytes are constructed below in complete RGB triples.
-#[allow(clippy::expect_used)]
+#[allow(
+    clippy::expect_used,
+    reason = "The palette length is built from complete RGB triples before conversion."
+)]
 pub fn decode(
     data: &[u8],
     token: Option<&crate::CancellationToken>,
@@ -811,25 +814,4 @@ fn orient_index_rows(mut pixels: Vec<u8>, width: usize, top_down: bool) -> Vec<u
         }
     }
     pixels
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    assert!(decode(b"", None).is_err());
-    assert!(decode(b"BM", None).is_err());
-    assert!(decode(b"not a bitmap", None).is_err());
-    let rle8 = include_bytes!("../../test_support/fixtures/input/images/bmp/rle8.bmp");
-    let rle4 = include_bytes!("../../test_support/fixtures/input/images/bmp/rle4.bmp");
-    for checks in 0..=5 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(rle8, Some(&token));
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(rle4, Some(&token));
-    }
-    let _ = metadata_bytes(b"");
-    let _ = metadata_bytes(b"X");
-    let _ = metadata_bytes(b"XX");
-    let _ = metadata_bytes(b"BM");
 }

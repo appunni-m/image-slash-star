@@ -26,6 +26,7 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let (width, height) = validate_primary_dimensions(&directory)?;
     verify_directory(&directory)?;
     let samples = directory.one_or(277, 1);
+    verify_separate_planar_offset_count(&directory, width, height, samples)?;
     let bits = directory.values_or(258, &[1]);
     if bits.is_empty() || bits.iter().any(|&value| value != bits[0]) {
         return Err(CodecError::Malformed(
@@ -73,6 +74,66 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     })
 }
 
+fn verify_separate_planar_offset_count(
+    directory: &Directory<'_>,
+    width: u32,
+    height: u32,
+    samples: usize,
+) -> CodecResult<()> {
+    if directory.one_or(284, 1) != 2 || samples <= 1 {
+        return Ok(());
+    }
+    // `verify_directory` has already rejected unmatched tile-offset/count tags.
+    if directory.field_type(324).is_some() {
+        let tile_width = directory
+            .one(322)
+            .dimensions("TIFF tile width is missing")?;
+        let tile_height = directory
+            .one(323)
+            .dimensions("TIFF tile height is missing")?;
+        if tile_width == 0 || tile_height == 0 {
+            return Ok(());
+        }
+        let tiles_across = (width as usize).div_ceil(tile_width);
+        let tiles_down = (height as usize).div_ceil(tile_height);
+        let expected_tiles = tiles_across
+            .checked_mul(tiles_down)
+            .dimensions("TIFF separate-planar tile count overflows")?;
+        let expected_offsets = expected_tiles
+            .checked_mul(samples)
+            .dimensions("TIFF separate-planar tile offset count overflows")?;
+        let tile_offset_count = directory
+            .value_count(324)
+            .malformed("TIFF tile offsets are missing")?;
+        if tile_offset_count > expected_offsets {
+            return Err(CodecError::Malformed(
+                "TIFF separate-planar tile offset count exceeds its geometry".to_owned(),
+            ));
+        }
+        return Ok(());
+    }
+
+    let rows_per_strip = directory.one_or(278, height as usize);
+    if rows_per_strip == 0 {
+        return Ok(());
+    }
+
+    let strip_offset_count = directory
+        .value_count(273)
+        .malformed("TIFF strip offsets are missing")?;
+    let strips_per_plane = (height as usize).div_ceil(rows_per_strip);
+    let expected_strips = strips_per_plane
+        .checked_mul(samples)
+        .dimensions("TIFF separate-planar strip count overflows")?;
+    if strip_offset_count > expected_strips {
+        return Err(CodecError::Malformed(
+            "TIFF separate-planar strip count exceeds its geometry".to_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
 pub(super) fn verify_directory(directory: &Directory<'_>) -> CodecResult<()> {
     let compression = directory.one_or(259, 1);
     if !matches!(compression, 1 | 5 | 8 | 32_773 | 32_946) {
@@ -82,16 +143,21 @@ pub(super) fn verify_directory(directory: &Directory<'_>) -> CodecResult<()> {
     }
     for tag in [273, 324] {
         if matches!(directory.field_type(tag), Some(1 | 3 | 4))
-            && directory
-                .values(tag)
-                .is_some_and(|values| values.is_empty())
+            && directory.value_count(tag).is_some_and(|count| count == 0)
         {
             return Err(CodecError::Malformed(
                 "TIFF strip or tile offsets are empty".to_owned(),
             ));
         }
     }
-    let tiled = directory.field_type(324).is_some() || directory.field_type(325).is_some();
+    let tile_offsets_present = directory.field_type(324).is_some();
+    let tile_byte_counts_present = directory.field_type(325).is_some();
+    if tile_offsets_present != tile_byte_counts_present {
+        return Err(CodecError::Malformed(
+            "TIFF tile offsets and byte counts must be present together".to_owned(),
+        ));
+    }
+    let tiled = tile_offsets_present || tile_byte_counts_present;
     if tiled {
         for tag in [322, 323] {
             if directory.one(tag).is_none() {

@@ -55,6 +55,10 @@ FIXTURES = {
         "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
         2, [16, 16], (2, 2, 2, 0),
     ),
+    "animated_lossless_inter_420_b32x32_10bit_64x64": (
+        "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
+        2, [64, 64], (2, 2, 2, 0),
+    ),
 }
 LIBAVIF_COMMIT = "6543b22b5bc706c53f038a16fe515f921556d9b3"
 LOOP_OBSERVER = r'''
@@ -984,7 +988,9 @@ def summarize_identity(
     }
 
 
-def rust_source_comparison(first_sample: dict[str, object]) -> dict[str, object]:
+def rust_source_comparison(
+    first_sample: dict[str, object], geometry: dict[str, object]
+) -> dict[str, object]:
     files = {
         "entropy": ROOT / "src" / "codecs" / "avif" / "av1" / "entropy.rs",
         "frame": ROOT / "src" / "codecs" / "avif" / "av1" / "frame.rs",
@@ -1010,10 +1016,9 @@ def rust_source_comparison(first_sample: dict[str, object]) -> dict[str, object]
         if missing:
             raise RuntimeError(f"Rust source comparison anchor missing: {name}: {missing}")
     result["interpretation"] = (
-        "The pinned decoder trace records persistent references and block/lifecycle "
-        "events for an I420 8-bit sequence. It does not prove that the Rust "
-        "validate_complete_lossy_420_partition admission predicate is the causal "
-        "gap; target execution is intentionally deferred."
+        "Pinned dav1d syntax and block traces are independent codec evidence. "
+        "They do not establish the Rust branch outcome; the selected public "
+        "parity case must be run under the managed Rust coverage collector."
     )
     first_frame = first_sample["frames"][0]
     result["trace_predicate_context"] = {
@@ -1024,11 +1029,62 @@ def rust_source_comparison(first_sample: dict[str, object]) -> dict[str, object]
         ],
         "frame_type": first_frame["syntax_frame_header"].get("frame_type"),
         "layout": "I420",
-        "bit_depth": 8,
+        "bit_depth": geometry["bit_depth"],
         "block_count": first_frame["block_count"],
         "status": "observation_only_source_comparison",
     }
     return result
+
+
+def assert_high_bitdepth_b32_inter_leaves(
+    trace_records: list[dict[str, object]],
+) -> dict[str, object]:
+    leaves = [
+        record
+        for record in trace_records
+        if record.get("kind") == "block"
+        and record.get("block_kind") == "leaf"
+        and record.get("pts") == 1
+        and record.get("frame_offset") == 1
+    ]
+    expected_locations = {(0, 0), (8, 0), (0, 8), (8, 8)}
+    observed_locations = {(int(leaf["x4"]), int(leaf["y4"])) for leaf in leaves}
+    if (
+        len(leaves) != 4
+        or observed_locations != expected_locations
+        or any(
+            int(leaf["width4"]) != 8
+            or int(leaf["height4"]) != 8
+            or int(leaf["bpc"]) != 10
+            or int(leaf["layout"]) != 1
+            for leaf in leaves
+        )
+    ):
+        raise RuntimeError(
+            "pinned dav1d second-frame trace lacks four 32x32 I420 leaves at 10 bpc"
+        )
+    origin = next(leaf for leaf in leaves if (leaf["x4"], leaf["y4"]) == (0, 0))
+    return {
+        "sample_index": 1,
+        "pts": 1,
+        "frame_offset": 1,
+        "origin": {
+            "x4": int(origin["x4"]),
+            "y4": int(origin["y4"]),
+            "width4": int(origin["width4"]),
+            "height4": int(origin["height4"]),
+            "width_px": 32,
+            "height_px": 32,
+            "bit_depth": int(origin["bpc"]),
+            "layout": "I420",
+        },
+        "leaf_count": len(leaves),
+        "leaf_mi_origins": [
+            [int(leaf["x4"]), int(leaf["y4"])]
+            for leaf in sorted(leaves, key=lambda leaf: (leaf["y4"], leaf["x4"]))
+        ],
+        "status": "asserted_from_pinned_dav1d_block_trace",
+    }
 
 
 def collect_role(
@@ -1066,6 +1122,9 @@ def collect_role(
         role,
     )
     del plain_records
+    trace_assertions = []
+    if FIXTURE.stem == "animated_lossless_inter_420_b32x32_10bit_64x64" and role == "color":
+        trace_assertions.append(assert_high_bitdepth_b32_inter_leaves(trace_records))
     trace_events = [record for record in trace_records if record["kind"] == "output"]
     trace_relative = Path("traces") / f"{role}.jsonl"
     trace_path = bundle / trace_relative
@@ -1101,6 +1160,7 @@ def collect_role(
         "trace_sha256": digest_file(trace_path),
         "trace_event_count": len(trace_records),
         "display_frames": display_reports,
+        "trace_assertions": trace_assertions,
         "identity": identity,
         "counts": counts,
         "noninterference": {
@@ -1391,7 +1451,12 @@ def build_bundle(
         "clean": True,
     }
     source_anchors = source_anchor_report(source)
-    color_first_sample = role_reports["color"]["identity"][0]
+    color_sample_index = (
+        1
+        if FIXTURE.stem == "animated_lossless_inter_420_b32x32_10bit_64x64"
+        else 0
+    )
+    color_trace_sample = role_reports["color"]["identity"][color_sample_index]
     index = {
         "schema": SCHEMA,
         "fixture": {
@@ -1444,7 +1509,9 @@ def build_bundle(
             "verify_after": source_verify_after,
             "anchors": source_anchors,
         },
-        "rust_source_comparison": rust_source_comparison(color_first_sample),
+        "rust_source_comparison": rust_source_comparison(
+            color_trace_sample, role_reports["color"]["geometry"]
+        ),
         "trace_scope": {
             "state_provenance": "instrumented pinned dav1d scalar decoder",
             "syntax_provenance": "independent inspect_avif_bitstreams and inspect_av1_obus",

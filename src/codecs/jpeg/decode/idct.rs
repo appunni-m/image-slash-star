@@ -1,9 +1,9 @@
 // Modified Rust port copyright (c) 2026 Appunni M.
 // Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 use wide::bytemuck::{cast, cast_slice, pod_read_unaligned};
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 use wide::{i16x8, i32x4, i32x8, u8x16};
 
 // ── IDCT Constants (matching IJG jidctint.c) ──────────────────────────────
@@ -25,37 +25,37 @@ pub(crate) const FIX_2_053119869: i32 = 16819;
 pub(crate) const FIX_2_562915447: i32 = 20995;
 pub(crate) const FIX_3_072711026: i32 = 25172;
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_0_298631336: i32x4 = i32x4::new([FIX_0_298631336; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_0_390180644_NEG: i32x4 = i32x4::new([-FIX_0_390180644; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_0_541196100: i32x4 = i32x4::new([FIX_0_541196100; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_0_765366865: i32x4 = i32x4::new([FIX_0_765366865; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_0_899976223_NEG: i32x4 = i32x4::new([-FIX_0_899976223; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_1_175875602: i32x4 = i32x4::new([FIX_1_175875602; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_1_501321110: i32x4 = i32x4::new([FIX_1_501321110; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_1_847759065_NEG: i32x4 = i32x4::new([-FIX_1_847759065; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_1_961570560_NEG: i32x4 = i32x4::new([-FIX_1_961570560; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_2_053119869: i32x4 = i32x4::new([FIX_2_053119869; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_2_562915447_NEG: i32x4 = i32x4::new([-FIX_2_562915447; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VFIX_3_072711026: i32x4 = i32x4::new([FIX_3_072711026; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VDESCALE_11_BIAS: i32x4 = i32x4::new([1 << 10; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VDESCALE_18_BIAS: i32x4 = i32x4::new([1 << 17; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VRANGE_CENTER: i32x4 = i32x4::new([128; 4]);
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 const VRANGE_MAX: i32x4 = i32x4::new([255; 4]);
 
 pub(crate) const DCTSIZE: usize = 8;
@@ -112,6 +112,21 @@ fn low_i32(value: i64) -> i32 {
 pub(crate) fn jpeg_idct_islow(block: &mut [i32; DCTSIZE2], workspace: &mut [i32; DCTSIZE2]) {
     // Pass 1: columns
     for c in 0..DCTSIZE {
+        if block[c.saturating_add(DCTSIZE)] == 0
+            && block[c.saturating_add(DCTSIZE.saturating_mul(2))] == 0
+            && block[c.saturating_add(DCTSIZE.saturating_mul(3))] == 0
+            && block[c.saturating_add(DCTSIZE.saturating_mul(4))] == 0
+            && block[c.saturating_add(DCTSIZE.saturating_mul(5))] == 0
+            && block[c.saturating_add(DCTSIZE.saturating_mul(6))] == 0
+            && block[c.saturating_add(DCTSIZE.saturating_mul(7))] == 0
+        {
+            let dcval = block[c].wrapping_shl(PASS1_BITS.cast_unsigned());
+            for r in 0..DCTSIZE {
+                workspace[r.saturating_mul(DCTSIZE).saturating_add(c)] = dcval;
+            }
+            continue;
+        }
+
         let z2 = block[c.saturating_add(DCTSIZE.saturating_mul(2))];
         let z3 = block[c.saturating_add(DCTSIZE.saturating_mul(6))];
         let z1 = mpy(add(z2, z3), FIX_0_541196100);
@@ -171,6 +186,22 @@ pub(crate) fn jpeg_idct_islow(block: &mut [i32; DCTSIZE2], workspace: &mut [i32;
 
     for r in 0..DCTSIZE {
         let row = r.saturating_mul(DCTSIZE);
+        if workspace[row.saturating_add(1)] == 0
+            && workspace[row.saturating_add(2)] == 0
+            && workspace[row.saturating_add(3)] == 0
+            && workspace[row.saturating_add(4)] == 0
+            && workspace[row.saturating_add(5)] == 0
+            && workspace[row.saturating_add(6)] == 0
+            && workspace[row.saturating_add(7)] == 0
+        {
+            let sample = i32::from(range_limit(descale(
+                workspace[row],
+                PASS1_BITS.saturating_add(3),
+            )));
+            block[row..row.saturating_add(DCTSIZE)].fill(sample);
+            continue;
+        }
+
         let z2 = workspace[row.saturating_add(2)];
         let z3 = workspace[row.saturating_add(6)];
         let z1 = mpy(add(z2, z3), FIX_0_541196100);
@@ -225,10 +256,10 @@ pub(crate) fn jpeg_idct_islow(block: &mut [i32; DCTSIZE2], workspace: &mut [i32;
     }
 }
 
-/// Safe AArch64 baseline transform that writes range-limited bytes directly
+/// Safe vectorized baseline transform that writes range-limited bytes directly
 /// into a component plane. Pass 1 keeps the scalar saturating contract while
 /// laying out four adjacent rows for the safe `wide` pass-2 vectors.
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[allow(
     clippy::too_many_arguments,
     reason = "the direct transform receives explicit component-plane coordinates"
@@ -281,11 +312,11 @@ pub(crate) fn jpeg_idct_islow_to_u8_safe(
     }
 }
 
-/// Safe AArch64 baseline transform that folds exact dequantization into the
+/// Safe vectorized baseline transform that folds exact dequantization into the
 /// first fixed-width pass and writes final bytes directly to the component
 /// plane. Baseline AC magnitudes always fit after dequantization; the caller
 /// checks the only cumulative lane, the DC predictor, before selecting it.
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[allow(
     clippy::too_many_arguments,
     reason = "the fused transform receives its quantizer and explicit component-plane coordinates"
@@ -336,7 +367,7 @@ pub(crate) fn jpeg_idct_islow_dequantized_to_u8_safe(
     );
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn idct_pass1_column_values(block: &[i32; DCTSIZE2], column: usize) -> [i32; DCTSIZE] {
     let z2 = block[column.saturating_add(DCTSIZE.saturating_mul(2))];
@@ -391,25 +422,25 @@ fn idct_pass1_column_values(block: &[i32; DCTSIZE2], column: usize) -> [i32; DCT
     ]
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn idct_vector_add(left: i32x4, right: i32x4) -> i32x4 {
     left.saturating_add(right)
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn idct_vector_sub(left: i32x4, right: i32x4) -> i32x4 {
     left.saturating_sub(right)
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn load_idct_four(workspace: &[i32; DCTSIZE2], offset: usize) -> i32x4 {
     pod_read_unaligned(cast_slice(&workspace[offset..offset.saturating_add(4)]))
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn idct_vector_descale_11(value: i32x4) -> i32x4 {
     value
@@ -417,13 +448,13 @@ fn idct_vector_descale_11(value: i32x4) -> i32x4 {
         .unbounded_shr_scalar(11)
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn store_idct_four(workspace: &mut [i32; DCTSIZE2], offset: usize, value: i32x4) {
     workspace[offset..offset.saturating_add(4)].copy_from_slice(value.as_array());
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[expect(
     clippy::arithmetic_side_effects,
     reason = "JPEG ISLOW fixed-point lanes are bounded before the safe vector multiplies"
@@ -507,7 +538,7 @@ fn idct_pass1_four_columns_safe(
     }
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn range_limit_four(value: i32x4) -> i32x4 {
     value
@@ -518,7 +549,7 @@ fn range_limit_four(value: i32x4) -> i32x4 {
         .min(VRANGE_MAX)
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[inline(always)]
 fn transpose_idct_four(columns: [i32x4; 4]) -> [i32x4; 4] {
     let first = columns[0].to_array();
@@ -533,7 +564,7 @@ fn transpose_idct_four(columns: [i32x4; 4]) -> [i32x4; 4] {
     ]
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[allow(
     clippy::too_many_arguments,
     reason = "the four-row store receives both transformed column halves and plane coordinates"
@@ -561,7 +592,7 @@ fn store_idct_four_rows(
     }
 }
 
-#[cfg(target_arch = "aarch64")]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
 #[allow(
     clippy::too_many_arguments,
     reason = "the vector pass receives its transposed workspace and plane coordinates"
@@ -657,54 +688,13 @@ fn idct_pass2_four_rows_safe(
     );
 }
 
-/// Exercise the safe vector transform's fixed-shape contract in the managed
-/// coverage build. These inputs model valid initialized DCT blocks and cover
-/// both the low-frequency-only and full horizontal-pass forms; they are not a
-/// production escape hatch or a public codec input.
-#[cfg(all(coverage, target_arch = "aarch64"))]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let block = [0i32; DCTSIZE2];
-    let quant_table = [1i32; DCTSIZE2];
-    let mut workspace = [0i32; DCTSIZE2];
-    let mut output = vec![0u8; DCTSIZE2];
-
-    jpeg_idct_islow_to_u8_safe(&block, &mut workspace, &mut output, DCTSIZE, 0, 0);
-    assert!(output.iter().all(|&value| value == 128));
-
-    jpeg_idct_islow_dequantized_to_u8_safe(
-        &block,
-        &quant_table,
-        &mut workspace,
-        &mut output,
-        DCTSIZE,
-        0,
-        0,
-        false,
-    );
-    jpeg_idct_islow_dequantized_to_u8_safe(
-        &block,
-        &quant_table,
-        &mut workspace,
-        &mut output,
-        DCTSIZE,
-        0,
-        0,
-        true,
-    );
-    assert!(output.iter().all(|&value| value == 128));
-}
-
 // ── JPEG Utilities ────────────────────────────────────────────────────────
 
 /// Exact output of [`jpeg_idct_islow`] when only the natural-order DC
 /// coefficient is nonzero.
 #[inline(always)]
 pub(crate) fn dc_only_output(dc: i32) -> u8 {
-    let pass1 = descale(
-        dc.wrapping_shl(CONST_BITS.cast_unsigned()),
-        CONST_BITS.saturating_sub(PASS1_BITS),
-    );
-    range_limit(descale(pass1.wrapping_shl(CONST_BITS.cast_unsigned()), 18))
+    range_limit(descale(dc, 3))
 }
 
 /// `jpeg_natural_order` maps zigzag index to natural (row-major) position.

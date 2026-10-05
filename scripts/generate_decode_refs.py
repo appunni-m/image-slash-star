@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import io
 import json
+import math
 import platform
 import re
 import shutil
@@ -43,7 +44,13 @@ ASSERTION_ORIGINS = {
     "independent_implementation",
     "defensive_model",
 }
+
+PNG_SOURCE_COLOR_PARITY_EXCLUSIONS = {
+    "pillow_tolerated_malformed_srgb_short",
+    "pillow_tolerated_malformed_iccp_empty_keyword",
+}
 ALL_CODEC_FEATURES = ["jpeg", "png", "gif", "bmp", "tiff", "webp", "ico", "avif"]
+MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH = 65_534
 
 
 def pillow_open_asset(path):
@@ -197,9 +204,22 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
                     "rust_sequence_error_reason": case.get(
                         "rust_sequence_error_reason"
                     ),
+                    "rust_inspect_basic": bool(case.get("rust_inspect_basic", False)),
+                    "rust_decode_with_metadata_limit": case.get(
+                        "rust_decode_with_metadata_limit"
+                    ),
                     "status": case.get("status", "active"),
                 }
             )
+            if case.get("avif_mdcv") is None:
+                row.pop("avif_mdcv", None)
+            else:
+                row["avif_mdcv"] = case["avif_mdcv"]
+            if case.get("frame_request") is None:
+                row.pop("frame_request", None)
+                row.pop("frame_request_result", None)
+            else:
+                row["frame_request"] = dict(case["frame_request"])
             return row
 
     row = {
@@ -217,8 +237,16 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
         ),
         "rust_sequence_error_kind": case.get("rust_sequence_error_kind"),
         "rust_sequence_error_reason": case.get("rust_sequence_error_reason"),
+        "rust_inspect_basic": bool(case.get("rust_inspect_basic", False)),
+        "rust_decode_with_metadata_limit": case.get(
+            "rust_decode_with_metadata_limit"
+        ),
         "status": "active",
     }
+    if case.get("avif_mdcv") is not None:
+        row["avif_mdcv"] = case["avif_mdcv"]
+    if case.get("frame_request") is not None:
+        row["frame_request"] = dict(case["frame_request"])
     rows.append(row)
     return row
 
@@ -268,10 +296,29 @@ def sync_decode_rows(manifest, matrix):
                         "rust_sequence_error_reason": case.get(
                             "rust_sequence_error_reason"
                         ),
+                        "rust_inspect_basic": bool(
+                            case.get("rust_inspect_basic", False)
+                        ),
+                        "rust_decode_with_metadata_limit": case.get(
+                            "rust_decode_with_metadata_limit"
+                        ),
                         "pure_rust_work_item": case.get("pure_rust_work_item"),
                         "status": case_status,
                     }
                 )
+                if case.get("frame_request") is None:
+                    row.pop("frame_request", None)
+                    row.pop("frame_request_result", None)
+                else:
+                    row["frame_request"] = dict(case["frame_request"])
+                if case.get("rust_decode_with_token"):
+                    row["rust_decode_with_token"] = True
+                else:
+                    row.pop("rust_decode_with_token", None)
+                if case.get("avif_mdcv") is None:
+                    row.pop("avif_mdcv", None)
+                else:
+                    row["avif_mdcv"] = case["avif_mdcv"]
                 if row["status"] == "planned":
                     row["gap"] = (
                         case.get("oracle_gap")
@@ -337,29 +384,37 @@ def encode_params(fmt, params):
         "alpha",
         "truncate_pixels",
         "source_dimensions",
+        "valid_l1_storage",
         "oversized_palette",
         "palette_on_nonindexed",
         "detach_source",
         "rust_unsupported_modes",
         "rust_invalid_color_mode",
+        "rust_encode_with_token",
+        "rust_encode_sequence_with_token",
         "encoded_only",
         "sequence_canvas_padding",
         "sequence_frame_offset",
         "sequence_frame_mode",
         "sequence_duration_ms",
-        "sequence_duration_fraction",
         "sequence_disposal",
         "sequence_blend",
         "sequence_interlaced",
         "sequence_default_image",
         "sequence_pixel_layout",
         "sequence_loop_count",
+        "sequence_total_plays",
         "sequence_clear_loop",
         "sequence_background_rgba",
         "sequence_background_palette",
         "sequence_clear_background",
     ):
         take(source_property)
+
+    # GIF consumes this rational below to create a millisecond override for
+    # Pillow. Other formats use it only as source-model metadata.
+    if fmt != "gif":
+        take("sequence_duration_fraction")
 
     if fmt == "jpeg":
         for name in ("quality", "optimize", "progressive"):
@@ -390,6 +445,18 @@ def encode_params(fmt, params):
         exif_hex = take("exif_hex")
         if exif_hex is not None:
             kwargs["exif"] = bytes.fromhex(exif_hex)
+        exif_payload_length = take("exif_payload_length")
+        if exif_payload_length is not None:
+            if "exif" in kwargs:
+                raise RuntimeError("exif_payload_length and exif_hex are mutually exclusive")
+            if type(exif_payload_length) is not int or exif_payload_length < 0:
+                raise RuntimeError("exif_payload_length must be a non-negative integer")
+            if exif_payload_length > MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH:
+                raise RuntimeError(
+                    "exif_payload_length must not exceed "
+                    f"{MAX_SYNTHETIC_JPEG_EXIF_PAYLOAD_LENGTH} bytes"
+                )
+            kwargs["exif"] = bytes(exif_payload_length)
     elif fmt == "png":
         compression = take("compression")
         if compression is not None:
@@ -453,6 +520,29 @@ def encode_params(fmt, params):
             kwargs["_manifest_animated"] = animated
         if frames is not None:
             kwargs["_manifest_frames"] = frames
+        preserve_duration = take("preserve_duration")
+        if preserve_duration is not None:
+            kwargs["_manifest_preserve_duration"] = preserve_duration
+        duration_fraction = take("sequence_duration_fraction")
+        if duration_fraction is not None:
+            if animated is not True:
+                raise RuntimeError(
+                    "GIF sequence_duration_fraction requires animated output"
+                )
+            if (
+                not isinstance(duration_fraction, list)
+                or len(duration_fraction) != 2
+                or any(type(value) is not int for value in duration_fraction)
+                or duration_fraction[0] < 0
+                or duration_fraction[1] <= 0
+            ):
+                raise RuntimeError(
+                    "GIF sequence_duration_fraction must be an unsigned numerator "
+                    "and non-zero denominator"
+                )
+            kwargs["_manifest_first_frame_duration_ms"] = (
+                duration_fraction[0] * 1000 // duration_fraction[1]
+            )
         preserve_disposal = take("preserve_disposal")
         if preserve_disposal is not None:
             kwargs["_manifest_preserve_disposal"] = preserve_disposal
@@ -676,10 +766,14 @@ def prepare_multiframe_call(image, kwargs):
         frames[1] = frames[1].convert(second_frame_mode)
     kwargs["save_all"] = True
     kwargs["append_images"] = frames[1:requested]
-    if preserve_duration:
-        kwargs["duration"] = [
+    first_frame_duration_ms = kwargs.pop("_manifest_first_frame_duration_ms", None)
+    if preserve_duration or first_frame_duration_ms is not None:
+        durations = [
             frame.info.get("duration", 0) for frame in frames[:requested]
         ]
+        if first_frame_duration_ms is not None:
+            durations[0] = first_frame_duration_ms
+        kwargs["duration"] = durations
     if preserve_disposal:
         requested_disposals = disposals[:requested]
         # Pillow's multi-frame writer accepts either a scalar or a per-frame
@@ -773,16 +867,41 @@ def validate_png_claim(case_id, data):
     kinds = [kind for kind, _ in png["chunks"]]
     if case_id == "color_indexed_alpha" and b"tRNS" not in kinds:
         raise RuntimeError("indexed-alpha fixture has no tRNS chunk")
-    if case_id == "interlace_adam7" and png["interlace"] != 1:
+    if case_id.startswith("interlace_adam7") and png["interlace"] != 1:
         raise RuntimeError("IHDR is not Adam7 interlaced")
+    if case_id == "interlace_adam7_gray_16bit":
+        expected_fields = {
+            "width": 9,
+            "height": 9,
+            "depth": 16,
+            "color_type": 0,
+        }
+        for field, expected in expected_fields.items():
+            if png[field] != expected:
+                raise RuntimeError(
+                    f"Adam7 gray16 IHDR {field} is {png[field]}, expected {expected}"
+                )
     if case_id == "no_interlace" and png["interlace"] != 0:
         raise RuntimeError("IHDR is interlaced")
 
     chunk_claims = {
         "chunk_gama": b"gAMA",
+        "chunk_gama_duplicate": b"gAMA",
         "chunk_srgb": b"sRGB",
+        "chunk_srgb_duplicate": b"sRGB",
+        "chunk_srgb_invalid_intent": b"sRGB",
+        "pillow_tolerated_malformed_srgb_short": b"sRGB",
+        "chunk_chrm": b"cHRM",
+        "chunk_chrm_duplicate": b"cHRM",
+        "pillow_tolerated_malformed_chrm_short": b"cHRM",
         "chunk_iccp": b"iCCP",
+        "chunk_iccp_duplicate": b"iCCP",
+        "pillow_tolerated_malformed_iccp_empty_keyword": b"iCCP",
         "chunk_text": b"tEXt",
+        "pillow_tolerated_malformed_text_metadata_edges": b"iTXt",
+        "pillow_tolerated_malformed_ztxt_invalid_compression": b"zTXt",
+        "pillow_tolerated_malformed_itxt_invalid_compression": b"iTXt",
+        "pillow_tolerated_malformed_iccp_invalid_compression": b"iCCP",
         "chunk_time": b"tIME",
         "chunk_background": b"bKGD",
         "chunk_phys": b"pHYs",
@@ -791,6 +910,58 @@ def validate_png_claim(case_id, data):
     expected_chunk = chunk_claims.get(case_id)
     if expected_chunk is not None and expected_chunk not in kinds:
         raise RuntimeError(f"fixture has no {expected_chunk.decode()} chunk")
+    if case_id == "chunk_text" and not {b"tEXt", b"zTXt", b"iTXt"}.issubset(kinds):
+        raise RuntimeError("text-metadata fixture must include tEXt, zTXt, and iTXt")
+    if case_id == "pillow_tolerated_malformed_text_metadata_edges" and not {
+        b"tEXt",
+        b"zTXt",
+        b"iTXt",
+    }.issubset(kinds):
+        raise RuntimeError("compressed text edge fixture is missing a text chunk family")
+    duplicate_chunk_claims = {
+        "chunk_gama_duplicate": b"gAMA",
+        "chunk_srgb_duplicate": b"sRGB",
+        "chunk_chrm_duplicate": b"cHRM",
+        "chunk_iccp_duplicate": b"iCCP",
+    }
+    duplicate_kind = duplicate_chunk_claims.get(case_id)
+    if duplicate_kind is not None and kinds.count(duplicate_kind) < 2:
+        raise RuntimeError(f"fixture has fewer than two {duplicate_kind.decode()} chunks")
+
+    invalid_compressed_metadata = {
+        "pillow_tolerated_malformed_ztxt_invalid_compression": (
+            b"zTXt",
+            b"Comment\0\0",
+        ),
+        "pillow_tolerated_malformed_itxt_invalid_compression": (
+            b"iTXt",
+            b"Comment\0\x01\x00\0\0Translation\0",
+        ),
+        "pillow_tolerated_malformed_iccp_invalid_compression": (
+            b"iCCP",
+            b"Test\0\0",
+        ),
+    }
+    compressed_claim = invalid_compressed_metadata.get(case_id)
+    if compressed_claim is not None:
+        chunk_kind, prefix = compressed_claim
+        payload = next(payload for kind, payload in png["chunks"] if kind == chunk_kind)
+        if not payload.startswith(prefix):
+            raise RuntimeError(f"{chunk_kind.decode()} metadata prefix is invalid")
+        try:
+            zlib.decompress(payload[len(prefix) :])
+        except zlib.error:
+            pass
+        else:
+            raise RuntimeError(f"{chunk_kind.decode()} metadata unexpectedly decompresses")
+    if case_id == "pillow_tolerated_malformed_iccp_empty_keyword":
+        payload = next(payload for kind, payload in png["chunks"] if kind == b"iCCP")
+        if not payload.startswith(b"\0\0"):
+            raise RuntimeError("iCCP empty-keyword fixture has a nonempty keyword")
+        try:
+            zlib.decompress(payload[2:])
+        except zlib.error as error:
+            raise RuntimeError("iCCP empty-keyword payload is not compressed data") from error
 
     filter_claims = {
         "filter_none": {0},
@@ -889,6 +1060,32 @@ def validate_tiff_claim(case_id, asset_name, data):
             depth = depth[0] if isinstance(depth, tuple) else depth
             if image.tag_v2.get(262) != 3 or depth not in (2, 4):
                 raise RuntimeError("TIFF is not a packed low-depth palette image")
+        tiled_low_depth_claims = {
+            "tiled_minisblack_1bit_edge": (1, 1, 1, 16),
+            "tiled_minisblack_1bit_unaligned_edge": (1, 1, 1, 9),
+            "tiled_gray2_deflate_edge": (2, 1, 8, 16),
+            "tiled_gray2_unaligned_edge": (2, 1, 1, 9),
+            "tiled_palette4_edge": (4, 3, 1, 16),
+            "tiled_palette4_unaligned_edge": (4, 3, 1, 9),
+        }
+        tiled_low_depth_claim = tiled_low_depth_claims.get(case_id)
+        if tiled_low_depth_claim is not None:
+            bits, photometric, compression, tile_width = tiled_low_depth_claim
+            actual_bits = image.tag_v2.get(258, (8,))
+            actual_bits = actual_bits[0] if isinstance(actual_bits, tuple) else actual_bits
+            if (
+                actual_bits != bits
+                or image.tag_v2.get(262) != photometric
+                or image.tag_v2.get(259, 1) != compression
+                or image.tag_v2.get(277, 1) != 1
+                or image.tag_v2.get(284, 1) != 1
+                or image.tag_v2.get(322) != tile_width
+                or image.tag_v2.get(323) != 16
+            ):
+                raise RuntimeError("TIFF packed-tile fixture tags differ from its claim")
+            expected_size = (17, 1) if "unaligned" in case_id else (17, 13)
+            if image.size != expected_size:
+                raise RuntimeError("TIFF packed-tile fixture dimensions differ from its edge claim")
         if case_id == "ycbcr" and (
             image.tag_v2.get(262) != 6 or image.tag_v2.get(530) != (1, 1)
         ):
@@ -981,6 +1178,31 @@ def preflight_decode_cases(manifest, target_format=None):
                 if pillow_error is not None:
                     failures.append(f"{case_name}: Pillow rejects active input: {pillow_error}")
                     continue
+                frame_request = case.get("frame_request")
+                if frame_request is not None:
+                    try:
+                        with pillow_open_asset(path) as image:
+                            image.seek(frame_request["index"])
+                    except Exception as error:
+                        frame_status = "error"
+                        frame_error_type = (
+                            f"{type(error).__module__}.{type(error).__name__}"
+                        )
+                    else:
+                        frame_status = "ok"
+                        frame_error_type = None
+                    if frame_status != frame_request.get("expected_status"):
+                        failures.append(
+                            f"{case_name}: Pillow seek({frame_request['index']}) "
+                            f"returned {frame_status}, expected "
+                            f"{frame_request.get('expected_status')}"
+                        )
+                    expected_error_type = frame_request.get("pillow_error_type")
+                    if expected_error_type is not None and frame_error_type != expected_error_type:
+                        failures.append(
+                            f"{case_name}: Pillow seek({frame_request['index']}) "
+                            f"raised {frame_error_type}, expected {expected_error_type}"
+                        )
                 if case.get("expect_sequence_error"):
                     try:
                         with pillow_open_asset(path) as image:
@@ -1040,13 +1262,17 @@ def decode_operation_expectations(row):
         or row.get("rust_expect_sequence_error")
     ):
         sequence = "error"
-    return {
+    operations = {
         "detect": "ok" if row.get("oracle_detects_format") else "error",
         "inspect": row.get("inspect_status"),
         "verify": row.get("verify_status"),
         "decode": row.get("oracle_status"),
         "decode_sequence": sequence,
     }
+    frame_request = row.get("frame_request")
+    if frame_request is not None:
+        operations["decode_frame"] = frame_request["expected_status"]
+    return operations
 
 
 def encode_operation_expectations(row):
@@ -1057,7 +1283,10 @@ def encode_operation_expectations(row):
     single_frame_success = (
         row.get("source_frame_count") == 1
         and expected == "ok"
-        and not any(name.startswith("sequence_") for name in params)
+        and not any(
+            name.startswith("sequence_") and name != "sequence_total_plays"
+            for name in params
+        )
     )
     return {
         "encode": (
@@ -1152,6 +1381,15 @@ def decode_error_contracts(row, fmt_name):
                 row["oracle_error_type"],
                 row["oracle_error_message"],
             )
+    if operations.get("decode_frame") == "error":
+        request = row["frame_request"]
+        result = row["frame_request_result"]
+        contracts["decode_frame"] = rust_error_contract(
+            fmt_name,
+            request["rust_error_kind"],
+            result["error_type"],
+            result["error_message"],
+        )
     return contracts
 
 
@@ -1199,6 +1437,29 @@ def write_pixel_ref(row, image, ref_name):
         getattr(image, "is_animated", fallback_animated)
     )
     return raw
+
+
+def write_frame_request_ref(row, image_path):
+    """Capture one declared Pillow frame-seek result from a fresh image handle."""
+    request = row.get("frame_request")
+    if request is None:
+        row.pop("frame_request_result", None)
+        return
+
+    result = {
+        "index": request["index"],
+        "status": "ok",
+        "error_type": None,
+        "error_message": None,
+    }
+    try:
+        with pillow_open_asset(image_path) as image:
+            image.seek(request["index"])
+    except Exception as error:
+        result["status"] = "error"
+        result["error_type"] = f"{type(error).__module__}.{type(error).__name__}"
+        result["error_message"] = stable_error_message(error)
+    row["frame_request_result"] = result
 
 
 def first_png_transparency(data):
@@ -1639,10 +1900,24 @@ def write_sequence_ref_from_data(row, image, fmt_name, asset_name, source_data):
             for size in page_sizes
         ]
     else:
-        background = {
-            "palette_index": int(image.info.get("background", 0)),
-            "origin": "pillow_fixture",
-        }
+        if fmt_name == "gif" and "background" not in image.info:
+            # With no global palette Pillow omits this info field. Keep the
+            # declared Logical Screen Descriptor index, but label its source
+            # as the GIF specification/input rather than Pillow output.
+            if len(source_data) < 12 or source_data[:6] not in (
+                b"GIF87a",
+                b"GIF89a",
+            ):
+                raise ValueError("GIF source is too short for its logical screen descriptor")
+            background = {
+                "palette_index": source_data[11],
+                "origin": "specification_reference",
+            }
+        else:
+            background = {
+                "palette_index": int(image.info.get("background", 0)),
+                "origin": "pillow_fixture",
+            }
         sources = None
 
     frames = []
@@ -1737,6 +2012,7 @@ def clear_pixel_ref(row):
     row.pop("decoded_palette", None)
     row.pop("decoded_source_byte_order", None)
     row.pop("decoded_source_byte_order_origin", None)
+    row.pop("decoded_source_color", None)
     row.pop("sequence", None)
 
 
@@ -1863,6 +2139,50 @@ def write_decoded_source_descriptor(row, image_path, fmt_name, image):
     else:
         row["decoded_source_byte_order"] = None
         row["decoded_source_byte_order_origin"] = None
+    if fmt_name == "png":
+        if row["id"] in PNG_SOURCE_COLOR_PARITY_EXCLUSIONS:
+            # Pillow exposes malformed color chunks differently from the
+            # decoder's spec-aware SourceColor API; these rows assert pixels.
+            row["decoded_source_color"] = None
+            return
+        info = image.info
+        srgb = info.get("srgb")
+        if not isinstance(srgb, int) or isinstance(srgb, bool) or srgb not in range(4):
+            srgb = None
+        gamma = info.get("gamma")
+        if isinstance(gamma, (int, float)) and not isinstance(gamma, bool):
+            gamma = round(gamma * 100_000) if math.isfinite(gamma) else None
+        else:
+            gamma = None
+        chromaticities = info.get("chromaticity")
+        if (
+            isinstance(chromaticities, (tuple, list))
+            and len(chromaticities) == 8
+            and all(
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and math.isfinite(value)
+                for value in chromaticities
+            )
+        ):
+            chromaticities = [round(value * 100_000) for value in chromaticities]
+        else:
+            chromaticities = None
+        row["decoded_source_color"] = {
+            "srgb": srgb,
+            "gamma": gamma,
+            "chromaticities": chromaticities,
+            "icc_profile_present": bool(info.get("icc_profile")),
+        }
+    elif fmt_name == "avif" and image.info.get("icc_profile"):
+        row["decoded_source_color"] = {
+            "srgb": None,
+            "gamma": None,
+            "chromaticities": None,
+            "icc_profile_present": True,
+        }
+    else:
+        row["decoded_source_color"] = None
 
 
 def write_inspect_ref(row, image_path, fmt_name):
@@ -2021,6 +2341,7 @@ def describe_encode_call(fmt_name, row):
     animated = kwargs.pop("_manifest_animated", None)
     frame_count = kwargs.pop("_manifest_frames", None)
     preserve_duration = kwargs.pop("_manifest_preserve_duration", False)
+    first_frame_duration_ms = kwargs.pop("_manifest_first_frame_duration_ms", None)
     preserve_disposal = kwargs.pop("_manifest_preserve_disposal", False)
     if animated:
         kwargs["save_all"] = True
@@ -2029,21 +2350,33 @@ def describe_encode_call(fmt_name, row):
             "start": 1,
             "count": (frame_count or 1) - 1,
         }
-        if preserve_duration:
-            kwargs["duration"] = {
+        if preserve_duration or first_frame_duration_ms is not None:
+            duration_spec = {
                 "type": "durations_from_source",
                 "count": frame_count or 1,
             }
+            if first_frame_duration_ms is not None:
+                duration_spec["first_frame_override_ms"] = first_frame_duration_ms
+            kwargs["duration"] = duration_spec
         if preserve_disposal:
             kwargs["disposal"] = {
                 "type": "disposals_from_source",
                 "count": frame_count or 1,
             }
+    recorded_kwargs = dict(kwargs)
+    payload_length = row.get("params", {}).get("exif_payload_length")
+    if payload_length is not None:
+        # Keep the exact zero-filled Pillow payload compact in generated JSON.
+        recorded_kwargs["exif"] = {
+            "type": "bytes",
+            "fill_byte": 0,
+            "length": payload_length,
+        }
     call = {
         "open": f"tests/fixtures/input/images/{row['source_format']}/{row['source_asset']}",
         "method": "PIL.Image.Image.save",
         "format": fmt_pil(fmt_name),
-        "kwargs": json_pillow_value(kwargs),
+        "kwargs": json_pillow_value(recorded_kwargs),
     }
     if fmt_name == "avif" and row.get("params", {}).get("sequence_time"):
         call["output_canonicalization"] = {
@@ -2079,6 +2412,12 @@ def describe_encode_call(fmt_name, row):
         call["rust_invalid_transform"] = (
             "construct L8 bytes with a deliberately inconsistent Rgb8 ColorType"
         )
+    if row.get("params", {}).get("rust_encode_with_token"):
+        call["rust_public_call_parity"] = {
+            "method": "image_slash_star::encode_with_token",
+            "token": "fresh non-cancelled cancellation token",
+            "comparison": "exact Pillow encoded bytes and ordinary encode output",
+        }
     sequence_fields = {
         name: value
         for name, value in row.get("params", {}).items()
@@ -2192,6 +2531,163 @@ def sync_encode_rows(manifest, matrix):
                 row.pop("source_asset", None)
             synchronized.append(row)
         fmt_matrix["encode"] = synchronized
+
+
+def sync_fault_contract_rows(manifest, matrix):
+    """Keep target-only injected-fault cases in the shared case index."""
+    allowed_faults = {
+        "av1.display_plane.reconstructed_copy_allocation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.temporal_motion_field.reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.temporal_projection.field_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "avif.sequence_frames.output_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.superres.position_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.superres.plane_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.restoration.sgr_output_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.restoration.sgr_intermediate_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "av1.restoration.stripe_scratch_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
+        "jpeg.multiscan.coefficient_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.monochrome_tile_state_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.color_tile_state_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.grid.cell_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.assembled_monochrome_loop_filter_metadata_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.assembled_monochrome_cdef_active_map_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.tile_cell_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.chroma_tile_cell_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.tile_block_metadata_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.frame.assembled_loop_filter_metadata_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+        "av1.partition_tree.node_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
+    }
+    rows = manifest.get("fault_contracts", [])
+    if not isinstance(rows, list):
+        raise RuntimeError("fault_contracts must be an array")
+
+    seen = set()
+    for row in rows:
+        expected_keys = {
+            "id",
+            "type",
+            "operation",
+            "format",
+            "status",
+            "requirements",
+            "verification",
+            "input",
+            "fault",
+            "oracle_status",
+        }
+        if not isinstance(row, dict) or set(row) != expected_keys:
+            raise RuntimeError(
+                "fault-contract rows must use the complete target-only schema"
+            )
+        case_id = row.get("id")
+        if not isinstance(case_id, str) or not case_id or case_id in seen:
+            raise RuntimeError(f"invalid or duplicate fault-contract id: {case_id!r}")
+        seen.add(case_id)
+        if (
+            row.get("type") != "fault-contract"
+            or row.get("verification") != "fault-contract"
+            or row.get("oracle_status") != "not_applicable"
+            or row.get("operation") != "decode"
+            or row.get("status") != "active"
+        ):
+            raise RuntimeError(
+                f"{case_id}: fault contract must be active decode with a not_applicable oracle"
+            )
+        if row.get("format") not in {"avif", "jpeg"}:
+            raise RuntimeError(f"{case_id}: unsupported fault-contract format")
+        requirements = row.get("requirements")
+        if (
+            not isinstance(requirements, list)
+            or not requirements
+            or any(not isinstance(value, str) or not value for value in requirements)
+            or len(set(requirements)) != len(requirements)
+            or requirements != ["structured-diagnostics"]
+        ):
+            raise RuntimeError(
+                f"{case_id}: requirements must name the structured-diagnostics contract"
+            )
+
+        input_spec = row.get("input")
+        if not isinstance(input_spec, dict) or set(input_spec) != {"source_case"}:
+            raise RuntimeError(f"{case_id}: input must name exactly one source_case")
+        source_case = input_spec.get("source_case")
+        if not isinstance(source_case, str):
+            raise RuntimeError(f"{case_id}: source_case must be a qualified case key")
+        source_fields = source_case.split(":")
+        if len(source_fields) != 3 or source_fields[0] != "decode":
+            raise RuntimeError(f"{case_id}: source_case must be decode:format:id")
+        source_format, source_id = source_fields[1:]
+        if source_format != row["format"] or not source_id:
+            raise RuntimeError(
+                f"{case_id}: source_case format must match the fault contract"
+            )
+        source_rows = matrix.get("formats", {}).get(source_format, {}).get("decode", [])
+        source_row = next(
+            (
+                candidate
+                for candidate in source_rows
+                if candidate.get("id") == source_id
+            ),
+            None,
+        )
+        if (
+            source_row is None
+            or source_row.get("status") != "active"
+            or source_row.get("oracle_status") != "ok"
+        ):
+            raise RuntimeError(f"{case_id}: source_case must reference an active decode row")
+
+        fault = row.get("fault")
+        if not isinstance(fault, dict) or set(fault) != {"point", "contract"}:
+            raise RuntimeError(f"{case_id}: fault must name exactly a point and contract")
+        point = fault.get("point")
+        contract = fault.get("contract")
+        if not isinstance(point, str) or not isinstance(contract, str):
+            raise RuntimeError(f"{case_id}: fault point and contract must be strings")
+        if point not in allowed_faults or contract not in allowed_faults.get(point, set()):
+            raise RuntimeError(f"{case_id}: fault point or public contract is not allow-listed")
+
+    matrix["fault_contracts"] = rows
 
 
 def update_summary(matrix):
@@ -2395,6 +2891,47 @@ def validate_generated_outputs(matrix, target_format=None):
                 if row.get("ref_path"):
                     failures.append(f"{case_name}: planned decode row retains a reference")
                 continue
+            frame_request = row.get("frame_request")
+            frame_request_result = row.get("frame_request_result")
+            if frame_request is None:
+                if frame_request_result is not None:
+                    failures.append(
+                        f"{case_name}: frame-request result has no declared request"
+                    )
+            elif (
+                not isinstance(frame_request, dict)
+                or set(frame_request)
+                != {
+                    "index",
+                    "expected_status",
+                    "pillow_error_type",
+                    "rust_error_kind",
+                }
+                or not isinstance(frame_request.get("index"), int)
+                or isinstance(frame_request.get("index"), bool)
+                or frame_request.get("index", -1) < 0
+                or frame_request.get("expected_status") != "error"
+                or not isinstance(frame_request.get("pillow_error_type"), str)
+                or frame_request.get("rust_error_kind") not in {
+                    "malformed",
+                    "unsupported",
+                    "dimensions",
+                    "parameter",
+                }
+            ):
+                failures.append(f"{case_name}: frame-request contract is invalid")
+            elif (
+                not isinstance(frame_request_result, dict)
+                or set(frame_request_result)
+                != {"index", "status", "error_type", "error_message"}
+                or frame_request_result.get("index") != frame_request["index"]
+                or frame_request_result.get("status") != "error"
+                or frame_request_result.get("error_type")
+                != frame_request["pillow_error_type"]
+                or not isinstance(frame_request_result.get("error_message"), str)
+                or not frame_request_result["error_message"]
+            ):
+                failures.append(f"{case_name}: frame-request Pillow evidence is invalid")
             if row.get("execution") != execution_contract():
                 failures.append(f"{case_name}: native execution contract is missing")
             if row.get("operations") != decode_operation_expectations(row):
@@ -2410,6 +2947,30 @@ def validate_generated_outputs(matrix, target_format=None):
                 or any(origin not in ASSERTION_ORIGINS for origin in origins.values())
             ):
                 failures.append(f"{case_name}: assertion origins are missing or invalid")
+            avif_mdcv = row.get("avif_mdcv")
+            avif_mdcv_origin = (
+                origins.get("avif_mdcv") if isinstance(origins, dict) else None
+            )
+            if avif_mdcv is None:
+                if avif_mdcv_origin is not None:
+                    failures.append(
+                        f"{case_name}: AVIF mdcv origin has no asserted value"
+                    )
+            elif (
+                fmt_name != "avif"
+                or row.get("oracle_status") != "ok"
+                or row.get("inspect_status") != "ok"
+                or not isinstance(avif_mdcv, list)
+                or len(avif_mdcv) != 10
+                or any(
+                    not isinstance(value, int)
+                    or isinstance(value, bool)
+                    or not 0 <= value <= (0xFFFF if index < 8 else 0xFFFF_FFFF)
+                    for index, value in enumerate(avif_mdcv)
+                )
+                or avif_mdcv_origin != "specification_reference"
+            ):
+                failures.append(f"{case_name}: AVIF mdcv evidence is invalid")
             asset_path = ASSETS_DIR / fmt_name / str(row.get("asset", ""))
             if (
                 not asset_path.is_file()
@@ -2503,6 +3064,76 @@ def validate_generated_outputs(matrix, target_format=None):
             elif decoded_byte_order is not None or decoded_byte_order_origin is not None:
                 failures.append(
                     f"{case_name}: decode invents source byte order for {fmt_name}"
+                )
+            source_color = row.get("decoded_source_color")
+            source_color_origin = row.get("assertion_origins", {}).get(
+                "decoded_source_color"
+            )
+            if fmt_name == "png" and row.get("oracle_status") == "ok":
+                excluded_color_parity = row["id"] in PNG_SOURCE_COLOR_PARITY_EXCLUSIONS
+                if excluded_color_parity and (
+                    source_color is not None or source_color_origin is not None
+                ):
+                    failures.append(
+                        f"{case_name}: excluded PNG source-color evidence must remain unasserted"
+                    )
+                elif not excluded_color_parity and (
+                    not isinstance(source_color, dict)
+                    or set(source_color)
+                    != {"srgb", "gamma", "chromaticities", "icc_profile_present"}
+                    or source_color_origin != "pillow_fixture"
+                ):
+                    failures.append(f"{case_name}: PNG source-color evidence is invalid")
+                elif not excluded_color_parity:
+                    srgb = source_color.get("srgb")
+                    gamma = source_color.get("gamma")
+                    chromaticities = source_color.get("chromaticities")
+                    icc_present = source_color.get("icc_profile_present")
+                    if srgb is not None and (
+                        not isinstance(srgb, int) or isinstance(srgb, bool) or srgb not in range(4)
+                    ):
+                        failures.append(f"{case_name}: PNG sRGB reference is invalid")
+                    if gamma is not None and (
+                        not isinstance(gamma, int)
+                        or isinstance(gamma, bool)
+                        or not 0 <= gamma <= 0xFFFF_FFFF
+                    ):
+                        failures.append(f"{case_name}: PNG gamma reference is invalid")
+                    if chromaticities is not None and (
+                        not isinstance(chromaticities, list)
+                        or len(chromaticities) != 8
+                        or any(
+                            not isinstance(value, int)
+                            or isinstance(value, bool)
+                            or not 0 <= value <= 0xFFFF_FFFF
+                            for value in chromaticities
+                        )
+                    ):
+                        failures.append(
+                            f"{case_name}: PNG chromaticity reference is invalid"
+                        )
+                    if not isinstance(icc_present, bool):
+                        failures.append(f"{case_name}: PNG ICC presence reference is invalid")
+            elif fmt_name == "avif" and row.get("oracle_status") == "ok":
+                if source_color is None:
+                    if source_color_origin is not None:
+                        failures.append(
+                            f"{case_name}: AVIF source-color origin has no asserted value"
+                        )
+                elif (
+                    not isinstance(source_color, dict)
+                    or set(source_color)
+                    != {"srgb", "gamma", "chromaticities", "icc_profile_present"}
+                    or source_color_origin != "pillow_fixture"
+                    or source_color.get("srgb") is not None
+                    or source_color.get("gamma") is not None
+                    or source_color.get("chromaticities") is not None
+                    or source_color.get("icc_profile_present") is not True
+                ):
+                    failures.append(f"{case_name}: AVIF ICC evidence is invalid")
+            elif source_color is not None or source_color_origin is not None:
+                failures.append(
+                    f"{case_name}: decoded source-color evidence is invalid for {fmt_name}"
                 )
             for field in ("inspect_palette", "decoded_palette"):
                 palette = row.get(field)
@@ -3819,6 +4450,7 @@ def generate_decode(manifest, matrix, target_format=None):
                     continue
                 write_inspect_ref(row, img_path, fmt_name)
                 write_verify_ref(row, img_path)
+                write_frame_request_ref(row, img_path)
                 if row.get("expect_error"):
                     clear_pixel_ref(row)
                     try:
@@ -3901,6 +4533,12 @@ def generate_decode(manifest, matrix, target_format=None):
                     origins["sequence_pixels"] = "pillow_fixture"
             if row.get("rust_expect_sequence_error"):
                 origins["rust_sequence_contract"] = "defensive_model"
+            if row.get("frame_request") is not None:
+                origins["frame_request"] = "pillow_fixture"
+            if row.get("decoded_source_color") is not None:
+                origins["decoded_source_color"] = "pillow_fixture"
+            if row.get("avif_mdcv") is not None:
+                origins["avif_mdcv"] = "specification_reference"
             row["assertion_origins"] = origins
             row["operations"] = decode_operation_expectations(row)
             row["error_contracts"] = decode_error_contracts(row, fmt_name)
@@ -3927,6 +4565,26 @@ def generate_decode(manifest, matrix, target_format=None):
                 ),
                 "rust_sequence_error_kind": r.get("rust_sequence_error_kind"),
                 "rust_sequence_error_reason": r.get("rust_sequence_error_reason"),
+                **(
+                    {"rust_inspect_basic": True}
+                    if r.get("rust_inspect_basic")
+                    else {}
+                ),
+                **(
+                    {
+                        "rust_decode_with_metadata_limit": r[
+                            "rust_decode_with_metadata_limit"
+                        ]
+                    }
+                    if r.get("rust_decode_with_metadata_limit") is not None
+                    else {}
+                ),
+                **(
+                    {"frame_request": r["frame_request"]}
+                    if r.get("frame_request") is not None
+                    else {}
+                ),
+                **({"avif_mdcv": r["avif_mdcv"]} if r.get("avif_mdcv") is not None else {}),
                 "pillow_call": {
                     "open": f"tests/fixtures/input/images/{fmt_name}/{r['asset']}",
                     "operations": ["PIL.Image.open", "load", "tobytes"],
@@ -3971,6 +4629,11 @@ def generate_decode(manifest, matrix, target_format=None):
                 "assertion_origins": r.get("assertion_origins"),
                 "operations": r.get("operations"),
                 "error_contracts": r.get("error_contracts"),
+                **(
+                    {"frame_request_result": r["frame_request_result"]}
+                    if r.get("frame_request_result") is not None
+                    else {}
+                ),
                 "ref_bit_depth": r.get("ref_bit_depth"),
                 "ref_bit_depth_origin": r.get("ref_bit_depth_origin"),
                 "ref_path": r.get("ref_path"),
@@ -3986,6 +4649,8 @@ def generate_decode(manifest, matrix, target_format=None):
                 "decoded_source_byte_order_origin": r.get(
                     "decoded_source_byte_order_origin"
                 ),
+                "decoded_source_color": r.get("decoded_source_color"),
+                **({"avif_mdcv": r["avif_mdcv"]} if r.get("avif_mdcv") is not None else {}),
                 "sequence_status": r.get("sequence_status"),
                 "sequence_error_type": r.get("sequence_error_type"),
                 "sequence_error_message": r.get("sequence_error_message"),
@@ -4229,6 +4894,7 @@ def generate(target_format=None):
     matrix = json.loads(MATRIX_PATH.read_text()) if MATRIX_PATH.exists() else {"formats": {}}
     sync_decode_rows(manifest, matrix)
     sync_encode_rows(manifest, matrix)
+    sync_fault_contract_rows(manifest, matrix)
     preflight_encode_cases(matrix, target_format)
     clear_generated_outputs(manifest, target_format)
 

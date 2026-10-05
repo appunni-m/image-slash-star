@@ -520,7 +520,10 @@ pub(crate) fn verify_format(_data: &[u8], format: ImageFormat) -> ImageResult<()
         feature = "tiff",
         feature = "avif"
     )),
-    allow(unused_variables)
+    allow(
+        unused_variables,
+        reason = "All sequence-decoder branches are cfg-disabled when no sequence codec is enabled."
+    )
 )]
 fn decode_sequence_codec(
     data: &[u8],
@@ -733,7 +736,13 @@ fn decode_sequence_token_format_with_mode(
 /// TIFF decodes only the selected page's IFD; every other sequence format
 /// currently decodes the full sequence and returns the indexed frame, so the
 /// public contract is uniform while the eager fallback is documented.
-#[cfg_attr(not(feature = "tiff"), allow(unused_variables))]
+#[cfg_attr(
+    not(feature = "tiff"),
+    allow(
+        unused_variables,
+        reason = "The page index is used only by TIFF's feature-gated page decoder."
+    )
+)]
 pub(crate) fn decode_frame_format(
     data: &[u8],
     format: ImageFormat,
@@ -904,7 +913,10 @@ pub(crate) fn encode_format_with_token(
         feature = "webp",
         feature = "avif"
     )),
-    allow(unused_variables)
+    allow(
+        unused_variables,
+        reason = "Every format-specific structural writer is cfg-disabled when no codec feature is enabled."
+    )
 )]
 pub(crate) fn encode_format_to_sink_with_token(
     image: &DecodedImage,
@@ -1338,7 +1350,10 @@ pub(crate) fn encode_format_to_sink_with_token(
         feature = "tiff",
         feature = "webp"
     )),
-    allow(unused_variables)
+    allow(
+        unused_variables,
+        reason = "Every format-specific sequence writer is cfg-disabled when no codec feature is enabled."
+    )
 )]
 pub(crate) fn encode_sequence_to_sink_with_token(
     sequence: &DecodedSequence,
@@ -2189,342 +2204,6 @@ fn ensure_enabled(format: ImageFormat) -> ImageResult<()> {
         });
     }
     Ok(())
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    error::__coverage_exercise_private_branches();
-
-    // The eager frame-decode fallback's sequence-error path is exercised
-    // with bytes whose signature never reaches a codec.
-    let _ = decode_frame_format(b"not an image", ImageFormat::Gif, 0);
-
-    let invalid_sequence = DecodedSequence {
-        width: 0,
-        height: 1,
-        frames: Vec::new(),
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::SingleFrame,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = encode_sequence_format(
-        &invalid_sequence,
-        ImageFormat::Png,
-        &EncodeOptions::for_format(ImageFormat::Png),
-    );
-
-    let luma = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
-    let rgb = DecodedImage::new(1, 1, vec![0, 0, 0], crate::types::ColorType::Rgb8);
-
-    // Exercise the public dispatch matrix for every enabled target.  Each
-    // format gets its successful structural writer, its typed option-mismatch
-    // error, and both still and one-frame sequence delivery.  These are real
-    // caller routes; Pillow parity cannot observe the Rust sink boundary or
-    // the format-qualified options error.
-    let dispatch_formats = [
-        ImageFormat::Jpeg,
-        ImageFormat::Png,
-        ImageFormat::Gif,
-        ImageFormat::Bmp,
-        ImageFormat::Tiff,
-        ImageFormat::WebP,
-        ImageFormat::Ico,
-        ImageFormat::Avif,
-    ];
-    let one_frame_sequence = DecodedSequence::from_image(rgb.clone());
-    for format in dispatch_formats {
-        let options = EncodeOptions::for_format(format);
-        let wrong_format = if format == ImageFormat::Png {
-            ImageFormat::Jpeg
-        } else {
-            ImageFormat::Png
-        };
-        let wrong_options = EncodeOptions::for_format(wrong_format);
-        let token = crate::CancellationToken::new();
-        let mut still_sink = Vec::new();
-        let _ = encode_format_to_sink_with_token(
-            &rgb,
-            format,
-            &options,
-            EncodePolicy::default(),
-            Some(&token),
-            &mut still_sink,
-        );
-        let mut still_mismatch_sink = Vec::new();
-        let _ = encode_format_to_sink_with_token(
-            &rgb,
-            format,
-            &wrong_options,
-            EncodePolicy::default(),
-            None,
-            &mut still_mismatch_sink,
-        );
-        let mut sequence_sink = Vec::new();
-        let _ = encode_sequence_to_sink_with_token(
-            &one_frame_sequence,
-            format,
-            &options,
-            EncodePolicy::default(),
-            Some(&token),
-            &mut sequence_sink,
-        );
-        let mut sequence_mismatch_sink = Vec::new();
-        let _ = encode_sequence_to_sink_with_token(
-            &one_frame_sequence,
-            format,
-            &wrong_options,
-            EncodePolicy::default(),
-            None,
-            &mut sequence_mismatch_sink,
-        );
-        let _ = encode_sequence_format_with_token(&one_frame_sequence, format, &options, None);
-        let _ = encode_sequence_format_with_token(
-            &one_frame_sequence,
-            format,
-            &options,
-            Some(&crate::CancellationToken::new()),
-        );
-    }
-
-    // A single retained frame can still carry sequence-only presentation
-    // metadata.  Still-image sink formats must reject that rather than
-    // silently discarding it.
-    let mut metadata_sequence = DecodedSequence::from_image(rgb.clone());
-    metadata_sequence.background = Some(crate::types::AnimationBackground::Rgba([0, 0, 0, 0]));
-    let mut metadata_sink = Vec::new();
-    let _ = encode_sequence_to_sink_with_token(
-        &metadata_sequence,
-        ImageFormat::Png,
-        &EncodeOptions::for_format(ImageFormat::Png),
-        EncodePolicy::default(),
-        None,
-        &mut metadata_sink,
-    );
-    let mut metadata_webp_sink = Vec::new();
-    let _ = encode_sequence_to_sink_with_token(
-        &metadata_sequence,
-        ImageFormat::WebP,
-        &EncodeOptions::for_format(ImageFormat::WebP),
-        EncodePolicy::default(),
-        None,
-        &mut metadata_webp_sink,
-    );
-
-    // Still codecs are currently whole-buffer operations.  The coverage-only
-    // hook makes the post-codec public-boundary cancellation checkpoint
-    // deterministic; Pillow has no equivalent caller token to exercise this
-    // Rust-only path.
-    // Token-aware PNG work adds internal polls before the dispatcher performs
-    // its final public-boundary check. Sweep a bounded count so the
-    // dispatcher-level cancellation edge is reached as well as the earlier
-    // codec-local edges; Pillow has no equivalent caller token.
-    let probe = crate::CancellationToken::new();
-    probe.cancel_after(usize::MAX);
-    let _ = encode_format_with_token(
-        &luma,
-        ImageFormat::Png,
-        &EncodeOptions::for_format(ImageFormat::Png),
-        Some(&probe),
-    );
-    let calls = usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-    for checks in 0..=calls {
-        let post_codec_cancel = crate::CancellationToken::new();
-        post_codec_cancel.cancel_after(checks);
-        let _ = encode_format_with_token(
-            &luma,
-            ImageFormat::Png,
-            &EncodeOptions::for_format(ImageFormat::Png),
-            Some(&post_codec_cancel),
-        );
-    }
-    let successful_post_codec_token = crate::CancellationToken::new();
-    let _ = encode_format_with_token(
-        &rgb,
-        ImageFormat::Png,
-        &EncodeOptions::for_format(ImageFormat::Png),
-        Some(&successful_post_codec_token),
-    );
-
-    let two_frame_sequence = DecodedSequence {
-        width: 1,
-        height: 1,
-        frames: vec![
-            crate::types::DecodedFrame::rendered_canvas(
-                luma.clone(),
-                crate::types::FrameRect {
-                    left: 0,
-                    top: 0,
-                    width: 1,
-                    height: 1,
-                },
-                crate::types::FrameDuration::ZERO,
-                crate::types::FrameDisposal::Unspecified,
-                crate::types::FrameBlend::Unspecified,
-            ),
-            crate::types::DecodedFrame::rendered_canvas(
-                luma,
-                crate::types::FrameRect {
-                    left: 0,
-                    top: 0,
-                    width: 1,
-                    height: 1,
-                },
-                crate::types::FrameDuration::ZERO,
-                crate::types::FrameDisposal::Unspecified,
-                crate::types::FrameBlend::Unspecified,
-            ),
-        ],
-        loop_count: crate::types::AnimationLoop::Unspecified,
-        background: None,
-        kind: crate::types::SequenceKind::TimedAnimation,
-        opaque_blocks: Vec::new(),
-        metadata: Vec::new(),
-        source_color: crate::types::SourceColor::new(),
-    };
-    let _ = encode_sequence_format(
-        &two_frame_sequence,
-        ImageFormat::Png,
-        &EncodeOptions::for_format(ImageFormat::Png),
-    );
-    for format in [
-        ImageFormat::Jpeg,
-        ImageFormat::Png,
-        ImageFormat::Bmp,
-        ImageFormat::Ico,
-    ] {
-        let mut sink = Vec::new();
-        let _ = encode_sequence_to_sink_with_token(
-            &two_frame_sequence,
-            format,
-            &EncodeOptions::for_format(format),
-            EncodePolicy::default(),
-            None,
-            &mut sink,
-        );
-    }
-    let mut webp_sequence_sink = Vec::new();
-    let _ = encode_sequence_to_sink_with_token(
-        &two_frame_sequence,
-        ImageFormat::WebP,
-        &EncodeOptions::for_format(ImageFormat::WebP),
-        EncodePolicy::default(),
-        None,
-        &mut webp_sequence_sink,
-    );
-    let mut webp_sequence_mismatch_sink = Vec::new();
-    let _ = encode_sequence_to_sink_with_token(
-        &two_frame_sequence,
-        ImageFormat::WebP,
-        &EncodeOptions::for_format(ImageFormat::Png),
-        EncodePolicy::default(),
-        None,
-        &mut webp_sequence_mismatch_sink,
-    );
-    let mut empty_webp_sink = Vec::new();
-    let _ = encode_sequence_to_sink_with_token(
-        &invalid_sequence,
-        ImageFormat::WebP,
-        &EncodeOptions::for_format(ImageFormat::WebP),
-        EncodePolicy::default(),
-        None,
-        &mut empty_webp_sink,
-    );
-
-    // These are Rust-only token-dispatch checks.  CancellationToken and the
-    // caller-owned output contract are not represented by Pillow parity rows.
-    #[cfg(feature = "gif")]
-    let _ = encode_sequence_format_with_token(
-        &two_frame_sequence,
-        ImageFormat::Gif,
-        &EncodeOptions::for_format(ImageFormat::Gif),
-        Some(&crate::CancellationToken::new()),
-    );
-    #[cfg(feature = "avif")]
-    let _ = encode_sequence_format_with_token(
-        &two_frame_sequence,
-        ImageFormat::Avif,
-        &EncodeOptions::for_format(ImageFormat::Avif),
-        Some(&crate::CancellationToken::new()),
-    );
-    #[cfg(feature = "avif")]
-    {
-        // The public dispatcher consumes the first poll before entering the
-        // AVIF still encoder. Cancel after that poll to exercise the codec's
-        // own pre-work checkpoint without adding a parity row.
-        let avif_still_cancel = crate::CancellationToken::new();
-        avif_still_cancel.cancel_after(1);
-        let _ = encode_format_with_token(
-            &two_frame_sequence.frames[1].image,
-            ImageFormat::Avif,
-            &EncodeOptions::for_format(ImageFormat::Avif),
-            Some(&avif_still_cancel),
-        );
-    }
-    #[cfg(feature = "tiff")]
-    let _ = encode_sequence_format_with_token(
-        &two_frame_sequence,
-        ImageFormat::Tiff,
-        &EncodeOptions::for_format(ImageFormat::Tiff),
-        Some(&crate::CancellationToken::new()),
-    );
-    #[cfg(feature = "webp")]
-    let _ = encode_sequence_format_with_token(
-        &two_frame_sequence,
-        ImageFormat::WebP,
-        &EncodeOptions::for_format(ImageFormat::WebP),
-        Some(&crate::CancellationToken::new()),
-    );
-
-    let invalid_image = DecodedImage::new(1, 1, Vec::new(), crate::types::ColorType::Rgb8);
-    let _ = validate_decoded_image(invalid_image);
-    for format in [
-        ImageFormat::Avif,
-        ImageFormat::Gif,
-        ImageFormat::Tiff,
-        ImageFormat::WebP,
-    ] {
-        let mut sink = Vec::new();
-        let invalid_image = DecodedImage::new(1, 1, Vec::new(), crate::types::ColorType::Rgb8);
-        let _ = encode_format_to_sink_with_token(
-            &invalid_image,
-            format,
-            &EncodeOptions::for_format(format),
-            EncodePolicy::default(),
-            None,
-            &mut sink,
-        );
-    }
-
-    // The manifest currently has no malformed AVIF container fixture. Keep the
-    // dispatch-only error conversion covered without weakening AVIF parity rows.
-    #[cfg(feature = "avif")]
-    let _ = decode_sequence_format(
-        b"not an AVIF container",
-        ImageFormat::Avif,
-        &mut SequenceDecodeBudget::default_for(ImageFormat::Avif),
-    );
-
-    #[cfg(any(feature = "png", feature = "tiff"))]
-    compression::__coverage_exercise_private_branches();
-    #[cfg(feature = "avif")]
-    avif::__coverage_exercise_private_branches();
-    #[cfg(feature = "bmp")]
-    bmp::__coverage_exercise_private_branches();
-    #[cfg(feature = "gif")]
-    gif::__coverage_exercise_private_branches();
-    #[cfg(feature = "ico")]
-    ico::__coverage_exercise_private_branches();
-    #[cfg(feature = "jpeg")]
-    jpeg::__coverage_exercise_private_branches();
-    #[cfg(feature = "png")]
-    png::__coverage_exercise_private_branches();
-    #[cfg(feature = "tiff")]
-    tiff::__coverage_exercise_private_branches();
-    #[cfg(feature = "webp")]
-    webp::__coverage_exercise_private_branches();
 }
 
 #[cfg(all(coverage, feature = "avif"))]

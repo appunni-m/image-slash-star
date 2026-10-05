@@ -51,7 +51,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -83,6 +84,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -130,7 +137,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -162,6 +170,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -209,7 +223,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -241,6 +256,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -288,7 +309,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -320,6 +342,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -367,7 +395,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -399,6 +428,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -446,7 +481,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -478,6 +514,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -525,7 +567,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -563,6 +606,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -610,7 +659,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -648,6 +698,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -695,7 +751,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -733,6 +790,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -780,7 +843,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -818,6 +882,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -865,7 +935,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -903,6 +974,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -950,7 +1027,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -994,6 +1072,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1041,7 +1125,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1085,6 +1170,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1132,7 +1223,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1164,6 +1256,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1211,7 +1309,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1243,6 +1342,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1290,7 +1395,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1322,6 +1428,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1369,7 +1481,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1401,6 +1514,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1448,7 +1567,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1480,6 +1600,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1527,7 +1653,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1559,6 +1686,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1606,7 +1739,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1638,6 +1772,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1685,7 +1825,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1717,6 +1858,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1764,7 +1911,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1796,6 +1944,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1843,7 +1997,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1875,6 +2030,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -1922,7 +2083,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -1954,6 +2116,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2001,7 +2169,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2033,6 +2202,184 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "interlace_adam7_gray_4bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "bf49dd44eb3e0a4d838125c2a1209c00a7858347f31d1056a45c3e9aac60aceb",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 4,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_adam7_gray_4bit_png.bin",
+      "ref_bytes": 81,
+      "ref_sha256": "ce9a80be9c20aa5764ee76770e206e5a8a5a078931fa8f62cb3de580498bc088",
+      "ref_mode": "L8",
+      "ref_size": [
+        9,
+        9
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "interlace_adam7_gray_16bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "59b6782d0bfcd0bb80a54111020fbbf9d31292f68527fd4374e37a3e6020fa16",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 16,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_adam7_gray_16bit_png.bin",
+      "ref_bytes": 162,
+      "ref_sha256": "67e8f6a15c947fe9be0a64cc8233bf28d7c531ef095c8e622ada90f403dcacb6",
+      "ref_mode": "I;16",
+      "ref_size": [
+        9,
+        9
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2080,7 +2427,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2112,6 +2460,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2159,7 +2513,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2191,6 +2546,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2238,7 +2599,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2270,6 +2632,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2317,7 +2685,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2349,6 +2718,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2396,7 +2771,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2428,6 +2804,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2475,7 +2857,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2507,6 +2890,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2554,7 +2943,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2586,6 +2976,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2633,7 +3029,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2665,6 +3062,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2712,7 +3115,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2744,6 +3148,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2791,7 +3201,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2823,6 +3234,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2870,7 +3287,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2902,6 +3320,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -2949,7 +3373,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -2981,6 +3406,98 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": 45455,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "chunk_gama_duplicate",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "8cf23a4fa81136a924e1db86c91b76437c25856b52fa57c5b248a5ce913ae6a2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_gama_duplicate_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": 45455,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3028,7 +3545,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3060,6 +3578,454 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": 0,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "chunk_srgb_duplicate",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "977fe0a3a05bcd9ab61be22a43af0162260bdeaf8e91c8b66b5677528ac7b115",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_srgb_duplicate_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": 0,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "chunk_srgb_invalid_intent",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "b4ea8c258733eda10a4a56c17fe0c5442fd0a91e79b0ba46e212c3856e6f5983",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_srgb_invalid_intent_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_malformed_srgb_short",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "36002c53a32518f1af6d984e410c7658e32198b6d65f308b915a17dcabdbd77b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_srgb_short_payload_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "chunk_chrm",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "9db8960338fb81aeb31ee193c3c30f62bab26742c602cc4c1bff15961766ee2e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_chrm_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": [
+          31270,
+          32900,
+          64000,
+          33000,
+          30000,
+          60000,
+          15000,
+          6000
+        ],
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "chunk_chrm_duplicate",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "48137c5c7b88891522f277f9edcf3e8bf1f98f1a136adb283831894b278922df",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_chrm_duplicate_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": [
+          31270,
+          32900,
+          64000,
+          33000,
+          30000,
+          60000,
+          15000,
+          6000
+        ],
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3107,7 +4073,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3139,6 +4106,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": true
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3148,7 +4121,7 @@
       "rust_sequence_error_reason": null
     },
     {
-      "id": "chunk_text",
+      "id": "chunk_iccp_duplicate",
       "status": "ok",
       "error_type": null,
       "error_message": null,
@@ -3166,7 +4139,93 @@
       "inspect_cursor_hotspot": null,
       "inspect_source_byte_order": null,
       "inspect_source_byte_order_origin": null,
-      "asset_sha256": "3d4ea6159c9cdb3e7e68c9adef752e97697ddde7e6aaadaa0fa25e8fd7d8c88f",
+      "asset_sha256": "7f7cd4775b123cbb12aa1f4486141e36f26485cd14ec88c93d68795168895aad",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_iccp_duplicate_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": true
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_malformed_iccp_empty_keyword",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "b55406046063cd1ed8cca36368a452f49ea18581239a9fab75b32eede9e7699d",
       "execution": {
         "target": "aarch64-apple-darwin",
         "features": [
@@ -3198,6 +4257,173 @@
       "error_contracts": {},
       "ref_bit_depth": 8,
       "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_iccp_empty_keyword_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_malformed_chrm_short",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "f3cd433caba457f68d9860eac97977d394ea9a0f2ca88a95a189f08b18ae8182",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_chrm_short_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "chunk_text",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "6a8ba1d6ff4cce6d5197928ede43062bb366c999778d2863254d59afe69d22c1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
       "ref_path": "tests/fixtures/outputs/raws/Decode.png_text_chunks_png.bin",
       "ref_bytes": 49152,
       "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
@@ -3218,6 +4444,365 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_malformed_text_metadata_edges",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "2ce66316a5d902275d1a7bf0c30ea42ee7eb653e6a0c483618bb588649a3d722",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_text_metadata_edges_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "unknown_ancillary_reserved_bit",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "dc2902a11af1ea32f13bd416e30361f33e81dd44dbe8e0b0c7ea377387465c46",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_unknown_ancillary_reserved_bit_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "unknown_ancillary_after_idat",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "97d0f228be970a2ac40ecb1fbbbc9b0820ea36ee5a42be69b625d08a79024f65",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_unknown_ancillary_after_idat_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_post_idat_ancillary_bad_crc",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "error",
+      "verify_error_type": "builtins.SyntaxError",
+      "verify_error_message": "broken PNG file (bad header checksum in b'abCd')",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "bfaa04b081a9f422ba6790b729cdbe2e85949b100c0da6572e0207aebb430e4d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "error",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {
+        "verify": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "broken PNG file (bad header checksum in b'abCd')",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_unknown_ancillary_after_idat_bad_crc_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3265,7 +4850,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3297,6 +4883,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3344,7 +4936,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3376,6 +4969,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3423,7 +5022,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3455,6 +5055,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3502,7 +5108,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3534,6 +5141,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3581,7 +5194,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3613,6 +5227,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3660,7 +5280,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3692,6 +5313,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3739,7 +5366,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3771,6 +5399,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3818,7 +5452,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3850,6 +5485,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3897,7 +5538,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -3929,6 +5571,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -3976,7 +5624,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -4008,6 +5657,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4111,6 +5766,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4222,6 +5878,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4325,6 +5982,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4436,6 +6094,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4539,6 +6198,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4642,6 +6302,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4745,6 +6406,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4848,6 +6510,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -4951,6 +6614,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5054,6 +6718,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5141,6 +6806,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5244,6 +6910,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5347,6 +7014,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5434,6 +7102,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5521,6 +7190,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5608,6 +7278,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5695,6 +7366,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5782,6 +7454,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5869,6 +7542,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -5956,6 +7630,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6043,6 +7718,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6130,6 +7806,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6217,6 +7894,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6304,6 +7982,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6391,6 +8070,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6478,6 +8158,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6565,6 +8246,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6652,6 +8334,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6739,6 +8422,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6826,6 +8510,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -6913,6 +8598,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7016,6 +8702,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7103,6 +8790,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7198,6 +8886,303 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_structure_incomplete_image_data_no_iend",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "image file is truncated",
+      "error_kind": "malformed",
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "error",
+      "verify_error_type": "builtins.OSError",
+      "verify_error_message": "truncated PNG file",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "b4c5b83118403fbff8bfa3fe0d4d85f094a79e21a8421de87bd7695c9b2e56e7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "verify": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "truncated PNG file",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "image file is truncated",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "image file is truncated",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_structure_apng_fdat_payload_before_idat",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "error_kind": "malformed",
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "error",
+      "verify_error_type": "builtins.SyntaxError",
+      "verify_error_message": "broken PNG file (chunk b'\\x00\\x00\\x00\\x01')",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "07d84a0ef147069484e49bdb3a63aca3a28d5e863d6af033708c3b186434d783",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "verify": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "broken PNG file (chunk b'\\x00\\x00\\x00\\x01')",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_structure_fdat_without_actl_before_idat",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "PIL.UnidentifiedImageError",
+      "inspect_error_message": "cannot identify image file <bytes>",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "PIL.UnidentifiedImageError",
+      "verify_error_message": "cannot identify image file <bytes>",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "6d1a1d4a5fb1e4185b39fe44bd13e489d9a58680b3a5f7490ffcad4854148c4d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7301,6 +9286,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7404,6 +9390,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7507,6 +9494,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7610,6 +9598,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7697,6 +9686,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7792,6 +9782,615 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_token_aware_reserved_deflate_distance",
+      "status": "error",
+      "error_type": "builtins.OSError",
+      "error_message": "broken data stream when reading image file",
+      "error_kind": "malformed",
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "222fcf6a5fc0b121582aa779cd86a7e77e35948b779e71151313d9ced571b7b1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "broken data stream when reading image file",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_iccp_fields",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "PIL.UnidentifiedImageError",
+      "inspect_error_message": "cannot identify image file <bytes>",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "PIL.UnidentifiedImageError",
+      "verify_error_message": "cannot identify image file <bytes>",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "ee80f60e96f1f846a7a6bd66ac09d1d1e57eb54900c777518fc8c6d71205ef47",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_iccp_fields_iccp_missing_compression_method",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "PIL.UnidentifiedImageError",
+      "inspect_error_message": "cannot identify image file <bytes>",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "PIL.UnidentifiedImageError",
+      "verify_error_message": "cannot identify image file <bytes>",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "32afe044d8484e033092ec0b2d5114c09ae443703275c22b2ad5fd1942b7b700",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_iccp_empty_keyword_unsupported_method",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "PIL.UnidentifiedImageError",
+      "inspect_error_message": "cannot identify image file <bytes>",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "PIL.UnidentifiedImageError",
+      "verify_error_message": "cannot identify image file <bytes>",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "9cb9f5770ad17c34517b2b44ad399fcd40f9d3b528234d19f16640b8ec821463",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_gama_short_payload",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "PIL.UnidentifiedImageError",
+      "inspect_error_message": "cannot identify image file <bytes>",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "PIL.UnidentifiedImageError",
+      "verify_error_message": "cannot identify image file <bytes>",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "e420235f5eae6f64c9aefcfcc236026e407f81f0276ec244d961462a94388d64",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "error_malformed_ztxt_unsupported_method",
+      "status": "error",
+      "error_type": "PIL.UnidentifiedImageError",
+      "error_message": "cannot identify image file <bytes>",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "PIL.UnidentifiedImageError",
+      "inspect_error_message": "cannot identify image file <bytes>",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "PIL.UnidentifiedImageError",
+      "verify_error_message": "cannot identify image file <bytes>",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "7c41a27db2f41bb97757e7182153285ddcdf60a6c548a5f24e0a0c2d3e32c35d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7839,7 +10438,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -7880,6 +10480,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -7927,7 +10533,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -7959,6 +10566,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8006,7 +10619,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8047,6 +10661,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8094,7 +10714,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8138,6 +10759,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8185,7 +10812,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8217,6 +10845,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8264,7 +10898,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8296,6 +10931,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8343,7 +10984,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8375,6 +11017,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8422,7 +11070,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8460,6 +11109,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8507,7 +11162,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8539,6 +11195,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8586,7 +11248,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8624,6 +11287,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8671,7 +11340,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8715,6 +11385,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8762,7 +11438,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8794,6 +11471,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8841,7 +11524,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8873,6 +11557,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8920,7 +11610,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -8952,6 +11643,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -8999,7 +11696,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9031,6 +11729,356 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_post_idat_color_chunks",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "a55bc6061fe70f7969bef364081582a4618ef6d66e9a3b5456c87d384d69f107",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_plte_trns_after_idat_png.bin",
+      "ref_bytes": 3,
+      "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_malformed_ztxt_invalid_compression",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "e3b9d817735e4383453fbfb75ad0547d23a94a50d8252546125367e8850975a7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_ztxt_invalid_compression_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_malformed_itxt_invalid_compression",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "5335af59154b6ca9becf330e1f14db5a3567af134dfe9761687b8bd542dc4cec",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_itxt_invalid_compression_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "pillow_tolerated_malformed_iccp_invalid_compression",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "a61389dc7afdcfb084a1c7f73d6a2f5c399b7494d8d71ff31d77b035eecdb735",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_iccp_invalid_compression_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9078,7 +12126,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9110,6 +12159,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9157,7 +12212,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9189,6 +12245,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9236,7 +12298,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9268,6 +12331,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9318,7 +12387,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9350,6 +12420,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9431,6 +12507,337 @@
       }
     },
     {
+      "id": "apng_empty_fdat_before_idat",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "error",
+      "verify_error_type": "builtins.SyntaxError",
+      "verify_error_message": "broken PNG file (chunk b'\\x00\\x00\\x00\\x01')",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "108354b38dbd4325334a4a236910930d14a99fe1d6bc7110c8bbad2e80d01ab7",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "specification_reference",
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "error",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {
+        "verify": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "broken PNG file (chunk b'\\x00\\x00\\x00\\x01')",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_empty_fdat_before_idat_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 1,
+            "duration_den": 10,
+            "duration_origin": "specification_reference",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": true,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_empty_fdat_before_idat_png_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 1,
+            "duration_den": 10,
+            "duration_origin": "specification_reference",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_empty_fdat_before_idat_png_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "98622fbb0f889e91dc6e2cc4ddad3ddb5cf6f85814d88c33dfa7657d0e361570",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
+      "id": "apng_unknown_ancillary",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "ea3010781418845a2a4a5a986f0b74046632a071675f88a1f3521449444a18c1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "sequence_canvas": "pillow_fixture",
+        "sequence_source": "specification_reference",
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_unknown_ancillary_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "sequence": {
+        "canvas_size": [
+          128,
+          128
+        ],
+        "canvas_origin": "pillow_fixture",
+        "loop_count": 0,
+        "loop_origin": "specification_reference",
+        "background": null,
+        "frames": [
+          {
+            "index": 0,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 1,
+            "duration_den": 10,
+            "duration_origin": "specification_reference",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": true,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_unknown_ancillary_png_frame_0.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          },
+          {
+            "index": 1,
+            "source_rect": [
+              0,
+              0,
+              128,
+              128
+            ],
+            "duration_num": 1,
+            "duration_den": 10,
+            "duration_origin": "specification_reference",
+            "disposal": "keep",
+            "blend": "source",
+            "interlaced": false,
+            "is_default_image": false,
+            "pixel_layout": "rendered_canvas",
+            "source_origin": "specification_reference",
+            "source_byte_order": null,
+            "source_byte_order_origin": null,
+            "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_unknown_ancillary_png_frame_1.bin",
+            "ref_bytes": 49152,
+            "ref_mode": "Rgb8",
+            "ref_size": [
+              128,
+              128
+            ],
+            "ref_sha256": "98622fbb0f889e91dc6e2cc4ddad3ddb5cf6f85814d88c33dfa7657d0e361570",
+            "pixel_assertion": "exact",
+            "pixel_origin": "pillow_fixture"
+          }
+        ]
+      }
+    },
+    {
       "id": "apng_sequence_controls",
       "status": "ok",
       "error_type": null,
@@ -9472,7 +12879,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9504,6 +12912,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9656,7 +13070,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9688,6 +13103,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -9840,7 +13261,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -9872,6 +13294,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10024,7 +13452,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -10056,6 +13485,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10208,7 +13643,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -10240,6 +13676,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10392,7 +13834,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -10424,6 +13867,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10576,7 +14025,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -10608,6 +14058,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10760,7 +14216,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -10792,6 +14249,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -10914,7 +14377,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -10946,6 +14410,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11068,7 +14538,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -11112,6 +14583,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11234,7 +14711,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -11266,6 +14744,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11358,7 +14842,8 @@
         "operations": "pillow_fixture",
         "sequence_canvas": "pillow_fixture",
         "sequence_source": "specification_reference",
-        "sequence_pixels": "pillow_fixture"
+        "sequence_pixels": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -11390,6 +14875,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11565,6 +15056,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11668,6 +15160,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11771,6 +15264,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11874,6 +15368,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -11961,6 +15456,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12048,6 +15544,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12143,93 +15640,7 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
-      "sequence_status": null,
-      "sequence_error_type": null,
-      "sequence_error_message": null,
-      "sequence_error_kind": null,
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null
-    },
-    {
-      "id": "apng_sequence_open_error_apng_fdat_without_fctl",
-      "status": "error",
-      "error_type": "builtins.SyntaxError",
-      "error_message": "APNG contains frame sequence errors",
-      "error_kind": "malformed",
-      "inspect_status": "ok",
-      "inspect_error_type": null,
-      "inspect_error_message": null,
-      "inspect_error_kind": null,
-      "verify_status": "ok",
-      "verify_error_type": null,
-      "verify_error_message": null,
-      "verify_error_kind": null,
-      "verification_scope": "structure",
-      "inspect_container_format": "PNG",
-      "inspect_cursor_hotspot": null,
-      "inspect_source_byte_order": null,
-      "inspect_source_byte_order_origin": null,
-      "asset_sha256": "7600ca7507bf8cf4f8dffdb4ea16ff8048082c8d007c088d6c26f23b52b3d156",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "pillow_fixture",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "ok",
-        "verify": "ok",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "decode": {
-          "pillow_type": "builtins.SyntaxError",
-          "pillow_message": "APNG contains frame sequence errors",
-          "rust_kind": "malformed",
-          "rust_format": "PNG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "builtins.SyntaxError",
-          "pillow_message": "APNG contains frame sequence errors",
-          "rust_kind": "malformed",
-          "rust_format": "PNG",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "ref_bit_depth": 8,
-      "ref_bit_depth_origin": "specification_reference",
-      "ref_path": null,
-      "ref_bytes": null,
-      "ref_sha256": null,
-      "ref_mode": null,
-      "ref_size": null,
-      "ref_frame_count": null,
-      "ref_is_animated": null,
-      "inspect_palette": null,
-      "decoded_palette": null,
-      "decoded_source_byte_order": null,
-      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12317,6 +15728,111 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "apng_sequence_open_error_apng_truncated_fdat_before_idat",
+      "status": "error",
+      "error_type": "builtins.ValueError",
+      "error_message": "APNG contains truncated fDAT chunk",
+      "error_kind": "malformed",
+      "inspect_status": "error",
+      "inspect_error_type": "builtins.ValueError",
+      "inspect_error_message": "APNG contains truncated fDAT chunk",
+      "inspect_error_kind": "malformed",
+      "verify_status": "error",
+      "verify_error_type": "builtins.ValueError",
+      "verify_error_message": "APNG contains truncated fDAT chunk",
+      "verify_error_kind": "malformed",
+      "verification_scope": "structure",
+      "inspect_container_format": null,
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "4f34e6caa28789baa349f5b3ada75f0ad7aae29f617717da9dffd6f906d2312b",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "APNG contains truncated fDAT chunk",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "APNG contains truncated fDAT chunk",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "APNG contains truncated fDAT chunk",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.ValueError",
+          "pillow_message": "APNG contains truncated fDAT chunk",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": null,
+      "ref_bit_depth_origin": null,
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12404,6 +15920,190 @@
       "decoded_palette": null,
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "apng_orphan_fdat_missing_control",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "2d2afd144b88e1966f4132f6fbf61b14eb84f084c1e211010ab67e08ef4fc2e0",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode_sequence": {
+          "pillow_type": "builtins.OSError",
+          "pillow_message": "Truncated File Read",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_apng_fdat_without_fctl_png.bin",
+      "ref_bytes": 49152,
+      "ref_sha256": "8a1d6fcc36f5b5e70fbf949d4e612630a1931279383e7c21db27cd3cbad98131",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        128,
+        128
+      ],
+      "ref_frame_count": 2,
+      "ref_is_animated": true,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": "error",
+      "sequence_error_type": "builtins.OSError",
+      "sequence_error_message": "Truncated File Read",
+      "sequence_error_kind": "malformed",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
+      "id": "apng_orphan_fdat_invalid_sequence",
+      "status": "error",
+      "error_type": "builtins.SyntaxError",
+      "error_message": "APNG contains frame sequence errors",
+      "error_kind": "malformed",
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "7600ca7507bf8cf4f8dffdb4ea16ff8048082c8d007c088d6c26f23b52b3d156",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "decode": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "APNG contains frame sequence errors",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.SyntaxError",
+          "pillow_message": "APNG contains frame sequence errors",
+          "rust_kind": "malformed",
+          "rust_format": "PNG",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": null,
+      "ref_bytes": null,
+      "ref_sha256": null,
+      "ref_mode": null,
+      "ref_size": null,
+      "ref_frame_count": null,
+      "ref_is_animated": null,
+      "inspect_palette": null,
+      "decoded_palette": null,
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": null,
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -12451,7 +16151,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -12492,6 +16193,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.SyntaxError",
       "sequence_error_message": "APNG contains frame sequence errors",
@@ -12539,7 +16246,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -12580,6 +16288,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.SyntaxError",
       "sequence_error_message": "APNG contains frame sequence errors",
@@ -12627,7 +16341,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -12668,6 +16383,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.SyntaxError",
       "sequence_error_message": "APNG contains invalid frames",
@@ -12715,7 +16436,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -12756,6 +16478,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.OSError",
       "sequence_error_message": "Truncated File Read",
@@ -12803,7 +16531,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -12844,6 +16573,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.ValueError",
       "sequence_error_message": "APNG contains truncated fcTL chunk",
@@ -12891,7 +16626,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -12932,6 +16668,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.ValueError",
       "sequence_error_message": "APNG contains truncated fDAT chunk",
@@ -12979,7 +16721,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13020,6 +16763,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.SyntaxError",
       "sequence_error_message": "APNG missing frame data",
@@ -13067,7 +16816,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13108,6 +16858,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.EOFError",
       "sequence_error_message": "no more images in APNG file",
@@ -13155,7 +16911,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13196,6 +16953,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.SyntaxError",
       "sequence_error_message": "APNG contains frame sequence errors",
@@ -13243,7 +17006,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13284,6 +17048,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.OSError",
       "sequence_error_message": "Truncated File Read",
@@ -13331,7 +17101,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13372,6 +17143,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": "error",
       "sequence_error_type": "builtins.OSError",
       "sequence_error_message": "image file is truncated (0 bytes not processed)",
@@ -13419,7 +17196,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13451,6 +17229,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13498,7 +17282,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13530,6 +17315,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,
@@ -13577,7 +17368,8 @@
         "inspection": "pillow_fixture",
         "verification": "pillow_fixture",
         "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
       },
       "operations": {
         "detect": "ok",
@@ -13609,6 +17401,12 @@
       },
       "decoded_source_byte_order": null,
       "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
       "sequence_status": null,
       "sequence_error_type": null,
       "sequence_error_message": null,

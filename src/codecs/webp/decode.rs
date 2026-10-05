@@ -238,7 +238,10 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
         }
     }
     // `pixel` is the sum of image chunk payloads inside the RIFF extent.
-    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(
+        clippy::arithmetic_side_effects,
+        reason = "Validated image chunks are included in the RIFF extent whose payload bytes are subtracted."
+    )]
     let metadata = consumed as u64 - pixel;
     Ok(metadata)
 }
@@ -259,44 +262,4 @@ fn decode_error(
         Some((offset, identity)) => error.at(offset, identity),
         None => error,
     }
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let _ = verify(b"");
-    let _ = verify(b"not a webp stream");
-    let _ = metadata_bytes(b"");
-    let _ = metadata_bytes(b"RIFF");
-    let _ = metadata_bytes(b"RIFF\0\0\0\0WEB");
-    let _ = decode(b"not a webp stream", None);
-    let _ = decode_sequence(
-        b"not a webp stream",
-        &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),
-        None,
-    );
-    let still = include_bytes!("../../test_support/fixtures/input/images/webp/16x16.webp");
-    let animated = include_bytes!("../../test_support/fixtures/input/images/webp/animated.webp");
-    for checks in 0..=4 {
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode(still, Some(&token));
-        let token = crate::CancellationToken::new();
-        token.cancel_after(checks);
-        let _ = decode_sequence(
-            animated,
-            &mut SequenceDecodeBudget::default_for(crate::ImageFormat::WebP),
-            Some(&token),
-        );
-    }
-    let _ = metadata_bytes(b"not webp");
-    let _ = metadata_bytes(b"RIFF\x08\0\0\0WEBX");
-    let _ = metadata_bytes(b"RIFF\xff\xff\xff\xffWEBP");
-    let _ = metadata_bytes(b"RIFF\x0e\0\0\0WEBP");
-    let _ = metadata_bytes(b"RIFF\x10\0\0\0WEBPVP8 \0\0\0\0\0\0\0\0");
-    let _ = metadata_bytes(b"RIFF\x0e\0\0\0WEBPVP8 \0\0\0\x10\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
-    let _ = metadata_bytes(b"RIFF\x10\0\0\0WEBPVP8L\0\0\0\0\0\0\0\0");
-    let _ = metadata_bytes(b"RIFF\x10\0\0\0WEBPALPH\0\0\0\0\0\0\0\0");
-    let _ = metadata_bytes(b"RIFF\x14\0\0\0WEBPVP8X\x06\0\0\0abcdef\0\0");
-    let _ = metadata_bytes(b"RIFF\x0d\0\0\0WEBPVP8 \x01\0\0\0x");
-    let _ = metadata_bytes(b"RIFF\x11\0\0\0WEBPVP8 \x01\0\0\0x\0\0\0\0");
 }

@@ -167,8 +167,6 @@ pub struct CancellationToken {
     work_budget: Rc<Cell<Option<WorkBudget>>>,
     progress_checkpoint: Rc<Cell<u64>>,
     progress_observer: Option<ProgressObserver>,
-    #[cfg(coverage)]
-    cancel_after: Rc<Cell<Option<usize>>>,
 }
 
 impl CancellationToken {
@@ -204,27 +202,7 @@ impl CancellationToken {
     /// Return whether the token has been cancelled.
     #[must_use]
     pub fn is_cancelled(&self) -> bool {
-        #[cfg(coverage)]
-        {
-            if self.cancelled.get() {
-                return true;
-            }
-            match self.cancel_after.get() {
-                Some(0) => {
-                    self.cancelled.set(true);
-                    true
-                }
-                Some(remaining) => {
-                    self.cancel_after.set(Some(remaining.saturating_sub(1)));
-                    false
-                }
-                None => false,
-            }
-        }
-        #[cfg(not(coverage))]
-        {
-            self.cancelled.get()
-        }
+        self.cancelled.get()
     }
 
     pub(crate) fn with_work_budget(maximum: u64, resource: ResourceLimit) -> Self {
@@ -252,27 +230,12 @@ impl CancellationToken {
             }))),
             progress_checkpoint: source.progress_checkpoint.clone(),
             progress_observer: source.progress_observer.clone(),
-            #[cfg(coverage)]
-            cancel_after: source.cancel_after.clone(),
         }
     }
 
     pub(crate) fn poll(&self) -> PollResult {
         if self.cancelled.get() {
             return PollResult::Cancelled;
-        }
-        #[cfg(coverage)]
-        {
-            match self.cancel_after.get() {
-                Some(0) => {
-                    self.cancelled.set(true);
-                    return PollResult::Cancelled;
-                }
-                Some(remaining) => {
-                    self.cancel_after.set(Some(remaining.saturating_sub(1)));
-                }
-                None => {}
-            }
         }
         if let Some(mut budget) = self.work_budget.get() {
             if budget.consumed >= budget.maximum {
@@ -297,21 +260,5 @@ impl CancellationToken {
             return PollResult::Cancelled;
         }
         PollResult::Continue
-    }
-
-    /// Coverage-only hook: automatically cancel after `checks` more polls.
-    ///
-    /// This lets the coverage drills deterministically hit each structural
-    /// checkpoint inside a single call. It is compiled out of production
-    /// builds and has no effect on the public contract.
-    #[cfg(coverage)]
-    pub(crate) fn cancel_after(&self, checks: usize) {
-        self.cancel_after.set(Some(checks));
-    }
-
-    #[cfg(coverage)]
-    #[coverage(off)]
-    pub(crate) fn coverage_remaining_checks(&self) -> Option<usize> {
-        self.cancel_after.get()
     }
 }

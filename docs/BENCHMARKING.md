@@ -26,6 +26,33 @@ Use a new `BENCH_OUTPUT` for each repeat. The runner requires an odd number of
 rounds, at least three; the maintained default is five. CI records the complete
 20-configuration encode/decode matrix.
 
+For an x86 SIMD comparison, run both builds on the same x86-64 host and use a
+separate Cargo target directory and result directory for each build. For
+example, on an AVX2-capable Linux host:
+
+```sh
+RUSTFLAGS="-C target-cpu=x86-64" \
+  make bench BENCH_TARGET_DIR=target/jpeg-sse2 \
+  BENCH_OUTPUT=target/benchmarks/jpeg/sse2
+
+RUSTFLAGS="-C target-cpu=x86-64 -C target-feature=+avx2" \
+  make bench BENCH_TARGET_DIR=target/jpeg-avx2 \
+  BENCH_OUTPUT=target/benchmarks/jpeg/avx2
+```
+
+The runner records explicit Rust build environment flags in `metadata.json`.
+The AVX2 build must only run on an AVX2-capable CPU. Keep workload, oracle,
+host, rounds, and correctness checks identical when comparing the two outputs;
+cross-compilation and assembly inspection alone do not establish a speedup.
+If `CARGO_BUILD_TARGET` is set, it must match the compiler host because the
+runner executes the built binary.
+
+The `x86-simd-lint` CI job runs strict Clippy for the SSE2 baseline and AVX2
+builds, then checks public JPEG and AVIF encode/decode parity in both runtime
+lanes. Those instrumented runs verify correctness and branch reachability; they
+are not performance measurements. AVIF has parity coverage there, but the
+paired timing comparison below measures JPEG only.
+
 ## Timing boundary
 
 Each timed encode starts from the same deterministic RGB, grayscale, or CMYK
@@ -75,10 +102,14 @@ profiling runs to investigate causes.
 ## Public data and CI
 
 The Benchmark workflow retains `metadata.json`, `summary.csv`, and
-`raw.jsonl`. Its validated public snapshot feeds this repository's Pages
-workflow. The original report hashes, source revision, environment, measurement
-policy, and every result remain identifiable. Local paths and hostnames are
-omitted from the public presentation.
+`raw.jsonl`. Its validated ARM64 public snapshot feeds this repository's Pages
+workflow. A separate x86-64 job measures SSE2 and AVX2 sequentially on one
+AVX2-capable host, checks that both builds produce the same outputs for all 40
+workloads, and retains both raw result sets as a CI artifact. Those hosted-runner
+measurements are investigation evidence; they do not publish a speed claim or
+gate changes on noisy timing differences. The original report hashes, source
+revision, environment, measurement policy, and every result remain identifiable.
+Local paths and hostnames are omitted from the public presentation.
 
 Fixture-harness timing from `benchmark_fixture_workloads.py` measures harness
 execution cost and artifact sizes. It is not a codec throughput comparison and

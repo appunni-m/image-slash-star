@@ -44,6 +44,8 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown, wasm32-wasip1
+      - name: Install pinned nightly Clippy for coverage-hook lint
+        run: rustup toolchain install "$COVERAGE_TOOLCHAIN" --profile minimal --component clippy
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -60,6 +62,77 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  x86-simd-lint:
+    name: x86 SSE2 and AVX2 checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      - name: Lint the x86-64 SSE2 baseline and AVX2 builds
+        run: make lint-x86-simd
+      - name: Install pinned nightly coverage toolchain
+        run: rustup toolchain install "$COVERAGE_TOOLCHAIN" --profile minimal --component llvm-tools-preview
+      - name: Install pinned coverage driver
+        run: cargo +"$COVERAGE_TOOLCHAIN" install cargo-llvm-cov --locked --version 0.8.7
+      - name: Run x86-64 public JPEG and AVIF parity with branch coverage
+        env:
+          CARGO_TARGET_DIR: target/x86_64-sse2-coverage
+          RUSTFLAGS: -C target-cpu=x86-64
+        run: |
+          mkdir -p target/release-evidence
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-jpeg-x86_64.json \
+            --test coverage_matrix_tests test_decode_matrix_jpeg
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-jpeg-encode-x86_64.json \
+            --test coverage_matrix_tests test_encode_matrix_jpeg
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-avif-x86_64.json \
+            --test coverage_matrix_tests test_decode_matrix_avif
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-avif-encode-x86_64.json \
+            --test coverage_matrix_tests test_encode_matrix_avif
+      - name: Run AVX2 public JPEG and AVIF parity with branch coverage
+        env:
+          CARGO_TARGET_DIR: target/x86_64-avx2-coverage
+          RUSTFLAGS: -C target-cpu=x86-64 -C target-feature=+avx2
+        run: |
+          if ! grep -qw avx2 /proc/cpuinfo; then
+            echo "AVX2 is required for this x86 parity lane" >&2
+            exit 1
+          fi
+          mkdir -p target/release-evidence
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-jpeg-x86_64-avx2.json \
+            --test coverage_matrix_tests test_decode_matrix_jpeg
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-jpeg-encode-x86_64-avx2.json \
+            --test coverage_matrix_tests test_encode_matrix_jpeg
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-avif-x86_64-avx2.json \
+            --test coverage_matrix_tests test_decode_matrix_avif
+          cargo +"$COVERAGE_TOOLCHAIN" llvm-cov test --all-features --branch --locked --json \
+            --output-path target/release-evidence/coverage-avif-encode-x86_64-avx2.json \
+            --test coverage_matrix_tests test_encode_matrix_avif
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: x86-codec-simd-coverage
+          path: |
+            target/release-evidence/coverage-jpeg-x86_64.json
+            target/release-evidence/coverage-jpeg-encode-x86_64.json
+            target/release-evidence/coverage-jpeg-x86_64-avx2.json
+            target/release-evidence/coverage-jpeg-encode-x86_64-avx2.json
+            target/release-evidence/coverage-avif-x86_64.json
+            target/release-evidence/coverage-avif-encode-x86_64.json
+            target/release-evidence/coverage-avif-x86_64-avx2.json
+            target/release-evidence/coverage-avif-encode-x86_64-avx2.json
+          if-no-files-found: error
+          retention-days: 90
+
   supply-chain:
     name: Dependencies and licenses
     runs-on: ubuntu-latest
@@ -71,8 +144,8 @@ jobs:
 
   coverage:
     name: Coverage report
-    # coverage_matrix_tests includes the same Apple ARM64 execution contract
-    # as the release fixture corpus.
+    # Oracle references were captured under the Apple ARM64 all-feature
+    # contract; measure the full suite on the matching runner here.
     runs-on: macos-14
     timeout-minutes: 90
     steps:

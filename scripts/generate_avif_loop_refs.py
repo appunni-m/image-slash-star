@@ -27,8 +27,202 @@ from inspect_avif_bitstreams import children, parse_boxes, unique_box
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = {
     "animated": ("animated.avif", "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"),
+    "opidc_0x101": ("animated_opidc_0x101.avif", "25b79a856ea2767e02e5a509f72e7af3f9563202301779be65b0745724ab23be"),
     "error_resilient": ("animated_error_resilient.avif", "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0"),
+    "filmgrain_reference_reuse_i444_64x64": (
+        "animated_filmgrain_reference_reuse_i444_64x64.avif",
+        "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34",
+    ),
+    "lossless_inter_420_b16x16": (
+        "animated_lossless_inter_420_b16x16.avif",
+        "6973cfff29185ffc7283ec539d9cf6736dfe4cba52850c46e4b196ba9db51ead",
+    ),
+    "lossless_inter_420_b8x16": (
+        "animated_lossless_inter_420_b8x16.avif",
+        "9e3fbac5e42c61413ec8c1f7f4f72bc1338fb7cfd21587e30826855732e369c0",
+    ),
+    "lossless_inter_intra_i444_b8x8_20x20": (
+        "animated_lossless_inter_intra_i444_b8x8_20x20.avif",
+        "7636f2de4078d5271941e6cf7de85f9c77205acce155c75e529e43fbc1d0acbf",
+    ),
+    "odd_dimensions_inter_intra_boundary_420": (
+        "animated_odd_dimensions_inter_intra_boundary_420.avif",
+        "736914091e00473af577a12de9910ce6abe2b038c84d2f580c5f528b0618c422",
+    ),
+    "lossy_interintra_420_nowedge_b16x16_64x64": (
+        "animated_lossy_interintra_420_nowedge_b16x16_64x64.avif",
+        "adc58d72626865406be3d0a048ecf0b9a1670d16a68f48babe4b9167a2dc2dea",
+    ),
+    "lossy_interintra_420_nowedge_mode1_b16x16_64x64": (
+        "animated_lossy_interintra_420_nowedge_mode1_b16x16_64x64.avif",
+        "dd4e06e559d83cc0863d65878799d2f7496c8f5d378eaeb639704fe3ac539f2f",
+    ),
+    "lossy_interintra_420_nowedge_mode2_b16x16_64x64": (
+        "animated_lossy_interintra_420_nowedge_mode2_b16x16_64x64.avif",
+        "08f616c2e14f9abadb6157c425653b5a7fd703f2797f3db04e23b58bc519eda8",
+    ),
+    "lossy_interintra_420_nowedge_mode3_b16x16_64x64": (
+        "animated_lossy_interintra_420_nowedge_mode3_b16x16_64x64.avif",
+        "7e035cef7293dfff72e50ff8c729bc0fad360ee14d7bf80d663b82b96ca7c4d7",
+    ),
+    "lossy_interintra_420_wedge_b16x16_64x64": (
+        "animated_lossy_interintra_420_wedge_b16x16_64x64.avif",
+        "1510b764d7e642f2caf02fff53e6dc966cfb92df8eca2e8f2d91c0b3bead1791",
+    ),
+    "lossless_inter_420_b32x32": (
+        "animated_lossless_inter_420_b32x32.avif",
+        "65e8617044f7f12db081f65276235296f8dc208a006451210ebb9603f27f20a7",
+    ),
+    "lossless_inter_420_b32x32_10bit": (
+        "animated_lossless_inter_420_b32x32_10bit.avif",
+        "c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a",
+    ),
+    "lossless_inter_420_b32x32_10bit_64x64": (
+        "animated_lossless_inter_420_b32x32_10bit_64x64.avif",
+        "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
+    ),
+    "lossless_inter_420_clipped_b32x32_10bit_28x28": (
+        "animated_lossless_inter_420_clipped_b32x32_10bit_28x28.avif",
+        "f9d829f20968483dbd078a47f136b9c413205ce78d423fb0b5f1bdb2d2c0cce4",
+    ),
+    "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64": (
+        "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_28x64.avif",
+        "8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f",
+    ),
+    "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64": (
+        "animated_lossless_inter_420_clipped_b32x32_10bit_partition32_56x64.avif",
+        "a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe",
+    ),
+    "lossless_inter_420_clipped_b32x32_17x17": (
+        "animated_lossless_inter_420_clipped_b32x32_17x17.avif",
+        "b29bedb6d7486dae5bed2abb74986a65e47bc737bfd26f85b1f69fa8bd666819",
+    ),
+    "lossless_inter_i444_clipped_b32x32_49x64": (
+        "animated_lossless_inter_i444_clipped_b32x32_49x64.avif",
+        "d45defceb497272879b1093f76e6a6c645f0bde8a6d10a1903e2322af422caae",
+    ),
+    "lossless_inter_i422_clipped_b32x32_49x64": (
+        "animated_lossless_inter_i422_clipped_b32x32_49x64.avif",
+        "fd18cdcef915327fd4aab6992c901e27f2efc1411d1d2d01eee93dd3f277d7b1",
+    ),
+    "lossless_inter_i422_clipped_b32x32_52x64": (
+        "animated_lossless_inter_i422_clipped_b32x32_52x64.avif",
+        "43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05",
+    ),
+    "lossless_inter_i444_clipped_b32x32_64x56": (
+        "animated_lossless_inter_i444_clipped_b32x32_64x56.avif",
+        "9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23",
+    ),
+    "lossless_inter_i422_clipped_b32x32_52x60": (
+        "animated_lossless_inter_i422_clipped_b32x32_52x60.avif",
+        "53e06d79c586151d920b94cc6173eebcc1f9869ebb0f1fa5bec673df11c45e50",
+    ),
+    "lossless_inter_i444_clipped_b32x32_52x60": (
+        "animated_lossless_inter_i444_clipped_b32x32_52x60.avif",
+        "9fdd099eb28fed9eaff2760b154e42d91933758fd6b01e532e441646f564993a",
+    ),
+    "lossless_inter_420_clipped_b32x32_60x64": (
+        "animated_lossless_inter_420_clipped_b32x32_60x64.avif",
+        "a60dde64c6b7bf9f6fbb3afe7e75a74374d446f8106613b00837300df4963bbc",
+    ),
+    "lossless_inter_420_clipped_b32x32_64x60": (
+        "animated_lossless_inter_420_clipped_b32x32_64x60.avif",
+        "7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6",
+    ),
+    "lossless_inter_420_clipped_b32x32_184x64": (
+        "animated_lossless_inter_420_clipped_b32x32_184x64.avif",
+        "0a8c935fe67694fe576e7f21064eec4c428cffc2a05a3ff2d0be33e401a20c1d",
+    ),
+    "lossless_inter_420_clipped_b32x32_185x64": (
+        "animated_lossless_inter_420_clipped_b32x32_185x64.avif",
+        "701d247ebbe2666b1f28f447fa1a086573e7dc6d88b0b29405f9f7a6f9460b59",
+    ),
+    "lossless_inter_420_clipped_b16x16_60x64": (
+        "animated_lossless_inter_420_clipped_b16x16_60x64.avif",
+        "7c8bd0f88cd6654fb1150d2220ecb33c6ec5874b26a2250909b51cab4ed2e17f",
+    ),
+    "lossless_inter_monochrome_b16x16": (
+        "animated_lossless_inter_monochrome_b16x16.avif",
+        "d29aaab346465bf7ac413954e3c862b2222d3ac510299f865fe579899d063fb5",
+    ),
+    "lossy_split_inter_420_b16x16": (
+        "animated_lossy_split_inter_420_b16x16.avif",
+        "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323",
+    ),
+    "lossy_b16_mixed_topology_inter_420_b16x16": (
+        "animated_lossy_b16_mixed_topology_inter_420_b16x16.avif",
+        "3264482e2a50d80bd39be178b843fdfe9997e947d54b4466c745751837821d74",
+    ),
+    "lossy_wide_monochrome_b128x128": (
+        "animated_lossy_wide_monochrome_b128x128.avif",
+        "eb8dda5000882ffd03c182a817e08fc944ef110afa1e78aaf1678bef5efc65bf",
+    ),
+    "lossy_wide_i444_b128x128": (
+        "animated_lossy_wide_i444_b128x128.avif",
+        "b4693fd2fb43d1c9406fe4ac8d782d74709bf8eed1b2d36771c0bd80763d84e8",
+    ),
+    "lossy_wide_i444_mode2_unsplit_b128x128": (
+        "animated_lossy_wide_i444_mode2_unsplit_b128x128.avif",
+        "ea87cfc19c427135396b44ea6b287b24e5301437abb5bd6769666d9a24144565",
+    ),
+    "lossy_wide_i444_mode2_split32_b128x128": (
+        "animated_lossy_wide_i444_mode2_split32_b128x128.avif",
+        "f48a6d235c7ab245e8d57aedcc6135b897cea1bcbc579c3d630aa7c20e1a61aa",
+    ),
+    "lossy_global_rotzoom_compound_i444_b128x128": (
+        "animated_lossy_global_rotzoom_compound_i444_b128x128.avif",
+        "14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e",
+    ),
+    "lossy_global_halfblend_spatial_i444_b256x256": (
+        "animated_lossy_global_halfblend_spatial_i444_b256x256.avif",
+        "ec2f145f64fa87c5b7c255b13b6009fb58760be06070724ed367cd4ccd9a6d7b",
+    ),
+    "motion_chroma": ("animated_motion_chroma.avif", "473469335e58cff3c442df51b4bbdca00b9467e8f352319812f50cf789748535"),
+    "has_chroma_4x4": ("animated_has_chroma_4x4.avif", "f9434d10ee465784ccb6c09f03c98813282f7033e3f06b90739e7815ec1eb75b"),
+    "motion_chroma_422": ("animated_motion_chroma_422.avif", "5a83530dcc60f75f0bec7d36cb4db67ae7258b2acc481cbb08cc0987247ea66a"),
+    "lossy_inter_422_checker_random_b32x32": (
+        "animated_lossy_inter_422_checker_random_b32x32.avif",
+        "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134",
+    ),
+    "motion_chroma_wide": ("animated_motion_chroma_wide.avif", "54ca9823b7b3f6f64af19d3b7ab7dbc0be0b9db6583d85fedcc310dd62d28311"),
+    "tx64_root_split_inter_420_64x64": (
+        "animated_tx64_root_split_inter_420_64x64.avif",
+        "9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c",
+    ),
+    "motion_temporal_window_left_512x128": (
+        "animated_motion_temporal_window_left_512x128.avif",
+        "29e856c6c8a117c764bb0a176ccc1d82bac982fdf7287eb461f827ebdc31b399",
+    ),
+    "motion_temporal_window_right_512x128": (
+        "animated_motion_temporal_window_right_512x128.avif",
+        "10d8e5514c1d8d9cad355f9a912b3e3075bf8bd661ee6af5ce44a9ce62d7cad2",
+    ),
+    "lossy_inter_i444_mode2_b32x32": (
+        "animated_lossy_inter_i444_mode2_b32x32.avif",
+        "43aac6364eebb113b128861f0e1c2cfb976295d7b5e9e226fa8f0eaa93704af4",
+    ),
+    "lossy_inter_i444_split_b16x32_mode2": (
+        "animated_lossy_inter_i444_split_b16x32_mode2.avif",
+        "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
+    ),
+    "lossy_inter_i444_obmc_mixed_b16x32": (
+        "animated_lossy_inter_i444_obmc_mixed_b16x32.avif",
+        "71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743",
+    ),
+    "motion_large_420": ("animated_motion_large_420.avif", "5b9ea2b9d552e8ff44f2818a7ae2b73a9dbe1eda84ead9c24c9f8a957c6e546f"),
     "highdepth": ("10bit.avif", "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"),
+    "lo8_superres_sgr_inter_160x56": (
+        "animated_lossy_inter_420_superres_sgr_8bit_160x56.avif",
+        "c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7",
+    ),
+    "hi10_superres_sgr_inter_160x56": (
+        "animated_lossy_inter_420_superres_sgr_10bit_160x56.avif",
+        "016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11",
+    ),
+    "hi10_superres_select_inter_160x56": (
+        "animated_lossy_inter_420_superres_select_10bit_160x56.avif",
+        "04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e",
+    ),
 }
 OBSERVER = r'''
 #include <avif/avif.h>
@@ -118,13 +312,17 @@ def pillow_observation(data, destination=None):
                                "duration_ms": image.info.get("duration")})
             return {"status": "ok", "loop_key": image.info.get("loop"), "frames": frames}
     except Exception as error:
+        message = str(error)
+        if message.startswith("cannot identify image file <_io.BytesIO object at 0x"):
+            message = "cannot identify image file <bytes>"
         return {"status": "error", "type": f"{type(error).__module__}.{type(error).__name__}",
-                "message": str(error)}
+                "message": message}
 
 
-def collect(bundle, observe):
+def collect(bundle, observe, only=None):
     originals, records = {}, []
-    for name, (filename, expected_hash) in FIXTURES.items():
+    fixtures = FIXTURES.items() if only is None else [(only, FIXTURES[only])]
+    for name, (filename, expected_hash) in fixtures:
         source = ROOT / "tests/fixtures/input/images/avif" / filename
         data = source.read_bytes()
         if sha256(data) != expected_hash:
@@ -158,13 +356,14 @@ def collect(bundle, observe):
         ("error_version", dict(version=2)),
         ("error_missing_segment", dict(size=16)),
         ("error_missing_flags", dict(size=8)),
-    ]
+    ] if only is None else []
     for name, parameters in cases:
         records.append((name, "animated", mutate(originals["animated"], **parameters), parameters))
-    records.append(("alpha_loop_disagreement", "highdepth",
-                    mutate(originals["highdepth"], track=1, flags=0), {"track": 1, "flags": 0}))
-    records.append(("error_alpha_segment", "highdepth",
-                    mutate(originals["highdepth"], track=1, segment=0), {"track": 1, "segment": 0}))
+    if only is None:
+        records.append(("alpha_loop_disagreement", "highdepth",
+                        mutate(originals["highdepth"], track=1, flags=0), {"track": 1, "flags": 0}))
+        records.append(("error_alpha_segment", "highdepth",
+                        mutate(originals["highdepth"], track=1, segment=0), {"track": 1, "segment": 0}))
     output = []
     for name, source, data, mutation in records:
         native_repeats = []
@@ -210,6 +409,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--libavif-source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--only", choices=sorted(FIXTURES), help="collect one unchanged fixture only"
+    )
     args = parser.parse_args()
     output, source = args.output.resolve(), args.libavif_source.resolve()
     if (ROOT / "target/oracle-staging").resolve() not in output.parents or output.exists():
@@ -240,7 +442,11 @@ def main():
         native = harness.observe
         native.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_int), ctypes.c_void_p, ctypes.c_size_t]
         native.restype = ctypes.c_int
-        cases = collect(bundle, lambda *values: native(library._handle, *values))
+        cases = collect(
+            bundle,
+            lambda *values: native(library._handle, *values),
+            only=args.only,
+        )
         index = {"schema": "image-slash-star/avif-loop-oracle@1", "cases": cases,
                  "origin": "libavif.avifDecoder.repetitionCount",
                  "source": {"commit": LIBAVIF_COMMIT, "tree_sha256": git_tree_digest(source),

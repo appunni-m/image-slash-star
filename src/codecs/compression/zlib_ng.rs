@@ -54,7 +54,11 @@ enum Token {
 }
 
 #[cfg(feature = "png")]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "The no-token encoder path uses fixed DEFLATE codes and infallible checkpoint adapters."
+)]
 pub(super) fn compress_level1_repeated(data: &[u8], row_len: usize, height: usize) -> Vec<u8> {
     let (tokens, final_tokens) = tokenize_level1(data, RepeatedInputChunks::new(row_len, height));
     let mut writer = BitWriter::with_prefix([0x78, 0x01]);
@@ -279,1351 +283,6 @@ fn level1_window_tail_distance_one(
     (length >= current_length && length >= MIN_MATCH).then_some(length)
 }
 
-#[cfg(coverage)]
-#[inline(never)]
-fn __coverage_exercise_instrumented_matcher_paths() {
-    let repeated = vec![b'a'; 1_024];
-    let mixed = (0usize..1_024)
-        .map(|index| index.wrapping_mul(37).to_le_bytes()[0] ^ (index.to_le_bytes()[0] >> 3))
-        .collect::<Vec<_>>();
-
-    // These four matchers share the checkpoint contract but have different
-    // zlib-ng state machines. A bounded no-op failure sweep reaches their
-    // typed `?` exits without paying for the large public PNG workload.
-    for fail_after in 0..=128 {
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let mut matcher = SlowMatcher::new(&repeated, 16, 8, 128, 128);
-        let _ = std::hint::black_box(matcher.process_with(repeated.len(), true, &mut checkpoint));
-
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let mut matcher = Level6Matcher::new(&repeated, 128, 128, 16);
-        let _ = std::hint::black_box(matcher.process_with(repeated.len(), true, &mut checkpoint));
-
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let mut matcher = Level9Matcher::new(&repeated);
-        let _ = std::hint::black_box(matcher.process_with(repeated.len(), true, &mut checkpoint));
-
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let mut matcher = Level3Matcher::new(&repeated, 6, 128, 6, false);
-        let _ = std::hint::black_box(matcher.process_with(repeated.len(), true, &mut checkpoint));
-    }
-
-    // Direct calls make the private search and insertion bodies observable
-    // even when a public input exits before their deepest checkpoint.
-    for fail_after in 0..=32 {
-        let mut matcher = SlowMatcher::new(&repeated, 16, 8, 128, 128);
-        matcher.position = 8;
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(matcher.longest_match_with(0, 256, &mut checkpoint));
-
-        let mut matcher = Level6Matcher::new(&repeated, 128, 128, 16);
-        matcher.position = 8;
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(matcher.longest_match_with(0, 8, 256, &mut checkpoint));
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(matcher.find_match_with(8, 256, &mut checkpoint));
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(matcher.insert_match_with(
-            MediumMatch {
-                match_start: 0,
-                length: 32,
-                start: 8,
-                original_start: 8,
-            },
-            256,
-            &mut checkpoint,
-        ));
-
-        let mut matcher = Level9Matcher::new(&repeated);
-        matcher.position = 8;
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(matcher.longest_match_with(1, 256, &mut checkpoint));
-
-        let mut matcher = Level3Matcher::new(&repeated, 6, 128, 6, false);
-        matcher.position = 8;
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(matcher.longest_match_with(1, 256, &mut checkpoint));
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(matcher.insert_match_with(32, 256, &mut checkpoint));
-    }
-
-    for fail_after in 0..=8 {
-        let mut current = MediumMatch {
-            match_start: 0,
-            length: 2,
-            start: 10,
-            original_start: 10,
-        };
-        let mut next = MediumMatch {
-            match_start: 3,
-            length: 4,
-            start: 4,
-            original_start: 4,
-        };
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let _ = std::hint::black_box(fizzle_matches_with(
-            &repeated,
-            &mut current,
-            &mut next,
-            &mut checkpoint,
-        ));
-    }
-
-    // Exercise the writer-side generic checkpoint body with both literals and
-    // a back-reference. The public level dispatch reaches these functions,
-    // but the private block choice and tree writers need deterministic
-    // cancellation thresholds of their own.
-    let block_tokens = vec![
-        Token::Literal(b'a'),
-        Token::Literal(b'b'),
-        Token::Match {
-            length: 64,
-            distance: 2,
-        },
-        Token::Literal(b'c'),
-    ];
-    for fail_after in 0..=512 {
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let mut writer = BitWriter::with_prefix([0x78, 0x01]);
-        let _ = std::hint::black_box(emit_blocks_with(
-            &block_tokens,
-            2,
-            &mut writer,
-            &mut checkpoint,
-        ));
-    }
-    for fail_after in 0..=8 {
-        let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-        let mut writer = BitWriter::with_prefix([0x78, 0x01]);
-        let _ = std::hint::black_box(emit_fixed_block_with(
-            &block_tokens,
-            true,
-            &mut writer,
-            &mut checkpoint,
-        ));
-        let _ = std::hint::black_box(adler32_with(&[b'a'; 1_024], &mut checkpoint));
-    }
-
-    #[cfg(feature = "png")]
-    {
-        let repeated = vec![b'a'; 64 * 1024];
-        let token = crate::CancellationToken::new();
-        let _ = std::hint::black_box(compress_level1_repeated_with_token(
-            &repeated,
-            64,
-            repeated.len() / 64,
-            &token,
-        ));
-        for level in 2..=5 {
-            let token = crate::CancellationToken::new();
-            let _ = std::hint::black_box(compress_early_level_repeated_with_token(
-                &repeated,
-                64,
-                repeated.len() / 64,
-                level,
-                &token,
-            ));
-        }
-        for level in 7..=8 {
-            let token = crate::CancellationToken::new();
-            let (max_lazy, good_match, nice_match, max_chain) = if level == 7 {
-                (32, 8, 128, 256)
-            } else {
-                (128, 32, 258, 1_024)
-            };
-            let _ = std::hint::black_box(compress_slow_level_with_token(
-                &repeated,
-                RepeatedInputChunks::new(64, repeated.len() / 64),
-                max_lazy,
-                good_match,
-                nice_match,
-                max_chain,
-                if level == 7 { 0x9c } else { 0xda },
-                &token,
-            ));
-        }
-
-        // The large public sweep above spends every cancellation budget in
-        // matcher work before the writer/checksum stages.  Empty and tiny
-        // inputs have a short, stable schedule, so replay those schedules to
-        // cover the later token-aware `?` edges without another large encode.
-        let empty: [u8; 0] = [];
-        let level1_empty_probe = crate::CancellationToken::new();
-        level1_empty_probe.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(compress_level1_repeated_with_token(
-            &empty,
-            0,
-            0,
-            &level1_empty_probe,
-        ));
-        let level1_empty_checks = usize::MAX.saturating_sub(
-            level1_empty_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=level1_empty_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = std::hint::black_box(compress_level1_repeated_with_token(&empty, 0, 0, &token));
-        }
-
-        let tiny = *b"abcdef";
-        let level1_tiny_probe = crate::CancellationToken::new();
-        level1_tiny_probe.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(compress_level1_repeated_with_token(
-            &tiny,
-            tiny.len(),
-            1,
-            &level1_tiny_probe,
-        ));
-        let level1_tiny_checks = usize::MAX.saturating_sub(
-            level1_tiny_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=level1_tiny_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = std::hint::black_box(compress_level1_repeated_with_token(
-                &tiny,
-                tiny.len(),
-                1,
-                &token,
-            ));
-        }
-
-        let level1_split = vec![b'a'; MIN_LOOKAHEAD * 2];
-        let level1_split_probe = crate::CancellationToken::new();
-        level1_split_probe.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(compress_level1_repeated_with_token(
-            &level1_split,
-            MIN_LOOKAHEAD,
-            2,
-            &level1_split_probe,
-        ));
-        let level1_split_checks = usize::MAX.saturating_sub(
-            level1_split_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=level1_split_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = std::hint::black_box(compress_level1_repeated_with_token(
-                &level1_split,
-                MIN_LOOKAHEAD,
-                2,
-                &token,
-            ));
-        }
-
-        for level in 2..=5 {
-            let probe = crate::CancellationToken::new();
-            probe.cancel_after(usize::MAX);
-            let _ = std::hint::black_box(compress_early_level_repeated_with_token(
-                &empty, 0, 0, level, &probe,
-            ));
-            let calls =
-                usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-            for checks in 0..=calls {
-                let token = crate::CancellationToken::new();
-                token.cancel_after(checks);
-                let _ = std::hint::black_box(compress_early_level_repeated_with_token(
-                    &empty, 0, 0, level, &token,
-                ));
-            }
-        }
-
-        for level in 7..=8 {
-            let probe = crate::CancellationToken::new();
-            probe.cancel_after(usize::MAX);
-            let _ = std::hint::black_box(compress_slow_level_repeated_with_token(
-                &empty, 0, 0, level, &probe,
-            ));
-            let calls =
-                usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-            for checks in 0..=calls {
-                let token = crate::CancellationToken::new();
-                token.cancel_after(checks);
-                let _ = std::hint::black_box(compress_slow_level_repeated_with_token(
-                    &empty, 0, 0, level, &token,
-                ));
-            }
-        }
-
-        let slow_tiny_probe = crate::CancellationToken::new();
-        slow_tiny_probe.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(compress_slow_level_repeated_with_token(
-            &tiny,
-            tiny.len(),
-            1,
-            7,
-            &slow_tiny_probe,
-        ));
-        let slow_tiny_checks = usize::MAX.saturating_sub(
-            slow_tiny_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=slow_tiny_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = std::hint::black_box(compress_slow_level_repeated_with_token(
-                &tiny,
-                tiny.len(),
-                1,
-                7,
-                &token,
-            ));
-        }
-
-        let level6_empty_probe = crate::CancellationToken::new();
-        level6_empty_probe.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(compress_level6_repeated(
-            &empty,
-            0,
-            0,
-            Some(&level6_empty_probe),
-            32_767,
-        ));
-        let level6_empty_checks = usize::MAX.saturating_sub(
-            level6_empty_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=level6_empty_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ =
-                std::hint::black_box(compress_level6_repeated(&empty, 0, 0, Some(&token), 32_767));
-        }
-
-        let medium_data = vec![b'a'; 64];
-        let medium_probe = crate::CancellationToken::new();
-        medium_probe.cancel_after(usize::MAX);
-        let input_chunks = [32, 32].into_iter();
-        let _ = std::hint::black_box(tokenize_lookahead_medium_with_token(
-            &medium_data,
-            input_chunks,
-            128,
-            128,
-            16,
-            &medium_probe,
-        ));
-        let medium_checks = usize::MAX.saturating_sub(
-            medium_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=medium_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let input_chunks = [32, 32].into_iter();
-            let _ = std::hint::black_box(tokenize_lookahead_medium_with_token(
-                &medium_data,
-                input_chunks,
-                128,
-                128,
-                16,
-                &token,
-            ));
-        }
-
-        // Exercise the window-slide checkpoint directly. This state is
-        // reachable only after a full 64 KiB window, and constructing it
-        // avoids a large input and a long matcher run just for three polls.
-        let slide_position = 32_768_usize.wrapping_add(MAX_DISTANCE);
-        let slide_probe = crate::CancellationToken::new();
-        slide_probe.cancel_after(usize::MAX);
-        let mut slide_matcher = Level6Matcher::new(&empty, 128, 128, 16);
-        slide_matcher.position = slide_position;
-        let mut slide_checkpoint = CancellationMatcherCheckpoint {
-            token: &slide_probe,
-        };
-        let _ =
-            std::hint::black_box(slide_matcher.slide_window_if_needed_with(&mut slide_checkpoint));
-        let slide_checks = usize::MAX.saturating_sub(
-            slide_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=slide_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let mut matcher = Level6Matcher::new(&empty, 128, 128, 16);
-            matcher.position = slide_position;
-            let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-            let _ = std::hint::black_box(matcher.slide_window_if_needed_with(&mut checkpoint));
-        }
-
-        let process_data = vec![0u8; slide_position];
-        let refill_probe = crate::CancellationToken::new();
-        refill_probe.cancel_after(usize::MAX);
-        let mut refill_matcher = Level6Matcher::new(&process_data, 128, 128, 16);
-        refill_matcher.position = slide_position;
-        let mut refill_checkpoint = CancellationMatcherCheckpoint {
-            token: &refill_probe,
-        };
-        let _ = std::hint::black_box(refill_matcher.refill_boundary_with(&mut refill_checkpoint));
-        let refill_checks = usize::MAX.saturating_sub(
-            refill_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=refill_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let mut matcher = Level6Matcher::new(&process_data, 128, 128, 16);
-            matcher.position = slide_position;
-            let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-            let _ = std::hint::black_box(matcher.refill_boundary_with(&mut checkpoint));
-        }
-
-        let process_probe = crate::CancellationToken::new();
-        process_probe.cancel_after(usize::MAX);
-        let mut process_matcher = Level6Matcher::new(&process_data, 128, 128, 16);
-        process_matcher.position = slide_position;
-        let mut process_checkpoint = CancellationMatcherCheckpoint {
-            token: &process_probe,
-        };
-        let _ = std::hint::black_box(process_matcher.process_with(
-            slide_position,
-            true,
-            &mut process_checkpoint,
-        ));
-        let process_checks = usize::MAX.saturating_sub(
-            process_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=process_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let mut matcher = Level6Matcher::new(&process_data, 128, 128, 16);
-            matcher.position = slide_position;
-            let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-            let _ =
-                std::hint::black_box(matcher.process_with(slide_position, true, &mut checkpoint));
-        }
-
-        for matcher_data in [medium_data.as_slice(), tiny.as_slice()] {
-            let probe = crate::CancellationToken::new();
-            probe.cancel_after(usize::MAX);
-            let _ = std::hint::black_box(tokenize_level9_with_token(
-                matcher_data,
-                [
-                    matcher_data.len() / 2,
-                    crate::coverage_support::require_some(
-                        (matcher_data.len()).checked_sub(matcher_data.len() / 2),
-                        "coverage fixture arithmetic",
-                    ),
-                ],
-                &probe,
-            ));
-            let calls =
-                usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-            for checks in 0..=calls {
-                let token = crate::CancellationToken::new();
-                token.cancel_after(checks);
-                let _ = std::hint::black_box(tokenize_level9_with_token(
-                    matcher_data,
-                    [
-                        matcher_data.len() / 2,
-                        crate::coverage_support::require_some(
-                            (matcher_data.len()).checked_sub(matcher_data.len() / 2),
-                            "coverage fixture arithmetic",
-                        ),
-                    ],
-                    &token,
-                ));
-            }
-        }
-
-        let level9_empty_probe = crate::CancellationToken::new();
-        level9_empty_probe.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(compress_level9_repeated_with_token(
-            &empty,
-            0,
-            0,
-            &level9_empty_probe,
-        ));
-        let level9_empty_checks = usize::MAX.saturating_sub(
-            level9_empty_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=level9_empty_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = std::hint::black_box(compress_level9_repeated_with_token(&empty, 0, 0, &token));
-        }
-
-        let level3_probe = crate::CancellationToken::new();
-        level3_probe.cancel_after(usize::MAX);
-        let input_chunks = [32, 32].into_iter();
-        let _ = std::hint::black_box(tokenize_early_matcher_with_token(
-            &medium_data,
-            input_chunks,
-            4,
-            8,
-            4,
-            true,
-            &level3_probe,
-        ));
-        let level3_checks = usize::MAX.saturating_sub(
-            level3_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=level3_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let input_chunks = [32, 32].into_iter();
-            let _ = std::hint::black_box(tokenize_early_matcher_with_token(
-                &medium_data,
-                input_chunks,
-                4,
-                8,
-                4,
-                true,
-                &token,
-            ));
-        }
-
-        // The public PNG path uses `RepeatedInputChunks`, while the
-        // slice-based iterator specialization has its own checkpoint edges.
-        // Keep this valid two-chunk input in the instrumented helper so both
-        // the reinsert and lookahead branches of that specialization run.
-        let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
-        let level1_reinsert_token = crate::CancellationToken::new();
-        let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
-        let _ = std::hint::black_box(tokenize_level1_with_token(
-            &level1_reinsert_data,
-            input_chunks,
-            &level1_reinsert_token,
-        ));
-
-        // Measure the complete successful checkpoint schedule first, then
-        // replay the same iterator specialization with cancellation at every
-        // bounded checkpoint. The final poll after the trailing-token loop is
-        // otherwise easy to miss because the short probe has several matcher
-        // polls before it reaches that line.
-        let level1_probe = crate::CancellationToken::new();
-        level1_probe.cancel_after(usize::MAX);
-        let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
-        let _ = std::hint::black_box(tokenize_level1_with_token(
-            &level1_reinsert_data,
-            input_chunks,
-            &level1_probe,
-        ));
-        let level1_checks = usize::MAX.saturating_sub(
-            level1_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        for checks in 0..=level1_checks {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
-            let _ = std::hint::black_box(tokenize_level1_with_token(
-                &level1_reinsert_data,
-                input_chunks,
-                &token,
-            ));
-        }
-
-        // Exercise the token-aware position matcher with a no-op checkpoint
-        // as well. These small states cover short lookahead, zero distance,
-        // an out-of-window candidate, a two-byte mismatch, and a short match.
-        let mut short_position = 0;
-        let mut short_head = vec![0usize; HASH_SIZE];
-        let mut short_tokens = Vec::new();
-        let mut short_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let _ = std::hint::black_box(tokenize_level1_position_with(
-            b"abc",
-            3,
-            &mut short_position,
-            &mut short_head,
-            &mut short_tokens,
-            &mut short_checkpoint,
-        ));
-
-        let mut zero_distance_position = 0;
-        let mut zero_distance_head = vec![0usize; HASH_SIZE];
-        let mut zero_distance_tokens = Vec::new();
-        let mut zero_distance_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let zero_distance_data = [b'a'; 16];
-        let _ = std::hint::black_box(tokenize_level1_position_with(
-            &zero_distance_data,
-            4,
-            &mut zero_distance_position,
-            &mut zero_distance_head,
-            &mut zero_distance_tokens,
-            &mut zero_distance_checkpoint,
-        ));
-
-        let mut distant_position = MAX_DISTANCE + 1;
-        let mut distant_head = vec![0usize; HASH_SIZE];
-        let mut distant_tokens = Vec::new();
-        let mut distant_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let distant_data = vec![b'a'; MAX_DISTANCE + 5];
-        let _ = std::hint::black_box(tokenize_level1_position_with(
-            &distant_data,
-            distant_data.len(),
-            &mut distant_position,
-            &mut distant_head,
-            &mut distant_tokens,
-            &mut distant_checkpoint,
-        ));
-
-        let mut mismatch_position = 4;
-        let mut mismatch_head = vec![0usize; HASH_SIZE];
-        let mut mismatch_tokens = Vec::new();
-        let mut mismatch_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let mismatch_data = *b"aaaabbbb";
-        let _ = std::hint::black_box(tokenize_level1_position_with(
-            &mismatch_data,
-            mismatch_data.len(),
-            &mut mismatch_position,
-            &mut mismatch_head,
-            &mut mismatch_tokens,
-            &mut mismatch_checkpoint,
-        ));
-
-        let mut short_match_position = 4;
-        let mut short_match_head = vec![0usize; HASH_SIZE];
-        let mut short_match_tokens = Vec::new();
-        let mut short_match_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let short_match_data = *b"aaaaaabb";
-        let _ = std::hint::black_box(tokenize_level1_position_with(
-            &short_match_data,
-            short_match_data.len(),
-            &mut short_match_position,
-            &mut short_match_head,
-            &mut short_match_tokens,
-            &mut short_match_checkpoint,
-        ));
-    }
-
-    #[cfg(any(feature = "png", feature = "tiff"))]
-    {
-        let token = crate::CancellationToken::new();
-        let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-        let mut matcher = SlowMatcher::new(&mixed, 16, 8, 128, 128);
-        let _ = std::hint::black_box(matcher.process_with(mixed.len(), true, &mut checkpoint));
-        let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-        let mut matcher = Level6Matcher::new(&mixed, 128, 128, 16);
-        let _ = std::hint::black_box(matcher.process_with(mixed.len(), true, &mut checkpoint));
-        let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-        let mut matcher = Level9Matcher::new(&mixed);
-        let _ = std::hint::black_box(matcher.process_with(mixed.len(), true, &mut checkpoint));
-        let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-        let mut matcher = Level3Matcher::new(&mixed, 6, 128, 6, false);
-        let _ = std::hint::black_box(matcher.process_with(mixed.len(), true, &mut checkpoint));
-    }
-}
-
-#[cfg(coverage)]
-#[inline(never)]
-pub(crate) fn __coverage_exercise_instrumented_paths() {
-    __coverage_exercise_instrumented_matcher_paths();
-}
-
-#[cfg(coverage)]
-#[coverage(off)]
-// This coverage-only state explorer uses `expect` as an assertion that its
-// hand-constructed private states satisfy the preconditions being exercised.
-#[allow(clippy::expect_used)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    let data = b"abcdef";
-    let mut tokens = Vec::new();
-    let mut head = vec![0usize; HASH_SIZE];
-    let mut position = 0usize;
-    tokenize_level1_position(data, data.len(), &mut position, &mut head, &mut tokens);
-    #[cfg(feature = "png")]
-    let _ = compress_level1_repeated(data, data.len(), 1);
-    let level1_reinsert_data = vec![b'a'; MIN_LOOKAHEAD + 3];
-    let input_chunks = [MIN_LOOKAHEAD, 3].into_iter();
-    let _ = tokenize_level1(&level1_reinsert_data, input_chunks);
-    let input_chunks = [
-        MIN_LOOKAHEAD + 1,
-        crate::coverage_support::require_some(
-            (crate::coverage_support::require_some(
-                level1_reinsert_data.len().checked_sub(MIN_LOOKAHEAD),
-                "fixture remaining lookahead",
-            ))
-            .checked_sub(1),
-            "coverage fixture arithmetic",
-        ),
-    ]
-    .into_iter();
-    let _ = tokenize_level1(&level1_reinsert_data, input_chunks);
-    let level1_tail_guard_data = vec![0; WINDOW_SIZE * 2 + MAX_MATCH];
-    let level1_first_slide_guard_start = WINDOW_SIZE * 2 - MIN_LOOKAHEAD;
-    let level1_tail_guard_position = WINDOW_SIZE * 2 - MIN_LOOKAHEAD + 1;
-    assert!(
-        level1_window_tail_distance_one(&level1_tail_guard_data, 0, MAX_MATCH, MAX_MATCH).is_none()
-    );
-    assert!(
-        level1_window_tail_distance_one(
-            &level1_tail_guard_data,
-            level1_first_slide_guard_start,
-            MAX_MATCH,
-            MAX_MATCH,
-        )
-        .is_none()
-    );
-    let mut level1_tail_mismatch_data = level1_tail_guard_data.clone();
-    level1_tail_mismatch_data[level1_tail_guard_position] = 1;
-    assert!(
-        level1_window_tail_distance_one(
-            &level1_tail_mismatch_data,
-            level1_tail_guard_position,
-            MAX_MATCH,
-            MAX_MATCH,
-        )
-        .is_none()
-    );
-    assert!(
-        level1_window_tail_distance_one(
-            &level1_tail_guard_data,
-            level1_tail_guard_position,
-            MAX_MATCH,
-            MAX_MATCH,
-        )
-        .is_some()
-    );
-    assert!(
-        level1_window_tail_distance_one(
-            &level1_tail_guard_data,
-            level1_tail_guard_position,
-            MAX_MATCH - 1,
-            MAX_MATCH,
-        )
-        .is_none()
-    );
-    assert!(
-        level1_window_tail_distance_one(
-            &level1_tail_guard_data,
-            level1_tail_guard_position,
-            MIN_MATCH - 1,
-            0,
-        )
-        .is_none()
-    );
-    #[cfg(feature = "png")]
-    {
-        let tail_bytes =
-            &level1_tail_guard_data[level1_tail_guard_position..level1_tail_guard_position + 4];
-        let tail_word =
-            u32::from_le_bytes([tail_bytes[0], tail_bytes[1], tail_bytes[2], tail_bytes[3]]);
-        let tail_hash = (tail_word.wrapping_mul(2_654_435_761) >> 16) as usize;
-        for fail_after in 0..=4 {
-            let mut tail_head = vec![0usize; HASH_SIZE];
-            tail_head[tail_hash] = level1_tail_guard_position - 1;
-            let mut tail_position = level1_tail_guard_position;
-            let mut tail_tokens = Vec::new();
-            let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-            let _ = std::hint::black_box(tokenize_level1_position_with(
-                &level1_tail_guard_data,
-                level1_tail_guard_position + MAX_MATCH,
-                &mut tail_position,
-                &mut tail_head,
-                &mut tail_tokens,
-                &mut checkpoint,
-            ));
-        }
-    }
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 4,
-        start: 10,
-        original_start: 10,
-    };
-    let mut next = MediumMatch {
-        match_start: 10,
-        length: 4,
-        start: 2,
-        original_start: 2,
-    };
-    fizzle_matches(b"aaaaaaaaaaaa", &mut current, &mut next);
-    assert_eq!(current.length, 4);
-    assert_eq!(next.start, 2);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 2,
-        start: 10,
-        original_start: 10,
-    };
-    let mut next = MediumMatch {
-        match_start: 1,
-        length: 4,
-        start: 2,
-        original_start: 2,
-    };
-    fizzle_matches(b"aaaaaaaaaaaa", &mut current, &mut next);
-    assert_eq!(current.length, 2);
-    assert_eq!(next.match_start, 1);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 2,
-        start: 10,
-        original_start: 10,
-    };
-    let mut next = MediumMatch {
-        match_start: 3,
-        length: 1,
-        start: 4,
-        original_start: 4,
-    };
-    fizzle_matches(b"ABCC", &mut current, &mut next);
-    assert_eq!(current.length, 2);
-    assert_eq!(next.length, 1);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 2,
-        start: 10,
-        original_start: 10,
-    };
-    let mut next = MediumMatch {
-        match_start: 3,
-        length: 4,
-        start: 4,
-        original_start: 4,
-    };
-    fizzle_matches(b"aaaaaaaaaaaa", &mut current, &mut next);
-    assert_eq!(current.length, 0);
-    assert_eq!(next.length, 6);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 3,
-        start: 0,
-        original_start: 0,
-    };
-    let mut next = MediumMatch {
-        match_start: 1,
-        length: 4,
-        start: 4,
-        original_start: 4,
-    };
-    fizzle_matches(b"aaaaaaaa", &mut current, &mut next);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 3,
-        start: 0,
-        original_start: 0,
-    };
-    let mut next = MediumMatch {
-        match_start: 4,
-        length: 4,
-        start: 1,
-        original_start: 1,
-    };
-    fizzle_matches(b"aaaaaaaa", &mut current, &mut next);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 2,
-        start: 0,
-        original_start: 0,
-    };
-    let mut next = MediumMatch {
-        match_start: 1,
-        length: 1,
-        start: 1,
-        original_start: 1,
-    };
-    fizzle_matches(b"aaaa", &mut current, &mut next);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 2,
-        start: 0,
-        original_start: 0,
-    };
-    let mut next = MediumMatch {
-        match_start: 2,
-        length: 1,
-        start: 2,
-        original_start: 2,
-    };
-    fizzle_matches(b"aaaa", &mut current, &mut next);
-
-    let mut current = MediumMatch {
-        match_start: 0,
-        length: 2,
-        start: 0,
-        original_start: 0,
-    };
-    let mut next = MediumMatch {
-        match_start: 3,
-        length: 255,
-        start: 3,
-        original_start: 3,
-    };
-    fizzle_matches(&[b'a'; 260], &mut current, &mut next);
-
-    let mut slow = SlowMatcher::new(b"abcdefghijkl", 16, 8, 128, 128);
-    slow.process(0, true);
-    slow.quick_insert(4);
-    slow.position = 4;
-    let _ = slow.longest_match(slow.position, 8);
-    slow.process(8, true);
-    assert!(slow.position > 4);
-    let mut slow_previous = SlowMatcher::new(b"aaaa", 16, 8, 128, 128);
-    slow_previous.previous_length = 3;
-    slow_previous.process(4, true);
-    let mut slow_empty_chain = SlowMatcher::new(b"abcxyz", 16, 8, 128, 0);
-    slow_empty_chain.position = 3;
-    let _ = slow_empty_chain.longest_match(0, 3);
-
-    let mut level6 = Level6Matcher::new(b"aaaaaaaa", 128, 128, 16);
-    level6.position = 4;
-    let self_hash = level6.hash(4);
-    level6.head[self_hash] = 4;
-    let found = level6.find_match(4, 4);
-    assert_eq!(found.length, 1);
-
-    let mut level9 = Level9Matcher::new(b"abcdefghijkl");
-    level9.process(0, true);
-    level9.position = 4;
-    level9.refill_boundary();
-    let self_hash = rolling_hash(level9.hash, level9.data[6]);
-    level9.head[self_hash] = 4;
-    level9.process(8, true);
-    assert!(level9.position > 4);
-
-    let mut level9 = Level9Matcher::new(b"aaaaaaaaaaaa");
-    level9.position = 4;
-    level9.previous_length = 3;
-    let mut hash = rolling_hash(0, level9.data[5]);
-    hash = rolling_hash(hash, level9.data[6]);
-    hash = rolling_hash(hash, level9.data[7]);
-    level9.head[hash] = 0;
-    let _ = level9.longest_match(1, 8);
-    let _ = level9.longest_match(level9.position, 8);
-    let mut level9 = Level9Matcher::new(b"abcdefghijkl");
-    level9.position = 4;
-    let _ = level9.longest_match(level9.position, 8);
-    let mut level9_previous = Level9Matcher::new(b"aaaa");
-    level9_previous.previous_length = 3;
-    level9_previous.process(4, true);
-
-    let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 4, 6, false);
-    level3.position = 4;
-    let _ = level3.longest_match(0, 8);
-    let mut level3 = Level3Matcher::new(b"aaaaaaaaaaaa", 6, 128, 6, false);
-    level3.position = 4;
-    let _ = level3.longest_match(0, 4);
-    let mut level3_empty_chain = Level3Matcher::new(b"abcxyz", 0, 128, 6, false);
-    level3_empty_chain.position = 3;
-    let _ = level3_empty_chain.longest_match(0, 3);
-    let mut level3_equal_match = Level3Matcher::new(b"ababxx", 6, 128, 6, false);
-    level3_equal_match.position = 2;
-    let _ = level3_equal_match.longest_match(0, 2);
-    let mut level3_candidate = Level3Matcher::new(b"abcdefghijklmnop", 6, 128, 6, false);
-    level3_candidate.position = 4;
-    let _ = level3_candidate.candidate_can_improve(0, 4);
-    let _ = level3_candidate.candidate_can_improve(0, 8);
-
-    let _ = medium_candidate_can_improve(b"abcdabcd", 0, 4, 2);
-    let _ = medium_candidate_can_improve(b"abcdwxyzz", 0, 4, 4);
-
-    let mut short_level3 = Level3Matcher::new(b"abcd", 1, 4, 4, false);
-    let _ = short_level3.quick_insert(0);
-    short_level3.position = 1;
-    let _ = short_level3.candidate_can_improve(0, 2);
-
-    // Exercise the cancellation-aware dispatch used by PNG's public
-    // compression entry point.  A repeated multi-row input reaches the
-    // matcher, token emission, block, and checksum checkpoints for every
-    // supported compression level without manufacturing private state.
-    #[cfg(feature = "png")]
-    {
-        let repeated = vec![b'a'; 64 * 1024];
-        let token = crate::CancellationToken::new();
-        for level in 1..=9 {
-            let _ = compress_repeated(&repeated, 64, repeated.len() / 64, level, Some(&token));
-        }
-        let _ = compress_repeated(&repeated, 64, repeated.len() / 64, 0, Some(&token));
-        let _ = compress_repeated(&repeated, 64, repeated.len() / 64, 10, Some(&token));
-        let _ = compress_repeated(&repeated, 64, repeated.len() / 64, 0, None);
-        let _ = std::hint::black_box(super::deflate::compress_zlib_png_repeated(
-            &repeated,
-            64,
-            repeated.len() / 64,
-            0,
-            None,
-        ));
-        let stored_probe = crate::CancellationToken::new();
-        stored_probe.cancel_after(usize::MAX);
-        let _ = std::hint::black_box(super::deflate::compress_zlib_png_repeated(
-            &repeated,
-            64,
-            repeated.len() / 64,
-            0,
-            Some(&stored_probe),
-        ));
-        let stored_checks = usize::MAX.saturating_sub(
-            stored_probe
-                .coverage_remaining_checks()
-                .unwrap_or(usize::MAX),
-        );
-        let stored_final = crate::CancellationToken::new();
-        stored_final.cancel_after(stored_checks.saturating_sub(1));
-        let _ = std::hint::black_box(super::deflate::compress_zlib_png_repeated(
-            &repeated,
-            64,
-            repeated.len() / 64,
-            0,
-            Some(&stored_final),
-        ));
-
-        // First measure each level's successful poll count, then cancel on
-        // its final poll. This reaches the late writer/checksum `?` edges
-        // deterministically without guessing how many matcher checkpoints a
-        // level happens to need.
-        for level in 1..=9 {
-            let probe = crate::CancellationToken::new();
-            probe.cancel_after(usize::MAX);
-            let _ = std::hint::black_box(compress_repeated(
-                &repeated,
-                64,
-                repeated.len() / 64,
-                level,
-                Some(&probe),
-            ));
-            let calls =
-                usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-            let final_token = crate::CancellationToken::new();
-            final_token.cancel_after(calls.saturating_sub(1));
-            let _ = std::hint::black_box(compress_repeated(
-                &repeated,
-                64,
-                repeated.len() / 64,
-                level,
-                Some(&final_token),
-            ));
-        }
-
-        // The empty level-one token stream takes the dedicated final-block
-        // path. The successful non-empty iterator specialization is exercised
-        // by the instrumented helper above.
-        let token = crate::CancellationToken::new();
-        let _ = compress_level1_repeated_with_token(&[], 0, 0, &token);
-
-        // Seed the level-one hash table so the token-aware match return is
-        // reached directly, without making the coverage model depend on a
-        // particular matcher history from a large image.
-        let matched = vec![b'a'; MIN_LOOKAHEAD + 4];
-        let mut head = vec![0usize; HASH_SIZE];
-        let mut position = 1usize;
-        let mut tokens = Vec::new();
-        let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-        let _ = tokenize_level1_position_with(
-            &matched,
-            matched.len(),
-            &mut position,
-            &mut head,
-            &mut tokens,
-            &mut checkpoint,
-        );
-        assert!(
-            tokens
-                .iter()
-                .any(|token| matches!(token, Token::Match { .. }))
-        );
-        for fail_after in 0..=16 {
-            let mut failing_checkpoint = NoopMatcherCheckpoint { fail_after };
-            let mut failing_position = 1usize;
-            let mut failing_head = vec![0usize; HASH_SIZE];
-            let mut failing_tokens = Vec::new();
-            let _ = std::hint::black_box(tokenize_level1_position_with(
-                &matched,
-                matched.len(),
-                &mut failing_position,
-                &mut failing_head,
-                &mut failing_tokens,
-                &mut failing_checkpoint,
-            ));
-        }
-
-        // Seed the private four-byte hash state to cover the three valid
-        // level-one matcher outcomes that ordinary repeated input rarely
-        // produces: an out-of-window candidate, a two-byte prefix mismatch,
-        // and a prefix match shorter than MIN_MATCH.
-        let level1_hash = |data: &[u8], position: usize| {
-            let bytes = &data[position..position.saturating_add(4)];
-            let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
-            (word.wrapping_mul(2_654_435_761) >> 16) as usize
-        };
-        let distance_data = vec![b'a'; MAX_DISTANCE + MIN_MATCH + 2];
-        let distance_position = MAX_DISTANCE + 1;
-        let mut distance_head = vec![0usize; HASH_SIZE];
-        distance_head[level1_hash(&distance_data, distance_position)] = 0;
-        let mut distance_tokens = Vec::new();
-        let mut distance_position_mut = distance_position;
-        let mut checkpoint = NoopMatcherCheckpoint::new();
-        let _ = tokenize_level1_position_with(
-            &distance_data,
-            distance_data.len(),
-            &mut distance_position_mut,
-            &mut distance_head,
-            &mut distance_tokens,
-            &mut checkpoint,
-        );
-
-        let mut prefix_data = vec![b'a'; 8];
-        prefix_data[0] = b'b';
-        let mut prefix_head = vec![0usize; HASH_SIZE];
-        prefix_head[level1_hash(&prefix_data, 1)] = 0;
-        let mut prefix_tokens = Vec::new();
-        let mut prefix_position = 1usize;
-        let mut checkpoint = NoopMatcherCheckpoint::new();
-        let _ = tokenize_level1_position_with(
-            &prefix_data,
-            prefix_data.len(),
-            &mut prefix_position,
-            &mut prefix_head,
-            &mut prefix_tokens,
-            &mut checkpoint,
-        );
-
-        let short_data = *b"aabaacaa";
-        let mut short_head = vec![0usize; HASH_SIZE];
-        short_head[level1_hash(&short_data, 3)] = 0;
-        let mut short_tokens = Vec::new();
-        let mut short_position = 3usize;
-        let mut checkpoint = NoopMatcherCheckpoint::new();
-        let _ = tokenize_level1_position_with(
-            &short_data,
-            short_data.len(),
-            &mut short_position,
-            &mut short_head,
-            &mut short_tokens,
-            &mut checkpoint,
-        );
-
-        // Sweep the level-six writer checkpoints until both dynamic-tree
-        // scans observe cancellation at their own `?` boundaries.
-        for checks in [0, 1, 2, 24, 48] {
-            let token = crate::CancellationToken::new();
-            token.cancel_after(checks);
-            let _ = compress_repeated(&repeated, 64, repeated.len() / 64, 6, Some(&token));
-        }
-
-        // Drive the two dynamic-tree scans directly with a bounded failing
-        // checkpoint. A real compressed block reaches this state, while the
-        // injected checkpoint makes each scan's typed error edge deterministic.
-        let block_tokens = (0u8..64)
-            .map(|value| Token::Literal(value.to_le_bytes()[0]))
-            .collect::<Vec<_>>();
-        for fail_after in [0, 1, 2, 64, 512, 4_096] {
-            let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-            let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-            let _ = write_block_with(&block_tokens, &[0; 64], true, &mut writer, &mut checkpoint);
-        }
-
-        // The public repeated-input path covers match tokens with its normal
-        // checkpoint, but the failing-checkpoint instantiation also needs a
-        // real length/distance pair to exercise the match arms in the Rust
-        // writer and frequency scans.
-        let match_tokens = vec![
-            Token::Literal(b'a'),
-            Token::Match {
-                length: MAX_MATCH,
-                distance: 1,
-            },
-        ];
-        let match_uncompressed = vec![b'a'; MAX_MATCH + 1];
-        for fail_after in [0, 1, 2, 16, 32] {
-            let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-            let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-            let _ = write_block_with(
-                &match_tokens,
-                &match_uncompressed,
-                true,
-                &mut writer,
-                &mut checkpoint,
-            );
-        }
-        let mut fixed_writer = BitWriter::with_prefix([0x78, 0x01]);
-        let mut fixed_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let _ = emit_fixed_block_with(
-            &match_tokens,
-            true,
-            &mut fixed_writer,
-            &mut fixed_checkpoint,
-        );
-
-        // A failing checkpoint intentionally stops before the dynamic-tree
-        // writer completes. Run one highly repetitive block to instantiate
-        // the same generic writer with a successful checkpoint as well.
-        let dynamic_tokens = (0..1_024).map(|_| Token::Literal(0)).collect::<Vec<_>>();
-        let mut dynamic_writer = BitWriter::with_prefix([0x78, 0x9c]);
-        let mut dynamic_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let _ = write_block_with(
-            &dynamic_tokens,
-            &vec![0; 1_024],
-            true,
-            &mut dynamic_writer,
-            &mut dynamic_checkpoint,
-        );
-        let mut aligned_writer = BitWriter::with_prefix([0x78, 0x9c]);
-        let mut aligned_checkpoint = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let _ = write_aligned_bytes_with(&mut aligned_writer, &[0; 1_024], &mut aligned_checkpoint);
-
-        // Replay both block-selection paths with the tiny no-op checkpoint.
-        // The successful call tells us exactly how many polls precede each
-        // writer stage; replaying that bounded schedule reaches every typed
-        // writer error without repeatedly compressing a large block.
-        let sweep_write_block = |tokens: &[Token], uncompressed: &[u8]| {
-            let mut probe = NoopMatcherCheckpoint {
-                fail_after: usize::MAX,
-            };
-            let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-            let _ = std::hint::black_box(write_block_with(
-                tokens,
-                uncompressed,
-                true,
-                &mut writer,
-                &mut probe,
-            ));
-            let calls = usize::MAX.saturating_sub(probe.fail_after);
-            for fail_after in 0..=calls {
-                let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-                let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-                let _ = std::hint::black_box(write_block_with(
-                    tokens,
-                    uncompressed,
-                    true,
-                    &mut writer,
-                    &mut checkpoint,
-                ));
-            }
-        };
-        let stored_tokens = (0u8..64).map(Token::Literal).collect::<Vec<_>>();
-        let stored_bytes = (0u8..64).collect::<Vec<_>>();
-        sweep_write_block(&stored_tokens, &stored_bytes);
-        let dynamic_small = (0..64).map(|_| Token::Literal(0)).collect::<Vec<_>>();
-        let dynamic_small_bytes = vec![0; 64];
-        sweep_write_block(&dynamic_small, &dynamic_small_bytes);
-        sweep_write_block(&match_tokens, &match_uncompressed);
-
-        let sweep_write_block_token = |tokens: &[Token], uncompressed: &[u8]| {
-            let probe = crate::CancellationToken::new();
-            probe.cancel_after(usize::MAX);
-            let mut probe_checkpoint = CancellationMatcherCheckpoint { token: &probe };
-            let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-            let _ = std::hint::black_box(write_block_with(
-                tokens,
-                uncompressed,
-                true,
-                &mut writer,
-                &mut probe_checkpoint,
-            ));
-            let calls =
-                usize::MAX.saturating_sub(probe.coverage_remaining_checks().unwrap_or(usize::MAX));
-            let mut payload_errors = 0usize;
-            for checks in 0..=calls {
-                let token = crate::CancellationToken::new();
-                token.cancel_after(checks);
-                let mut checkpoint = CancellationMatcherCheckpoint { token: &token };
-                let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-                let result = std::hint::black_box(write_block_with(
-                    tokens,
-                    uncompressed,
-                    true,
-                    &mut writer,
-                    &mut checkpoint,
-                ));
-                if result.is_err() && writer.bytes.len() > 2 {
-                    payload_errors = payload_errors.wrapping_add(1);
-                }
-            }
-            assert!(payload_errors > 0);
-        };
-        sweep_write_block_token(&stored_tokens, &stored_bytes);
-
-        let aligned_probe = NoopMatcherCheckpoint {
-            fail_after: usize::MAX,
-        };
-        let mut aligned_probe = aligned_probe;
-        let aligned_bytes = vec![0u8; 2_048];
-        let mut aligned_writer = BitWriter::with_prefix([0x78, 0x9c]);
-        let _ = std::hint::black_box(write_aligned_bytes_with(
-            &mut aligned_writer,
-            &aligned_bytes,
-            &mut aligned_probe,
-        ));
-        let aligned_checks = usize::MAX.saturating_sub(aligned_probe.fail_after);
-        for fail_after in 0..=aligned_checks {
-            let mut writer = BitWriter::with_prefix([0x78, 0x9c]);
-            let mut checkpoint = NoopMatcherCheckpoint { fail_after };
-            let _ = std::hint::black_box(write_aligned_bytes_with(
-                &mut writer,
-                &aligned_bytes,
-                &mut checkpoint,
-            ));
-        }
-
-        // These private level helpers deliberately panic on an invalid level;
-        // the public dispatcher rejects it with a typed parameter error. Keep
-        // the defensive assertions executable without changing that contract.
-        for invalid in [
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let _ = compress_early_level_repeated(&repeated, 64, repeated.len() / 64, 1);
-            })),
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let token = crate::CancellationToken::new();
-                let _ = compress_early_level_repeated_with_token(
-                    &repeated,
-                    64,
-                    repeated.len() / 64,
-                    1,
-                    &token,
-                );
-            })),
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let _ = compress_slow_level_repeated(&repeated, 64, repeated.len() / 64, 6);
-            })),
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let token = crate::CancellationToken::new();
-                let _ = compress_slow_level_repeated_with_token(
-                    &repeated,
-                    64,
-                    repeated.len() / 64,
-                    6,
-                    &token,
-                );
-            })),
-        ] {
-            let _ = invalid;
-        }
-    }
-}
-
 fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usize {
     let bytes = &data[position..position.saturating_add(4)];
     let word = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
@@ -1636,7 +295,11 @@ fn quick_insert_level1(data: &[u8], position: usize, head: &mut [usize]) -> usiz
 }
 
 #[cfg(feature = "png")]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "The no-token encoder path uses fixed DEFLATE codes and infallible checkpoint adapters."
+)]
 pub(super) fn compress_early_level_repeated(
     data: &[u8],
     row_len: usize,
@@ -1733,7 +396,11 @@ pub(super) fn compress_slow_level_repeated_with_token(
     )
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "This non-cancellable DEFLATE path uses the no-op matcher checkpoint."
+)]
 fn compress_slow_level<I>(
     data: &[u8],
     input_chunks: I,
@@ -1764,7 +431,8 @@ where
 #[allow(
     clippy::expect_used,
     clippy::too_many_arguments,
-    clippy::unwrap_in_result
+    clippy::unwrap_in_result,
+    reason = "The scalar arguments are DEFLATE level parameters, plus its zlib header and cancellation token."
 )]
 fn compress_slow_level_with_token(
     data: &[u8],
@@ -1801,7 +469,11 @@ struct SlowSettings {
     max_chain: usize,
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "This non-cancellable matcher path uses a no-op checkpoint that cannot fail."
+)]
 fn slow<I>(data: &[u8], input_chunks: I, settings: SlowSettings) -> Vec<Token>
 where
     I: IntoIterator<Item = usize>,
@@ -1898,7 +570,11 @@ impl SlowMatcher {
         }
     }
 
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "The wrapper delegates to a checkpoint whose no-op poll cannot fail."
+    )]
     fn process(&mut self, available: usize, finishing: bool) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.process_with(available, finishing, &mut checkpoint)
@@ -1996,7 +672,12 @@ impl SlowMatcher {
         candidate
     }
 
-    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        dead_code,
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "The non-cancellable matcher adapter mirrors the checkpoint-aware search method."
+    )]
     fn longest_match(&self, candidate: usize, lookahead: usize) -> (usize, usize) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.longest_match_with(candidate, lookahead, &mut checkpoint)
@@ -2048,7 +729,11 @@ impl SlowMatcher {
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "When cancellation is absent, matcher and emission checkpoints are no-ops."
+)]
 pub(super) fn compress_level6_repeated(
     data: &[u8],
     row_len: usize,
@@ -2102,7 +787,6 @@ pub(super) fn compress_repeated(
 }
 
 #[cfg(feature = "png")]
-#[cfg_attr(coverage, coverage(off))]
 fn compress_level6_repeated_without_token(
     data: &[u8],
     row_len: usize,
@@ -2120,7 +804,11 @@ fn compress_level6_repeated_without_token(
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "The optional no-token branch uses an infallible matcher checkpoint."
+)]
 fn finish_level6_tokens(
     data: &[u8],
     tokens: Vec<Token>,
@@ -2146,7 +834,11 @@ fn finish_level6_tokens(
 }
 
 #[cfg(any(feature = "png", feature = "tiff"))]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "This non-cancellable level-six matcher uses a no-op checkpoint."
+)]
 fn tokenize_lookahead_medium_repeated(
     data: &[u8],
     row_len: usize,
@@ -2199,7 +891,11 @@ fn tokenize_lookahead_medium_repeated_with_token(
     Ok(matcher.tokens)
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "This non-cancellable level-six matcher uses a no-op checkpoint."
+)]
 fn tokenize_lookahead_medium<I>(
     data: &[u8],
     input_chunks: I,
@@ -2275,30 +971,17 @@ trait MatcherCheckpoint {
     fn poll(&mut self) -> crate::codecs::CodecResult<()>;
 }
 
-struct NoopMatcherCheckpoint {
-    #[cfg(coverage)]
-    fail_after: usize,
-}
+struct NoopMatcherCheckpoint;
 
 impl NoopMatcherCheckpoint {
     fn new() -> Self {
-        Self {
-            #[cfg(coverage)]
-            fail_after: usize::MAX,
-        }
+        Self
     }
 }
 
 impl MatcherCheckpoint for NoopMatcherCheckpoint {
     #[inline(always)]
     fn poll(&mut self) -> crate::codecs::CodecResult<()> {
-        #[cfg(coverage)]
-        {
-            if self.fail_after == 0 {
-                return Err(crate::codecs::CodecError::Cancelled);
-            }
-            self.fail_after = self.fail_after.saturating_sub(1);
-        }
         Ok(())
     }
 }
@@ -2349,7 +1032,11 @@ impl Level6Matcher {
         }
     }
 
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "This adapter supplies a no-op checkpoint to the fallible boundary refill."
+    )]
     fn refill_boundary(&mut self) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.refill_boundary_with(&mut checkpoint)
@@ -2388,7 +1075,11 @@ impl Level6Matcher {
         Ok(())
     }
 
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "This adapter supplies a no-op checkpoint to the fallible matcher loop."
+    )]
     fn process(&mut self, available: usize, finishing: bool) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.process_with(available, finishing, &mut checkpoint)
@@ -2459,7 +1150,12 @@ impl Level6Matcher {
         }
     }
 
-    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        dead_code,
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "The non-cancellable matcher adapter mirrors the checkpoint-aware search method."
+    )]
     fn find_match(&mut self, position: usize, lookahead: usize) -> MediumMatch {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.find_match_with(position, lookahead, &mut checkpoint)
@@ -2589,7 +1285,11 @@ impl Level6Matcher {
     }
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "This non-cancellable level-nine matcher uses an infallible no-op checkpoint."
+)]
 fn tokenize_level9<I>(data: &[u8], input_chunks: I) -> Vec<Token>
 where
     I: IntoIterator<Item = usize>,
@@ -2638,7 +1338,11 @@ where
 }
 
 #[cfg(feature = "png")]
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "The no-token compressor delegates through infallible matcher and emission checkpoints."
+)]
 pub(super) fn compress_level9_repeated(data: &[u8], row_len: usize, height: usize) -> Vec<u8> {
     let tokens = tokenize_level9(data, RepeatedInputChunks::new(row_len, height));
     let mut writer = BitWriter::with_prefix([0x78, 0xda]);
@@ -2699,7 +1403,11 @@ impl Level9Matcher {
         }
     }
 
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "This adapter supplies a no-op checkpoint to the fallible boundary refill."
+    )]
     fn refill_boundary(&mut self) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.refill_boundary_with(&mut checkpoint)
@@ -2719,7 +1427,11 @@ impl Level9Matcher {
         checkpoint.poll()
     }
 
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "This adapter supplies a no-op checkpoint to the fallible matcher loop."
+    )]
     fn process(&mut self, available: usize, finishing: bool) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.process_with(available, finishing, &mut checkpoint)
@@ -2816,7 +1528,12 @@ impl Level9Matcher {
         candidate
     }
 
-    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        dead_code,
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "The non-cancellable matcher adapter mirrors the checkpoint-aware search method."
+    )]
     fn longest_match(&self, candidate: usize, lookahead: usize) -> (usize, usize) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.longest_match_with(candidate, lookahead, &mut checkpoint)
@@ -2949,7 +1666,11 @@ fn medium_candidate_can_improve(
                 [position.wrapping_add(offset)..position.wrapping_add(offset).saturating_add(width)]
 }
 
-#[allow(dead_code, clippy::expect_used)]
+#[allow(
+    dead_code,
+    clippy::expect_used,
+    reason = "The non-cancellable helper mirrors the checkpoint-aware match-fizzling routine."
+)]
 fn fizzle_matches(data: &[u8], current: &mut MediumMatch, next: &mut MediumMatch) {
     let mut checkpoint = NoopMatcherCheckpoint::new();
     fizzle_matches_with(data, current, next, &mut checkpoint)
@@ -3004,7 +1725,11 @@ fn fizzle_matches_with<P: MatcherCheckpoint>(
     Ok(())
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "This non-cancellable early-level matcher uses a no-op checkpoint."
+)]
 fn tokenize_early_matcher<I>(
     data: &[u8],
     input_chunks: I,
@@ -3093,7 +1818,11 @@ impl<'a> Level3Matcher<'a> {
         }
     }
 
-    #[allow(clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "This adapter supplies a no-op checkpoint to the fallible matcher loop."
+    )]
     fn process(&mut self, available: usize, finishing: bool) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.process_with(available, finishing, &mut checkpoint)
@@ -3161,7 +1890,12 @@ impl<'a> Level3Matcher<'a> {
         candidate
     }
 
-    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        dead_code,
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "The non-cancellable matcher adapter mirrors the checkpoint-aware insertion method."
+    )]
     fn insert_match(&mut self, length: usize, lookahead: usize) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.insert_match_with(length, lookahead, &mut checkpoint)
@@ -3202,7 +1936,12 @@ impl<'a> Level3Matcher<'a> {
         Ok(())
     }
 
-    #[allow(dead_code, clippy::expect_used, clippy::unwrap_in_result)]
+    #[allow(
+        dead_code,
+        clippy::expect_used,
+        clippy::unwrap_in_result,
+        reason = "The non-cancellable matcher adapter mirrors the checkpoint-aware search method."
+    )]
     fn longest_match(&self, candidate: usize, lookahead: usize) -> (usize, usize) {
         let mut checkpoint = NoopMatcherCheckpoint::new();
         self.longest_match_with(candidate, lookahead, &mut checkpoint)
@@ -3511,7 +2250,11 @@ fn generate_codes(nodes: &mut [Node], max_code: usize, counts: &[u16; BIT_COUNT_
     }
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "The wrapper supplies a no-op checkpoint to the result-returning block emitter."
+)]
 fn emit_blocks(tokens: &[Token], block_tokens: usize, writer: &mut BitWriter) {
     let mut checkpoint = NoopMatcherCheckpoint::new();
     emit_blocks_with(tokens, block_tokens, writer, &mut checkpoint)
@@ -3654,7 +2397,10 @@ fn write_block_with<P: MatcherCheckpoint>(
     };
     if stored_cost <= dynamic_bytes.min(static_bytes) {
         // The stored-cost guard above proves this conversion cannot truncate.
-        #[allow(clippy::cast_possible_truncation)]
+        #[allow(
+            clippy::cast_possible_truncation,
+            reason = "The stored-block cost guard limits this length to u16::MAX."
+        )]
         let length = uncompressed.len() as u16;
         return write_stored_block_with(writer, length, final_block, uncompressed, checkpoint);
     }
@@ -3759,12 +2505,6 @@ fn scan_tree_with<P: MatcherCheckpoint>(
     Ok(())
 }
 
-// LLVM's region mapper does not retain the error arms of this generic
-// checkpoint wrapper in the aggregate report, even though the coverage hook
-// measures every cancellation position. Keep only this small adapter out of
-// instrumentation; the stored-block selection and cancellation schedule are
-// still exercised by the surrounding writer probes.
-#[cfg_attr(coverage, coverage(off))]
 fn write_stored_block_with<P: MatcherCheckpoint>(
     writer: &mut BitWriter,
     length: u16,
@@ -3902,7 +2642,11 @@ fn emit_tokens_with<P: MatcherCheckpoint>(
     Ok(())
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "The wrapper supplies a no-op checkpoint to the result-returning fixed-block emitter."
+)]
 fn emit_fixed_block(tokens: &[Token], final_block: bool, writer: &mut BitWriter) {
     let mut checkpoint = NoopMatcherCheckpoint::new();
     emit_fixed_block_with(tokens, final_block, writer, &mut checkpoint)
@@ -4062,7 +2806,11 @@ fn write_aligned_bytes_with<P: MatcherCheckpoint>(
     Ok(())
 }
 
-#[allow(clippy::expect_used, clippy::unwrap_in_result)]
+#[allow(
+    clippy::expect_used,
+    clippy::unwrap_in_result,
+    reason = "Adler-32 uses the no-op checkpoint, while token-aware checksum failures are propagated."
+)]
 fn adler32(data: &[u8]) -> u32 {
     let mut checkpoint = NoopMatcherCheckpoint::new();
     adler32_with(data, &mut checkpoint).expect("the no-op matcher checkpoint cannot fail")

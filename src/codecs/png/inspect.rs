@@ -44,14 +44,18 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let mut palette_alpha = Vec::new();
     let mut frame_count = 1;
     let mut animation_declared = false;
+    let mut saw_actl = false;
     let mut saw_frame_control = false;
     let mut next_sequence = 0u32;
     let mut saw_following_chunk = false;
     while position < data.len() {
+        let chunk_offset = position as u64;
         let (kind, payload, next) =
             read_chunk(data, position).map_err(|error| error.at(position as u64, "png_chunk"))?;
         saw_following_chunk = true;
         position = next;
+        super::decode::validate_compressed_metadata_method(kind, payload, chunk_offset)?;
+        super::decode::validate_color_chunk_structure(kind, payload, chunk_offset)?;
         match &kind {
             b"PLTE" if palette_rgb.is_none() => {
                 let entries = (payload.len() / 3).min(256);
@@ -68,6 +72,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                         "invalid PNG animation control chunk".to_owned(),
                     ));
                 }
+                saw_actl = true;
                 let frames = u32::from_be_bytes([payload[0], payload[1], payload[2], payload[3]]);
                 if animation_declared {
                     animation_declared = false;
@@ -99,6 +104,16 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
                     ));
                 }
                 saw_frame_control = true;
+            }
+            b"fdAT" if payload.len() < 4 => {
+                return Err(CodecError::Malformed(
+                    "APNG contains a truncated fdAT chunk".to_owned(),
+                ));
+            }
+            b"fdAT" if !saw_actl => {
+                return Err(CodecError::Malformed(
+                    "PNG fdAT chunk has no preceding acTL chunk".to_owned(),
+                ));
             }
             b"IDAT" => {
                 if animation_declared && !saw_frame_control {
@@ -217,41 +232,4 @@ fn crc32(kind: &[u8; 4], data: &[u8]) -> u32 {
         }
     }
     !crc
-}
-
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    fn chunk(kind: [u8; 4], payload: &[u8]) -> Vec<u8> {
-        let mut result = Vec::new();
-        result.extend_from_slice(
-            &crate::coverage_support::require_ok(
-                u32::try_from(payload.len()),
-                "fixture value must fit u32",
-            )
-            .to_be_bytes(),
-        );
-        result.extend_from_slice(&kind);
-        result.extend_from_slice(payload);
-        result.extend_from_slice(&crc32(&kind, payload).to_be_bytes());
-        result
-    }
-
-    let _ = inspect(b"");
-    let _ = inspect(b"not png!");
-    let mut no_image_data = SIGNATURE.to_vec();
-    let mut header = [0u8; 13];
-    header[3] = 1;
-    header[7] = 1;
-    no_image_data.extend_from_slice(&chunk(*b"IHDR", &header));
-    no_image_data.extend_from_slice(&chunk(*b"IEND", &[]));
-    let _ = inspect(&no_image_data);
-    let mut ends_after_ihdr = SIGNATURE.to_vec();
-    ends_after_ihdr.extend_from_slice(&chunk(*b"IHDR", &header));
-    let _ = inspect(&ends_after_ihdr);
-    let mut huge_payload = SIGNATURE.to_vec();
-    huge_payload.extend_from_slice(&0xffff_ffffu32.to_be_bytes());
-    huge_payload.extend_from_slice(b"IHDR");
-    let _ = inspect(&huge_payload);
-    let mut sequence = u32::MAX;
-    assert!(consume_sequence(u32::MAX, &mut sequence).is_err());
 }

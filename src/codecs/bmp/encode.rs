@@ -261,135 +261,6 @@ fn bmp_file_fits(img: &DecodedImage) -> bool {
         && pixel_offset.saturating_add(pixel_bytes) <= u128::from(u32::MAX)
 }
 
-#[cfg(coverage)]
-pub(crate) fn __coverage_exercise_private_branches() {
-    // These calls model private defensive edges that a valid Pillow input
-    // cannot select. Pillow has no caller-owned OutputSink, cancellation
-    // token, or access to these post-preflight arithmetic states, so this is
-    // Rust defensive-model evidence rather than a parity fixture or a
-    // coverage-only substitute for the real sink contract.
-    for (width, height) in [(u32::MAX, 1), (1, u32::MAX), (i32::MAX as u32, 1)] {
-        let image = DecodedImage::new(width, height, Vec::new(), crate::types::ColorType::L8);
-        assert!(encode(&image, &BmpEncodeOptions::default()).is_err());
-    }
-
-    let cancelled = crate::CancellationToken::new();
-    cancelled.cancel();
-    let image = DecodedImage::new(1, 1, vec![0], crate::types::ColorType::L8);
-    let mut accept = |_bytes: &[u8]| Ok::<(), CodecError>(());
-    let _ = write_encoded(
-        &image,
-        &BmpEncodeOptions::default(),
-        Some(&cancelled),
-        None,
-        &mut accept,
-    );
-
-    let huge = DecodedImage::new(
-        u32::MAX,
-        u32::MAX,
-        Vec::new(),
-        crate::types::ColorType::Rgba8,
-    );
-    let _ = BmpLayout::for_image(&huge);
-
-    let mut written = 0usize;
-    let mut reject = |_bytes: &[u8]| Err(CodecError::OutputWrite("coverage sink".to_owned()));
-    let _ = write_1bit_rows(
-        &[],
-        usize::MAX,
-        usize::MAX,
-        0,
-        None,
-        &mut accept,
-        &mut written,
-    );
-    let _ = write_1bit_rows(
-        &[],
-        16,
-        usize::MAX / 2 + 1,
-        0,
-        None,
-        &mut accept,
-        &mut written,
-    );
-    let _ = write_1bit_rows(&[], 8, 1, 0, None, &mut accept, &mut written);
-    let _ = write_1bit_rows(&[0], 8, 1, 1, None, &mut reject, &mut written);
-    let _ = write_1bit_rows(&[], 1, 1, 0, Some(&cancelled), &mut accept, &mut written);
-
-    let mut convert = |_pixel: &[u8], _row: &mut Vec<u8>| {};
-    let _ = write_rows(
-        &[],
-        usize::MAX,
-        1,
-        2,
-        0,
-        &mut convert,
-        None,
-        &mut accept,
-        &mut written,
-    );
-    let _ = write_rows(
-        &[],
-        1,
-        3,
-        usize::MAX / 2 + 1,
-        0,
-        &mut convert,
-        None,
-        &mut accept,
-        &mut written,
-    );
-    let _ = write_rows(
-        &[],
-        2,
-        usize::MAX / 2 + 1,
-        1,
-        0,
-        &mut convert,
-        None,
-        &mut accept,
-        &mut written,
-    );
-    let _ = write_rows(
-        &[],
-        1,
-        1,
-        1,
-        0,
-        &mut convert,
-        None,
-        &mut accept,
-        &mut written,
-    );
-    let _ = write_rows(
-        &[0],
-        1,
-        1,
-        1,
-        1,
-        &mut convert,
-        None,
-        &mut reject,
-        &mut written,
-    );
-    let _ = write_rows(
-        &[],
-        1,
-        1,
-        1,
-        0,
-        &mut convert,
-        Some(&cancelled),
-        &mut accept,
-        &mut written,
-    );
-
-    let _ = emit(&[0], Some(&cancelled), &mut accept, &mut written);
-    let mut max_written = usize::MAX;
-    let _ = emit(&[0], None, &mut accept, &mut max_written);
-}
-
 fn source_row(output_row: usize, height: usize) -> usize {
     height.saturating_sub(output_row).saturating_sub(1)
 }
@@ -459,7 +330,10 @@ fn write_1bit_rows(
 // The row converter keeps the codec's byte layout explicit; these parameters
 // are the independent validated inputs needed by both indexed and true-color
 // row emission.
-#[allow(clippy::too_many_arguments)]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "The streaming row writer receives its validated layout, converter, and sink separately."
+)]
 fn write_rows(
     pixels: &[u8],
     width: usize,

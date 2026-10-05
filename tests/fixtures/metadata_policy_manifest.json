@@ -48,12 +48,39 @@
       "metadata_origin": "independent_measurement"
     },
     {
+      "name": "tiff_cyclic_ifd",
+      "feature": "tiff",
+      "asset_path": "tests/fixtures/input/images/tiff/cyclic_ifd.tiff",
+      "asset_sha256": "fb45342f6b3cd9e556a574e61ca5452de98d26222d33c3fb42e13851a83c8b21",
+      "expected_format": "tiff",
+      "metadata_bytes": 140,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "tiff_empty_tile_byte_counts",
+      "feature": "tiff",
+      "asset_path": "tests/fixtures/input/images/tiff/empty_tile_byte_counts.tiff",
+      "asset_sha256": "15c1742da2121998c4c7637af35e95d599b3aa6a0d534f3c88961c25887e34cf",
+      "expected_format": "tiff",
+      "metadata_bytes": 146,
+      "metadata_origin": "independent_measurement"
+    },
+    {
       "name": "webp",
       "feature": "webp",
       "asset_path": "tests/fixtures/input/images/webp/16x16.webp",
       "asset_sha256": "68cce81ba41263b278056702805052047750cb437864f0f48f162c96808e0e26",
       "expected_format": "webp",
       "metadata_bytes": 20,
+      "metadata_origin": "independent_measurement"
+    },
+    {
+      "name": "webp_xmp_metadata",
+      "feature": "webp",
+      "asset_path": "tests/fixtures/input/images/webp/xmp.webp",
+      "asset_sha256": "8e699b2fe8e59cd4196bd6335da7f59980f9f4cf9ebab358f690ed16a70afe19",
+      "expected_format": "webp",
+      "metadata_bytes": 79,
       "metadata_origin": "independent_measurement"
     },
     {
@@ -73,6 +100,15 @@
       "expected_format": "avif",
       "metadata_bytes": 282,
       "metadata_origin": "independent_measurement"
+    }
+  ],
+  "error_cases": [
+    {
+      "name": "tiff_empty_ifd_chain",
+      "feature": "tiff",
+      "asset_path": "tests/fixtures/input/images/tiff/empty_ifd_chain.tiff",
+      "asset_sha256": "1ce397a187d135876fec3bfb2adeed0a66a8cc8c1ad76d36e6f0ab834f320fc6",
+      "expected_format": "tiff"
     }
   ]
 }

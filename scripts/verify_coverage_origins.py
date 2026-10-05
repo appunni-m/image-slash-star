@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Verify the provenance inventory for exact ``cfg(coverage)`` guards.
 
-The inventory is a static source audit. It deliberately does not execute Rust
-tests and it rejects ``pillow_fixture`` as an origin for a coverage guard:
-Pillow parity is represented by ``coverage_matrix.json`` instead.
+The inventory is a static source audit. It rejects source coverage exclusions
+and ``pillow_fixture`` as an origin for a coverage guard. Pillow parity is
+represented by ``coverage_matrix.json`` instead.
 """
 
 from __future__ import annotations
@@ -16,6 +16,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INVENTORY = ROOT / "tests" / "fixtures" / "coverage_origin_manifest.json"
 GUARD = re.compile(r"^\s*#\[cfg\(coverage\)\]\s*$")
+EXCLUSION = re.compile(
+    r"^[ \t]*#\[[^\]]*\bcoverage\s*\(\s*off\s*\)[^\]]*\]", re.MULTILINE
+)
 ORIGINS = {
     "defensive_model",
     "independent_implementation",
@@ -78,6 +81,11 @@ def verify() -> tuple[int, int]:
     discovered: dict[str, list[int]] = {}
     for path in source_files():
         relative = path.relative_to(ROOT).as_posix()
+        source = path.read_text(encoding="utf-8")
+        exclusion = EXCLUSION.search(source)
+        if exclusion is not None:
+            line = source.count("\n", 0, exclusion.start()) + 1
+            fail(f"{relative}:{line}: source coverage exclusions are forbidden")
         line_numbers = guards(path)
         if line_numbers:
             discovered[relative] = line_numbers
@@ -131,7 +139,7 @@ def main() -> int:
         return 1
     print(
         f"coverage origin inventory OK: {total} exact cfg(coverage) guards "
-        f"across {files} files; no Pillow-parity origin assigned"
+        f"across {files} files; no source exclusions or Pillow-parity origin assigned"
     )
     return 0
 
