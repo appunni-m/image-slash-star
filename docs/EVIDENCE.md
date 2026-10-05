@@ -373,6 +373,37 @@ are corrected to 526, with historical coverage records unchanged, and
 verification is rerun separately. The administrative correction changes no
 codec, test, fixture or generator byte measured by those runtime comparisons.
 
+### Full-campaign AVIF witness registration correction
+
+The fresh full attempt on `7edbc034` passes all 1,675 ordinary decode rows,
+431 active encode rows and 26 separate fault contracts, with 1,647 public
+encode calls and zero encode panics. It fails the existing complete native
+repetition witness test on its stale 285-artifact assertion: the current
+index contains 291 artifacts. This failed attempt produces no accepted
+coverage report. Its seven raw profiles, original receipt and log remain
+preserved in `maintained-exporter-canonical-main-7edbc034-v4/`; the failure
+audit has SHA-256
+`0ed60c841df220fd55a7736cfcfc58ec6e60674d63d484e8f8388b9fea69ed00`.
+
+The public witness harness now requires exactly 291 artifacts, appends the
+new case to its exact name list and resolves its source through the existing
+matrix sequence observer. All previous 91 case objects and 285 artifact
+bytes remain unchanged. Complete-input hashes, native repetition facts,
+every frame's pixels and timing, and public error checks remain enforced.
+The focused existing test passes 1/1 with zero failures or ignored tests,
+covering all 92 complete cases. Fresh pinned Pillow observes the new five
+frames and two native observations match the retained index. Formatting,
+strict all-feature public-test Clippy and fixture verification also pass.
+
+The terminal review is
+`animated-avif-primary-irot-f04ba130-20261005/witness-registration-fix-7edbc034-v1/completion-review.json`,
+SHA-256
+`9a57980be1c9ee0445fda3e13ca7258f011f3e3ecdc52e402f7b5da5554aae73`.
+Its guards bind 5,388 source and fixture files, tools, logs, the actually
+recompiled normal test binary and the two unrelated untracked files. Only
+the three harness registrations change. This focused correction does not
+replace the last full coverage measurement above.
+
 ## Pre-cleanup AVIF full coverage — 2026-10-05
 
 The last recorded full local report was

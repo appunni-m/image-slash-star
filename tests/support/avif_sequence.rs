@@ -492,7 +492,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
     assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
     let artifacts: Vec<Value> = field(&index, "artifacts");
-    assert_eq!(artifacts.len(), 285);
+    assert_eq!(artifacts.len(), 291);
     let mut artifact_paths = std::collections::HashSet::new();
     for artifact in artifacts {
         let path: String = field(&artifact, "path");
@@ -602,6 +602,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_420_derived_skip_refs_b32x32_64x64",
         "lossless_inter_i422_derived_skip_refs_b32x32_64x64",
         "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
+        "animated_primary_item_irot",
     ];
     assert_eq!(cases.len(), expected_names.len());
     for (case, expected_name) in cases.iter().zip(expected_names) {
@@ -644,6 +645,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         assert_eq!(field::<Option<u32>>(&pillow, "loop_key"), None);
         let mut expected = match field::<String>(case, "source").as_str() {
             "animated" => animated(),
+            "animated_primary_item_irot" => matrix_sequence_case("animated_primary_item_irot"),
             "tkhd_version_zero" => matrix_sequence_case("animated_tkhd_version_zero"),
             "tkhd_version_zero_unknown_duration" => {
                 matrix_sequence_case("animated_tkhd_version_zero_unknown_duration")
