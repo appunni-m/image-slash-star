@@ -39,6 +39,10 @@ FIXTURES = {
         "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009",
     ),
     "animated": ("animated.avif", "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"),
+    "animated_primary_item_irot": (
+        "animated_primary_item_irot.avif",
+        "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+    ),
     "tkhd_version_zero": (
         "animated_tkhd_version_zero.avif",
         "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674",

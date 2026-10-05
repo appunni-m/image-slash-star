@@ -277,8 +277,8 @@ location for the new-only report. Its LCOV line union records zero new lines.
 Its branch union is incomparable because reported totals and detail differ;
 provider source/build receipts remain unregistered. No report fields were
 rewritten. These selected results do not replace the last full all-feature
-measurement above or establish a full-suite regression check. The current
-inventory is 2,137 ordinary rows, including 267 TIFF decode rows; the 26
+measurement above or establish a full-suite regression check. The inventory
+at this checkpoint is 2,137 ordinary rows, including 267 TIFF decode rows; the 26
 fault contracts remain outside Pillow parity totals.
 
 After the harness update, all ten scoped commands pass: formatting, fixture
@@ -325,6 +325,53 @@ Final guards bind 5,374 source files, tools, rebuilt test binaries and the
 two unrelated untracked files. This resolves the four classification failures
 left outside the preceding three-row WASI selection. It is no complete
 33-lane campaign or fresh full coverage result.
+
+## Animated AVIF primary-item rotation parity — 2026-10-05
+
+`animated_primary_item_irot` adds one essential primary-item rotation property
+to the existing complete five-frame AVIF. The input-only generator grows the
+file from 1,235 to 1,245 bytes, rebases its item and track offsets, and retains
+every coded sample byte. Pinned Pillow 12.2.0 observes the same five 150x150
+RGB frames and 33-ms durations. Two fresh observations through the maintained
+native observer record repetition count zero. That observer uses the exact
+surviving ABI header and pinned Pillow shared library; no full clean native
+source checkout is claimed.
+
+The isolated ordinary public comparison passes 1/1. Its fixed-source
+incremental run passes one existing animated control, resets raw profiles,
+then passes only the new row. No fault contract is selected or executed.
+All 63 compiled objects and all four native denominators remain identical:
+135,754 lines, 31,228 branches, 8,682 functions and 210,844 regions. The true
+arm at `avif/decode.rs:349` changes from 0 to 1 in file and function records;
+literal LCOV records agree. Coverage MCP returns the missing true arm for the
+control and the missing false arm for the new-only run. Its incremental union
+is incomparable because normalized detail and aggregate inventories differ.
+Reports retain all fields; no MCP union or full-suite gain is claimed.
+
+The candidate preserves all 2,137 previous ordinary observations, 26 separate
+fault objects, old input/raw bytes and loop facts. Appending the fresh native
+loop observation changes the whole-index digest, so 132 old-row index-SHA
+fields are explicitly refreshed; those row objects are not byte-identical.
+The final handoff is
+`animated-avif-primary-irot-f04ba130-20261005/final-handoff-v1.json`, SHA-256
+`2509e87af0b47c2ade917d0edff80bcd473039598120e410a1e56310c57c6973`,
+under the recovery directory above. The original selected-run bookkeeping
+failure is preserved and qualified by its actual command exit zero and
+literal 1/1 result. This update changes no Rust codec or test harness. The
+current inventory contains 2,138 ordinary rows, including 526 AVIF decode
+rows; fault contracts remain outside Pillow parity totals.
+
+Normal main acceptance passes formatting, the pinned input-generator check,
+526/526 native AVIF rows and the one selected WASI row, with zero failures or
+ignored tests. Existing executables are reused for actual current inputs;
+there is no recompile claim. The outcome receipt is
+`animated-avif-primary-irot-f04ba130-20261005/main-normal-public-outcomes-v1.json`,
+SHA-256 `70594fd65d6370650667f3a7eea64fd85ce62240e81e91ce77bee2b9b5697e28`.
+The initial fixture verification fails on two stale current roadmap AVIF
+counts; its original receipt and log remain preserved. Those derived fields
+are corrected to 526, with historical coverage records unchanged, and
+verification is rerun separately. The administrative correction changes no
+codec, test, fixture or generator byte measured by those runtime comparisons.
 
 ## Pre-cleanup AVIF full coverage — 2026-10-05
 
@@ -2826,8 +2873,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,137 total rows: 1,674 decode / inspect /
-verify rows and 463 encode rows. Of those, 1,674 decode rows and 431 encode
+The current matrix contains 2,138 total rows: 1,675 decode / inspect /
+verify rows and 463 encode rows. Of those, 1,675 decode rows and 431 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 267 decode rows. The 26 fault contracts are tracked separately from the
 Pillow parity totals. Full
@@ -6179,7 +6226,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `d66168d52ac4b7245214beebbb42c46def25aa357624cb0ddc2114723001e4f1`; matrix `ee9168c07b96009a2f610894f300cd6c5e16dacbd1018f4eef45a94d15445e0c`.
+- Current fixture integrity only: manifest `ed95a71970f7af59560b3fad830700cc68d06b82cf349e0177e61fd4fd6ce8fa`; matrix `e77b9ed6db7c11e45da8c8d2ce73c7dd7265a519a4caf51f11fb6f4e7cc3437a`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

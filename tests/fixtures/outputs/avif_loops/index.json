@@ -1660,6 +1660,36 @@
       "bytes": 12288,
       "path": "pixels/tx64_root_split_inter_420_64x64/frame_2.bin",
       "sha256": "cdcf7ce5c1885c086852bb9ba4119857d54cdbaca2f80cd5c78fb7166977ae5d"
+    },
+    {
+      "path": "inputs/animated_primary_item_irot.avif",
+      "bytes": 1245,
+      "sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe"
+    },
+    {
+      "path": "pixels/animated_primary_item_irot/frame_0.bin",
+      "bytes": 67500,
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "path": "pixels/animated_primary_item_irot/frame_1.bin",
+      "bytes": 67500,
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "path": "pixels/animated_primary_item_irot/frame_2.bin",
+      "bytes": 67500,
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "path": "pixels/animated_primary_item_irot/frame_3.bin",
+      "bytes": 67500,
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "path": "pixels/animated_primary_item_irot/frame_4.bin",
+      "bytes": 67500,
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
     }
   ],
   "build": {
@@ -7162,6 +7192,87 @@
       "repeat_equal": true,
       "source": "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
       "source_sha256": "3769c145bb4d97f357a8b3c4660fb8a2f976c682643304e64833d06515901009"
+    },
+    {
+      "name": "animated_primary_item_irot",
+      "source": "animated_primary_item_irot",
+      "input_path": "inputs/animated_primary_item_irot.avif",
+      "input_bytes": 1245,
+      "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+      "source_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+      "mutation": {},
+      "native": {
+        "parse_result": 0,
+        "repetition_count": 0,
+        "frame_count": 5,
+        "decoded_frames": 5,
+        "terminal_result": 16,
+        "sequence_track_present": 1,
+        "diagnostic": ""
+      },
+      "pillow": {
+        "status": "ok",
+        "loop_key": null,
+        "frames": [
+          {
+            "index": 0,
+            "mode": "RGB",
+            "size": [
+              150,
+              150
+            ],
+            "bytes": 67500,
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "duration_ms": 33
+          },
+          {
+            "index": 1,
+            "mode": "RGB",
+            "size": [
+              150,
+              150
+            ],
+            "bytes": 67500,
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "duration_ms": 33
+          },
+          {
+            "index": 2,
+            "mode": "RGB",
+            "size": [
+              150,
+              150
+            ],
+            "bytes": 67500,
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "duration_ms": 33
+          },
+          {
+            "index": 3,
+            "mode": "RGB",
+            "size": [
+              150,
+              150
+            ],
+            "bytes": 67500,
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "duration_ms": 33
+          },
+          {
+            "index": 4,
+            "mode": "RGB",
+            "size": [
+              150,
+              150
+            ],
+            "bytes": 67500,
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "duration_ms": 33
+          }
+        ]
+      },
+      "repeat_equal": true,
+      "media_payloads_equal": true
     }
   ],
   "oracle": {
@@ -7191,5 +7302,60 @@
       }
     ],
     "tree_sha256": "9a4323fe85047fecdc1822ce82e447fba7e329bf1f0dd9bbd9e5fb09fc5f5454"
-  }
+  },
+  "incremental_collections": [
+    {
+      "case": "animated_primary_item_irot",
+      "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df",
+      "observer_binary_sha256": "ef7c45fd5168d8e1472a2ced0240fab5c885a24806813487682b6ba7895bbf5f",
+      "header_sha256": "2fcde09bb0124f4c1d1fbc5dfbf06ade08a66d8c58854fd3fe3411a6483bd26e",
+      "avif_binary_sha256": "802fd04690e634bbedf4876178d35abc2085bcdf252abecfc4403fd5cbbdda89",
+      "imaging_binary_sha256": "ed534830281dd092be3755632eac8422cdee53d2d8f045ff1779a7d795414d26",
+      "build_argv": [
+        "/usr/bin/c++",
+        "-std=c++17",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-shared",
+        "-fPIC",
+        "-I/private/tmp/image-slash-star-avif-gen/include",
+        "/private/tmp/image-slash-star-evidence-recovery-a761-20261005/animated-avif-primary-irot-f04ba130-20261005/preparation-v1/observer.cc",
+        "-o",
+        "/private/tmp/image-slash-star-evidence-recovery-a761-20261005/animated-avif-primary-irot-f04ba130-20261005/preparation-v1/observer.so"
+      ],
+      "build_exit_code": 0,
+      "native_observations": [
+        {
+          "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+          "return_code": 0,
+          "fields": [
+            0,
+            0,
+            5,
+            5,
+            16,
+            1
+          ],
+          "diagnostic": ""
+        },
+        {
+          "input_sha256": "39e6cb6e7227b4b748335c2e8093316195c7eceeda9433377aaa8ebff2debafe",
+          "return_code": 0,
+          "fields": [
+            0,
+            0,
+            5,
+            5,
+            16,
+            1
+          ],
+          "diagnostic": ""
+        }
+      ],
+      "source_tree_provenance_limitation": "Surviving libavif header matches the committed oracle pin exactly; a clean full native source checkout is unavailable. No fresh whole-source-tree identity is claimed."
+    }
+  ]
 }

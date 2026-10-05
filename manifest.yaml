@@ -7099,6 +7099,11 @@ formats:
       - animated.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_primary_item_irot
+      description: Five-frame AVIF sequence retains an essential primary-item 270-degree irot property while preserving the complete encoded samples
+      test_assets:
+      - animated_primary_item_irot.avif
+      status: active
     - id: animated_opidc_0x101
       description: Five-frame AVIF sequence with explicit temporal-0/spatial-0 operating-point headers and exact pixels and timing
       test_assets:
