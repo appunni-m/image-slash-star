@@ -129821,6 +129821,240 @@
           }
         },
         {
+          "id": "extra_samples_zero_rgbx_row_255_contiguous_strips_raw",
+          "type": "decode",
+          "format": "tiff",
+          "category": "extra",
+          "description": "One complete raw RGB row with an ignored fourth sample stays below the 1024 stored-byte boundary",
+          "asset": "extra_samples_zero_rgbx_row_255_contiguous_strips_raw.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "733d1d942a3133b6cda2e2f9e392c45a9fb8ea368638a0a45b1f1f5f6a5a4233",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "8453ba4e9ec1c4f8cebbf7de68b36ad88718a271f3baca84d749f4cddde75e60",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_extra_samples_zero_rgbx_row_255_contiguous_strips_raw_tiff.bin",
+          "ref_bytes": 765,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            255,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "extra_samples_zero_rgbx_row_256_contiguous_strips_raw",
+          "type": "decode",
+          "format": "tiff",
+          "category": "extra",
+          "description": "One complete raw RGB row with an ignored fourth sample ends exactly at the 1024 stored-byte boundary",
+          "asset": "extra_samples_zero_rgbx_row_256_contiguous_strips_raw.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "0ecb787cb0078400c6e59ec1ee6e79de7d2330205ec49cb915913a92927f4e5d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "0dd454ef5162da7a2bde0ff17388bf6a5f09c42c9409f380516a06c01a20c789",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_extra_samples_zero_rgbx_row_256_contiguous_strips_raw_tiff.bin",
+          "ref_bytes": 768,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            256,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "extra_samples_zero_rgbx_row_257_contiguous_strips_raw",
+          "type": "decode",
+          "format": "tiff",
+          "category": "extra",
+          "description": "One complete raw RGB row with an ignored fourth sample crosses the 1024 stored-byte boundary within the row",
+          "asset": "extra_samples_zero_rgbx_row_257_contiguous_strips_raw.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "dfd8ef730ef7222c27ec5a43d992098c005b3a8375df5f4afff1cda2fa1f8cf9",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "8882b6cb2f9254de42dd90487386dfefe44b7bab03a5baa0bce90d2b8291a6a7",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_extra_samples_zero_rgbx_row_257_contiguous_strips_raw_tiff.bin",
+          "ref_bytes": 771,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            257,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "extra_samples_zero_rgbx_contiguous_strips_raw",
           "type": "decode",
           "format": "tiff",
@@ -179373,12 +179607,12 @@
     }
   },
   "summary": {
-    "total_rows": 2134,
-    "decode_rows": 1671,
+    "total_rows": 2137,
+    "decode_rows": 1674,
     "encode_rows": 463,
     "formats": 8,
-    "assets_available": 1668,
-    "decode_active": 1671,
+    "assets_available": 1671,
+    "decode_active": 1674,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

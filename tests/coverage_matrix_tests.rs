@@ -5777,6 +5777,21 @@ fn run_decode_matrix(format_filter: Option<&str>) {
                     failed += 1;
                     continue;
                 }
+                // The maintained wasm32-wasip1 runner does not provide threads;
+                // cloned public handles must still reuse the exact decoded cache.
+                #[cfg(target_os = "wasi")]
+                let concurrent_addresses = require_ok(
+                    (0..4)
+                        .map(|_| {
+                            source
+                                .clone()
+                                .decode()
+                                .map(|decoded| std::ptr::from_ref(decoded) as usize)
+                        })
+                        .collect::<Result<Vec<_>, _>>(),
+                    "sequential source decode must succeed",
+                );
+                #[cfg(not(target_os = "wasi"))]
                 let concurrent_addresses = require_ok(
                     std::thread::scope(|scope| {
                         (0..4)

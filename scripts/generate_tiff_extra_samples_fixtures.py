@@ -38,6 +38,8 @@ class Recipe:
     tiled: bool
     compression: int
     compression_name: str
+    width: int = WIDTH
+    height: int = HEIGHT
 
     @property
     def name(self) -> str:
@@ -57,6 +59,9 @@ RECIPES = tuple(
     for planar in (1, 2)
     for tiled in (False, True)
     for compression, compression_name in ((1, "raw"), (8, "deflate"), (5, "lzw"), (32773, "packbits"))
+) + tuple(
+    Recipe(f"extra_samples_zero_rgbx_row_{width}", 2, 4, 0, 1, False, 1, "raw", width, 1)
+    for width in (255, 256, 257)
 )
 
 
@@ -64,8 +69,8 @@ def stored_pixels(recipe: Recipe) -> bytes:
     """Build stored samples without normalized or reference pixel expectations."""
     output = bytearray()
     alphas = (0, 1, 2, 17, 64, 127, 128, 192, 254, 255)
-    for y in range(HEIGHT):
-        for x in range(WIDTH):
+    for y in range(recipe.height):
+        for x in range(recipe.width):
             extra = alphas[(x + y) % len(alphas)]
             for channel in range(recipe.samples - 1):
                 value = (x * 31 + y * 17 + channel * 59) & 255
@@ -95,29 +100,30 @@ def encode_block(raw: bytes, compression: int) -> bytes:
 def build_tiff(recipe: Recipe) -> bytes:
     """Write one IFD and every declared strip or padded edge-tile payload."""
     raw = stored_pixels(recipe)
+    width, height = recipe.width, recipe.height
     blocks = []
     channels = range(recipe.samples) if recipe.planar == 2 else (None,)
     for channel in channels:
         plane = raw[channel::recipe.samples] if channel is not None else raw
         samples = 1 if channel is not None else recipe.samples
         if recipe.tiled:
-            for tile_y in range(0, HEIGHT, TILE_SIZE):
-                for tile_x in range(0, WIDTH, TILE_SIZE):
+            for tile_y in range(0, height, TILE_SIZE):
+                for tile_x in range(0, width, TILE_SIZE):
                     block = bytearray(TILE_SIZE * TILE_SIZE * samples)
-                    for row in range(min(TILE_SIZE, HEIGHT - tile_y)):
-                        copied = min(TILE_SIZE, WIDTH - tile_x) * samples
-                        source = ((tile_y + row) * WIDTH + tile_x) * samples
+                    for row in range(min(TILE_SIZE, height - tile_y)):
+                        copied = min(TILE_SIZE, width - tile_x) * samples
+                        source = ((tile_y + row) * width + tile_x) * samples
                         destination = row * TILE_SIZE * samples
                         block[destination:destination + copied] = plane[source:source + copied]
                     blocks.append(encode_block(bytes(block), recipe.compression))
         else:
-            for row in range(0, HEIGHT, ROWS_PER_STRIP):
-                block = plane[row * WIDTH * samples:min(row + ROWS_PER_STRIP, HEIGHT) * WIDTH * samples]
+            for row in range(0, height, ROWS_PER_STRIP):
+                block = plane[row * width * samples:min(row + ROWS_PER_STRIP, height) * width * samples]
                 blocks.append(encode_block(block, recipe.compression))
 
     offsets_tag, counts_tag = (324, 325) if recipe.tiled else (273, 279)
     entries = [
-        (256, 4, [WIDTH]), (257, 4, [HEIGHT]), (258, 3, [8] * recipe.samples),
+        (256, 4, [width]), (257, 4, [height]), (258, 3, [8] * recipe.samples),
         (259, 3, [recipe.compression]), (262, 3, [recipe.photometric]),
         (277, 3, [recipe.samples]), (284, 3, [recipe.planar]),
         (338, 3, [recipe.extra_sample]), (offsets_tag, 4, [0] * len(blocks)),
@@ -137,9 +143,12 @@ def build_tiff(recipe: Recipe) -> bytes:
     for block in blocks:
         offsets.append(cursor)
         cursor += len(block)
-    buffers[offsets_tag] = (buffers[offsets_tag][0], struct.pack("<" + "I" * len(offsets), *offsets))
+    if len(offsets) > 1:
+        buffers[offsets_tag] = (buffers[offsets_tag][0], struct.pack("<" + "I" * len(offsets), *offsets))
     output = bytearray(b"II*\0\x08\0\0\0" + struct.pack("<H", len(entries)))
     for tag, kind, values in entries:
+        if tag == offsets_tag:
+            values = offsets
         packed = struct.pack("<" + ("H" if kind == 3 else "I") * len(values), *values)
         value = struct.pack("<I", buffers[tag][0]) if len(packed) > 4 else packed.ljust(4, b"\0")
         output.extend(struct.pack("<HHI", tag, kind, len(values)) + value)

@@ -28,7 +28,8 @@ investigation checkpoint; the fresh validation below has its own artifacts.
 
 ## Last full all-feature coverage — 2026-10-05
 
-The current implementation was measured through `make coverage-with-exporter`,
+The implementation at the recorded 2,134-row checkpoint was measured through
+`make coverage-with-exporter`,
 which delegates to the existing full `make coverage` command with the
 independently audited LLVM 22.1.8 v3 exporter and pinned Rust `llvm-profdata`.
 The JSON is `maintained-exporter-canonical-main-0460-v3/maintained-producer.json`,
@@ -48,8 +49,8 @@ unrecovered.
 
 All alpha floors pass. The separate strict verifier exits 1 because every
 100% requirement remains unmet. The full run passes all seven existing test
-binaries (3/4/1/57/7/1/68), with zero failures or ignored tests. The current
-ordinary inventory contains 2,134 rows: 1,671 active decode, 431 active encode
+binaries (3/4/1/57/7/1/68), with zero failures or ignored tests. That run
+measured an ordinary inventory of 2,134 rows: 1,671 active decode, 431 active encode
 and 32 planned encode. TIFF has 264 decode rows; AVIF remains at 525 and JPEG
 at 216. All 26 target-only fault contracts retain separate results and oracle
 status `not_applicable`. The malformed ledger contains 592 entries and the
@@ -62,8 +63,9 @@ profiles. An empty `RUSTC_WRAPPER`, two build jobs and parent
 objects and profiles; source and artifact hashes stay fixed through all
 exports. The full receipt has SHA-256
 `943194502182041a23802e5bcddb6a4398ebb47c3753d9d3d0dc5627b195580d`.
-This evidence prose was updated after measurement; measured codec, test and
-fixture contents remain unchanged.
+This evidence prose was updated after measurement. Its source and fixture
+identity remains bound to that recorded inventory; later additions have
+separate evidence.
 
 All eight distinct formatting/strict-Clippy gates pass, including debug,
 release, coverage hooks, JPEG benchmark, SSE2 and AVX2 cross-compilation.
@@ -236,6 +238,64 @@ list is captured after the export, explicitly as a later capture. Human evidence
 and command-reference prose are updated after measurement; codec, test,
 fixture and producer recipe contents remain unchanged. No provider receipt is
 invented, and this reporting repair is separate from a new-case coverage gain.
+
+## TIFF ignored-sample row boundary parity — 2026-10-05
+
+Three complete raw RGB TIFFs retain an unspecified fourth sample in rows of
+255, 256 and 257 pixels. Their stored row sizes are 1,020, 1,024 and 1,028
+bytes. The normal input-only generator and pinned Pillow 12.2.0 reference
+producer preserve all previous 64 generator outputs, 2,134 ordinary rows and
+26 separately typed fault contracts. Exact RGB observations contain 765, 768
+and 771 bytes. The codec implementation is unchanged. The existing public
+cache check uses four cloned handles sequentially on the maintained WASI
+runner, which lacks thread spawning; native checks retain four worker threads
+and the same complete image, pointer-identity and cache-state assertions.
+
+The fixed-source incremental run, preceding that harness portability update,
+selects all 264 previous public TIFF rows, then only the three new rows.
+Both selections pass without failures or
+ignored tests, with zero fault contracts selected or executed. Both native
+reports retain identical denominators: 135,754 lines, 31,228 branches, 8,682
+functions and 210,844 regions. The previously missing true arm of
+`compact_extra_samples` at `tiff/decode.rs:1517` changes from 0 to 1 in the
+native file and function records; the new row crosses the 1,024-byte token
+checkpoint within a row. This is no cancellation-response or throughput claim.
+
+Fresh evidence resides in
+`tiff-extra-sample-boundary-cases-8abb-20261005/` below the recovery directory
+named above. The original incremental receipt has SHA-256
+`271b2e8da2b981fa6456594e77b9089326ff4be2a5af933b42a9467e7701bb92`;
+independent completion has SHA-256
+`1110d55f680fe9d0b182f7213a7f33b94c126a86ad0dba9cd338d14f825f576d`.
+Preserved raw profiles re-merge byte-identically. Direct native exports match
+all counters, coordinates, names and shapes; distinct outputs retain only
+explicitly reported percentage display differences within two ULPs and one
+terminal LF in LCOV. Earlier strict reviewer attempts remain preserved.
+
+Coverage MCP returns the missing branch for the controls and none at that
+location for the new-only report. Its LCOV line union records zero new lines.
+Its branch union is incomparable because reported totals and detail differ;
+provider source/build receipts remain unregistered. No report fields were
+rewritten. These selected results do not replace the last full all-feature
+measurement above or establish a full-suite regression check. The current
+inventory is 2,137 ordinary rows, including 267 TIFF decode rows; the 26
+fault contracts remain outside Pillow parity totals.
+
+After the harness update, all ten scoped commands pass: formatting, fixture
+verification, generator byte checks, strict native and WASI all-target/
+all-feature Clippy, coverage-configured strict Clippy, native TIFF decode and
+encode, the normal WASI matrix build, and its three selected ordinary rows.
+Native parity passes 267/267 decode and 59/59 encode, with 205 public encode
+calls and zero panics. WASI passes 3/3 selected rows. No test is ignored.
+The completion receipt is
+`main-scoped-acceptance-portable-v3-completion/completion.json`, SHA-256
+`7ff0067677967b6f9f1141336412b050f411d3d183c03eeca62f50bfa88c4a55`.
+Its final guards bind 5,374 source and fixture files and the rebuilt native
+and WASI binaries. The original failed bookkeeping receipt is preserved:
+it incorrectly expected a coverage-only fault summary from a normal binary,
+whose fault dispatcher is empty. No fault selector was requested or counted
+as Pillow parity. Four earlier WASI malformed-range classifications remain
+outside this selected scope; this is no full WASI or 33-lane campaign claim.
 
 ## Pre-cleanup AVIF full coverage — 2026-10-05
 
@@ -2737,10 +2797,10 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,134 total rows: 1,671 decode / inspect /
-verify rows and 463 encode rows. Of those, 1,671 decode rows and 431 encode
+The current matrix contains 2,137 total rows: 1,674 decode / inspect /
+verify rows and 463 encode rows. Of those, 1,674 decode rows and 431 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
-264 decode rows. The 26 fault contracts are tracked separately from the
+267 decode rows. The 26 fault contracts are tracked separately from the
 Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
@@ -6090,7 +6150,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `7013ec7d13987749060e4526de3ccee41f58a1229831fd00cf3d007739738869`; matrix `fd3c7f4701e13db9654d973110d097f7c5b5071c23a61583e0618ef5da86653e`.
+- Current fixture integrity only: manifest `d66168d52ac4b7245214beebbb42c46def25aa357624cb0ddc2114723001e4f1`; matrix `ee9168c07b96009a2f610894f300cd6c5e16dacbd1018f4eef45a94d15445e0c`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

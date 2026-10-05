@@ -4170,6 +4170,18 @@ formats:
       test_assets:
       - associated_rgba_separate_tiles_raw_first_alpha_block.tiff
       expect_error: true
+    - id: extra_samples_zero_rgbx_row_255_contiguous_strips_raw
+      description: One complete raw RGB row with an ignored fourth sample stays below the 1024 stored-byte boundary
+      test_assets:
+      - extra_samples_zero_rgbx_row_255_contiguous_strips_raw.tiff
+    - id: extra_samples_zero_rgbx_row_256_contiguous_strips_raw
+      description: One complete raw RGB row with an ignored fourth sample ends exactly at the 1024 stored-byte boundary
+      test_assets:
+      - extra_samples_zero_rgbx_row_256_contiguous_strips_raw.tiff
+    - id: extra_samples_zero_rgbx_row_257_contiguous_strips_raw
+      description: One complete raw RGB row with an ignored fourth sample crosses the 1024 stored-byte boundary within the row
+      test_assets:
+      - extra_samples_zero_rgbx_row_257_contiguous_strips_raw.tiff
     - id: extra_samples_zero_rgbx_contiguous_strips_raw
       description: Complete contiguous raw TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
       test_assets:
