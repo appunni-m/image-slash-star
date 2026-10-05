@@ -1,0 +1,148 @@
+--- a/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp
++++ b/llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp
+@@ -536,11 +536,25 @@
+ }
+ 
+ // Check if the mapping data is a dummy, i.e. is emitted for an unused function.
+-static Expected<bool> isCoverageMappingDummy(uint64_t Hash, StringRef Mapping) {
+-  // The hash value of dummy mapping records is always zero.
++static Expected<bool>
++isCoverageMappingDummy(uint64_t Hash, StringRef Mapping,
++                       ArrayRef<std::string> TranslationUnitFilenames) {
++  // Unused mappings have hash zero, but may retain more than one source region.
++  // Decode the complete mapping with its actual filename range so all region
++  // kinds and malformed records receive the ordinary reader's validation.
+   if (Hash)
+     return false;
+-  return RawCoverageMappingDummyChecker(Mapping).isDummy();
++  std::vector<StringRef> Filenames;
++  std::vector<CounterExpression> Expressions;
++  std::vector<CounterMappingRegion> MappingRegions;
++  RawCoverageMappingReader Reader(Mapping, TranslationUnitFilenames, Filenames,
++                                  Expressions, MappingRegions);
++  if (Error Err = Reader.read())
++    return std::move(Err);
++  return !MappingRegions.empty() &&
++         llvm::all_of(MappingRegions, [](const CounterMappingRegion &Region) {
++           return Region.Count.isZero() && Region.FalseCount.isZero();
++         });
+ }
+ 
+ /// A range of filename indices. Used to specify the location of a batch of
+@@ -645,13 +659,16 @@
+     BinaryCoverageReader::ProfileMappingRecord &OldRecord =
+         Records[OldRecordIndex];
+     Expected<bool> OldIsDummyExpected = isCoverageMappingDummy(
+-        OldRecord.FunctionHash, OldRecord.CoverageMapping);
++        OldRecord.FunctionHash, OldRecord.CoverageMapping,
++        ArrayRef(Filenames).slice(OldRecord.FilenamesBegin,
++                                  OldRecord.FilenamesSize));
+     if (Error Err = OldIsDummyExpected.takeError())
+       return Err;
+     if (!*OldIsDummyExpected)
+       return Error::success();
+-    Expected<bool> NewIsDummyExpected =
+-        isCoverageMappingDummy(FuncHash, Mapping);
++    Expected<bool> NewIsDummyExpected = isCoverageMappingDummy(
++        FuncHash, Mapping,
++        ArrayRef(Filenames).slice(FileRange.StartingIndex, FileRange.Length));
+     if (Error Err = NewIsDummyExpected.takeError())
+       return Err;
+     if (*NewIsDummyExpected)
+--- a/llvm/lib/ProfileData/Coverage/CoverageMapping.cpp
++++ b/llvm/lib/ProfileData/Coverage/CoverageMapping.cpp
+@@ -852,10 +852,19 @@
+   else
+     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName, Record.Filenames[0]);
+ 
++  // Unused mappings describe uncovered source and have no profile counters.
++  // Hash zero is not a wildcard for a differently-hashed real profile record.
++  const bool IsUnusedMapping =
++      Record.FunctionHash == 0 && !Record.MappingRegions.empty() &&
++      llvm::all_of(Record.MappingRegions,
++                   [](const CounterMappingRegion &Region) {
++                     return Region.Count.isZero() && Region.FalseCount.isZero();
++                   });
++
+   CounterMappingContext Ctx(Record.Expressions);
+ 
+   std::vector<uint64_t> Counts;
+-  if (ProfileReader) {
++  if (ProfileReader && !IsUnusedMapping) {
+     if (Error E = ProfileReader.value().get().getFunctionCounts(
+             Record.FunctionName, Record.FunctionHash, Counts)) {
+       instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
+@@ -878,7 +887,7 @@
+                            IndexedInstrProf::ProfVersion::Version12;
+ 
+   BitVector Bitmap;
+-  if (ProfileReader) {
++  if (ProfileReader && !IsUnusedMapping) {
+     if (Error E = ProfileReader.value().get().getFunctionBitmap(
+             Record.FunctionName, Record.FunctionHash, Bitmap)) {
+       instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
+@@ -892,20 +901,11 @@
+       Bitmap = BitVector(getMaxBitmapSize(Record, IsVersion11));
+     }
+   } else {
+-    Bitmap = BitVector(getMaxBitmapSize(Record, false));
++    Bitmap = BitVector(getMaxBitmapSize(Record, IsVersion11));
+   }
+   Ctx.setBitmap(std::move(Bitmap));
+ 
+   assert(!Record.MappingRegions.empty() && "Function has no regions");
+-
+-  // This coverage record is a zero region for a function that's unused in
+-  // some TU, but used in a different TU. Ignore it. The coverage maps from the
+-  // the other TU will either be loaded (providing full region counts) or they
+-  // won't (in which case we don't unintuitively report functions as uncovered
+-  // when they have non-zero counts in the profile).
+-  if (Record.MappingRegions.size() == 1 &&
+-      Record.MappingRegions[0].Count.isZero() && Counts[0] > 0)
+-    return Error::success();
+ 
+   MCDCDecisionRecorder MCDCDecisions;
+   FunctionRecord Function(OrigFuncName, Record.Filenames);
+@@ -959,10 +959,25 @@
+     Function.pushMCDCRecord(std::move(*Record));
+   }
+ 
+-  // Don't create records for (filenames, function) pairs we've already seen.
++  // Prefer a real mapping over an unused mapping across objects as well as
++  // within each reader. Selection depends on mapping structure, never on the
++  // profile count: a real function with zero executions must also win. Keep
++  // unmatched unused mappings so their source regions remain uncovered.
+   auto FilenamesHash = hash_combine_range(Record.Filenames);
+-  if (!RecordProvenance[FilenamesHash].insert(hash_value(OrigFuncName)).second)
++  auto InsertResult = RecordProvenance[FilenamesHash].try_emplace(
++      hash_value(OrigFuncName),
++      LoadedFunctionProvenance{static_cast<unsigned>(Functions.size()),
++                               IsUnusedMapping});
++  if (!InsertResult.second) {
++    auto &Previous = InsertResult.first->second;
++    if (Previous.IsUnusedMapping && !IsUnusedMapping) {
++      // The filename provenance is unchanged, so existing filename-to-function
++      // indices remain valid when replacing this record at the same index.
++      Functions[Previous.FunctionIndex] = std::move(Function);
++      Previous.IsUnusedMapping = false;
++    }
+     return Error::success();
++  }
+ 
+   Functions.push_back(std::move(Function));
+ 
+--- a/llvm/include/llvm/ProfileData/Coverage/CoverageMapping.h
++++ b/llvm/include/llvm/ProfileData/Coverage/CoverageMapping.h
+@@ -992,7 +992,11 @@
+ /// This is the main interface to get coverage information, using a profile to
+ /// fill out execution counts.
+ class CoverageMapping {
+-  DenseMap<size_t, DenseSet<size_t>> RecordProvenance;
++  struct LoadedFunctionProvenance {
++    unsigned FunctionIndex;
++    bool IsUnusedMapping;
++  };
++  DenseMap<size_t, DenseMap<size_t, LoadedFunctionProvenance>> RecordProvenance;
+   std::vector<FunctionRecord> Functions;
+   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
+   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;

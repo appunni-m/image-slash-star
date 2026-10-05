@@ -6,6 +6,16 @@ RELEASE_CRATE = $(RELEASE_DIR)/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
 REGISTRY_CRATE = $(RELEASE_DIR)/registry/$(PACKAGE_NAME)-$(PACKAGE_VERSION).crate
 COVERAGE_TOOLCHAIN ?= nightly-2026-07-16
 COVERAGE_REPORT ?= target/release-evidence/coverage.json
+COVERAGE_EXPORTER_PREFIX ?= $(CURDIR)/target/coverage-exporter/llvm22.1.8
+COVERAGE_EXPORTER_SOURCE ?=
+COVERAGE_EXPORTER_TARGET ?= coverage
+# Quote optional launcher arguments for the recipe shell, including apostrophes.
+coverage_exporter_quote = '$(subst ','"'"',$(1))'
+# A literal line feed for rejecting recipe-breaking report names before the shell.
+define coverage_exporter_newline
+
+
+endef
 
 .DEFAULT_GOAL := help
 .NOTPARALLEL: ci release-verify
@@ -26,6 +36,8 @@ help:
 	@printf "  make test             Run docs, tests, and target feature lanes\n"
 	@printf "  make supply-chain     Run cargo-deny\n"
 	@printf "  make coverage         Require alpha floors: lines 59, branches 46, functions 52, regions 58 percent\n"
+	@printf "  make coverage-exporter-setup Build the optional pinned native exporter (macOS ARM64; Git/CMake/Ninja, network on first setup)\n"
+	@printf "  make coverage-with-exporter Use the verified exporter; COVERAGE_EXPORTER_TARGET=coverage-complete retains strict 100%%\n"
 	@printf "  make package-verify   Build and consume a reproducible package\n"
 	@printf "  make ci               Run all local CI gates\n"
 	@printf "  make release-verify   Require a clean, complete release candidate\n"
@@ -86,6 +98,19 @@ coverage:
 	cargo +"$(COVERAGE_TOOLCHAIN)" llvm-cov --all-features --branch --locked --json \
 		--output-path "$(COVERAGE_REPORT)" --no-fail-fast
 	$(MAKE) coverage-check
+
+.PHONY: coverage-exporter-setup coverage-with-exporter
+coverage-exporter-setup:
+	$(PYTHON) scripts/setup_coverage_exporter.py setup \
+		--prefix $(call coverage_exporter_quote,$(COVERAGE_EXPORTER_PREFIX)) --source $(call coverage_exporter_quote,$(COVERAGE_EXPORTER_SOURCE)) \
+		--toolchain $(call coverage_exporter_quote,$(COVERAGE_TOOLCHAIN))
+
+coverage-with-exporter:
+	$(if $(findstring $$,$(value COVERAGE_REPORT)),$(error COVERAGE_REPORT contains characters unsupported by the recursive Make recipes))
+	$(if $(findstring $(coverage_exporter_newline),$(value COVERAGE_REPORT)),$(error COVERAGE_REPORT contains characters unsupported by the recursive Make recipes))
+	+$(PYTHON) scripts/setup_coverage_exporter.py run \
+		--prefix $(call coverage_exporter_quote,$(COVERAGE_EXPORTER_PREFIX)) --toolchain $(call coverage_exporter_quote,$(COVERAGE_TOOLCHAIN)) \
+		--make $(call coverage_exporter_quote,$(MAKE)) --target $(call coverage_exporter_quote,$(COVERAGE_EXPORTER_TARGET)) --report $(call coverage_exporter_quote,$(value COVERAGE_REPORT))
 
 .PHONY: coverage-check
 coverage-check:

@@ -28,11 +28,12 @@ investigation checkpoint; the fresh validation below has its own artifacts.
 
 ## Last full all-feature coverage — 2026-10-05
 
-The current implementation was measured through the existing full `make
-coverage` command with the independently audited LLVM 22.1.8 v3 exporter and
-the pinned Rust `llvm-profdata`. The JSON is
-`combined-full-coverage-main-056c502b/candidate-v3.json`, SHA-256
-`e130e9580848fd1a4623b1007401e3f728fcf15e3bd1f2d875703795b8ed2c73`.
+The current implementation was measured through `make coverage-with-exporter`,
+which delegates to the existing full `make coverage` command with the
+independently audited LLVM 22.1.8 v3 exporter and pinned Rust `llvm-profdata`.
+The JSON is `maintained-exporter-canonical-main-0460-v3/maintained-producer.json`,
+SHA-256
+`24a01a758cbdb7dbf3a1c3d0444a18352cf9a5cc001733ec8912d0435563c7c5`.
 All fresh proof paths in this section are relative to
 `/private/tmp/image-slash-star-evidence-recovery-a761-20261005/` and are outside
 the removable build-target directories. Historical cleaned artifacts remain
@@ -54,7 +55,7 @@ at 216. All 26 target-only fault contracts retain separate results and oracle
 status `not_applicable`. The malformed ledger contains 592 entries and the
 static origin registry has 141 guards across 20 files.
 
-The campaign explicitly binds 5,297 source, fixture, script, configuration,
+The preceding same-code campaign explicitly binds 5,297 source, fixture, script, configuration,
 benchmark and documentation files, 113 compiled artifacts and seven fresh raw
 profiles. An empty `RUSTC_WRAPPER`, two build jobs and parent
 `CARGO_INCREMENTAL=0` are recorded. Native reports use exactly the same
@@ -178,6 +179,63 @@ Its 34 Cargo/native percentage-only scalar differences remain separately
 recorded. The first audit preparation fails on an incorrect assumption that
 the new sorted fault row is last; the corrected exact-ID guard succeeds.
 That failed preparation is preserved separately.
+
+### Maintained producer setup and canonical command
+
+The opt-in `coverage-exporter-setup` and `coverage-with-exporter` targets now
+maintain the exact native patch and toolchain descriptor in the repository.
+The original coverage/check/complete recipe bytes remain unchanged. A narrow
+Git whitespace attribute preserves the serialized patch's blank context
+markers; its reviewed patch hash remains exact. The optional launcher preserves
+spaces and apostrophes in report names and rejects characters the inner recipes
+cannot represent literally. Final controlled checks pass 90/90; an independent
+outer-to-inner check passes 40/40, including GNU Make 3.81's `-i` behavior.
+Ignored shell errors can mask the Python rejection's outer exit status, but no
+coverage/context work runs for those rejected values. Dollar and line-feed
+guards fail during Make expansion. Earlier failed checks remain preserved.
+
+A genuinely fresh maintained v3 setup uses the exact prepared LLVM source,
+two build jobs and an isolated prefix outside `target/`. Configure and all
+759 build steps pass, followed by actual no-op and two concurrent receipt
+reuses. Its executable SHA-256 is
+`045227d446bfb7241b8e6febd2707ce82c6aee9aedb8cb725cb4d828bcec7004`;
+its identity receipt is
+`49ff1dd42ff0afbae1745cb002c9c55c3ee256357c0c7cf970e66887c8fedb42`.
+All 34 native JSON/LCOV exports across 17 complete object orders match the
+previously audited producer's fields. The actual setup/export verdict has
+SHA-256
+`db4e20acd783ca834861b25742bcb6c0fc452fc0baf75a041bc32f9128bdff9d`.
+The first-source-fetch branch remains unexercised. Native admission and the
+foreign-hash limitation described above retain their recorded scope.
+
+The integrated canonical command passes `make verify`, all seven existing
+test binaries, 1,671 active decode rows, 431 active encode rows and all 26
+target-only fault contracts. Its 1,647 counted public encode calls have zero
+panics. The 32 planned encoder rows are reported separately from the active
+denominator. All alpha floors pass; the separate strict verifier exits 1.
+The integer totals above reproduce the preceding audited full campaign exactly.
+
+The measurement runner's bookkeeping assertion incorrectly included planned
+skips in that active denominator and failed after the real commands exited 0.
+Its original failed receipt remains unchanged, SHA-256
+`01a969d5e64f4f0a54693aa95fe6e6f6fb68600718adc0346d901fb23e30a8d3`.
+An independent completion supplement checks the actual runner source and
+literal results, then performs only a normal LCOV report export and strict
+verification. It reruns no tests and rewrites no counters or original receipt.
+Its SHA-256 is
+`54c7affcf9587c894a3580fd3bf4d38875a6bf572846e9f25b323a556f5977f0`.
+The LCOV SHA-256 is
+`363c6078af91b6907c56a1843fa5f1c6eba4f215540bfdfc420a61830d1426ef`.
+
+The canonical run freezes 5,301 source/configuration files, 113 compiled
+artifacts plus the root executable used by the nine-object export, seven raw
+profiles and one merged profile. Its completion audit archives and checks
+these artifacts, original reports/logs, producer identities and all 110 measured
+sources before and after report-only work. The export's raw-profile argument
+list is captured after the export, explicitly as a later capture. Human evidence
+and command-reference prose are updated after measurement; codec, test,
+fixture and producer recipe contents remain unchanged. No provider receipt is
+invented, and this reporting repair is separate from a new-case coverage gain.
 
 ## Pre-cleanup AVIF full coverage — 2026-10-05
 

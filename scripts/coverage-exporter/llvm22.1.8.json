@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "name": "LLVM22.1.8 real-over-unused mapping repair v3",
+  "status": "conditionally admitted native macOS ARM64 producer",
+  "platform": {
+    "system": "Darwin",
+    "machine": "arm64",
+    "rust_host": "aarch64-apple-darwin"
+  },
+  "rust": {
+    "toolchain": "nightly-2026-07-16",
+    "commit": "d0babd8b6b05ef9bb65d42f928cef4129d64cf65",
+    "llvm_version": "22.1.8"
+  },
+  "llvm": {
+    "repository": "https://github.com/rust-lang/llvm-project.git",
+    "commit": "52ed14fcd56afc30f9cccd8ca8ce237c2eef7e04",
+    "sparse_directories": [
+      "llvm",
+      "cmake",
+      "third-party"
+    ],
+    "source_hashes": {
+      "llvm/lib/ProfileData/Coverage/CoverageMappingReader.cpp": {
+        "baseline": "aa4f19ad0861bcbbfeb639da7e5db2ec22b02334655de932833e01395e177a01",
+        "candidate": "d535b2831bb4bfc95d449385bab909a9db593ea555a359ef05afc2cfbe3410ef"
+      },
+      "llvm/lib/ProfileData/Coverage/CoverageMapping.cpp": {
+        "baseline": "66f8b1cac45a0fc27c66bf8d3a1c32aa91e55b65acdf3828e19f2f87ef0b8d69",
+        "candidate": "943a92bd378a4dd9c6c93d1492a5ef63ed887df0bb7134704a87efa9d4f64a49"
+      },
+      "llvm/include/llvm/ProfileData/Coverage/CoverageMapping.h": {
+        "baseline": "f5e1a0e8e4fde5f1f3f7df6ab20295c884d4ce0494df7a8cf7da3db2a7105e96",
+        "candidate": "2f1b6dc22b1d12e29ae73af5b5d8ba2c3c77a1a8b436669303a5492da72b994a"
+      }
+    }
+  },
+  "patch": {
+    "filename": "real-over-unused-v3.patch",
+    "sha256": "c79225c56592e5305169c006f5f17d432e80a11f0e9463eff04b387434061b91"
+  },
+  "build": {
+    "jobs": 2,
+    "allocated_limit_bytes": 16106127360,
+    "cmake_options": [
+      "-G",
+      "Ninja",
+      "-DCMAKE_BUILD_TYPE=Release",
+      "-DCMAKE_C_COMPILER=/usr/bin/clang",
+      "-DCMAKE_CXX_COMPILER=/usr/bin/clang++",
+      "-DCMAKE_C_COMPILER_LAUNCHER=",
+      "-DCMAKE_CXX_COMPILER_LAUNCHER=",
+      "-DCMAKE_OSX_ARCHITECTURES=arm64",
+      "-DLLVM_TARGETS_TO_BUILD=",
+      "-DLLVM_ENABLE_PROJECTS=",
+      "-DLLVM_ENABLE_RUNTIMES=",
+      "-DLLVM_INCLUDE_TESTS=OFF",
+      "-DLLVM_INCLUDE_BENCHMARKS=OFF",
+      "-DLLVM_INCLUDE_EXAMPLES=OFF",
+      "-DLLVM_INCLUDE_DOCS=OFF",
+      "-DLLVM_ENABLE_ASSERTIONS=ON",
+      "-DLLVM_ENABLE_ZLIB=FORCE_ON",
+      "-DLLVM_ENABLE_ZSTD=ON",
+      "-DLLVM_ENABLE_CURL=OFF",
+      "-DLLVM_ENABLE_LIBXML2=OFF",
+      "-DBUILD_SHARED_LIBS=OFF",
+      "-DLLVM_BUILD_LLVM_DYLIB=OFF",
+      "-DLLVM_LINK_LLVM_DYLIB=OFF"
+    ]
+  },
+  "primary_sources": [
+    "https://github.com/rust-lang/rust/tree/d0babd8b6b05ef9bb65d42f928cef4129d64cf65/src/llvm-project",
+    "https://github.com/rust-lang/llvm-project/tree/52ed14fcd56afc30f9cccd8ca8ce237c2eef7e04",
+    "https://github.com/taiki-e/cargo-llvm-cov/blob/v0.8.7/README.md#environment-variables"
+  ],
+  "native_validation": {
+    "admission": "same-artifact JSON/LCOV order invariance and genuine zero-count real preference verified on pinned native macOS ARM64",
+    "full_order_labels": 18,
+    "distinct_full_orders": 17,
+    "executed_binaries": 7,
+    "repository_sources": 110,
+    "restored_positive_exact_profile_functions": 64,
+    "retained_unused_only_functions": 397,
+    "genuine_zero_real_branch_counts": [
+      2,
+      7
+    ],
+    "natural_positive_foreign_hash_unmatched_unused_controls": 0,
+    "limitation": "positive foreign-hash unmatched-unused retention has source-policy proof only; admission is limited to the pinned native macOS ARM64 producer",
+    "audit_result_sha256": "0b48887f8613126abf4d7d9d5054af7e0ab3afad3ca5b606ac2631c5fabdbb71"
+  }
+}

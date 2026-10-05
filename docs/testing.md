@@ -70,6 +70,71 @@ No source exclusions are added to reach those floors. Complete coverage retains
 100%; every executed test must pass. The [evidence guide](EVIDENCE.md) preserves
 the distinction between old claim-ledger measurements and the release report.
 
+### Optional native coverage exporter
+
+The pinned Rust LLVM coverage reader can select a hash-zero unused mapping
+before a real mapping with the same function name. Historical exports of the
+same profile and object set depended on object order. The optional native patch
+recognizes complete unused mappings, prefers real mappings even with zero
+executions, and retains unmatched unused source regions. It changes mapping
+selection in LLVM itself; it does not rewrite report counters or omit sources.
+
+The supported setup recipe is native macOS ARM64 with
+`nightly-2026-07-16` (Rust commit
+`d0babd8b6b05ef9bb65d42f928cef4129d64cf65`, LLVM 22.1.8). Independent source
+review and native builds passed on that host. A fresh seven-executable campaign
+retained all 110 repository sources and produced identical JSON and LCOV for 18
+order labels (17 distinct object orders). All 64 restored positive functions
+matched their exact merged-profile tuples; 397 unused-only functions stayed at
+zero. A genuine raw-profile subset also preserved real zero-count branch
+mappings with two and seven branches. Positive foreign-hash unmatched-unused
+retention has source-policy proof only: no natural runtime control occurred.
+The descriptor records conditional admission for this pinned native platform.
+A separately bound maintained v3 recipe built from the prepared source, passed
+real no-op/concurrent reuse, and matched the audited native exports in all 17
+distinct object orders. The integrated canonical coverage command also passed
+all executed tests and the alpha floors. Construction and command checks are
+recorded separately in [the evidence guide](EVIDENCE.md); the descriptor records
+the producer pin and its admission scope. The
+first-source-fetch path remains source-reviewed and unexercised. This is an
+opt-in contributor tool; another platform and an upstream fixed release have
+not been verified.
+
+Install Git, CMake, Ninja and the pinned Rust toolchain with
+`llvm-tools-preview` through the normal contributor setup, then run:
+
+```bash
+make coverage-exporter-setup
+make coverage-with-exporter
+make coverage-with-exporter COVERAGE_EXPORTER_TARGET=coverage-complete
+```
+
+The first setup fetches the exact
+[Rust LLVM source commit](https://github.com/rust-lang/llvm-project/tree/52ed14fcd56afc30f9cccd8ca8ce237c2eef7e04),
+checks the source and patch hashes, and builds only `llvm-cov` with two jobs.
+LLVM is governed by its [upstream license](https://github.com/rust-lang/llvm-project/blob/52ed14fcd56afc30f9cccd8ca8ce237c2eef7e04/llvm/LICENSE.TXT).
+Rust runtime dependencies and installed toolchain files remain unchanged.
+`COVERAGE_EXPORTER_SOURCE=/absolute/path/to/pinned/llvm-project` reuses a
+prepared clean checkout or the exact reviewed patched checkout without another
+download. `COVERAGE_EXPORTER_PREFIX=/absolute/path/to/exporter` selects an
+isolated build directory; its default is under the removable `target/` tree.
+Setup verifies the descriptor, source, native executable, build configuration
+and coupled profile tool on every reuse. Changed or stale bindings fail.
+
+The explicit coverage target uses the documented
+[`LLVM_COV` and `LLVM_PROFDATA` overrides](https://github.com/taiki-e/cargo-llvm-cov/blob/v0.8.7/README.md#environment-variables)
+only for its recursive Make invocation. Conflicting caller overrides, custom
+LLVM flags and unsupported toolchain or cross-target settings are rejected.
+The setup also rejects custom native build flags or a CMake toolchain file
+instead of changing caller settings. The optional alias accepts report names
+with spaces or apostrophes. It rejects dollar signs, backticks, double quotes,
+backslashes and CR/LF before running a coverage command: the unchanged inner
+Make recipes cannot represent those characters literally.
+Normal `make coverage` keeps the normal Cargo command, alpha floors, complete
+source denominator and test-failure policy. The strict command still requires
+100% for all four metrics. Run setup separately before using the explicit
+target; a missing or invalid receipt never triggers a silent download.
+
 ## Submit a change
 
 Run the narrow failing lane first, then the relevant full contract. Explain

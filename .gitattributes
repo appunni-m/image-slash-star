@@ -12,3 +12,6 @@
 *.webp binary
 
 tests/fixtures/outputs/** linguist-generated=true
+
+# Unified diff context lines retain a marker even when their source line is empty.
+scripts/coverage-exporter/real-over-unused-v3.patch whitespace=-blank-at-eol
