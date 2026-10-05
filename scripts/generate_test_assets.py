@@ -16875,9 +16875,11 @@ def gen_avif():
 
     from generate_avif_config_disagreement_fixtures import generate as generate_config_disagreements
     from generate_avif_filmgrain_edge_fixtures import write_avif_filmgrain_edge_fixtures
+    from generate_avif_idat_fixture import generate as generate_idat_fixture
 
     generate_config_disagreements(output_dir=d, source_path=baseline_path)
     write_avif_filmgrain_edge_fixtures(d)
+    generate_idat_fixture(output_dir=d, source_path=baseline_path)
 
     meta_payload_start, meta_payload_end = avif_unique_top_level_payload_range(
         baseline_bytes, b"meta"

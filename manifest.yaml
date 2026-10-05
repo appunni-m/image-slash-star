@@ -4877,6 +4877,12 @@ formats:
       - iloc_version_2_wide_item_ids.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: iloc_idat_primary_item
+      description: Still AVIF stores its unchanged primary AV1 item in meta/idat using construction method one and nonzero base and extent offsets
+      test_assets:
+      - iloc_idat_primary_item.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
     - id: ipma_wide_property_associations
       description: Still AVIF with 16-bit ipma property association indices
       test_assets:

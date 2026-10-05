@@ -1437,6 +1437,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "iloc_idat_primary_item",
+          "type": "decode",
+          "format": "avif",
+          "category": "iloc",
+          "description": "Still AVIF stores its unchanged primary AV1 item in meta/idat using construction method one and nonzero base and extent offsets",
+          "asset": "iloc_idat_primary_item.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "cc020ae1e91a2cad8c4f66b10165702bf11abc39a462a06b9665664f3c63c337",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_iloc_idat_primary_item_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "ipma_wide_property_associations",
           "type": "decode",
           "format": "avif",
@@ -168185,12 +168263,12 @@
     }
   },
   "summary": {
-    "total_rows": 2015,
-    "decode_rows": 1552,
+    "total_rows": 2016,
+    "decode_rows": 1553,
     "encode_rows": 463,
     "formats": 8,
-    "assets_available": 1549,
-    "decode_active": 1552,
+    "assets_available": 1550,
+    "decode_active": 1553,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
