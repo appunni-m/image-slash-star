@@ -8,6 +8,12 @@
   },
   "fault_contract_cases": [
     {
+      "id": "avif_retained_temporal_sample_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_retained_temporal_sample_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "avif_tile_group_temporal_sample_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_tile_group_temporal_sample_reservation_failure",

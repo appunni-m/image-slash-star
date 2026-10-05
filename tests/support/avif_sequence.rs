@@ -492,7 +492,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
     assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
     let artifacts: Vec<Value> = field(&index, "artifacts");
-    assert_eq!(artifacts.len(), 235);
+    assert_eq!(artifacts.len(), 267);
     let mut artifact_paths = std::collections::HashSet::new();
     for artifact in artifacts {
         let path: String = field(&artifact, "path");
@@ -593,6 +593,12 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "error_missing_flags",
         "alpha_loop_disagreement",
         "error_alpha_segment",
+        "tkhd_version_zero",
+        "tkhd_version_zero_unknown_duration",
+        "motion_multitile",
+        "motion_multitile_split_groups",
+        "lossless_motion_multitile",
+        "lossless_motion_multitile_split_groups",
     ];
     assert_eq!(cases.len(), expected_names.len());
     for (case, expected_name) in cases.iter().zip(expected_names) {
@@ -635,6 +641,20 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         assert_eq!(field::<Option<u32>>(&pillow, "loop_key"), None);
         let mut expected = match field::<String>(case, "source").as_str() {
             "animated" => animated(),
+            "tkhd_version_zero" => matrix_sequence_case("animated_tkhd_version_zero"),
+            "tkhd_version_zero_unknown_duration" => {
+                matrix_sequence_case("animated_tkhd_version_zero_unknown_duration")
+            }
+            "motion_multitile" => matrix_sequence_case("animated_motion_multitile"),
+            "motion_multitile_split_groups" => {
+                matrix_sequence_case("animated_motion_multitile_split_groups")
+            }
+            "lossless_motion_multitile" => {
+                matrix_sequence_case("animated_lossless_motion_multitile")
+            }
+            "lossless_motion_multitile_split_groups" => {
+                matrix_sequence_case("animated_lossless_motion_multitile_split_groups")
+            }
             "opidc_0x101" => matrix_sequence_case("animated_opidc_0x101"),
             "error_resilient" => error_resilient(),
             "filmgrain_reference_reuse_i444_64x64" => {

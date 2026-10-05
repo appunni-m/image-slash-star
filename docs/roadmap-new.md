@@ -10,15 +10,15 @@ is not evidence that a later fix failed. No entry is silently removed here.
 
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 The latest complete all-feature run passed 57/57 matrix tests and 68/68
-feature-gate tests, along with all 509 AVIF decode rows and all 24 target-only
+feature-gate tests, along with all 522 AVIF decode rows and all 25 target-only
 fault contracts. Its local full report is
-`target/release-evidence/coverage-avif-iloc-temporal-20261005.json`, with SHA-256
-`1de66283960b30d4afbf90213e54a0a111663a48a5d59ca37a341fe7a9de0f7f`.
+`target/release-evidence/coverage-avif-multitile-container-v2-20261005.json`, with SHA-256
+`027665b7e2cb4e54182b7929ecd568ff83941b839f3708d29277747c4720103e`.
 The LLVM percentages below remain the historical measured baseline; current
 local report counts and their separate denominator are recorded in
 [Evidence](EVIDENCE.md).
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The origin verifier passes for 139 exact `cfg(coverage)` guards across 20 files.
+The origin verifier passes for 140 exact `cfg(coverage)` guards across 20 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -34,9 +34,9 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 ## AVIF planned-gap ledger (current tree)
 
-- AVIF decode/inspect/verify: 509 rows total, 509 active, 0 explicit planned gaps.
+- AVIF decode/inspect/verify: 522 rows total, 522 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 2,021 rows total, 1558 active decode rows, 431 active encode rows, 0 planned decode rows, and 32 planned encode rows. The 24 typed fault contracts remain outside Pillow parity totals.
+- Whole matrix: 2,034 rows total, 1571 active decode rows, 431 active encode rows, 0 planned decode rows, and 32 planned encode rows. The 25 typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 

@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 82 complete files observed twice with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Seventy-four accepted files decode completely; eight
-malformed files fail native parsing and Pillow opening. The 235 hashed
-artifacts total 7,560,957 bytes, including all inputs, the compiled observer's
-source, and 7,046,084 bytes of Pillow-decoded frame outputs. Mutation cases
+This bundle records 88 complete files observed twice with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Eighty accepted files decode completely; eight
+malformed files fail native parsing and Pillow opening. The 267 hashed
+artifacts total 9,816,480 bytes, including all inputs, the compiled observer's
+source, and 9,293,948 bytes of Pillow-decoded frame outputs. Mutation cases
 share the original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
-The 57 unchanged fixture sources are declared in
+The 63 unchanged fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The 4:2:2 source adds
 horizontal chroma ownership while a small block moves between frames. The
@@ -116,6 +116,14 @@ The four-frame identity/RotZoom I444 case has five frame-3 compound spatial
 neighbors where the identity lane has no affine vector and the RotZoom lane
 does. It retains four exact Pillow frames, 100ms durations, and an independent
 infinite-loop observation.
+The quality-80 and all-lossless quality-100 256x128 I420 motion sources
+carry two tile columns and one key frame followed by three inter frames.
+Their companions retain the frame headers and tile bytes in ordered standalone
+tile groups. All four native observations decode every exact Pillow frame and
+report infinite repetition. The two complete track-header version-zero variants
+of `animated.avif`, including its unknown-duration sentinel, retain all five
+Pillow frames and native repetition zero (one total play). Their separately
+collected observer build identities remain in `additional_collections`.
 `animated_opidc_0x101.avif` is derived from `animated.avif`; it selects
 operating-point IDC `0x101` and adds layer extensions for temporal/spatial
 layer zero while retaining all five source frames. Its loop observation is

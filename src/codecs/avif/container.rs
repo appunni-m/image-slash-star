@@ -645,9 +645,9 @@ fn parse_iloc(
         } else {
             AvifItemLocationSource::File
         };
-        if reader.u16()? != 0 {
-            return Err(parse_failure!());
-        }
+        // Pinned libavif ignores the data-reference index. Item storage remains
+        // the bounded file/idat source selected by its construction method.
+        let _ = reader.u16()?;
         let base_offset = reader.uint(base_offset_size)?;
         let extent_count = usize::from(reader.u16()?);
         for _ in 0..extent_count {

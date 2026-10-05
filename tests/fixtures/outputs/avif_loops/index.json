@@ -1,4 +1,162 @@
 {
+  "additional_collections": [
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "bed15d1100f47bbd01a59d5818a2b526fadfa19b823015ef6b834f87a988c3a7",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "tkhd_version_zero"
+      ],
+      "collection_index_sha256": "62650c8003031b7b86b3c17baafc46483ed1556b306c0e7195e946cf143188da",
+      "generator_sha256": "2d6be1f45ddb7122c597a844b0eef45b273d93998fc7682d3d72563510957bbb",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "0cf71a3aec676c460fdd3a2be00115be49c3252860af927b934df33e5a125642",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "tkhd_version_zero_unknown_duration"
+      ],
+      "collection_index_sha256": "61d101e19d9814427789573aa864f704736951d8692f21610256acec9258aafe",
+      "generator_sha256": "2d6be1f45ddb7122c597a844b0eef45b273d93998fc7682d3d72563510957bbb",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "ce4fd6424200125bb4b93bc99f7a3e72e0d1cbfd85abf77e31974e57cc4889f0",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "motion_multitile"
+      ],
+      "collection_index_sha256": "7c291644f8fa19fe5aa44c3647f021bbe484583bda8ebe6cfb8b8abc118790f5",
+      "generator_sha256": "2d6be1f45ddb7122c597a844b0eef45b273d93998fc7682d3d72563510957bbb",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "d503bcfabb6ed5129a218010cd62104ac1268c55b4c855259f5a36df847af795",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "motion_multitile_split_groups"
+      ],
+      "collection_index_sha256": "cb0ad0aceda474559bce368c3ae90efbb0de2fe1a3cc8be783293ad95a2e713f",
+      "generator_sha256": "2d6be1f45ddb7122c597a844b0eef45b273d93998fc7682d3d72563510957bbb",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "bcbc43ea8dcde8b0eaf5b6a1717db2907e2f6fec389ab035002e5d504205e23b",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_motion_multitile"
+      ],
+      "collection_index_sha256": "0ca939dcde17db8fe57bc455edcfd2db1313df437329b8aca6cf2e222d2fe4a9",
+      "generator_sha256": "2d6be1f45ddb7122c597a844b0eef45b273d93998fc7682d3d72563510957bbb",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    },
+    {
+      "build": {
+        "argv": [
+          "/usr/bin/c++",
+          "-std=c++17",
+          "-O2",
+          "-Wall",
+          "-Wextra",
+          "-Werror",
+          "-shared",
+          "-fPIC",
+          "-I<source>/include",
+          "<work>/bundle/observer.cc",
+          "-o",
+          "<work>/observer.so"
+        ],
+        "binary_sha256": "8e41166c16c3388949cc59a8bb92a88e30d6de0a1f6d1d8eeb90e8a5a926a527",
+        "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+      },
+      "cases": [
+        "lossless_motion_multitile_split_groups"
+      ],
+      "collection_index_sha256": "c8451c36025f0631bbca15052b5233aed552fab54b91401403bf483053aa0ca2",
+      "generator_sha256": "2d6be1f45ddb7122c597a844b0eef45b273d93998fc7682d3d72563510957bbb",
+      "observer_source_sha256": "aa052eaad1d7af0f1431f363da8d7e1362287302f5c0a11b7f62181ef14622df"
+    }
+  ],
   "artifacts": [
     {
       "bytes": 2267,
@@ -221,6 +379,16 @@
       "sha256": "d29aaab346465bf7ac413954e3c862b2222d3ac510299f865fe579899d063fb5"
     },
     {
+      "bytes": 1327,
+      "path": "inputs/lossless_motion_multitile.avif",
+      "sha256": "24612186624c6b470a50a549d876469c8265976633afee87fa030d910cd0532b"
+    },
+    {
+      "bytes": 1342,
+      "path": "inputs/lossless_motion_multitile_split_groups.avif",
+      "sha256": "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596"
+    },
+    {
       "bytes": 1186,
       "path": "inputs/lossy_b16_mixed_topology_inter_420_b16x16.avif",
       "sha256": "3264482e2a50d80bd39be178b843fdfe9997e947d54b4466c745751837821d74"
@@ -326,6 +494,16 @@
       "sha256": "5b9ea2b9d552e8ff44f2818a7ae2b73a9dbe1eda84ead9c24c9f8a957c6e546f"
     },
     {
+      "bytes": 1264,
+      "path": "inputs/motion_multitile.avif",
+      "sha256": "c248f019a008e9dea4425e1d5f44d1418b44929604312d95a69a0a3ac5d4709f"
+    },
+    {
+      "bytes": 1280,
+      "path": "inputs/motion_multitile_split_groups.avif",
+      "sha256": "eb19bcebc0698dfa3149c76fb6828705b22e37f45e213b70541a61b3abd20b89"
+    },
+    {
       "bytes": 5027,
       "path": "inputs/motion_temporal_window_left_512x128.avif",
       "sha256": "29e856c6c8a117c764bb0a176ccc1d82bac982fdf7287eb461f827ebdc31b399"
@@ -404,6 +582,16 @@
       "bytes": 1235,
       "path": "inputs/repeating_v0.avif",
       "sha256": "28771d1433f3a750109704ed0b7e098be36b1fabd88deb191a3546ebc717d413"
+    },
+    {
+      "bytes": 1223,
+      "path": "inputs/tkhd_version_zero.avif",
+      "sha256": "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674"
+    },
+    {
+      "bytes": 1223,
+      "path": "inputs/tkhd_version_zero_unknown_duration.avif",
+      "sha256": "ca1834317cd4b5b0db00130370cf3db3c94426ff7479c6414c4da2cabfef2a09"
     },
     {
       "bytes": 3768,
@@ -761,6 +949,46 @@
       "sha256": "40539b86f9f256c1701f2a4f7578b3cd21619f626f8527fd8a3ca1b02b0106ac"
     },
     {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile/frame_0.bin",
+      "sha256": "341e17b00c4f121c51bb93d0d19a82bebd96c0728d482255d61f032f36ca5d7c"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile/frame_1.bin",
+      "sha256": "56642f465595d26b31b8f4b2a244062de7e6f27e2f1453e462f5c6c1b45e3e98"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile/frame_2.bin",
+      "sha256": "b8b2bd903aa5084f5818abfd1f36a0b4451b75ae0f8913bcbac58e0438f94b12"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile/frame_3.bin",
+      "sha256": "d1e184edc7ddb92e19a789f856cefa8d86f585cc17ee02b1551ef4060d454ae2"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile_split_groups/frame_0.bin",
+      "sha256": "341e17b00c4f121c51bb93d0d19a82bebd96c0728d482255d61f032f36ca5d7c"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile_split_groups/frame_1.bin",
+      "sha256": "56642f465595d26b31b8f4b2a244062de7e6f27e2f1453e462f5c6c1b45e3e98"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile_split_groups/frame_2.bin",
+      "sha256": "b8b2bd903aa5084f5818abfd1f36a0b4451b75ae0f8913bcbac58e0438f94b12"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/lossless_motion_multitile_split_groups/frame_3.bin",
+      "sha256": "d1e184edc7ddb92e19a789f856cefa8d86f585cc17ee02b1551ef4060d454ae2"
+    },
+    {
       "bytes": 768,
       "path": "pixels/lossy_b16_mixed_topology_inter_420_b16x16/frame_0.bin",
       "sha256": "7f3e5e4e65eca4390e9242558012bc9bdad133d7ac9f6aed53fa156a2288f73b"
@@ -1086,6 +1314,46 @@
       "sha256": "dff52b584d0ff22ce1f3030ffd0f58d08ff99c65bbbafcc24574572712f905f8"
     },
     {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile/frame_0.bin",
+      "sha256": "63ebec65051c59ee0287b062db99a2db8d0a98b489e1d327f6805b0a2fc42023"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile/frame_1.bin",
+      "sha256": "b4c75dad4e0882eadd077ac33b94746cf78ed7456b699d60b1df2aea389896e0"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile/frame_2.bin",
+      "sha256": "bc734882a642e0d04d881ae4f13c560545b04ef4b884b5cde0a9dc22a9c1b814"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile/frame_3.bin",
+      "sha256": "e987c8084570de7b22cdd3df5e4dd826a792054763637c7f6cb6a1efa9bc6a85"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile_split_groups/frame_0.bin",
+      "sha256": "63ebec65051c59ee0287b062db99a2db8d0a98b489e1d327f6805b0a2fc42023"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile_split_groups/frame_1.bin",
+      "sha256": "b4c75dad4e0882eadd077ac33b94746cf78ed7456b699d60b1df2aea389896e0"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile_split_groups/frame_2.bin",
+      "sha256": "bc734882a642e0d04d881ae4f13c560545b04ef4b884b5cde0a9dc22a9c1b814"
+    },
+    {
+      "bytes": 98304,
+      "path": "pixels/motion_multitile_split_groups/frame_3.bin",
+      "sha256": "e987c8084570de7b22cdd3df5e4dd826a792054763637c7f6cb6a1efa9bc6a85"
+    },
+    {
       "bytes": 196608,
       "path": "pixels/motion_temporal_window_left_512x128/frame_0.bin",
       "sha256": "5b1b616cb9876e38b02619a46583ffc6a1baf6b81b986077b1647b45580d3ca6"
@@ -1158,6 +1426,56 @@
     {
       "bytes": 67500,
       "path": "pixels/opidc_0x101/frame_4.bin",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero/frame_4.bin",
+      "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero_unknown_duration/frame_0.bin",
+      "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero_unknown_duration/frame_1.bin",
+      "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero_unknown_duration/frame_2.bin",
+      "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero_unknown_duration/frame_3.bin",
+      "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746"
+    },
+    {
+      "bytes": 67500,
+      "path": "pixels/tkhd_version_zero_unknown_duration/frame_4.bin",
       "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85"
     },
     {
@@ -5991,6 +6309,448 @@
       "repeat_equal": true,
       "source": "highdepth",
       "source_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576"
+    },
+    {
+      "input_bytes": 1223,
+      "input_path": "inputs/tkhd_version_zero.avif",
+      "input_sha256": "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "tkhd_version_zero",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "tkhd_version_zero",
+      "source_sha256": "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674"
+    },
+    {
+      "input_bytes": 1223,
+      "input_path": "inputs/tkhd_version_zero_unknown_duration.avif",
+      "input_sha256": "ca1834317cd4b5b0db00130370cf3db3c94426ff7479c6414c4da2cabfef2a09",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "tkhd_version_zero_unknown_duration",
+      "native": {
+        "decoded_frames": 5,
+        "diagnostic": "",
+        "frame_count": 5,
+        "parse_result": 0,
+        "repetition_count": 0,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "426020a90d0efab71b689d180a1b3c8c5e296619771fbbf7ed586e963702342e",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b713db5eaea775f35de7df5aef10d4f2cc4c25a3bccc215ccd13d9be528b43e7",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "c6ae1de6153af976c7f680e5149065725a6ba88d81984ed061638f2b2cc42679",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "bb83d486de48dc0b03563d6c3d3284e1af3ee4d30f35529617a29deeb92c5746",
+            "size": [
+              150,
+              150
+            ]
+          },
+          {
+            "bytes": 67500,
+            "duration_ms": 33,
+            "index": 4,
+            "mode": "RGB",
+            "sha256": "7698b34acbf12356e47dc8e8eea3bb75df4537006bfc5fb120c475932329eb85",
+            "size": [
+              150,
+              150
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "tkhd_version_zero_unknown_duration",
+      "source_sha256": "ca1834317cd4b5b0db00130370cf3db3c94426ff7479c6414c4da2cabfef2a09"
+    },
+    {
+      "input_bytes": 1264,
+      "input_path": "inputs/motion_multitile.avif",
+      "input_sha256": "c248f019a008e9dea4425e1d5f44d1418b44929604312d95a69a0a3ac5d4709f",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "motion_multitile",
+      "native": {
+        "decoded_frames": 4,
+        "diagnostic": "",
+        "frame_count": 4,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "63ebec65051c59ee0287b062db99a2db8d0a98b489e1d327f6805b0a2fc42023",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b4c75dad4e0882eadd077ac33b94746cf78ed7456b699d60b1df2aea389896e0",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "bc734882a642e0d04d881ae4f13c560545b04ef4b884b5cde0a9dc22a9c1b814",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "e987c8084570de7b22cdd3df5e4dd826a792054763637c7f6cb6a1efa9bc6a85",
+            "size": [
+              256,
+              128
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "motion_multitile",
+      "source_sha256": "c248f019a008e9dea4425e1d5f44d1418b44929604312d95a69a0a3ac5d4709f"
+    },
+    {
+      "input_bytes": 1280,
+      "input_path": "inputs/motion_multitile_split_groups.avif",
+      "input_sha256": "eb19bcebc0698dfa3149c76fb6828705b22e37f45e213b70541a61b3abd20b89",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "motion_multitile_split_groups",
+      "native": {
+        "decoded_frames": 4,
+        "diagnostic": "",
+        "frame_count": 4,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "63ebec65051c59ee0287b062db99a2db8d0a98b489e1d327f6805b0a2fc42023",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "b4c75dad4e0882eadd077ac33b94746cf78ed7456b699d60b1df2aea389896e0",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "bc734882a642e0d04d881ae4f13c560545b04ef4b884b5cde0a9dc22a9c1b814",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "e987c8084570de7b22cdd3df5e4dd826a792054763637c7f6cb6a1efa9bc6a85",
+            "size": [
+              256,
+              128
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "motion_multitile_split_groups",
+      "source_sha256": "eb19bcebc0698dfa3149c76fb6828705b22e37f45e213b70541a61b3abd20b89"
+    },
+    {
+      "input_bytes": 1327,
+      "input_path": "inputs/lossless_motion_multitile.avif",
+      "input_sha256": "24612186624c6b470a50a549d876469c8265976633afee87fa030d910cd0532b",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_motion_multitile",
+      "native": {
+        "decoded_frames": 4,
+        "diagnostic": "",
+        "frame_count": 4,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "341e17b00c4f121c51bb93d0d19a82bebd96c0728d482255d61f032f36ca5d7c",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "56642f465595d26b31b8f4b2a244062de7e6f27e2f1453e462f5c6c1b45e3e98",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "b8b2bd903aa5084f5818abfd1f36a0b4451b75ae0f8913bcbac58e0438f94b12",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "d1e184edc7ddb92e19a789f856cefa8d86f585cc17ee02b1551ef4060d454ae2",
+            "size": [
+              256,
+              128
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_motion_multitile",
+      "source_sha256": "24612186624c6b470a50a549d876469c8265976633afee87fa030d910cd0532b"
+    },
+    {
+      "input_bytes": 1342,
+      "input_path": "inputs/lossless_motion_multitile_split_groups.avif",
+      "input_sha256": "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "lossless_motion_multitile_split_groups",
+      "native": {
+        "decoded_frames": 4,
+        "diagnostic": "",
+        "frame_count": 4,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "341e17b00c4f121c51bb93d0d19a82bebd96c0728d482255d61f032f36ca5d7c",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "56642f465595d26b31b8f4b2a244062de7e6f27e2f1453e462f5c6c1b45e3e98",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 2,
+            "mode": "RGB",
+            "sha256": "b8b2bd903aa5084f5818abfd1f36a0b4451b75ae0f8913bcbac58e0438f94b12",
+            "size": [
+              256,
+              128
+            ]
+          },
+          {
+            "bytes": 98304,
+            "duration_ms": 100,
+            "index": 3,
+            "mode": "RGB",
+            "sha256": "d1e184edc7ddb92e19a789f856cefa8d86f585cc17ee02b1551ef4060d454ae2",
+            "size": [
+              256,
+              128
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "lossless_motion_multitile_split_groups",
+      "source_sha256": "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596"
     }
   ],
   "oracle": {

@@ -144,6 +144,14 @@ FAULT_CONTRACTS = {
         "point": "av1.frame.tile_group_temporal_sample_reservation",
         "contract": "sequence_decode_error_then_retry_succeeds",
     },
+    "avif_retained_temporal_sample_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_retained_temporal_sample_reservation_failure",
+        "source_case": "decode:avif:animated_motion_multitile_split_groups",
+        "point": "av1.frame.retained_temporal_sample_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
     "avif_color_tile_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

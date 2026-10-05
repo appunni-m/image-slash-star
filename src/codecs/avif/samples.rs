@@ -1109,9 +1109,9 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
             _ => return Err(parse_failure!()),
         };
         let mut source_end = input.len();
-        if reader.u16()? != 0 {
-            return Err(parse_failure!());
-        }
+        // Pinned libavif reads this field without selecting external storage.
+        // The construction method still selects bounded bytes from this input.
+        let _ = reader.u16()?;
         let base_offset = reader.uint(base_offset_size)?;
         let extent_count = usize::from(reader.u16()?);
         budget.records_seen(extent_count)?;

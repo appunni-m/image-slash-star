@@ -27,6 +27,30 @@ from inspect_avif_bitstreams import children, parse_boxes, unique_box
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = {
     "animated": ("animated.avif", "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"),
+    "tkhd_version_zero": (
+        "animated_tkhd_version_zero.avif",
+        "eb7b131fb8288fbe8e67daf9e41e7f80bdf3f923d474177fac84a0b58550b674",
+    ),
+    "tkhd_version_zero_unknown_duration": (
+        "animated_tkhd_version_zero_unknown_duration.avif",
+        "ca1834317cd4b5b0db00130370cf3db3c94426ff7479c6414c4da2cabfef2a09",
+    ),
+    "motion_multitile": (
+        "animated_motion_multitile.avif",
+        "c248f019a008e9dea4425e1d5f44d1418b44929604312d95a69a0a3ac5d4709f",
+    ),
+    "motion_multitile_split_groups": (
+        "animated_motion_multitile_split_groups.avif",
+        "eb19bcebc0698dfa3149c76fb6828705b22e37f45e213b70541a61b3abd20b89",
+    ),
+    "lossless_motion_multitile": (
+        "animated_lossless_motion_multitile.avif",
+        "24612186624c6b470a50a549d876469c8265976633afee87fa030d910cd0532b",
+    ),
+    "lossless_motion_multitile_split_groups": (
+        "animated_lossless_motion_multitile_split_groups.avif",
+        "04b61cf8b3e9887ee651cec5dc055b5a102198de9f69e2ad64b4e183639cf596",
+    ),
     "opidc_0x101": ("animated_opidc_0x101.avif", "25b79a856ea2767e02e5a509f72e7af3f9563202301779be65b0745724ab23be"),
     "error_resilient": ("animated_error_resilient.avif", "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0"),
     "filmgrain_reference_reuse_i444_64x64": (

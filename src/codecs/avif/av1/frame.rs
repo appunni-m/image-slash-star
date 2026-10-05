@@ -1575,9 +1575,26 @@ impl FrameState {
                         "unable to reserve reconstructed AV1 tile state".to_owned(),
                     )
                 })?;
+            #[cfg(coverage)]
+            let temporal_sample_reservation = if group.temporal_samples.len()
+                > pending
+                    .temporal_samples
+                    .capacity()
+                    .saturating_sub(pending.temporal_samples.len())
+                && crate::coverage_support::take_fault_point(
+                    crate::coverage_support::CoverageFaultPoint::
+                        Av1RetainedTemporalSampleReservation,
+                ) {
+                // A reservation that fits existing capacity cannot fail.
+                usize::MAX
+            } else {
+                group.temporal_samples.len()
+            };
+            #[cfg(not(coverage))]
+            let temporal_sample_reservation = group.temporal_samples.len();
             pending
                 .temporal_samples
-                .try_reserve(group.temporal_samples.len())
+                .try_reserve(temporal_sample_reservation)
                 .map_err(|_| {
                     CodecError::Dimensions(
                         "unable to reserve retained AV1 temporal-MV samples".to_owned(),

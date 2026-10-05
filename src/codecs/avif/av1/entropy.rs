@@ -18864,7 +18864,13 @@ fn complete_lossless_inter_color_reconstruction_context(
             reference.surface.upscaled_width == context.upscaled_width
                 && reference.surface.frame_height == context.frame_height
         } else {
-            reference.surface.coded_width == context.upscaled_width && !reference.scale.scaled
+            // Scaling compares the full current frame and reference surface;
+            // this context's width belongs to one checked tile. Preserve the
+            // previously admitted references and also admit unreduced full
+            // references shared by multiple tiles.
+            !reference.scale.scaled
+                && (reference.surface.coded_width == context.upscaled_width
+                    || reference.surface.coded_width == reference.surface.upscaled_width)
         };
         reference.surface.validate().is_ok()
             && reference.surface.depth.bits() == 8

@@ -11757,6 +11757,12 @@ def gen_avif():
         raise RuntimeError("motion/chroma AVIF fixture is not deterministic")
     (d / "animated_motion_chroma.avif").write_bytes(motion_chroma_animation)
 
+    from generate_avif_multitile_motion_fixture import (
+        generate_fixtures as generate_multitile_motion,
+    )
+
+    generate_multitile_motion(d)
+
     def encode_motion_chroma_422_animation():
         from PIL import ImageDraw
 
@@ -16876,12 +16882,19 @@ def gen_avif():
     from generate_avif_config_disagreement_fixtures import generate as generate_config_disagreements
     from generate_avif_filmgrain_edge_fixtures import write_avif_filmgrain_edge_fixtures
     from generate_avif_idat_fixture import generate as generate_idat_fixture
+    from generate_avif_container_edge_fixtures import generate as generate_container_edges
 
     generate_config_disagreements(output_dir=d, source_path=baseline_path)
     write_avif_filmgrain_edge_fixtures(d)
     # Method-one idat inputs retain AV1 bytes and exercise indexed location
     # assembly, open failures, and a load failure after successful inspection.
     generate_idat_fixture(output_dir=d, source_path=baseline_path)
+    generate_container_edges(
+        output_dir=d,
+        file_source=baseline_path,
+        idat_source=d / "iloc_idat_indexed_extent.avif",
+        sequence_source=d / "animated.avif",
+    )
 
     meta_payload_start, meta_payload_end = avif_unique_top_level_payload_range(
         baseline_bytes, b"meta"

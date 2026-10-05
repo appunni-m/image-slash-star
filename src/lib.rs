@@ -71,9 +71,9 @@
 //!
 //! Default features enable the Rust-only `jpeg`, `png`, `gif`, `bmp`, `tiff`,
 //! `webp`, and `ico` codecs. `ico` also enables `png` and `bmp`. The `avif`
-//! feature is opt-in and exposes the same safe, portable still-decode subset
-//! on every target. AVIF encoding and sequence decoding remain explicit
-//! pure-Rust implementation gaps; there is no native fallback.
+//! feature is opt-in and exposes the same safe, portable still and sequence
+//! decode subset on every target. AVIF encoding remains an explicit pure-Rust
+//! implementation gap; there is no native fallback.
 //!
 //! # Errors
 //!

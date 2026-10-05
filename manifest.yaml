@@ -54,6 +54,20 @@ reference_oracles:
       pillow_feature: avif
       pillow_feature_version: 1.4.1
 fault_contracts:
+  - id: avif_retained_temporal_sample_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_motion_multitile_split_groups
+    fault:
+      point: av1.frame.retained_temporal_sample_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_tile_group_temporal_sample_reservation_failure
     type: fault-contract
     operation: decode
@@ -6841,6 +6855,75 @@ formats:
       description: 256x256 all-lossless monochrome AVIF with repeated patches and IntraBC disabled
       test_assets:
       - no_intrabc_repeated_patch_monochrome_256.avif
+      status: active
+    - id: animated_tkhd_version_zero
+      description: Five-frame AVIF uses a version-zero track header with unchanged pixels, metadata and timing
+      test_assets:
+      - animated_tkhd_version_zero.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_tkhd_version_zero_unknown_duration
+      description: Version-zero AVIF track duration uses the UINT32_MAX unknown sentinel with unchanged public sequence observations
+      test_assets:
+      - animated_tkhd_version_zero_unknown_duration.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: ipma_optional_zero_index
+      description: Complete AVIF appends an optional zero primary-item property association which Pillow ignores
+      test_assets:
+      - ipma_optional_zero_index.avif
+      status: active
+    - id: error_ipma_essential_zero_index
+      description: Complete AVIF appends an essential zero primary-item property index and Pillow rejects it at open
+      test_assets:
+      - ipma_essential_zero_index.avif
+      expect_error: true
+      status: active
+    - id: error_ipma_property_index_out_of_bounds
+      description: Complete AVIF associates nonexistent primary-item property index 127 and Pillow rejects it at open
+      test_assets:
+      - error_ipma_property_index_out_of_bounds.avif
+      expect_error: true
+      status: active
+    - id: iloc_file_data_reference_1
+      description: File-backed primary AVIF item declares ignored data-reference index 1 with unchanged local payload and Pillow observations
+      test_assets:
+      - iloc_file_data_reference_1.avif
+      status: active
+    - id: iloc_file_data_reference_65535
+      description: File-backed primary AVIF item declares ignored data-reference index 65535 with unchanged local payload and Pillow observations
+      test_assets:
+      - iloc_file_data_reference_65535.avif
+      status: active
+    - id: iloc_idat_data_reference_1
+      description: Idat-backed primary AVIF item declares ignored data-reference index 1 with unchanged bounded payload and Pillow observations
+      test_assets:
+      - iloc_idat_data_reference_1.avif
+      status: active
+    - id: iloc_idat_data_reference_65535
+      description: Idat-backed primary AVIF item declares ignored data-reference index 65535 with unchanged bounded payload and Pillow observations
+      test_assets:
+      - iloc_idat_data_reference_65535.avif
+      status: active
+    - id: animated_lossless_motion_multitile
+      description: Four-frame lossless 256x128 4:2:0 AVIF motion sequence shares full-frame references across two tile columns
+      test_assets:
+      - animated_lossless_motion_multitile.avif
+      status: active
+    - id: animated_lossless_motion_multitile_split_groups
+      description: Four-frame lossless 256x128 4:2:0 AVIF motion sequence splits each key and inter frame into ordered tile groups
+      test_assets:
+      - animated_lossless_motion_multitile_split_groups.avif
+      status: active
+    - id: animated_motion_multitile
+      description: Four-frame 256x128 4:2:0 AVIF motion sequence with two tile columns in each complete frame group
+      test_assets:
+      - animated_motion_multitile.avif
+      status: active
+    - id: animated_motion_multitile_split_groups
+      description: Four-frame 256x128 4:2:0 AVIF motion sequence with separate ordered tile groups across each inter frame
+      test_assets:
+      - animated_motion_multitile_split_groups.avif
       status: active
     - id: animated_motion_chroma
       description: Four-frame 4:2:0 AVIF sequence with a translating small block and chroma-boundary motion

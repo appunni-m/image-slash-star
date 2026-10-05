@@ -2569,6 +2569,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.frame.tile_group_temporal_sample_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
+        "av1.frame.retained_temporal_sample_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
         "av1.grid.cell_reservation": {
             "decode_error_then_retry_succeeds"
         },

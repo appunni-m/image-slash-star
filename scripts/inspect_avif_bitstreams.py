@@ -298,8 +298,9 @@ def parse_iloc(
             method = construction & 0xF
         if method not in (0, 1):
             raise ValueError(f"unsupported iloc construction method {method}")
-        if reader.u16() != 0:
-            raise ValueError("external iloc data reference")
+        # Pinned libavif consumes this field without selecting external bytes.
+        # The supported construction method still bounds every local extent.
+        reader.u16()
         base_offset = reader.uint(base_offset_size)
         extents = []
         for _ in range(reader.u16()):
