@@ -80,6 +80,8 @@ pub enum CoverageFaultPoint {
     Av1AssembledCdefActiveMapReservation,
     /// Force AV1 partition-tree node reservation to fail.
     Av1PartitionNodeReservation,
+    /// Force the AV1 SGR source-plane reservation to fail before restoration.
+    Av1SgrSourceReservation,
     /// Force the AV1 SGR output-plane reservation to fail during restoration.
     Av1SgrRestorationOutputReservation,
     /// Force an AV1 SGR intermediate-buffer reservation to fail.

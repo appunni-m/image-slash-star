@@ -208,6 +208,20 @@ fault_contracts:
       point: av1.superres.plane_reservation
       contract: sequence_decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_sgr_source_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56
+    fault:
+      point: av1.restoration.sgr_source_reservation
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_sgr_restoration_output_reservation_failure
     type: fault-contract
     operation: decode
@@ -4156,6 +4170,292 @@ formats:
       test_assets:
       - associated_rgba_separate_tiles_raw_first_alpha_block.tiff
       expect_error: true
+    - id: extra_samples_zero_rgbx_contiguous_strips_raw
+      description: Complete contiguous raw TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_strips_raw.tiff
+    - id: extra_samples_zero_rgbx_contiguous_strips_deflate
+      description: Complete contiguous deflate TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_strips_deflate.tiff
+    - id: extra_samples_zero_rgbx_contiguous_strips_lzw
+      description: Complete contiguous lzw TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_strips_lzw.tiff
+    - id: extra_samples_zero_rgbx_contiguous_strips_packbits
+      description: Complete contiguous packbits TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_strips_packbits.tiff
+    - id: extra_samples_zero_rgbx_contiguous_tiles_raw
+      description: Complete contiguous raw TIFF tiles with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_tiles_raw.tiff
+    - id: extra_samples_zero_rgbx_contiguous_tiles_deflate
+      description: Complete contiguous deflate TIFF tiles with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_tiles_deflate.tiff
+    - id: extra_samples_zero_rgbx_contiguous_tiles_lzw
+      description: Complete contiguous lzw TIFF tiles with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_tiles_lzw.tiff
+    - id: extra_samples_zero_rgbx_contiguous_tiles_packbits
+      description: Complete contiguous packbits TIFF tiles with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_contiguous_tiles_packbits.tiff
+    - id: extra_samples_zero_rgbx_separate_strips_raw
+      description: Complete separate raw TIFF strips with RGB and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_rgbx_separate_strips_raw.tiff
+      expect_error: true
+    - id: extra_samples_zero_rgbx_separate_strips_deflate
+      description: Complete separate deflate TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_separate_strips_deflate.tiff
+    - id: extra_samples_zero_rgbx_separate_strips_lzw
+      description: Complete separate lzw TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_separate_strips_lzw.tiff
+    - id: extra_samples_zero_rgbx_separate_strips_packbits
+      description: Complete separate packbits TIFF strips with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_separate_strips_packbits.tiff
+    - id: extra_samples_zero_rgbx_separate_tiles_raw
+      description: Complete separate raw TIFF tiles with RGB and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_rgbx_separate_tiles_raw.tiff
+      expect_error: true
+    - id: extra_samples_zero_rgbx_separate_tiles_deflate
+      description: Complete separate deflate TIFF tiles with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_separate_tiles_deflate.tiff
+    - id: extra_samples_zero_rgbx_separate_tiles_lzw
+      description: Complete separate lzw TIFF tiles with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_separate_tiles_lzw.tiff
+    - id: extra_samples_zero_rgbx_separate_tiles_packbits
+      description: Complete separate packbits TIFF tiles with RGB and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_rgbx_separate_tiles_packbits.tiff
+    - id: extra_samples_zero_grayx_contiguous_strips_raw
+      description: Complete contiguous raw TIFF strips with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_strips_raw.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_contiguous_strips_deflate
+      description: Complete contiguous deflate TIFF strips with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_strips_deflate.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_contiguous_strips_lzw
+      description: Complete contiguous lzw TIFF strips with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_strips_lzw.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_contiguous_strips_packbits
+      description: Complete contiguous packbits TIFF strips with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_strips_packbits.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_contiguous_tiles_raw
+      description: Complete contiguous raw TIFF tiles with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_tiles_raw.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_contiguous_tiles_deflate
+      description: Complete contiguous deflate TIFF tiles with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_tiles_deflate.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_contiguous_tiles_lzw
+      description: Complete contiguous lzw TIFF tiles with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_tiles_lzw.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_contiguous_tiles_packbits
+      description: Complete contiguous packbits TIFF tiles with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_contiguous_tiles_packbits.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_separate_strips_raw
+      description: Complete separate raw TIFF strips with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_separate_strips_raw.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_separate_strips_deflate
+      description: Complete separate deflate TIFF strips with grayscale and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_grayx_separate_strips_deflate.tiff
+    - id: extra_samples_zero_grayx_separate_strips_lzw
+      description: Complete separate lzw TIFF strips with grayscale and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_grayx_separate_strips_lzw.tiff
+    - id: extra_samples_zero_grayx_separate_strips_packbits
+      description: Complete separate packbits TIFF strips with grayscale and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_grayx_separate_strips_packbits.tiff
+    - id: extra_samples_zero_grayx_separate_tiles_raw
+      description: Complete separate raw TIFF tiles with grayscale and one unspecified extra sample; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - extra_samples_zero_grayx_separate_tiles_raw.tiff
+      expect_error: true
+    - id: extra_samples_zero_grayx_separate_tiles_deflate
+      description: Complete separate deflate TIFF tiles with grayscale and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_grayx_separate_tiles_deflate.tiff
+    - id: extra_samples_zero_grayx_separate_tiles_lzw
+      description: Complete separate lzw TIFF tiles with grayscale and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_grayx_separate_tiles_lzw.tiff
+    - id: extra_samples_zero_grayx_separate_tiles_packbits
+      description: Complete separate packbits TIFF tiles with grayscale and one unspecified extra sample; retains Pillow modes and ignored-sample behavior
+      test_assets:
+      - extra_samples_zero_grayx_separate_tiles_packbits.tiff
+    - id: associated_gray_alpha_contiguous_strips_raw
+      description: Complete contiguous raw TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_strips_raw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_contiguous_strips_deflate
+      description: Complete contiguous deflate TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_strips_deflate.tiff
+      expect_error: true
+    - id: associated_gray_alpha_contiguous_strips_lzw
+      description: Complete contiguous lzw TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_strips_lzw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_contiguous_strips_packbits
+      description: Complete contiguous packbits TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_strips_packbits.tiff
+      expect_error: true
+    - id: associated_gray_alpha_contiguous_tiles_raw
+      description: Complete contiguous raw TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_tiles_raw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_contiguous_tiles_deflate
+      description: Complete contiguous deflate TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_tiles_deflate.tiff
+      expect_error: true
+    - id: associated_gray_alpha_contiguous_tiles_lzw
+      description: Complete contiguous lzw TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_tiles_lzw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_contiguous_tiles_packbits
+      description: Complete contiguous packbits TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_contiguous_tiles_packbits.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_strips_raw
+      description: Complete separate raw TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_strips_raw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_strips_deflate
+      description: Complete separate deflate TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_strips_deflate.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_strips_lzw
+      description: Complete separate lzw TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_strips_lzw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_strips_packbits
+      description: Complete separate packbits TIFF strips with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_strips_packbits.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_tiles_raw
+      description: Complete separate raw TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_tiles_raw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_tiles_deflate
+      description: Complete separate deflate TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_tiles_deflate.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_tiles_lzw
+      description: Complete separate lzw TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_tiles_lzw.tiff
+      expect_error: true
+    - id: associated_gray_alpha_separate_tiles_packbits
+      description: Complete separate packbits TIFF tiles with associated grayscale alpha; Pillow rejects this valid storage layout during image opening
+      test_assets:
+      - associated_gray_alpha_separate_tiles_packbits.tiff
+      expect_error: true
+    - id: straight_gray_alpha_contiguous_strips_raw
+      description: Complete contiguous raw TIFF strips with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_strips_raw.tiff
+    - id: straight_gray_alpha_contiguous_strips_deflate
+      description: Complete contiguous deflate TIFF strips with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_strips_deflate.tiff
+    - id: straight_gray_alpha_contiguous_strips_lzw
+      description: Complete contiguous lzw TIFF strips with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_strips_lzw.tiff
+    - id: straight_gray_alpha_contiguous_strips_packbits
+      description: Complete contiguous packbits TIFF strips with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_strips_packbits.tiff
+    - id: straight_gray_alpha_contiguous_tiles_raw
+      description: Complete contiguous raw TIFF tiles with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_tiles_raw.tiff
+    - id: straight_gray_alpha_contiguous_tiles_deflate
+      description: Complete contiguous deflate TIFF tiles with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_tiles_deflate.tiff
+    - id: straight_gray_alpha_contiguous_tiles_lzw
+      description: Complete contiguous lzw TIFF tiles with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_tiles_lzw.tiff
+    - id: straight_gray_alpha_contiguous_tiles_packbits
+      description: Complete contiguous packbits TIFF tiles with straight grayscale alpha; retained matching control for grayscale-alpha bytes
+      test_assets:
+      - straight_gray_alpha_contiguous_tiles_packbits.tiff
+    - id: straight_gray_alpha_separate_strips_raw
+      description: Complete separate raw TIFF strips with straight grayscale alpha; Pillow rejects this valid storage layout during decode after successful inspection
+      test_assets:
+      - straight_gray_alpha_separate_strips_raw.tiff
+      expect_error: true
+    - id: straight_gray_alpha_separate_strips_deflate
+      description: Complete separate deflate TIFF strips with straight grayscale alpha; follows Pillow separate compressed alpha transfer bytes
+      test_assets:
+      - straight_gray_alpha_separate_strips_deflate.tiff
+    - id: straight_gray_alpha_separate_strips_lzw
+      description: Complete separate lzw TIFF strips with straight grayscale alpha; follows Pillow separate compressed alpha transfer bytes
+      test_assets:
+      - straight_gray_alpha_separate_strips_lzw.tiff
+    - id: straight_gray_alpha_separate_strips_packbits
+      description: Complete separate packbits TIFF strips with straight grayscale alpha; follows Pillow separate compressed alpha transfer bytes
+      test_assets:
+      - straight_gray_alpha_separate_strips_packbits.tiff
+    - id: straight_gray_alpha_separate_tiles_raw
+      description: Complete separate raw TIFF tiles with straight grayscale alpha; Pillow rejects this valid storage layout during decode after successful inspection
+      test_assets:
+      - straight_gray_alpha_separate_tiles_raw.tiff
+      expect_error: true
+    - id: straight_gray_alpha_separate_tiles_deflate
+      description: Complete separate deflate TIFF tiles with straight grayscale alpha; follows Pillow separate compressed alpha transfer bytes
+      test_assets:
+      - straight_gray_alpha_separate_tiles_deflate.tiff
+    - id: straight_gray_alpha_separate_tiles_lzw
+      description: Complete separate lzw TIFF tiles with straight grayscale alpha; follows Pillow separate compressed alpha transfer bytes
+      test_assets:
+      - straight_gray_alpha_separate_tiles_lzw.tiff
+    - id: straight_gray_alpha_separate_tiles_packbits
+      description: Complete separate packbits TIFF tiles with straight grayscale alpha; follows Pillow separate compressed alpha transfer bytes
+      test_assets:
+      - straight_gray_alpha_separate_tiles_packbits.tiff
     - id: planar_separate_rgb
       description: Separate RGB sample planes across multiple uncompressed strips
       test_assets:

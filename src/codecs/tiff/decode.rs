@@ -223,27 +223,44 @@ fn decode_ifd(
         ));
     }
     let separate_planar = planar == 2 && samples_per_pixel > 1;
+    let extra_samples = directory.values(338);
     let (layout, palette) = super::inspect::layout_and_palette(
         photometric,
         samples_per_pixel,
         usize::from(bits_per_sample),
         sample_format,
         color_map.as_deref(),
+        extra_samples.as_deref().unwrap_or_default(),
+        planar,
     )?;
-    let source_alpha = directory
-        .values(338)
+    super::inspect::verify_ignored_raw_band_count(&directory, width, height, layout)?;
+    if layout == TiffLayout::GrayAlpha8 && separate_planar && compression == COMPRESSION_NONE {
+        return Err(CodecError::Malformed(
+            "TIFF raw separate grayscale-alpha band is invalid".to_owned(),
+        ));
+    }
+    let source_alpha = extra_samples
         .as_deref()
         .and_then(source_alpha_from_extra_samples);
     let associated_rgba =
         layout == TiffLayout::Rgba8 && source_alpha == Some(SourceAlpha::Premultiplied);
     let raw_separate_associated_alpha =
         associated_rgba && separate_planar && compression == COMPRESSION_NONE;
+    let decoded_planes = match layout {
+        TiffLayout::GrayIgnored8 => 1,
+        TiffLayout::RgbIgnored8 => 3,
+        _ => samples_per_pixel,
+    };
     let alpha = TiffAlpha {
         source: source_alpha,
         // Pillow's raw per-band importer leaves missing alpha planes at zero
         // without normalizing the RGB bands. Its compressed importer and
         // contiguous raw importer normalize associated RGBA after assembly.
         unassociate: associated_rgba && !raw_separate_associated_alpha,
+        // Pillow's compressed separate importer copies through RGBA band
+        // unpackers. LA stores alpha in the fourth internal byte, so copying
+        // its second source plane into G leaves the exported alpha at zero.
+        clear_gray_alpha: layout == TiffLayout::GrayAlpha8 && separate_planar,
     };
     if let Some(budget) = budget {
         budget
@@ -322,6 +339,7 @@ fn decode_ifd(
                     tile_width,
                     tile_height,
                     samples_per_pixel,
+                    decoded_planes,
                     output_samples: stored_samples,
                     output_row_bytes: row_bytes,
                     output_len: expected_total,
@@ -533,6 +551,7 @@ fn decode_ifd(
                 height: height_usize,
                 rows_per_strip,
                 samples_per_pixel,
+                decoded_planes,
                 output_samples: stored_samples,
                 output_row_bytes: row_bytes,
                 output_len: expected_total,
@@ -691,6 +710,7 @@ struct SeparatePlanarStripLayout<'a> {
     height: usize,
     rows_per_strip: usize,
     samples_per_pixel: usize,
+    decoded_planes: usize,
     output_samples: usize,
     output_row_bytes: usize,
     output_len: usize,
@@ -733,7 +753,12 @@ fn decode_separate_planar_strips(
     }
 
     let mut pixels = vec![0; layout.output_len];
-    for (index, &offset) in layout.offsets.iter().enumerate() {
+    // Compressed Pillow loading decodes only retained bands. The ignored
+    // trailing planes must not contribute payload errors or output samples.
+    let decoded_strips = strips_per_plane
+        .checked_mul(layout.decoded_planes)
+        .dimensions("TIFF retained separate-planar strip count overflows")?;
+    for (index, &offset) in layout.offsets.iter().take(decoded_strips).enumerate() {
         crate::codecs::error::check_cancelled(token)?;
         let plane = index
             .checked_div(strips_per_plane)
@@ -837,6 +862,7 @@ struct SeparatePlanarTileLayout<'a> {
     tile_width: usize,
     tile_height: usize,
     samples_per_pixel: usize,
+    decoded_planes: usize,
     output_samples: usize,
     output_row_bytes: usize,
     output_len: usize,
@@ -894,7 +920,16 @@ fn decode_separate_planar_tiles(
         .checked_mul(sample_bytes)
         .dimensions("TIFF separate-planar pixel stride overflows")?;
     let mut pixels = vec![0; layout.output_len];
-    for (index, (&offset, &byte_count)) in layout.offsets.iter().zip(&byte_counts).enumerate() {
+    let decoded_tiles = tiles_per_plane
+        .checked_mul(layout.decoded_planes)
+        .dimensions("TIFF retained separate-planar tile count overflows")?;
+    for (index, (&offset, &byte_count)) in layout
+        .offsets
+        .iter()
+        .zip(&byte_counts)
+        .take(decoded_tiles)
+        .enumerate()
+    {
         crate::codecs::error::check_cancelled(token)?;
         let plane = index
             .checked_div(tiles_per_plane)
@@ -1310,6 +1345,7 @@ fn uses_horizontal_predictor(predictor: usize, compression: usize, bits: u8) -> 
 struct TiffAlpha {
     source: Option<SourceAlpha>,
     unassociate: bool,
+    clear_gray_alpha: bool,
 }
 
 /// Normalize one associated RGBA pixel exactly as Pillow's RGBa unpacker does.
@@ -1340,7 +1376,7 @@ fn convert_pixels(
     endian: Endian,
     palette: Option<ImagePalette>,
     alpha: TiffAlpha,
-) -> DecodedImage {
+) -> CodecResult<DecodedImage> {
     let (width, height) = dimensions;
     let image = match layout {
         TiffLayout::Bilevel { invert } => {
@@ -1364,7 +1400,18 @@ fn convert_pixels(
             }
             DecodedImage::new(width, height, pixels, ColorType::L8)
         }
-        TiffLayout::GrayAlpha8 => DecodedImage::with_mode(width, height, pixels, ImageMode::La8),
+        TiffLayout::GrayAlpha8 => {
+            if alpha.clear_gray_alpha {
+                for pixel in pixels.as_chunks_mut::<2>().0 {
+                    pixel[1] = 0;
+                }
+            }
+            DecodedImage::with_mode(width, height, pixels, ImageMode::La8)
+        }
+        TiffLayout::GrayIgnored8 => {
+            compact_extra_samples(&mut pixels, width as usize, 2, None)?;
+            DecodedImage::new(width, height, pixels, ColorType::L8)
+        }
         TiffLayout::Gray2 { invert } | TiffLayout::Gray4 { invert } => {
             let bits = if matches!(layout, TiffLayout::Gray2 { .. }) {
                 2
@@ -1418,6 +1465,10 @@ fn convert_pixels(
             }
         }
         TiffLayout::Cmyk8 => DecodedImage::new(width, height, pixels, ColorType::Cmyk8),
+        TiffLayout::RgbIgnored8 => {
+            compact_extra_samples(&mut pixels, width as usize, 4, None)?;
+            DecodedImage::new(width, height, pixels, ColorType::Rgb8)
+        }
         TiffLayout::Ycbcr8 => {
             let mut rgb = Vec::with_capacity((pixels.len() / 4).wrapping_mul(3));
             for pixel in pixels.as_chunks::<4>().0 {
@@ -1430,7 +1481,52 @@ fn convert_pixels(
     if let Some(alpha) = alpha.source {
         descriptor = descriptor.with_alpha(alpha);
     }
-    image.with_source_descriptor(descriptor)
+    Ok(image.with_source_descriptor(descriptor))
+}
+
+/// Remove one ignored trailing sample using the checked assembly buffer.
+///
+/// Output positions precede their source positions, so overlapping copies
+/// cannot overwrite a later stored pixel. The allocation and its capacity are
+/// retained; only the initialized output length changes.
+fn compact_extra_samples(
+    pixels: &mut Vec<u8>,
+    width: usize,
+    stored_samples: usize,
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    let retained_samples = match stored_samples {
+        2 => 1,
+        4 => 3,
+        _ => {
+            return Err(CodecError::Malformed(
+                "TIFF ignored sample stride is invalid".to_owned(),
+            ));
+        }
+    };
+    let row_bytes = width
+        .checked_mul(stored_samples)
+        .dimensions("TIFF ignored sample row size overflows")?;
+    if row_bytes == 0 || !pixels.len().is_multiple_of(row_bytes) {
+        return Err(CodecError::Malformed(
+            "TIFF ignored sample assembly size is invalid".to_owned(),
+        ));
+    }
+    let mut destination = 0usize;
+    for source in (0..pixels.len()).step_by(stored_samples) {
+        if token.is_some() && (source.is_multiple_of(row_bytes) || source.is_multiple_of(1_024)) {
+            crate::codecs::error::check_cancelled(token)?;
+        }
+        let end = source
+            .checked_add(retained_samples)
+            .dimensions("TIFF retained sample range overflows")?;
+        pixels.copy_within(source..end, destination);
+        destination = destination
+            .checked_add(retained_samples)
+            .dimensions("TIFF retained sample position overflows")?;
+    }
+    pixels.truncate(destination);
+    Ok(())
 }
 
 fn convert_pixels_for_token(
@@ -1446,9 +1542,7 @@ fn convert_pixels_for_token(
         Some(token) => {
             convert_pixels_with_token(dimensions, pixels, layout, endian, palette, alpha, token)
         }
-        None => Ok(convert_pixels(
-            dimensions, pixels, layout, endian, palette, alpha,
-        )),
+        None => convert_pixels(dimensions, pixels, layout, endian, palette, alpha),
     }
 }
 
@@ -1502,7 +1596,21 @@ fn convert_pixels_with_token(
             }
             DecodedImage::new(width, height, pixels, ColorType::L8)
         }
-        TiffLayout::GrayAlpha8 => DecodedImage::with_mode(width, height, pixels, ImageMode::La8),
+        TiffLayout::GrayAlpha8 => {
+            if alpha.clear_gray_alpha {
+                for chunk in pixels.chunks_mut(1_024) {
+                    crate::codecs::error::check_cancelled(Some(token))?;
+                    for pixel in chunk.as_chunks_mut::<2>().0 {
+                        pixel[1] = 0;
+                    }
+                }
+            }
+            DecodedImage::with_mode(width, height, pixels, ImageMode::La8)
+        }
+        TiffLayout::GrayIgnored8 => {
+            compact_extra_samples(&mut pixels, width_usize, 2, Some(token))?;
+            DecodedImage::new(width, height, pixels, ColorType::L8)
+        }
         TiffLayout::Gray2 { invert } | TiffLayout::Gray4 { invert } => {
             let bits = if matches!(layout, TiffLayout::Gray2 { .. }) {
                 2
@@ -1572,6 +1680,10 @@ fn convert_pixels_with_token(
             }
         }
         TiffLayout::Cmyk8 => DecodedImage::new(width, height, pixels, ColorType::Cmyk8),
+        TiffLayout::RgbIgnored8 => {
+            compact_extra_samples(&mut pixels, width_usize, 4, Some(token))?;
+            DecodedImage::new(width, height, pixels, ColorType::Rgb8)
+        }
         TiffLayout::Ycbcr8 => {
             let row_bytes = width_usize.wrapping_mul(4);
             let mut rgb = Vec::with_capacity((pixels.len() / 4).wrapping_mul(3));

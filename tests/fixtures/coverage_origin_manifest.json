@@ -239,7 +239,7 @@
       "path": "src/codecs/avif/av1/resize.rs"
     },
     {
-      "guard_count": 3,
+      "guard_count": 4,
       "origin": "defensive_model",
       "path": "src/codecs/avif/av1/restoration.rs"
     },
@@ -357,31 +357,27 @@
           "origin": "defensive_model"
         },
         {
-          "line": 1442,
+          "line": 1454,
           "origin": "defensive_model"
         },
         {
-          "line": 1881,
+          "line": 1893,
           "origin": "independent_implementation"
         },
         {
-          "line": 1891,
+          "line": 1903,
           "origin": "independent_implementation"
         },
         {
-          "line": 1900,
+          "line": 1912,
           "origin": "independent_implementation"
         },
         {
-          "line": 1913,
+          "line": 1925,
           "origin": "independent_implementation"
         },
         {
-          "line": 1922,
-          "origin": "independent_implementation"
-        },
-        {
-          "line": 1933,
+          "line": 1934,
           "origin": "independent_implementation"
         },
         {
@@ -393,99 +389,99 @@
           "origin": "independent_implementation"
         },
         {
-          "line": 1972,
+          "line": 1969,
           "origin": "independent_implementation"
         },
         {
-          "line": 1982,
+          "line": 1984,
           "origin": "independent_implementation"
         },
         {
-          "line": 1992,
+          "line": 1994,
           "origin": "independent_implementation"
         },
         {
-          "line": 2255,
+          "line": 2004,
           "origin": "independent_implementation"
         },
         {
-          "line": 2263,
+          "line": 2267,
           "origin": "independent_implementation"
         },
         {
-          "line": 2270,
+          "line": 2275,
           "origin": "independent_implementation"
         },
         {
-          "line": 2281,
+          "line": 2282,
           "origin": "independent_implementation"
         },
         {
-          "line": 2288,
+          "line": 2293,
           "origin": "independent_implementation"
         },
         {
-          "line": 2297,
+          "line": 2300,
           "origin": "independent_implementation"
         },
         {
-          "line": 2307,
+          "line": 2309,
           "origin": "independent_implementation"
         },
         {
-          "line": 2317,
+          "line": 2319,
           "origin": "independent_implementation"
         },
         {
-          "line": 2330,
+          "line": 2329,
           "origin": "independent_implementation"
         },
         {
-          "line": 2338,
+          "line": 2342,
           "origin": "independent_implementation"
         },
         {
-          "line": 2346,
+          "line": 2350,
           "origin": "independent_implementation"
         },
         {
-          "line": 2359,
+          "line": 2358,
           "origin": "independent_implementation"
         },
         {
-          "line": 2366,
+          "line": 2371,
           "origin": "independent_implementation"
         },
         {
-          "line": 2387,
+          "line": 2378,
           "origin": "independent_implementation"
         },
         {
-          "line": 2390,
+          "line": 2399,
           "origin": "independent_implementation"
         },
         {
-          "line": 2392,
+          "line": 2402,
           "origin": "independent_implementation"
         },
         {
-          "line": 2395,
+          "line": 2404,
           "origin": "independent_implementation"
         },
         {
-          "line": 2452,
+          "line": 2407,
           "origin": "independent_implementation"
         },
         {
-          "line": 2491,
+          "line": 2464,
           "origin": "independent_implementation"
         },
         {
-          "line": 7602,
+          "line": 2503,
           "origin": "independent_implementation"
         },
         {
-          "line": 7690,
+          "line": 7614,
           "origin": "independent_implementation"
         },
         {
@@ -493,27 +489,31 @@
           "origin": "independent_implementation"
         },
         {
-          "line": 7712,
+          "line": 7714,
           "origin": "independent_implementation"
         },
         {
-          "line": 7772,
+          "line": 7724,
           "origin": "independent_implementation"
         },
         {
-          "line": 7789,
+          "line": 7784,
           "origin": "independent_implementation"
         },
         {
-          "line": 8023,
+          "line": 7801,
           "origin": "independent_implementation"
         },
         {
-          "line": 8268,
+          "line": 8035,
           "origin": "independent_implementation"
         },
         {
-          "line": 14583,
+          "line": 8280,
+          "origin": "independent_implementation"
+        },
+        {
+          "line": 14595,
           "origin": "defensive_model"
         }
       ],

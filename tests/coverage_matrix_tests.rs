@@ -1087,6 +1087,15 @@ fn execute_fault_contract(
                 img::ImageErrorStage::SequenceDecode,
             ),
             (
+                "av1.restoration.sgr_source_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1SgrSourceReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
+            (
                 "av1.restoration.sgr_output_reservation",
                 "sequence_decode_error_then_retry_succeeds",
             ) => (
@@ -1290,6 +1299,9 @@ fn execute_fault_contract(
         ),
         "av1.frame.assembled_cdef_active_map_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled AV1 CDEF active map",
+        ),
+        "av1.restoration.sgr_source_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate AV1 SGR source",
         ),
         "av1.restoration.sgr_output_reservation" => Some(
             "decode sequence: AVIF sequence validation failed: unable to allocate AV1 SGR output",

@@ -37,20 +37,23 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let photometric = directory.one_or(262, 1);
     let sample_format = directory.one_or(339, 1);
     let color_map = directory.values(320);
+    let extra_samples = directory.values(338);
     let (layout, palette) = layout_and_palette(
         photometric,
         samples,
         bit_depth,
         sample_format,
         color_map.as_deref(),
+        extra_samples.as_deref().unwrap_or_default(),
+        directory.one_or(284, 1),
     )?;
+    verify_ignored_raw_band_count(&directory, width, height, layout)?;
     let (frame_count, complete_chain) = if basic {
         (1u32, directory.next_offset() == 0)
     } else {
         count_directories(data, first_offset, endian)
     };
-    let alpha = directory
-        .values(338)
+    let alpha = extra_samples
         .as_deref()
         .and_then(super::decode::source_alpha_from_extra_samples);
     let mut source = SourceDescriptor::new().with_byte_order(endian.source_byte_order());
@@ -83,6 +86,15 @@ fn verify_separate_planar_offset_count(
     if directory.one_or(284, 1) != 2 || samples <= 1 {
         return Ok(());
     }
+    verify_planar_offset_count(directory, width, height, samples)
+}
+
+fn verify_planar_offset_count(
+    directory: &Directory<'_>,
+    width: u32,
+    height: u32,
+    samples: usize,
+) -> CodecResult<()> {
     // `verify_directory` has already rejected unmatched tile-offset/count tags.
     if directory.field_type(324).is_some() {
         let tile_width = directory
@@ -131,6 +143,26 @@ fn verify_separate_planar_offset_count(
         ));
     }
 
+    Ok(())
+}
+
+/// Pillow removes unspecified separate bands from its raw-mode string, but
+/// still walks every declared offset. An offset for an ignored band therefore
+/// makes raw image opening fail; compressed loading ignores that band instead.
+pub(super) fn verify_ignored_raw_band_count(
+    directory: &Directory<'_>,
+    width: u32,
+    height: u32,
+    layout: TiffLayout,
+) -> CodecResult<()> {
+    if directory.one_or(259, 1) == 1 && directory.one_or(284, 1) == 2 {
+        let retained_samples = match layout {
+            TiffLayout::GrayIgnored8 => 1,
+            TiffLayout::RgbIgnored8 => 3,
+            _ => return Ok(()),
+        };
+        verify_planar_offset_count(directory, width, height, retained_samples)?;
+    }
     Ok(())
 }
 
@@ -205,9 +237,11 @@ pub(super) enum TiffLayout {
     Gray8 { invert: bool },
     Gray16,
     GrayAlpha8,
+    GrayIgnored8,
     I32,
     F32,
     Rgb8,
+    RgbIgnored8,
     Rgba8,
     Palette { bits: u8 },
     Cmyk8,
@@ -218,12 +252,14 @@ impl TiffLayout {
     pub(super) const fn mode(self) -> ImageMode {
         match self {
             Self::Bilevel { .. } => ImageMode::L1,
-            Self::Gray2 { .. } | Self::Gray4 { .. } | Self::Gray8 { .. } => ImageMode::L8,
+            Self::Gray2 { .. } | Self::Gray4 { .. } | Self::Gray8 { .. } | Self::GrayIgnored8 => {
+                ImageMode::L8
+            }
             Self::Gray16 => ImageMode::L16,
             Self::GrayAlpha8 => ImageMode::La8,
             Self::I32 => ImageMode::I32,
             Self::F32 => ImageMode::F32,
-            Self::Rgb8 | Self::Ycbcr8 => ImageMode::Rgb8,
+            Self::Rgb8 | Self::RgbIgnored8 | Self::Ycbcr8 => ImageMode::Rgb8,
             Self::Rgba8 => ImageMode::Rgba8,
             Self::Palette { .. } => ImageMode::P8,
             Self::Cmyk8 => ImageMode::Cmyk8,
@@ -237,6 +273,8 @@ pub(super) fn layout_and_palette(
     bits: usize,
     sample_format: usize,
     color_map: Option<&[usize]>,
+    extra_samples: &[usize],
+    planar: usize,
 ) -> CodecResult<(TiffLayout, Option<ImagePalette>)> {
     let invert = photometric == 0;
     let layout = match (photometric, samples, bits) {
@@ -254,8 +292,10 @@ pub(super) fn layout_and_palette(
                 ));
             }
         },
-        (1, 2, 8) => TiffLayout::GrayAlpha8,
+        (1, 2, 8) if extra_samples == [2] => TiffLayout::GrayAlpha8,
+        (1, 2, 8) if planar == 2 && extra_samples == [0] => TiffLayout::GrayIgnored8,
         (2, 3, 8) => TiffLayout::Rgb8,
+        (2, 4, 8) if extra_samples == [0] => TiffLayout::RgbIgnored8,
         (2, 4, 8) => TiffLayout::Rgba8,
         (3, 1, bits @ (1 | 2 | 4 | 8)) => TiffLayout::Palette {
             bits: bits.to_le_bytes()[0],

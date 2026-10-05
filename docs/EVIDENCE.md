@@ -17,15 +17,169 @@ outside build directories.
 Before cleanup, a native exporter investigation found positive raw-profile
 counts for 64 API functions reported as uncovered in the last full JSON.
 Reordering the identical complete object set changed the exported function
-coverage. The table below preserves the original exporter output, but these
+coverage. The pre-cleanup AVIF table below preserves the original exporter output, but these
 mapping losses prevent interpreting its changes as missing execution or a
 test regression. The diagnosis retained after cleanup is a context
 reconstruction, and a native repair must be validated with fresh artifacts.
 The repair must prefer real mappings over unused mappings, including real
 functions with zero executions, while retaining genuinely unused functions
-and every reported source. No corrected coverage result is claimed here.
+and every reported source. No corrected result was admitted at that
+investigation checkpoint; the fresh validation below has its own artifacts.
 
 ## Last full all-feature coverage — 2026-10-05
+
+The current implementation was measured through the existing full `make
+coverage` command with the independently audited LLVM 22.1.8 v3 exporter and
+the pinned Rust `llvm-profdata`. The JSON is
+`combined-full-coverage-main-056c502b/candidate-v3.json`, SHA-256
+`e130e9580848fd1a4623b1007401e3f728fcf15e3bd1f2d875703795b8ed2c73`.
+All fresh proof paths in this section are relative to
+`/private/tmp/image-slash-star-evidence-recovery-a761-20261005/` and are outside
+the removable build-target directories. Historical cleaned artifacts remain
+unrecovered.
+
+| Metric | Covered / total | Percent |
+| --- | ---: | ---: |
+| Lines | 89,211 / 135,769 | 65.707930% |
+| Branches | 17,399 / 31,246 | 55.683928% |
+| Functions | 4,989 / 8,685 | 57.443869% |
+| Regions | 136,465 / 210,864 | 64.717069% |
+
+All alpha floors pass. The separate strict verifier exits 1 because every
+100% requirement remains unmet. The full run passes all seven existing test
+binaries (3/4/1/57/7/1/68), with zero failures or ignored tests. The current
+ordinary inventory contains 2,134 rows: 1,671 active decode, 431 active encode
+and 32 planned encode. TIFF has 264 decode rows; AVIF remains at 525 and JPEG
+at 216. All 26 target-only fault contracts retain separate results and oracle
+status `not_applicable`. The malformed ledger contains 592 entries and the
+static origin registry has 141 guards across 20 files.
+
+The campaign explicitly binds 5,297 source, fixture, script, configuration,
+benchmark and documentation files, 113 compiled artifacts and seven fresh raw
+profiles. An empty `RUSTC_WRAPPER`, two build jobs and parent
+`CARGO_INCREMENTAL=0` are recorded. Native reports use exactly the same
+objects and profiles; source and artifact hashes stay fixed through all
+exports. The full receipt has SHA-256
+`943194502182041a23802e5bcddb6a4398ebb47c3753d9d3d0dc5627b195580d`.
+This evidence prose was updated after measurement; measured codec, test and
+fixture contents remain unchanged.
+
+All eight distinct formatting/strict-Clippy gates pass, including debug,
+release, coverage hooks, JPEG benchmark, SSE2 and AVX2 cross-compilation.
+All-feature check, strict rustdoc, doctests and existing tests pass. All 33
+feature lanes pass: 11 native runtime, 11 WASI runtime and 11 browser
+compile/strict-Clippy/rustdoc lanes. The quality receipt has SHA-256
+`91fb461c28aa400ea37503763afa15706d772f0819c66176fb85981d6f29d62b`.
+The verbose matrix log supplies the lane records; its nonverbose summary list
+is empty. Cross-compilation supplies no matching x86 throughput measurement.
+This slice adds no private unit tests, unsafe code, broad lint exceptions,
+source exclusions or ignored cases.
+
+### TIFF ExtraSamples and grayscale-alpha parity
+
+The maintained input-only generator covers four families (RGBX and grayscale
+unspecified extras, associated LA and straight LA), contiguous/separate
+storage, strips/tiles, and raw/Deflate/LZW/PackBits compression: 64 complete
+17x9 inputs with padded tile edges and alpha boundaries. Fresh pinned Pillow
+12.2.0 owns all expected outcomes: 34 successful pixel references, 28 open
+failures and two successful opens followed by materialization failures. The
+30 valid but unsupported layouts are classified `ambiguous` in the malformed
+ledger. They are ordinary oracle cases, separately from fault contracts.
+
+A fresh isolated public comparison observes 56/64 mismatches in the preceding
+implementation and zero in this candidate; eight controls match both. All
+264 TIFF cases pass. Every prior ordinary row, 25 prior fault contracts,
+200 TIFF input/reference records and old encoded-input/raw-reference byte
+remains exact. Historical managed measurements and identities are preserved.
+The combined preparation receipt has SHA-256
+`4cc13292522e82dcf0fc0f7a59f692baabd4a9ccd649db240b95b048545eda49`.
+
+Inspection and decode share the ExtraSamples layout decision and raw ignored
+band-count validation. Compressed ignored planes are omitted from payload
+decoding. Retained samples are compacted in the existing checked assembly
+buffer with its allocation and capacity preserved; cancellation remains
+bounded. Optional alpha, color-map and extra-sample metadata retain genuine
+absence semantics. The existing private fast-path `Option` categories retain
+their checked fallbacks. New fallible conversion/compaction helpers return
+`Result`. No timing result is claimed for these changes.
+
+### AVIF SGR source reservation contract
+
+`avif_sgr_source_reservation_failure` reuses the complete ordinary
+`animated_lossy_inter_420_superres_sgr_8bit_160x56` input and introduces the
+typed `av1.restoration.sgr_source_reservation` fault point. Under coverage it
+requests `usize::MAX` through the actual `Vec<u16>::try_reserve` operation;
+normal builds use the original sample count. The public contract checks the
+structured `SequenceDecode` dimensions error and exact message, one-shot
+fault reset, and two fresh successful retries with complete sequence equality.
+The hook is absent from normal builds. This is target-only fault evidence;
+the adjacent ordinary source keeps its independent Pillow comparison.
+
+On fixed source and instrumentation, the selected control run passes 201
+ordinary cases (200 prior TIFF cases plus the AVIF source) and 25 prior
+faults. The next run passes only the new 64 TIFF cases and one fault. Profiles
+are reset between runs; all actual objects and all four native denominators
+stay fixed. The selected receipt has SHA-256
+`3aea95a9a9e4749b0ec8e1782be610b0b7eeaad54212dd4146fdcbaa2bba39ae`.
+
+Coverage MCP's unmodified LCOV comparison observes 56 new line coordinates,
+55 in TIFF and one at the coverage-only SGR reservation hook, for the selected
+union 34,518 -> 34,574 / 131,268. Its status is `limited`: provider source,
+build and test contexts remain unbound, although the independent local receipt
+records fixed hashes and successful executions. The response SHA-256 is
+`a094bb469b4a603957f6977ce0af8d312507214b953bccbebe0a321560e5413f`.
+Both native JSON incremental queries are `incomparable` because summary and
+normalized detail counts differ. Reports and counters were preserved. These
+selected coordinates do not establish full-suite regression status or the
+full campaign's coverage delta.
+
+
+### Native exporter provenance and reporting boundaries
+
+The v3 native patch is pinned to Rust LLVM commit
+`52ed14fcd56afc30f9cccd8ca8ce237c2eef7e04`; patch SHA-256 is
+`c79225c56592e5305169c006f5f17d432e80a11f0e9463eff04b387434061b91`.
+The preserved exporter SHA-256 is
+`80b04f713478755ad311865a82ed2a3c49c7441f9398cfea37c06326d684e768`.
+No installed toolchain files are replaced.
+
+A fresh control on the preceding `056c502b` source reproduces the original
+unpatched coverage totals. On identical objects and profiles the native repair
+restores 64 real functions whose exact mangled-name/CFG-hash profile tuples
+have positive counts. It retains all 110 source files and 397 unused-only
+function entries at zero, including 333 entries in measured source files.
+A separately labeled genuine capability-test profile proves that two real
+unexecuted mappings retain their branch records at count zero. Unused
+payloads contain the same coordinates with structural Zero counters, so LLVM
+folds and omits their exported branches; real CounterRef/expression payloads
+retain them. The full branch denominator increases by 14 for the seven
+`SourceColor::is_empty` branch regions. This producer correction is separate
+from execution gains caused by new cases.
+
+The preceding native audit receipt has SHA-256
+`0b48887f8613126abf4d7d9d5054af7e0ab3afad3ca5b606ac2631c5fabdbb71`;
+its payload-wording correction has SHA-256
+`464f449829a1829a65b04f18c9095f6c2e35e15b24ed75ae660ee88377b21957`.
+The original strict Cargo/native JSON identity failure is preserved: Cargo
+adds metadata and slightly reserializes percentage floats. Native integer
+counters and literal LCOV fields agree; no original report is corrected.
+Natural unmatched-unused mappings with a positive foreign-hash profile record
+were not demonstrated. That edge retains source-policy evidence only.
+Admission is bounded to the pinned native macOS ARM64 producer and recorded
+artifacts.
+
+An independent audit of the current combined campaign passes 34 direct native
+JSON/LCOV exports across 17 distinct complete nine-object orders. Every source,
+function, region, branch, instantiation and count field is retained and order
+invariant. Frozen source, full and incremental objects, profiles, tools and
+original reports/logs remain byte exact. The current audit receipt has SHA-256
+`87db2f9469abc3be885755ac7a7b9c2b869355da889a58a3534211f5ac95253d`.
+Its 34 Cargo/native percentage-only scalar differences remain separately
+recorded. The first audit preparation fails on an incorrect assumption that
+the new sorted fault row is last; the corrected exact-ID guard succeeds.
+That failed preparation is preserved separately.
+
+## Pre-cleanup AVIF full coverage — 2026-10-05
 
 The last recorded full local report was
 `target/release-evidence/coverage-avif-derived-skip-refs-v2-20261005.json`, SHA-256
@@ -43,7 +197,7 @@ jobs, `CARGO_INCREMENTAL=0` and a fresh
 
 All alpha floors pass. The separate strict verifier exits 1: all four 100%
 requirements remain unmet. All seven test binaries pass 3, 4, 1, 57, 7, 1 and
-68 tests, with zero failures or ignored tests. The current ordinary inventory
+68 tests, with zero failures or ignored tests. The measured AVIF checkpoint ordinary inventory
 contains 2,070 rows: 1,607 active decode, 431 active encode and 32 planned
 encode. AVIF has 525 decode rows, JPEG 216 and TIFF 200. All 25 target-only
 fault contracts retain oracle status `not_applicable` and separate results.
@@ -2525,10 +2679,11 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,070 total rows: 1,607 decode / inspect /
-verify rows and 463 encode rows. Of those, 1,607 decode rows and 431 encode
-rows are active; 0 decode rows and 32 encode rows are planned. The 25
-fault contracts are tracked separately from the Pillow parity totals. Full
+The current matrix contains 2,134 total rows: 1,671 decode / inspect /
+verify rows and 463 encode rows. Of those, 1,671 decode rows and 431 encode
+rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
+264 decode rows. The 26 fault contracts are tracked separately from the
+Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
 attribution.
@@ -5877,7 +6032,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `bb691b5538bf06dec81825e73a2c339ac96d3c65ebb103e1f86aa3d2ac50ab72`; matrix `c6a918a9011752acd1c11347ca87618f47ac2c7047348287f397c5ba4a4592b9`.
+- Current fixture integrity only: manifest `7013ec7d13987749060e4526de3ccee41f58a1229831fd00cf3d007739738869`; matrix `fd3c7f4701e13db9654d973110d097f7c5b5071c23a61583e0618ef5da86653e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

@@ -650,8 +650,18 @@ fn restore_sgr_plane(
     }
 
     let mut source = Vec::<u16>::new();
+    #[cfg(coverage)]
+    let source_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1SgrSourceReservation,
+    ) {
+        usize::MAX
+    } else {
+        sample_count
+    };
+    #[cfg(not(coverage))]
+    let source_reservation_count = sample_count;
     source
-        .try_reserve(sample_count)
+        .try_reserve(source_reservation_count)
         .map_err(|_| CodecError::Dimensions("unable to allocate AV1 SGR source".to_owned()))?;
     source.extend_from_slice(&plane.samples);
     let mut radius_two = None;

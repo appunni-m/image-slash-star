@@ -2548,6 +2548,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.superres.plane_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
+        "av1.restoration.sgr_source_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
         "av1.restoration.sgr_output_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
