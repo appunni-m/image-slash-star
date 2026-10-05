@@ -58,6 +58,8 @@ pub enum CoverageFaultPoint {
     Av1GridCellReservation,
     /// Force assembled AV1 monochrome loop-filter metadata reservation to fail.
     Av1AssembledMonochromeLoopFilterMetadataReservation,
+    /// Force assembled AV1 monochrome CDEF region-map reservation to fail.
+    Av1AssembledMonochromeCdefRegionMapReservation,
     /// Force assembled AV1 monochrome CDEF active-map reservation to fail.
     Av1AssembledMonochromeCdefActiveMapReservation,
     /// Force AV1 per-tile luma cell storage reservation to fail.

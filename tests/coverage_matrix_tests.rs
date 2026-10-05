@@ -1143,6 +1143,15 @@ fn execute_fault_contract(
                 img::ImageErrorStage::StillDecode,
             ),
             (
+                "av1.frame.assembled_monochrome_cdef_region_map_reservation",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1AssembledMonochromeCdefRegionMapReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
                 "av1.frame.assembled_monochrome_cdef_active_map_reservation",
                 "decode_error_then_retry_succeeds",
             ) => (
@@ -1212,6 +1221,9 @@ fn execute_fault_contract(
         }
         "av1.frame.assembled_monochrome_loop_filter_metadata_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome loop-filter metadata",
+        ),
+        "av1.frame.assembled_monochrome_cdef_region_map_reservation" => Some(
+            "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome CDEF map",
         ),
         "av1.frame.assembled_monochrome_cdef_active_map_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome CDEF active map",

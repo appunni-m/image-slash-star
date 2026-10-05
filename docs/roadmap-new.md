@@ -10,11 +10,11 @@ is not evidence that a later fix failed. No entry is silently removed here.
 
 The ledger's AVIF runtime is safe Rust with no native runtime fallback.
 The latest complete all-feature run passed 57/57 matrix tests and 68/68
-feature-gate tests, along with all 503 AVIF decode rows and all 20 target-only
+feature-gate tests, along with all 503 AVIF decode rows and all 21 target-only
 fault contracts. The LLVM percentages below remain the historical measured
 baseline; the latest local full report is recorded in [Evidence](EVIDENCE.md).
 Historical LLVM coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
-The origin verifier passes for 135 exact `cfg(coverage)` guards across 20 files.
+The origin verifier passes for 136 exact `cfg(coverage)` guards across 20 files.
 
 The bounded raster contract's eleven Rust tests prove alignment, checked extents,
 overlap rejection, no partial mutation, and complete-canvas enforcement.
@@ -32,7 +32,7 @@ are described in [Usage](USAGE.md); the ledger below retains its reviewed scope.
 
 - AVIF decode/inspect/verify: 503 rows total, 503 active, 0 explicit planned gaps.
 - AVIF encode: 32 rows total, all 32 explicit planned gaps.
-- Whole matrix: 2,015 rows total, 1552 active decode rows, 431 active encode rows, 0 planned decode rows, and 32 planned encode rows. The twenty typed fault contracts remain outside Pillow parity totals.
+- Whole matrix: 2,015 rows total, 1552 active decode rows, 431 active encode rows, 0 planned decode rows, and 32 planned encode rows. The 21 typed fault contracts remain outside Pillow parity totals.
 
 ### Former native-only cases: explicit Rust work, never hidden fallback
 

@@ -2265,9 +2265,24 @@ fn assemble_monochrome_tiles(
         let region_count = region_width
             .checked_mul(region_height)
             .ok_or_else(|| malformed("assembled monochrome CDEF region map overflows"))?;
-        cdef_indices.try_reserve_exact(region_count).map_err(|_| {
-            CodecError::Dimensions("unable to allocate assembled monochrome CDEF map".to_owned())
-        })?;
+        #[cfg(coverage)]
+        let region_reservation_count = if crate::coverage_support::take_fault_point(
+            crate::coverage_support::CoverageFaultPoint::
+                Av1AssembledMonochromeCdefRegionMapReservation,
+        ) {
+            usize::MAX
+        } else {
+            region_count
+        };
+        #[cfg(not(coverage))]
+        let region_reservation_count = region_count;
+        cdef_indices
+            .try_reserve_exact(region_reservation_count)
+            .map_err(|_| {
+                CodecError::Dimensions(
+                    "unable to allocate assembled monochrome CDEF map".to_owned(),
+                )
+            })?;
         cdef_indices.resize(region_count, None);
         let active_count = active_width
             .checked_mul(active_height)

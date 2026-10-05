@@ -122,6 +122,12 @@
       "test": "test_fault_contract_matrix"
     },
     {
+      "id": "avif_monochrome_cdef_region_map_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "avif_monochrome_cdef_active_map_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure",

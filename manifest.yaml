@@ -82,6 +82,20 @@ fault_contracts:
       point: av1.frame.assembled_monochrome_loop_filter_metadata_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_monochrome_cdef_region_map_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_monochrome_split_groups
+    fault:
+      point: av1.frame.assembled_monochrome_cdef_region_map_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_monochrome_cdef_active_map_reservation_failure
     type: fault-contract
     operation: decode
