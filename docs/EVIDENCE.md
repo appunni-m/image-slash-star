@@ -2,12 +2,32 @@
 
 Fixture declarations, executed comparisons, source coverage, and release
 publication have different identities and denominators.
-The first section records the latest full local report; later evidence entries
+The full-coverage section records the last full local report; later entries
 retain the report-specific observations made when each entry was recorded.
+
+## Local artifact availability and exporter investigation — 2026-10-05
+
+An owner-confirmed routine cleanup removed the local `target/` directories,
+including the raw profiles, compiled objects and receipts cited below. Their
+recorded digests remain historical identities; unavailable artifacts have not
+been recreated or represented as surviving originals. Fresh measurements are
+required for further comparisons. New essential receipts are being retained
+outside build directories.
+
+Before cleanup, a native exporter investigation found positive raw-profile
+counts for 64 API functions reported as uncovered in the last full JSON.
+Reordering the identical complete object set changed the exported function
+coverage. The table below preserves the original exporter output, but these
+mapping losses prevent interpreting its changes as missing execution or a
+test regression. The diagnosis retained after cleanup is a context
+reconstruction, and a native repair must be validated with fresh artifacts.
+The repair must prefer real mappings over unused mappings, including real
+functions with zero executions, while retaining genuinely unused functions
+and every reported source. No corrected coverage result is claimed here.
 
 ## Last full all-feature coverage — 2026-10-05
 
-The latest full local report is
+The last recorded full local report was
 `target/release-evidence/coverage-avif-derived-skip-refs-v2-20261005.json`, SHA-256
 `32b12a55dddb5a2488f8c09bfb67a02feb42dab40fa0ac21697c0b151983e0e3`.
 `make coverage` uses `nightly-2026-07-16`, an empty `RUSTC_WRAPPER`, two build
@@ -33,8 +53,10 @@ The incremental and full campaigns preserve all 5,190 measured
 source/configuration/script/fixture hashes: 5,189 repository files and one
 ignored ambient Finder file. The repository-local count includes the ignored
 `.cargo/config.toml`; 5,188 measured files are tracked in Git. The local
-configuration forces `CARGO_INCREMENTAL=0` and selects a compiler wrapper,
-which the recorded empty `RUSTC_WRAPPER` overrides. Both ignored files retain
+configuration sets `CARGO_INCREMENTAL=0` for child commands and selects a
+compiler wrapper. The campaign explicitly sets the parent Cargo environment
+to `CARGO_INCREMENTAL=0` and overrides the wrapper with an empty
+`RUSTC_WRAPPER`. Both ignored files retain
 separately verified hashes. The full campaign has its own 113 instrumented
 artifacts and seven fresh profiles, unchanged across JSON and LCOV exports.
 The selected campaign's 63 artifacts and final profiles remain unchanged.
