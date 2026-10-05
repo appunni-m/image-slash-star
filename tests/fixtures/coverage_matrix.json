@@ -81,6 +81,1128 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "av1c_profile_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow uses the in-band AV1 profile despite a differing redundant av1C profile",
+          "asset": "av1c_profile_disagreement.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "b121418213ffce59190855a0bfcd285bf0f114e28e847024b633ccf6c8a97a0f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_profile_disagreement_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_level_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow uses the in-band AV1 level despite a differing redundant av1C level",
+          "asset": "av1c_level_disagreement.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f9c1ed6f53420b64abb098b8616229e3b6a93447f082e0d5acf4f8902b9bda6e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_level_disagreement_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_tier_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow uses the in-band AV1 tier despite a differing redundant av1C tier",
+          "asset": "av1c_tier_disagreement.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "a9b416067d9531d8f285d67b478b56e100fc68062cd78410abec3bfaadd01e17",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_tier_disagreement_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_monochrome_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow retains RGB output despite a differing redundant av1C monochrome flag",
+          "asset": "av1c_monochrome_disagreement.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "7979583621de681a8c441edeb02d4ac4d75ab474682dd7a6848be2349c9a82ec",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_monochrome_disagreement_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_subsampling_x_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow uses the in-band horizontal chroma sampling despite a differing av1C flag",
+          "asset": "av1c_subsampling_x_disagreement.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "79de6a2617c3b6e3cf8581354a750caebefeb1446615aaf431c783581180b3c1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_subsampling_x_disagreement_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_subsampling_y_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow uses the in-band vertical chroma sampling despite a differing av1C flag",
+          "asset": "av1c_subsampling_y_disagreement.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "49b6b7cc3ade8745d865a1f281b2f8386d81f1baf7c2918bc14e052118bda40a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_subsampling_y_disagreement_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_chroma_position_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow uses the in-band chroma sample position despite a differing av1C declaration",
+          "asset": "av1c_chroma_position_disagreement.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "8d1ab6941b6dac678d8be39c62f207c60d1cb41ffe2841d47bd86948b37a2b2d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_chroma_position_disagreement_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_bit_depth_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow rejects an av1C ten-bit declaration that disagrees with the eight-bit pixi property",
+          "asset": "av1c_bit_depth_disagreement.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "5c4f5eb53d0136d7799cd79b8c524b842ec028b24eec80d03368903fcce41301",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "av1c_twelve_bit_depth_disagreement",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow rejects an av1C twelve-bit declaration that disagrees with the eight-bit pixi property",
+          "asset": "av1c_twelve_bit_depth_disagreement.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ce0944c4be7b97aa7c28d963e46e3dfe1c44612a308b1c1bd32b3e8a3e2fcd79",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "PIL.UnidentifiedImageError",
+          "inspect_error_message": "cannot identify image file <bytes>",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "PIL.UnidentifiedImageError",
+          "verify_error_message": "cannot identify image file <bytes>",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "PIL.UnidentifiedImageError",
+          "oracle_error_message": "cannot identify image file <bytes>",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "PIL.UnidentifiedImageError",
+              "pillow_message": "cannot identify image file <bytes>",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "av1c_pixi_ten_bit_sequence_eight_bit",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Matching ten-bit pixi and av1C declarations retain eight-bit AV1 sequence pixels",
+          "asset": "av1c_pixi_ten_bit_sequence_eight_bit.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "c001be20f76a3b26b520012c534ffb0c6532e9a3f32543ab68693536e91aa113",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 10,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_pixi_ten_bit_sequence_eight_bit_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_pixi_twelve_bit_sequence_eight_bit",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Matching twelve-bit pixi and av1C declarations retain eight-bit AV1 sequence pixels",
+          "asset": "av1c_pixi_twelve_bit_sequence_eight_bit.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "abd8d5da2354d01861953e8a8604e4c3c8d13ee003cb072e59cbc61d0c7db9b4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_pixi_twelve_bit_sequence_eight_bit_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "av1c_pixi_twelve_bit_without_high_bitdepth",
+          "type": "decode",
+          "format": "avif",
+          "category": "av1c",
+          "description": "Pillow accepts matching twelve-bit pixi and av1C declarations with the highBitdepth flag clear and decodes the eight-bit sequence",
+          "asset": "av1c_pixi_twelve_bit_without_high_bitdepth.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "9e9ab41acf3e0cae7e4dc8b0047b962293706057d8276cc6f5b214c3672e40c5",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 12,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_av1c_pixi_twelve_bit_without_high_bitdepth_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "duplicate_pixi_trailing_ten_bit_depth",
+          "type": "decode",
+          "format": "avif",
+          "category": "duplicate",
+          "description": "Pillow selects the first eight-bit pixi property and ignores a later ten-bit duplicate",
+          "asset": "duplicate_pixi_trailing_ten_bit_depth.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d42428a1834db38569c76aa162ba7f2a7c06a807a3334ab741347da3d2e3e8c7",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_duplicate_pixi_trailing_ten_bit_depth_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "duplicate_pixi_trailing_twelve_bit_depth",
+          "type": "decode",
+          "format": "avif",
+          "category": "duplicate",
+          "description": "Pillow selects the first eight-bit pixi property and ignores a later twelve-bit duplicate",
+          "asset": "duplicate_pixi_trailing_twelve_bit_depth.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ba3019e72b079f9e1255a592c447b4d535422fbfd55579e4065ab6093d2e55d4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "f1a2555b1c61036af2bd1d3d125a6a1343993873d9e5d58e3caee79989095dcf",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_duplicate_pixi_trailing_twelve_bit_depth_avif.bin",
+          "ref_bytes": 49152,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            128,
+            128
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "size_zero_top_level_free",
           "type": "decode",
           "format": "avif",
@@ -2705,6 +3827,566 @@
           "error_contracts": {}
         },
         {
+          "id": "portable_lossless_filmgrain_i422_64x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "portable",
+          "description": "64x64 lossless I422 key frame with independent Y, U, and V film-grain scaling points",
+          "asset": "portable_lossless_filmgrain_i422_64x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "7c0241226c98d663df8b704b60fabb22e625bf7b010ad194f41db4b80afa0344",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "0683e77f414bf0c550f763d136cbedd24ce9e6fb521777243e702a2f05af2016",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_portable_lossless_filmgrain_i422_64x64_avif.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "malformed_filmgrain_y_point_count_15",
+          "type": "decode",
+          "format": "avif",
+          "category": "malformed",
+          "description": "A complete I444 AVIF declares fifteen film-grain Y points, exceeding the fourteen-point limit",
+          "asset": "malformed_filmgrain_y_point_count_15.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "81be05bdc9f5004a0c8afbbad23cf94bed8b888affbb45a728d05600940fd444",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "malformed_filmgrain_uv_point_count_11",
+          "type": "decode",
+          "format": "avif",
+          "category": "malformed",
+          "description": "A complete I444 AVIF declares eleven film-grain UV points, exceeding the ten-point limit",
+          "asset": "malformed_filmgrain_uv_point_count_11.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d2e202c8fcd4942096a4d4369c0ca4856f51f7f8fefc16feb796148f87bcd0ed",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "malformed_filmgrain_i420_unequal_uv_presence",
+          "type": "decode",
+          "format": "avif",
+          "category": "malformed",
+          "description": "A complete I420 AVIF has V film-grain points without U points",
+          "asset": "malformed_filmgrain_i420_unequal_uv_presence.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ed8928138b0c7758e69c436bcf9cb4354a8a9da7bafa041c8e25832cd10f27eb",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "Failed to decode frame 0: Decoding of color planes failed",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 0: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "malformed_filmgrain_unused_reference_slot",
+          "type": "decode",
+          "format": "avif",
+          "category": "malformed",
+          "description": "Frame one requests film-grain reuse from a slot absent from its seven reference indices",
+          "asset": "malformed_filmgrain_unused_reference_slot.avif",
+          "expect_error": false,
+          "expect_sequence_error": true,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "82dec6de0b8f46bf2157101847abe34e89a40cd23098b5beb69c1cd0d3eb5ae1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "a4e4fa07369777b09a15c680d4812441a5509a7662740c039127a998bdf3d9ab",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_malformed_filmgrain_unused_reference_slot_avif.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence_status": "error",
+          "sequence_error_type": "builtins.RuntimeError",
+          "sequence_error_message": "Failed to decode frame 1: Decoding of color planes failed",
+          "sequence_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode frame 1: Decoding of color planes failed",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "animated_filmgrain_inactive_reference_reuse_i444_64x64",
+          "type": "decode",
+          "format": "avif",
+          "category": "animated",
+          "description": "Two I444 frames reuse an inactive grain reference, preserving the decoded pixels without synthesizing grain",
+          "asset": "animated_filmgrain_inactive_reference_reuse_i444_64x64.avif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "AVIF",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "independent_implementation",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "2b546a196a9dbf7c347d733e69334f6a4c19753eeb274d23aad318068585db84",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_filmgrain_inactive_reference_reuse_i444_64x64_avif.bin",
+          "ref_bytes": 12288,
+          "ref_mode": "Rgb8",
+          "ref_size": [
+            64,
+            64
+          ],
+          "ref_frame_count": 2,
+          "ref_is_animated": true,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "sequence": {
+            "canvas_size": [
+              64,
+              64
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": 0,
+            "loop_origin": "independent_implementation",
+            "background": null,
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_filmgrain_inactive_reference_reuse_i444_64x64_avif_frame_0.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "2b546a196a9dbf7c347d733e69334f6a4c19753eeb274d23aad318068585db84",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              },
+              {
+                "index": 1,
+                "source_rect": [
+                  0,
+                  0,
+                  64,
+                  64
+                ],
+                "duration_num": 100,
+                "duration_den": 1000,
+                "duration_origin": "independent_implementation",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "rendered_canvas",
+                "source_origin": "independent_implementation",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "ref_path": "tests/fixtures/outputs/raws/Decode.avif_animated_filmgrain_inactive_reference_reuse_i444_64x64_avif_frame_1.bin",
+                "ref_bytes": 12288,
+                "ref_mode": "Rgb8",
+                "ref_size": [
+                  64,
+                  64
+                ],
+                "ref_sha256": "2af8438108708dbe0fe860299b979f240526edd268ea5939d17f26f242651838",
+                "pixel_assertion": "exact",
+                "pixel_origin": "pillow_fixture"
+              }
+            ],
+            "loop_evidence": {
+              "index_path": "tests/fixtures/outputs/avif_loops/index.json",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
+              "case": "filmgrain_inactive_reference_reuse_i444_64x64",
+              "input_sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536",
+              "repetition_count": -1
+            }
+          },
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "independent_implementation",
+            "sequence_pixels": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "portable_lossless_filmgrain_monochrome_64x64",
           "type": "decode",
           "format": "avif",
@@ -2917,7 +4599,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "filmgrain_reference_reuse_i444_64x64",
               "input_sha256": "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34",
               "repetition_count": -1
@@ -27909,7 +29591,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "highdepth",
               "input_sha256": "3bf9f91da471749e7df639ba7945d4d94c1c3e3968c26f3619fbbcfc92790576",
               "repetition_count": -1
@@ -29771,7 +31453,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "animated",
               "input_sha256": "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d",
               "repetition_count": 0
@@ -30004,7 +31686,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "opidc_0x101",
               "input_sha256": "25b79a856ea2767e02e5a509f72e7af3f9563202301779be65b0745724ab23be",
               "repetition_count": 0
@@ -30181,7 +31863,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "error_resilient",
               "input_sha256": "06ea9771f8b46c3432c6c6cdf324f1c05e86a5fdccd774c8e3c9a8fce0b831f0",
               "repetition_count": -1
@@ -30324,7 +32006,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_b16x16",
               "input_sha256": "6973cfff29185ffc7283ec539d9cf6736dfe4cba52850c46e4b196ba9db51ead",
               "repetition_count": -1
@@ -30486,7 +32168,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_b8x16",
               "input_sha256": "9e3fbac5e42c61413ec8c1f7f4f72bc1338fb7cfd21587e30826855732e369c0",
               "repetition_count": -1
@@ -30644,7 +32326,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_intra_i444_b8x8_20x20",
               "input_sha256": "7636f2de4078d5271941e6cf7de85f9c77205acce155c75e529e43fbc1d0acbf",
               "repetition_count": -1
@@ -30804,7 +32486,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "odd_dimensions_inter_intra_boundary_420",
               "input_sha256": "736914091e00473af577a12de9910ce6abe2b038c84d2f580c5f528b0618c422",
               "repetition_count": -1
@@ -30994,7 +32676,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_interintra_420_nowedge_b16x16_64x64",
               "input_sha256": "adc58d72626865406be3d0a048ecf0b9a1670d16a68f48babe4b9167a2dc2dea",
               "repetition_count": -1
@@ -31184,7 +32866,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_interintra_420_nowedge_mode1_b16x16_64x64",
               "input_sha256": "dd4e06e559d83cc0863d65878799d2f7496c8f5d378eaeb639704fe3ac539f2f",
               "repetition_count": -1
@@ -31374,7 +33056,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_interintra_420_nowedge_mode2_b16x16_64x64",
               "input_sha256": "08f616c2e14f9abadb6157c425653b5a7fd703f2797f3db04e23b58bc519eda8",
               "repetition_count": -1
@@ -31564,7 +33246,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_interintra_420_nowedge_mode3_b16x16_64x64",
               "input_sha256": "7e035cef7293dfff72e50ff8c729bc0fad360ee14d7bf80d663b82b96ca7c4d7",
               "repetition_count": -1
@@ -31754,7 +33436,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_interintra_420_wedge_b16x16_64x64",
               "input_sha256": "1510b764d7e642f2caf02fff53e6dc966cfb92df8eca2e8f2d91c0b3bead1791",
               "repetition_count": -1
@@ -31944,7 +33626,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_split_inter_420_b16x16",
               "input_sha256": "9eb50f5a45dc2eb549c62ac9bcb67abd931a977076685bcf3c0f69e6827ce323",
               "repetition_count": -1
@@ -32136,7 +33818,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_b16_mixed_topology_inter_420_b16x16",
               "input_sha256": "3264482e2a50d80bd39be178b843fdfe9997e947d54b4466c745751837821d74",
               "repetition_count": -1
@@ -32354,7 +34036,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_wide_monochrome_b128x128",
               "input_sha256": "eb8dda5000882ffd03c182a817e08fc944ef110afa1e78aaf1678bef5efc65bf",
               "repetition_count": -1
@@ -32514,7 +34196,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_wide_i444_b128x128",
               "input_sha256": "b4693fd2fb43d1c9406fe4ac8d782d74709bf8eed1b2d36771c0bd80763d84e8",
               "repetition_count": -1
@@ -32674,7 +34356,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_wide_i444_mode2_unsplit_b128x128",
               "input_sha256": "ea87cfc19c427135396b44ea6b287b24e5301437abb5bd6769666d9a24144565",
               "repetition_count": -1
@@ -32836,7 +34518,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_wide_i444_mode2_split32_b128x128",
               "input_sha256": "f48a6d235c7ab245e8d57aedcc6135b897cea1bcbc579c3d630aa7c20e1a61aa",
               "repetition_count": -1
@@ -33054,7 +34736,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_global_rotzoom_compound_i444_b128x128",
               "input_sha256": "14ffb1529c54f07a397a1fe94d02135f9def3a7730416cb80d5acbf3c54c144e",
               "repetition_count": -1
@@ -33274,7 +34956,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_global_halfblend_spatial_i444_b256x256",
               "input_sha256": "ec2f145f64fa87c5b7c255b13b6009fb58760be06070724ed367cd4ccd9a6d7b",
               "repetition_count": -1
@@ -33434,7 +35116,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_b32x32",
               "input_sha256": "65e8617044f7f12db081f65276235296f8dc208a006451210ebb9603f27f20a7",
               "repetition_count": -1
@@ -33594,7 +35276,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_b32x32_10bit",
               "input_sha256": "c90bf9e75b0c091e19ab6b8aa70c17243ae1dbbf818493e815015f998f14e73a",
               "repetition_count": -1
@@ -33756,7 +35438,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_b32x32_10bit_64x64",
               "input_sha256": "62a154bb3e8a7c92816045d58f492aaa30c3aa215526f6c3d7433de942fb2448",
               "repetition_count": -1
@@ -33916,7 +35598,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_10bit_28x28",
               "input_sha256": "f9d829f20968483dbd078a47f136b9c413205ce78d423fb0b5f1bdb2d2c0cce4",
               "repetition_count": -1
@@ -34076,7 +35758,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_28x64",
               "input_sha256": "8f2b787faea151faf9c7f69c2b92e098dedd3bb70f28fd33546194c002b3456f",
               "repetition_count": -1
@@ -34236,7 +35918,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_10bit_partition32_56x64",
               "input_sha256": "a819711996c804d7c5e4dcc26cee2e6a35bb82c48a88a6db8e34bd61d3b5f9fe",
               "repetition_count": -1
@@ -34394,7 +36076,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_17x17",
               "input_sha256": "b29bedb6d7486dae5bed2abb74986a65e47bc737bfd26f85b1f69fa8bd666819",
               "repetition_count": -1
@@ -34556,7 +36238,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_i422_clipped_b32x32_49x64",
               "input_sha256": "fd18cdcef915327fd4aab6992c901e27f2efc1411d1d2d01eee93dd3f277d7b1",
               "repetition_count": -1
@@ -34726,7 +36408,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_i444_clipped_b32x32_49x64",
               "input_sha256": "d45defceb497272879b1093f76e6a6c645f0bde8a6d10a1903e2322af422caae",
               "repetition_count": -1
@@ -34886,7 +36568,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_i422_clipped_b32x32_52x64",
               "input_sha256": "43bbcd3d92593e026d88ce4dea727074f74134175ee42a962886c6de697a4e05",
               "repetition_count": -1
@@ -35046,7 +36728,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_i444_clipped_b32x32_64x56",
               "input_sha256": "9004ec840b2a413c0e15294f52c723ebe5c3689cbe3decbd4afd5575cad78e23",
               "repetition_count": -1
@@ -35206,7 +36888,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_i422_clipped_b32x32_52x60",
               "input_sha256": "53e06d79c586151d920b94cc6173eebcc1f9869ebb0f1fa5bec673df11c45e50",
               "repetition_count": -1
@@ -35366,7 +37048,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_i444_clipped_b32x32_52x60",
               "input_sha256": "9fdd099eb28fed9eaff2760b154e42d91933758fd6b01e532e441646f564993a",
               "repetition_count": -1
@@ -35524,7 +37206,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_60x64",
               "input_sha256": "a60dde64c6b7bf9f6fbb3afe7e75a74374d446f8106613b00837300df4963bbc",
               "repetition_count": -1
@@ -35684,7 +37366,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_64x60",
               "input_sha256": "7602fd062d0aefdaa0221b35a3a6c9403fecc27bf8a66cb00c0b4f9b8763c0d6",
               "repetition_count": -1
@@ -35844,7 +37526,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_184x64",
               "input_sha256": "0a8c935fe67694fe576e7f21064eec4c428cffc2a05a3ff2d0be33e401a20c1d",
               "repetition_count": -1
@@ -36004,7 +37686,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b32x32_185x64",
               "input_sha256": "701d247ebbe2666b1f28f447fa1a086573e7dc6d88b0b29405f9f7a6f9460b59",
               "repetition_count": -1
@@ -36164,7 +37846,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_420_clipped_b16x16_60x64",
               "input_sha256": "7c8bd0f88cd6654fb1150d2220ecb33c6ec5874b26a2250909b51cab4ed2e17f",
               "repetition_count": -1
@@ -36324,7 +38006,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossless_inter_monochrome_b16x16",
               "input_sha256": "d29aaab346465bf7ac413954e3c862b2222d3ac510299f865fe579899d063fb5",
               "repetition_count": -1
@@ -36699,7 +38381,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "motion_chroma",
               "input_sha256": "473469335e58cff3c442df51b4bbdca00b9467e8f352319812f50cf789748535",
               "repetition_count": -1
@@ -36889,7 +38571,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "has_chroma_4x4",
               "input_sha256": "f9434d10ee465784ccb6c09f03c98813282f7033e3f06b90739e7815ec1eb75b",
               "repetition_count": -1
@@ -37109,7 +38791,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "motion_chroma_422",
               "input_sha256": "5a83530dcc60f75f0bec7d36cb4db67ae7258b2acc481cbb08cc0987247ea66a",
               "repetition_count": -1
@@ -37270,7 +38952,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_inter_422_checker_random_b32x32",
               "input_sha256": "e46aef4aed9076da48627a449e53c6f318a0494ba5d94a32a4f13edc548ab134",
               "repetition_count": -1
@@ -37432,7 +39114,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lo8_superres_sgr_inter_160x56",
               "input_sha256": "c294163610d4a45852fe374e0345c878979bb81e5ea94596960ef64411180fd7",
               "repetition_count": -1
@@ -37904,7 +39586,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "hi10_superres_sgr_inter_160x56",
               "input_sha256": "016e4a8433002b60899744fba6f26a7c10af82c192f65b4c5c19233b15c3cb11",
               "repetition_count": -1
@@ -38064,7 +39746,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "hi10_superres_select_inter_160x56",
               "input_sha256": "04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e",
               "repetition_count": -1
@@ -38281,7 +39963,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "motion_chroma_wide",
               "input_sha256": "54ca9823b7b3f6f64af19d3b7ab7dbc0be0b9db6583d85fedcc310dd62d28311",
               "repetition_count": -1
@@ -38472,7 +40154,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_inter_i444_mode2_b32x32",
               "input_sha256": "43aac6364eebb113b128861f0e1c2cfb976295d7b5e9e226fa8f0eaa93704af4",
               "repetition_count": -1
@@ -38632,7 +40314,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_inter_i444_split_b16x32_mode2",
               "input_sha256": "ad7ce564a11440b91237e0dfffedbde1053bc663ae0e9bf0894f87e05e669bd0",
               "repetition_count": -1
@@ -38822,7 +40504,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "lossy_inter_i444_obmc_mixed_b16x32",
               "input_sha256": "71e737f7b196173d98ae6447925cd8f6f77d95ced3eaa80d924ad81febcb3743",
               "repetition_count": -1
@@ -39042,7 +40724,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "motion_large_420",
               "input_sha256": "5b9ea2b9d552e8ff44f2818a7ae2b73a9dbe1eda84ead9c24c9f8a957c6e546f",
               "repetition_count": -1
@@ -39232,7 +40914,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "tx64_root_split_inter_420_64x64",
               "input_sha256": "9f4450d4d9c7c2738d4f9f34eafb02100c5fb15b85ac121a057c3eef367f6d7c",
               "repetition_count": -1
@@ -39452,7 +41134,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "motion_temporal_window_left_512x128",
               "input_sha256": "29e856c6c8a117c764bb0a176ccc1d82bac982fdf7287eb461f827ebdc31b399",
               "repetition_count": -1
@@ -39672,7 +41354,7 @@
             ],
             "loop_evidence": {
               "index_path": "tests/fixtures/outputs/avif_loops/index.json",
-              "index_sha256": "75e3729227701bf3fc9964f0b72be61eca2bd0fed1ea44f9c336dfdcec3cac1a",
+              "index_sha256": "84ccdbc3607afdd462cc71da0ed789a91e0181bee578389a33d5624360bda0be",
               "case": "motion_temporal_window_right_512x128",
               "input_sha256": "10d8e5514c1d8d9cad355f9a912b3e3075bf8bd661ee6af5ce44a9ce62d7cad2",
               "repetition_count": -1
@@ -166503,12 +168185,12 @@
     }
   },
   "summary": {
-    "total_rows": 1995,
-    "decode_rows": 1532,
+    "total_rows": 2015,
+    "decode_rows": 1552,
     "encode_rows": 463,
     "formats": 8,
-    "assets_available": 1529,
-    "decode_active": 1532,
+    "assets_available": 1549,
+    "decode_active": 1552,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

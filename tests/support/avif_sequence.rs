@@ -492,7 +492,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
     assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
     let artifacts: Vec<Value> = field(&index, "artifacts");
-    assert_eq!(artifacts.len(), 232);
+    assert_eq!(artifacts.len(), 235);
     let mut artifact_paths = std::collections::HashSet::new();
     for artifact in artifacts {
         let path: String = field(&artifact, "path");
@@ -515,6 +515,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "opidc_0x101",
         "error_resilient",
         "filmgrain_reference_reuse_i444_64x64",
+        "filmgrain_inactive_reference_reuse_i444_64x64",
         "lossless_inter_420_b16x16",
         "lossless_inter_420_b8x16",
         "lossless_inter_intra_i444_b8x8_20x20",
@@ -638,6 +639,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             "error_resilient" => error_resilient(),
             "filmgrain_reference_reuse_i444_64x64" => {
                 matrix_sequence_case("animated_filmgrain_reference_reuse_i444_64x64")
+            }
+            "filmgrain_inactive_reference_reuse_i444_64x64" => {
+                matrix_sequence_case("animated_filmgrain_inactive_reference_reuse_i444_64x64")
             }
             "lossless_inter_420_b16x16" => {
                 matrix_sequence_case("animated_lossless_inter_420_b16x16")

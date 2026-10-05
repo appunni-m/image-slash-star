@@ -4295,7 +4295,11 @@ fn read_film_grain(
             return Err(malformed("film grain references an empty frame slot"));
         };
         let Some(mut grain) = reference.film_grain.clone() else {
-            return Err(malformed("referenced frame has no film-grain parameters"));
+            // Consistent sequence headers preserve film_grain_present, so
+            // this reference had grain syntax available. None represents
+            // apply_grain=false; reuse inherits those inactive parameters.
+            // libaom 3.13.2 decodeframe.c:3912-3915,3958,5135-5137.
+            return Ok(None);
         };
         grain.seed = seed;
         grain.update = false;

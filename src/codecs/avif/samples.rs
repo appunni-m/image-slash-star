@@ -364,7 +364,10 @@ enum Property {
     Pixi {
         depth: u8,
     },
-    Av1C(ByteSpan),
+    Av1C {
+        data: ByteSpan,
+        depth: u8,
+    },
     AuxC {
         kind: FourCc,
         is_alpha: bool,
@@ -685,8 +688,11 @@ fn parse_property(input: &[u8], property: BoxSpan) -> ParseResult<Property> {
             Ok(Property::Pixi { depth })
         }
         kind if kind == *b"av1C" => {
-            let _ = parse_av1c_declaration(property.payload.bytes(input)?)?;
-            Ok(Property::Av1C(property.payload))
+            let (depth, _) = parse_av1c_declaration(property.payload.bytes(input)?)?;
+            Ok(Property::Av1C {
+                data: property.payload,
+                depth,
+            })
         }
         kind if kind == *b"colr" => parse_colr(input, property.payload),
         kind if kind == *b"clli" => parse_clli(input, property.payload),
@@ -729,9 +735,8 @@ fn parse_av1c_declaration(payload: &[u8]) -> ParseResult<(u8, AvifChromaSamplePo
     let _ = reader.u8()?;
     let high_bit_depth = flags & 0x40 != 0;
     let twelve_bit = flags & 0x20 != 0;
-    if twelve_bit && !high_bit_depth {
-        return Err(parse_failure!());
-    }
+    // libavif 1.4.1 read.c:380-390 selects twelveBit first, even when
+    // highBitdepth is clear. Actual AV1 sample depth is checked independently.
     let bit_depth = if twelve_bit {
         12
     } else if high_bit_depth {
@@ -1212,8 +1217,8 @@ impl Meta {
             source_color = source_color.with_avif_color(color);
         }
         if let Some(span) = self.associated(self.primary_item_id).find_map(|property| {
-            if let Property::Av1C(span) = property {
-                Some(*span)
+            if let Property::Av1C { data, .. } = property {
+                Some(*data)
             } else {
                 None
             }
@@ -1298,15 +1303,31 @@ impl Meta {
 
     fn av1c(&self, item_id: u32) -> ParseResult<ByteSpan> {
         let mut configs = self.associated(item_id).filter_map(|property| {
-            if let Property::Av1C(span) = property {
-                Some(*span)
+            if let Property::Av1C { data, depth } = property {
+                Some((*data, *depth))
             } else {
                 None
             }
         });
-        let config = configs.next().ok_or_else(|| parse_failure!())?;
+        let (config, config_depth) = configs.next().ok_or_else(|| parse_failure!())?;
         if configs.next().is_some() {
             return Err(parse_failure!());
+        }
+        // Pillow/libavif validates the first associated pixi property's
+        // depth against av1C before opening the item; later duplicates do not
+        // change that selection. Reuse the already parsed configuration depth.
+        let pixel_depth = self.associated(item_id).find_map(|property| {
+            if let Property::Pixi { depth } = property {
+                Some(*depth)
+            } else {
+                None
+            }
+        });
+        if pixel_depth.is_some_and(|depth| depth != config_depth) {
+            return Err(CodecError::Malformed(
+                "AVIF pixel-information depth disagrees with its AV1 codec configuration"
+                    .to_owned(),
+            ));
         }
         Ok(config)
     }
@@ -1552,7 +1573,7 @@ impl Meta {
             }
             let mut codec = None;
             for property in self.associated(item.id) {
-                if let Property::Av1C(span) = property {
+                if let Property::Av1C { data: span, .. } = property {
                     if codec.is_some() {
                         return Err(parse_failure!());
                     }
@@ -2420,7 +2441,7 @@ fn parse_sample_description(
     while let Some(child) = next_box(&mut reader, false, budget)? {
         match parse_property(input, child)? {
             Property::Ispe { .. } | Property::Pixi { .. } => {}
-            Property::Av1C(span) => {
+            Property::Av1C { data: span, .. } => {
                 if config.replace(span).is_some() {
                     return Err(parse_failure!());
                 }

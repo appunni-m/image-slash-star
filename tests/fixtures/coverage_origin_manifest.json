@@ -1,19 +1,11 @@
 {
-  "format_version": 1,
-  "scope": "exact_cfg_coverage_attributes",
-  "origin_definitions": {
-    "defensive_model": "Synthetic private-state, overflow, cancellation, fault-injection, or target-boundary exercise that a valid Pillow input cannot select.",
-    "independent_implementation": "Private codec state and output checked against pinned dav1d/libavif/reference corpora; Pillow/native output is retained independently.",
-    "specification_reference": "A format-state or contract branch justified by the format specification rather than by a Pillow-observable field."
-  },
   "entries": [
     {
-      "path": "src/codecs/avif/av1/block.rs",
       "guard_count": 12,
-      "origin": "independent_implementation"
+      "origin": "independent_implementation",
+      "path": "src/codecs/avif/av1/block.rs"
     },
     {
-      "path": "src/codecs/avif/av1/entropy.rs",
       "guard_count": 22,
       "guards": [
         {
@@ -104,10 +96,10 @@
           "line": 22238,
           "origin": "independent_implementation"
         }
-      ]
+      ],
+      "path": "src/codecs/avif/av1/entropy.rs"
     },
     {
-      "path": "src/codecs/avif/av1/frame.rs",
       "guard_count": 10,
       "guards": [
         {
@@ -150,10 +142,10 @@
           "line": 2275,
           "origin": "defensive_model"
         }
-      ]
+      ],
+      "path": "src/codecs/avif/av1/frame.rs"
     },
     {
-      "path": "src/codecs/avif/av1/mod.rs",
       "guard_count": 11,
       "guards": [
         {
@@ -165,45 +157,45 @@
           "origin": "independent_implementation"
         },
         {
-          "line": 538,
+          "line": 534,
           "origin": "independent_implementation"
         },
         {
-          "line": 565,
+          "line": 561,
           "origin": "independent_implementation"
         },
         {
-          "line": 593,
+          "line": 589,
           "origin": "independent_implementation"
         },
         {
-          "line": 902,
+          "line": 898,
           "origin": "defensive_model"
         },
         {
-          "line": 1383,
+          "line": 1379,
           "origin": "independent_implementation"
         },
         {
-          "line": 1395,
+          "line": 1391,
           "origin": "independent_implementation"
         },
         {
-          "line": 1401,
+          "line": 1397,
           "origin": "independent_implementation"
         },
         {
-          "line": 1440,
+          "line": 1436,
           "origin": "independent_implementation"
         },
         {
-          "line": 1472,
+          "line": 1468,
           "origin": "independent_implementation"
         }
-      ]
+      ],
+      "path": "src/codecs/avif/av1/mod.rs"
     },
     {
-      "path": "src/codecs/avif/av1/motion.rs",
       "guard_count": 3,
       "guards": [
         {
@@ -218,20 +210,20 @@
           "line": 3122,
           "origin": "defensive_model"
         }
-      ]
+      ],
+      "path": "src/codecs/avif/av1/motion.rs"
     },
     {
-      "path": "src/codecs/avif/av1/resize.rs",
       "guard_count": 2,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/avif/av1/resize.rs"
     },
     {
-      "path": "src/codecs/avif/av1/restoration.rs",
       "guard_count": 3,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/avif/av1/restoration.rs"
     },
     {
-      "path": "src/codecs/avif/av1/surface.rs",
       "guard_count": 2,
       "guards": [
         {
@@ -242,20 +234,20 @@
           "line": 218,
           "origin": "independent_implementation"
         }
-      ]
+      ],
+      "path": "src/codecs/avif/av1/surface.rs"
     },
     {
-      "path": "src/codecs/avif/av1/tile_state.rs",
       "guard_count": 3,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/avif/av1/tile_state.rs"
     },
     {
-      "path": "src/codecs/avif/decode.rs",
       "guard_count": 2,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/avif/decode.rs"
     },
     {
-      "path": "src/codecs/avif/encode.rs",
       "guard_count": 2,
       "guards": [
         {
@@ -266,40 +258,40 @@
           "line": 96,
           "origin": "independent_implementation"
         }
-      ]
+      ],
+      "path": "src/codecs/avif/encode.rs"
     },
     {
-      "path": "src/codecs/avif/mod.rs",
       "guard_count": 4,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/avif/mod.rs"
     },
     {
-      "path": "src/codecs/gif/encode.rs",
       "guard_count": 2,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/gif/encode.rs"
     },
     {
-      "path": "src/codecs/jpeg/decode/decode.rs",
       "guard_count": 1,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/jpeg/decode/decode.rs"
     },
     {
-      "path": "src/codecs/jpeg/decode/huffman.rs",
       "guard_count": 1,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/jpeg/decode/huffman.rs"
     },
     {
-      "path": "src/codecs/tiff/encode.rs",
       "guard_count": 3,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/codecs/tiff/encode.rs"
     },
     {
-      "path": "src/encode_options.rs",
       "guard_count": 2,
-      "origin": "defensive_model"
+      "origin": "defensive_model",
+      "path": "src/encode_options.rs"
     },
     {
-      "path": "src/lib.rs",
       "guard_count": 3,
       "guards": [
         {
@@ -314,10 +306,10 @@
           "line": 120,
           "origin": "defensive_model"
         }
-      ]
+      ],
+      "path": "src/lib.rs"
     },
     {
-      "path": "tests/coverage_matrix_tests.rs",
       "guard_count": 46,
       "guards": [
         {
@@ -504,12 +496,20 @@
           "line": 14523,
           "origin": "defensive_model"
         }
-      ]
+      ],
+      "path": "tests/coverage_matrix_tests.rs"
     },
     {
-      "path": "tests/support/av1_short_references.rs",
       "guard_count": 1,
-      "origin": "independent_implementation"
+      "origin": "independent_implementation",
+      "path": "tests/support/av1_short_references.rs"
     }
-  ]
+  ],
+  "format_version": 1,
+  "origin_definitions": {
+    "defensive_model": "Synthetic private-state, overflow, cancellation, fault-injection, or target-boundary exercise that a valid Pillow input cannot select.",
+    "independent_implementation": "Private codec state and output checked against pinned dav1d/libavif/reference corpora; Pillow/native output is retained independently.",
+    "specification_reference": "A format-state or contract branch justified by the format specification rather than by a Pillow-observable field."
+  },
+  "scope": "exact_cfg_coverage_attributes"
 }

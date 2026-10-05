@@ -103,34 +103,6 @@ impl SequenceHeader {
         }
         first == second
     }
-
-    /// Compare sequence declarations with the four-byte AV1 configuration
-    /// record retained by the AVIF container.
-    pub(super) fn matches_config(&self, bytes: &[u8]) -> bool {
-        if bytes.len() < 4 || bytes[0] != 0x81 {
-            return false;
-        }
-        let first_operating_point = self.operating_points.first();
-        let profile = u32::from(bytes[1] >> 5);
-        let level = u32::from(bytes[1] & 0x1f);
-        let tier = u32::from(bytes[2] >> 7);
-        let high_bitdepth = bytes[2] & 0x40 != 0;
-        let twelve_bit = bytes[2] & 0x20 != 0;
-        let bit_depth = if twelve_bit {
-            12
-        } else if high_bitdepth {
-            10
-        } else {
-            8
-        };
-        profile == self.profile
-            && first_operating_point.is_some_and(|point| point.level == level && point.tier == tier)
-            && bit_depth == self.bit_depth
-            && (bytes[2] & 0x10 != 0) == self.monochrome
-            && (bytes[2] & 0x08 != 0) == self.subsampling_x
-            && (bytes[2] & 0x04 != 0) == self.subsampling_y
-            && u32::from(bytes[2] & 3) == self.chroma_sample_position
-    }
 }
 
 // ✅ VERIFIED: AV1 specification sections 5.5 and 6.4; dav1d 1.5.3

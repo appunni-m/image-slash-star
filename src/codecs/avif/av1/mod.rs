@@ -114,9 +114,6 @@ fn validate_sample_and_return_temporal_unit(
     state: &mut FrameState,
 ) -> Av1Result<u64> {
     let data = SegmentedData::new(input, &sample.spans)?;
-    // The AVIF sample extractor constructs codec-configuration spans only
-    // after validating them against the immutable input buffer.
-    let config = &input[sample.config.start..sample.config.end];
     let mut offset = 0_usize;
     let mut obu_count = 0_usize;
     let mut frame_bearing = false;
@@ -171,11 +168,10 @@ fn validate_sample_and_return_temporal_unit(
         match obu_type {
             1 => {
                 let sequence = sequence::parse(&data, payload_start, payload_end)?;
-                if !sequence.matches_config(config) {
-                    return Err(malformed(
-                        "sequence header disagrees with the AV1 codec configuration",
-                    ));
-                }
+                // Pillow/libavif uses decoded sequence fields even when the
+                // redundant av1C declarations differ. The sample extractor
+                // has validated the container configuration; this parser and
+                // FrameState validate the actual syntax and storage depth.
                 state.accept_sequence(sequence)?;
             }
             2 => state.temporal_delimiter()?,

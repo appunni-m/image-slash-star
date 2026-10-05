@@ -902,8 +902,13 @@ def read_film_grain(
         if slot not in header["reference_indices"]:
             raise ValueError("film grain references an unused slot")
         reference = references[slot]
-        if reference is None or reference["film_grain"] is None:
+        if reference is None:
             raise ValueError("film grain inherits from an empty reference")
+        if reference["film_grain"] is None:
+            # Grain syntax availability is a sequence property. A reference
+            # with apply_grain=false holds inactive parameters that may be
+            # inherited, as in libaom 3.13.2 decodeframe.c:3912-3915,3958.
+            return None
         inherited = dict(reference["film_grain"])
         inherited["seed"] = seed
         inherited["update"] = False

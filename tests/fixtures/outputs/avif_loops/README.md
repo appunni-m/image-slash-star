@@ -1,14 +1,14 @@
 # Native AVIF repetition evidence
 
-This bundle records 81 complete files observed twice with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Seventy-three accepted files decode completely; eight
-malformed files fail native parsing and Pillow opening. The 232 hashed
-artifacts total 7,518,377 bytes, including all inputs, the compiled observer's
-source, and 7,021,508 bytes of Pillow-decoded frame outputs. Mutation cases
+This bundle records 82 complete files observed twice with Pillow 12.2.0 and
+libavif 1.4.1/dav1d 1.5.3. Seventy-four accepted files decode completely; eight
+malformed files fail native parsing and Pillow opening. The 235 hashed
+artifacts total 7,560,957 bytes, including all inputs, the compiled observer's
+source, and 7,046,084 bytes of Pillow-decoded frame outputs. Mutation cases
 share the original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
-The 55 unchanged fixture sources are declared in
+The 57 unchanged fixture sources are declared in
 `scripts/generate_avif_loop_refs.py`; `index.json` records each source digest.
 The 4:2:2 source adds
 horizontal chroma ownership while a small block moves between frames. The
@@ -55,6 +55,9 @@ The 64x64 I444 film-grain reuse sequence has a key frame with explicit grain
 parameters and an inter frame that reuses reference slot 0 with a new grain
 seed. Both 100 ms Pillow RGB frames match the generated reference hashes, and
 the native observer reports two decoded frames with infinite repetition.
+The inactive-reference companion disables grain on the key frame while the
+inter frame reuses that listed reference with a new seed. Both exact Pillow
+frames have no grain, and native observation confirms infinite repetition.
 The companion full-range 10-bit I420 source uses the same deterministic frames
 with a quality-39, speed-5 encode. Its inter picture uses TX_MODE_SELECT,
 128x56 coded dimensions, and 160x56 upscaled dimensions, with no active

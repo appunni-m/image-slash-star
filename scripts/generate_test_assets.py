@@ -16873,6 +16873,12 @@ def gen_avif():
         else:
             raise RuntimeError(f"Pillow unexpectedly decoded {malformed_path.name}")
 
+    from generate_avif_config_disagreement_fixtures import generate as generate_config_disagreements
+    from generate_avif_filmgrain_edge_fixtures import write_avif_filmgrain_edge_fixtures
+
+    generate_config_disagreements(output_dir=d, source_path=baseline_path)
+    write_avif_filmgrain_edge_fixtures(d)
+
     meta_payload_start, meta_payload_end = avif_unique_top_level_payload_range(
         baseline_bytes, b"meta"
     )

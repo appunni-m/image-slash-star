@@ -2065,8 +2065,8 @@ def avif_bit_depth(image_path):
         raise ValueError("invalid AV1CodecConfigurationBox")
     high_bit_depth = bool(payload[2] & 0x40)
     twelve_bit = bool(payload[2] & 0x20)
-    if twelve_bit and not high_bit_depth:
-        raise ValueError("invalid AV1CodecConfigurationBox depth flags")
+    # libavif 1.4.1 avifCodecConfigurationBoxGetDepth selects twelveBit
+    # first, including a tolerated declaration with highBitdepth clear.
     return 12 if twelve_bit else 10 if high_bit_depth else 8
 
 

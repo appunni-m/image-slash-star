@@ -33,6 +33,10 @@ FIXTURES = {
         "animated_filmgrain_reference_reuse_i444_64x64.avif",
         "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34",
     ),
+    "filmgrain_inactive_reference_reuse_i444_64x64": (
+        "animated_filmgrain_inactive_reference_reuse_i444_64x64.avif",
+        "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536",
+    ),
     "lossless_inter_420_b16x16": (
         "animated_lossless_inter_420_b16x16.avif",
         "6973cfff29185ffc7283ec539d9cf6736dfe4cba52850c46e4b196ba9db51ead",

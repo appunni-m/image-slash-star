@@ -57,6 +57,11 @@
     },
     {
       "bytes": 18004,
+      "path": "inputs/filmgrain_inactive_reference_reuse_i444_64x64.avif",
+      "sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536"
+    },
+    {
+      "bytes": 18004,
       "path": "inputs/filmgrain_reference_reuse_i444_64x64.avif",
       "sha256": "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34"
     },
@@ -444,6 +449,16 @@
       "bytes": 768,
       "path": "pixels/error_resilient/frame_1.bin",
       "sha256": "6d4525df688f4dbfe6ecf5b6ae3c8764f01941441bbade31be70e0be766579d7"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/filmgrain_inactive_reference_reuse_i444_64x64/frame_0.bin",
+      "sha256": "2b546a196a9dbf7c347d733e69334f6a4c19753eeb274d23aad318068585db84"
+    },
+    {
+      "bytes": 12288,
+      "path": "pixels/filmgrain_inactive_reference_reuse_i444_64x64/frame_1.bin",
+      "sha256": "2af8438108708dbe0fe860299b979f240526edd268ea5939d17f26f242651838"
     },
     {
       "bytes": 12288,
@@ -1176,7 +1191,7 @@
       "-o",
       "<work>/observer.so"
     ],
-    "binary_sha256": "58c5bc06369147bae1e64b62191cb4214c7516d5520987c54298f4bcc091127b",
+    "binary_sha256": "060114a095776ba2955e3229bde9b1e7cd9869c34de9192ad170a2a5b8f4a6c0",
     "compiler": "Apple clang version 17.0.0 (clang-1700.0.13.5)\nTarget: arm64-apple-darwin24.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin"
   },
   "cases": [
@@ -1437,6 +1452,54 @@
       "repeat_equal": true,
       "source": "filmgrain_reference_reuse_i444_64x64",
       "source_sha256": "bd947085ed6437edfd50a97b43506cc56e96af8b5450a8ef5cb8289b8ec62b34"
+    },
+    {
+      "input_bytes": 18004,
+      "input_path": "inputs/filmgrain_inactive_reference_reuse_i444_64x64.avif",
+      "input_sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536",
+      "media_payloads_equal": true,
+      "mutation": {},
+      "name": "filmgrain_inactive_reference_reuse_i444_64x64",
+      "native": {
+        "decoded_frames": 2,
+        "diagnostic": "",
+        "frame_count": 2,
+        "parse_result": 0,
+        "repetition_count": -1,
+        "sequence_track_present": 1,
+        "terminal_result": 16
+      },
+      "pillow": {
+        "frames": [
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 0,
+            "mode": "RGB",
+            "sha256": "2b546a196a9dbf7c347d733e69334f6a4c19753eeb274d23aad318068585db84",
+            "size": [
+              64,
+              64
+            ]
+          },
+          {
+            "bytes": 12288,
+            "duration_ms": 100,
+            "index": 1,
+            "mode": "RGB",
+            "sha256": "2af8438108708dbe0fe860299b979f240526edd268ea5939d17f26f242651838",
+            "size": [
+              64,
+              64
+            ]
+          }
+        ],
+        "loop_key": null,
+        "status": "ok"
+      },
+      "repeat_equal": true,
+      "source": "filmgrain_inactive_reference_reuse_i444_64x64",
+      "source_sha256": "d1c4c2b6c9c24571452ccb95387a4c18580d9e7b871e704217b17b58ae916536"
     },
     {
       "input_bytes": 1112,

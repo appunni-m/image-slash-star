@@ -4774,6 +4774,78 @@ formats:
       test_assets:
       - baseline.avif
       status: active
+    - id: av1c_profile_disagreement
+      description: Pillow uses the in-band AV1 profile despite a differing redundant av1C profile
+      test_assets:
+      - av1c_profile_disagreement.avif
+      status: active
+    - id: av1c_level_disagreement
+      description: Pillow uses the in-band AV1 level despite a differing redundant av1C level
+      test_assets:
+      - av1c_level_disagreement.avif
+      status: active
+    - id: av1c_tier_disagreement
+      description: Pillow uses the in-band AV1 tier despite a differing redundant av1C tier
+      test_assets:
+      - av1c_tier_disagreement.avif
+      status: active
+    - id: av1c_monochrome_disagreement
+      description: Pillow retains RGB output despite a differing redundant av1C monochrome flag
+      test_assets:
+      - av1c_monochrome_disagreement.avif
+      status: active
+    - id: av1c_subsampling_x_disagreement
+      description: Pillow uses the in-band horizontal chroma sampling despite a differing av1C flag
+      test_assets:
+      - av1c_subsampling_x_disagreement.avif
+      status: active
+    - id: av1c_subsampling_y_disagreement
+      description: Pillow uses the in-band vertical chroma sampling despite a differing av1C flag
+      test_assets:
+      - av1c_subsampling_y_disagreement.avif
+      status: active
+    - id: av1c_chroma_position_disagreement
+      description: Pillow uses the in-band chroma sample position despite a differing av1C declaration
+      test_assets:
+      - av1c_chroma_position_disagreement.avif
+      status: active
+    - id: av1c_bit_depth_disagreement
+      description: Pillow rejects an av1C ten-bit declaration that disagrees with the eight-bit pixi property
+      test_assets:
+      - av1c_bit_depth_disagreement.avif
+      status: active
+      expect_error: true
+    - id: av1c_twelve_bit_depth_disagreement
+      description: Pillow rejects an av1C twelve-bit declaration that disagrees with the eight-bit pixi property
+      test_assets:
+      - av1c_twelve_bit_depth_disagreement.avif
+      status: active
+      expect_error: true
+    - id: av1c_pixi_ten_bit_sequence_eight_bit
+      description: Matching ten-bit pixi and av1C declarations retain eight-bit AV1 sequence pixels
+      test_assets:
+      - av1c_pixi_ten_bit_sequence_eight_bit.avif
+      status: active
+    - id: av1c_pixi_twelve_bit_sequence_eight_bit
+      description: Matching twelve-bit pixi and av1C declarations retain eight-bit AV1 sequence pixels
+      test_assets:
+      - av1c_pixi_twelve_bit_sequence_eight_bit.avif
+      status: active
+    - id: av1c_pixi_twelve_bit_without_high_bitdepth
+      description: Pillow accepts matching twelve-bit pixi and av1C declarations with the highBitdepth flag clear and decodes the eight-bit sequence
+      test_assets:
+      - av1c_pixi_twelve_bit_without_high_bitdepth.avif
+      status: active
+    - id: duplicate_pixi_trailing_ten_bit_depth
+      description: Pillow selects the first eight-bit pixi property and ignores a later ten-bit duplicate
+      test_assets:
+      - duplicate_pixi_trailing_ten_bit_depth.avif
+      status: active
+    - id: duplicate_pixi_trailing_twelve_bit_depth
+      description: Pillow selects the first eight-bit pixi property and ignores a later twelve-bit duplicate
+      test_assets:
+      - duplicate_pixi_trailing_twelve_bit_depth.avif
+      status: active
     - id: size_zero_top_level_free
       description: A size-zero top-level free box consumes the remaining bytes through EOF
       test_assets:
@@ -4974,6 +5046,38 @@ formats:
       - portable_lossless_filmgrain_420_zero_y_points_64x64.avif
       status: active
       pure_rust_work_item: AVF-STILL-001
+    - id: portable_lossless_filmgrain_i422_64x64
+      description: 64x64 lossless I422 key frame with independent Y, U, and V film-grain scaling points
+      test_assets:
+      - portable_lossless_filmgrain_i422_64x64.avif
+      status: active
+      pure_rust_work_item: AVF-STILL-001
+    - id: malformed_filmgrain_y_point_count_15
+      description: A complete I444 AVIF declares fifteen film-grain Y points, exceeding the fourteen-point limit
+      test_assets:
+      - malformed_filmgrain_y_point_count_15.avif
+      expect_error: true
+    - id: malformed_filmgrain_uv_point_count_11
+      description: A complete I444 AVIF declares eleven film-grain UV points, exceeding the ten-point limit
+      test_assets:
+      - malformed_filmgrain_uv_point_count_11.avif
+      expect_error: true
+    - id: malformed_filmgrain_i420_unequal_uv_presence
+      description: A complete I420 AVIF has V film-grain points without U points
+      test_assets:
+      - malformed_filmgrain_i420_unequal_uv_presence.avif
+      expect_error: true
+    - id: malformed_filmgrain_unused_reference_slot
+      description: Frame one requests film-grain reuse from a slot absent from its seven reference indices
+      test_assets:
+      - malformed_filmgrain_unused_reference_slot.avif
+      expect_sequence_error: true
+    - id: animated_filmgrain_inactive_reference_reuse_i444_64x64
+      description: Two I444 frames reuse an inactive grain reference, preserving the decoded pixels without synthesizing grain
+      test_assets:
+      - animated_filmgrain_inactive_reference_reuse_i444_64x64.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: portable_lossless_filmgrain_monochrome_64x64
       description: 64x64 8-bit all-lossless monochrome key frame exercising AV1 monochrome film-grain synthesis
       test_assets:

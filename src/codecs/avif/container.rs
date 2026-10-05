@@ -1044,9 +1044,8 @@ fn parse_av1c(payload: &[u8]) -> ParseResult<Property> {
     let _ = reader.u8()?;
     let high_bit_depth = flags & 0x40 != 0;
     let twelve_bit = flags & 0x20 != 0;
-    if twelve_bit && !high_bit_depth {
-        return Err(parse_failure!());
-    }
+    // libavif 1.4.1 read.c:380-390 selects twelveBit first, even when
+    // highBitdepth is clear. Actual AV1 sample depth is checked independently.
     let depth = if twelve_bit {
         12
     } else if high_bit_depth {
