@@ -155,6 +155,61 @@ Local red/green logs: `config-disagreement-red-20261005.log`,
 `sequence-depth-red-20261005.log`, `depth-flags-red-20261005.log`, and
 `avif-20-green-20261005.log`, all under `target/release-evidence/`.
 
+### Rejected JPEG sparse chroma masks — 2026-10-05
+
+A separate worktree at `d5ddebbe83d067be16f49eb13c4f29603faa55d5`
+implemented fused chroma nonzero masks and a separate sparse Cb/Cr entropy
+loop for complete I420 MCUs without low-quality trimming. The prototype is
+rejected and reverted; the main encoder remains unchanged. Its exact source
+and patch are preserved locally for review of the rejected prototype.
+
+The ARM64 macOS 15.7.7 campaign used rustc 1.96.1, ordinary Cargo release
+builds, and the pinned TurboJPEG 3.2.0 oracle. No LTO, target-cpu, PGO, or
+TurboJPEG SIMD disabling was added. Single-threaded complete public calls use
+the existing twenty configurations, forty encode/decode workloads, and Rust
+harness's 100-call warmup; per-invocation iteration counts and timings are
+retained. Five rounds alternate baseline/candidate order, with the unchanged
+oracle following each variant. All 800 raw records retain commands, timing,
+output hashes, order, and background-load observations. Source, binary, and
+oracle hashes remained unchanged. CPU brand/model queries were unavailable;
+recorded background load was nonzero, so this is a scoped host observation.
+
+All seven admitted encode configurations regress in every paired round.
+The table gives medians of paired candidate/baseline time ratios; values above
+one are slower. Oracle normalization retains the same regression decision.
+
+| Encode workload | Candidate / baseline | Oracle-normalized ratio |
+| --- | ---: | ---: |
+| 32×32 Q85 I420 | 1.1585 | 1.1587 |
+| 128×128 Q50 I420 | 1.0494 | 1.0413 |
+| 128×128 Q85 I420 | 1.1222 | 1.1243 |
+| 128×128 Q100 I420 | 1.2138 | 1.1838 |
+| 512×512 Q85 I420 | 1.2125 | 1.2083 |
+| 1024×1024 Q85 I420 | 1.2366 | 1.2138 |
+| 128×128 Q85 I420, restart interval 4 | 1.1085 | 1.1325 |
+
+Controls varied: odd 63×65 encoding was 0.9805, I444 encoding 1.0008,
+512×512 Q10 encoding 1.0927, and 1024×1024 decoding 0.9928. These controls
+are retained alongside the regressions. Mask-construction overhead and lost
+six-chain instruction overlap are plausible causes, without stage-level
+proof. No encoder, decoder, SSE2, AVX2, or universal speedup is claimed.
+
+Correctness still passed: emitted JPEG bytes matched the baseline for all
+twenty configurations; the existing public manifest passed 81/81 encode rows
+(379 calls, zero panics) and 205/205 decode rows; strict all-feature/all-target
+Clippy passed.
+
+The preserved candidate source SHA-256 is
+`283be8d25af57b67396f3a08742586532c539593cbb5095cd6b0dcc78e912321`;
+patch SHA-256 is
+`b541f59801c0a84d7ae4510ab292943a28779fc3046661896b9543a247558556`.
+Local evidence is under `target/release-evidence/jpeg-sparse-chroma-d5ddebbe/`:
+`rejection.json`, `candidate-source.rs`, `candidate.patch`, build/check logs,
+and `paired-five-rounds/{metadata.json,raw.jsonl,summary.json,summary.csv,exact-encode-equality.json}`.
+These local artifacts are not shipped release benchmark results. The next
+candidate must preserve instruction overlap or identify a different measured
+cost, then pass the same correctness and complete-call measurement gates.
+
 ### SSE2/AVX2 runtime evidence and JPEG profile — 2026-10-05
 
 At pushed revision `d5ddebbe83d067be16f49eb13c4f29603faa55d5`,
@@ -181,12 +236,13 @@ coefficient reads, zero-run handling, and the bit reservoir. Collapsed samples
 prevent assigning a precise entropy fraction. Sampling is not a timing
 benchmark.
 
-The next optimization candidate is collecting sparse chroma AC masks during
-quantization and enumerating their zigzag positions. Any implementation must
+The profile motivated collecting sparse chroma AC masks during quantization
+and enumerating their zigzag positions. The experiment above rejects that
+prototype after complete-call measurement. Any future implementation must
 preserve ZRL/EOB, DC prediction, byte stuffing, and restart semantics, then
 pass exact public parity and balanced complete-call measurements. Dense-image
-mask overhead remains unmeasured; no optimization is retained from this
-profile. Halving the measured conversion bucket would permit approximately
+mask overhead is part of the measured rejection above; no optimization is
+retained from this profile. Halving the measured conversion bucket would permit approximately
 1.048× overall speedup, while the sparse-scan candidate's affected fraction is
 unknown.
 
