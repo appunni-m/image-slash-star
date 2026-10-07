@@ -5,6 +5,7 @@
 [![Benchmarks](https://github.com/appunni-m/image-slash-star/actions/workflows/benchmark.yml/badge.svg?branch=main)](https://github.com/appunni-m/image-slash-star/actions/workflows/benchmark.yml)
 [![Release](https://github.com/appunni-m/image-slash-star/actions/workflows/release.yml/badge.svg)](https://github.com/appunni-m/image-slash-star/actions/workflows/release.yml)
 [![Latest release](https://img.shields.io/github/v/release/appunni-m/image-slash-star?include_prereleases&sort=semver)](https://github.com/appunni-m/image-slash-star/releases)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA)](https://github.com/sponsors/appunni-m)
 
 <!-- release:summary -->
 **Latest release: [0.1.3](https://github.com/appunni-m/image-slash-star/releases/tag/v0.1.3).**
