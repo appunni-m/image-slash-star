@@ -4490,6 +4490,10 @@ formats:
       description: Rational FillOrder 1/1 preserves the default packed bit order
       test_assets:
       - miniswhite_1bit_fillorder_rational1.tiff
+    - id: fill_order_duplicate_rational_last_wins_miniswhite_1bit
+      description: Later duplicate rational FillOrder entry determines packed bit order
+      test_assets:
+      - miniswhite_1bit_fillorder_duplicate_rational_last_wins.tiff
     - id: fill_order_rational_count_zero_miniswhite_1bit
       description: Zero-count rational FillOrder is treated as the missing default
       test_assets:

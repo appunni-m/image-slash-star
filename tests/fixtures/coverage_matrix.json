@@ -133225,6 +133225,84 @@
           "error_contracts": {}
         },
         {
+          "id": "fill_order_duplicate_rational_last_wins_miniswhite_1bit",
+          "type": "decode",
+          "format": "tiff",
+          "category": "fill",
+          "description": "Later duplicate rational FillOrder entry determines packed bit order",
+          "asset": "miniswhite_1bit_fillorder_duplicate_rational_last_wins.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "aedff731bf569efab03f53c48a900054a50b16622aadf4488dbdb457eff96b1d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 1,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "219256bbc50d6f4dd47528023dc91b475f87dfd9477f17b5fdfa9fe4fdc3e796",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_miniswhite_1bit_fillorder_duplicate_rational_last_wins_tiff.bin",
+          "ref_bytes": 39,
+          "ref_mode": "1",
+          "ref_size": [
+            17,
+            13
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "fill_order_rational_count_zero_miniswhite_1bit",
           "type": "decode",
           "format": "tiff",
@@ -187649,12 +187727,12 @@
     }
   },
   "summary": {
-    "total_rows": 2221,
-    "decode_rows": 1743,
+    "total_rows": 2222,
+    "decode_rows": 1744,
     "encode_rows": 478,
     "formats": 8,
-    "assets_available": 1740,
-    "decode_active": 1743,
+    "assets_available": 1741,
+    "decode_active": 1744,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

@@ -2605,7 +2605,7 @@ impl<'a> Directory<'a> {
                 "TIFF directory value is out of bounds",
             )?;
             let raw_value = data[value_position..value_position.saturating_add(byte_len)].to_vec();
-            if tag == 266 && field_type == 5 && fill_order_rational.is_none() {
+            if tag == 266 && field_type == 5 {
                 let rational = if value_count == 0 {
                     (0, 0)
                 } else {
@@ -2619,7 +2619,12 @@ impl<'a> Directory<'a> {
                         endian.u32_exact([value[4], value[5], value[6], value[7]]),
                     )
                 };
-                fill_order_rational = Some((value_count, rational));
+                // Pillow keeps the last value when a TIFF directory repeats a tag.
+                if let Some(previous) = fill_order_rational.as_mut() {
+                    *previous = (value_count, rational);
+                } else {
+                    fill_order_rational = Some((value_count, rational));
+                }
             }
             if !INTERPRETED_TAGS.contains(&tag) {
                 let mut kind = [0u8; 2];

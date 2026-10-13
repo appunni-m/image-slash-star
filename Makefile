@@ -57,6 +57,7 @@ verify: release-tools-test docs-lint docs-test
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
+	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check
 	$(PYTHON) scripts/verify_claim_ledger.py
 	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_diagnostic_provenance.py
