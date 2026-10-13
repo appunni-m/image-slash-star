@@ -343,6 +343,23 @@ run_wasi_determinism_lane() {
     return "$determinism_status"
 }
 
+run_wasi_parity_lane() {
+    parity_log="$matrix_log_dir/wasm-wasi-parity.jsonl"
+    parity_status=0
+    cargo test --locked --target wasm32-wasip1 --test coverage_matrix_tests \
+        --all-features --no-run --message-format=json --color never \
+        >"$parity_log" 2>&1 || parity_status=$?
+    cat "$parity_log"
+    if [ "$parity_status" -ne 0 ]; then
+        return "$parity_status"
+    fi
+    parity_binary=$(wasm_binary_from_log "$parity_log" coverage_matrix_tests)
+    node scripts/wasm_test_runner.js "$parity_binary" test_decode_matrix_avif \
+        --skip "__image_slash_star_matrix_row_selector__=decode:avif:baseline" \
+        --skip "__image_slash_star_matrix_row_selector__=encode:png:enc_rgb8" \
+        --test-threads "$MATRIX_TEST_THREADS"
+}
+
 run_wasi_lane() {
     features=$1
     set -- $(feature_args "$features")
@@ -366,6 +383,11 @@ run_wasi_lane() {
     fi
     if [ "$features" = all ]; then
         run_wasi_determinism_lane
+        wasi_status=$?
+        if [ "$wasi_status" -ne 0 ]; then
+            return "$wasi_status"
+        fi
+        run_wasi_parity_lane
         wasi_status=$?
         if [ "$wasi_status" -ne 0 ]; then
             return "$wasi_status"

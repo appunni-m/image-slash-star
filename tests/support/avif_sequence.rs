@@ -69,6 +69,47 @@ fn bundle(relative: &str) -> PathBuf {
         .join(relative)
 }
 
+fn avif_loop_artifact_paths(root: &Path) -> std::collections::HashSet<String> {
+    fn collect(root: &Path, directory: &Path, paths: &mut std::collections::HashSet<String>) {
+        for entry in require_ok(fs::read_dir(directory), "loop oracle directory") {
+            let entry = require_ok(entry, "loop oracle directory entry");
+            let file_type = require_ok(entry.file_type(), "loop oracle entry type");
+            let path = entry.path();
+
+            if file_type.is_dir() {
+                collect(root, &path, paths);
+                continue;
+            }
+
+            assert!(
+                file_type.is_file(),
+                "unexpected non-file in loop oracle: {path:?}"
+            );
+            let relative = require_ok(path.strip_prefix(root), "loop oracle artifact path");
+            let normalized = relative
+                .components()
+                .map(|part| match part {
+                    std::path::Component::Normal(name) => {
+                        require_some(name.to_str(), "UTF-8 loop oracle path")
+                    }
+                    _ => panic!("non-normal loop oracle path: {relative:?}"),
+                })
+                .collect::<Vec<_>>()
+                .join("/");
+
+            if matches!(normalized.as_str(), "README.md" | "index.json") {
+                continue;
+            }
+
+            assert!(paths.insert(normalized), "duplicate loop oracle path");
+        }
+    }
+
+    let mut paths = std::collections::HashSet::new();
+    collect(root, root, &mut paths);
+    paths
+}
+
 fn native_sequence(
     relative: &str,
     dimensions: (u32, u32),
@@ -499,7 +540,6 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
     assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
     let artifacts: Vec<Value> = field(&index, "artifacts");
-    assert_eq!(artifacts.len(), 303);
     let mut artifact_paths = std::collections::HashSet::new();
     for artifact in artifacts {
         let path: String = field(&artifact, "path");
@@ -516,6 +556,11 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             field::<String>(&artifact, "sha256")
         );
     }
+    assert_eq!(
+        artifact_paths,
+        avif_loop_artifact_paths(&root),
+        "loop oracle index must enumerate every fixture artifact exactly once"
+    );
     let expected_names = [
         "animated",
         "animated_co64_chunk_offsets",
