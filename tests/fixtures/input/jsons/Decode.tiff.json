@@ -12082,6 +12082,58 @@
       ]
     },
     {
+      "id": "tiled_minisblack_2bit_fillorder2_byte_aligned",
+      "asset": "tiled_gray2_fillorder2_byte_aligned_edge.tiff",
+      "asset_sha256": "72cd9141ecf5434459a85f62e3509c8f3c989ff1b37f6ca5991b958e2d306666",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/tiled_gray2_fillorder2_byte_aligned_edge.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "tiled_minisblack_1bit_unaligned_edge",
       "asset": "tiled_minisblack_1bit_unaligned_edge.tiff",
       "asset_sha256": "54d4deb0d6b5c7869258942601c4c1110937bfaa101ca624a5fe37ea79a68893",

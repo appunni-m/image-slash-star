@@ -9220,6 +9220,44 @@ def gen_tiff():
                 raise RuntimeError(
                     "FillOrder 2 changed Pillow's unaligned 2-bit tiled image output"
                 )
+    tiled_gray2_byte_aligned = d / "tiled_gray2_byte_aligned_edge.tiff"
+    write_low_depth_tiled_tiff(
+        tiled_gray2_byte_aligned,
+        16,
+        1,
+        2,
+        1,
+        tile_width=8,
+        tile_height=1,
+    )
+    tiled_gray2_fill_order_2_byte_aligned = (
+        d / "tiled_gray2_fillorder2_byte_aligned_edge.tiff"
+    )
+    write_low_depth_tiled_tiff(
+        tiled_gray2_fill_order_2_byte_aligned,
+        16,
+        1,
+        2,
+        1,
+        tile_width=8,
+        tile_height=1,
+        fill_order=2,
+    )
+    verify_tiff_fill_order_2_tiled_variant(
+        tiled_gray2_byte_aligned,
+        tiled_gray2_fill_order_2_byte_aligned,
+    )
+    with Image.open(tiled_gray2_byte_aligned) as source_image:
+        source_image.load()
+        with Image.open(tiled_gray2_fill_order_2_byte_aligned) as fill_order_image:
+            fill_order_image.load()
+            if (
+                (fill_order_image.mode, fill_order_image.size, fill_order_image.tobytes())
+                != (source_image.mode, source_image.size, source_image.tobytes())
+            ):
+                raise RuntimeError(
+                    "FillOrder 2 changed Pillow's byte-aligned 2-bit tiled output"
+                )
     write_low_depth_tiled_tiff(
         d / "tiled_palette4_edge.tiff", 17, 13, 4, 3
     )

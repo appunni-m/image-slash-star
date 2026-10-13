@@ -2999,10 +2999,10 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,203 total rows: 1,725 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,725 decode rows and 446 encode
+The current matrix contains 2,204 total rows: 1,726 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,726 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
-283 decode rows. The 27 fault contracts are tracked separately from the
+284 decode rows. The 27 fault contracts are tracked separately from the
 Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
@@ -6364,7 +6364,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `62943fbe9d0826477fe34218fff0bcf2418d4587ecba71191cd118458e449825`; matrix `30e988dc2e967e78cb517782a299a0edc84c84074dccf39f7f1689625e0c340d`.
+- Current fixture integrity only: manifest `d4575eb348ad249ef525d85fb11069d4d8f2c951ab22a68167f7bcd300c5011f`; matrix `40a66bcbb16678498f4972dfb1ea63fa7898ed265c4c4de36b58cb77b1a1031e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

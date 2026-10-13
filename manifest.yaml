@@ -5017,6 +5017,11 @@ formats:
       test_assets:
       - tiled_gray2_fillorder2_unaligned_edge.tiff
       status: active
+    - id: tiled_minisblack_2bit_fillorder2_byte_aligned
+      description: FillOrder 2 2-bit grayscale copied as complete aligned tile bytes
+      test_assets:
+      - tiled_gray2_fillorder2_byte_aligned_edge.tiff
+      status: active
     - id: tiled_minisblack_1bit_unaligned_edge
       description: Pillow-accepted 9-pixel tile width shifts 1-bit grayscale samples off byte boundaries
       test_assets:

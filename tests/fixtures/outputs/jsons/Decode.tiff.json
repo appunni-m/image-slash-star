@@ -17335,6 +17335,86 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "tiled_minisblack_2bit_fillorder2_byte_aligned",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "header_only",
+      "inspect_container_format": "TIFF",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": "little",
+      "inspect_source_byte_order_origin": "pillow_fixture",
+      "asset_sha256": "72cd9141ecf5434459a85f62e3509c8f3c989ff1b37f6ca5991b958e2d306666",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 2,
+      "ref_bit_depth_origin": "pillow_fixture",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_gray2_fillorder2_byte_aligned_edge_tiff.bin",
+      "ref_bytes": 16,
+      "ref_sha256": "d6591e2f9c5c4f4156323d28bb19ac453d1ac5f4d0ede89805b7ce5316e6fc2e",
+      "ref_mode": "L8",
+      "ref_size": [
+        16,
+        1
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": "little",
+      "decoded_source_byte_order_origin": "pillow_fixture",
+      "decoded_source_color": null,
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "tiled_minisblack_1bit_unaligned_edge",
       "status": "ok",
       "error_type": null,
