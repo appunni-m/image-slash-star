@@ -945,6 +945,11 @@ formats:
       test_assets:
       - error_baseline_multiscan_second_sos_length_7.jpg
       expect_error: true
+    - id: error_baseline_dc_category_16
+      description: Complete baseline JPEG with an out-of-range DC coefficient category rejected during pixel decoding
+      test_assets:
+      - baseline_dc_category_16.jpg
+      expect_error: true
     - id: progressive_com_tail_junk
       description: Progressive JPEG with a post-scan COM marker followed by non-marker bytes
       test_assets:

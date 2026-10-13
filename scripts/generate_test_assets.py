@@ -2143,6 +2143,30 @@ def gen_jpeg():
     (d / "progressive_dc_category_16.jpg").write_bytes(
         mutate_first_jpeg_dc_category(ac_first_source_data, 16)
     )
+    baseline_dc_category_stream = BytesIO()
+    Image.new("L", (8, 8), 128).save(
+        baseline_dc_category_stream,
+        format="JPEG",
+        quality=85,
+        progressive=False,
+        optimize=False,
+    )
+    baseline_dc_category_source = baseline_dc_category_stream.getvalue()
+    if not jpeg_segments(baseline_dc_category_source, 0xC0) or jpeg_segments(
+        baseline_dc_category_source, 0xC2
+    ):
+        raise RuntimeError("baseline DC-category fixture source is not SOF0")
+    baseline_dc_category_16 = mutate_first_jpeg_dc_category(
+        baseline_dc_category_source, 16
+    )
+    (d / "baseline_dc_category_16.jpg").write_bytes(baseline_dc_category_16)
+    try:
+        with Image.open(BytesIO(baseline_dc_category_16)) as malformed_image:
+            malformed_image.load()
+    except OSError:
+        pass
+    else:
+        raise RuntimeError("Pillow accepted baseline JPEG DC category 16")
     refinement_rng = random.Random(0xAC_CE55)
     refinement_noise = Image.new("RGB", (64, 64))
     refinement_noise.putdata(
