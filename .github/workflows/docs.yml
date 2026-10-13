@@ -109,9 +109,7 @@ jobs:
     needs: [build, examples]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     concurrency:
-      # Preserve the prior workflow-level group so in-flight runs from the old
-      # workflow version serialize with this deployment job during rollout.
-      group: documentation-main
+      group: documentation-pages-${{ github.event.repository.default_branch || github.ref }}
       cancel-in-progress: false
     runs-on: ubuntu-24.04
     timeout-minutes: 25
