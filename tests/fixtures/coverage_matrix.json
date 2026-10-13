@@ -187395,6 +187395,25 @@
       "oracle_status": "not_applicable"
     },
     {
+      "id": "avif_restoration_stripe_output_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "avif",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:avif:high_bitdepth"
+      },
+      "fault": {
+        "point": "av1.restoration.stripe_output_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "jpeg_multiscan_coefficient_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

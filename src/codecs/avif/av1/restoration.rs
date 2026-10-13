@@ -217,9 +217,21 @@ pub(super) fn restore_striped_plane(
     }
     let filtered = &plane.samples;
     let mut output = Vec::new();
+    #[cfg(coverage)]
+    let output_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1RestorationStripeOutputReservation,
+    ) {
+        usize::MAX
+    } else {
+        count
+    };
+    #[cfg(not(coverage))]
+    let output_reservation_count = count;
     output
-        .try_reserve_exact(count)
-        .map_err(|_| malformed("unable to allocate striped restoration output"))?;
+        .try_reserve_exact(output_reservation_count)
+        .map_err(|_| {
+            CodecError::Dimensions("unable to allocate striped restoration output".to_owned())
+        })?;
     output.resize(count, 0);
     let mut start = 0_usize;
     while start < height {

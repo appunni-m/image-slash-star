@@ -96,6 +96,8 @@ pub enum CoverageFaultPoint {
     Av1SgrIntermediateReservation,
     /// Force AV1 striped restoration scratch reservation to fail.
     Av1RestorationStripeScratchReservation,
+    /// Force AV1 striped restoration output reservation to fail.
+    Av1RestorationStripeOutputReservation,
 }
 
 thread_local! {

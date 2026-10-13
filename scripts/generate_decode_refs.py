@@ -2646,6 +2646,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.restoration.stripe_scratch_reservation": {
             "sequence_decode_error_then_retry_succeeds"
         },
+        "av1.restoration.stripe_output_reservation": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
         "jpeg.multiscan.coefficient_reservation": {
             "decode_error_then_retry_succeeds"
         },

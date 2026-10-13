@@ -7,7 +7,7 @@
   },
   "fixture_manifests": {
     "capability_tables": "991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400",
-    "coverage_origins": "79bf05e9ae0579f8962dda89e01376b6e1f9c9e47541dd45982358f68dc7cd68",
+    "coverage_origins": "ef0194ab25f8e941ae401c0a7bfb2c55288e5e975236c2be400b479b64b97e57",
     "decode_policy": "b9fdc778cb73d4d9ea99daa9adcdd8812ebc9cc90d6698d047619966620d6b6a",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
@@ -15,16 +15,16 @@
     "metadata_policy": "2cb37a1e467ef34c06d19bf2a47e668840e4feed0337d0e8237f8b9b56d4c79e",
     "option_acceptance": "604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5",
     "option_error": "657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb",
-    "roadmap": "e45738c69954f11bcc759883302d96c01dd96b3863a67333f663870f81bc0883",
+    "roadmap": "164a4692b7517754a1e39d3b513267a84907e3bd46225431e5c1735dcfa6c7c5",
     "sequence_policy": "3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51",
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
-    "unreachable_contract": "bcc73d161f554971bb4e1388fcfaf8d39f5eda01804a31d0369a61a45d46d539",
+    "unreachable_contract": "566d65e55f79fd2640dadccdcee0436a4967a01c9b827acff1135241ab28e4e8",
     "webp_property_inspector": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
     "webp_property_map": "d5c892ed3a0d8d09857e5da158019a95455e46123cd4d3b0a37f205b3f608afa"
   },
   "format_version": 2,
-  "manifest_sha256": "31b405a4a3690467b53f273bee57f1d3581aa18cc035fc0bfe1b7398ad1ac329",
-  "matrix_sha256": "493f53134c14b6fb78e952521ec3e496986a3afe5895b16b878e13db94156f75",
+  "manifest_sha256": "d44063eb8f0d4ac9daa9a3039ccb3770cc365ed558bb9e22951485acf6e8a63d",
+  "matrix_sha256": "97dcb762c9751f61364c39ace6dd3c0536e6b053d6477f9e96c7be0de37581cb",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"

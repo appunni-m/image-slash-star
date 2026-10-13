@@ -1128,6 +1128,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::SequenceDecode,
             ),
+            (
+                "av1.restoration.stripe_output_reservation",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::Av1RestorationStripeOutputReservation,
+                true,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::SequenceDecode,
+            ),
             ("av1.frame.monochrome_tile_state_reservation", "decode_error_then_retry_succeeds") => {
                 (
                     img::CoverageFaultPoint::Av1MonochromeTileReservation,
@@ -1347,6 +1356,9 @@ fn execute_fault_contract(
         ),
         "av1.restoration.stripe_scratch_reservation" => Some(
             "decode sequence: AVIF sequence validation failed: unable to allocate AV1 restoration stripe",
+        ),
+        "av1.restoration.stripe_output_reservation" => Some(
+            "decode sequence: AVIF sequence validation failed: unable to allocate striped restoration output",
         ),
         _ => None,
     };

@@ -225,6 +225,14 @@ FAULT_CONTRACTS = {
         "point": "av1.restoration.stripe_scratch_reservation",
         "contract": "sequence_decode_error_then_retry_succeeds",
     },
+    "avif_restoration_stripe_output_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_restoration_stripe_output_reservation_failure",
+        "source_case": "decode:avif:high_bitdepth",
+        "point": "av1.restoration.stripe_output_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
     "avif_tile_cell_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",
