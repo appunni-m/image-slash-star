@@ -25,6 +25,10 @@ ROOT = Path(__file__).resolve().parent.parent
 PINNED_ACTION_RE = re.compile(
     r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[^@\s]+)?@[0-9a-f]{40}\Z"
 )
+USES_ENTRY_RE = re.compile(
+    r"(?:^|[,{])\s*(?:-\s*)?(?:'uses'|\"uses\"|uses)\s*:\s*"
+    r"(?P<value>'[^']*'|\"[^\"]*\"|[^,\s}#]+)"
+)
 
 
 def unpinned_action_uses(contents: str) -> list[tuple[int, str]]:
@@ -32,20 +36,18 @@ def unpinned_action_uses(contents: str) -> list[tuple[int, str]]:
 
     violations = []
     for line_number, line in enumerate(contents.splitlines(), start=1):
-        match = re.match(r"^\s*(?:-\s*)?uses\s*:\s*(.*?)\s*$", line)
-        if match is None:
-            continue
-        reference = match.group(1).split(" #", maxsplit=1)[0].strip()
-        if (
-            len(reference) >= 2
-            and reference[0] == reference[-1]
-            and reference[0] in "\"'"
-        ):
-            reference = reference[1:-1]
-        if reference.startswith("./"):
-            continue
-        if not PINNED_ACTION_RE.fullmatch(reference):
-            violations.append((line_number, reference))
+        for match in USES_ENTRY_RE.finditer(line):
+            reference = match.group("value").strip()
+            if (
+                len(reference) >= 2
+                and reference[0] == reference[-1]
+                and reference[0] in "\"'"
+            ):
+                reference = reference[1:-1]
+            if reference.startswith("./"):
+                continue
+            if not PINNED_ACTION_RE.fullmatch(reference):
+                violations.append((line_number, reference))
     return violations
 
 

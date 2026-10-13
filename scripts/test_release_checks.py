@@ -198,6 +198,17 @@ class WorkflowPolicyTests(unittest.TestCase):
             ],
         )
 
+    def test_inline_flow_steps_cannot_bypass_action_pinning(self) -> None:
+        contents = (
+            "jobs:\n  build:\n    steps:\n"
+            "      - {run: echo ok, uses: actions/checkout@v4}\n"
+            "      - {\"uses\": owner/action@v1, run: echo ok}\n"
+        )
+        self.assertEqual(
+            check_workflows.unpinned_action_uses(contents),
+            [(4, "actions/checkout@v4"), (5, "owner/action@v1")],
+        )
+
 
 class CoverageCliTests(unittest.TestCase):
     def test_help_formats_percentages_on_supported_python_versions(self) -> None:
