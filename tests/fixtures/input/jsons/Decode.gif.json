@@ -2877,91 +2877,6 @@
       ]
     },
     {
-      "id": "error_malformed_no_frame_no_trailer",
-      "asset": "no_frame_no_trailer.gif",
-      "asset_sha256": "e166f869cdc0a87f67fc5841ad08082c87d0ffa3c1d677956415ea3110e1fd3f",
-      "execution": {
-        "target": "aarch64-apple-darwin",
-        "features": [
-          "jpeg",
-          "png",
-          "gif",
-          "bmp",
-          "tiff",
-          "webp",
-          "ico",
-          "avif"
-        ],
-        "suite": "native_all_features"
-      },
-      "assertion_origins": {
-        "detection": "pillow_fixture",
-        "inspection": "pillow_fixture",
-        "verification": "pillow_fixture",
-        "decode": "pillow_fixture",
-        "operations": "pillow_fixture"
-      },
-      "operations": {
-        "detect": "ok",
-        "inspect": "error",
-        "verify": "error",
-        "decode": "error",
-        "decode_sequence": "error"
-      },
-      "error_contracts": {
-        "inspect": {
-          "pillow_type": "PIL.UnidentifiedImageError",
-          "pillow_message": "cannot identify image file <bytes>",
-          "rust_kind": "malformed",
-          "rust_format": "GIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "verify": {
-          "pillow_type": "PIL.UnidentifiedImageError",
-          "pillow_message": "cannot identify image file <bytes>",
-          "rust_kind": "malformed",
-          "rust_format": "GIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode": {
-          "pillow_type": "PIL.UnidentifiedImageError",
-          "pillow_message": "cannot identify image file <bytes>",
-          "rust_kind": "malformed",
-          "rust_format": "GIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        },
-        "decode_sequence": {
-          "pillow_type": "PIL.UnidentifiedImageError",
-          "pillow_message": "cannot identify image file <bytes>",
-          "rust_kind": "malformed",
-          "rust_format": "GIF",
-          "rust_message": "non_empty",
-          "origin": "pillow_fixture"
-        }
-      },
-      "expect_error": true,
-      "expect_sequence_error": false,
-      "verification_scope": "header_only",
-      "rust_expect_sequence_error": false,
-      "rust_sequence_error_kind": null,
-      "rust_sequence_error_reason": null,
-      "pillow_call": {
-        "open": "tests/fixtures/input/images/gif/no_frame_no_trailer.gif",
-        "operations": [
-          "PIL.Image.open",
-          "load",
-          "tobytes"
-        ]
-      },
-      "pillow_verify_call": [
-        "PIL.Image.open",
-        "verify"
-      ]
-    },
-    {
       "id": "error_malformed_truncated_global_palette",
       "asset": "truncated_global_palette.gif",
       "asset_sha256": "b3d131b8060dfbafcd83ac261bad4a6a91d85e72c8bdc84a83152ce8801ee968",
@@ -5420,6 +5335,92 @@
       "rust_sequence_error_reason": null,
       "pillow_call": {
         "open": "tests/fixtures/input/images/gif/lzw_truncated_output.gif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "error_malformed_no_frame_no_trailer",
+      "asset": "no_frame_no_trailer.gif",
+      "asset_sha256": "e166f869cdc0a87f67fc5841ad08082c87d0ffa3c1d677956415ea3110e1fd3f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "GIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "GIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "GIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "malformed",
+          "rust_format": "GIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "rust_decode_with_metadata_limit": 13,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/gif/no_frame_no_trailer.gif",
         "operations": [
           "PIL.Image.open",
           "load",

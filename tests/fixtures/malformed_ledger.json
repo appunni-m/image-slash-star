@@ -6699,7 +6699,7 @@
             "rust_message": "non_empty"
           }
         },
-        "description": "Invalid headers, descriptors, controls, and LZW roots",
+        "description": "GIF89a logical screen reaches EOF before its first image frame within the metadata budget",
         "inspect_status": "error",
         "origins": [
           "pillow_fixture"

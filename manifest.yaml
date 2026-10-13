@@ -2650,7 +2650,6 @@ formats:
       - truncated_after_background.gif
       - declared_global_palette_short.gif
       - no_frame_trailer.gif
-      - no_frame_no_trailer.gif
       - truncated_global_palette.gif
       - unknown_block.gif
       - extension_no_label.gif
@@ -2681,6 +2680,12 @@ formats:
       - zero_frame_height.gif
       - bad_gce_terminator.gif
       - lzw_truncated_output.gif
+      expect_error: true
+    - id: error_malformed_no_frame_no_trailer
+      description: GIF89a logical screen reaches EOF before its first image frame within the metadata budget
+      rust_decode_with_metadata_limit: 13
+      test_assets:
+      - no_frame_no_trailer.gif
       expect_error: true
     - id: error_lzw_end_only_token_checkpoint
       description: Token-aware decode preserves the Pillow error for an immediate GIF LZW end code
