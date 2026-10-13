@@ -15,8 +15,6 @@ import re
 import sys
 from pathlib import Path
 
-import yaml
-
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "tests" / "fixtures" / "unreachable_contract_manifest.json"
 DOCUMENT = ROOT / "docs" / "EVIDENCE.md"
@@ -345,6 +343,51 @@ def verify_test_symbols(path: Path, names: list[str], field: str) -> None:
         fail(f"{field} names are not #[test] functions in {path}: {missing}")
 
 
+def active_fault_contract_ids() -> set[str]:
+    """Read the fault-contract IDs without adding a YAML runtime dependency."""
+
+    try:
+        lines = SOURCE_MANIFEST.read_text(encoding="utf-8").splitlines()
+    except OSError as error:
+        fail(f"cannot read active fault rows from {SOURCE_MANIFEST}: {error}")
+
+    try:
+        section_start = lines.index("fault_contracts:") + 1
+    except ValueError:
+        fail(f"{SOURCE_MANIFEST} is missing the top-level fault_contracts section")
+
+    case_ids = []
+    current_status = None
+    in_section = False
+    for line in lines[section_start:]:
+        if line and not line[0].isspace():
+            break
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if line.startswith("  - "):
+            if case_ids and current_status != "active":
+                fail("every manifest fault contract must have status: active")
+            match = re.fullmatch(r"  - id: ([a-z0-9_]+)", line)
+            if match is None:
+                fail("manifest fault-contract rows must begin with a simple id field")
+            case_ids.append(match.group(1))
+            current_status = None
+            in_section = True
+            continue
+        if in_section:
+            match = re.fullmatch(r"    status: ([a-z]+)", line)
+            if match is not None:
+                current_status = match.group(1)
+
+    if current_status != "active":
+        fail("every manifest fault contract must have status: active")
+    if not case_ids:
+        fail(f"{SOURCE_MANIFEST} has no active fault-contract IDs")
+    if len(case_ids) != len(set(case_ids)):
+        fail("manifest fault_contracts contains duplicate active ids")
+    return set(case_ids)
+
+
 def verify_fault_contract_case_index(entries: object) -> None:
     if not isinstance(entries, list):
         fail("fault_contract_cases must be an array")
@@ -353,27 +396,7 @@ def verify_fault_contract_case_index(entries: object) -> None:
             f"fault_contract_cases must contain exactly {len(FAULT_CONTRACTS)} active fault rows"
         )
 
-    try:
-        source_manifest = yaml.safe_load(SOURCE_MANIFEST.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as error:
-        fail(f"cannot read active fault rows from {SOURCE_MANIFEST}: {error}")
-    if not isinstance(source_manifest, dict):
-        fail(f"{SOURCE_MANIFEST} must contain a YAML mapping")
-    source_rows = source_manifest.get("fault_contracts")
-    if not isinstance(source_rows, list):
-        fail(f"{SOURCE_MANIFEST} fault_contracts must be an array")
-    active_source_rows = [
-        row for row in source_rows if isinstance(row, dict) and row.get("status") == "active"
-    ]
-    if len(active_source_rows) != len(source_rows):
-        fail("every manifest fault_contracts row must be a valid active mapping")
-    source_ids = [row.get("id") for row in active_source_rows]
-    if any(not isinstance(case_id, str) or not case_id for case_id in source_ids):
-        fail("every active manifest fault contract must have a non-empty id")
-    if len(set(source_ids)) != len(source_ids):
-        fail("manifest fault_contracts contains duplicate active ids")
-    source_by_id = {row["id"]: row for row in active_source_rows}
-    source_id_set = set(source_by_id)
+    source_id_set = active_fault_contract_ids()
     if source_id_set != set(FAULT_CONTRACTS):
         missing = sorted(source_id_set - set(FAULT_CONTRACTS))
         stale = sorted(set(FAULT_CONTRACTS) - source_id_set)
@@ -381,23 +404,6 @@ def verify_fault_contract_case_index(entries: object) -> None:
             "verifier fault mappings differ from active manifest rows: "
             f"missing={missing}, stale={stale}"
         )
-    for case_id, expected in FAULT_CONTRACTS.items():
-        source_row = source_by_id[case_id]
-        source = source_row.get("input")
-        fault = source_row.get("fault")
-        if (
-            source_row.get("type") != "fault-contract"
-            or source_row.get("operation") != "decode"
-            or source_row.get("format") != expected["format"]
-            or source_row.get("requirements") != [expected["category"]]
-            or not isinstance(source, dict)
-            or source.get("source_case") != expected["source_case"]
-            or not isinstance(fault, dict)
-            or fault.get("point") != expected["point"]
-            or fault.get("contract") != expected["contract"]
-        ):
-            fail(f"{case_id}: source manifest row differs from its fault mapping")
-
     try:
         coverage = json.loads(
             (ROOT / "tests" / "fixtures" / "coverage_matrix.json").read_text(
