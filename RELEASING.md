@@ -48,6 +48,9 @@ Retry only the same source and unchanged artifacts after a transient failure.
 An uploaded registry version or released tag must never be overwritten.
 Changed source, packaging, or artifact bytes require a new version and tag.
 Verify which job actually failed before changing trusted-publisher settings.
+Protect `v*` tags with a GitHub ruleset that blocks updates and deletion. The
+release workflow also rechecks the remote annotated tag against the triggering
+commit before crates.io publication and GitHub release creation.
 
 The completed local bootstrap target has been removed. The maintainer controls
 releases through repository review and tag permissions; no maintainer-succession

@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from verify_release_tag import ReleaseTagError, verify_remote_tag
+
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE_NAME = "image-slash-star"
@@ -150,6 +152,16 @@ def require_publish_approval() -> None:
         raise PublishError(
             "RELEASE_CI_SHA must equal the exact clean commit being published"
         )
+    if os.environ.get("GITHUB_SHA") != commit:
+        raise PublishError("GITHUB_SHA must equal the exact clean commit being published")
+    try:
+        verify_remote_tag(
+            os.environ.get("GITHUB_REF_NAME", ""),
+            commit,
+            capture_command=capture,
+        )
+    except (ReleaseTagError, subprocess.CalledProcessError) as error:
+        raise PublishError(f"release tag changed before publication: {error}") from error
 
 
 def publish(version: str) -> None:

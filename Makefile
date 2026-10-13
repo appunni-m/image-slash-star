@@ -203,5 +203,5 @@ package-surface-check: ## Check the exact declared Cargo archive file list
 	$(PYTHON) scripts/verify_package_surface.py
 
 .PHONY: workflows-check
-workflows-check: ## Validate Actions workflows with checksum-pinned actionlint
+workflows-check: ## Require SHA-pinned actions and validate workflows with actionlint
 	$(PYTHON) scripts/check_workflows.py

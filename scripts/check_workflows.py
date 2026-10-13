@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Validate every GitHub workflow with a checksum-pinned actionlint binary."""
+"""Require immutable external actions and validate workflows with actionlint."""
 from __future__ import annotations
 
 import hashlib
 import io
 from pathlib import Path
 import platform
+import re
 import subprocess
+import sys
 import tarfile
 import urllib.request
 
@@ -20,6 +22,51 @@ ARCHIVES = {
     ("Linux", "aarch64"): ("linux_arm64", "325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6"),
 }
 ROOT = Path(__file__).resolve().parent.parent
+PINNED_ACTION_RE = re.compile(
+    r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(?:/[^@\s]+)?@[0-9a-f]{40}\Z"
+)
+
+
+def unpinned_action_uses(contents: str) -> list[tuple[int, str]]:
+    """Return workflow `uses` references that are not local or SHA-pinned."""
+
+    violations = []
+    for line_number, line in enumerate(contents.splitlines(), start=1):
+        match = re.match(r"^\s*(?:-\s*)?uses\s*:\s*(.*?)\s*$", line)
+        if match is None:
+            continue
+        reference = match.group(1).split(" #", maxsplit=1)[0].strip()
+        if (
+            len(reference) >= 2
+            and reference[0] == reference[-1]
+            and reference[0] in "\"'"
+        ):
+            reference = reference[1:-1]
+        if reference.startswith("./"):
+            continue
+        if not PINNED_ACTION_RE.fullmatch(reference):
+            violations.append((line_number, reference))
+    return violations
+
+
+def verify_action_pins(workflows: list[Path]) -> bool:
+    """Reject mutable external action refs before running actionlint."""
+
+    violations = []
+    for workflow in workflows:
+        for line_number, reference in unpinned_action_uses(
+            workflow.read_text(encoding="utf-8")
+        ):
+            violations.append(f"{workflow.relative_to(ROOT)}:{line_number}: {reference}")
+    if not violations:
+        return True
+    print(
+        "Workflow action pinning failed; use full 40-character commit SHAs:",
+        file=sys.stderr,
+    )
+    for violation in violations:
+        print(f"  {violation}", file=sys.stderr)
+    return False
 
 
 def binary_bytes(archive: bytes, checksum: str) -> bytes:
@@ -37,6 +84,12 @@ def binary_bytes(archive: bytes, checksum: str) -> bytes:
 
 
 def main() -> int:
+    workflows = sorted((ROOT / ".github" / "workflows").glob("*.y*ml"))
+    if not workflows:
+        raise SystemExit("No GitHub workflows found")
+    if not verify_action_pins(workflows):
+        return 1
+
     target = (platform.system(), platform.machine())
     if target not in ARCHIVES:
         raise SystemExit(f"Workflow lint supports Linux/macOS x86-64 and ARM64; got {target}")
@@ -55,9 +108,6 @@ def main() -> int:
     binary = directory / "actionlint"
     binary.write_bytes(executable)
     binary.chmod(0o755)
-    workflows = sorted((ROOT / ".github" / "workflows").glob("*.y*ml"))
-    if not workflows:
-        raise SystemExit("No GitHub workflows found")
     # Validate YAML, expressions, action inputs, and job dependencies. Shell and
     # Python linters are separate tools, not silently host-dependent checks.
     result = subprocess.run(

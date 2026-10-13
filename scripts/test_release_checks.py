@@ -19,8 +19,10 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import verify_llvm_coverage as coverage
+import check_workflows
 import publish_release
 import verify_claim_ledger as claim_ledger
+import verify_release_tag
 
 
 class CoverageTests(unittest.TestCase):
@@ -114,21 +116,87 @@ class PublishTests(unittest.TestCase):
             "GITHUB_ACTIONS": "true",
             "GITHUB_REPOSITORY": "appunni-m/image-slash-star",
             "GITHUB_REF": "refs/tags/v0.1.1",
+            "GITHUB_REF_NAME": "v0.1.1",
+            "GITHUB_SHA": "a" * 40,
             "ACTIONS_ID_TOKEN_REQUEST_URL": "https://example.invalid/oidc",
             "CARGO_REGISTRY_TOKEN": "test-placeholder",
             "RELEASE_CI_SHA": "a" * 40,
         }
         with patch.object(publish_release, "capture", side_effect=["", "a" * 40] * 3), \
-             patch.object(publish_release, "package_version", return_value="0.1.1"):
+             patch.object(publish_release, "package_version", return_value="0.1.1"), \
+             patch.object(publish_release, "verify_remote_tag") as verify_tag:
             with patch.dict(os.environ, {}, clear=True):
                 with self.assertRaises(publish_release.PublishError):
                     publish_release.require_publish_approval()
             with patch.dict(os.environ, context, clear=True):
                 publish_release.require_publish_approval()
+            verify_tag.assert_called_once_with(
+                "v0.1.1", "a" * 40, capture_command=publish_release.capture
+            )
             context["GITHUB_REF"] = "refs/heads/main"
             with patch.dict(os.environ, context, clear=True):
                 with self.assertRaises(publish_release.PublishError):
                     publish_release.require_publish_approval()
+
+
+class ReleaseTagTests(unittest.TestCase):
+    def test_remote_annotated_tag_must_peel_to_the_event_commit(self) -> None:
+        tag_object = "b" * 40
+        commit = "a" * 40
+        output = (
+            f"{tag_object}\trefs/tags/v0.1.1\n"
+            f"{commit}\trefs/tags/v0.1.1^{{}}\n"
+        )
+
+        def capture_command(command: list[str]) -> str:
+            if command[1] == "check-ref-format":
+                return ""
+            return output
+
+        self.assertEqual(
+            verify_release_tag.verify_remote_tag(
+                "v0.1.1", commit, capture_command=capture_command
+            ),
+            commit,
+        )
+        with self.assertRaisesRegex(verify_release_tag.ReleaseTagError, "resolves to"):
+            verify_release_tag.verify_remote_tag(
+                "v0.1.1", "c" * 40, capture_command=capture_command
+            )
+
+    def test_remote_lightweight_tag_is_rejected(self) -> None:
+        commit = "a" * 40
+
+        def capture_command(command: list[str]) -> str:
+            if command[1] == "check-ref-format":
+                return ""
+            return f"{commit}\trefs/tags/v0.1.1\n"
+
+        with self.assertRaisesRegex(verify_release_tag.ReleaseTagError, "annotated"):
+            verify_release_tag.verify_remote_tag(
+                "v0.1.1", commit, capture_command=capture_command
+            )
+
+
+class WorkflowPolicyTests(unittest.TestCase):
+    def test_external_actions_require_full_commit_shas(self) -> None:
+        sha = "a" * 40
+        contents = f"""jobs:
+  build:
+    steps:
+      - uses: actions/checkout@v4
+      - uses: "owner/action@{sha}" # pinned
+      - uses: ./local/action
+  reusable:
+    uses: owner/repo/.github/workflows/ci.yml@v1
+"""
+        self.assertEqual(
+            check_workflows.unpinned_action_uses(contents),
+            [
+                (4, "actions/checkout@v4"),
+                (8, "owner/repo/.github/workflows/ci.yml@v1"),
+            ],
+        )
 
 
 class CoverageCliTests(unittest.TestCase):
