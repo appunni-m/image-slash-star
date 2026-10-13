@@ -2999,8 +2999,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,212 total rows: 1,734 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,734 decode rows and 446 encode
+The current matrix contains 2,213 total rows: 1,735 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,735 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 284 decode rows. The 30 fault contracts are tracked separately from the
 Pillow parity totals. Full
@@ -6364,7 +6364,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `fc589a9fc057ae3020de9a0b75f485f08951d0cc040214222d52ad8cdce547f9`; matrix `ccb45c8687799abaf83b49593c0f3caf2ffd4c193a992c6f716d907fb4ea6f45`.
+- Current fixture integrity only: manifest `afd0d98d7a79e38e05db87b217463dc7558bcef9515160749eee732734b938b3`; matrix `2cfa78e0f91e6dfe1a84c8a78c14d2b9d041e53436c63c06365e7b0b6060061e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6637,10 +6637,31 @@ Pillow 12.2.0 detects the AVIF signature, then reports
 inspection, verification, decode, and sequence decode. It reaches the normal
 missing-child parse error and is not a target-only fault case.
 
-The focused public run passed 1/1 selected row. Coverage MCP returned no
-missing branch location at `src/codecs/avif/samples.rs:589`; other
-`parse_iinf` outcomes remain uncovered. The selected fault run passed the
-baseline plus both contracts (3/3 rows), with no missing branch observations
+The complementary public row `error_iinf_entry_count_zero_with_child` changes
+that count from one to zero while retaining the same child. Its full-file
+fixture SHA-256 is
+`951efe4031639fc3cda52ba994de66b93b028892cae96e4e0efb2f83d79677ef`. The
+pinned Pillow 12.2.0 reference generator classifies inspection, verification,
+decode, and sequence decode as malformed
+`builtins.RuntimeError: Failed to decode image: Missing or empty image item`.
+The single-row coverage run passed 1/1. Coverage MCP's selected report
+`.coverage-mcp/local-evidence/20261013/avif-iinf-zero-count/coverage.json`
+(SHA-256
+`45c831e568a85c30b2895f0ad7343d523bafe0b7138f7ac78b73f59f876c0bf8`)
+lists the `false` arm as missing at `src/codecs/avif/samples.rs:599`; the
+trailing-child `true` arm is observed in this selection. The test command ran
+from source revision `43a94a55ea39cb53115749a60ebef757ea6e3b48` with the
+generated manifest and references. The report has no build ID or recorded
+revision, and MCP labels source identity unverified and test attribution
+unknown. Incremental comparisons with the selected iinf report and saved full
+baseline are incomparable because their exact branch detail is incomplete;
+no aggregate coverage gain is claimed.
+
+For the count-exceeds selection, the focused public run passed 1/1 row and
+Coverage MCP returned no missing branch location at
+`src/codecs/avif/samples.rs:589`; that path is distinct from the trailing-child
+branch measured by the zero-count selection above. The selected fault run
+passed the baseline plus both contracts (3/3 rows), with no missing branch observations
 at the `iinf` reservation hook (`samples.rs:576`) or the exercised
 `parse_iloc::<true>` hook (`samples.rs:1095`). Both reports are selected-only;
 MCP labels source identity unverified and test attribution unknown. The full

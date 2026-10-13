@@ -8253,6 +8253,11 @@ formats:
       test_assets:
       - iinf_entry_count_exceeds_children.avif
       expect_error: true
+    - id: error_iinf_entry_count_zero_with_child
+      description: AVIF iinf declares zero item-information entries while retaining one infe child
+      test_assets:
+      - iinf_entry_count_zero_with_child.avif
+      expect_error: true
     - id: error_meta_missing_item_properties
       description: AVIF meta omits the required item-property table
       test_assets:

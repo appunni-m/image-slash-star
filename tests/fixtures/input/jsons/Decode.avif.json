@@ -29227,6 +29227,91 @@
       ]
     },
     {
+      "id": "error_iinf_entry_count_zero_with_child",
+      "asset": "iinf_entry_count_zero_with_child.avif",
+      "asset_sha256": "951efe4031639fc3cda52ba994de66b93b028892cae96e4e0efb2f83d79677ef",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "specification_reference",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "inspect": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode image: Missing or empty image item",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode image: Missing or empty image item",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode image: Missing or empty image item",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "builtins.RuntimeError",
+          "pillow_message": "Failed to decode image: Missing or empty image item",
+          "rust_kind": "malformed",
+          "rust_format": "AVIF",
+          "rust_message": "non_empty",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/avif/iinf_entry_count_zero_with_child.avif",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "error_meta_missing_item_properties",
       "asset": "meta_missing_item_properties.avif",
       "asset_sha256": "5339cf9635130eee4dcfd7801dd25563b591332b243b137b077a67576ee69436",

@@ -50461,6 +50461,99 @@
           }
         },
         {
+          "id": "error_iinf_entry_count_zero_with_child",
+          "type": "decode",
+          "format": "avif",
+          "category": "error",
+          "description": "AVIF iinf declares zero item-information entries while retaining one infe child",
+          "asset": "iinf_entry_count_zero_with_child.avif",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "951efe4031639fc3cda52ba994de66b93b028892cae96e4e0efb2f83d79677ef",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_status": "error",
+          "inspect_error_type": "builtins.RuntimeError",
+          "inspect_error_message": "Failed to decode image: Missing or empty image item",
+          "inspect_error_kind": "malformed",
+          "verify_status": "error",
+          "verify_error_type": "builtins.RuntimeError",
+          "verify_error_message": "Failed to decode image: Missing or empty image item",
+          "verify_error_kind": "malformed",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.RuntimeError",
+          "oracle_error_message": "Failed to decode image: Missing or empty image item",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "specification_reference",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "error",
+            "verify": "error",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "inspect": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode image: Missing or empty image item",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "verify": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode image: Missing or empty image item",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode image: Missing or empty image item",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.RuntimeError",
+              "pillow_message": "Failed to decode image: Missing or empty image item",
+              "rust_kind": "malformed",
+              "rust_format": "AVIF",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "error_meta_missing_item_properties",
           "type": "decode",
           "format": "avif",
@@ -186775,12 +186868,12 @@
     }
   },
   "summary": {
-    "total_rows": 2212,
-    "decode_rows": 1734,
+    "total_rows": 2213,
+    "decode_rows": 1735,
     "encode_rows": 478,
     "formats": 8,
-    "assets_available": 1731,
-    "decode_active": 1734,
+    "assets_available": 1732,
+    "decode_active": 1735,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

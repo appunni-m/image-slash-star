@@ -10436,6 +10436,95 @@ def avif_unique_top_level_payload_range(data, wanted_kind):
     return ranges[0]
 
 
+def avif_unique_meta_child_range(data, wanted_kind):
+    """Return the complete range for one child of a version-zero meta box."""
+    meta_payload_start, meta_payload_end = avif_unique_top_level_payload_range(
+        data, b"meta"
+    )
+    if (
+        meta_payload_end - meta_payload_start < 4
+        or data[meta_payload_start : meta_payload_start + 4] != bytes(4)
+    ):
+        raise RuntimeError("AVIF metadata mutation needs a version-zero meta box")
+
+    position = meta_payload_start + 4
+    ranges = []
+    while position < meta_payload_end:
+        remaining = meta_payload_end - position
+        if remaining < 8:
+            raise RuntimeError("AVIF meta child header is truncated")
+        size, kind = struct.unpack_from(">I4s", data, position)
+        header_size = 8
+        if size == 1:
+            if remaining < 16:
+                raise RuntimeError("AVIF meta child large-box header is truncated")
+            size = struct.unpack_from(">Q", data, position + 8)[0]
+            header_size = 16
+        elif size == 0:
+            size = remaining
+        if size < header_size or size > remaining:
+            raise RuntimeError(f"AVIF meta child {kind!r} box size is invalid")
+        if kind == wanted_kind:
+            ranges.append((position, position + header_size, position + size))
+        position += size
+
+    if len(ranges) != 1:
+        raise RuntimeError(
+            f"expected one AVIF meta child {wanted_kind!r}, found {len(ranges)}"
+        )
+    return ranges[0]
+
+
+def avif_iinf_entry_count_field(data, iinf_offset):
+    """Validate the baseline iinf shape and return its version-zero count field."""
+    if data[iinf_offset + 4 : iinf_offset + 8] != b"iinf":
+        raise RuntimeError("AVIF item-information offset does not point to iinf")
+    actual_iinf_offset, payload_start, box_end = avif_unique_meta_child_range(
+        data, b"iinf"
+    )
+    if actual_iinf_offset != iinf_offset or box_end <= payload_start:
+        raise RuntimeError("AVIF item-information box range is invalid")
+    if data[payload_start : payload_start + 4] != bytes(4):
+        raise RuntimeError("AVIF item-information table must use version zero")
+
+    count_offset = payload_start + 4
+    if count_offset + 2 > box_end:
+        raise RuntimeError("AVIF item-information entry count is truncated")
+    children = avif_parse_boxes(data, count_offset + 2, box_end)
+    if len(children) != 1 or children[0][0] != b"infe":
+        raise RuntimeError("AVIF item-information table must contain one infe child")
+    return count_offset
+
+
+def write_avif_iinf_entry_count_fixture(
+    directory, baseline, iinf_offset, entry_count, expected_sha256, fixture_name
+):
+    """Write one count-only iinf mutation after validating the baseline shape."""
+    count_offset = avif_iinf_entry_count_field(baseline, iinf_offset)
+    if struct.unpack_from(">H", baseline, count_offset)[0] != 1:
+        raise RuntimeError("baseline AVIF item-information table must contain one entry")
+    variant = bytearray(baseline)
+    struct.pack_into(">H", variant, count_offset, entry_count)
+    if hashlib.sha256(variant).hexdigest() != expected_sha256:
+        raise RuntimeError(f"AVIF {fixture_name} fixture differs from its pinned hash")
+    (directory / fixture_name).write_bytes(variant)
+
+
+def gen_avif_iinf_entry_count_zero():
+    """Regenerate the iinf zero-count parity input without other AVIF assets."""
+    directory = OUT / "avif"
+    baseline = (directory / "baseline.avif").read_bytes()
+    iinf_offset, _, _ = avif_unique_meta_child_range(baseline, b"iinf")
+    write_avif_iinf_entry_count_fixture(
+        directory,
+        baseline,
+        iinf_offset,
+        0,
+        "951efe4031639fc3cda52ba994de66b93b028892cae96e4e0efb2f83d79677ef",
+        "iinf_entry_count_zero_with_child.avif",
+    )
+
+
 def avif_pack_boxes(boxes):
     """Serialize a bounded sequence of standard-size ISO-BMFF boxes."""
     packed = bytearray()
@@ -18008,17 +18097,22 @@ def gen_avif():
     iinf_offset = meta_child_offsets.get(b"iinf")
     if iinf_offset is None:
         raise RuntimeError("baseline AVIF meta has no item-information child")
-    iinf_entry_count = struct.unpack_from(">H", baseline, iinf_offset + 12)[0]
-    if iinf_entry_count != 1:
-        raise RuntimeError("baseline AVIF item-information table must contain one entry")
-    excess_iinf_entry_count = bytearray(baseline)
-    struct.pack_into(">H", excess_iinf_entry_count, iinf_offset + 12, 2)
-    excess_iinf_entry_count_path = d / "iinf_entry_count_exceeds_children.avif"
-    if hashlib.sha256(excess_iinf_entry_count).hexdigest() != (
-        "651cb3bd4e3d0f6202d1b9caddd11470f518d05c978e5d38cc5d66423a60dde8"
-    ):
-        raise RuntimeError("AVIF iinf entry-count fixture differs from its pinned hash")
-    excess_iinf_entry_count_path.write_bytes(excess_iinf_entry_count)
+    write_avif_iinf_entry_count_fixture(
+        d,
+        baseline,
+        iinf_offset,
+        2,
+        "651cb3bd4e3d0f6202d1b9caddd11470f518d05c978e5d38cc5d66423a60dde8",
+        "iinf_entry_count_exceeds_children.avif",
+    )
+    write_avif_iinf_entry_count_fixture(
+        d,
+        baseline,
+        iinf_offset,
+        0,
+        "951efe4031639fc3cda52ba994de66b93b028892cae96e4e0efb2f83d79677ef",
+        "iinf_entry_count_zero_with_child.avif",
+    )
 
     duplicate_item_location = bytearray(baseline)
     duplicate_item_location[iinf_offset + 4 : iinf_offset + 8] = b"iloc"
@@ -18374,7 +18468,18 @@ def main():
     }
     parser = argparse.ArgumentParser()
     parser.add_argument("--format", choices=generators)
+    parser.add_argument(
+        "--avif-iinf-entry-count-zero",
+        action="store_true",
+        help="generate only the AVIF iinf zero-count parity input",
+    )
     args = parser.parse_args()
+    if args.avif_iinf_entry_count_zero:
+        if args.format is not None:
+            parser.error("--avif-iinf-entry-count-zero cannot be combined with --format")
+        gen_avif_iinf_entry_count_zero()
+        print("Generated AVIF iinf zero-count parity input")
+        return
     selected = [args.format] if args.format else generators
     for format_name in selected:
         generators[format_name]()
