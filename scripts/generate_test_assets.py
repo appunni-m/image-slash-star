@@ -3357,6 +3357,22 @@ def gen_png():
     img.save(d / "compress_none.png", compress_level=0)
     # Sizes
     Image.new("RGB", (1,1), (128,0,0)).save(d / "1x1.png")
+    iend_bad_crc = corrupt_png_chunk_crc(
+        (d / "1x1.png").read_bytes(), b"IEND"
+    )
+    (d / "iend_bad_crc.png").write_bytes(iend_bad_crc)
+    with Image.open(d / "1x1.png") as source_image:
+        source_image.load()
+        with Image.open(d / "iend_bad_crc.png") as tolerated_image:
+            tolerated_image.load()
+            if (
+                tolerated_image.mode,
+                tolerated_image.size,
+                tolerated_image.tobytes(),
+            ) != (source_image.mode, source_image.size, source_image.tobytes()):
+                raise RuntimeError("Pillow changed PNG pixels for an invalid IEND CRC")
+    with Image.open(d / "iend_bad_crc.png") as tolerated_image:
+        tolerated_image.verify()
     (d / "plte_trns_after_idat.png").write_bytes((d / "1x1.png").read_bytes())
     insert_png_chunks_before_iend(
         d / "plte_trns_after_idat.png",

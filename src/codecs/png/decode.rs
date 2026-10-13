@@ -223,8 +223,7 @@ fn record_invalid_compressed_metadata(
 fn record_crc_diagnostic(chunk: &Chunk<'_>, diagnostics: &mut Vec<crate::ImageDiagnostic>) {
     // Pillow defers CRC validation for IDAT and every chunk after the first
     // IDAT until `verify()`. Decode keeps the usable result while exposing the
-    // invalid member through the Rust-only diagnostic contract; Rust
-    // structural verification remains strict.
+    // invalid member through the Rust-only diagnostic contract.
     if chunk.crc_valid {
         return;
     }
@@ -1390,11 +1389,11 @@ fn set_packed_bit(pixels: &mut [u8], width: u32, x: u32, y: u32, value: bool) {
     }
 }
 
-/// Validate PNG chunk framing and CRCs without decompressing image samples.
+/// Validate PNG chunk framing and Pillow-checked CRCs without decompressing samples.
 ///
-/// This matches Pillow's PNG-specific `Image.verify()` behavior: validation
-/// proceeds from the image-data chunk through `IEND`, while construction has
-/// already inspected the preceding header and metadata chunks.
+/// This matches Pillow's `Image.verify()` behavior: it validates image-data and
+/// post-IDAT chunk CRCs, then accepts `IEND` as a terminator without checking
+/// its CRC. Construction has already inspected preceding header and metadata.
 pub(crate) fn verify(data: &[u8]) -> CodecResult<()> {
     // `EncodedImage::new` has already inspected the immutable source and
     // proved its signature, 13-byte IHDR framing, and construction-critical
@@ -2027,10 +2026,13 @@ impl<'a> Iterator for Chunks<'a> {
             let kind = [kind_bytes[0], kind_bytes[1], kind_bytes[2], kind_bytes[3]];
             let start = self.position.saturating_add(8);
             // Pillow validates construction-critical CRCs before the first
-            // IDAT, then defers IDAT and every later chunk to its verification
-            // boundary. The explicit Rust verifier sets `verify_crc` and
-            // remains strict for all chunks.
-            let verify_crc = self.verify_crc || (!self.saw_idat && kind != *b"IDAT");
+            // IDAT, then checks image-data and post-IDAT chunks at verification
+            // time. It treats IEND as a terminator without checking its CRC.
+            let verify_crc = if self.verify_crc {
+                kind != *b"IEND" || !self.saw_idat
+            } else {
+                !self.saw_idat && kind != *b"IDAT"
+            };
             let (payload, crc_end, crc_valid) =
                 chunk_payload_with_crc(self.data, &kind, start, length, verify_crc)?;
             self.position = crc_end;

@@ -1922,6 +1922,11 @@ formats:
       test_assets:
       - unknown_ancillary_after_idat_bad_crc.png
       rust_decode_with_metadata_limit: 78
+    - id: pillow_tolerated_iend_bad_crc
+      description: Invalid CRC on IEND preserves Pillow pixels and verification success
+      test_assets:
+      - iend_bad_crc.png
+      status: active
     - id: chunk_time
       description: PNG with tIME chunk
       test_assets:
