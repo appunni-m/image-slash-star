@@ -1,6 +1,7 @@
 // Modified Rust port copyright (c) 2026 Appunni M.
 // Derived from libjpeg-turbo/IJG sources; see third_party/libjpeg-turbo/.
 
+use super::super::encode::huffman::{STD_AC_CHROMA, STD_AC_LUMA, STD_DC_CHROMA, STD_DC_LUMA};
 use super::huffman::{HuffTableStorage, build_huff_table};
 use crate::codecs::{CodecError, CodecResult, OptionCodecExt};
 // ── Marker Constants ──────────────────────────────────────────────────────
@@ -373,6 +374,44 @@ pub(super) fn parse_dri(data: &[u8], pos: &mut usize) -> CodecResult<u16> {
     Ok(restart_interval)
 }
 
+/// Install only referenced absent standard tables before a baseline scan.
+///
+/// Libjpeg supplies defaults for slots zero and one. Supplied tables retain
+/// their identity, and other absent slots remain checked decode errors.
+fn install_baseline_scan_huffman_defaults(
+    scan_components: &[ScanComponent],
+    dc_tables: &mut Vec<Option<HuffTableStorage>>,
+    ac_tables: &mut Vec<Option<HuffTableStorage>>,
+) -> CodecResult<()> {
+    for scan_component in scan_components {
+        for (table_class, table_id, tables) in [
+            (0u8, scan_component.dc_tbl, &mut *dc_tables),
+            (1u8, scan_component.ac_tbl, &mut *ac_tables),
+        ] {
+            let table_index = usize::from(table_id);
+            if tables.get(table_index).is_some_and(Option::is_some) {
+                continue;
+            }
+            let (counts, values): (&[u8; 16], &[u8]) = match (table_class, table_id) {
+                (0, 0) => (&STD_DC_LUMA.0, &STD_DC_LUMA.1),
+                (0, 1) => (&STD_DC_CHROMA.0, &STD_DC_CHROMA.1),
+                (1, 0) => (&STD_AC_LUMA.0, &STD_AC_LUMA.1),
+                (1, 1) => (&STD_AC_CHROMA.0, &STD_AC_CHROMA.1),
+                _ => continue,
+            };
+            if tables.len() <= table_index {
+                let additional = table_index.saturating_add(1).saturating_sub(tables.len());
+                tables.try_reserve_exact(additional).map_err(|_| {
+                    CodecError::Dimensions("unable to allocate JPEG Huffman table slots".to_owned())
+                })?;
+                tables.resize_with(table_index.saturating_add(1), || None);
+            }
+            tables[table_index] = Some(build_huff_table(table_class, counts, values));
+        }
+    }
+    Ok(())
+}
+
 fn snapshot_scan_quant_tables(
     scan_components: &[ScanComponent],
     components: &[FrameComponent],
@@ -493,6 +532,14 @@ pub(super) fn parse_jpeg(data: &[u8]) -> CodecResult<JpegInfo> {
                             );
                         }
                     }
+                    // Freeze the previous scan before supplying defaults for
+                    // the current one, so later definitions cannot replace it.
+                    install_baseline_scan_huffman_defaults(
+                        &comps,
+                        &mut dc_huff_tables,
+                        &mut ac_huff_tables,
+                    )
+                    .map_err(|error| error.at(marker_offset, "jpeg_sos"))?;
                     scans.push(ScanInfo {
                         components: comps.clone(),
                         entropy_start: scan_start,

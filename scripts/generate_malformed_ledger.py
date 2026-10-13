@@ -24,6 +24,12 @@ LEDGER_PATH = ROOT / "tests" / "fixtures" / "malformed_ledger.json"
 #   spec_violation | truncated | not_the_format | tolerated | ambiguous
 SPEC_STATUS_OVERRIDES: dict[str, str] = {
     "jpeg:malformed_markers_fill_marker_only": "ambiguous",
+    # These complete JPEGs retain all entropy bytes and terminal EOI. They
+    # reference undefined Huffman slots beyond the standard defaults.
+    "jpeg:grayscale_huffman_444_missing_dc_2_17x9": "spec_violation",
+    "jpeg:grayscale_huffman_444_missing_ac_3_17x9": "spec_violation",
+    "jpeg:grayscale_huffman_420_missing_dc_2_17x9": "spec_violation",
+    "jpeg:grayscale_huffman_420_missing_ac_3_17x9": "spec_violation",
     "gif:error_malformed_near_miss_version": "ambiguous",
     # These complete classic TIFFs are valid associated-alpha storage. Pillow
     # can inspect them but its raw separate-plane importer has no lowercase

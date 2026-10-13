@@ -71,6 +71,52 @@ def stable_error_message(error):
     )
 
 
+def validate_observed_decode_call(case, fmt_name, asset_name):
+    """Validate an input-only declaration of the maintained public workflow."""
+    call = case.get("pillow_call")
+    if call is None:
+        return
+    supported = {
+        "open": f"tests/fixtures/input/images/{fmt_name}/{asset_name}",
+        "operations": ["PIL.Image.open", "load", "tobytes"],
+    }
+    if call != supported:
+        raise RuntimeError(f"unsupported explicit Pillow decode call: {case['id']}")
+    unsupported = set(case) - {"id", "description", "test_assets", "pillow_call"}
+    if unsupported:
+        raise RuntimeError(f"unsupported explicit Pillow workflow fields: {case['id']}: {sorted(unsupported)}")
+
+
+def is_pillow_codec_exception(error):
+    """Recognize pinned Pillow input errors; propagate oracle environment failures."""
+    from PIL import Image, UnidentifiedImageError
+
+    supported = (OSError, ValueError, SyntaxError, EOFError, Image.DecompressionBombError)
+    if not isinstance(error, supported):
+        return False
+    if isinstance(error, OSError):
+        if error.errno is not None:
+            return False
+        if isinstance(error, UnidentifiedImageError):
+            return True
+        # These are the pinned decoder's -1/-2/-3 input-status messages.
+        # Configuration, allocation, unavailable decoders and unknown statuses
+        # propagate rather than becoming ordinary input-error observations.
+        return str(error) in {
+            "buffer overrun when reading image file",
+            "broken data stream when reading image file",
+            "unrecognized data stream contents when reading image file",
+        }
+    return True
+
+
+def sync_observed_decode_call(row, case):
+    if case.get("pillow_call") is None:
+        row.pop("pillow_call", None)
+    else:
+        row["pillow_call"] = dict(case["pillow_call"])
+
+
 def decode_error_kind(detects_format, error):
     """Map a Pillow decode/open failure to the canonical public error category."""
     if not detects_format:
@@ -220,6 +266,7 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
                 row.pop("frame_request_result", None)
             else:
                 row["frame_request"] = dict(case["frame_request"])
+            sync_observed_decode_call(row, case)
             return row
 
     row = {
@@ -247,6 +294,7 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
         row["avif_mdcv"] = case["avif_mdcv"]
     if case.get("frame_request") is not None:
         row["frame_request"] = dict(case["frame_request"])
+    sync_observed_decode_call(row, case)
     rows.append(row)
     return row
 
@@ -311,6 +359,7 @@ def sync_decode_rows(manifest, matrix):
                     row.pop("frame_request_result", None)
                 else:
                     row["frame_request"] = dict(case["frame_request"])
+                sync_observed_decode_call(row, case)
                 if case.get("rust_decode_with_token"):
                     row["rust_decode_with_token"] = True
                 else:
@@ -1161,9 +1210,14 @@ def preflight_decode_cases(manifest, target_format=None):
                 continue
             for asset_name in case.get("test_assets", []):
                 case_name = f"{fmt_name}/{case['id']}/{asset_name}"
+                validate_observed_decode_call(case, fmt_name, asset_name)
                 path = ASSETS_DIR / fmt_name / asset_name
                 if not path.exists():
                     failures.append(f"{case_name}: asset does not exist")
+                    continue
+                if case.get("pillow_call") is not None:
+                    # Outcomes for an explicit call are observed in generation;
+                    # neither success nor failure is a stimulus requirement.
                     continue
                 try:
                     with pillow_open_asset(path) as image:
@@ -2180,6 +2234,8 @@ def write_inspect_ref(row, image_path, fmt_name):
     try:
         image = pillow_open_asset(image_path)
     except Exception as error:
+        if row.get("pillow_call") is not None and not is_pillow_codec_exception(error):
+            raise
         row["inspect_status"] = "error"
         row.pop("inspect_container_format", None)
         row.pop("inspect_cursor_hotspot", None)
@@ -2238,6 +2294,8 @@ def write_verify_ref(row, image_path):
         with pillow_open_asset(image_path) as image:
             image.verify()
     except Exception as error:
+        if row.get("pillow_call") is not None and not is_pillow_codec_exception(error):
+            raise
         row["verify_status"] = "error"
         row["verify_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
         row["verify_error_message"] = stable_error_message(error)
@@ -4390,6 +4448,51 @@ def preflight_encode_cases(matrix, target_format=None):
         raise RuntimeError(f"active encode cases do not map exactly to Pillow:\n  - {detail}")
 
 
+def generate_observed_decode_reference(row, image_path, fmt_name, asset_name):
+    """Observe only the public open/load calls; output writes remain fallible."""
+    from PIL import Image
+
+    # Read stimulus bytes before entering the codec exception boundary.
+    data = image_path.read_bytes()
+    with io.BytesIO(data) as stream:
+        stream.name = image_path.relative_to(ROOT).as_posix()
+        image = None
+        try:
+            try:
+                image = Image.open(stream)
+                image.load()
+            except Exception as error:
+                if not is_pillow_codec_exception(error):
+                    raise
+                clear_pixel_ref(row)
+                row["expect_error"] = True
+                row["oracle_status"] = "error"
+                row["oracle_error_type"] = f"{type(error).__module__}.{type(error).__name__}"
+                row["oracle_error_message"] = stable_error_message(error)
+                row["oracle_error_kind"] = decode_error_kind(row["oracle_detects_format"], error)
+                for key in ("sequence_status", "sequence_error_type", "sequence_error_message", "sequence_error_kind"):
+                    row.pop(key, None)
+                return False
+            row["expect_error"] = False
+            row["oracle_status"] = "ok"
+            for key in ("oracle_error_type", "oracle_error_message", "oracle_error_kind",
+                        "sequence_status", "sequence_error_type", "sequence_error_message", "sequence_error_kind"):
+                row.pop(key, None)
+            ref_name = f"Decode.{fmt_name}_{asset_name.replace('.', '_')}.bin"
+            write_pixel_ref(row, image, ref_name)
+            write_decoded_source_descriptor(row, image_path, fmt_name, image)
+            write_palette_refs(row, image, fmt_name, image_path, ref_name)
+            if fmt_name == "gif":
+                with pillow_open_asset(image_path) as sequence_image:
+                    write_sequence_ref(row, sequence_image, fmt_name, asset_name)
+            else:
+                write_sequence_ref(row, image, fmt_name, asset_name)
+            return True
+        finally:
+            if image is not None:
+                image.close()
+
+
 def generate_decode(manifest, matrix, target_format=None):
     """Generate Decode refs: raw pixel bytes from PIL."""
     generated = 0
@@ -4463,6 +4566,9 @@ def generate_decode(manifest, matrix, target_format=None):
                 write_inspect_ref(row, img_path, fmt_name)
                 write_verify_ref(row, img_path)
                 write_frame_request_ref(row, img_path)
+                if row.get("pillow_call") is not None:
+                    generated += int(generate_observed_decode_reference(row, img_path, fmt_name, asset_name))
+                    continue
                 if row.get("expect_error"):
                     clear_pixel_ref(row)
                     try:
@@ -4605,6 +4711,16 @@ def generate_decode(manifest, matrix, target_format=None):
             }
             for r in dec_cases
         ]
+        for row, input_case in zip(dec_cases, inp_data):
+            if row.get("pillow_call") is not None:
+                # Explicit workflows keep only stimulus and public-call fields.
+                # Observed outcomes belong to the matrix and output JSON.
+                retained = {key: input_case[key] for key in (
+                    "id", "asset", "asset_sha256", "execution", "verification_scope",
+                    "pillow_call", "pillow_verify_call",
+                )}
+                input_case.clear()
+                input_case.update(retained)
         inp = {
             "format_version": 3,
             "oracle": oracle_identity(manifest),

@@ -2739,6 +2739,8 @@ def gen_jpeg():
     generate_sos_edges(d, source_dir=d)
     from generate_jpeg_grayscale_subsampling_fixtures import generate as generate_grayscale_sampling
     generate_grayscale_sampling(OUT, check=False)
+    from generate_jpeg_default_huffman_fixtures import generate as generate_huffman_defaults
+    generate_huffman_defaults(OUT, check=False)
     print(f"  JPEG: {len(list(d.glob('*.jpg')))} files")
 
 

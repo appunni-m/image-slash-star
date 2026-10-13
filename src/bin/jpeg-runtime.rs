@@ -1,3 +1,4 @@
+#![cfg_attr(not(test), deny(clippy::panic))]
 #![doc = "Release-mode JPEG encode/decode runtime probe."]
 
 use std::error::Error;

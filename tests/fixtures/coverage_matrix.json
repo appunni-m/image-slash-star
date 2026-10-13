@@ -98057,6 +98057,1722 @@
             "decode_sequence": "ok"
           },
           "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_missing_dc_0_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing dc 0",
+          "asset": "grayscale_huffman_444_missing_dc_0_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_0_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "461244e7c4742c1e5444bb3d2c9bf8a5fcb52b9aa8ae5928fd0b6b8e0e101548",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_missing_dc_0_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_missing_ac_0_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing ac 0",
+          "asset": "grayscale_huffman_444_missing_ac_0_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_0_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "d5c2c5cf02d9d6c142cf18caf07fe0dfd4d8850de01fd12f476cbf8ff6e7035f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_missing_ac_0_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_missing_both_0_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing both 0",
+          "asset": "grayscale_huffman_444_missing_both_0_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_both_0_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "7b42d69615c533334c254a34064d07b46dcbcc97dc68e6faf86c9a8b9800e4a5",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_missing_both_0_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_missing_dc_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing dc 1",
+          "asset": "grayscale_huffman_444_missing_dc_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "ff409a92b6d9b2483c25ea72cda16057ef2b92b6a231a10e6ce3911e644aaa5a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "ed300e00cb1d08b28b6be1b237aac47ed5dec2e7150c8ff97ec64294064a3226",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_missing_dc_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_missing_ac_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing ac 1",
+          "asset": "grayscale_huffman_444_missing_ac_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "84be1108291557f85e2a957b5cccfd25a13e4d985dad74264e11a50458a5f66c",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "41bbaf9daf0f8e2da57b856026ccc1f90de90c8d20e66d00d65289c48238de6d",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_missing_ac_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_missing_both_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing both 1",
+          "asset": "grayscale_huffman_444_missing_both_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_both_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "e12e76d0265bdfb282a72d7009f3af333ede7a3ffafe3ea2581b2baf37fab50d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "43f18f3c571ce5d60b0d6e457cc2ae0c02be1f243ca4040cac6192f715513dec",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_missing_both_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_missing_dc_2_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing dc 2",
+          "asset": "grayscale_huffman_444_missing_dc_2_17x9.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_2_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "b9bf05cf7512679d384a8756e4bd24e3ae06690b2e264e42996bab189255706d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "grayscale_huffman_444_missing_ac_3_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with missing ac 3",
+          "asset": "grayscale_huffman_444_missing_ac_3_17x9.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_3_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "3ba0389f0cc04996b811f4aff35f34f833cbc7b39543a55da34b440c831c1ecd",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "grayscale_huffman_444_supplied_luma_slot_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG with supplied luma slot 1",
+          "asset": "grayscale_huffman_444_supplied_luma_slot_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_supplied_luma_slot_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "fe108069e403bd2450186533f545fd4e4b3f0f7086c0078a8d879a993667a26a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_supplied_luma_slot_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 444 JPEG uses default slot 0 beside supplied slot 1 tables",
+          "asset": "grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "8ae1c4e15c63b3d875954d2fc1c2d4706dcf7f7dd13d385da923242136b903a8",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_missing_dc_0_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing dc 0",
+          "asset": "grayscale_huffman_420_missing_dc_0_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_0_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "d4d5abcb04d8d932eff6653f56388e451debb8ce7a806b3cdab3155bbc6ccdc4",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_missing_dc_0_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_missing_ac_0_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing ac 0",
+          "asset": "grayscale_huffman_420_missing_ac_0_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_0_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "ef5b90dfd1756d387aeb5a4f86894a5db38ffe333859cf7cbc649683ee7ab67d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_missing_ac_0_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_missing_both_0_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing both 0",
+          "asset": "grayscale_huffman_420_missing_both_0_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_both_0_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "a38b42d257292acad7e203c97e0368ac2a05dc74ab2f95fd9800bebdcb221002",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_missing_both_0_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_missing_dc_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing dc 1",
+          "asset": "grayscale_huffman_420_missing_dc_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "60644ba3dec47655e1493c99341d1061c0a7d8e40159d0a3a8b00c7583813388",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "ed300e00cb1d08b28b6be1b237aac47ed5dec2e7150c8ff97ec64294064a3226",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_missing_dc_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_missing_ac_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing ac 1",
+          "asset": "grayscale_huffman_420_missing_ac_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "d8068c51b5cda37485f7b980fa8fe73e0eb1eb9a7f12cbb34e99a4b0ea2b18c1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "41bbaf9daf0f8e2da57b856026ccc1f90de90c8d20e66d00d65289c48238de6d",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_missing_ac_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_missing_both_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing both 1",
+          "asset": "grayscale_huffman_420_missing_both_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_both_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "fad7a45797217378c9d431459421565069e050773354a4546eaa47a86f96fa38",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "43f18f3c571ce5d60b0d6e457cc2ae0c02be1f243ca4040cac6192f715513dec",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_missing_both_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_missing_dc_2_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing dc 2",
+          "asset": "grayscale_huffman_420_missing_dc_2_17x9.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_2_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "f43cffeb8dc19de3e49ded0f9897ad2356b3474ffbe1242368655e587e1e96a2",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "grayscale_huffman_420_missing_ac_3_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with missing ac 3",
+          "asset": "grayscale_huffman_420_missing_ac_3_17x9.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_3_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "5347a0235a751b03f0a2bbf59b2fb739b026f3dab9adaa161e12ad3bb6d47c6e",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
+          "id": "grayscale_huffman_420_supplied_luma_slot_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG with supplied luma slot 1",
+          "asset": "grayscale_huffman_420_supplied_luma_slot_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_supplied_luma_slot_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "60ae8d4c274fcc9d269f9074ce4c369e3e4ad65c09cc492c68f81428cc445bb1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_supplied_luma_slot_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "grayscale",
+          "description": "Complete sole-component 420 JPEG uses default slot 0 beside supplied slot 1 tables",
+          "asset": "grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "pillow_call": {
+            "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+            "operations": [
+              "PIL.Image.open",
+              "load",
+              "tobytes"
+            ]
+          },
+          "asset_sha256": "37d2e14f3500c0ce775077b8bb23e8e06286a646bd5861a21b5b9d5b527eb109",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6cb8bf5ca5f3ecb5e63af750426a1af7823ef95743d030651deb9e7b9366728c",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.jpeg_grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9_jpg.bin",
+          "ref_bytes": 153,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            9
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
         }
       ],
       "encode": [
@@ -102520,6 +104236,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "a0bfa5319e30c5fdcb15fdb7775c994c5edb4934a8783f36908e2eada7fdb446",
@@ -102532,17 +104258,7 @@
             9
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_444_17x9",
@@ -102576,6 +104292,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "a0bfa5319e30c5fdcb15fdb7775c994c5edb4934a8783f36908e2eada7fdb446",
@@ -102588,17 +104314,7 @@
             9
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_422_17x9",
@@ -102632,6 +104348,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "073f466605758f65c1f6a0af7fbcaf072af42c61b2d43ef768f57ad19c41b8c4",
@@ -102644,17 +104370,7 @@
             9
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_420_17x9",
@@ -102688,6 +104404,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_17x9.bin",
           "encoded_ref_bytes": 468,
           "encoded_ref_sha256": "5ce93b78d7497ab9b6f651bd97b43ec594ebe28ec59ecdaffd8c9f06b59b5583",
@@ -102700,17 +104426,7 @@
             9
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_default_128x128",
@@ -102743,6 +104459,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "f848e394f95884859a02d8461450f272dfb59d809b9a1ab7145b7493cab67f0b",
@@ -102755,17 +104481,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_444_128x128",
@@ -102799,6 +104515,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "f848e394f95884859a02d8461450f272dfb59d809b9a1ab7145b7493cab67f0b",
@@ -102811,17 +104537,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_422_128x128",
@@ -102855,6 +104571,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "26ad036e67a855f4495851c59686c212b1d316c6a9c6699b16d0517b6f6c4f44",
@@ -102867,17 +104593,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_420_128x128",
@@ -102911,6 +104627,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128.bin",
           "encoded_ref_bytes": 11384,
           "encoded_ref_sha256": "ec3d968f651020392282ddf1ff6734ae45d95ccd4f4f7e69658f8a25be435cce",
@@ -102923,17 +104649,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_default_512x512",
@@ -102966,6 +104682,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_default_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "1909f0c98b6561134063ee49e68e2adb5f435864ea9e1dcc692e215693643ec9",
@@ -102978,17 +104704,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_444_512x512",
@@ -103022,6 +104738,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_444_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "1909f0c98b6561134063ee49e68e2adb5f435864ea9e1dcc692e215693643ec9",
@@ -103034,17 +104760,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_422_512x512",
@@ -103078,6 +104794,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_422_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "f9f40477a1701ba7f721e4688db484daef27a30c4d7afab0c78462c7481445fe",
@@ -103090,17 +104816,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_420_512x512",
@@ -103134,6 +104850,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_512x512.bin",
           "encoded_ref_bytes": 176897,
           "encoded_ref_sha256": "23603612ec346f2eac5f3b880d53fd433deec85c3156c44c8e110be12c025ef5",
@@ -103146,17 +104872,7 @@
             512
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_420_128x128_optimized",
@@ -103190,6 +104906,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_optimized.bin",
           "encoded_ref_bytes": 10514,
           "encoded_ref_sha256": "e0dd7cb15399cb4588202b7cef0c068f7e5fa94db6be0d1179c27b7cff8cb9ad",
@@ -103202,17 +104928,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_420_128x128_progressive",
@@ -103246,6 +104962,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_progressive.bin",
           "encoded_ref_bytes": 10616,
           "encoded_ref_sha256": "9c91aace0599cb36f7f9fb970523f6951f971d7a4397666d265d9ad709d3bb9b",
@@ -103258,17 +104984,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_grayscale_sampling_420_128x128_restart_rows_4",
@@ -103303,6 +105019,16 @@
           },
           "source_mode": "L8",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.jpeg_enc_grayscale_sampling_420_128x128_restart_rows_4.bin",
           "encoded_ref_bytes": 11401,
           "encoded_ref_sha256": "8c780ae5bb7f8cd3a7dfcc30e7504332b0da70b57ed3ee410eb489dcd301987c",
@@ -103315,17 +105041,7 @@
             128
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         }
       ]
     },
@@ -181553,12 +183269,12 @@
     }
   },
   "summary": {
-    "total_rows": 2164,
-    "decode_rows": 1686,
+    "total_rows": 2184,
+    "decode_rows": 1706,
     "encode_rows": 478,
     "formats": 8,
-    "assets_available": 1683,
-    "decode_active": 1686,
+    "assets_available": 1703,
+    "decode_active": 1706,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

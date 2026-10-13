@@ -1090,6 +1090,146 @@ formats:
         definition follows entropy
       test_assets:
       - grayscale_sampling_420_17x9_late_changed_dht.jpg
+    - id: grayscale_huffman_444_missing_dc_0_17x9
+      description: Complete sole-component 444 JPEG with missing dc 0
+      test_assets:
+      - grayscale_huffman_444_missing_dc_0_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_0_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_missing_ac_0_17x9
+      description: Complete sole-component 444 JPEG with missing ac 0
+      test_assets:
+      - grayscale_huffman_444_missing_ac_0_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_0_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_missing_both_0_17x9
+      description: Complete sole-component 444 JPEG with missing both 0
+      test_assets:
+      - grayscale_huffman_444_missing_both_0_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_both_0_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_missing_dc_1_17x9
+      description: Complete sole-component 444 JPEG with missing dc 1
+      test_assets:
+      - grayscale_huffman_444_missing_dc_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_missing_ac_1_17x9
+      description: Complete sole-component 444 JPEG with missing ac 1
+      test_assets:
+      - grayscale_huffman_444_missing_ac_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_missing_both_1_17x9
+      description: Complete sole-component 444 JPEG with missing both 1
+      test_assets:
+      - grayscale_huffman_444_missing_both_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_both_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_missing_dc_2_17x9
+      description: Complete sole-component 444 JPEG with missing dc 2
+      test_assets:
+      - grayscale_huffman_444_missing_dc_2_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_2_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_missing_ac_3_17x9
+      description: Complete sole-component 444 JPEG with missing ac 3
+      test_assets:
+      - grayscale_huffman_444_missing_ac_3_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_3_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_supplied_luma_slot_1_17x9
+      description: Complete sole-component 444 JPEG with supplied luma slot 1
+      test_assets:
+      - grayscale_huffman_444_supplied_luma_slot_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_supplied_luma_slot_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9
+      description: Complete sole-component 444 JPEG uses default slot 0 beside supplied slot 1 tables
+      test_assets:
+      - grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_dc_0_17x9
+      description: Complete sole-component 420 JPEG with missing dc 0
+      test_assets:
+      - grayscale_huffman_420_missing_dc_0_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_0_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_ac_0_17x9
+      description: Complete sole-component 420 JPEG with missing ac 0
+      test_assets:
+      - grayscale_huffman_420_missing_ac_0_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_0_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_both_0_17x9
+      description: Complete sole-component 420 JPEG with missing both 0
+      test_assets:
+      - grayscale_huffman_420_missing_both_0_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_both_0_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_dc_1_17x9
+      description: Complete sole-component 420 JPEG with missing dc 1
+      test_assets:
+      - grayscale_huffman_420_missing_dc_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_ac_1_17x9
+      description: Complete sole-component 420 JPEG with missing ac 1
+      test_assets:
+      - grayscale_huffman_420_missing_ac_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_both_1_17x9
+      description: Complete sole-component 420 JPEG with missing both 1
+      test_assets:
+      - grayscale_huffman_420_missing_both_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_both_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_dc_2_17x9
+      description: Complete sole-component 420 JPEG with missing dc 2
+      test_assets:
+      - grayscale_huffman_420_missing_dc_2_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_2_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_missing_ac_3_17x9
+      description: Complete sole-component 420 JPEG with missing ac 3
+      test_assets:
+      - grayscale_huffman_420_missing_ac_3_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_3_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_supplied_luma_slot_1_17x9
+      description: Complete sole-component 420 JPEG with supplied luma slot 1
+      test_assets:
+      - grayscale_huffman_420_supplied_luma_slot_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_supplied_luma_slot_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
+    - id: grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9
+      description: Complete sole-component 420 JPEG uses default slot 0 beside supplied slot 1 tables
+      test_assets:
+      - grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg
+      pillow_call:
+        open: tests/fixtures/input/images/jpeg/grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg
+        operations: [PIL.Image.open, load, tobytes]
     encode_edge_cases:
     - id: enc_error_retained_sequence_geometry
       description: A still JPEG cannot represent a retained frame offset or a larger sequence canvas

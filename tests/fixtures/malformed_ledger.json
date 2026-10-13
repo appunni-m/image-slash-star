@@ -9459,6 +9459,134 @@
         "verify_status": "ok"
       },
       {
+        "asset": "grayscale_huffman_420_missing_ac_3_17x9.jpg",
+        "class": "grayscale_huffman_420_missing_ac_3_17x9",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete sole-component 420 JPEG with missing ac 3",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "grayscale_huffman_420_missing_dc_2_17x9.jpg",
+        "class": "grayscale_huffman_420_missing_dc_2_17x9",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete sole-component 420 JPEG with missing dc 2",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "grayscale_huffman_444_missing_ac_3_17x9.jpg",
+        "class": "grayscale_huffman_444_missing_ac_3_17x9",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete sole-component 444 JPEG with missing ac 3",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
+        "asset": "grayscale_huffman_444_missing_dc_2_17x9.jpg",
+        "class": "grayscale_huffman_444_missing_dc_2_17x9",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Complete sole-component 444 JPEG with missing dc 2",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "dangling_marker.jpg",
         "class": "malformed_markers",
         "contracts": {
@@ -25066,23 +25194,23 @@
       "bmp": 65,
       "gif": 47,
       "ico": 30,
-      "jpeg": 93,
+      "jpeg": 97,
       "png": 60,
       "tiff": 110,
       "webp": 131
     },
     "by_origin": {
-      "pillow_fixture": 592,
+      "pillow_fixture": 596,
       "specification_reference": 56
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 38,
-      "spec_violation": 331,
+      "spec_violation": 335,
       "tolerated": 0,
       "truncated": 188
     },
-    "classes": 592,
+    "classes": 596,
     "formats": 8
   }
 }

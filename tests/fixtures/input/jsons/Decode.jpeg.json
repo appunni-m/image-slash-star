@@ -14284,6 +14284,646 @@
         "PIL.Image.open",
         "verify"
       ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_dc_0_17x9",
+      "asset": "grayscale_huffman_444_missing_dc_0_17x9.jpg",
+      "asset_sha256": "461244e7c4742c1e5444bb3d2c9bf8a5fcb52b9aa8ae5928fd0b6b8e0e101548",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_0_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_ac_0_17x9",
+      "asset": "grayscale_huffman_444_missing_ac_0_17x9.jpg",
+      "asset_sha256": "d5c2c5cf02d9d6c142cf18caf07fe0dfd4d8850de01fd12f476cbf8ff6e7035f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_0_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_both_0_17x9",
+      "asset": "grayscale_huffman_444_missing_both_0_17x9.jpg",
+      "asset_sha256": "7b42d69615c533334c254a34064d07b46dcbcc97dc68e6faf86c9a8b9800e4a5",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_both_0_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_dc_1_17x9",
+      "asset": "grayscale_huffman_444_missing_dc_1_17x9.jpg",
+      "asset_sha256": "ff409a92b6d9b2483c25ea72cda16057ef2b92b6a231a10e6ce3911e644aaa5a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_ac_1_17x9",
+      "asset": "grayscale_huffman_444_missing_ac_1_17x9.jpg",
+      "asset_sha256": "84be1108291557f85e2a957b5cccfd25a13e4d985dad74264e11a50458a5f66c",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_both_1_17x9",
+      "asset": "grayscale_huffman_444_missing_both_1_17x9.jpg",
+      "asset_sha256": "e12e76d0265bdfb282a72d7009f3af333ede7a3ffafe3ea2581b2baf37fab50d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_both_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_dc_2_17x9",
+      "asset": "grayscale_huffman_444_missing_dc_2_17x9.jpg",
+      "asset_sha256": "b9bf05cf7512679d384a8756e4bd24e3ae06690b2e264e42996bab189255706d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_dc_2_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_missing_ac_3_17x9",
+      "asset": "grayscale_huffman_444_missing_ac_3_17x9.jpg",
+      "asset_sha256": "3ba0389f0cc04996b811f4aff35f34f833cbc7b39543a55da34b440c831c1ecd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_missing_ac_3_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_supplied_luma_slot_1_17x9",
+      "asset": "grayscale_huffman_444_supplied_luma_slot_1_17x9.jpg",
+      "asset_sha256": "fe108069e403bd2450186533f545fd4e4b3f0f7086c0078a8d879a993667a26a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_supplied_luma_slot_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9",
+      "asset": "grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+      "asset_sha256": "8ae1c4e15c63b3d875954d2fc1c2d4706dcf7f7dd13d385da923242136b903a8",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_444_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_dc_0_17x9",
+      "asset": "grayscale_huffman_420_missing_dc_0_17x9.jpg",
+      "asset_sha256": "d4d5abcb04d8d932eff6653f56388e451debb8ce7a806b3cdab3155bbc6ccdc4",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_0_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_ac_0_17x9",
+      "asset": "grayscale_huffman_420_missing_ac_0_17x9.jpg",
+      "asset_sha256": "ef5b90dfd1756d387aeb5a4f86894a5db38ffe333859cf7cbc649683ee7ab67d",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_0_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_both_0_17x9",
+      "asset": "grayscale_huffman_420_missing_both_0_17x9.jpg",
+      "asset_sha256": "a38b42d257292acad7e203c97e0368ac2a05dc74ab2f95fd9800bebdcb221002",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_both_0_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_dc_1_17x9",
+      "asset": "grayscale_huffman_420_missing_dc_1_17x9.jpg",
+      "asset_sha256": "60644ba3dec47655e1493c99341d1061c0a7d8e40159d0a3a8b00c7583813388",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_ac_1_17x9",
+      "asset": "grayscale_huffman_420_missing_ac_1_17x9.jpg",
+      "asset_sha256": "d8068c51b5cda37485f7b980fa8fe73e0eb1eb9a7f12cbb34e99a4b0ea2b18c1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_both_1_17x9",
+      "asset": "grayscale_huffman_420_missing_both_1_17x9.jpg",
+      "asset_sha256": "fad7a45797217378c9d431459421565069e050773354a4546eaa47a86f96fa38",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_both_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_dc_2_17x9",
+      "asset": "grayscale_huffman_420_missing_dc_2_17x9.jpg",
+      "asset_sha256": "f43cffeb8dc19de3e49ded0f9897ad2356b3474ffbe1242368655e587e1e96a2",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_dc_2_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_missing_ac_3_17x9",
+      "asset": "grayscale_huffman_420_missing_ac_3_17x9.jpg",
+      "asset_sha256": "5347a0235a751b03f0a2bbf59b2fb739b026f3dab9adaa161e12ad3bb6d47c6e",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_missing_ac_3_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_supplied_luma_slot_1_17x9",
+      "asset": "grayscale_huffman_420_supplied_luma_slot_1_17x9.jpg",
+      "asset_sha256": "60ae8d4c274fcc9d269f9074ce4c369e3e4ad65c09cc492c68f81428cc445bb1",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_supplied_luma_slot_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
+      "id": "grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9",
+      "asset": "grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+      "asset_sha256": "37d2e14f3500c0ce775077b8bb23e8e06286a646bd5861a21b5b9d5b527eb109",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "verification_scope": "structure",
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/grayscale_huffman_420_defaults_slot_0_preserve_supplied_slot_1_17x9.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
     }
   ]
 }
