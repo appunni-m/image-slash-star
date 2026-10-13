@@ -145220,6 +145220,84 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "tiled_multivalue_tile_width_external",
+          "type": "decode",
+          "format": "tiff",
+          "category": "tiled",
+          "description": "Pillow accepts external multi-value TileWidth and uses its first scalar",
+          "asset": "tiled_multivalue_tile_width_external.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "73c5de052b08b39d137430eba848ec88cf1956b89b5207bd92f0b77500196068",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 1,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "0670db2c5d1027a45c63535f3e04b0ab7a0dd61cbf17a5aa6ceb5e5d2a8179b0",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_multivalue_tile_width_external_tiff.bin",
+          "ref_bytes": 39,
+          "ref_mode": "1",
+          "ref_size": [
+            17,
+            13
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "tiled_deflate_no_predictor",
           "type": "decode",
           "format": "tiff",
@@ -187727,12 +187805,12 @@
     }
   },
   "summary": {
-    "total_rows": 2222,
-    "decode_rows": 1744,
+    "total_rows": 2223,
+    "decode_rows": 1745,
     "encode_rows": 478,
     "formats": 8,
-    "assets_available": 1741,
-    "decode_active": 1744,
+    "assets_available": 1742,
+    "decode_active": 1745,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

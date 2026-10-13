@@ -5104,6 +5104,11 @@ formats:
       description: Tiled organization
       test_assets:
       - tiled.tiff
+    - id: tiled_multivalue_tile_width_external
+      description: Pillow accepts external multi-value TileWidth and uses its first scalar
+      test_assets:
+      - tiled_multivalue_tile_width_external.tiff
+      status: active
     - id: tiled_deflate_no_predictor
       description: Deflate-compressed RGB tiles without horizontal prediction
       test_assets:

@@ -8736,6 +8736,43 @@ def mutate_tiff_tag(source, destination, tag, value, value_index=0):
     raise ValueError(f"TIFF tag {tag} not found")
 
 
+def mutate_tiff_tag_to_external_longs(source, destination, tag, values):
+    """Replace one inline LONG with a multi-value external LONG array."""
+    data = bytearray(source.read_bytes())
+    if data[:2] not in (b"II", b"MM"):
+        raise ValueError("TIFF byte-order marker is invalid")
+    byte_order = "<" if data[:2] == b"II" else ">"
+    if struct.unpack_from(byte_order + "H", data, 2)[0] != 42:
+        raise ValueError("TIFF source is not classic TIFF")
+    if len(values) < 2 or any(not 0 <= value <= 0xFFFF_FFFF for value in values):
+        raise ValueError("external TIFF LONG values must contain at least two u32s")
+
+    ifd_offset = struct.unpack_from(byte_order + "I", data, 4)[0]
+    entry_count = struct.unpack_from(byte_order + "H", data, ifd_offset)[0]
+    for index in range(entry_count):
+        start = ifd_offset + 2 + index * 12
+        actual_tag, field_type, count = struct.unpack_from(
+            byte_order + "HHI", data, start
+        )
+        if actual_tag != tag:
+            continue
+        if field_type != 4 or count != 1:
+            raise ValueError(f"TIFF tag {tag} is not one inline LONG")
+
+        original_value = struct.unpack_from(byte_order + "I", data, start + 8)[0]
+        if values[0] != original_value:
+            raise ValueError(f"TIFF tag {tag} must preserve its original first value")
+
+        values_offset = (len(data) + 3) & ~3
+        data.extend(b"\0" * (values_offset - len(data)))
+        data.extend(struct.pack(byte_order + f"{len(values)}I", *values))
+        struct.pack_into(byte_order + "I", data, start + 4, len(values))
+        struct.pack_into(byte_order + "I", data, start + 8, values_offset)
+        destination.write_bytes(data)
+        return
+    raise ValueError(f"TIFF tag {tag} not found")
+
+
 def write_short_deflate_tile_tiff(source, destination, output_prefix_bytes):
     """Make one valid Deflate tile decode to fewer bytes than a packed row."""
     data = bytearray(source.read_bytes())
@@ -9171,6 +9208,24 @@ def gen_tiff():
     write_low_depth_tiled_tiff(
         d / "tiled_minisblack_1bit_edge.tiff", 17, 13, 1, 1
     )
+    tiled_multivalue_width = d / "tiled_multivalue_tile_width_external.tiff"
+    mutate_tiff_tag_to_external_longs(
+        d / "tiled_minisblack_1bit_edge.tiff",
+        tiled_multivalue_width,
+        322,
+        (16, 9),
+    )
+    with Image.open(d / "tiled_minisblack_1bit_edge.tiff") as source_image:
+        source_image.load()
+        with Image.open(tiled_multivalue_width) as multivalue_image:
+            multivalue_image.load()
+            if (
+                (multivalue_image.mode, multivalue_image.size, multivalue_image.tobytes())
+                != (source_image.mode, source_image.size, source_image.tobytes())
+            ):
+                raise RuntimeError(
+                    "multi-value TileWidth changed Pillow's tiled image output"
+                )
     tiled_fill_order_2 = d / "tiled_minisblack_1bit_fillorder2_edge.tiff"
     write_low_depth_tiled_tiff(
         tiled_fill_order_2,
