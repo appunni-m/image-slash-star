@@ -4201,6 +4201,36 @@ def gen_gif():
     # Transparency
     img.info['transparency'] = 0
     img.save(d / "transparent.gif", transparency=0)
+    identity_gray_palette = [
+        component
+        for value in range(256)
+        for component in (value, value, value)
+    ]
+    opaque_identity_gray = Image.new("P", (4, 1))
+    opaque_identity_gray.putpalette(identity_gray_palette)
+    opaque_identity_gray.putdata((0, 64, 128, 255))
+    opaque_identity_gray.save(d / "identity_gray_palette.gif", optimize=False)
+
+    short_identity_gray = Image.new("P", (4, 1))
+    short_identity_gray.putpalette(identity_gray_palette)
+    short_identity_gray.putdata((0, 1, 2, 3))
+    short_identity_gray.save(d / "short_identity_gray_palette.gif", optimize=True)
+
+    near_identity_gray_palette = identity_gray_palette.copy()
+    near_identity_gray_palette[-3:] = (254, 254, 254)
+    near_identity_gray = Image.new("P", (4, 1))
+    near_identity_gray.putpalette(near_identity_gray_palette)
+    near_identity_gray.putdata((0, 64, 128, 255))
+    near_identity_gray.save(d / "near_identity_gray_palette.gif", optimize=False)
+
+    transparent_identity_gray = Image.new("P", (4, 1))
+    transparent_identity_gray.putpalette(identity_gray_palette)
+    transparent_identity_gray.putdata((0, 1, 128, 255))
+    transparent_identity_gray.save(
+        d / "identity_gray_palette_transparency.gif",
+        transparency=1,
+        optimize=False,
+    )
     # Interlaced
     img.save(d / "interlaced.gif", interlace=True)
     Image.new("P", (1,1), 0).save(d / "1x1.gif")

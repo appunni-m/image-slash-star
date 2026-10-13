@@ -34,6 +34,7 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let mut transparent_index = None;
     let mut first_palette = None;
     let mut first_mode = None;
+    let mut first_has_transparency = false;
     let mut first_bit_depth = 8;
     let mut frame_count = 0u32;
     let mut fallback_width = 0u32;
@@ -85,19 +86,30 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
                 let local_palette = read_color_table(&mut input, image_packed)?;
                 if first_mode.is_none() {
                     let palette = local_palette.as_ref().or(global_palette.as_ref());
-                    first_bit_depth = if local_palette.is_some() {
+                    let identity_grayscale_palette =
+                        palette.is_some_and(|rgb| super::is_identity_grayscale_palette(rgb));
+                    first_bit_depth = if identity_grayscale_palette {
+                        8
+                    } else if local_palette.is_some() {
                         (image_packed & 7).wrapping_add(1)
                     } else if global_palette.is_some() {
                         (screen_packed & 7).wrapping_add(1)
                     } else {
                         8
                     };
-                    first_mode = Some(if palette.is_some() {
+                    first_mode = Some(if palette.is_some() && !identity_grayscale_palette {
                         ImageMode::P8
                     } else {
                         ImageMode::L8
                     });
-                    first_palette = palette.map(|rgb| palette_with_alpha(rgb, transparent_index));
+                    first_palette = if identity_grayscale_palette {
+                        None
+                    } else {
+                        palette.map(|rgb| palette_with_alpha(rgb, transparent_index))
+                    };
+                    first_has_transparency = transparent_index.is_some_and(|index| {
+                        palette.is_some_and(|rgb| usize::from(index) < rgb.len() / 3)
+                    });
                 }
                 frame_count = frame_count.wrapping_add(1);
                 fallback_width = fallback_width.max(left.wrapping_add(width));
@@ -132,10 +144,7 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
         }
     }
 
-    let source = if first_palette
-        .as_ref()
-        .is_some_and(|palette| palette.alpha.iter().any(|&alpha| alpha != u8::MAX))
-    {
+    let source = if first_has_transparency {
         crate::types::SourceDescriptor::new().with_alpha(crate::types::SourceAlpha::BinaryMask)
     } else {
         crate::types::SourceDescriptor::new()

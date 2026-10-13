@@ -289,8 +289,7 @@ fn decode_image(
         None
     };
     let palette_rgb = local_palette.or(global_palette);
-    let identity_grayscale_palette =
-        transparent_index.is_none() && palette_rgb.is_some_and(is_identity_grayscale_palette);
+    let identity_grayscale_palette = palette_rgb.is_some_and(super::is_identity_grayscale_palette);
     if let Some(budget) = budget {
         let mode = if palette_rgb.is_some() && !identity_grayscale_palette {
             ImageMode::P8
@@ -429,18 +428,6 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
 
 fn color_table_len(packed: u8) -> usize {
     (1usize << (packed & 0x07).saturating_add(1)).saturating_mul(3)
-}
-
-fn is_identity_grayscale_palette(palette: &[u8]) -> bool {
-    let (entries, remainder) = palette.as_chunks::<3>();
-    let complete = remainder.is_empty();
-    let identity = entries.iter().enumerate().all(|(index, entry)| {
-        let Ok(value) = u8::try_from(index) else {
-            return false;
-        };
-        *entry == [value; 3]
-    });
-    identity && complete
 }
 
 /// Decode GIF's variable-width, least-significant-bit-first LZW stream.

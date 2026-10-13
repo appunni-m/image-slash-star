@@ -2606,6 +2606,22 @@ formats:
       description: GIF with transparency index
       test_assets:
       - transparent.gif
+    - id: identity_gray_palette
+      description: Exact 256-entry identity grayscale palette is exposed as luminance samples
+      test_assets:
+      - identity_gray_palette.gif
+    - id: short_identity_gray_palette
+      description: Short exact grayscale palette is exposed as luminance samples
+      test_assets:
+      - short_identity_gray_palette.gif
+    - id: near_identity_gray_palette
+      description: One non-identity entry keeps the palette indexed
+      test_assets:
+      - near_identity_gray_palette.gif
+    - id: identity_gray_palette_transparency
+      description: Identity grayscale palette with a graphic-control transparency index
+      test_assets:
+      - identity_gray_palette_transparency.gif
     - id: interlaced
       description: Interlaced GIF
       test_assets:
