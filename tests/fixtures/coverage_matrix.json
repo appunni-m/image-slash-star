@@ -173230,6 +173230,83 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "error_malformed_container_vp8l_predictor_size_bits_truncated",
+          "type": "decode",
+          "format": "webp",
+          "category": "error",
+          "description": "Malformed WebP container and codec headers",
+          "asset": "vp8l_predictor_size_bits_truncated.webp",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "cb6ad65d4c7350c9f0a8c0dd7c127749814b7982e369928e8e19fd715e2832ec",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "WEBP",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "failed to read next frame",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "failed to read next frame",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "failed to read next frame",
+              "rust_kind": "malformed",
+              "rust_format": "WEBP",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "id": "error_malformed_container_vp8l_predictor_transform_stream_truncated",
           "type": "decode",
           "format": "webp",
@@ -186868,12 +186945,12 @@
     }
   },
   "summary": {
-    "total_rows": 2213,
-    "decode_rows": 1735,
+    "total_rows": 2214,
+    "decode_rows": 1736,
     "encode_rows": 478,
     "formats": 8,
-    "assets_available": 1732,
-    "decode_active": 1735,
+    "assets_available": 1733,
+    "decode_active": 1736,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

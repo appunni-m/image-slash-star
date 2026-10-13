@@ -6341,6 +6341,12 @@ def gen_webp():
 
     write_vp8l_bits("vp8l_color_index_size_truncated.webp", [1, 1, 1])
 
+    # Reach the predictor transform's size_bits read with only two bits left.
+    write_vp8l_bits(
+        "vp8l_predictor_size_bits_truncated.webp",
+        [1, 0, 1, 1, 0, 0, 0, 0],
+    )
+
     bits = [1, 0, 0]
     append_lsb(bits, 0, 3)
     write_vp8l_bits("vp8l_predictor_transform_stream_truncated.webp", bits)

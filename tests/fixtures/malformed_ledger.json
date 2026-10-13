@@ -24483,6 +24483,38 @@
         "verify_status": "ok"
       },
       {
+        "asset": "vp8l_predictor_size_bits_truncated.webp",
+        "class": "error_malformed_container_vp8l_predictor_size_bits_truncated",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "failed to read next frame",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "failed to read next frame",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "WEBP",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Malformed WebP container and codec headers",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "failed to read next frame",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
+      },
+      {
         "asset": "vp8l_predictor_transform_stream_truncated.webp",
         "class": "error_malformed_container_vp8l_predictor_transform_stream_truncated",
         "contracts": {
@@ -25623,10 +25655,10 @@
       "jpeg": 98,
       "png": 60,
       "tiff": 116,
-      "webp": 131
+      "webp": 132
     },
     "by_origin": {
-      "pillow_fixture": 605,
+      "pillow_fixture": 606,
       "specification_reference": 58
     },
     "by_spec_status": {
@@ -25634,9 +25666,9 @@
       "not_the_format": 39,
       "spec_violation": 343,
       "tolerated": 0,
-      "truncated": 188
+      "truncated": 189
     },
-    "classes": 605,
+    "classes": 606,
     "formats": 8
   }
 }

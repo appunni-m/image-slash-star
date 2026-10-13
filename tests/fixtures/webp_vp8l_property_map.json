@@ -10,9 +10,9 @@
     "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
     "inspector_sha256": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
     "manifest_path": "manifest.yaml",
-    "manifest_sha256": "afd0d98d7a79e38e05db87b217463dc7558bcef9515160749eee732734b938b3",
+    "manifest_sha256": "576436a5fc0646a1d9ba86c8d73329564b6418a09035a6907c51470559cabe4d",
     "matrix_path": "tests/fixtures/coverage_matrix.json",
-    "matrix_sha256": "2cfa78e0f91e6dfe1a84c8a78c14d2b9d041e53436c63c06365e7b0b6060061e"
+    "matrix_sha256": "a8faa71e8f62f1caf7ca61de1f4ed2bc1d75d457027bc38608ac823fc156934b"
   },
   "malformed_witnesses": [
     {
@@ -132,6 +132,16 @@
           },
           "operation": "decode",
           "row_id": "error_malformed_container_vp8l_predictor_transform_stream_truncated"
+        },
+        {
+          "expect": {
+            "bit_offset": 46,
+            "error_code": "truncated_bitstream",
+            "error_phase": "transform_header",
+            "status": "error"
+          },
+          "operation": "decode",
+          "row_id": "error_malformed_container_vp8l_predictor_size_bits_truncated"
         },
         {
           "expect": {
@@ -929,7 +939,7 @@
     },
     {
       "claim_boundary": "pillow_outer_result",
-      "gap": "The independent parser now proves the five listed malformed transform forms by rejection code, phase, and bit offset; the Pillow error rows remain outer-result evidence and other malformed forms remain outside this witnessed scope.",
+      "gap": "The independent parser now proves the six listed malformed transform forms by rejection code, phase, and bit offset; the Pillow error rows remain outer-result evidence and other malformed forms remain outside this witnessed scope.",
       "id": "vp8l.transform.malformed_forms",
       "internal_state_proven": true,
       "minimal_witnesses": [
@@ -940,6 +950,10 @@
         {
           "operation": "decode",
           "row_id": "error_malformed_container_vp8l_predictor_transform_stream_truncated"
+        },
+        {
+          "operation": "decode",
+          "row_id": "error_malformed_container_vp8l_predictor_size_bits_truncated"
         },
         {
           "operation": "decode",

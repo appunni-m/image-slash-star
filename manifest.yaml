@@ -3700,6 +3700,7 @@ formats:
       - vp8l_incomplete_huffman_tree.webp
       - vp8l_invalid_max_symbol.webp
       - vp8l_color_index_size_truncated.webp
+      - vp8l_predictor_size_bits_truncated.webp
       - vp8l_predictor_transform_stream_truncated.webp
       - vp8l_color_transform_stream_truncated.webp
       - vp8l_meta_huffman_stream_truncated.webp
