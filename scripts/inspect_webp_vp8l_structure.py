@@ -251,6 +251,7 @@ class StreamStats:
         self.tree_forms: Counter[str] = Counter()
         self.backrefs = 0
         self.cache_lookups = 0
+        self.cache_indices: set[int] = set()
         self.distance_prefixes: set[int] = set()
         self.plane_codes: set[int] = set()
         self.mapped_distances: set[int] = set()
@@ -269,6 +270,7 @@ class StreamStats:
             "tree_forms": dict(sorted(self.tree_forms.items())),
             "backrefs": self.backrefs,
             "cache_lookups": self.cache_lookups,
+            "cache_indices": sorted(self.cache_indices),
             "distance_prefixes": sorted(self.distance_prefixes),
             "plane_codes": sorted(self.plane_codes),
             "mapped_distances": sorted(self.mapped_distances),
@@ -447,6 +449,7 @@ class VP8LParser:
                     )
                 output.append(color_cache.lookup(cache_index))
                 stats.cache_lookups += 1
+                stats.cache_indices.add(cache_index)
                 index += 1
 
         stats.green_values.update(pixel[1] for pixel in output)

@@ -2999,8 +2999,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,184 total rows: 1,706 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,706 decode rows and 446 encode
+The current matrix contains 2,185 total rows: 1,707 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,707 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 267 decode rows. The 27 fault contracts are tracked separately from the
 Pillow parity totals. Full
@@ -5493,6 +5493,17 @@ parity. Its isolated local LLVM report records both outcomes at
 true/false respectively. This is selected-row evidence, not a refreshed
 Coverage MCP measurement or complete coverage claim.
 
+The public VP8L cache-boundary corpus also includes a 2×1 RGBA input with
+`color_cache_bits = 11`. Its dynamic green tree emits a literal whose cache hash
+is 2047, then performs a real lookup of that highest entry. The independent
+structural inspector records both the width and referenced cache index; Pillow
+12.2 decodes the exact pixels. The focused matrix test passes. Coverage MCP
+reports the focused branch profile as 135/31,268 observations, with source
+identity unverified and test status unknown. Incremental comparison with the
+saved full baseline is incomparable because its exact branch detail does not
+match the summary totals, so this case is recorded as a maximum-boundary parity
+witness rather than a claimed marginal branch-coverage gain.
+
 The same change simplifies AV1 lossless inter-transform selection to use its
 prevalidated geometry predicate directly, removing a repeated exact-geometry
 check and duplicate block/layout guards. The matrix adds a two-frame 8-bit
@@ -6353,7 +6364,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1318a6659f9c43be792d86845e9643301e9c72203144e34a906f8bc18983a7d9`; matrix `a3fd54f7b40c2b1eba80e122bd67ebc140da9a85e4a165a404e30fb6afc8aa93`.
+- Current fixture integrity only: manifest `2dc22614ad3d85d73e8b9fc016ce9a2dcf57dd1cd97b0e49828d448e3bd7c1e9`; matrix `1f41fd732998c31454392de15ab2b554748efc4cc78d6ba4eac97eeb2bfcaf01`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

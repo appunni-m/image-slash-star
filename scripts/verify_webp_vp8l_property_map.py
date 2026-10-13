@@ -256,6 +256,7 @@ def verify_structure(expect: object, structure: dict, label: str) -> None:
                 fail(f"{stream_label}: {key} differs from structural witness")
         for key in (
             "green_values_contains",
+            "cache_indices_contains",
             "predictor_modes_contains",
             "distance_prefixes_contains",
             "plane_codes_contains",
