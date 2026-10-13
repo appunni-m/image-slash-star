@@ -562,6 +562,10 @@ formats:
       description: Baseline 4:4:4 multi-scan JPEG repeats Huffman-table markers between the first two component scans
       test_assets:
       - baseline_444_multiscan_duplicate_dht_after_snapshot.jpg
+    - id: baseline_444_multiscan_late_dht_after_default_scan
+      description: Baseline 4:4:4 JPEG uses Pillow default Huffman tables for its first component scan, then defines selector 0 before the Cb/Cr scan
+      test_assets:
+      - baseline_444_multiscan_late_dht_after_default_scan.jpg
     - id: baseline_444_multiscan_duplicate_dqt_after_snapshot
       description: Baseline 4:4:4 multi-scan JPEG repeats a DQT marker after the first scan snapshots its tables
       test_assets:

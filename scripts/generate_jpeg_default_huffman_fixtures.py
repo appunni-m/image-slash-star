@@ -30,6 +30,49 @@ RECIPES = (
 )
 
 
+def multiscan_late_huffman_default_fixture():
+    """Build a complete baseline JPEG that redefines a defaulted table."""
+
+    def segment(marker, payload):
+        return (
+            b"\xff"
+            + bytes((marker,))
+            + (len(payload) + 2).to_bytes(2, "big")
+            + payload
+        )
+
+    # The first component scan has no DHT and therefore uses Pillow's standard
+    # default tables. Its entropy is DC category 0, AC EOB, and one-fill.
+    quantization = segment(0xDB, bytes((0,)) + bytes((0xFF,)) * 64)
+    frame = segment(
+        0xC0,
+        bytes((8, 0, 8, 0, 8, 3, 1, 0x11, 0, 2, 0x11, 0, 3, 0x11, 0)),
+    )
+    first_scan = segment(0xDA, bytes((1, 1, 0, 0, 63, 0)))
+    first_entropy = b"\x2b"
+
+    # The later DC0 table maps code 0 to category 1. The AC0 table maps code
+    # 0 to a one-coefficient value and code 10 to EOB; neither table assigns
+    # an all-ones code, and the following Cb/Cr scan is encoded with them.
+    dc0 = bytes((0, 1)) + bytes(15) + bytes((1,))
+    ac0 = bytes((0x10, 1, 1)) + bytes(14) + bytes((1, 0))
+    later_tables = segment(0xC4, dc0 + ac0)
+    chroma_scan = segment(0xDA, bytes((2, 2, 0, 3, 0, 0, 63, 0)))
+    chroma_entropy = b"\x66"
+
+    return (
+        b"\xff\xd8"
+        + quantization
+        + frame
+        + first_scan
+        + first_entropy
+        + later_tables
+        + chroma_scan
+        + chroma_entropy
+        + b"\xff\xd9"
+    )
+
+
 def split_header(source, sampling):
     """Boundedly locate the sole scan without interpreting entropy as markers."""
     if not source.startswith(b"\xff\xd8") or not source.endswith(b"\xff\xd9"):
@@ -102,6 +145,9 @@ def generate(output, check):
         for name, removed, dc_slot, ac_slot, move_tables in RECIPES:
             relative = Path("jpeg") / f"grayscale_huffman_{layout}_{name}_17x9.jpg"
             expected[relative] = mutate(source, sampling, removed, dc_slot, ac_slot, move_tables)
+    expected[Path("jpeg") / "baseline_444_multiscan_late_dht_after_default_scan.jpg"] = (
+        multiscan_late_huffman_default_fixture()
+    )
     for relative, data in expected.items():
         destination = output / relative
         if check:
