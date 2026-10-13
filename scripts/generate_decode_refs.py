@@ -299,9 +299,11 @@ def ensure_decode_row(matrix, fmt_name, fmt_manifest, case, asset_name):
     return row
 
 
-def sync_decode_rows(manifest, matrix):
+def sync_decode_rows(manifest, matrix, target_format=None):
     """Make manifest decode cases authoritative without deduplicating assets."""
     for fmt_name, fmt_manifest in manifest.get("formats", {}).items():
+        if target_format is not None and fmt_name != target_format:
+            continue
         fmt_matrix = matrix.setdefault("formats", {}).setdefault(fmt_name, {})
         existing = {row["id"]: row for row in fmt_matrix.get("decode", [])}
         synchronized = []
@@ -2484,9 +2486,11 @@ def describe_encode_call(fmt_name, row):
     return call
 
 
-def sync_encode_rows(manifest, matrix):
+def sync_encode_rows(manifest, matrix, target_format=None):
     """Make manifest encode cases authoritative and reject ambiguous IDs."""
     for fmt_name, fmt_manifest in manifest.get("formats", {}).items():
+        if target_format is not None and fmt_name != target_format:
+            continue
         specifications = fmt_manifest.get("encode_edge_cases", [])
         seen = set()
         for specification in specifications:
@@ -2621,6 +2625,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.multiscan.coefficient_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "tiff.strip_assembly.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -2703,7 +2710,7 @@ def sync_fault_contract_rows(manifest, matrix):
             raise RuntimeError(
                 f"{case_id}: fault contract must be active decode with a not_applicable oracle"
             )
-        if row.get("format") not in {"avif", "jpeg"}:
+        if row.get("format") not in {"avif", "jpeg", "tiff"}:
             raise RuntimeError(f"{case_id}: unsupported fault-contract format")
         requirements = row.get("requirements")
         if (
@@ -5020,8 +5027,8 @@ def generate(target_format=None):
     verify_primary_oracle(manifest)
     preflight_decode_cases(manifest, target_format)
     matrix = json.loads(MATRIX_PATH.read_text()) if MATRIX_PATH.exists() else {"formats": {}}
-    sync_decode_rows(manifest, matrix)
-    sync_encode_rows(manifest, matrix)
+    sync_decode_rows(manifest, matrix, target_format)
+    sync_encode_rows(manifest, matrix, target_format)
     sync_fault_contract_rows(manifest, matrix)
     preflight_encode_cases(matrix, target_format)
     clear_generated_outputs(manifest, target_format)

@@ -50,6 +50,8 @@ pub enum CoverageFaultPoint {
     Av1SuperResolutionPlaneReservation,
     /// Force JPEG multi-scan coefficient retention reservation to fail.
     JpegCoefficientBufferReservation,
+    /// Force TIFF strip assembly output reservation to fail before decoding.
+    TiffStripAssemblyReservation,
     /// Force AV1 partial monochrome tile-state retention to fail.
     Av1MonochromeTileReservation,
     /// Force AV1 partial color tile-state retention to fail.

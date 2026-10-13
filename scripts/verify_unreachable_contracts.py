@@ -128,6 +128,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.multiscan.coefficient_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "tiff_strip_assembly_reservation_failure": {
+        "format": "tiff",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:tiff:tiff_strip_assembly_reservation_failure",
+        "source_case": "decode:tiff:compression_none",
+        "point": "tiff.strip_assembly.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_monochrome_tile_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

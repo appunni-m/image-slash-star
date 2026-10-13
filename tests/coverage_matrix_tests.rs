@@ -1028,7 +1028,7 @@ fn execute_fault_contract(
 ) -> Result<(), String> {
     if row.row_type != "fault-contract"
         || row.operation != "decode"
-        || !matches!(row.format.as_str(), "avif" | "jpeg")
+        || !matches!(row.format.as_str(), "avif" | "jpeg" | "tiff")
         || row.status != "active"
         || row.verification != "fault-contract"
         || row.oracle_status != "not_applicable"
@@ -1242,6 +1242,12 @@ fn execute_fault_contract(
                 img::CoverageFaultPoint::JpegCoefficientBufferReservation,
                 false,
                 img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
+            ("tiff.strip_assembly.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::TiffStripAssemblyReservation,
+                false,
+                img::ImageFormat::Tiff,
                 img::ImageErrorStage::StillDecode,
             ),
             _ => {

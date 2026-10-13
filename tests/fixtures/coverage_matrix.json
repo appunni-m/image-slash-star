@@ -183280,6 +183280,25 @@
   },
   "fault_contracts": [
     {
+      "id": "tiff_strip_assembly_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "tiff",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:tiff:compression_none"
+      },
+      "fault": {
+        "point": "tiff.strip_assembly.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
       "id": "avif_retained_temporal_sample_reservation_failure",
       "type": "fault-contract",
       "operation": "decode",

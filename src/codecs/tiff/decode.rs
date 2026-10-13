@@ -621,7 +621,20 @@ fn decode_ifd(
             declared_byte_counts
         }
     };
-    let mut pixels = Vec::with_capacity(expected_total);
+    let mut pixels = Vec::new();
+    #[cfg(coverage)]
+    let reservation = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::TiffStripAssemblyReservation,
+    ) {
+        usize::MAX
+    } else {
+        expected_total
+    };
+    #[cfg(not(coverage))]
+    let reservation = expected_total;
+    pixels
+        .try_reserve_exact(reservation)
+        .map_err(|_| CodecError::Dimensions("unable to allocate TIFF strip buffer".to_owned()))?;
 
     for (strip_index, (&offset, &declared_byte_count)) in
         offsets.iter().zip(&byte_counts).enumerate()
