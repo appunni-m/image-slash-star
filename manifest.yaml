@@ -4373,6 +4373,11 @@ formats:
       description: Uncompressed 1-bit miniswhite TIFF with FillOrder 2
       test_assets:
       - miniswhite_1bit_fillorder2.tiff
+    - id: fill_order_2_minisblack_2bit
+      description: Uncompressed 2-bit minisblack TIFF with FillOrder 2
+      test_assets:
+      - gray2_fillorder2.tiff
+      status: active
     - id: fill_order_2_long_type_miniswhite_1bit
       description: FillOrder 2 stored in a single LONG field
       test_assets:
@@ -4997,6 +5002,11 @@ formats:
       description: FillOrder 2 samples copied from tiles beginning off byte boundaries
       test_assets:
       - tiled_minisblack_1bit_fillorder2_unaligned_edge.tiff
+    - id: tiled_minisblack_2bit_fillorder2_unaligned_edge
+      description: FillOrder 2 samples copied from 9-pixel tiles beginning off byte boundaries
+      test_assets:
+      - tiled_gray2_fillorder2_unaligned_edge.tiff
+      status: active
     - id: tiled_minisblack_1bit_unaligned_edge
       description: Pillow-accepted 9-pixel tile width shifts 1-bit grayscale samples off byte boundaries
       test_assets:

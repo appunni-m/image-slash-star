@@ -130112,6 +130112,84 @@
           "error_contracts": {}
         },
         {
+          "id": "fill_order_2_minisblack_2bit",
+          "type": "decode",
+          "format": "tiff",
+          "category": "fill",
+          "description": "Uncompressed 2-bit minisblack TIFF with FillOrder 2",
+          "asset": "gray2_fillorder2.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "ad114b309c9365c9cd79a142279d117a21a16bcaa50ebe8e560e06f7ce8c936a",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 2,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "53225f3c5907b05ae5ed94f6d49ddeeab36af9adca01fa20ff65d7e503ada0dc",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_gray2_fillorder2_tiff.bin",
+          "ref_bytes": 221,
+          "ref_mode": "L8",
+          "ref_size": [
+            17,
+            13
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "fill_order_2_long_type_miniswhite_1bit",
           "type": "decode",
           "format": "tiff",
@@ -142541,6 +142619,84 @@
           "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_minisblack_1bit_fillorder2_unaligned_edge_tiff.bin",
           "ref_bytes": 3,
           "ref_mode": "1",
+          "ref_size": [
+            17,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": "little",
+          "decoded_source_byte_order_origin": "pillow_fixture",
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "decoded_palette": {
+            "state": "absent",
+            "origin": "pillow_fixture"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "tiled_minisblack_2bit_fillorder2_unaligned_edge",
+          "type": "decode",
+          "format": "tiff",
+          "category": "tiled",
+          "description": "FillOrder 2 samples copied from 9-pixel tiles beginning off byte boundaries",
+          "asset": "tiled_gray2_fillorder2_unaligned_edge.tiff",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "f46ed370cb75fcf1fe8ef1811b98156847d9e755767d36b9c5fd7f4ed80140f1",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "TIFF",
+          "ref_bit_depth": 2,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": "little",
+          "inspect_source_byte_order_origin": "pillow_fixture",
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "8093f63ad676ce81dfe83282bb31306b0655f5b4d706229f2036a7824bba5e62",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.tiff_tiled_gray2_fillorder2_unaligned_edge_tiff.bin",
+          "ref_bytes": 17,
+          "ref_mode": "L8",
           "ref_size": [
             17,
             1
@@ -184537,12 +184693,12 @@
     }
   },
   "summary": {
-    "total_rows": 2199,
-    "decode_rows": 1721,
+    "total_rows": 2201,
+    "decode_rows": 1723,
     "encode_rows": 478,
     "formats": 8,
-    "assets_available": 1718,
-    "decode_active": 1721,
+    "assets_available": 1720,
+    "decode_active": 1723,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

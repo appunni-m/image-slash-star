@@ -7872,8 +7872,10 @@ def write_tiff_fill_order_variant(
     destination_path,
     values=(2,),
     field_type=3,
+    bits=1,
+    photometric=0,
 ):
-    """Add a scalar FillOrder entry to a single-strip 1-bit TIFF fixture."""
+    """Add a scalar FillOrder entry to an uncompressed packed grayscale TIFF."""
     source = source_path.read_bytes()
     ifd_offset, entry_count, ifd_end, entries = _classic_tiff_entries(source)
     if 266 in entries:
@@ -7894,12 +7896,12 @@ def write_tiff_fill_order_variant(
     ):
         raise RuntimeError("FillOrder fixture source must use inline IFD values")
     if (
-        _tiff_scalar_entry(source, entries, 258) != 1
+        _tiff_scalar_entry(source, entries, 258) != bits
         or _tiff_scalar_entry(source, entries, 259) != 1
-        or _tiff_scalar_entry(source, entries, 262) != 0
+        or _tiff_scalar_entry(source, entries, 262) != photometric
     ):
         raise RuntimeError(
-            "FillOrder fixture source must be uncompressed 1-bit miniswhite"
+            "FillOrder fixture source must have the expected uncompressed grayscale layout"
         )
     strip_offset = _tiff_scalar_entry(source, entries, 273)
     strip_byte_count = _tiff_scalar_entry(source, entries, 279)
@@ -7955,6 +7957,8 @@ def verify_tiff_fill_order_variant(
     destination_path,
     values=(2,),
     field_type=3,
+    bits=1,
+    photometric=0,
 ):
     """Check the FillOrder IFD entry, shifted strip, and all transformed bits."""
     source = source_path.read_bytes()
@@ -7978,6 +7982,12 @@ def verify_tiff_fill_order_variant(
         raise RuntimeError("FillOrder fixture has unexpected tag values")
     if struct.unpack_from("<I", output, output_end - 4)[0] != 0:
         raise RuntimeError("FillOrder fixture unexpectedly adds another directory")
+    if (
+        _tiff_scalar_entry(source, source_entries, 258) != bits
+        or _tiff_scalar_entry(source, source_entries, 259) != 1
+        or _tiff_scalar_entry(source, source_entries, 262) != photometric
+    ):
+        raise RuntimeError("FillOrder fixture source has an unexpected grayscale layout")
 
     source_strip_offset = _tiff_scalar_entry(source, source_entries, 273)
     output_strip_offset = _tiff_scalar_entry(output, output_entries, 273)
@@ -8182,11 +8192,9 @@ def write_low_depth_tiled_tiff(
         raise ValueError("packed TIFF tiles support raw or Deflate compression")
     if fill_order not in (1, 2):
         raise ValueError("TIFF FillOrder must be 1 or 2")
-    if fill_order == 2 and (
-        bits != 1 or compression != 1 or samples_per_pixel != 1
-    ):
+    if fill_order == 2 and (compression != 1 or samples_per_pixel != 1):
         raise ValueError(
-            "FillOrder 2 tiled fixtures require uncompressed bilevel samples"
+            "FillOrder 2 tiled fixtures require uncompressed grayscale samples"
         )
 
     # Pillow's libtiff accepts packed tiles narrower than the TIFF multiple-of-16
@@ -8215,6 +8223,8 @@ def write_low_depth_tiled_tiff(
                             sample = (luminance * maximum + 127) // 255
                             if photometric == 0:
                                 sample = maximum - sample
+                        if fill_order == 2:
+                            sample = int(f"{sample:0{bits}b}"[::-1], 2)
                         sample_index = column * samples_per_pixel + channel
                         bit = sample_index * bits
                         sample_shift = (
@@ -9042,6 +9052,28 @@ def gen_tiff():
     )
     write_low_depth_tiff(d / "miniswhite_8bit.tiff", low_depth, 8, 0)
     write_low_depth_tiff(d / "gray2.tiff", low_depth, 2, 1)
+    gray2_fill_order_2 = d / "gray2_fillorder2.tiff"
+    write_tiff_fill_order_variant(
+        d / "gray2.tiff",
+        gray2_fill_order_2,
+        bits=2,
+        photometric=1,
+    )
+    verify_tiff_fill_order_variant(
+        d / "gray2.tiff",
+        gray2_fill_order_2,
+        bits=2,
+        photometric=1,
+    )
+    with Image.open(d / "gray2.tiff") as source_image:
+        source_image.load()
+        with Image.open(gray2_fill_order_2) as fill_order_image:
+            fill_order_image.load()
+            if (
+                (fill_order_image.mode, fill_order_image.size, fill_order_image.tobytes())
+                != (source_image.mode, source_image.size, source_image.tobytes())
+            ):
+                raise RuntimeError("FillOrder 2 changed Pillow's 2-bit grayscale output")
     write_low_depth_tiff(d / "gray4.tiff", low_depth, 4, 1)
     write_low_depth_tiff(d / "miniswhite_2bit.tiff", low_depth, 2, 0)
     write_low_depth_tiff(d / "miniswhite_4bit.tiff", low_depth, 4, 0)
@@ -9121,6 +9153,33 @@ def gen_tiff():
     write_low_depth_tiled_tiff(
         d / "tiled_gray2_unaligned_edge.tiff", 17, 1, 2, 1, tile_width=9
     )
+    tiled_gray2_fill_order_2_unaligned = (
+        d / "tiled_gray2_fillorder2_unaligned_edge.tiff"
+    )
+    write_low_depth_tiled_tiff(
+        tiled_gray2_fill_order_2_unaligned,
+        17,
+        1,
+        2,
+        1,
+        tile_width=9,
+        fill_order=2,
+    )
+    verify_tiff_fill_order_2_tiled_variant(
+        d / "tiled_gray2_unaligned_edge.tiff",
+        tiled_gray2_fill_order_2_unaligned,
+    )
+    with Image.open(d / "tiled_gray2_unaligned_edge.tiff") as source_image:
+        source_image.load()
+        with Image.open(tiled_gray2_fill_order_2_unaligned) as fill_order_image:
+            fill_order_image.load()
+            if (
+                (fill_order_image.mode, fill_order_image.size, fill_order_image.tobytes())
+                != (source_image.mode, source_image.size, source_image.tobytes())
+            ):
+                raise RuntimeError(
+                    "FillOrder 2 changed Pillow's unaligned 2-bit tiled image output"
+                )
     write_low_depth_tiled_tiff(
         d / "tiled_palette4_edge.tiff", 17, 13, 4, 3
     )

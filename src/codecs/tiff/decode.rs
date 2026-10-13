@@ -207,8 +207,6 @@ fn decode_ifd(
         CodecError::Malformed(format!("TIFF bit depth exceeds format limits: {error}"))
     })?;
     let compression = directory.one_or(259, COMPRESSION_NONE);
-    let reverse_bilevel_bits =
-        bits_per_sample == 1 && compression == COMPRESSION_NONE && fill_order == 2;
     let photometric = directory.one_or(262, 1);
     let rows_per_strip = directory.one_or(278, height as usize);
     let predictor = directory.one_or(317, 1);
@@ -236,6 +234,12 @@ fn decode_ifd(
         extra_samples.as_deref().unwrap_or_default(),
         planar,
     )?;
+    let reverse_packed_fill_order = compression == COMPRESSION_NONE
+        && fill_order == 2
+        && matches!(
+            layout,
+            TiffLayout::Bilevel { .. } | TiffLayout::Gray2 { .. }
+        );
     super::inspect::verify_ignored_raw_band_count(&directory, width, height, layout)?;
     if layout == TiffLayout::GrayAlpha8 && separate_planar && compression == COMPRESSION_NONE {
         return Err(CodecError::Malformed(
@@ -453,7 +457,7 @@ fn decode_ifd(
                     copied_height,
                     bits_per_sample,
                 };
-                if reverse_bilevel_bits {
+                if reverse_packed_fill_order {
                     copy_packed_tile_into::<true>(&mut pixels, tile_data, placement, token)
                 } else {
                     copy_packed_tile_into::<false>(&mut pixels, tile_data, placement, token)
@@ -701,7 +705,7 @@ fn decode_ifd(
         pixels.extend_from_slice(&decoded);
     }
     pixels.resize(expected_total, 0);
-    if reverse_bilevel_bits {
+    if reverse_packed_fill_order {
         reverse_tiff_fill_order(&mut pixels, token)?;
     }
 
@@ -1128,7 +1132,7 @@ fn decode_block(
     }
 }
 
-/// Normalize uncompressed bilevel bytes to TIFF's default high-bit-first order.
+/// Normalize uncompressed packed bytes to TIFF's default high-bit-first order.
 fn reverse_tiff_fill_order(
     bytes: &mut [u8],
     token: Option<&crate::CancellationToken>,
@@ -1371,6 +1375,16 @@ fn copy_packed_tile_row<const LSB_FIRST: bool>(
                 .malformed("TIFF packed source sample shift is invalid")?
         };
         let value = source[source_bit / 8].wrapping_shr(source_shift) & sample_mask;
+        let value = if LSB_FIRST {
+            // FillOrder=2 stores each packed sample's bits in reverse order.
+            // Reverse the sample value when copying into a non-byte-aligned
+            // destination; the byte-aligned path reverses complete bytes.
+            value
+                .reverse_bits()
+                .wrapping_shr(8_u32.wrapping_sub(sample_shift))
+        } else {
+            value
+        };
         let destination_bit = destination_start_bit
             .checked_add(source_bit)
             .dimensions("TIFF packed tile destination bit offset overflows")?;
