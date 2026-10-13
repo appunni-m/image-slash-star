@@ -3032,10 +3032,10 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,222 total rows: 1,744 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,744 decode rows and 446 encode
+The current matrix contains 2,223 total rows: 1,745 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,745 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
-285 decode rows. The 30 fault contracts are tracked separately from the
+286 decode rows. The 30 fault contracts are tracked separately from the
 Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
