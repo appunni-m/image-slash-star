@@ -193,6 +193,7 @@ fn decode_ifd(
         .saturating_add(directory.entries.len().saturating_mul(12))
         .saturating_add(4);
     validate_decode_field_types(&directory)?;
+    let fill_order = validate_fill_order(&directory)?;
 
     let (width, height) = super::inspect::validate_primary_dimensions(&directory)?;
     let samples_per_pixel = directory.one_or(277, 1);
@@ -206,6 +207,8 @@ fn decode_ifd(
         CodecError::Malformed(format!("TIFF bit depth exceeds format limits: {error}"))
     })?;
     let compression = directory.one_or(259, COMPRESSION_NONE);
+    let reverse_bilevel_bits =
+        bits_per_sample == 1 && compression == COMPRESSION_NONE && fill_order == 2;
     let photometric = directory.one_or(262, 1);
     let rows_per_strip = directory.one_or(278, height as usize);
     let predictor = directory.one_or(317, 1);
@@ -441,20 +444,20 @@ fn decode_ifd(
                         .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
                     &decoded
                 };
-                copy_packed_tile_into(
-                    &mut pixels,
-                    tile_data,
-                    PackedTilePlacement {
-                        tile_row_bytes,
-                        row_bytes,
-                        tile_x,
-                        tile_y,
-                        copied_width,
-                        copied_height,
-                        bits_per_sample,
-                    },
-                    token,
-                )
+                let placement = PackedTilePlacement {
+                    tile_row_bytes,
+                    row_bytes,
+                    tile_x,
+                    tile_y,
+                    copied_width,
+                    copied_height,
+                    bits_per_sample,
+                };
+                if reverse_bilevel_bits {
+                    copy_packed_tile_into::<true>(&mut pixels, tile_data, placement, token)
+                } else {
+                    copy_packed_tile_into::<false>(&mut pixels, tile_data, placement, token)
+                }
                 .map_err(|error| error.at(offset as u64, "tiff_tile"))?;
                 continue;
             }
@@ -698,6 +701,9 @@ fn decode_ifd(
         pixels.extend_from_slice(&decoded);
     }
     pixels.resize(expected_total, 0);
+    if reverse_bilevel_bits {
+        reverse_tiff_fill_order(&mut pixels, token)?;
+    }
 
     Ok((
         convert_pixels_for_token(
@@ -1122,6 +1128,20 @@ fn decode_block(
     }
 }
 
+/// Normalize uncompressed bilevel bytes to TIFF's default high-bit-first order.
+fn reverse_tiff_fill_order(
+    bytes: &mut [u8],
+    token: Option<&crate::CancellationToken>,
+) -> CodecResult<()> {
+    for chunk in bytes.chunks_mut(1_024) {
+        crate::codecs::error::check_cancelled(token)?;
+        for byte in chunk {
+            *byte = byte.reverse_bits();
+        }
+    }
+    Ok(())
+}
+
 fn copy_raw_into(
     output: &mut Vec<u8>,
     data: &[u8],
@@ -1204,7 +1224,7 @@ struct PackedTilePlacement {
     bits_per_sample: u8,
 }
 
-fn copy_packed_tile_into(
+fn copy_packed_tile_into<const LSB_FIRST: bool>(
     output: &mut [u8],
     data: &[u8],
     placement: PackedTilePlacement,
@@ -1245,7 +1265,7 @@ fn copy_packed_tile_into(
             .ok_or_else(|| {
                 CodecError::Malformed("TIFF packed tile destination row is invalid".to_owned())
             })?;
-        copy_packed_tile_row(
+        copy_packed_tile_row::<LSB_FIRST>(
             destination_row,
             source_row,
             placement.tile_x,
@@ -1257,7 +1277,7 @@ fn copy_packed_tile_into(
     Ok(())
 }
 
-fn copy_packed_tile_row(
+fn copy_packed_tile_row<const LSB_FIRST: bool>(
     destination: &mut [u8],
     source: &[u8],
     tile_x: usize,
@@ -1289,7 +1309,22 @@ fn copy_packed_tile_row(
                 .zip(destination[destination_start..destination_full_end].chunks_mut(1_024))
             {
                 crate::codecs::error::check_cancelled(Some(token))?;
-                destination_chunk.copy_from_slice(source_chunk);
+                if LSB_FIRST {
+                    for (source_byte, destination_byte) in
+                        source_chunk.iter().zip(destination_chunk)
+                    {
+                        *destination_byte = source_byte.reverse_bits();
+                    }
+                } else {
+                    destination_chunk.copy_from_slice(source_chunk);
+                }
+            }
+        } else if LSB_FIRST {
+            for (source_byte, destination_byte) in source[..whole_bytes]
+                .iter()
+                .zip(&mut destination[destination_start..destination_full_end])
+            {
+                *destination_byte = source_byte.reverse_bits();
             }
         } else {
             destination[destination_start..destination_full_end]
@@ -1303,7 +1338,11 @@ fn copy_packed_tile_row(
                 .and_then(|shift| u32::try_from(shift).ok())
                 .malformed("TIFF packed tile tail shift is invalid")?;
             let tail_mask = u8::MAX.wrapping_shl(tail_shift);
-            let source_tail = source[whole_bytes];
+            let source_tail = if LSB_FIRST {
+                source[whole_bytes].reverse_bits()
+            } else {
+                source[whole_bytes]
+            };
             let destination_tail = &mut destination[destination_full_end];
             *destination_tail = (*destination_tail & !tail_mask) | (source_tail & tail_mask);
         }
@@ -1320,11 +1359,17 @@ fn copy_packed_tile_row(
         let source_bit = sample_index
             .checked_mul(bits)
             .dimensions("TIFF packed tile source bit offset overflows")?;
-        let source_shift = 8usize
-            .checked_sub(bits)
-            .and_then(|shift| shift.checked_sub(source_bit % 8))
-            .and_then(|shift| u32::try_from(shift).ok())
-            .malformed("TIFF packed source sample shift is invalid")?;
+        let source_shift = if LSB_FIRST {
+            u32::try_from(source_bit % 8).map_err(|_| {
+                CodecError::Malformed("TIFF packed source sample shift is invalid".to_owned())
+            })?
+        } else {
+            8usize
+                .checked_sub(bits)
+                .and_then(|shift| shift.checked_sub(source_bit % 8))
+                .and_then(|shift| u32::try_from(shift).ok())
+                .malformed("TIFF packed source sample shift is invalid")?
+        };
         let value = source[source_bit / 8].wrapping_shr(source_shift) & sample_mask;
         let destination_bit = destination_start_bit
             .checked_add(source_bit)
@@ -2350,6 +2395,7 @@ pub(super) struct Directory<'a> {
     endian: Endian,
     fields: Vec<Field>,
     entries: Vec<Entry>,
+    fill_order_rational: (usize, (u32, u32)),
     next_offset: usize,
     pub(super) opaque_blocks: Vec<crate::types::OpaqueBlock>,
     pub(super) metadata: Vec<crate::types::OpaqueMetadata>,
@@ -2379,8 +2425,8 @@ enum NumericKind {
 
 /// Tags the TIFF model interprets and therefore never retains as container
 /// records.
-const INTERPRETED_TAGS: [u16; 18] = [
-    256, 257, 258, 259, 262, 273, 277, 278, 279, 284, 317, 320, 322, 323, 324, 325, 338, 339,
+const INTERPRETED_TAGS: [u16; 19] = [
+    256, 257, 258, 259, 262, 266, 273, 277, 278, 279, 284, 317, 320, 322, 323, 324, 325, 338, 339,
 ];
 
 /// Tags the model classifies as known metadata and retains as raw metadata
@@ -2423,6 +2469,48 @@ fn validate_decode_field_types(directory: &Directory<'_>) -> CodecResult<()> {
     Ok(())
 }
 
+pub(super) fn validate_fill_order(directory: &Directory<'_>) -> CodecResult<usize> {
+    let Some(field_type) = directory.field_type(266) else {
+        return Ok(1);
+    };
+    let fill_order = match field_type {
+        3 | 4 => directory.one_or(266, 1),
+        5 => {
+            let (count, (numerator, denominator)) = directory.fill_order_rational;
+            if count == 0 {
+                return Ok(1);
+            }
+            if denominator == 0 {
+                return Err(CodecError::Malformed(
+                    "TIFF FillOrder rational denominator is zero".to_owned(),
+                ));
+            }
+            let numerator = u64::from(numerator);
+            let denominator = u64::from(denominator);
+            if numerator == denominator {
+                1
+            } else if numerator == denominator * 2 {
+                2
+            } else {
+                return Err(CodecError::Malformed(
+                    "TIFF FillOrder has an unsupported value".to_owned(),
+                ));
+            }
+        }
+        _ => {
+            return Err(CodecError::Malformed(
+                "TIFF FillOrder has an unsupported field type".to_owned(),
+            ));
+        }
+    };
+    if !matches!(fill_order, 1 | 2) {
+        return Err(CodecError::Malformed(
+            "TIFF FillOrder has an unsupported value".to_owned(),
+        ));
+    }
+    Ok(fill_order)
+}
+
 impl<'a> Directory<'a> {
     pub(super) fn parse(data: &'a [u8], offset: usize, endian: Endian) -> CodecResult<Self> {
         let count_end = offset
@@ -2443,6 +2531,7 @@ impl<'a> Directory<'a> {
         let entries_start = offset.saturating_add(2);
         let mut fields = Vec::with_capacity(count);
         let mut entries = Vec::with_capacity(count);
+        let mut fill_order_rational = None;
         let mut opaque_blocks = Vec::new();
         let mut metadata = Vec::new();
         for index in 0..count {
@@ -2502,6 +2591,22 @@ impl<'a> Directory<'a> {
                 "TIFF directory value is out of bounds",
             )?;
             let raw_value = data[value_position..value_position.saturating_add(byte_len)].to_vec();
+            if tag == 266 && field_type == 5 && fill_order_rational.is_none() {
+                let rational = if value_count == 0 {
+                    (0, 0)
+                } else {
+                    let value = raw_value.get(..8).ok_or_else(|| {
+                        CodecError::Malformed(
+                            "TIFF FillOrder rational value is truncated".to_owned(),
+                        )
+                    })?;
+                    (
+                        endian.u32_exact([value[0], value[1], value[2], value[3]]),
+                        endian.u32_exact([value[4], value[5], value[6], value[7]]),
+                    )
+                };
+                fill_order_rational = Some((value_count, rational));
+            }
             if !INTERPRETED_TAGS.contains(&tag) {
                 let mut kind = [0u8; 2];
                 endian.write_u16(tag, &mut kind);
@@ -2544,6 +2649,7 @@ impl<'a> Directory<'a> {
             endian,
             fields,
             entries,
+            fill_order_rational: fill_order_rational.unwrap_or_default(),
             next_offset: endian.u32_exact([next[0], next[1], next[2], next[3]]) as usize,
             opaque_blocks,
             metadata,
@@ -2555,8 +2661,30 @@ impl<'a> Directory<'a> {
     }
 
     pub(super) fn one(&self, tag: u16) -> Option<usize> {
-        self.values(tag)
-            .and_then(|values| values.into_iter().next())
+        let entry = self.entries.iter().find(|entry| entry.tag == tag)?;
+        if entry.count == 0 {
+            return None;
+        }
+        let position = if entry.byte_len <= 4 {
+            entry.inline_position
+        } else {
+            entry.value_position
+        };
+        match entry.numeric_kind {
+            NumericKind::Bytes => self.data.get(position).copied().map(usize::from),
+            NumericKind::Shorts => {
+                let bytes = self.data.get(position..position.saturating_add(2))?;
+                Some(usize::from(self.endian.u16_exact([bytes[0], bytes[1]])))
+            }
+            NumericKind::Longs => {
+                let bytes = self.data.get(position..position.saturating_add(4))?;
+                Some(
+                    self.endian
+                        .u32_exact([bytes[0], bytes[1], bytes[2], bytes[3]])
+                        as usize,
+                )
+            }
+        }
     }
 
     pub(super) fn one_or(&self, tag: u16, default: usize) -> usize {

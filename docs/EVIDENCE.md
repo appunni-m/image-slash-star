@@ -2999,10 +2999,10 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,185 total rows: 1,707 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,707 decode rows and 446 encode
+The current matrix contains 2,198 total rows: 1,720 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,720 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
-267 decode rows. The 27 fault contracts are tracked separately from the
+280 decode rows. The 27 fault contracts are tracked separately from the
 Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
@@ -6364,7 +6364,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2dc22614ad3d85d73e8b9fc016ce9a2dcf57dd1cd97b0e49828d448e3bd7c1e9`; matrix `1f41fd732998c31454392de15ab2b554748efc4cc78d6ba4eac97eeb2bfcaf01`.
+- Current fixture integrity only: manifest `4e1cce1766ba9def8ebfac4a222e70c61dc9d269e3b3c0807ad670171abee7c9`; matrix `78d11e201c094bcdd5f3306d00bc1db17af0ac6c4dd2d83ca304fadaf4dcf135`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6531,6 +6531,33 @@ peak-allocation measurements remain unfinished.
 All 12 strict native/WASM, AVIF-only/all-feature, ordinary/coverage compile
 configurations pass, along with rustdoc, formatting and static provenance gates.
 The coverage-origin inventory records 142 exact guards across 21 Rust files.
+
+### TIFF FillOrder rational field parity — 2026-10-13
+
+The TIFF decode matrix now includes complete-file Pillow cases for SHORT,
+LONG, BYTE and RATIONAL tag 266 values. The RATIONAL cases cover valid 1/1 and
+2/1 values, first-value behavior with a later 0/0 value, zero-count defaulting,
+zero denominators, fractional values, and unsupported 3/1. BYTE(2) and invalid
+rational values match Pillow's open-time rejection. These are public input
+parity cases; no target-only fault contract was added, and the 27 typed fault
+contracts remain separately reported.
+
+The focused TIFF run selected 14 matrix rows, including the default
+FillOrder-absent miniswhite row, all seven new FillOrder rows, and the existing
+strip and tiled cases. It passed (`1 passed; 0 failed; 56 filtered out`).
+Formatting and strict all-target/all-feature Clippy also pass. The focused
+Coverage MCP report is
+`.coverage-mcp/local-evidence/20261013/tiff-fillorder2/focused.json`;
+`coverage_gaps` reports no missing branch outcomes in
+`validate_fill_order` and summarizes the selected report as 201/31,308 branch
+observations. Coverage MCP marks source identity unverified and test attribution
+unknown. Its incremental comparison with
+`.coverage-mcp/local-evidence/20261013/main-full-baseline/coverage.json` is
+incomparable because the reports' branch details do not match their totals, so
+this focused run does not establish a suite-wide gain or regression. The last
+full baseline remains 89,277/135,839 lines, 17,418/31,268 branches,
+4,992/8,690 functions and 136,575/210,976 regions; no full coverage campaign
+was run for this change.
 
 ## Diagnostic provenance
 

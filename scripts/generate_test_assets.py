@@ -7797,6 +7797,363 @@ def write_low_depth_tiff(path, image, bits, photometric):
     path.write_bytes(output)
 
 
+def _tiff_scalar_entry(data, entries, tag):
+    """Read one inline SHORT or LONG value from a little-endian classic TIFF."""
+    entry = entries.get(tag)
+    if entry is None:
+        raise RuntimeError(f"TIFF fixture is missing tag {tag}")
+    entry_position, field_type, count = entry
+    if count != 1 or field_type not in (3, 4):
+        raise RuntimeError(f"TIFF fixture tag {tag} is not one inline SHORT or LONG")
+    unpack_format = "<H" if field_type == 3 else "<I"
+    return struct.unpack_from(unpack_format, data, entry_position + 8)[0]
+
+
+def _classic_tiff_entries(data):
+    """Return the IFD offset, count, and tag-to-entry positions for classic II TIFF."""
+    if data[:4] != b"II*\0" or len(data) < 8:
+        raise RuntimeError(
+            "FillOrder fixture source must be little-endian classic TIFF"
+        )
+    ifd_offset = struct.unpack_from("<I", data, 4)[0]
+    if ifd_offset + 2 > len(data):
+        raise RuntimeError("FillOrder fixture source has a truncated first IFD")
+    entry_count = struct.unpack_from("<H", data, ifd_offset)[0]
+    ifd_end = ifd_offset + 2 + entry_count * 12 + 4
+    if ifd_end > len(data):
+        raise RuntimeError("FillOrder fixture source has a truncated first IFD")
+    entries = {}
+    for index in range(entry_count):
+        entry_position = ifd_offset + 2 + index * 12
+        tag, field_type, count = struct.unpack_from("<HHI", data, entry_position)
+        if tag in entries:
+            raise RuntimeError(f"FillOrder fixture source repeats tag {tag}")
+        entries[tag] = (entry_position, field_type, count)
+    return ifd_offset, entry_count, ifd_end, entries
+
+
+def _tiff_entry_values(data, entry):
+    """Read a classic TIFF BYTE, SHORT, or LONG entry into Python integers."""
+    entry_position, field_type, count = entry
+    type_sizes = {1: 1, 3: 2, 4: 4}
+    type_size = type_sizes.get(field_type)
+    if type_size is None:
+        raise RuntimeError(f"TIFF fixture field type {field_type} is not numeric")
+    byte_count = type_size * count
+    value_position = (
+        entry_position + 8
+        if byte_count <= 4
+        else struct.unpack_from("<I", data, entry_position + 8)[0]
+    )
+    payload = data[value_position : value_position + byte_count]
+    if len(payload) != byte_count:
+        raise RuntimeError("TIFF fixture entry payload is truncated")
+    formats = {1: "B", 3: "H", 4: "I"}
+    return struct.unpack(f"<{count}{formats[field_type]}", payload) if count else ()
+
+
+def _tiff_rational_entry_values(data, entry):
+    """Read the unsigned numerator and denominator pairs from a TIFF entry."""
+    entry_position, field_type, count = entry
+    if field_type != 5:
+        raise RuntimeError("FillOrder fixture field is not RATIONAL")
+    payload_offset = struct.unpack_from("<I", data, entry_position + 8)[0]
+    payload_size = count * 8
+    payload = data[payload_offset : payload_offset + payload_size]
+    if len(payload) != payload_size:
+        raise RuntimeError("FillOrder rational payload is truncated")
+    return tuple(
+        struct.unpack_from("<II", payload, index * 8) for index in range(count)
+    )
+
+
+def write_tiff_fill_order_variant(
+    source_path,
+    destination_path,
+    values=(2,),
+    field_type=3,
+):
+    """Add a scalar FillOrder entry to a single-strip 1-bit TIFF fixture."""
+    source = source_path.read_bytes()
+    ifd_offset, entry_count, ifd_end, entries = _classic_tiff_entries(source)
+    if 266 in entries:
+        raise RuntimeError("FillOrder fixture source already declares tag 266")
+    expected_tags = {256, 257, 258, 259, 262, 273, 277, 278, 279}
+    ordered_tags = [
+        struct.unpack_from("<H", source, ifd_offset + 2 + index * 12)[0]
+        for index in range(entry_count)
+    ]
+    if set(entries) != expected_tags or ordered_tags != sorted(ordered_tags):
+        raise RuntimeError("FillOrder fixture source has unexpected IFD metadata")
+    if struct.unpack_from("<I", source, ifd_end - 4)[0] != 0:
+        raise RuntimeError("FillOrder fixture source must contain one directory")
+    inline_sizes = {1: 1, 3: 2, 4: 4}
+    if any(
+        inline_sizes[field_type] * count > 4
+        for _, field_type, count in entries.values()
+    ):
+        raise RuntimeError("FillOrder fixture source must use inline IFD values")
+    if (
+        _tiff_scalar_entry(source, entries, 258) != 1
+        or _tiff_scalar_entry(source, entries, 259) != 1
+        or _tiff_scalar_entry(source, entries, 262) != 0
+    ):
+        raise RuntimeError(
+            "FillOrder fixture source must be uncompressed 1-bit miniswhite"
+        )
+    strip_offset = _tiff_scalar_entry(source, entries, 273)
+    strip_byte_count = _tiff_scalar_entry(source, entries, 279)
+    if entries[273][2] != 1 or entries[279][2] != 1 or strip_offset != ifd_end:
+        raise RuntimeError(
+            "FillOrder fixture source must have one strip immediately after its IFD"
+        )
+    if strip_offset + strip_byte_count != len(source):
+        raise RuntimeError(
+            "FillOrder fixture source strip must end at the file boundary"
+        )
+    if field_type == 3 and len(values) <= 2:
+        fill_order_value = struct.pack("<HH", *(tuple(values) + (0, 0))[:2])
+    elif field_type == 4 and len(values) <= 1:
+        fill_order_value = struct.pack("<I", values[0] if values else 0)
+    else:
+        raise RuntimeError(
+            "FillOrder fixture values must be inline SHORT or scalar LONG"
+        )
+
+    insertion_index = next(
+        (
+            index
+            for index, tag in enumerate(ordered_tags)
+            if tag > 266
+        ),
+        entry_count,
+    )
+    insertion_offset = ifd_offset + 2 + insertion_index * 12
+    fill_order_entry = (
+        struct.pack("<HHI", 266, field_type, len(values)) + fill_order_value
+    )
+    output = bytearray(
+        source[:insertion_offset] + fill_order_entry + source[insertion_offset:]
+    )
+    struct.pack_into("<H", output, ifd_offset, entry_count + 1)
+    shifted_entries = {
+        tag: (position + (12 if position >= insertion_offset else 0), field_type, count)
+        for tag, (position, field_type, count) in entries.items()
+    }
+    shifted_strip_offset = _tiff_scalar_entry(output, shifted_entries, 273) + 12
+    struct.pack_into("<I", output, shifted_entries[273][0] + 8, shifted_strip_offset)
+    if values and values[0] == 2:
+        strip = output[shifted_strip_offset : shifted_strip_offset + strip_byte_count]
+        output[shifted_strip_offset : shifted_strip_offset + strip_byte_count] = bytes(
+            int(f"{byte:08b}"[::-1], 2) for byte in strip
+        )
+    destination_path.write_bytes(output)
+
+
+def verify_tiff_fill_order_variant(
+    source_path,
+    destination_path,
+    values=(2,),
+    field_type=3,
+):
+    """Check the FillOrder IFD entry, shifted strip, and all transformed bits."""
+    source = source_path.read_bytes()
+    output = destination_path.read_bytes()
+    source_ifd, source_count, source_end, source_entries = _classic_tiff_entries(source)
+    output_ifd, output_count, output_end, output_entries = _classic_tiff_entries(output)
+    if output_ifd != source_ifd or output_count != source_count + 1:
+        raise RuntimeError(
+            "FillOrder fixture IFD count or location changed unexpectedly"
+        )
+    if output_end != source_end + 12 or len(output) != len(source) + 12:
+        raise RuntimeError(
+            "FillOrder fixture did not relocate the strip by exactly one IFD entry"
+        )
+    _, fill_type, fill_count = output_entries.get(266, (0, 0, 0))
+    if fill_type != field_type or fill_count != len(values):
+        raise RuntimeError(
+            "FillOrder fixture has an unexpected tag type or value count"
+        )
+    if _tiff_entry_values(output, output_entries[266]) != tuple(values):
+        raise RuntimeError("FillOrder fixture has unexpected tag values")
+    if struct.unpack_from("<I", output, output_end - 4)[0] != 0:
+        raise RuntimeError("FillOrder fixture unexpectedly adds another directory")
+
+    source_strip_offset = _tiff_scalar_entry(source, source_entries, 273)
+    output_strip_offset = _tiff_scalar_entry(output, output_entries, 273)
+    source_strip_count = _tiff_scalar_entry(source, source_entries, 279)
+    output_strip_count = _tiff_scalar_entry(output, output_entries, 279)
+    if (
+        output_strip_offset != source_strip_offset + 12
+        or output_strip_count != source_strip_count
+    ):
+        raise RuntimeError(
+            "FillOrder fixture strip offsets or byte counts changed unexpectedly"
+        )
+    source_strip = source[
+        source_strip_offset : source_strip_offset + source_strip_count
+    ]
+    output_strip = output[
+        output_strip_offset : output_strip_offset + output_strip_count
+    ]
+    if len(source_strip) != len(output_strip):
+        raise RuntimeError("FillOrder fixture strip size changed unexpectedly")
+    reverse_bits = bool(values and values[0] == 2)
+    for source_byte, output_byte in zip(source_strip, output_strip):
+        expected_byte = (
+            int(f"{source_byte:08b}"[::-1], 2) if reverse_bits else source_byte
+        )
+        if output_byte != expected_byte:
+            raise RuntimeError(
+                "FillOrder fixture strip bytes do not match the selected order"
+            )
+
+    for tag, (source_position, source_type, source_values) in source_entries.items():
+        output_position, output_type, output_values = output_entries[tag]
+        if (source_type, source_values) != (output_type, output_values):
+            raise RuntimeError(f"FillOrder fixture changed source metadata tag {tag}")
+        if tag != 273 and source[source_position + 8 : source_position + 12] != output[
+            output_position + 8 : output_position + 12
+        ]:
+            raise RuntimeError(
+                f"FillOrder fixture changed source metadata value for tag {tag}"
+            )
+
+
+def write_tiff_fill_order_rational_variant(source_path, destination_path, values):
+    """Replace a SHORT FillOrder entry with out-of-line RATIONAL values."""
+    source = source_path.read_bytes()
+    ifd_offset, _, _, entries = _classic_tiff_entries(source)
+    entry = entries.get(266)
+    if entry is None or entry[1] != 3 or entry[2] not in (0, 1):
+        raise RuntimeError("RATIONAL FillOrder source must contain a SHORT tag")
+    for value in values:
+        if (
+            not isinstance(value, tuple)
+            or len(value) != 2
+            or any(
+                not isinstance(part, int) or not 0 <= part <= 0xFFFFFFFF
+                for part in value
+            )
+        ):
+            raise RuntimeError(
+                "RATIONAL FillOrder values must be unsigned 32-bit pairs"
+            )
+
+    output = bytearray(source)
+    entry_position = entry[0]
+    struct.pack_into("<H", output, entry_position + 2, 5)
+    struct.pack_into("<I", output, entry_position + 4, len(values))
+    if values:
+        payload_offset = (len(source) + 3) & ~3
+        struct.pack_into("<I", output, entry_position + 8, payload_offset)
+        output.extend(b"\0" * (payload_offset - len(source)))
+        output.extend(
+            b"".join(
+                struct.pack("<II", numerator, denominator)
+                for numerator, denominator in values
+            )
+        )
+    else:
+        output[entry_position + 8 : entry_position + 12] = b"\0\0\0\0"
+    destination_path.write_bytes(output)
+
+
+def verify_tiff_fill_order_rational_variant(source_path, destination_path, values):
+    """Check the rational payload, unchanged IFD layout, and strip bytes."""
+    source = source_path.read_bytes()
+    output = destination_path.read_bytes()
+    source_ifd, source_count, source_end, source_entries = _classic_tiff_entries(source)
+    output_ifd, output_count, output_end, output_entries = _classic_tiff_entries(output)
+    if (output_ifd, output_count, output_end) != (
+        source_ifd,
+        source_count,
+        source_end,
+    ):
+        raise RuntimeError("RATIONAL FillOrder fixture changed its IFD layout")
+    fill_entry = output_entries.get(266)
+    if fill_entry is None or fill_entry[1:] != (5, len(values)):
+        raise RuntimeError(
+            "RATIONAL FillOrder fixture has an invalid field type or count"
+        )
+    if _tiff_rational_entry_values(output, fill_entry) != tuple(values):
+        raise RuntimeError("RATIONAL FillOrder fixture has unexpected values")
+    if struct.unpack_from("<I", output, output_end - 4)[0] != 0:
+        raise RuntimeError("RATIONAL FillOrder fixture unexpectedly adds another directory")
+
+    if values:
+        payload_offset = struct.unpack_from("<I", output, fill_entry[0] + 8)[0]
+        expected_offset = (len(source) + 3) & ~3
+        if payload_offset != expected_offset:
+            raise RuntimeError("RATIONAL FillOrder fixture has an invalid payload offset")
+        if any(output[len(source) : payload_offset]):
+            raise RuntimeError("RATIONAL FillOrder fixture alignment bytes are not zero")
+        if len(output) != payload_offset + len(values) * 8:
+            raise RuntimeError("RATIONAL FillOrder fixture has trailing payload bytes")
+    elif len(output) != len(source) or output[
+        fill_entry[0] + 8 : fill_entry[0] + 12
+    ] != bytes(4):
+        raise RuntimeError(
+            "Empty RATIONAL FillOrder fixture added a payload"
+        )
+
+    for tag, (source_position, _, _) in source_entries.items():
+        output_position, _, _ = output_entries[tag]
+        if tag != 266 and source[source_position : source_position + 12] != output[
+            output_position : output_position + 12
+        ]:
+            raise RuntimeError(f"RATIONAL FillOrder fixture changed source tag {tag}")
+    source_strip_offset = _tiff_scalar_entry(source, source_entries, 273)
+    output_strip_offset = _tiff_scalar_entry(output, output_entries, 273)
+    source_strip_count = _tiff_scalar_entry(source, source_entries, 279)
+    output_strip_count = _tiff_scalar_entry(output, output_entries, 279)
+    if (source_strip_offset, source_strip_count) != (output_strip_offset, output_strip_count):
+        raise RuntimeError("RATIONAL FillOrder fixture changed strip geometry")
+    source_strip = source[
+        source_strip_offset : source_strip_offset + source_strip_count
+    ]
+    output_strip = output[
+        output_strip_offset : output_strip_offset + output_strip_count
+    ]
+    if source_strip != output_strip:
+        raise RuntimeError("RATIONAL FillOrder fixture changed its strip payload")
+
+
+def write_tiff_fill_order_byte_variant(source_path, destination_path):
+    """Change a valid FillOrder SHORT entry to BYTE without changing its value."""
+    source = source_path.read_bytes()
+    _, _, _, entries = _classic_tiff_entries(source)
+    entry = entries.get(266)
+    if (
+        entry is None
+        or entry[1:] != (3, 1)
+        or _tiff_entry_values(source, entry) != (2,)
+    ):
+        raise RuntimeError("BYTE FillOrder source must declare SHORT value 2")
+    output = bytearray(source)
+    struct.pack_into("<H", output, entry[0] + 2, 1)
+    destination_path.write_bytes(output)
+
+
+def verify_tiff_fill_order_byte_variant(source_path, destination_path):
+    """Check that the BYTE mutation changes only the FillOrder field type."""
+    source = source_path.read_bytes()
+    output = destination_path.read_bytes()
+    _, _, _, source_entries = _classic_tiff_entries(source)
+    _, _, _, output_entries = _classic_tiff_entries(output)
+    source_entry = source_entries[266]
+    output_entry = output_entries[266]
+    if (
+        output_entry[1:] != (1, 1)
+        or _tiff_entry_values(output, output_entry) != (2,)
+    ):
+        raise RuntimeError("BYTE FillOrder fixture has an unexpected type or value")
+    expected = bytearray(source)
+    struct.pack_into("<H", expected, source_entry[0] + 2, 1)
+    if output != expected:
+        raise RuntimeError("BYTE FillOrder fixture changed unrelated TIFF bytes")
+
+
 def write_low_depth_tiled_tiff(
     path,
     width,
@@ -7807,6 +8164,7 @@ def write_low_depth_tiled_tiff(
     tile_height=16,
     compression=1,
     samples_per_pixel=1,
+    fill_order=1,
 ):
     """Write packed grayscale, palette, or RGB TIFF tiles for Pillow parity fixtures."""
     if bits not in (1, 2, 4) or photometric not in (0, 1, 2, 3):
@@ -7822,6 +8180,14 @@ def write_low_depth_tiled_tiff(
         raise ValueError("TIFF image and tile dimensions must be positive")
     if compression not in (1, 8):
         raise ValueError("packed TIFF tiles support raw or Deflate compression")
+    if fill_order not in (1, 2):
+        raise ValueError("TIFF FillOrder must be 1 or 2")
+    if fill_order == 2 and (
+        bits != 1 or compression != 1 or samples_per_pixel != 1
+    ):
+        raise ValueError(
+            "FillOrder 2 tiled fixtures require uncompressed bilevel samples"
+        )
 
     # Pillow's libtiff accepts packed tiles narrower than the TIFF multiple-of-16
     # recommendation; a 9-pixel width exercises unaligned packed sample placement.
@@ -7851,9 +8217,12 @@ def write_low_depth_tiled_tiff(
                                 sample = maximum - sample
                         sample_index = column * samples_per_pixel + channel
                         bit = sample_index * bits
-                        tile[row * tile_row_bytes + bit // 8] |= sample << (
-                            8 - bits - bit % 8
+                        sample_shift = (
+                            bit % 8
+                            if fill_order == 2
+                            else 8 - bits - bit % 8
                         )
+                        tile[row * tile_row_bytes + bit // 8] |= sample << sample_shift
             encoded_tiles.append(
                 zlib.compress(tile) if compression == 8 else bytes(tile)
             )
@@ -7872,6 +8241,8 @@ def write_low_depth_tiled_tiff(
         (324, 4, len(encoded_tiles), "tile_offsets"),
         (325, 4, len(encoded_tiles), "tile_byte_counts"),
     ]
+    if fill_order == 2:
+        entries.append((266, 3, 1, 2))
     if photometric == 3:
         for channel in range(3):
             for index in range(maximum + 1):
@@ -7932,6 +8303,67 @@ def write_low_depth_tiled_tiff(
     for tile in encoded_tiles:
         output.extend(tile)
     path.write_bytes(output)
+
+
+def verify_tiff_fill_order_2_tiled_variant(source_path, destination_path):
+    """Check tiled offsets, metadata, and every bit in the transformed tiles."""
+    source = source_path.read_bytes()
+    output = destination_path.read_bytes()
+    source_ifd, source_count, source_end, source_entries = _classic_tiff_entries(source)
+    output_ifd, output_count, output_end, output_entries = _classic_tiff_entries(output)
+    if output_ifd != source_ifd or output_count != source_count + 1:
+        raise RuntimeError("FillOrder tiled fixture changed its IFD location or count")
+    if len(output) != len(source) + 12 or output_end != source_end + 12:
+        raise RuntimeError("FillOrder tiled fixture did not insert one IFD entry")
+    if struct.unpack_from("<I", source, source_end - 4)[0] != 0:
+        raise RuntimeError("FillOrder tiled source must contain one directory")
+    if struct.unpack_from("<I", output, output_end - 4)[0] != 0:
+        raise RuntimeError(
+            "FillOrder tiled fixture unexpectedly adds another directory"
+        )
+    fill_order_entry = output_entries.get(266)
+    if fill_order_entry is None or _tiff_entry_values(output, fill_order_entry) != (2,):
+        raise RuntimeError("FillOrder tiled fixture does not declare tag 266 as 2")
+    if fill_order_entry[1:] != (3, 1):
+        raise RuntimeError(
+            "FillOrder tiled fixture has an invalid FillOrder type or count"
+        )
+
+    source_offsets = _tiff_entry_values(source, source_entries[324])
+    output_offsets = _tiff_entry_values(output, output_entries[324])
+    source_counts = _tiff_entry_values(source, source_entries[325])
+    output_counts = _tiff_entry_values(output, output_entries[325])
+    if len(source_offsets) != len(output_offsets) or source_counts != output_counts:
+        raise RuntimeError("FillOrder tiled fixture changed tile counts")
+    if any(
+        output_offset != source_offset + 12
+        for source_offset, output_offset in zip(source_offsets, output_offsets)
+    ):
+        raise RuntimeError(
+            "FillOrder tiled fixture did not relocate every tile by 12 bytes"
+        )
+
+    for tag, source_entry in source_entries.items():
+        if tag == 324:
+            continue
+        if _tiff_entry_values(source, source_entry) != _tiff_entry_values(
+            output, output_entries[tag]
+        ):
+            raise RuntimeError(f"FillOrder tiled fixture changed source tag {tag}")
+
+    for source_offset, output_offset, byte_count in zip(
+        source_offsets, output_offsets, source_counts
+    ):
+        source_tile = source[source_offset : source_offset + byte_count]
+        output_tile = output[output_offset : output_offset + byte_count]
+        if len(source_tile) != len(output_tile):
+            raise RuntimeError("FillOrder tiled fixture changed a tile's byte count")
+        for source_byte, output_byte in zip(source_tile, output_tile):
+            expected_byte = int(f"{source_byte:08b}"[::-1], 2)
+            if output_byte != expected_byte:
+                raise RuntimeError(
+                    "FillOrder tiled fixture did not reverse each tile byte"
+                )
 
 
 def write_compressed_grayscale_tiff(path, payload, compression, width=1):
@@ -8433,6 +8865,149 @@ def gen_tiff():
     img.convert("1").save(d / "bilevel.tiff")
     low_depth = img.convert("L").resize((17, 13))
     write_low_depth_tiff(d / "miniswhite_1bit.tiff", low_depth, 1, 0)
+    fill_order_2 = d / "miniswhite_1bit_fillorder2.tiff"
+    write_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_2,
+    )
+    verify_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_2,
+    )
+    fill_order_long = d / "miniswhite_1bit_fillorder2_long.tiff"
+    write_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_long,
+        field_type=4,
+    )
+    verify_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_long,
+        field_type=4,
+    )
+    fill_order_invalid = d / "miniswhite_1bit_fillorder3.tiff"
+    write_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_invalid,
+        values=(3,),
+    )
+    verify_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_invalid,
+        values=(3,),
+    )
+    fill_order_multiple = d / "miniswhite_1bit_fillorder2_multiple.tiff"
+    write_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_multiple,
+        values=(2, 1),
+    )
+    verify_tiff_fill_order_variant(
+        d / "miniswhite_1bit.tiff",
+        fill_order_multiple,
+        values=(2, 1),
+    )
+    fill_order_rational_one = d / "miniswhite_1bit_fillorder_rational1.tiff"
+    fill_order_rational_zero_count = (
+        d / "miniswhite_1bit_fillorder_rational_count0.tiff"
+    )
+    fill_order_rational_two = (
+        d / "miniswhite_1bit_fillorder2_rational_multiple.tiff"
+    )
+    fill_order_rational_zero_denominator = (
+        d / "miniswhite_1bit_fillorder_rational_zero_denominator.tiff"
+    )
+    fill_order_rational_three = d / "miniswhite_1bit_fillorder_rational3.tiff"
+    fill_order_rational_half = d / "miniswhite_1bit_fillorder_rational_half.tiff"
+    fill_order_byte = d / "miniswhite_1bit_fillorder2_byte.tiff"
+    with tempfile.TemporaryDirectory(prefix="tiff-fill-order-") as temporary_directory:
+        fill_order_count_zero = Path(temporary_directory) / "fill-order-count-zero.tiff"
+        write_tiff_fill_order_variant(
+            d / "miniswhite_1bit.tiff",
+            fill_order_count_zero,
+            values=(),
+        )
+        verify_tiff_fill_order_variant(
+            d / "miniswhite_1bit.tiff",
+            fill_order_count_zero,
+            values=(),
+        )
+        write_tiff_fill_order_rational_variant(
+            fill_order_count_zero,
+            fill_order_rational_one,
+            values=((1, 1),),
+        )
+        verify_tiff_fill_order_rational_variant(
+            fill_order_count_zero,
+            fill_order_rational_one,
+            values=((1, 1),),
+        )
+        write_tiff_fill_order_rational_variant(
+            fill_order_count_zero,
+            fill_order_rational_zero_count,
+            values=(),
+        )
+        verify_tiff_fill_order_rational_variant(
+            fill_order_count_zero,
+            fill_order_rational_zero_count,
+            values=(),
+        )
+        write_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_two,
+            values=((2, 1), (0, 0)),
+        )
+        verify_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_two,
+            values=((2, 1), (0, 0)),
+        )
+        write_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_zero_denominator,
+            values=((2, 0),),
+        )
+        verify_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_zero_denominator,
+            values=((2, 0),),
+        )
+        write_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_three,
+            values=((3, 1),),
+        )
+        verify_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_three,
+            values=((3, 1),),
+        )
+        write_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_half,
+            values=((1, 2),),
+        )
+        verify_tiff_fill_order_rational_variant(
+            fill_order_2,
+            fill_order_rational_half,
+            values=((1, 2),),
+        )
+        write_tiff_fill_order_byte_variant(fill_order_2, fill_order_byte)
+        verify_tiff_fill_order_byte_variant(fill_order_2, fill_order_byte)
+
+    with Image.open(d / "miniswhite_1bit.tiff") as source_image:
+        source_image.load()
+        expected_output = (source_image.mode, source_image.size, source_image.tobytes())
+    for fill_order_path in (
+        fill_order_rational_one,
+        fill_order_rational_zero_count,
+        fill_order_rational_two,
+    ):
+        with Image.open(fill_order_path) as fill_order_image:
+            fill_order_image.load()
+            output = (fill_order_image.mode, fill_order_image.size, fill_order_image.tobytes())
+            if output != expected_output:
+                raise RuntimeError("RATIONAL FillOrder changed Pillow's image output")
     write_low_depth_tiff(
         d / "miniswhite_1bit_aligned.tiff",
         low_depth.resize((16, 8)),
@@ -8475,6 +9050,55 @@ def gen_tiff():
     write_low_depth_tiled_tiff(
         d / "tiled_minisblack_1bit_edge.tiff", 17, 13, 1, 1
     )
+    tiled_fill_order_2 = d / "tiled_minisblack_1bit_fillorder2_edge.tiff"
+    write_low_depth_tiled_tiff(
+        tiled_fill_order_2,
+        17,
+        13,
+        1,
+        1,
+        fill_order=2,
+    )
+    verify_tiff_fill_order_2_tiled_variant(
+        d / "tiled_minisblack_1bit_edge.tiff",
+        tiled_fill_order_2,
+    )
+    with Image.open(d / "tiled_minisblack_1bit_edge.tiff") as source_image:
+        source_image.load()
+        with Image.open(tiled_fill_order_2) as fill_order_image:
+            fill_order_image.load()
+            if (
+                (fill_order_image.mode, fill_order_image.size, fill_order_image.tobytes())
+                != (source_image.mode, source_image.size, source_image.tobytes())
+            ):
+                raise RuntimeError("FillOrder 2 changed Pillow's tiled image output")
+    tiled_fill_order_2_unaligned = (
+        d / "tiled_minisblack_1bit_fillorder2_unaligned_edge.tiff"
+    )
+    write_low_depth_tiled_tiff(
+        tiled_fill_order_2_unaligned,
+        17,
+        1,
+        1,
+        1,
+        tile_width=9,
+        fill_order=2,
+    )
+    verify_tiff_fill_order_2_tiled_variant(
+        d / "tiled_minisblack_1bit_unaligned_edge.tiff",
+        tiled_fill_order_2_unaligned,
+    )
+    with Image.open(d / "tiled_minisblack_1bit_unaligned_edge.tiff") as source_image:
+        source_image.load()
+        with Image.open(tiled_fill_order_2_unaligned) as fill_order_image:
+            fill_order_image.load()
+            if (
+                (fill_order_image.mode, fill_order_image.size, fill_order_image.tobytes())
+                != (source_image.mode, source_image.size, source_image.tobytes())
+            ):
+                raise RuntimeError(
+                    "FillOrder 2 changed Pillow's unaligned tiled image output"
+                )
     write_low_depth_tiled_tiff(
         d / "tiled_minisblack_1bit_unaligned_edge.tiff",
         17,

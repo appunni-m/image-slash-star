@@ -22,6 +22,7 @@ pub fn inspect_basic(data: &[u8]) -> CodecResult<ImageInfo> {
 fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
     let (endian, first_offset) = super::decode::parse_header(data)?;
     let directory = Directory::parse(data, first_offset, endian)?;
+    super::decode::validate_fill_order(&directory)?;
 
     let (width, height) = validate_primary_dimensions(&directory)?;
     verify_directory(&directory)?;
