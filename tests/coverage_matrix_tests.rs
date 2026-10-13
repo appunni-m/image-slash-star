@@ -1050,6 +1050,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("av1.film_grain.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::Av1FilmGrainOutputReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("av1.temporal_motion_field.reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::Av1TemporalMotionFieldReservation,
                 false,
@@ -1258,6 +1264,9 @@ fn execute_fault_contract(
             }
         };
     let expected_message = match row.fault.point.as_str() {
+        "av1.film_grain.output_reservation" => {
+            Some("decode: AVIF AV1 validation failed: unable to allocate film-grain output")
+        }
         "av1.temporal_motion_field.reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to allocate AV1 temporal motion field")
         }

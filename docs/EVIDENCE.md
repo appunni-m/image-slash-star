@@ -3002,7 +3002,7 @@ are unavailable; branch-level incremental unions remain incomparable.
 The current matrix contains 2,204 total rows: 1,726 decode / inspect /
 verify rows and 478 encode rows. Of those, 1,726 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
-284 decode rows. The 27 fault contracts are tracked separately from the
+284 decode rows. The 28 fault contracts are tracked separately from the
 Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
@@ -6364,7 +6364,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e31c37d1f7a703e50ee1f729b017e210883710aaa03a329ae4a7e198e1e31c2f`; matrix `689a320cd49d74aeca4f1ec3b1a046eb58348942bda34bcc4667d561b85c07fd`.
+- Current fixture integrity only: manifest `67640f7b7da60cadb5938c8e14fca9c365901b57772f3159d8292d7abfc8d0de`; matrix `38f96c1d01f7bffad91060cecad581594dc87f21ca7aa8c12c9c5a16c8c9ca9d`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6530,7 +6530,7 @@ behavior and managed coverage remain deferred; aggregate memory limits and
 peak-allocation measurements remain unfinished.
 All 12 strict native/WASM, AVIF-only/all-feature, ordinary/coverage compile
 configurations pass, along with rustdoc, formatting and static provenance gates.
-The coverage-origin inventory records 142 exact guards across 21 Rust files.
+The coverage-origin inventory records 143 exact guards across 22 Rust files.
 
 ### TIFF FillOrder rational field parity — 2026-10-13
 
@@ -6558,6 +6558,28 @@ this focused run does not establish a suite-wide gain or regression. The last
 full baseline remains 89,277/135,839 lines, 17,418/31,268 branches,
 4,992/8,690 functions and 136,575/210,976 regions; no full coverage campaign
 was run for this change.
+
+### AV1 film-grain output allocation fault contract — 2026-10-13
+
+The target-only row
+`fault-contract:avif:avif_film_grain_output_reservation_failure` uses the
+active Pillow parity input `decode:avif:portable_lossless_filmgrain_i444_64x64`
+as deterministic stimulus. A coverage-only reservation-size override reaches
+the real `Vec::try_reserve_exact` error path; the public result is
+`ImageError::Dimensions` for AVIF at `StillDecode`, and a clean retry must
+match a fresh uninjected decode. The row is recorded with
+`oracle_status: not_applicable`, separate from Pillow parity. In normal builds
+the fault hook is absent and the reserve path has no additional branch; the
+behavior change classifies allocation failure as a dimensions/resource error
+instead of malformed input.
+
+The focused target-only run selected and passed this one contract. Coverage MCP
+reports no remaining region at `apply_plane` line 1059; the historical full
+report showed two unobserved regions in the prior allocation-error mapping at
+line 1048. Its incremental comparison is `incomparable` because the historical
+baseline detail differs from its totals. Both reports are source-unverified
+with test attribution unknown, so this is focused coverage evidence rather
+than a quantified suite-wide gain. No full coverage campaign was run.
 
 ## Diagnostic provenance
 
@@ -6601,7 +6623,7 @@ reports this lane separately from Pillow decode/encode counts.
 | `output-sink-delivery` | `OutputSink` delivery | Pillow does not accept this crate's dependency-free sink, expose delivered prefixes, flush failures, or rollback semantics | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `caller-owned-destination-buffers` | Caller-owned destination buffers | Pillow does not expose `decode_into` capacity, short-destination rejection, or no-partial-write guarantees | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `source-provenance` | Source provenance | `SourceDescriptor`, FileTypeBox facts, AVIF item/property identity, raw source relationships, and declared-versus-confirmed fields are not Pillow result fields | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
-| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure` | `excluded` |
+| `structured-diagnostics` | Structured diagnostics | Rust diagnostic kind, offset, consumed extent, recovery status, and provenance are not Pillow's ordinary return shape | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `scripts/verify_diagnostic_provenance.py`; target-only fault cases: `fault-contract:avif:avif_display_plane_copy_allocation_failure`, `fault-contract:avif:avif_film_grain_output_reservation_failure`, `fault-contract:avif:avif_temporal_motion_field_reservation_failure`, `fault-contract:avif:avif_sequence_frames_reservation_failure`, `fault-contract:avif:avif_superresolution_positions_reservation_failure`, `fault-contract:avif:avif_superresolution_plane_reservation_failure`, `fault-contract:avif:avif_sgr_restoration_output_reservation_failure`, `fault-contract:avif:avif_sgr_intermediate_reservation_failure`, `fault-contract:avif:avif_restoration_stripe_scratch_reservation_failure`, `fault-contract:jpeg:jpeg_multiscan_coefficient_reservation_failure`, `fault-contract:avif:avif_monochrome_tile_reservation_failure`, `fault-contract:avif:avif_color_tile_reservation_failure`, `fault-contract:avif:avif_tile_cell_reservation_failure`, `fault-contract:avif:avif_tile_block_metadata_reservation_failure`, `fault-contract:avif:avif_chroma_tile_cell_reservation_failure`, `fault-contract:avif:avif_assembled_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_partition_node_reservation_failure`, `fault-contract:avif:avif_projected_temporal_field_reservation_failure`, `fault-contract:avif:avif_grid_cell_reservation_failure`, `fault-contract:avif:avif_monochrome_loop_filter_metadata_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_region_map_reservation_failure`, `fault-contract:avif:avif_monochrome_cdef_active_map_reservation_failure`, `fault-contract:tiff:tiff_strip_assembly_reservation_failure` | `excluded` |
 | `feature-target-capability` | Feature and target capability | Pillow does not model this crate's Cargo feature-disabled errors or native versus `wasm32-wasip1` capability table | `covered` | Manifest evidence: `tests/feature_gate_tests.rs`, `tests/capability_table.rs` | `excluded` |
 | `cache-concurrency-api-lifecycle` | Cache/concurrency/API lifecycle | Pillow does not expose `EncodedImage` lazy-cache states, Rust clone sharing, bounded native concurrent verification, or this crate's frame/page lifecycle | `covered` | Manifest evidence: `tests/feature_gate_tests.rs` | `excluded` |
 | `release-package-surface` | Release package surface | Pillow cannot inspect this crate's Cargo archive, included source/legal files, or deliberate exclusion of parity fixtures and repository-only integration targets | `covered` | Manifest evidence: `tests/fixtures/package_surface_manifest.json`, `scripts/verify_package_surface.py` | `excluded` |

@@ -9,7 +9,7 @@
 
 use super::block::{FirstLeaf, ReconstructedPlane};
 use super::frame::FilmGrain;
-use super::{Av1Result, malformed};
+use super::{Av1Result, CodecError, malformed};
 use crate::CancellationToken;
 
 const AR_PAD: usize = 3;
@@ -18,6 +18,7 @@ const GRAIN_HEIGHT: usize = 73;
 const SUB_GRAIN_WIDTH: usize = 44;
 const SUB_GRAIN_HEIGHT: usize = 38;
 const BLOCK_SIZE: usize = 32;
+const OUTPUT_ALLOCATION_ERROR: &str = "unable to allocate film-grain output";
 
 /// Return whether a full-resolution 4:4:4 display has the geometry supported
 /// by the checked film-grain kernel.
@@ -1043,9 +1044,19 @@ fn apply_plane(
         }
     }
     let mut output = Vec::new();
+    #[cfg(coverage)]
+    let output_reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::Av1FilmGrainOutputReservation,
+    ) {
+        usize::MAX
+    } else {
+        count
+    };
+    #[cfg(not(coverage))]
+    let output_reservation_count = count;
     output
-        .try_reserve_exact(count)
-        .map_err(|_| malformed("unable to allocate film-grain output"))?;
+        .try_reserve_exact(output_reservation_count)
+        .map_err(|_| CodecError::Dimensions(OUTPUT_ALLOCATION_ERROR.to_owned()))?;
     output.extend_from_slice(source);
     let block_width = if chroma {
         BLOCK_SIZE >> sampling.subx

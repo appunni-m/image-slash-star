@@ -48,6 +48,14 @@ FAULT_CONTRACTS = {
         "point": "av1.display_plane.reconstructed_copy_allocation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_film_grain_output_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_film_grain_output_reservation_failure",
+        "source_case": "decode:avif:portable_lossless_filmgrain_i444_64x64",
+        "point": "av1.film_grain.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_temporal_motion_field_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",
