@@ -7566,6 +7566,12 @@ formats:
       - animated.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_stts_zero_delta
+      description: Five-frame AVIF with zero stts sample_delta preserves exact pixels and zero-duration timing
+      test_assets:
+      - animated_stts_zero_delta.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_primary_item_irot
       description: Five-frame AVIF sequence retains an essential primary-item 270-degree irot property while preserving the complete encoded samples
       test_assets:

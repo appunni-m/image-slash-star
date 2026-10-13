@@ -22,6 +22,7 @@ from generate_av1_sequence_refs import (
     LIBAVIF_COMMIT, artifact_records, digest_file, git_tree_digest,
     resolve_tool, run, sha256, text_output, write_json,
 )
+from avif_sample_table_fixtures import zero_stts_sample_delta
 from inspect_avif_bitstreams import children, parse_boxes, unique_box
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -365,13 +366,18 @@ def pillow_observation(data, destination=None):
 
 def collect(bundle, observe, only=None):
     originals, records = {}, []
-    fixtures = FIXTURES.items() if only is None else [(only, FIXTURES[only])]
+    if only == "stts_zero_delta":
+        fixtures = [("animated", FIXTURES["animated"])]
+    else:
+        fixtures = FIXTURES.items() if only is None else [(only, FIXTURES[only])]
     for name, (filename, expected_hash) in fixtures:
         source = ROOT / "tests/fixtures/input/images/avif" / filename
         data = source.read_bytes()
         if sha256(data) != expected_hash:
             raise RuntimeError(f"pinned {name} source changed")
         originals[name] = data
+        if only == "stts_zero_delta":
+            continue
         record = pillow_observation(data, bundle / "pixels" / name)
         if record["status"] != "ok" or record != pillow_observation(data):
             raise RuntimeError("original Pillow frames failed or changed")
@@ -401,8 +407,18 @@ def collect(bundle, observe, only=None):
         ("error_missing_segment", dict(size=16)),
         ("error_missing_flags", dict(size=8)),
     ] if only is None else []
+    if only == "stts_zero_delta":
+        cases = [("stts_zero_delta", {})]
+    elif only is None:
+        cases.append(("stts_zero_delta", {}))
     for name, parameters in cases:
-        records.append((name, "animated", mutate(originals["animated"], **parameters), parameters))
+        data = (
+            zero_stts_sample_delta(originals["animated"])
+            if name == "stts_zero_delta"
+            else mutate(originals["animated"], **parameters)
+        )
+        mutation = {"stts_sample_delta": 0} if name == "stts_zero_delta" else parameters
+        records.append((name, "animated", data, mutation))
     if only is None:
         records.append(("alpha_loop_disagreement", "highdepth",
                         mutate(originals["highdepth"], track=1, flags=0), {"track": 1, "flags": 0}))
@@ -427,6 +443,20 @@ def collect(bundle, observe, only=None):
         if name.startswith("error_") and name != "error_resilient":
             if native["parse_result"] == 0 or pillow["status"] != "error":
                 raise RuntimeError(f"expected independent malformed-file rejection: {name}")
+        elif name == "stts_zero_delta":
+            original = pillow_observation(originals[source])
+            if (
+                native["parse_result"] != 0
+                or native["decoded_frames"] != len(original["frames"])
+                or pillow["status"] != "ok"
+                or len(pillow["frames"]) != len(original["frames"])
+            ):
+                raise RuntimeError("zero stts delta did not preserve native/Pillow frame decoding")
+            for before, after in zip(original["frames"], pillow["frames"]):
+                if any(before[key] != after[key] for key in ("mode", "size", "bytes", "sha256")):
+                    raise RuntimeError("zero stts delta changed Pillow frame pixels")
+                if after["duration_ms"] != 0:
+                    raise RuntimeError("Pillow did not report zero duration for zero stts delta")
         else:
             expected = pillow_observation(originals[source])
             if native["parse_result"] != 0 or native["decoded_frames"] != len(expected["frames"]) or pillow != expected:
@@ -454,7 +484,9 @@ def main():
     parser.add_argument("--libavif-source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
-        "--only", choices=sorted(FIXTURES), help="collect one unchanged fixture only"
+        "--only",
+        choices=sorted((*FIXTURES, "stts_zero_delta")),
+        help="collect one unchanged fixture or the zero-stts-delta mutation",
     )
     args = parser.parse_args()
     output, source = args.output.resolve(), args.libavif_source.resolve()

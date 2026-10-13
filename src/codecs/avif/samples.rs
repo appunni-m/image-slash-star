@@ -2498,18 +2498,19 @@ fn parse_sample_description(
     })
 }
 
-/// Prove that a track's decode-time table supplies one positive duration for
-/// every sample. `stts` is optional for still-image item tables, but a movie
-/// track must not silently invent a duration when the table is absent or
-/// under-filled. Keep this proof local to `track_plane`, which is used only by
-/// sequence tracks.
+/// Prove that a track's decode-time table covers every sample without empty
+/// runs. Preserve zero `sample_delta` values as zero-duration frames to match
+/// Pillow's AVIF sequence results. `stts` is optional for still-image item
+/// tables, but a movie track must not invent a duration when the table is
+/// absent or under-filled. Keep this proof local to `track_plane`, which is
+/// used only by sequence tracks.
 fn validate_track_timings(table: &SampleTable) -> ParseResult<()> {
     if table.timings.is_empty() {
         return Err(parse_failure!());
     }
     let mut covered = 0_usize;
     for timing in &table.timings {
-        if timing.sample_count == 0 || timing.sample_delta == 0 {
+        if timing.sample_count == 0 {
             return Err(parse_failure!());
         }
         covered = covered

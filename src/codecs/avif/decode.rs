@@ -309,16 +309,6 @@ fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> Codec
             "AVIF sequence timescale is zero".to_owned(),
         ));
     }
-    if sequence
-        .color
-        .samples
-        .iter()
-        .any(|sample| sample.duration == 0)
-    {
-        return Err(CodecError::Malformed(
-            "AVIF sequence sample duration is zero".to_owned(),
-        ));
-    }
     if let Some(alpha) = &sequence.alpha {
         if alpha.samples.len() != sequence.color.samples.len() {
             return Err(CodecError::Malformed(
@@ -326,7 +316,7 @@ fn validate_sequence_timing(sequence: &super::samples::SequencePayload) -> Codec
             ));
         }
         for (color, alpha) in sequence.color.samples.iter().zip(&alpha.samples) {
-            if alpha.duration == 0 || color.duration != alpha.duration {
+            if color.duration != alpha.duration {
                 return Err(CodecError::Malformed(
                     "AVIF sequence color and alpha durations differ".to_owned(),
                 ));

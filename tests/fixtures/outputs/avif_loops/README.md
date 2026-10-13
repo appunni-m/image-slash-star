@@ -124,6 +124,10 @@ report infinite repetition. The two complete track-header version-zero variants
 of `animated.avif`, including its unknown-duration sentinel, retain all five
 Pillow frames and native repetition zero (one total play). Their separately
 collected observer build identities remain in `additional_collections`.
+The `stts_zero_delta` mutation changes only the animated track's `stts`
+`sample_delta` from one to zero without changing file length or media payload.
+Pillow reports five zero-millisecond frames with unchanged pixels, and pinned
+libavif decodes all five frames.
 `animated_opidc_0x101.avif` is derived from `animated.avif`; it selects
 operating-point IDC `0x101` and adds layer extensions for temporal/spatial
 layer zero while retaining all five source frames. Its loop observation is

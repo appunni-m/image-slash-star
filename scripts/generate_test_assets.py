@@ -11294,6 +11294,9 @@ def gen_avif():
         "2f8683d21725261f37f86e115f0c212cc52d0fefd3a2ddfcc4fa648c1859906d"
     ):
         raise RuntimeError("animated AVIF source differs from the pinned libavif fixture")
+    from avif_sample_table_fixtures import write_fixture as write_stts_zero_delta
+
+    write_stts_zero_delta(animated_bytes, d / "animated_stts_zero_delta.avif")
     operating_point_sequence = rewrite_avif_operating_point_sequence(animated_source)
     operating_point_path = d / "animated_opidc_0x101.avif"
     operating_point_path.write_bytes(operating_point_sequence)
