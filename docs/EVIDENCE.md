@@ -2999,8 +2999,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,205 total rows: 1,727 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,727 decode rows and 446 encode
+The current matrix contains 2,210 total rows: 1,732 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,732 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 284 decode rows. The 28 fault contracts are tracked separately from the
 Pillow parity totals. Full
@@ -6364,7 +6364,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `bab05d03c70152d4ab4d069bfde26782b8d5be4cc6e7d88b3d79ea1ae4c75bf7`; matrix `077d2327f2a542b4d77cbdcee85ac850982e7abd9bfdda33ddabd29ec5bfda0d`.
+- Current fixture integrity only: manifest `fb0f1193a1248f312e62e451549b661b32738bcf68028c6065ac922b9c858bfe`; matrix `dc1c6593ecfb0600569dd4ff6f7eb42b4ff2e7266613c28e10ff21029872adde`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6581,29 +6581,42 @@ baseline detail differs from its totals. Both reports are source-unverified
 with test attribution unknown, so this is focused coverage evidence rather
 than a quantified suite-wide gain. No full coverage campaign was run.
 
-### AVIF zero `stts.sample_delta` parity — 2026-10-13
+### AVIF `stts` timing fallbacks — 2026-10-13
 
-The active parity row `decode:avif:animated_stts_zero_delta` mutates the pinned
-five-frame `animated.avif` input by setting its sole `stts.sample_delta` to
-zero. The deterministic writer preserves the 1,235-byte file length and checks
-that only byte 906 changes. Pillow 12.2.0 returns five 150×150 RGB frames at
-zero milliseconds with pixels identical to the source, and pinned libavif 1.4.1
-decodes all five frames. The Rust sequence decoder now preserves those
-zero-duration frames while continuing to reject empty timing tables, zero
-sample counts, incomplete timing coverage, and zero timescales.
+Six active parity rows mutate the pinned `animated.avif` source: the original
+zero-`sample_delta` case plus empty, zero-count, under-filled, over-filled, and
+wrapped-count timing tables. The deterministic writer pins each output hash
+and preserves all media payload bytes. The four incomplete-table mutations
+keep the complete file length; the empty table is a size-16 `stts` box followed
+by an 8-byte `free` sibling. The wrapped-count case inserts an additional run,
+updates enclosing sizes and `stco`/`iloc` offsets, and grows the input from
+1,235 to 1,243 bytes. Pillow 12.2.0 returns five 150×150 RGB frames with
+unchanged pixels for every mutation. The zero-delta case has five zero-ms
+durations, the four incomplete-table cases have five 33-ms durations, and the
+wrapped-count case has durations 33, 67, 67, 67, and 67 ms. Pinned libavif 1.4.1
+parses each file and decodes all five frames.
 
-The focused public decode-matrix run selected and passed this row (1/1; 56
-other tests filtered out). Its branch report is
-`.coverage-mcp/local-evidence/20261013/avif-stts-zero-delta/row.json`.
-Coverage MCP lists three remaining true-arm gaps in `validate_track_timings`:
-empty timing entries (`samples.rs:2508`), zero `sample_count` (`:2513`), and
-timing/sample-count mismatch (`:2520`). Those remain candidates for distinct
-malformed-input parity cases. The incremental comparison with the saved full
-baseline is `incomparable` because baseline branch detail differs from reported
-totals. Coverage MCP marks both reports source-unverified and test attribution
-unknown, so no suite-wide coverage gain or regression is claimed. No full
-coverage campaign was run. The exact command, identities, and receipt are in
-`.coverage-mcp/local-evidence/20261013/avif-stts-zero-delta/receipt.md`.
+The Rust sequence decoder now mirrors libavif's `uint32_t` timing-run
+accumulation, final-run fallback, and one-tick empty-table default while
+preserving zero deltas. The wrapped-count row reaches the defined `u32` sum
+wrap on all Rust targets. The decoder still checks conversion of Rust sample
+indices and downstream timing arithmetic. These are public Pillow parity
+cases, not target-only fault contracts.
+
+The five new incomplete- and wrapped-table rows passed one focused public
+decode-matrix run (5/5 selected rows; one integration test, 56 filtered).
+Its Coverage MCP report is
+`.coverage-mcp/local-evidence/20261013/avif-stts-incomplete/current-selected.json`,
+SHA-256 `9b27edbd93dacf007c9d6cb7492d56078c558b9bf40382f02feeca38cb9bc50c`.
+The selected report records 3,297/31,302 branches and 20,014/135,914 lines;
+Coverage MCP found no missing branch observations at `samples.rs:2503` for
+this selection. MCP marks the report source unverified and test attribution
+unknown. The earlier split-run reports remain in the same local directory;
+their comparison with the saved full baseline is `incomparable` because
+baseline branch detail differs from its reported totals. No suite-wide
+coverage gain or regression is claimed. No full coverage campaign was run.
+Exact commands, local test output, report digests, and oracle identities are
+in `.coverage-mcp/local-evidence/20261013/avif-stts-incomplete/receipt.md`.
 
 ## Diagnostic provenance
 

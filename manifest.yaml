@@ -7572,6 +7572,36 @@ formats:
       - animated_stts_zero_delta.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_stts_empty
+      description: Five-frame AVIF with an empty stts table uses libavif's default one-unit frame timing
+      test_assets:
+      - animated_stts_empty.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_stts_zero_sample_count
+      description: Five-frame AVIF whose zero-count stts run uses the final-run timing fallback
+      test_assets:
+      - animated_stts_zero_sample_count.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_stts_underfilled
+      description: Five-frame AVIF whose stts run covers four samples and applies its final delta to the fifth
+      test_assets:
+      - animated_stts_underfilled.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_stts_overfilled
+      description: Five-frame AVIF whose stts run covers six samples but decodes five with the first-run delta
+      test_assets:
+      - animated_stts_overfilled.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_stts_wrapped_sample_count
+      description: Five-frame AVIF whose two stts runs wrap the u32 sample-count sum and use the final delta
+      test_assets:
+      - animated_stts_wrapped_sample_count.avif
+      status: active
+      pure_rust_work_item: AVF-SEQUENCE-001
     - id: animated_primary_item_irot
       description: Five-frame AVIF sequence retains an essential primary-item 270-degree irot property while preserving the complete encoded samples
       test_assets:

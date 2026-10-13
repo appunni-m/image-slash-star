@@ -22,7 +22,7 @@ from generate_av1_sequence_refs import (
     LIBAVIF_COMMIT, artifact_records, digest_file, git_tree_digest,
     resolve_tool, run, sha256, text_output, write_json,
 )
-from avif_sample_table_fixtures import zero_stts_sample_delta
+from avif_sample_table_fixtures import stts_timing_variants, zero_stts_sample_delta
 from inspect_avif_bitstreams import children, parse_boxes, unique_box
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -269,6 +269,17 @@ FIXTURES = {
         "04e31a3ac36c25ef77061a2ed09b79fd8fb885a5ff14d6ab3a82e2d32ad3b02e",
     ),
 }
+STTS_CASES = {
+    "stts_zero_delta": {"stts_sample_delta": 0},
+    "stts_empty": {"stts_entry_count": 0, "stts_box_size": 16},
+    "stts_zero_sample_count": {"stts_sample_count": 0},
+    "stts_underfilled": {"stts_sample_count": 4},
+    "stts_overfilled": {"stts_sample_count": 6},
+    "stts_wrapped_sample_count": {
+        "stts_sample_counts": [1, 0xFFFF_FFFF],
+        "stts_sample_deltas": [1, 2],
+    },
+}
 OBSERVER = r'''
 #include <avif/avif.h>
 #include <dlfcn.h>
@@ -366,7 +377,7 @@ def pillow_observation(data, destination=None):
 
 def collect(bundle, observe, only=None):
     originals, records = {}, []
-    if only == "stts_zero_delta":
+    if only in STTS_CASES:
         fixtures = [("animated", FIXTURES["animated"])]
     else:
         fixtures = FIXTURES.items() if only is None else [(only, FIXTURES[only])]
@@ -376,7 +387,7 @@ def collect(bundle, observe, only=None):
         if sha256(data) != expected_hash:
             raise RuntimeError(f"pinned {name} source changed")
         originals[name] = data
-        if only == "stts_zero_delta":
+        if only in STTS_CASES:
             continue
         record = pillow_observation(data, bundle / "pixels" / name)
         if record["status"] != "ok" or record != pillow_observation(data):
@@ -407,17 +418,23 @@ def collect(bundle, observe, only=None):
         ("error_missing_segment", dict(size=16)),
         ("error_missing_flags", dict(size=8)),
     ] if only is None else []
-    if only == "stts_zero_delta":
-        cases = [("stts_zero_delta", {})]
+    if only in STTS_CASES:
+        cases = [(only, {})]
     elif only is None:
-        cases.append(("stts_zero_delta", {}))
+        cases.extend((name, {}) for name in STTS_CASES)
+    timing_variants = (
+        stts_timing_variants(originals["animated"])
+        if any(name in STTS_CASES for name, _ in cases)
+        else {}
+    )
     for name, parameters in cases:
-        data = (
-            zero_stts_sample_delta(originals["animated"])
-            if name == "stts_zero_delta"
-            else mutate(originals["animated"], **parameters)
-        )
-        mutation = {"stts_sample_delta": 0} if name == "stts_zero_delta" else parameters
+        if name == "stts_zero_delta":
+            data = zero_stts_sample_delta(originals["animated"])
+        elif name in timing_variants:
+            data = timing_variants[name]
+        else:
+            data = mutate(originals["animated"], **parameters)
+        mutation = STTS_CASES[name] if name in STTS_CASES else parameters
         records.append((name, "animated", data, mutation))
     if only is None:
         records.append(("alpha_loop_disagreement", "highdepth",
@@ -457,17 +474,46 @@ def collect(bundle, observe, only=None):
                     raise RuntimeError("zero stts delta changed Pillow frame pixels")
                 if after["duration_ms"] != 0:
                     raise RuntimeError("Pillow did not report zero duration for zero stts delta")
+        elif name == "stts_wrapped_sample_count":
+            expected = pillow_observation(originals[source])
+            if (
+                native["parse_result"] != 0
+                or native["decoded_frames"] != len(expected["frames"])
+                or pillow["status"] != "ok"
+                or len(pillow["frames"]) != len(expected["frames"])
+            ):
+                raise RuntimeError(
+                    "wrapped stts count did not preserve native/Pillow frame decoding"
+                )
+            for index, (before, after) in enumerate(zip(expected["frames"], pillow["frames"])):
+                if any(before[key] != after[key] for key in ("mode", "size", "bytes", "sha256")):
+                    raise RuntimeError("wrapped stts count changed Pillow frame pixels")
+                expected_duration = 33 if index == 0 else 67
+                if after["duration_ms"] != expected_duration:
+                    raise RuntimeError("Pillow timing differs from wrapped stts count mutation")
         else:
             expected = pillow_observation(originals[source])
-            if native["parse_result"] != 0 or native["decoded_frames"] != len(expected["frames"]) or pillow != expected:
+            if (
+                native["parse_result"] != 0
+                or native["decoded_frames"] != len(expected["frames"])
+                or pillow != expected
+            ):
                 raise RuntimeError(f"full-frame mutation changed native/Pillow decoding: {name}")
         relative = f"inputs/{name}.avif"
         (bundle / "inputs").mkdir(exist_ok=True)
         (bundle / relative).write_bytes(data)
         source_data = originals[source]
-        sample_payloads_equal = all(
-            data[b.payload_start:b.end] == source_data[b.payload_start:b.end]
-            for b in parse_boxes(source_data, 0, len(source_data)) if b.kind == b"mdat"
+        source_mdats = [
+            box for box in parse_boxes(source_data, 0, len(source_data))
+            if box.kind == b"mdat"
+        ]
+        mutated_mdats = [
+            box for box in parse_boxes(data, 0, len(data)) if box.kind == b"mdat"
+        ]
+        sample_payloads_equal = len(source_mdats) == len(mutated_mdats) and all(
+            data[mutated.payload_start : mutated.end]
+            == source_data[original.payload_start : original.end]
+            for original, mutated in zip(source_mdats, mutated_mdats)
         )
         if not sample_payloads_equal:
             raise RuntimeError("mutation changed media bytes")
@@ -485,8 +531,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--only",
-        choices=sorted((*FIXTURES, "stts_zero_delta")),
-        help="collect one unchanged fixture or the zero-stts-delta mutation",
+        choices=sorted((*FIXTURES, *STTS_CASES)),
+        help="collect one unchanged fixture or one stts timing-table mutation",
     )
     args = parser.parse_args()
     output, source = args.output.resolve(), args.libavif_source.resolve()

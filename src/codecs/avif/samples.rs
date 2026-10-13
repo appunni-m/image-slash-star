@@ -2498,47 +2498,26 @@ fn parse_sample_description(
     })
 }
 
-/// Prove that a track's decode-time table covers every sample without empty
-/// runs. Preserve zero `sample_delta` values as zero-duration frames to match
-/// Pillow's AVIF sequence results. `stts` is optional for still-image item
-/// tables, but a movie track must not invent a duration when the table is
-/// absent or under-filled. Keep this proof local to `track_plane`, which is
-/// used only by sequence tracks.
-fn validate_track_timings(table: &SampleTable) -> ParseResult<()> {
-    if table.timings.is_empty() {
-        return Err(parse_failure!());
-    }
-    let mut covered = 0_usize;
-    for timing in &table.timings {
-        if timing.sample_count == 0 {
-            return Err(parse_failure!());
-        }
-        covered = covered
-            .checked_add(usize::try_from(timing.sample_count).map_err(|_| parse_failure!())?)
-            .ok_or_else(|| parse_failure!())?;
-    }
-    if covered != table.sample_sizes.len() {
-        return Err(parse_failure!());
-    }
-    Ok(())
-}
-
-fn duration_at(timings: &[TimeToSample], sample_index: usize) -> Option<u32> {
-    let mut covered = 0_usize;
+/// Match libavif's `uint32_t` timing-run accumulation and fallbacks.
+/// Wrapping preserves libavif's observable behavior for over-filled tables.
+fn duration_at(timings: &[TimeToSample], sample_index: usize) -> ParseResult<u32> {
+    let sample_index = u32::try_from(sample_index).map_err(|_| parse_failure!())?;
+    let mut covered = 0_u32;
+    let mut last_delta = None;
     for timing in timings {
-        covered = covered.checked_add(usize::try_from(timing.sample_count).ok()?)?;
+        last_delta = Some(timing.sample_delta);
+        covered = covered.wrapping_add(timing.sample_count);
         if sample_index < covered {
-            return Some(timing.sample_delta);
+            return Ok(timing.sample_delta);
         }
     }
-    None
+    Ok(last_delta.unwrap_or(1))
 }
 
 // ✅ VERIFIED: libavif 1.4.1 read.c:520-607. Chunk mappings expand in
 // declaration order, and the first sample is sync even without stss.
 fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
     let table = track.table.as_ref().ok_or_else(|| parse_failure!())?;
-    validate_track_timings(table)?;
     let mut samples = Vec::with_capacity(table.sample_sizes.len());
     let mut sample_index = 0_usize;
     let mut mapping_index = 0_usize;
@@ -2591,8 +2570,7 @@ fn track_plane(input: &[u8], track: &Track) -> ParseResult<EncodedPlane> {
                 spans: vec![span],
                 config,
                 sync: sample_index == 0 || table.sync_samples.contains(&sample_number),
-                duration: duration_at(&table.timings, sample_index)
-                    .ok_or_else(|| parse_failure!())?,
+                duration: duration_at(&table.timings, sample_index)?,
             });
             sample_offset = sample_offset.saturating_add(u64::from(size));
             sample_index = sample_index.saturating_add(1);

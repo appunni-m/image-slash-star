@@ -1814,7 +1814,7 @@ def bmff_boxes(data, start=0, end=None, path=()):
 
 
 def avif_frame_durations(data, frame_count):
-    """Read exact track timescale/sample deltas without float conversion."""
+    """Mirror libavif timing fallbacks while preserving exact track units."""
     timescales = []
     sample_tables = []
     for path, payload in bmff_boxes(data):
@@ -1831,22 +1831,43 @@ def avif_frame_durations(data, frame_count):
             entry_count = int.from_bytes(payload[4:8], "big")
             entries = []
             cursor = 8
+            valid = True
             for _ in range(entry_count):
                 if cursor + 8 > len(payload):
-                    entries = []
+                    valid = False
                     break
                 count = int.from_bytes(payload[cursor : cursor + 4], "big")
                 delta = int.from_bytes(payload[cursor + 4 : cursor + 8], "big")
-                entries.extend([delta] * count)
+                entries.append((count, delta))
                 cursor += 8
-            if entries:
+            if valid:
                 sample_tables.append(entries)
+
+    def expand(entries):
+        durations = []
+        for sample_index in range(frame_count):
+            covered = 0
+            delta = 1
+            for count, run_delta in entries:
+                covered = (covered + count) & 0xFFFF_FFFF
+                delta = run_delta
+                if sample_index < covered:
+                    break
+            durations.append((delta, timescale))
+        return durations
+
     for timescale in timescales:
         if timescale == 0:
             continue
-        for durations in sample_tables:
-            if len(durations) == frame_count:
-                return [(duration, timescale) for duration in durations]
+        for entries in sample_tables:
+            if sum(count for count, _ in entries) == frame_count:
+                return expand(entries)
+    for timescale in timescales:
+        if timescale == 0:
+            continue
+        if sample_tables:
+            return expand(sample_tables[0])
+        return [(1, timescale)] * frame_count
     raise ValueError("AVIF frame timing table does not match Pillow frame count")
 
 

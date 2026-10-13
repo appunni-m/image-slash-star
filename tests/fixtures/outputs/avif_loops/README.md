@@ -1,10 +1,10 @@
 # Native AVIF repetition evidence
 
-This bundle records 88 complete files observed twice with Pillow 12.2.0 and
-libavif 1.4.1/dav1d 1.5.3. Eighty accepted files decode completely; eight
-malformed files fail native parsing and Pillow opening. The 267 hashed
-artifacts total 9,816,480 bytes, including all inputs, the compiled observer's
-source, and 9,293,948 bytes of Pillow-decoded frame outputs. Mutation cases
+This bundle records 98 input observations made with Pillow 12.2.0 and libavif
+1.4.1/dav1d 1.5.3. Ninety accepted files decode completely; eight malformed
+files fail native parsing and Pillow opening. The 297 hashed artifacts total
+10,370,758 bytes, including 98 inputs, the compiled observer's
+source, and 9,815,768 bytes of Pillow-decoded frame outputs. Mutation cases
 share the original frame artifacts; each observation records complete per-frame
 pixel hashes and durations.
 
@@ -128,6 +128,17 @@ The `stts_zero_delta` mutation changes only the animated track's `stts`
 `sample_delta` from one to zero without changing file length or media payload.
 Pillow reports five zero-millisecond frames with unchanged pixels, and pinned
 libavif decodes all five frames.
+Five additional `stts` mutations retain the five frames and their pixels while
+exercising libavif's timing fallbacks: an empty table uses one tick per frame,
+a zero-count run uses its final delta, an under-filled run uses its final delta
+for the uncovered frame, and an over-filled run supplies the covered frames.
+These four mutations report five 33 ms Pillow durations. The empty table is
+encoded as a size-16 `stts` box followed by an 8-byte `free` sibling, preserving
+the complete file length and media payload. A two-run table with counts `[1,
+u32::MAX]` and deltas `[1, 2]` wraps its cumulative `u32` count; it reports
+durations 33 ms then four at 67 ms while preserving all five pixels. That
+1,243-byte input adjusts enclosing box sizes and the `stco`/`iloc` offsets but
+keeps the original media payload bytes.
 `animated_opidc_0x101.avif` is derived from `animated.avif`; it selects
 operating-point IDC `0x101` and adds layer extensions for temporal/spatial
 layer zero while retaining all five source frames. Its loop observation is
