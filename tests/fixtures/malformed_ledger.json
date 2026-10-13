@@ -18871,6 +18871,62 @@
         "verify_status": "ok"
       },
       {
+        "asset": "invalid_unregistered_magic.tiff",
+        "class": "error_unregistered_magic",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "detect": {
+            "origin": "pillow_fixture",
+            "pillow_message": null,
+            "pillow_type": null,
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "inspect": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          },
+          "verify": {
+            "origin": "pillow_fixture",
+            "pillow_message": "cannot identify image file <bytes>",
+            "pillow_type": "PIL.UnidentifiedImageError",
+            "rust_format": null,
+            "rust_kind": "unknown_format",
+            "rust_message": "none"
+          }
+        },
+        "description": "Pillow rejects an otherwise complete TIFF header with an unregistered magic value",
+        "inspect_status": "error",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "cannot identify image file <bytes>",
+        "pillow_status": "error",
+        "pillow_type": "PIL.UnidentifiedImageError",
+        "spec_status": "not_the_format",
+        "verify_status": "error"
+      },
+      {
         "asset": "extra_samples_zero_grayx_contiguous_strips_deflate.tiff",
         "class": "extra_samples_zero_grayx_contiguous_strips_deflate",
         "contracts": {
@@ -25436,21 +25492,21 @@
       "ico": 30,
       "jpeg": 97,
       "png": 60,
-      "tiff": 115,
+      "tiff": 116,
       "webp": 131
     },
     "by_origin": {
-      "pillow_fixture": 601,
+      "pillow_fixture": 602,
       "specification_reference": 56
     },
     "by_spec_status": {
       "ambiguous": 35,
-      "not_the_format": 38,
+      "not_the_format": 39,
       "spec_violation": 340,
       "tolerated": 0,
       "truncated": 188
     },
-    "classes": 601,
+    "classes": 602,
     "formats": 8
   }
 }

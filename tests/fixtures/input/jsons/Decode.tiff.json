@@ -17122,6 +17122,99 @@
       ]
     },
     {
+      "id": "error_unregistered_magic",
+      "asset": "invalid_unregistered_magic.tiff",
+      "asset_sha256": "46eb26949327a702f890b121b37d31314661c3f0c94d9ef21811329cbcdeb62a",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "error",
+        "inspect": "error",
+        "verify": "error",
+        "decode": "error",
+        "decode_sequence": "error"
+      },
+      "error_contracts": {
+        "detect": {
+          "pillow_type": null,
+          "pillow_message": null,
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "inspect": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "verify": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "decode": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        },
+        "decode_sequence": {
+          "pillow_type": "PIL.UnidentifiedImageError",
+          "pillow_message": "cannot identify image file <bytes>",
+          "rust_kind": "unknown_format",
+          "rust_format": null,
+          "rust_message": "none",
+          "origin": "pillow_fixture"
+        }
+      },
+      "expect_error": true,
+      "expect_sequence_error": false,
+      "verification_scope": "header_only",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/tiff/invalid_unregistered_magic.tiff",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "error_empty_ifd_chain_metadata_policy",
       "asset": "empty_ifd_chain.tiff",
       "asset_sha256": "1ce397a187d135876fec3bfb2adeed0a66a8cc8c1ad76d36e6f0ab834f320fc6",

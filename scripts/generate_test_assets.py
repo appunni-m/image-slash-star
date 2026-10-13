@@ -9550,6 +9550,9 @@ def gen_tiff():
     invalid_magic = bytearray((d / "rgb.tiff").read_bytes())
     invalid_magic[2:4] = b"+\0"
     (d / "invalid_magic.tiff").write_bytes(invalid_magic)
+    unregistered_magic = bytearray((d / "rgb.tiff").read_bytes())
+    unregistered_magic[2:4] = b"\0\0"
+    (d / "invalid_unregistered_magic.tiff").write_bytes(unregistered_magic)
     for source, name, signature in (
         ("le.tiff", "legacy_le_swapped_magic.tiff", b"II\0*"),
         ("be.tiff", "legacy_be_swapped_magic.tiff", b"MM*\0"),

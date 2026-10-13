@@ -5135,6 +5135,11 @@ formats:
       - ascii_tile_height.tiff
       - oversized_rgba_tile.tiff
       expect_error: true
+    - id: error_unregistered_magic
+      description: Pillow rejects an otherwise complete TIFF header with an unregistered magic value
+      test_assets:
+      - invalid_unregistered_magic.tiff
+      expect_error: true
     - id: error_empty_ifd_chain_metadata_policy
       description: Metadata-limited public decode rejects a TIFF whose header points to no IFD
       rust_decode_with_metadata_limit: 0
