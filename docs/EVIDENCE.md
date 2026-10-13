@@ -3013,14 +3013,37 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,219 total rows: 1,741 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,741 decode rows and 446 encode
+The current matrix contains 2,221 total rows: 1,743 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,743 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 284 decode rows. The 30 fault contracts are tracked separately from the
 Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
 attribution.
+
+### JPEG Huffman edge rows — 2026-10-14
+
+Two generated JPEG parity rows extend the active matrix. `long_huffman_code_slow_path`
+is an 8x8 grayscale SOF0 image whose one-symbol DC and AC tables use valid
+11-bit codes; pinned Pillow 12.2.0 decodes all 64 samples as 128. The row
+exercises the >10-bit lookup fallback through public decode operations.
+`baseline_444_unused_custom_dc_chroma_table` adds unused DHT selector 2 with
+standard chroma DC code counts and swapped symbol values. Pillow 12.2.0
+returns the same 128x128 RGB pixels as the baseline image, while Rust takes
+the generic custom-table path.
+
+The saved full branch report
+`.coverage-mcp/local-evidence/20261013/main-full-baseline/coverage.json`
+lists the false arm of `standard_huff_table` at `huffman.rs:89` as missing.
+The selected public row passed 1/1. Its focused report is
+`.coverage-mcp/local-evidence/20261014/jpeg-unused-custom-dc-chroma/coverage.json`;
+Coverage MCP no longer lists the values-comparison false arm at line 89, and a
+selected-row comparison against `jpeg-empty-dc-huffman/coverage.json` reports
+three newly observed branch coordinates, including that arm. The comparison
+is `limited`: source/build identities are unverified and test attribution is
+unknown. This is targeted coordinate evidence, not a verified aggregate gain.
+No full coverage run was made.
 
 ### Current AVIF location generator observations — 2026-10-05
 
@@ -6378,7 +6401,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `214bc892613781388147ee020579ab77511273e4bf2e0c2928c8932fb9fb5215`; matrix `a331cb98d33677cc5f6f111d4c814842709e0aad1b462e752a29836e48668b96`.
+- Current fixture integrity only: manifest `8ea10d8d651e55a63518158607afe4d5e79493c668feaa517ba8804796ef7ee8`; matrix `115bab78a1f3e830c645e2ed5e49b717959788714777e35d7cc98df12aec6f22`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

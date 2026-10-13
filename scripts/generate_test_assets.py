@@ -2765,6 +2765,19 @@ def gen_jpeg():
     generate_grayscale_sampling(OUT, check=False)
     from generate_jpeg_default_huffman_fixtures import generate as generate_huffman_defaults
     generate_huffman_defaults(OUT, check=False)
+    from generate_jpeg_long_huffman_fixture import (
+        generate_fixture as generate_long_huffman,
+    )
+    d.joinpath("long_huffman_code_slow_path.jpg").write_bytes(generate_long_huffman())
+    from generate_jpeg_unused_custom_dc_chroma_table_fixture import (
+        generate_fixture as generate_custom_dc_chroma,
+        verify_pillow_reference as verify_custom_dc_chroma,
+    )
+    custom_dc_chroma = generate_custom_dc_chroma()
+    verify_custom_dc_chroma(custom_dc_chroma)
+    d.joinpath("baseline_444_unused_custom_dc_chroma_table.jpg").write_bytes(
+        custom_dc_chroma
+    )
     print(f"  JPEG: {len(list(d.glob('*.jpg')))} files")
 
 
