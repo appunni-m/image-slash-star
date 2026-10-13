@@ -2549,6 +2549,7 @@ impl DecodedImage {
     /// This constructor records the buffer without validating its dimensions
     /// or length. Call [`Self::validate`] before handing caller-built samples
     /// to code that relies on those invariants; encoders validate inputs.
+    #[must_use = "retain the decoded image for further processing"]
     pub fn new(width: u32, height: u32, pixels: Vec<u8>, color: ColorType) -> Self {
         Self {
             width,
@@ -2591,6 +2592,7 @@ impl DecodedImage {
     /// This constructor does not attach an optional [`ImageMode::P8`] palette
     /// and does not validate the byte length. Use [`Self::with_palette`] when a
     /// source palette is available, then call [`Self::validate`].
+    #[must_use = "retain the decoded image for further processing"]
     pub fn with_mode(width: u32, height: u32, pixels: Vec<u8>, mode: ImageMode) -> Self {
         Self {
             width,
