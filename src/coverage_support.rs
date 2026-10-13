@@ -46,6 +46,10 @@ pub enum CoverageFaultPoint {
     Av1ProjectedTemporalFieldReservation,
     /// Force AVIF sequence-frame reservation to fail before any frame is decoded.
     AvifSequenceFrameReservation,
+    /// Force AVIF item-information table reservation to fail during parsing.
+    AvifItemTableReservation,
+    /// Force AVIF item-location table reservation to fail during parsing.
+    AvifItemLocationTableReservation,
     /// Force AV1 super-resolution position reservation to fail while resizing a frame.
     Av1SuperResolutionPositionReservation,
     /// Force AV1 super-resolution output-plane reservation to fail.

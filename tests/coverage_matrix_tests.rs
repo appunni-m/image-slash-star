@@ -1166,6 +1166,21 @@ fn execute_fault_contract(
                 img::ImageFormat::Avif,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("avif.metadata.item_table_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::AvifItemTableReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
+            (
+                "avif.metadata.item_location_table_reservation",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::AvifItemLocationTableReservation,
+                false,
+                img::ImageFormat::Avif,
+                img::ImageErrorStage::StillDecode,
+            ),
             (
                 "av1.frame.assembled_monochrome_loop_filter_metadata_reservation",
                 "decode_error_then_retry_succeeds",
@@ -1284,6 +1299,12 @@ fn execute_fault_contract(
         ),
         "av1.grid.cell_reservation" => {
             Some("decode: AVIF AV1 validation failed: unable to reserve AVIF grid cells")
+        }
+        "avif.metadata.item_table_reservation" => {
+            Some("decode: AVIF container validation failed: unable to reserve AVIF item metadata")
+        }
+        "avif.metadata.item_location_table_reservation" => {
+            Some("decode: AVIF container validation failed: unable to reserve AVIF item locations")
         }
         "av1.frame.assembled_monochrome_loop_filter_metadata_reservation" => Some(
             "decode: AVIF AV1 validation failed: unable to allocate assembled monochrome loop-filter metadata",

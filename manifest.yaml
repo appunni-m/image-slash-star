@@ -82,6 +82,34 @@ fault_contracts:
       point: av1.frame.retained_temporal_sample_reservation
       contract: sequence_decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_item_table_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: avif.metadata.item_table_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
+  - id: avif_item_location_table_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:baseline
+    fault:
+      point: avif.metadata.item_location_table_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_tile_group_temporal_sample_reservation_failure
     type: fault-contract
     operation: decode
@@ -8219,6 +8247,11 @@ formats:
       description: AVIF meta omits the required item-information table
       test_assets:
       - meta_missing_item_info.avif
+      expect_error: true
+    - id: error_iinf_entry_count_exceeds_children
+      description: AVIF iinf declares two item-information entries but contains one infe child
+      test_assets:
+      - iinf_entry_count_exceeds_children.avif
       expect_error: true
     - id: error_meta_missing_item_properties
       description: AVIF meta omits the required item-property table

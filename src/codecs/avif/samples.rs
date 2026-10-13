@@ -572,7 +572,19 @@ fn parse_iinf(
         _ => return Err(parse_failure!()),
     };
     budget.records_seen(entry_count)?;
-    meta.items.reserve(entry_count);
+    #[cfg(coverage)]
+    let reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifItemTableReservation,
+    ) {
+        usize::MAX
+    } else {
+        entry_count
+    };
+    #[cfg(not(coverage))]
+    let reservation_count = entry_count;
+    meta.items
+        .try_reserve(reservation_count)
+        .map_err(|_| CodecError::Dimensions("unable to reserve AVIF item metadata".to_owned()))?;
     for _ in 0..entry_count {
         let child = next_box(&mut reader, false, budget)?.ok_or_else(|| parse_failure!())?;
         if child.kind != *b"infe" {
@@ -1079,7 +1091,19 @@ fn parse_iloc<const CHECK_ITEM_BOUNDS: bool>(
         reader.u32()? as usize
     };
     budget.records_seen(item_count)?;
-    meta.locations.reserve(item_count);
+    #[cfg(coverage)]
+    let reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::AvifItemLocationTableReservation,
+    ) {
+        usize::MAX
+    } else {
+        item_count
+    };
+    #[cfg(not(coverage))]
+    let reservation_count = item_count;
+    meta.locations
+        .try_reserve(reservation_count)
+        .map_err(|_| CodecError::Dimensions("unable to reserve AVIF item locations".to_owned()))?;
     for _ in 0..item_count {
         let item_id = if version < 2 {
             u32::from(reader.u16()?)

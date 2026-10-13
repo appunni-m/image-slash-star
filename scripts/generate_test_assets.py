@@ -18008,6 +18008,18 @@ def gen_avif():
     iinf_offset = meta_child_offsets.get(b"iinf")
     if iinf_offset is None:
         raise RuntimeError("baseline AVIF meta has no item-information child")
+    iinf_entry_count = struct.unpack_from(">H", baseline, iinf_offset + 12)[0]
+    if iinf_entry_count != 1:
+        raise RuntimeError("baseline AVIF item-information table must contain one entry")
+    excess_iinf_entry_count = bytearray(baseline)
+    struct.pack_into(">H", excess_iinf_entry_count, iinf_offset + 12, 2)
+    excess_iinf_entry_count_path = d / "iinf_entry_count_exceeds_children.avif"
+    if hashlib.sha256(excess_iinf_entry_count).hexdigest() != (
+        "651cb3bd4e3d0f6202d1b9caddd11470f518d05c978e5d38cc5d66423a60dde8"
+    ):
+        raise RuntimeError("AVIF iinf entry-count fixture differs from its pinned hash")
+    excess_iinf_entry_count_path.write_bytes(excess_iinf_entry_count)
+
     duplicate_item_location = bytearray(baseline)
     duplicate_item_location[iinf_offset + 4 : iinf_offset + 8] = b"iloc"
     if hashlib.sha256(duplicate_item_location).hexdigest() != (

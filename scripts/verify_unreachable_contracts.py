@@ -15,9 +15,12 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "tests" / "fixtures" / "unreachable_contract_manifest.json"
 DOCUMENT = ROOT / "docs" / "EVIDENCE.md"
+SOURCE_MANIFEST = ROOT / "manifest.yaml"
 
 TOP_LEVEL_KEYS = {
     "format_version",
@@ -127,6 +130,30 @@ FAULT_CONTRACTS = {
         "source_case": "decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56",
         "point": "av1.superres.plane_reservation",
         "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_sgr_source_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_sgr_source_reservation_failure",
+        "source_case": "decode:avif:animated_lossy_inter_420_superres_sgr_8bit_160x56",
+        "point": "av1.restoration.sgr_source_reservation",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
+    "avif_item_table_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_item_table_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "avif.metadata.item_table_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
+    "avif_item_location_table_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_item_location_table_reservation_failure",
+        "source_case": "decode:avif:baseline",
+        "point": "avif.metadata.item_location_table_reservation",
+        "contract": "decode_error_then_retry_succeeds",
     },
     "jpeg_multiscan_coefficient_reservation_failure": {
         "format": "jpeg",
@@ -323,8 +350,53 @@ def verify_fault_contract_case_index(entries: object) -> None:
         fail("fault_contract_cases must be an array")
     if len(entries) != len(FAULT_CONTRACTS):
         fail(
-            f"fault_contract_cases must contain exactly {len(FAULT_CONTRACTS)} allow-listed rows"
+            f"fault_contract_cases must contain exactly {len(FAULT_CONTRACTS)} active fault rows"
         )
+
+    try:
+        source_manifest = yaml.safe_load(SOURCE_MANIFEST.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as error:
+        fail(f"cannot read active fault rows from {SOURCE_MANIFEST}: {error}")
+    if not isinstance(source_manifest, dict):
+        fail(f"{SOURCE_MANIFEST} must contain a YAML mapping")
+    source_rows = source_manifest.get("fault_contracts")
+    if not isinstance(source_rows, list):
+        fail(f"{SOURCE_MANIFEST} fault_contracts must be an array")
+    active_source_rows = [
+        row for row in source_rows if isinstance(row, dict) and row.get("status") == "active"
+    ]
+    if len(active_source_rows) != len(source_rows):
+        fail("every manifest fault_contracts row must be a valid active mapping")
+    source_ids = [row.get("id") for row in active_source_rows]
+    if any(not isinstance(case_id, str) or not case_id for case_id in source_ids):
+        fail("every active manifest fault contract must have a non-empty id")
+    if len(set(source_ids)) != len(source_ids):
+        fail("manifest fault_contracts contains duplicate active ids")
+    source_by_id = {row["id"]: row for row in active_source_rows}
+    source_id_set = set(source_by_id)
+    if source_id_set != set(FAULT_CONTRACTS):
+        missing = sorted(source_id_set - set(FAULT_CONTRACTS))
+        stale = sorted(set(FAULT_CONTRACTS) - source_id_set)
+        fail(
+            "verifier fault mappings differ from active manifest rows: "
+            f"missing={missing}, stale={stale}"
+        )
+    for case_id, expected in FAULT_CONTRACTS.items():
+        source_row = source_by_id[case_id]
+        source = source_row.get("input")
+        fault = source_row.get("fault")
+        if (
+            source_row.get("type") != "fault-contract"
+            or source_row.get("operation") != "decode"
+            or source_row.get("format") != expected["format"]
+            or source_row.get("requirements") != [expected["category"]]
+            or not isinstance(source, dict)
+            or source.get("source_case") != expected["source_case"]
+            or not isinstance(fault, dict)
+            or fault.get("point") != expected["point"]
+            or fault.get("contract") != expected["contract"]
+        ):
+            fail(f"{case_id}: source manifest row differs from its fault mapping")
 
     try:
         coverage = json.loads(
@@ -338,6 +410,15 @@ def verify_fault_contract_case_index(entries: object) -> None:
     if not isinstance(rows, list):
         fail("coverage matrix fault_contracts must be an array")
     matrix_rows = {row.get("id"): row for row in rows if isinstance(row, dict)}
+    if len(matrix_rows) != len(rows):
+        fail("coverage matrix fault_contracts contains duplicate or invalid row ids")
+    if set(matrix_rows) != source_id_set:
+        missing = sorted(source_id_set - set(matrix_rows))
+        unexpected = sorted(set(matrix_rows) - source_id_set)
+        fail(
+            "coverage matrix fault_contracts differ from active manifest rows: "
+            f"missing={missing}, unexpected={unexpected}"
+        )
 
     entry_ids = []
     seen_entry_ids = set()
@@ -400,10 +481,6 @@ def verify_fault_contract_case_index(entries: object) -> None:
         missing = sorted(set(FAULT_CONTRACTS) - set(entry_ids))
         unexpected = sorted(set(entry_ids) - set(FAULT_CONTRACTS))
         fail(f"fault_contract_cases differs from the allowlist: missing={missing}, unexpected={unexpected}")
-
-    if len(matrix_rows) != len(rows):
-        fail("coverage matrix fault_contracts contains duplicate or invalid row ids")
-
 
 def verify_evidence(entry: object, category_id: str, index: int) -> None:
     if not isinstance(entry, dict):
@@ -523,6 +600,20 @@ def verify_catalog_table(document_text: str, categories: list[dict]) -> None:
             )
 
         evidence_cell = cells[4]
+        if category_id == "structured-diagnostics":
+            documented_selectors = re.findall(r"`(fault-contract:[^`]+)`", evidence_cell)
+            expected_selectors = {
+                fault["selector"] for fault in FAULT_CONTRACTS.values()
+            }
+            if len(documented_selectors) != len(set(documented_selectors)):
+                fail(f"{DOCUMENT} repeats a target-only fault selector")
+            if set(documented_selectors) != expected_selectors:
+                missing = sorted(expected_selectors - set(documented_selectors))
+                unexpected = sorted(set(documented_selectors) - expected_selectors)
+                fail(
+                    f"{DOCUMENT} structured-diagnostics fault selectors differ: "
+                    f"missing={missing}, unexpected={unexpected}"
+                )
         if category["status"] == "covered":
             for evidence in category["evidence"]:
                 path = evidence["path"]
