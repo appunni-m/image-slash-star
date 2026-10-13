@@ -2999,8 +2999,8 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,213 total rows: 1,735 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,735 decode rows and 446 encode
+The current matrix contains 2,214 total rows: 1,736 decode / inspect /
+verify rows and 478 encode rows. Of those, 1,736 decode rows and 446 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 284 decode rows. The 30 fault contracts are tracked separately from the
 Pillow parity totals. Full
