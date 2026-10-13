@@ -7,7 +7,7 @@
   },
   "fixture_manifests": {
     "capability_tables": "991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400",
-    "coverage_origins": "ef0194ab25f8e941ae401c0a7bfb2c55288e5e975236c2be400b479b64b97e57",
+    "coverage_origins": "038e58fd7908cbabc0a10726c9c758dd6cc6148fa94d384333533ba39901f248",
     "decode_policy": "b9fdc778cb73d4d9ea99daa9adcdd8812ebc9cc90d6698d047619966620d6b6a",
     "diagnostic": "bb537f7eb5e0159793d52335fb9ba03326801c0fe8042a2876b3b98347b4c822",
     "incremental_input": "e84414f61e52f40b6e341bbaf564bb5602395aed57da6c2fbfbbff2e44511f45",
@@ -15,16 +15,16 @@
     "metadata_policy": "2cb37a1e467ef34c06d19bf2a47e668840e4feed0337d0e8237f8b9b56d4c79e",
     "option_acceptance": "604225c8e89b13066f49f072899829c7745f4262d698f43b203645e8da0368f5",
     "option_error": "657f8d9d82cb33b337ac6355aec08038686c2289ee004f8847481ac2270469eb",
-    "roadmap": "58d73f5c1f7d00f219d7d67ff87be9de58be77497e61e9129566a11dc0c8cdda",
+    "roadmap": "d6b1283c56966eb33d71d4e011484a47584b1e2cde62bf0b2954cb5fa3ca8949",
     "sequence_policy": "3916244bc02725f21883792dd0e16a3ff64a5ab23ab08c3326d051a306af2d51",
     "trailing_input": "b98ccdeedb66b93b40b1d057dd8f443d1550a9c0f545106c19d153f866176abb",
-    "unreachable_contract": "566d65e55f79fd2640dadccdcee0436a4967a01c9b827acff1135241ab28e4e8",
+    "unreachable_contract": "55b4c5ed6b84fa09007cee19eb4e5879e834321d241b6063309d275d0a496632",
     "webp_property_inspector": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
-    "webp_property_map": "efbf748be348259cb5106e021e353cdad708abbc110fa3c7f5103232a538bc18"
+    "webp_property_map": "d4c0ea8f5b2a75fb5f69633af4876646961a662d4263594fcc06adb128fffcb6"
   },
   "format_version": 2,
-  "manifest_sha256": "0e2e9460c8c1e9d683e3ddbb1061f915faf56685f11238966df4d5a066f46e7b",
-  "matrix_sha256": "101ff7f5e3c47a367526c008e593239106419192f6f25575f5f9de466a2581b9",
+  "manifest_sha256": "60ec1ee1fa8000b8f662a23cfb3b6794e3f4590416f21d1b26fc466b229bc64b",
+  "matrix_sha256": "8c3d110fb11e2c3d3cf2896cf7fbf5242bd3d1dba127377c23b2a6f649b1d421",
   "measured_inputs": {
     "manifest_sha256": "c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b",
     "matrix_sha256": "f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58"

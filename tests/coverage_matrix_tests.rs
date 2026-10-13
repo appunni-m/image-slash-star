@@ -1274,6 +1274,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "jpeg.baseline.huffman_table_slot_reservation",
+                "decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::JpegHuffmanTableSlotReservation,
+                false,
+                img::ImageFormat::Jpeg,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("tiff.strip_assembly.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffStripAssemblyReservation,
                 false,
@@ -1360,6 +1369,9 @@ fn execute_fault_contract(
         "av1.restoration.stripe_output_reservation" => Some(
             "decode sequence: AVIF sequence validation failed: unable to allocate striped restoration output",
         ),
+        "jpeg.baseline.huffman_table_slot_reservation" => {
+            Some("decode: unable to allocate JPEG Huffman table slots")
+        }
         _ => None,
     };
 

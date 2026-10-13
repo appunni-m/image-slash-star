@@ -161,6 +161,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.multiscan.coefficient_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "jpeg_huffman_table_slot_reservation_failure": {
+        "format": "jpeg",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:jpeg:jpeg_huffman_table_slot_reservation_failure",
+        "source_case": "decode:jpeg:baseline_444_multiscan_late_dht_after_default_scan",
+        "point": "jpeg.baseline.huffman_table_slot_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_strip_assembly_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",

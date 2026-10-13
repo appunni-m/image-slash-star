@@ -401,7 +401,17 @@ fn install_baseline_scan_huffman_defaults(
             };
             if tables.len() <= table_index {
                 let additional = table_index.saturating_add(1).saturating_sub(tables.len());
-                tables.try_reserve_exact(additional).map_err(|_| {
+                #[cfg(coverage)]
+                let reservation = if crate::coverage_support::take_fault_point(
+                    crate::coverage_support::CoverageFaultPoint::JpegHuffmanTableSlotReservation,
+                ) {
+                    usize::MAX
+                } else {
+                    additional
+                };
+                #[cfg(not(coverage))]
+                let reservation = additional;
+                tables.try_reserve_exact(reservation).map_err(|_| {
                     CodecError::Dimensions("unable to allocate JPEG Huffman table slots".to_owned())
                 })?;
                 tables.resize_with(table_index.saturating_add(1), || None);
