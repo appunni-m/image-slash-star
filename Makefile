@@ -51,20 +51,23 @@ fmt:
 	cargo fmt --all -- --check
 	cargo fmt --manifest-path benchmarks/jpeg-production/rust/Cargo.toml -- --check
 
+.PHONY: verify-fixture-integrity
+verify-fixture-integrity:
+	$(PYTHON) scripts/verify_claim_ledger.py
+	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
+	$(PYTHON) scripts/verify_roadmap.py
+	$(PYTHON) scripts/generate_capability_docs.py --check
+
 .PHONY: verify
-verify: release-tools-test docs-lint docs-test
+verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/verify_third_party_licenses.py
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check
-	$(PYTHON) scripts/verify_claim_ledger.py
 	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_diagnostic_provenance.py
 	$(PYTHON) scripts/verify_unreachable_contracts.py
-	$(PYTHON) scripts/verify_webp_vp8l_property_map.py
-	$(PYTHON) scripts/verify_roadmap.py
-	$(PYTHON) scripts/generate_capability_docs.py --check
 
 .PHONY: lint
 lint:

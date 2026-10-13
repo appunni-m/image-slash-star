@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, "codex/**"]
   pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -26,8 +28,22 @@ env:
   NPM_VERSION: "11.5.1"
 
 jobs:
+  fixture-integrity:
+    name: Fixture and release metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The claim ledger verifies its historical measurement revision.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check fixture and release metadata
+        run: make verify-fixture-integrity
+
   quality:
     name: Format, lint, and parity
+    needs: fixture-integrity
     # The committed native fixture contract is generated on Apple ARM64.
     # Run the full matrix on the same architecture so codec bytes and
     # execution metadata are compared under the recorded environment.
@@ -67,6 +83,7 @@ jobs:
 
   x86-simd-lint:
     name: x86 SSE2 and AVX2 checks
+    needs: fixture-integrity
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -149,7 +166,12 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
 
   coverage:
-    name: Coverage report
+    name: Periodic full coverage report
+    # Per-push CI keeps focused parity and x86 coverage. Run the full suite
+    # weekly or on demand to keep an exploration baseline without repeating it
+    # for every metadata-only commit.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: fixture-integrity
     # Oracle references were captured under the Apple ARM64 all-feature
     # contract; measure the full suite on the matching runner here.
     runs-on: macos-14
