@@ -7566,6 +7566,11 @@ formats:
       - animated.avif
       status: active
       pure_rust_work_item: AVF-SEQUENCE-001
+    - id: animated_co64_chunk_offsets
+      description: Five-frame AVIF with 64-bit sample-table chunk offsets and exact frame parity
+      test_assets:
+      - animated_co64_chunk_offsets.avif
+      status: active
     - id: animated_stts_zero_delta
       description: Five-frame AVIF with zero stts sample_delta preserves exact pixels and zero-duration timing
       test_assets:

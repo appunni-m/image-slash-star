@@ -285,7 +285,7 @@ fn highdepth() -> NativeSequence {
     }
 }
 
-fn assert_frames(actual: &img::DecodedSequence, expected: &NativeSequence) {
+fn assert_frames(actual: &img::DecodedSequence, expected: &NativeSequence, context: &str) {
     assert_eq!(
         (actual.width, actual.height),
         (expected.width, expected.height)
@@ -313,7 +313,10 @@ fn assert_frames(actual: &img::DecodedSequence, expected: &NativeSequence) {
             (frame.image.width, frame.image.height),
             (expected.width, expected.height)
         );
-        assert_eq!(frame.source.duration, expected.durations[index]);
+        assert_eq!(
+            frame.source.duration, expected.durations[index],
+            "{context} frame {index}"
+        );
         assert_eq!(
             require_ok(
                 frame.source.duration.milliseconds_rounded(),
@@ -362,7 +365,7 @@ fn public_avif_sequences_match_every_native_display_and_exact_timing() {
                 continue;
             }
         };
-        assert_frames(&actual.content, &expected);
+        assert_frames(&actual.content, &expected, "public sequence fixture");
         let first = require_ok(
             img::decode(&expected.data),
             "independent first/default image",
@@ -413,7 +416,11 @@ fn avif_sequence_transfer_budget_is_reserved_once_and_before_reconstruction() {
             img::decode_sequence_with_policy(&expected.data, &policy),
             "exact sequence limits",
         );
-        assert_frames(&exact.content, &expected);
+        assert_frames(
+            &exact.content,
+            &expected,
+            "transfer-budget sequence fixture",
+        );
         let token = img::CancellationToken::new();
         token.cancel();
         let cancelled = img::decode_sequence_with_token(&expected.data, &token);
@@ -492,7 +499,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
     assert_eq!(field::<String>(&oracle, "pillow"), "12.2.0");
     assert_eq!(field::<String>(&oracle, "libavif"), "1.4.1");
     let artifacts: Vec<Value> = field(&index, "artifacts");
-    assert_eq!(artifacts.len(), 291);
+    assert_eq!(artifacts.len(), 303);
     let mut artifact_paths = std::collections::HashSet::new();
     for artifact in artifacts {
         let path: String = field(&artifact, "path");
@@ -509,9 +516,9 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             field::<String>(&artifact, "sha256")
         );
     }
-    let cases: Vec<Value> = field(&index, "cases");
     let expected_names = [
         "animated",
+        "animated_co64_chunk_offsets",
         "opidc_0x101",
         "error_resilient",
         "filmgrain_reference_reuse_i444_64x64",
@@ -604,6 +611,13 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         "lossless_inter_i444_derived_skip_refs_b32x32_64x64",
         "animated_primary_item_irot",
     ];
+    // STTS parser cases in the shared index are exercised by matrix parity;
+    // this test stays focused on complete native repetition witnesses.
+    let cases: Vec<Value> = field(&index, "cases");
+    let cases: Vec<Value> = cases
+        .into_iter()
+        .filter(|case| expected_names.contains(&field::<String>(case, "name").as_str()))
+        .collect();
     assert_eq!(cases.len(), expected_names.len());
     for (case, expected_name) in cases.iter().zip(expected_names) {
         assert_eq!(field::<String>(case, "name"), expected_name);
@@ -645,6 +659,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
         assert_eq!(field::<Option<u32>>(&pillow, "loop_key"), None);
         let mut expected = match field::<String>(case, "source").as_str() {
             "animated" => animated(),
+            "animated_co64_chunk_offsets" => matrix_sequence_case("animated_co64_chunk_offsets"),
             "animated_primary_item_irot" => matrix_sequence_case("animated_primary_item_irot"),
             "tkhd_version_zero" => matrix_sequence_case("animated_tkhd_version_zero"),
             "tkhd_version_zero_unknown_duration" => {
@@ -868,7 +883,7 @@ fn avif_edit_lists_match_complete_native_repetition_witnesses() {
             continue;
         }
         let actual = require_ok(img::decode_sequence(&data), "native loop sequence");
-        assert_frames(&actual.content, &expected);
+        assert_frames(&actual.content, &expected, expected_name);
         assert_eq!(
             require_ok(img::decode(&data), "loop independent image")
                 .content
