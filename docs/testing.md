@@ -23,7 +23,7 @@ rustup target add x86_64-unknown-linux-gnu --toolchain 1.96.1
 | Format / fix | `make fmt` / `make fmt-fix` | Checks / rewrites Rust formatting |
 | Contracts | `make verify` | Legal, fixture, capability, roadmap, coverage-origin, and release-tool checks |
 | Lint | `make lint` | Strict debug/release, coverage-hook, and JPEG benchmark Clippy |
-| Tests | `make test` | Rustdoc, all-feature tests, and feature/target lanes |
+| Tests | `make test` | Rustdoc, all-feature tests, strict WASI Clippy, and feature/target lanes |
 | Package example | `make example` | Executes the self-contained public PNG example |
 | Coverage | `make coverage` | Measures the full source denominator and enforces alpha floors |
 | Complete coverage | `make coverage-complete` | Requires all four metrics to reach 100% |

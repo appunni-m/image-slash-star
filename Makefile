@@ -33,7 +33,7 @@ help:
 	@printf "  make verify           Run generated, claim, roadmap, and legal checks\n"
 	@printf "  make lint             Run strict Clippy for debug/release, coverage hooks, and benchmark code\n"
 	@printf "  make lint-x86-simd    Lint the x86-64 SSE2 baseline and AVX2 builds\n"
-	@printf "  make test             Run docs, tests, and target feature lanes\n"
+	@printf "  make test             Run docs, tests, target feature lanes, and WASI Clippy\n"
 	@printf "  make supply-chain     Run cargo-deny\n"
 	@printf "  make coverage         Require alpha floors: lines 59, branches 46, functions 52, regions 58 percent\n"
 	@printf "  make coverage-exporter-setup Build the optional pinned native exporter (macOS ARM64; Git/CMake/Ninja, network on first setup)\n"
@@ -91,7 +91,7 @@ test:
 	$(MAKE) test-feature-matrix
 
 .PHONY: test-feature-matrix
-test-feature-matrix: ## Run the complete native, WASI, and WASM feature lanes
+test-feature-matrix: ## Run native, WASI, and WASM lanes with strict target Clippy
 	scripts/test_feature_matrix.sh
 
 .PHONY: supply-chain

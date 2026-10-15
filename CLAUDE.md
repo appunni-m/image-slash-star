@@ -92,8 +92,9 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
   receive the same strict gate. This is compile-time validation and does not
   affect release code or runtime performance.
 - `make test-feature-matrix` runs strict library Clippy and rustdoc for every
-  `wasm32-unknown-unknown` feature lane. Its native and WASI lanes run the full
-  feature-gated integration tests, but do not repeat Clippy for each feature
+  `wasm32-unknown-unknown` feature lane, plus one strict all-target/all-feature
+  Clippy pass for `wasm32-wasip1`. Its native and WASI lanes run the
+  feature-gated integration tests without repeating Clippy for each feature
   subset. Run strict Clippy for a specific native or WASI feature lane when a
   change touches code gated specifically to that target or feature selection.
 - Fix every diagnostic; do not use a warning baseline to declare completion.

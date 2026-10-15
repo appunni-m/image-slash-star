@@ -363,6 +363,17 @@ run_wasi_parity_lane() {
 run_wasi_lane() {
     features=$1
     set -- $(feature_args "$features")
+    if [ "$features" = all ]; then
+        # Lint the target-specific WASI library and integration-test code in
+        # one all-feature lane instead of recompiling it for every subset.
+        wasi_status=0
+        cargo clippy --workspace --all-targets --locked \
+            --target wasm32-wasip1 --all-features -- -D warnings \
+            || wasi_status=$?
+        if [ "$wasi_status" -ne 0 ]; then
+            return "$wasi_status"
+        fi
+    fi
     build_log="$matrix_log_dir/wasm-wasi-$features.jsonl"
     build_status=0
     cargo test --locked --target wasm32-wasip1 --test feature_gate_tests \
