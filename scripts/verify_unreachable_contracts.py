@@ -105,6 +105,14 @@ FAULT_CONTRACTS = {
         "point": "av1.frame.assembled_monochrome_cdef_active_map_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "avif_monochrome_group_buffer_reservation_failure": {
+        "format": "avif",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:avif:avif_monochrome_group_buffer_reservation_failure",
+        "source_case": "decode:avif:multitile_monochrome",
+        "point": "av1.frame.monochrome_group_buffer_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_sequence_frames_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

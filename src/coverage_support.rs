@@ -62,6 +62,8 @@ pub enum CoverageFaultPoint {
     TiffStripAssemblyReservation,
     /// Force AV1 partial monochrome tile-state retention to fail.
     Av1MonochromeTileReservation,
+    /// Force AV1 complete monochrome tile buffering to fail.
+    Av1MonochromeGroupBufferReservation,
     /// Force AV1 partial color tile-state retention to fail.
     Av1ColorTileReservation,
     /// Force reservation of nonempty AV1 tile-group temporal-MV samples to fail.

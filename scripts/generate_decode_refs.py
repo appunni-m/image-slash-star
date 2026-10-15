@@ -2661,6 +2661,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "av1.frame.monochrome_group_buffer_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "av1.frame.color_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },

@@ -376,6 +376,20 @@ fault_contracts:
       point: av1.frame.monochrome_tile_state_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: avif_monochrome_group_buffer_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: avif
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:avif:multitile_monochrome
+    fault:
+      point: av1.frame.monochrome_group_buffer_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_color_tile_reservation_failure
     type: fault-contract
     operation: decode

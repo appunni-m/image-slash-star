@@ -3069,11 +3069,23 @@ fn validate_tile_entropy_prefixes(
                     loop_parameters,
                     filter_blocks,
                 ) = reconstruction.into_unfiltered_monochrome_tile()?;
-                complete_monochrome_tiles.try_reserve(1).map_err(|_| {
-                    CodecError::Dimensions(
-                        "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
-                    )
-                })?;
+                #[cfg(coverage)]
+                let reservation_count = if crate::coverage_support::take_fault_point(
+                    crate::coverage_support::CoverageFaultPoint::Av1MonochromeGroupBufferReservation,
+                ) {
+                    usize::MAX
+                } else {
+                    1
+                };
+                #[cfg(not(coverage))]
+                let reservation_count = 1;
+                complete_monochrome_tiles
+                    .try_reserve(reservation_count)
+                    .map_err(|_| {
+                        CodecError::Dimensions(
+                            "unable to allocate reconstructed AV1 monochrome tiles".to_owned(),
+                        )
+                    })?;
                 complete_monochrome_tiles.push(ReconstructedMonochromeTile {
                     x: tile_origin_x,
                     y: tile_origin_y,

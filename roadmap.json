@@ -5712,7 +5712,7 @@
       },
       "coverage_origin_inventory": {
         "files": 24,
-        "guards": 147
+        "guards": 148
       },
       "function": {
         "covered": 5125,
