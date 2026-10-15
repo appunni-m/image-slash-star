@@ -200,10 +200,10 @@ fn emit(args: &[String], with_token: bool) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn benchmark_encode(args: &[String]) -> Result<(), Box<dyn Error>> {
+fn benchmark_encode(args: &[String], with_token: bool) -> Result<(), Box<dyn Error>> {
     if args.len() != 11 {
         return Err(invalid_input(
-            "encode WIDTH HEIGHT rgb|gray|cmyk QUALITY SUBSAMPLING PROGRESSIVE OPTIMIZE RESTART_ROWS ITERATIONS",
+            "encode|encode-token WIDTH HEIGHT rgb|gray|cmyk QUALITY SUBSAMPLING PROGRESSIVE OPTIMIZE RESTART_ROWS ITERATIONS",
         ));
     }
     let width = parse_argument::<usize>(args, 2, "width")?;
@@ -224,7 +224,16 @@ fn benchmark_encode(args: &[String]) -> Result<(), Box<dyn Error>> {
         .map_err(|_| invalid_input("height does not fit the public image dimensions"))?;
     let image = DecodedImage::new(width_u32, height_u32, pixels, mode);
     let options = options(quality, subsampling, progressive, optimize, restart)?;
-    let invoke = || encode(black_box(&image), ImageFormat::Jpeg, black_box(&options));
+    let token = CancellationToken::new();
+    let invoke = || {
+        let image = black_box(&image);
+        let options = black_box(&options);
+        if with_token {
+            encode_with_token(image, ImageFormat::Jpeg, options, &token)
+        } else {
+            encode(image, ImageFormat::Jpeg, options)
+        }
+    };
     for _ in 0..WARMUP {
         black_box(invoke()?);
     }
@@ -248,7 +257,8 @@ fn benchmark_encode(args: &[String]) -> Result<(), Box<dyn Error>> {
         drop(output);
         samples.push(start.elapsed().as_nanos());
     }
-    report("encode", iterations, total.elapsed().as_nanos(), samples)
+    let operation = if with_token { "encode-token" } else { "encode" };
+    report(operation, iterations, total.elapsed().as_nanos(), samples)
 }
 
 fn benchmark_decode(args: &[String]) -> Result<(), Box<dyn Error>> {
@@ -292,10 +302,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     match argument(&args, 1, "operation")? {
         "emit" => emit(&args, false),
         "emit-token" => emit(&args, true),
-        "encode" => benchmark_encode(&args),
+        "encode" => benchmark_encode(&args, false),
+        "encode-token" => benchmark_encode(&args, true),
         "decode" => benchmark_decode(&args),
         _ => Err(invalid_input(
-            "operation must be emit, emit-token, encode, or decode",
+            "operation must be emit, emit-token, encode, encode-token, or decode",
         )),
     }
 }

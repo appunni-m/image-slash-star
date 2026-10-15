@@ -20,6 +20,11 @@ together; the possible one-step quotient correction stays exact as a 0-or-1
 subtraction. Keep this path byte-identical across the public Pillow JPEG encode
 matrix.
 
+The token-aware generic encoder also transforms four adjacent blocks with the
+same safe FDCT kernel. It preserves row and per-block cancellation polls; a
+poll can be delayed by at most one four-block transform batch. Tail lanes repeat
+the final source block and are discarded after the transform.
+
 Evaluate a change using the complete [public API benchmark](BENCHMARKING.md),
 including odd dimensions, quality, chroma sampling, progressive/optimized modes,
 and grayscale/CMYK. A faster inner loop can lose end-to-end after allocation,

@@ -1364,11 +1364,12 @@ fn progress_callbacks_report_checkpoints_and_can_cancel() -> Result<(), Box<dyn 
 
 #[test]
 fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::error::Error>> {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
     // Pillow has no caller-controlled cancellation token or OutputSink. These
     // assertions cover the Rust operation boundary and must not become parity
-    // rows. JPEG additionally polls internal row/block/scan checkpoints;
-    // deterministic checkpoint firing is covered by its codec-local
-    // `#[cfg(coverage)]` drill rather than by a timing-sensitive public test.
+    // rows. JPEG additionally polls internal row/block/scan checkpoints.
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     if cfg!(feature = "jpeg") {
         let data = fs::read(root.join("tests/fixtures/input/images/jpeg/1x1.jpg"))?;
@@ -1400,6 +1401,42 @@ fn encode_cancellation_is_a_non_parity_contract() -> Result<(), Box<dyn std::err
             }
             Err(error) => error,
         };
+        assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
+        assert_eq!(error.format(), Some(ImageFormat::Jpeg));
+        assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));
+
+        let grayscale = fs::read(root.join("tests/fixtures/input/images/jpeg/baseline_gray.jpg"))?;
+        let decoded = image_slash_star::decode(&grayscale)?;
+        let observed = Rc::new(Cell::new(0));
+        let callback_observed = Rc::clone(&observed);
+        // The 128-row L8 source reaches its first FDCT block poll at public
+        // checkpoint 133: one dispatch poll, two JPEG-entry polls, 128
+        // source-row polls, one FDCT-row poll, then the first block poll after
+        // a four-block batch.
+        let token = image_slash_star::CancellationToken::with_progress(move |event| {
+            callback_observed.set(event.checkpoint());
+            if event.checkpoint() == 133 {
+                image_slash_star::ProgressDecision::Cancel
+            } else {
+                image_slash_star::ProgressDecision::Continue
+            }
+        });
+        let error = match image_slash_star::encode_with_token(
+            &decoded.content,
+            ImageFormat::Jpeg,
+            &options,
+            &token,
+        ) {
+            Ok(bytes) => {
+                return Err(format!(
+                    "checkpoint-cancelled JPEG encode returned {} bytes",
+                    bytes.len()
+                )
+                .into());
+            }
+            Err(error) => error,
+        };
+        assert_eq!(observed.get(), 133);
         assert_eq!(error.kind(), image_slash_star::ImageErrorKind::Cancelled);
         assert_eq!(error.format(), Some(ImageFormat::Jpeg));
         assert_eq!(error.stage(), Some(ImageErrorStage::StillEncode));

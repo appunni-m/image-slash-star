@@ -3141,19 +3141,35 @@ fn fdct_quantize_with_checkpoint<C: FdctCheckpoint>(
 
     for by in 0..block_rows {
         checkpoint.row()?;
-        for bx in 0..blocks_per_row {
-            let mut samples = load_fdct_samples(plane, w, h, bx, by);
-            fdct::fdct_islow(&mut samples);
-            // Quantize in natural order: divisor = quantval[i] << 3.
-            let quantized = std::array::from_fn(|coefficient| {
-                quantize_coefficient(
-                    samples[coefficient],
-                    quantizer.divisors[coefficient],
-                    quantizer.reciprocals[coefficient],
-                )
+        for bx_start in (0usize..blocks_per_row).step_by(4) {
+            let block_count = blocks_per_row.saturating_sub(bx_start).min(4);
+            let mut sample_batch: [[i32; 64]; 4] = std::array::from_fn(|lane| {
+                let bx = bx_start
+                    .saturating_add(lane)
+                    .min(blocks_per_row.saturating_sub(1));
+                load_fdct_samples(plane, w, h, bx, by)
             });
-            blocks[by.saturating_mul(blocks_per_row).saturating_add(bx)] = quantized;
-            checkpoint.block()?;
+
+            // Cancellation is still polled after every completed block. The
+            // four transforms complete together first, bounding deferred
+            // cancellation work to one horizontal batch.
+            fdct::fdct_islow_four(&mut sample_batch);
+            for (lane, samples) in sample_batch.iter().take(block_count).enumerate() {
+                // Quantize in natural order: divisor = quantval[i] << 3.
+                let quantized = std::array::from_fn(|coefficient| {
+                    quantize_coefficient(
+                        samples[coefficient],
+                        quantizer.divisors[coefficient],
+                        quantizer.reciprocals[coefficient],
+                    )
+                });
+                let block_index = by
+                    .saturating_mul(blocks_per_row)
+                    .saturating_add(bx_start)
+                    .saturating_add(lane);
+                blocks[block_index] = quantized;
+                checkpoint.block()?;
+            }
         }
     }
     Ok((blocks, blocks_per_row, block_rows))
