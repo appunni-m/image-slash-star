@@ -193,6 +193,14 @@ FAULT_CONTRACTS = {
         "point": "tiff.strip_assembly.output_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "png_decoded_sample_buffer_reservation_failure": {
+        "format": "png",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:png:png_decoded_sample_buffer_reservation_failure",
+        "source_case": "decode:png:size_1x1",
+        "point": "png.scanline.sample_buffer_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "avif_monochrome_tile_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

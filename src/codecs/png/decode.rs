@@ -1561,7 +1561,21 @@ fn decode_scanlines(
     let width = width as usize;
     let height = height as usize;
     let sample_count = decoded_sample_count(width, height, channels);
-    let mut samples = vec![0u16; sample_count];
+    let mut samples = Vec::new();
+    #[cfg(coverage)]
+    let reservation_count = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::PngDecodedSampleBufferReservation,
+    ) {
+        usize::MAX
+    } else {
+        sample_count
+    };
+    #[cfg(not(coverage))]
+    let reservation_count = sample_count;
+    samples.try_reserve_exact(reservation_count).map_err(|_| {
+        CodecError::Dimensions("unable to reserve PNG decoded sample buffer".to_owned())
+    })?;
+    samples.resize(sample_count, 0);
     let mut position = 0usize;
 
     if interlace == 0 {

@@ -5711,8 +5711,8 @@
         "uncovered": 1385
       },
       "coverage_origin_inventory": {
-        "files": 25,
-        "guards": 149
+        "files": 26,
+        "guards": 150
       },
       "function": {
         "covered": 5125,

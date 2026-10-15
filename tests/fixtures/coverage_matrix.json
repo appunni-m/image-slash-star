@@ -128968,6 +128968,16 @@
           },
           "source_mode": "1",
           "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
           "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_1bit_odd_width.bin",
           "encoded_ref_bytes": 74,
           "encoded_ref_sha256": "ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675",
@@ -128980,17 +128990,7 @@
             3
           ],
           "ref_frame_count": 1,
-          "ref_is_animated": false,
-          "assertion_origins": {
-            "source": "pillow_fixture",
-            "encode": "pillow_fixture",
-            "operations": "pillow_fixture"
-          },
-          "operations": {
-            "encode": "ok",
-            "encode_sequence": "ok"
-          },
-          "error_contracts": {}
+          "ref_is_animated": false
         },
         {
           "id": "enc_adam7",
@@ -189348,6 +189348,25 @@
       },
       "fault": {
         "point": "tiff.strip_assembly.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
+    {
+      "id": "png_decoded_sample_buffer_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "png",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:png:size_1x1"
+      },
+      "fault": {
+        "point": "png.scanline.sample_buffer_reservation",
         "contract": "decode_error_then_retry_succeeds"
       },
       "oracle_status": "not_applicable"

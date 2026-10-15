@@ -82,6 +82,20 @@ fault_contracts:
       point: tiff.strip_assembly.output_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: png_decoded_sample_buffer_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: png
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:png:size_1x1
+    fault:
+      point: png.scanline.sample_buffer_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_retained_temporal_sample_reservation_failure
     type: fault-contract
     operation: decode
