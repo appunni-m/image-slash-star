@@ -45,9 +45,9 @@ jobs:
     name: Format, lint, and parity
     needs: fixture-integrity
     # The committed native fixture contract is generated on Apple ARM64.
-    # Run the full matrix on the same architecture so codec bytes and
-    # execution metadata are compared under the recorded environment.
-    runs-on: macos-14
+    # GitHub's macos-15 label selects Apple silicon and avoids the retiring
+    # macos-14 image while keeping the parity architecture unchanged.
+    runs-on: macos-15
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,6 +55,8 @@ jobs:
           # Claim-ledger verification resolves its measured base commit.
           fetch-depth: 0
           persist-credentials: false
+      - name: Confirm Apple silicon runner
+        run: test "$(uname -m)" = arm64
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -173,14 +175,16 @@ jobs:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: fixture-integrity
     # Oracle references were captured under the Apple ARM64 all-feature
-    # contract; measure the full suite on the matching runner here.
-    runs-on: macos-14
+    # contract; measure the full suite on the matching supported runner.
+    runs-on: macos-15
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Confirm Apple silicon runner
+        run: test "$(uname -m)" = arm64
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
