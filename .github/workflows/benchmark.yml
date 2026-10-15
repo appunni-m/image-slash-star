@@ -53,6 +53,7 @@ jobs:
         if: always()
         with:
           name: benchmark-${{ github.run_id }}
+          overwrite: true
           path: target/benchmarks/jpeg/
           if-no-files-found: warn
 
@@ -121,6 +122,7 @@ jobs:
         if: always()
         with:
           name: x86-simd-benchmarks-${{ github.run_id }}
+          overwrite: true
           path: target/benchmarks/jpeg/simd-x86_64/
           if-no-files-found: warn
           retention-days: 90

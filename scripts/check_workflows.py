@@ -244,29 +244,50 @@ def verify_release_coverage_gate(workflow: Path) -> bool:
     return False
 
 
-def verify_candidate_artifact_rerun_safety(contents: str) -> bool:
-    """Require CI's release candidate artifact to be replaceable on reruns."""
+def artifact_upload_rerun_violations(contents: str) -> list[str]:
+    """Require every uploaded workflow artifact to be replaceable on retries."""
 
-    step_match = re.search(
-        r"(?ms)^      - name: Retain verified candidate bundle\s*$"
-        r"(?P<step>.*?)(?=^      - |\Z)",
+    violations = []
+    steps = re.finditer(
+        r"(?ms)^      - (?P<header>[^\n]*)\n"
+        r"(?P<body>.*?)(?=^      - |\Z)",
         contents,
     )
-    step = step_match.group("step") if step_match is not None else ""
-    if (
-        re.search(
-            r"(?m)^          name:\s*image-slash-star-candidate\s*$",
-            step,
-        )
-        is None
-        or re.search(r"(?m)^          overwrite:\s*true\s*$", step) is None
-    ):
-        print(
-            "CI candidate artifact must keep its release name and overwrite prior uploads",
-            file=sys.stderr,
-        )
-        return False
-    return True
+    for match in steps:
+        header = match.group("header")
+        body = match.group("body")
+        uses = header.removeprefix("uses: ") if header.startswith("uses: ") else None
+        if uses is None:
+            uses_match = re.search(r"(?m)^        uses:\s*(.+)$", body)
+            uses = uses_match.group(1) if uses_match is not None else None
+        if uses is None or not uses.startswith("actions/upload-artifact@"):
+            continue
+
+        artifact_match = re.search(r"(?m)^          name:\s*(.+)$", body)
+        artifact_name = artifact_match.group(1) if artifact_match is not None else "<unnamed>"
+        if re.search(r"(?m)^          overwrite:\s*true\s*$", body) is None:
+            violations.append(
+                f"artifact {artifact_name!r} must set overwrite: true for same-run retries"
+            )
+    return violations
+
+
+def verify_artifact_upload_rerun_safety(workflows: list[Path]) -> bool:
+    """Reject artifact uploads that would collide when a workflow is retried."""
+
+    violations = []
+    for workflow in workflows:
+        for violation in artifact_upload_rerun_violations(
+            workflow.read_text(encoding="utf-8")
+        ):
+            violations.append(f"{workflow.relative_to(ROOT)}: {violation}")
+    if not violations:
+        return True
+
+    print("Workflow artifact retry validation failed:", file=sys.stderr)
+    for violation in violations:
+        print(f"  {violation}", file=sys.stderr)
+    return False
 
 
 def binary_bytes(archive: bytes, checksum: str) -> bytes:
@@ -381,10 +402,7 @@ def main() -> int:
     release_workflow = ROOT / ".github" / "workflows" / "release.yml"
     if not verify_release_coverage_gate(release_workflow):
         return 1
-    ci_workflow = ROOT / ".github" / "workflows" / "ci.yml"
-    if not verify_candidate_artifact_rerun_safety(
-        ci_workflow.read_text(encoding="utf-8")
-    ):
+    if not verify_artifact_upload_rerun_safety(workflows):
         return 1
 
     target = (platform.system(), platform.machine())

@@ -146,6 +146,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: x86-codec-simd-coverage
+          overwrite: true
           path: |
             target/release-evidence/coverage-jpeg-x86_64.json
             target/release-evidence/coverage-jpeg-encode-x86_64.json
@@ -216,6 +217,7 @@ jobs:
         if: always()
         with:
           name: llvm-coverage
+          overwrite: true
           path: |
             target/release-evidence/coverage.json
             target/release-evidence/coverage.log
