@@ -27,13 +27,13 @@
     }
   ],
   "summary": {
-    "observations": 55,
-    "new_full_files": 53,
+    "observations": 57,
+    "new_full_files": 55,
     "existing_controls": 2,
-    "new_successful_controls": 3,
+    "new_successful_controls": 5,
     "classification_and_control_rows": 49,
     "unresolved_precedence_rows": 4,
-    "pillow_successes": 5,
+    "pillow_successes": 7,
     "pillow_errors": 50
   },
   "pillow_cases": [
@@ -1857,6 +1857,108 @@
         "mode": "RGB",
         "pixel_bytes": 3,
         "pixel_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e"
+      },
+      "pillow_verify": {
+        "status": "ok"
+      }
+    },
+    {
+      "id": "rle4_odd_absolute_eol",
+      "description": "BI_RLE4 odd absolute run reaches EOL with its final nibble omitted",
+      "asset": "rle4_odd_absolute_eol.bmp",
+      "asset_sha256": "e126b4422eb23399b411090b0a9928b7f4f46467ea6847fbd9c0da522b6a33fb",
+      "bytes": 216,
+      "source": "tests/fixtures/input/images/bmp/rle4.bmp",
+      "source_sha256": "9e7c9a58b2fba11db20e1f24f31772d03c875dc94ee9a77d5696d4bb543b0882",
+      "mutations": [
+        {
+          "operation": "replace_compressed_pixels",
+          "offset": 118,
+          "prefix_hex": "",
+          "pixel_offset": 118,
+          "length": 98,
+          "sha256": "81068a707dc223cbe6ad0aeeb560fc836c8e7889be6356eaec37f959836449aa",
+          "file_size": 216,
+          "image_size": 98
+        }
+      ],
+      "header_size": 40,
+      "compression": 2,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          16,
+          16
+        ],
+        "mode": "P",
+        "compression": 2
+      },
+      "pillow_decode": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          16,
+          16
+        ],
+        "mode": "P",
+        "pixel_bytes": 256,
+        "pixel_sha256": "6ef084e787e0f3a692a6b1fd2a001e000402e750f8dce45943741cca8750f6ab"
+      },
+      "pillow_verify": {
+        "status": "ok"
+      }
+    },
+    {
+      "id": "rle4_odd_pixel_offset",
+      "description": "BI_RLE4 absolute-run padding is relative to an odd-offset pixel stream",
+      "asset": "rle4_odd_pixel_offset.bmp",
+      "asset_sha256": "39a7b1fbc8d09716958cd9ad55f72fb477e69c40d20afceabb357807d39fff03",
+      "bytes": 201,
+      "source": "tests/fixtures/input/images/bmp/rle4.bmp",
+      "source_sha256": "9e7c9a58b2fba11db20e1f24f31772d03c875dc94ee9a77d5696d4bb543b0882",
+      "mutations": [
+        {
+          "operation": "replace_compressed_pixels",
+          "offset": 118,
+          "prefix_hex": "00",
+          "pixel_offset": 119,
+          "length": 82,
+          "sha256": "394ddf2180e68c8ac12ec20c592cfa731bc9ee23b07561dcd2761706ffafb259",
+          "file_size": 201,
+          "image_size": 82
+        }
+      ],
+      "header_size": 40,
+      "compression": 2,
+      "registration": "new_full_file",
+      "pillow_detection": {
+        "format": "BMP"
+      },
+      "pillow_open": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          16,
+          16
+        ],
+        "mode": "P",
+        "compression": 2
+      },
+      "pillow_decode": {
+        "status": "ok",
+        "format": "BMP",
+        "size": [
+          16,
+          16
+        ],
+        "mode": "P",
+        "pixel_bytes": 256,
+        "pixel_sha256": "fd4f4975bf12c1586e4e190e7cedb76b32a52599975390644c584b5f4a5ef468"
       },
       "pillow_verify": {
         "status": "ok"

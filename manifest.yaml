@@ -54,6 +54,20 @@ reference_oracles:
       pillow_feature: avif
       pillow_feature_version: 1.4.1
 fault_contracts:
+  - id: bmp_palette_reservation_failure
+    type: fault-contract
+    operation: decode
+    format: bmp
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:bmp:rle4_odd_absolute_eol
+    fault:
+      point: bmp.palette.output_reservation
+      contract: decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: tiff_strip_assembly_reservation_failure
     type: fault-contract
     operation: decode
@@ -3165,6 +3179,14 @@ formats:
       test_assets:
       - rle4.bmp
       - rle4_mixed.bmp
+    - id: rle4_odd_absolute_eol
+      description: BI_RLE4 odd absolute run ends each scanline with omitted nibble
+      test_assets:
+      - rle4_odd_absolute_eol.bmp
+    - id: rle4_odd_pixel_offset
+      description: BI_RLE4 absolute-run padding is relative to an odd-offset pixel stream
+      test_assets:
+      - rle4_odd_pixel_offset.bmp
     - id: compression_bitfields
       description: BI_BITFIELDS (16/32 bit with masks)
       test_assets:

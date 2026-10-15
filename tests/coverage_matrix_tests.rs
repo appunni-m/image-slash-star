@@ -1028,7 +1028,7 @@ fn execute_fault_contract(
 ) -> Result<(), String> {
     if row.row_type != "fault-contract"
         || row.operation != "decode"
-        || !matches!(row.format.as_str(), "avif" | "jpeg" | "tiff")
+        || !matches!(row.format.as_str(), "avif" | "bmp" | "jpeg" | "tiff")
         || row.status != "active"
         || row.verification != "fault-contract"
         || row.oracle_status != "not_applicable"
@@ -1292,6 +1292,12 @@ fn execute_fault_contract(
                 img::ImageFormat::Jpeg,
                 img::ImageErrorStage::StillDecode,
             ),
+            ("bmp.palette.output_reservation", "decode_error_then_retry_succeeds") => (
+                img::CoverageFaultPoint::BmpPaletteReservation,
+                false,
+                img::ImageFormat::Bmp,
+                img::ImageErrorStage::StillDecode,
+            ),
             ("tiff.strip_assembly.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffStripAssemblyReservation,
                 false,
@@ -1384,6 +1390,7 @@ fn execute_fault_contract(
         "jpeg.baseline.huffman_table_slot_reservation" => {
             Some("decode: unable to allocate JPEG Huffman table slots")
         }
+        "bmp.palette.output_reservation" => Some("decode: unable to allocate BMP palette"),
         _ => None,
     };
 

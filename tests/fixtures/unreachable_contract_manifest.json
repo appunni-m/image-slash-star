@@ -8,6 +8,12 @@
   },
   "fault_contract_cases": [
     {
+      "id": "bmp_palette_reservation_failure",
+      "category": "structured-diagnostics",
+      "selector": "fault-contract:bmp:bmp_palette_reservation_failure",
+      "test": "test_fault_contract_matrix"
+    },
+    {
       "id": "tiff_strip_assembly_reservation_failure",
       "category": "structured-diagnostics",
       "selector": "fault-contract:tiff:tiff_strip_assembly_reservation_failure",

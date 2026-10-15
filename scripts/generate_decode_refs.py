@@ -2655,6 +2655,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "jpeg.baseline.huffman_table_slot_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "bmp.palette.output_reservation": {
+            "decode_error_then_retry_succeeds"
+        },
         "tiff.strip_assembly.output_reservation": {
             "decode_error_then_retry_succeeds"
         },
@@ -2749,7 +2752,7 @@ def sync_fault_contract_rows(manifest, matrix):
             raise RuntimeError(
                 f"{case_id}: fault contract must be active decode with a not_applicable oracle"
             )
-        if row.get("format") not in {"avif", "jpeg", "tiff"}:
+        if row.get("format") not in {"avif", "bmp", "jpeg", "tiff"}:
             raise RuntimeError(f"{case_id}: unsupported fault-contract format")
         requirements = row.get("requirements")
         if (

@@ -159,7 +159,19 @@ fn read_palette(
     count: u32,
     entry_bytes: usize,
 ) -> CodecResult<Vec<[u8; 4]>> {
-    let mut pal = Vec::with_capacity(count as usize);
+    let mut pal = Vec::new();
+    #[cfg(coverage)]
+    let reservation = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::BmpPaletteReservation,
+    ) {
+        usize::MAX
+    } else {
+        count as usize
+    };
+    #[cfg(not(coverage))]
+    let reservation = count as usize;
+    pal.try_reserve_exact(reservation)
+        .map_err(|_| CodecError::Dimensions("unable to allocate BMP palette".to_owned()))?;
     for _ in 0..count {
         let start = r.position();
         let mut entry = [0u8; 4];

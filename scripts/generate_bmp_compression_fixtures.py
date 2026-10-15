@@ -32,6 +32,7 @@ SOURCE_SHA256 = {
     "v4header.bmp": "27af926cc51e163dabf41e70f47516957608a389f4c5d8b123c02a0a363bae70",
     "16bit.bmp": "291e550a35a111edec21233115d238e8386358f02da5c4850bec6dc0807ddcde",
     "4bit.bmp": "d0ce444f15c20bac76357c9f0f495ad44c36fc0775aab52f7016bf8b603c8d9b",
+    "rle4.bmp": "9e7c9a58b2fba11db20e1f24f31772d03c875dc94ee9a77d5696d4bb543b0882",
 }
 EXISTING_CONTROLS = {"control_core_rgb", "control_info_rgb"}
 PENDING_RUST = "Not executed by this native recipe; requires final Rust fixture verification."
@@ -74,7 +75,7 @@ def build_inputs() -> list[tuple[dict, bytes]]:
     cases = []
 
     def emit(case_id, source, description, *, header=None, compression=None,
-             words=(), shorts=(), truncate=None):
+             words=(), shorts=(), truncate=None, raster=None, raster_prefix=b""):
         original = sources[source]
         data = resize_dib(original, header) if header else bytearray(original)
         changes = []
@@ -89,6 +90,20 @@ def build_inputs() -> list[tuple[dict, bytes]]:
         for offset, value in shorts:
             struct.pack_into("<H", data, offset, value)
             changes.append({"operation": "write_u16_le", "offset": offset, "value": value})
+        if raster is not None:
+            pixel_offset = read_u32(data, 10)
+            if pixel_offset > len(data):
+                raise ValueError(f"pixel-data offset exceeds source length for {case_id}")
+            updated_pixel_offset = pixel_offset + len(raster_prefix)
+            data = data[:pixel_offset] + bytearray(raster_prefix) + bytearray(raster)
+            struct.pack_into("<I", data, 10, updated_pixel_offset)
+            struct.pack_into("<I", data, 2, len(data))
+            struct.pack_into("<I", data, 34, len(raster))
+            changes.append({"operation": "replace_compressed_pixels", "offset": pixel_offset,
+                            "prefix_hex": raster_prefix.hex(),
+                            "pixel_offset": updated_pixel_offset, "length": len(raster),
+                            "sha256": sha256(raster), "file_size": len(data),
+                            "image_size": len(raster)})
         complete_sha256 = sha256(data)
         complete_bytes = len(data)
         if truncate is not None:
@@ -133,6 +148,13 @@ def build_inputs() -> list[tuple[dict, bytes]]:
     emit("control_os2_compatible_bitfields24", "1x1.bmp",
          "Pillow accepts Windows-compatible RGB888 bitfields in OS/2 DIB 64",
          header=64, compression=3, words=((54, 0xFF0000), (58, 0xFF00), (62, 0xFF)))
+    emit("rle4_odd_absolute_eol", "rle4.bmp",
+         "BI_RLE4 odd absolute run reaches EOL with its final nibble omitted",
+         raster=bytes.fromhex("00 03 12 00 00 00") * 16 + bytes.fromhex("00 01"))
+    emit("rle4_odd_pixel_offset", "rle4.bmp",
+         "BI_RLE4 absolute-run padding is relative to an odd-offset pixel stream",
+         raster=bytes.fromhex("00 03 12 00 00") * 16 + bytes.fromhex("00 01"),
+         raster_prefix=b"\x00")
     for depth in (0, 3):
         for code in (4, 5):
             emit(f"info_depth{depth}_compression{code}", "1x1.bmp",
@@ -240,8 +262,8 @@ def build_report(manifest: dict, inputs: list[tuple[dict, bytes]]) -> dict:
             {"scope": "OS/2 BITMAPINFOHEADER2 Huffman/RLE24 header namespace",
              "url": "https://www.bitsavers.org/pdf/ibm/pc/os2/OS2_3.x/G25H-7191-00_OS2_WARP_V3_Presentation_Manager_Programming_Reference_Volume_2_Oct94.pdf"},
         ],
-        "summary": {"observations": len(rows), "new_full_files": 53,
-                    "existing_controls": 2, "new_successful_controls": 3,
+        "summary": {"observations": len(rows), "new_full_files": 55,
+                    "existing_controls": 2, "new_successful_controls": 5,
                     "classification_and_control_rows": 49, "unresolved_precedence_rows": 4,
                     "pillow_successes": sum(row["pillow_decode"]["status"] == "ok" for row in rows),
                     "pillow_errors": sum(row["pillow_decode"]["status"] == "error" for row in rows)},

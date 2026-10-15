@@ -58,6 +58,8 @@ pub enum CoverageFaultPoint {
     JpegCoefficientBufferReservation,
     /// Force reservation of default JPEG Huffman table slots to fail.
     JpegHuffmanTableSlotReservation,
+    /// Force reservation of a BMP palette to fail before reading its entries.
+    BmpPaletteReservation,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force AV1 partial monochrome tile-state retention to fail.

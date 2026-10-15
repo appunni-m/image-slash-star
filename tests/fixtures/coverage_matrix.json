@@ -54513,6 +54513,174 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "rle4_odd_absolute_eol",
+          "type": "decode",
+          "format": "bmp",
+          "category": "rle4",
+          "description": "BI_RLE4 odd absolute run ends each scanline with omitted nibble",
+          "asset": "rle4_odd_absolute_eol.bmp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "e126b4422eb23399b411090b0a9928b7f4f46467ea6847fbd9c0da522b6a33fb",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 4,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6ef084e787e0f3a692a6b1fd2a001e000402e750f8dce45943741cca8750f6ab",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_odd_absolute_eol_bmp.bin",
+          "ref_bytes": 256,
+          "ref_mode": "P",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_odd_absolute_eol_bmp.inspect-palette.rgb.bin",
+            "rgb_bytes": 48,
+            "rgb_sha256": "4c484aa56bf40bbd96bf171090b09100531cbaa44784495ddd08e5bda27c875f"
+          },
+          "decoded_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_odd_absolute_eol_bmp.decoded-palette.rgb.bin",
+            "rgb_bytes": 48,
+            "rgb_sha256": "4c484aa56bf40bbd96bf171090b09100531cbaa44784495ddd08e5bda27c875f"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
+          "id": "rle4_odd_pixel_offset",
+          "type": "decode",
+          "format": "bmp",
+          "category": "rle4",
+          "description": "BI_RLE4 absolute-run padding is relative to an odd-offset pixel stream",
+          "asset": "rle4_odd_pixel_offset.bmp",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "39a7b1fbc8d09716958cd9ad55f72fb477e69c40d20afceabb357807d39fff03",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "BMP",
+          "ref_bit_depth": 4,
+          "ref_bit_depth_origin": "specification_reference",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "fd4f4975bf12c1586e4e190e7cedb76b32a52599975390644c584b5f4a5ef468",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_odd_pixel_offset_bmp.bin",
+          "ref_bytes": 256,
+          "ref_mode": "P",
+          "ref_size": [
+            16,
+            16
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_odd_pixel_offset_bmp.inspect-palette.rgb.bin",
+            "rgb_bytes": 48,
+            "rgb_sha256": "4c484aa56bf40bbd96bf171090b09100531cbaa44784495ddd08e5bda27c875f"
+          },
+          "decoded_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.bmp_rle4_odd_pixel_offset_bmp.decoded-palette.rgb.bin",
+            "rgb_bytes": 48,
+            "rgb_sha256": "4c484aa56bf40bbd96bf171090b09100531cbaa44784495ddd08e5bda27c875f"
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "bitfields.bmp",
           "category": "compression",
           "description": "BI_BITFIELDS (16/32 bit with masks)",
@@ -188386,16 +188554,35 @@
     }
   },
   "summary": {
-    "total_rows": 2231,
-    "decode_rows": 1751,
+    "total_rows": 2233,
+    "decode_rows": 1753,
     "encode_rows": 480,
     "formats": 8,
-    "assets_available": 1748,
-    "decode_active": 1751,
+    "assets_available": 1750,
+    "decode_active": 1753,
     "decode_planned": 0,
     "encode_not_wired": 32
   },
   "fault_contracts": [
+    {
+      "id": "bmp_palette_reservation_failure",
+      "type": "fault-contract",
+      "operation": "decode",
+      "format": "bmp",
+      "status": "active",
+      "requirements": [
+        "structured-diagnostics"
+      ],
+      "verification": "fault-contract",
+      "input": {
+        "source_case": "decode:bmp:rle4_odd_absolute_eol"
+      },
+      "fault": {
+        "point": "bmp.palette.output_reservation",
+        "contract": "decode_error_then_retry_succeeds"
+      },
+      "oracle_status": "not_applicable"
+    },
     {
       "id": "tiff_strip_assembly_reservation_failure",
       "type": "fault-contract",

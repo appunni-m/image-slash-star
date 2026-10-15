@@ -177,6 +177,14 @@ FAULT_CONTRACTS = {
         "point": "jpeg.baseline.huffman_table_slot_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "bmp_palette_reservation_failure": {
+        "format": "bmp",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:bmp:bmp_palette_reservation_failure",
+        "source_case": "decode:bmp:rle4_odd_absolute_eol",
+        "point": "bmp.palette.output_reservation",
+        "contract": "decode_error_then_retry_succeeds",
+    },
     "tiff_strip_assembly_reservation_failure": {
         "format": "tiff",
         "category": "structured-diagnostics",
