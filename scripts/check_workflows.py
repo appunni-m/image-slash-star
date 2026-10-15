@@ -2,18 +2,41 @@
 """Require immutable external actions and validate workflows with actionlint."""
 from __future__ import annotations
 
+import errno
 import hashlib
+import http.client
 import io
 from pathlib import Path
 import platform
 import re
+import socket
+import ssl
 import subprocess
 import sys
 import tarfile
+import time
+import urllib.error
 import urllib.request
 
 
 VERSION = "1.7.12"
+DOWNLOAD_ATTEMPTS = 3
+DOWNLOAD_RETRY_BACKOFF_SECONDS = 1
+TRANSIENT_HTTP_STATUS_CODES = frozenset({408, 425, 429, 500, 502, 503, 504})
+TRANSIENT_NETWORK_ERRNOS = frozenset(
+    {
+        errno.EAGAIN,
+        errno.ECONNABORTED,
+        errno.ECONNREFUSED,
+        errno.ECONNRESET,
+        errno.EHOSTUNREACH,
+        errno.ENETDOWN,
+        errno.ENETUNREACH,
+        errno.EPIPE,
+        errno.ETIMEDOUT,
+        socket.EAI_AGAIN,
+    }
+)
 # Official release checksums: https://github.com/rhysd/actionlint/releases/tag/v1.7.12
 ARCHIVES = {
     ("Darwin", "arm64"): ("darwin_arm64", "aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f"),
@@ -185,6 +208,54 @@ def binary_bytes(archive: bytes, checksum: str) -> bytes:
         return source.read()
 
 
+def is_transient_download_failure(error: BaseException) -> bool:
+    """Return whether a failed release download is likely to recover."""
+
+    if isinstance(error, urllib.error.HTTPError):
+        return error.code in TRANSIENT_HTTP_STATUS_CODES
+    if isinstance(error, urllib.error.URLError):
+        error = error.reason
+    if isinstance(
+        error,
+        (http.client.IncompleteRead, http.client.RemoteDisconnected, ssl.SSLEOFError),
+    ):
+        return True
+    if isinstance(error, ssl.SSLError):
+        return False
+    if isinstance(error, TimeoutError):
+        return True
+    return isinstance(error, OSError) and error.errno in TRANSIENT_NETWORK_ERRNOS
+
+
+def download_archive(url: str) -> bytes:
+    """Download a release archive, retrying only transient failures."""
+
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as response:
+                return response.read()
+        except (http.client.HTTPException, OSError) as error:
+            retryable = is_transient_download_failure(error)
+            if isinstance(error, urllib.error.HTTPError):
+                if error.fp is not None:
+                    error.close()
+                failure = f"HTTP {error.code}"
+            else:
+                failure = str(error)
+            if not retryable or attempt == DOWNLOAD_ATTEMPTS:
+                raise
+
+        delay = DOWNLOAD_RETRY_BACKOFF_SECONDS * (2 ** (attempt - 1))
+        print(
+            f"actionlint download attempt {attempt}/{DOWNLOAD_ATTEMPTS} failed "
+            f"({failure}); retrying in {delay}s",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
+
+    raise RuntimeError("actionlint download retry loop exited unexpectedly")
+
+
 def main() -> int:
     workflows = sorted((ROOT / ".github" / "workflows").glob("*.y*ml"))
     if not workflows:
@@ -206,8 +277,7 @@ def main() -> int:
         data = archive.read_bytes()
     else:
         url = f"https://github.com/rhysd/actionlint/releases/download/v{VERSION}/actionlint_{VERSION}_{suffix}.tar.gz"
-        with urllib.request.urlopen(url, timeout=60) as response:
-            data = response.read()
+        data = download_archive(url)
     executable = binary_bytes(data, checksum)
     archive.write_bytes(data)
     binary = directory / "actionlint"

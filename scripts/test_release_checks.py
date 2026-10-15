@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import contextlib
 import copy
+import errno
 import gzip
 import hashlib
 import io
 import json
 import os
 from pathlib import Path
+import ssl
 import sys
 import tempfile
 import subprocess
@@ -293,6 +295,127 @@ jobs:
             "release-coverage checkout must use the tag event commit",
             check_workflows.release_coverage_gate_violations(workflow),
         )
+
+
+class WorkflowDownloadTests(unittest.TestCase):
+    def test_only_tls_eof_is_retried(self) -> None:
+        self.assertTrue(
+            check_workflows.is_transient_download_failure(
+                ssl.SSLEOFError("unexpected end of file")
+            )
+        )
+        self.assertFalse(
+            check_workflows.is_transient_download_failure(
+                ssl.SSLCertVerificationError("certificate verification failed")
+            )
+        )
+
+    def test_download_retries_transient_transport_error_then_succeeds(self) -> None:
+        archive = b"checksum-verified-by-caller"
+        response = io.BytesIO(archive)
+        with (
+            patch.object(
+                check_workflows.urllib.request,
+                "urlopen",
+                side_effect=[
+                    check_workflows.urllib.error.URLError(
+                        ConnectionResetError(errno.ECONNRESET, "connection reset")
+                    ),
+                    check_workflows.urllib.error.URLError(
+                        ConnectionResetError(errno.ECONNRESET, "connection reset")
+                    ),
+                    response,
+                ],
+            ) as urlopen,
+            patch.object(check_workflows.time, "sleep") as sleep,
+        ):
+            downloaded = check_workflows.download_archive("https://example.test/archive")
+
+        self.assertEqual(downloaded, archive)
+        self.assertEqual(urlopen.call_count, 3)
+        self.assertEqual(
+            [call.args[0] for call in sleep.call_args_list],
+            [
+                check_workflows.DOWNLOAD_RETRY_BACKOFF_SECONDS,
+                2 * check_workflows.DOWNLOAD_RETRY_BACKOFF_SECONDS,
+            ],
+        )
+
+    def test_download_retries_transient_http_error_then_succeeds(self) -> None:
+        url = "https://example.test/archive"
+        error_body = io.BytesIO(b"temporary error response")
+        unavailable = check_workflows.urllib.error.HTTPError(
+            url, 503, "Service Unavailable", {}, error_body
+        )
+        archive = b"release archive"
+        with (
+            patch.object(
+                check_workflows.urllib.request,
+                "urlopen",
+                side_effect=[unavailable, io.BytesIO(archive)],
+            ) as urlopen,
+            patch.object(check_workflows.time, "sleep") as sleep,
+        ):
+            downloaded = check_workflows.download_archive(url)
+
+        self.assertEqual(downloaded, archive)
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertTrue(error_body.closed)
+        sleep.assert_called_once_with(check_workflows.DOWNLOAD_RETRY_BACKOFF_SECONDS)
+
+    def test_download_does_not_retry_permanent_http_error(self) -> None:
+        for status, reason in ((404, "Not Found"), (501, "Not Implemented")):
+            with self.subTest(status=status):
+                error_body = io.BytesIO(b"permanent error response")
+                error = check_workflows.urllib.error.HTTPError(
+                    "https://example.test/archive", status, reason, {}, error_body
+                )
+                with (
+                    patch.object(
+                        check_workflows.urllib.request, "urlopen", side_effect=error
+                    ) as urlopen,
+                    patch.object(check_workflows.time, "sleep") as sleep,
+                ):
+                    with self.assertRaises(check_workflows.urllib.error.HTTPError):
+                        check_workflows.download_archive(
+                            "https://example.test/archive"
+                        )
+
+                self.assertEqual(urlopen.call_count, 1)
+                self.assertTrue(error_body.closed)
+                sleep.assert_not_called()
+
+    def test_download_stops_after_the_configured_attempts(self) -> None:
+        with (
+            patch.object(check_workflows, "DOWNLOAD_ATTEMPTS", 2),
+            patch.object(
+                check_workflows.urllib.request,
+                "urlopen",
+                side_effect=check_workflows.urllib.error.URLError(
+                    TimeoutError("temporary failure")
+                ),
+            ) as urlopen,
+            patch.object(check_workflows.time, "sleep") as sleep,
+        ):
+            with self.assertRaises(check_workflows.urllib.error.URLError):
+                check_workflows.download_archive("https://example.test/archive")
+
+        self.assertEqual(urlopen.call_count, 2)
+        sleep.assert_called_once_with(check_workflows.DOWNLOAD_RETRY_BACKOFF_SECONDS)
+
+    def test_checksum_mismatch_still_rejects_downloaded_archive(self) -> None:
+        with patch.object(
+            check_workflows.urllib.request,
+            "urlopen",
+            return_value=io.BytesIO(b"untrusted archive"),
+        ) as urlopen:
+            downloaded = check_workflows.download_archive(
+                "https://example.test/archive"
+            )
+
+        with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+            check_workflows.binary_bytes(downloaded, "0" * 64)
+        urlopen.assert_called_once()
 
 
 class CoverageCliTests(unittest.TestCase):
