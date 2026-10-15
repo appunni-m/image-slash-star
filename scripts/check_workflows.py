@@ -244,6 +244,31 @@ def verify_release_coverage_gate(workflow: Path) -> bool:
     return False
 
 
+def verify_candidate_artifact_rerun_safety(contents: str) -> bool:
+    """Require CI's release candidate artifact to be replaceable on reruns."""
+
+    step_match = re.search(
+        r"(?ms)^      - name: Retain verified candidate bundle\s*$"
+        r"(?P<step>.*?)(?=^      - |\Z)",
+        contents,
+    )
+    step = step_match.group("step") if step_match is not None else ""
+    if (
+        re.search(
+            r"(?m)^          name:\s*image-slash-star-candidate\s*$",
+            step,
+        )
+        is None
+        or re.search(r"(?m)^          overwrite:\s*true\s*$", step) is None
+    ):
+        print(
+            "CI candidate artifact must keep its release name and overwrite prior uploads",
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
 def binary_bytes(archive: bytes, checksum: str) -> bytes:
     if hashlib.sha256(archive).hexdigest() != checksum:
         raise ValueError("actionlint archive checksum mismatch")
@@ -355,6 +380,11 @@ def main() -> int:
         return 1
     release_workflow = ROOT / ".github" / "workflows" / "release.yml"
     if not verify_release_coverage_gate(release_workflow):
+        return 1
+    ci_workflow = ROOT / ".github" / "workflows" / "ci.yml"
+    if not verify_candidate_artifact_rerun_safety(
+        ci_workflow.read_text(encoding="utf-8")
+    ):
         return 1
 
     target = (platform.system(), platform.machine())
