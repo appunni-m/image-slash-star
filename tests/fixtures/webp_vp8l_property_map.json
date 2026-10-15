@@ -10,9 +10,9 @@
     "inspector_path": "scripts/inspect_webp_vp8l_structure.py",
     "inspector_sha256": "224576dad5fbf1c337b38e79e880c0a5b02fd5e0a6cb5bcd1b0bb6fcb39ee21a",
     "manifest_path": "manifest.yaml",
-    "manifest_sha256": "361d70c7305cc44ff1bd7043033ddb773fb88cec4648ace39ad54309aba061da",
+    "manifest_sha256": "777950a9d1c93df54604e4ff09483fa9a8a66498699b35caad4c3b578b935626",
     "matrix_path": "tests/fixtures/coverage_matrix.json",
-    "matrix_sha256": "60ea5826a2791cf007d4740e7a197ddc78df27e252d3b6c7ec60698e7bbe9017"
+    "matrix_sha256": "952a1b3870eb174dbf678a1567baf7785324a0879f128a62e06982a1267c65dc"
   },
   "malformed_witnesses": [
     {
@@ -810,7 +810,7 @@
     },
     {
       "claim_boundary": "pillow_outer_result",
-      "gap": "The independent parser now proves the explicitly listed entropy-image dimensions (2\u00d71, 3\u00d73, and 24\u00d724) and their two-group forms; other dimensions and grouping patterns remain outside this witnessed scope.",
+      "gap": "The independent parser now proves the explicitly listed entropy-image dimensions (2×1, 3×3, and 24×24) and their two-group forms; other dimensions and grouping patterns remain outside this witnessed scope.",
       "id": "vp8l.entropy_image_dimensions",
       "internal_state_proven": true,
       "minimal_witnesses": [
@@ -910,7 +910,7 @@
     },
     {
       "claim_boundary": "pillow_outer_result",
-      "gap": "The independent parser now proves the listed successful plane-distance mappings, including clamp behavior (10\u21921), coordinate mapping (5\u219216 and 24\u21924), a full-width mapping (23\u2192256), and the direct-distance branch (152\u219232); malformed distance streams and other mapping entries remain outside this witnessed scope.",
+      "gap": "The independent parser now proves the listed successful plane-distance mappings, including clamp behavior (10→1), coordinate mapping (5→16 and 24→4), a full-width mapping (23→256), and the direct-distance branch (152→32); malformed distance streams and other mapping entries remain outside this witnessed scope.",
       "id": "vp8l.distance_mapping",
       "internal_state_proven": true,
       "minimal_witnesses": [

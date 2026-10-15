@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `361d70c7305cc44ff1bd7043033ddb773fb88cec4648ace39ad54309aba061da`; matrix `60ea5826a2791cf007d4740e7a197ddc78df27e252d3b6c7ec60698e7bbe9017`.
+- Current fixture integrity only: manifest `777950a9d1c93df54604e4ff09483fa9a8a66498699b35caad4c3b578b935626`; matrix `952a1b3870eb174dbf678a1567baf7785324a0879f128a62e06982a1267c65dc`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6872,8 +6872,8 @@ stream when pixels are loaded. Rust now preserves marker-only inspection and
 verification while returning a malformed decode error for the invalid
 frame-order scan.
 
-The current fixture matrix contains 2,240 total rows: 1,760 decode /
-inspect / verify rows and 480 encode rows. Of those, 1,760 decode rows and
+The current fixture matrix contains 2,241 total rows: 1,761 decode /
+inspect / verify rows and 480 encode rows. Of those, 1,761 decode rows and
 448 encode rows are active.
 
 The selected control, malformed case, and multi-scan control passed 3/3; the
@@ -6920,6 +6920,29 @@ input remains ordinary Pillow parity evidence; it is not a target-only fault
 contract. Reports:
 `target/release-evidence/coverage-jpeg-direct-safe-cleanup-current.json` and
 `target/release-evidence/coverage-jpeg-cmyk-order-regression-current.json`.
+
+### JPEG active chroma AC Huffman table parity — 2026-10-16
+
+The public row `decode:jpeg:baseline_444_custom_ac_chroma_values` changes two
+unused codeword symbols in AC DHT table 1, which the first scan selects for
+both chroma components. The generated input is pinned to SHA-256
+`157f83e6e9a3f0d41dde66adf35dc156d1efaa1acfd77c64a83c782214059799`;
+Pillow 12.2.0 returns the baseline 128x128 RGB pixels with SHA-256
+`2288f8f3cb6dafaa523538760165f2a4634b9a269e03175b8fbc284158dbb94a`.
+This is valid-input public parity, not a target-only fault contract. The
+selected matrix test passed 1/1.
+
+Coverage MCP's selected-row comparison with the `subsampling_444` control
+observed two additional false-arm coordinates in
+`standard_huff_table` (`huffman.rs:95`) and
+`standard_ac_general_pair_table` (`huffman.rs:428`). The focused report is
+`target/release-evidence/coverage-jpeg-active-ac-chroma.json`; the control is
+`target/release-evidence/coverage-jpeg-baseline444-control.json`. The reports
+lack source/build receipts and test attribution, so this is limited coordinate
+evidence. Comparison with the saved full baseline is incomparable because its
+branch inventory differs (31,268 versus 31,276 outcomes). No aggregate
+coverage gain or full-suite result is claimed, and no full coverage campaign
+was run.
 
 ### Pillow-tolerated zTXt without a keyword separator — 2026-10-16
 

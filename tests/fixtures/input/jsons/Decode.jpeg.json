@@ -169,6 +169,58 @@
       ]
     },
     {
+      "id": "baseline_444_custom_ac_chroma_values",
+      "asset": "baseline_444_custom_ac_chroma_values.jpg",
+      "asset_sha256": "157f83e6e9a3f0d41dde66adf35dc156d1efaa1acfd77c64a83c782214059799",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/jpeg/baseline_444_custom_ac_chroma_values.jpg",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "baseline_444_single_scan_trailing_dqt",
       "asset": "baseline_444_single_scan_trailing_dqt.jpg",
       "asset_sha256": "1b4519e48e1ce711cd1cbb44c3173ef3c97f222b8aa1686f9437df5e5f906372",

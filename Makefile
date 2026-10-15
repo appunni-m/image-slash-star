@@ -66,6 +66,7 @@ verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/generate_png_itxt_missing_keyword_separator.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
+	$(PYTHON) scripts/generate_jpeg_custom_active_ac_chroma_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check
 	$(PYTHON) scripts/verify_coverage_origins.py
 	$(PYTHON) scripts/verify_diagnostic_provenance.py

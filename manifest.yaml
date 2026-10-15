@@ -562,6 +562,10 @@ formats:
       description: Baseline 4:4:4 JPEG defines an unused DC DHT with standard chroma code counts and a changed symbol order
       test_assets:
       - baseline_444_unused_custom_dc_chroma_table.jpg
+    - id: baseline_444_custom_ac_chroma_values
+      description: Baseline 4:4:4 JPEG changes two unused symbols in active AC table 1 selected for both chroma components
+      test_assets:
+      - baseline_444_custom_ac_chroma_values.jpg
     - id: baseline_444_single_scan_trailing_dqt
       description: Baseline 4:4:4 JPEG redefines a quantization table after its only entropy scan
       test_assets:

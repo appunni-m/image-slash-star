@@ -2939,6 +2939,12 @@ def gen_jpeg():
     d.joinpath("baseline_444_unused_custom_dc_chroma_table.jpg").write_bytes(
         custom_dc_chroma
     )
+    from generate_jpeg_custom_active_ac_chroma_fixture import (
+        generate_fixture as generate_custom_active_ac_chroma,
+    )
+    d.joinpath("baseline_444_custom_ac_chroma_values.jpg").write_bytes(
+        generate_custom_active_ac_chroma()
+    )
     print(f"  JPEG: {len(list(d.glob('*.jpg')))} files")
 
 
