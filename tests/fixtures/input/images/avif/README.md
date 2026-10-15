@@ -1162,6 +1162,20 @@ dav1d 1.5.3 with 118 entropy operations, exact Y/U/V planes, and exact Pillow
 RGB output. The fixture SHA-256 is
 `7251e37d120b6cd170d0f2de705b2e56cccda3dfbd3ea4384369132bd0ea0f3f`.
 
+The `coverage_h16x8_following_chroma_dct_dct_01.avif` fixture promotes
+candidate F03/N09 (seed 328209) from the input-only search in
+`scripts/explore_avif_horizontal16x8_following.py`. The focused generator
+`scripts/generate_test_assets.py --avif-h16x8-following-chroma` uses Pillow
+12.2.0, libavif 1.4.1, dav1d 1.5.3, and AOM 3.13.2 with quality 99, speed 0,
+one thread, and 4:2:0 subsampling. The 32x8 frame has AV1 base qindex 4 and a
+following Horizontal16x8 pair: both leaves use unsplit TX16x8 DCT_DCT luma;
+the left U/V transforms are skipped, while the right U/V TX8x4 DCT_DCT
+transforms are coded with EOB values 25 and 30. Its exact Pillow RGB output is
+stored in the decode reference, and the fixture SHA-256 is
+`09f28c50a75e29b87a7862aa3d74431707622b9bd5c597e19b05aa20df941f85`; the RGB
+SHA-256 is
+`58932efed7fe326d1de67786f8d595ec317ee217ed23a107b670a74fe1dd6892`.
+
 ## AVIF sample timing mutations
 
 The `animated_stts_*` cases are deterministic mutations of the pinned

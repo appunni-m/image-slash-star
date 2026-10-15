@@ -70,6 +70,129 @@ def pattern_img(mode="RGB", size=SIZE):
     return base.convert(mode)
 
 
+def generate_avif_h16x8_following_chroma_fixture(output_dir=None):
+    """Write the pinned qindex-4 following Horizontal16x8 chroma fixture."""
+
+    from PIL import _avif, features
+
+    if PILLOW_VERSION != "12.2.0":
+        raise RuntimeError(f"Pillow 12.2.0 is required, found {PILLOW_VERSION}")
+    if features.version("avif") != "1.4.1":
+        raise RuntimeError("H16x8 AVIF fixture requires libavif 1.4.1")
+    codec_versions = _avif.codec_versions()
+    for expected_codec in ("dav1d [dec]:1.5.3", "aom [enc]:3.13.2"):
+        if expected_codec not in codec_versions:
+            raise RuntimeError(
+                f"H16x8 AVIF fixture requires {expected_codec}: {codec_versions}"
+            )
+
+    width, height = 32, 8
+    luma_amplitude = 96
+    chroma_amplitude = 76
+
+    def clamp_channel(value):
+        return max(0, min(255, int(value)))
+
+    def pixel(x, y):
+        side = -1 if x < width // 2 else 1
+        luma = clamp_channel(
+            128 + side * (luma_amplitude // 2) + (x % 4 - 2) * 3
+        )
+        if x < width // 2:
+            u = v = 128
+        else:
+            chroma_x = x // 2 - width // 4
+            chroma_y = y // 2
+            u = clamp_channel(128 + (chroma_x - 3) * (chroma_amplitude // 3))
+            v = clamp_channel(128 + (chroma_y - 1) * (chroma_amplitude // 2))
+
+        du = u - 128
+        dv = v - 128
+        return (
+            clamp_channel(luma + (358 * dv + 128) // 256),
+            clamp_channel(luma - (88 * du + 183 * dv + 128) // 256),
+            clamp_channel(luma + (453 * du + 128) // 256),
+        )
+
+    image_bytes = bytes(
+        component
+        for y in range(height)
+        for x in range(width)
+        for component in pixel(x, y)
+    )
+    image = Image.frombytes("RGB", (width, height), image_bytes)
+    advanced = {
+        "min-partition-size": "8",
+        "max-partition-size": "16",
+        "use-intra-dct-only": "0",
+        "enable-filter-intra": "0",
+        "enable-intra-edge-filter": "0",
+        "enable-smooth-intra": "0",
+        "enable-paeth-intra": "0",
+        "enable-directional-intra": "0",
+        "enable-cfl-intra": "0",
+        "enable-cdef": "0",
+        "enable-restoration": "0",
+        "loopfilter-control": "0",
+        "aq-mode": "0",
+        "deltaq-mode": "0",
+    }
+
+    def encode():
+        output = BytesIO()
+        image.save(
+            output,
+            format="AVIF",
+            quality=99,
+            speed=0,
+            max_threads=1,
+            subsampling="4:2:0",
+            autotiling=False,
+            advanced=advanced,
+        )
+        return output.getvalue()
+
+    encoded = encode()
+    if encoded != encode():
+        raise RuntimeError("H16x8 AVIF fixture encoding is not deterministic")
+    if hashlib.sha256(encoded).hexdigest() != (
+        "09f28c50a75e29b87a7862aa3d74431707622b9bd5c597e19b05aa20df941f85"
+    ):
+        raise RuntimeError("H16x8 AVIF fixture differs from its pinned hash")
+
+    with Image.open(BytesIO(encoded)) as decoded:
+        decoded.load()
+        if decoded.mode != "RGB" or decoded.size != (width, height):
+            raise RuntimeError("H16x8 AVIF fixture has an unexpected Pillow output")
+        if hashlib.sha256(decoded.tobytes()).hexdigest() != (
+            "58932efed7fe326d1de67786f8d595ec317ee217ed23a107b670a74fe1dd6892"
+        ):
+            raise RuntimeError(
+                "H16x8 AVIF fixture Pillow pixels differ from the pinned reference"
+            )
+
+    from inspect_av1_obus import inspect as inspect_av1_obus
+
+    with tempfile.TemporaryDirectory(prefix="avif-h16x8-qbase4-") as temp_dir:
+        temporary_fixture = Path(temp_dir) / "candidate.avif"
+        temporary_fixture.write_bytes(encoded)
+        parsed = inspect_av1_obus(temporary_fixture)
+    frame_headers = [
+        obu["frame_header"]
+        for sample in parsed["samples"]
+        for obu in sample["obus"]
+        if "frame_header" in obu
+    ]
+    if len(frame_headers) != 1 or frame_headers[0]["quantization"]["base"] != 4:
+        raise RuntimeError("H16x8 AVIF fixture no longer has frame-header qbase 4")
+
+    destination = Path(output_dir) if output_dir is not None else OUT / "avif"
+    destination.mkdir(parents=True, exist_ok=True)
+    fixture = destination / "coverage_h16x8_following_chroma_dct_dct_01.avif"
+    fixture.write_bytes(encoded)
+    return fixture
+
+
 def corrupt_png_crc(src, dst):
     data = bytearray(src.read_bytes())
     # Corrupt the critical IHDR CRC. Pillow is allowed to ignore ancillary and
@@ -14214,6 +14337,8 @@ def gen_avif():
         speed=0,
     )
 
+    generate_avif_h16x8_following_chroma_fixture(d)
+
     def cfl_signal(family, index, x, y):
         """Return the deterministic origin Square16 CFL search field."""
 
@@ -18577,12 +18702,26 @@ def main():
         action="store_true",
         help="generate only the AVIF iinf zero-count parity input",
     )
+    parser.add_argument(
+        "--avif-h16x8-following-chroma",
+        action="store_true",
+        help="generate only the qindex-4 following Horizontal16x8 chroma fixture",
+    )
     args = parser.parse_args()
-    if args.avif_iinf_entry_count_zero:
+    selected_avif_fixture = (
+        args.avif_iinf_entry_count_zero or args.avif_h16x8_following_chroma
+    )
+    if selected_avif_fixture:
         if args.format is not None:
-            parser.error("--avif-iinf-entry-count-zero cannot be combined with --format")
-        gen_avif_iinf_entry_count_zero()
-        print("Generated AVIF iinf zero-count parity input")
+            parser.error("focused AVIF fixture generation cannot be combined with --format")
+        if args.avif_iinf_entry_count_zero and args.avif_h16x8_following_chroma:
+            parser.error("focused AVIF fixture options cannot be combined")
+        if args.avif_iinf_entry_count_zero:
+            gen_avif_iinf_entry_count_zero()
+            print("Generated AVIF iinf zero-count parity input")
+        else:
+            fixture = generate_avif_h16x8_following_chroma_fixture()
+            print(f"Generated AVIF H16x8 following-chroma fixture: {fixture}")
         return
     selected = [args.format] if args.format else generators
     for format_name in selected:

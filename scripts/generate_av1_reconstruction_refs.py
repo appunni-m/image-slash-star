@@ -57,7 +57,10 @@ H16X8_ORIGIN_TARGET_FIXTURES = frozenset(
     {"coverage_h16x8_origin_dct_dct_01.avif"}
 )
 H16X8_FOLLOWING_TARGET_FIXTURES = frozenset(
-    {"coverage_h16x8_following_dct_dct_01.avif"}
+    {
+        "coverage_h16x8_following_dct_dct_01.avif",
+        "coverage_h16x8_following_chroma_dct_dct_01.avif",
+    }
 )
 H16X4_FOLLOWING_TARGET_FIXTURES = frozenset(
     {"coverage_h16x4_following_h_dct_01.avif"}
@@ -1026,6 +1029,11 @@ EXPECTED_FIXTURES = {
     "coverage_h16x8_following_dct_dct_01.avif": {
         "file_sha256": "e60c2fd265b7e59fa61e4dc712e168f38707cc775b4bc2f09cbdbfd9c74b8695",
         "rgb_sha256": "f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f",
+        "size": [32, 8],
+    },
+    "coverage_h16x8_following_chroma_dct_dct_01.avif": {
+        "file_sha256": "09f28c50a75e29b87a7862aa3d74431707622b9bd5c597e19b05aa20df941f85",
+        "rgb_sha256": "58932efed7fe326d1de67786f8d595ec317ee217ed23a107b670a74fe1dd6892",
         "size": [32, 8],
     },
     "coverage_r32x32_following_01.avif": {
@@ -2157,6 +2165,26 @@ def portable_color_reference(path: Path) -> dict[str, object]:
     }
 
 
+def frame_header_qbase_reference(path: Path) -> int:
+    """Read the coded frame-header base qindex from AV1 syntax."""
+
+    report = inspect_av1(path)
+    samples = report.get("samples", [])
+    if len(samples) != 1:
+        raise RuntimeError(f"{path.name} must contain one AV1 color sample")
+    frame_headers = [
+        obu["frame_header"]
+        for obu in samples[0]["obus"]
+        if "frame_header" in obu
+    ]
+    if len(frame_headers) != 1 or frame_headers[0].get("show_existing_frame"):
+        raise RuntimeError(f"{path.name} must contain one coded AV1 frame header")
+    quantization = frame_headers[0].get("quantization")
+    if not isinstance(quantization, dict) or "base" not in quantization:
+        raise RuntimeError(f"{path.name} frame header has no base qindex")
+    return int(quantization["base"])
+
+
 def decode_fixture(
     executable: Path,
     env: dict[str, str],
@@ -2234,7 +2262,7 @@ def decode_fixture(
             }
         )
     color_item = container["items"]["color"][0]
-    return {
+    case = {
         "fixture": path.name,
         "fixture_sha256": sha256(file_bytes),
         "encoded_item": {
@@ -2261,6 +2289,9 @@ def decode_fixture(
         "dav1d_debug_log": log,
         "decoded_planes": planes,
     }
+    if path.name == "coverage_h16x8_following_chroma_dct_dct_01.avif":
+        case["frame_header_qbase"] = frame_header_qbase_reference(path)
+    return case
 
 
 def generate(

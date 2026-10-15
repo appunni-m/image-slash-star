@@ -2006,6 +2006,7 @@ struct Av1ReconstructionOracle {
 #[derive(Debug)]
 struct Av1ReconstructionCase {
     fixture: String,
+    frame_header_qbase: Option<u32>,
     portable_color: Av1PortableColor,
     pillow: Av1PillowOutput,
     partition_blocks: Vec<Av1PartitionBlock>,
@@ -2369,6 +2370,7 @@ json_object!(Av1ReconstructionOracle {
 #[cfg(coverage)]
 json_object!(Av1ReconstructionCase {
     fixture,
+    frame_header_qbase,
     portable_color,
     pillow,
     partition_blocks,
@@ -8384,7 +8386,7 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
          not a public image-processing API"
     );
     assert_eq!(expected.oracle.pillow_libyuv, 1922);
-    assert_eq!(expected.cases.len(), 273);
+    assert_eq!(expected.cases.len(), 274);
     for (accepted, extension) in [
         ("partitioned_12x4_a.avif", "partitioned_16x4_a.avif"),
         (
@@ -8494,6 +8496,13 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
             ),
             "AV1 portable color state case {case_index}"
         );
+        if case.fixture == "coverage_h16x8_following_chroma_dct_dct_01.avif" {
+            assert_eq!(
+                case.frame_header_qbase,
+                Some(4),
+                "AV1 following Horizontal16x8 chroma witness frame-header qbase"
+            );
+        }
         if let Some(expectation) = I444_SQUARE8_EXPECTATIONS
             .iter()
             .find(|expectation| expectation.fixture == case.fixture)
@@ -8835,6 +8844,40 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     },
                 ],
                 "AV1 following Horizontal16x8 DCT-DCT witness partition topology"
+            );
+        } else if case.fixture == "coverage_h16x8_following_chroma_dct_dct_01.avif" {
+            assert_eq!(
+                case.partition_blocks,
+                vec![
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 2,
+                        context: 0,
+                        partition: 3,
+                        range: 38_416,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 0,
+                        y: 0,
+                        level: 3,
+                        context: 0,
+                        partition: 1,
+                        range: 54_924,
+                    },
+                    Av1PartitionBlock {
+                        poc: 0,
+                        x: 4,
+                        y: 0,
+                        level: 3,
+                        context: 2,
+                        partition: 1,
+                        range: 63_936,
+                    },
+                ],
+                "AV1 following Horizontal16x8 chroma witness partition topology"
             );
         } else if case.fixture == "coverage_square16_chroma_smooth_horizontal_01.avif" {
             assert_eq!(
@@ -11127,6 +11170,48 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                     "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=54268 [x=0,cbx4=2]",
                 ],
                 "AV1 following Horizontal16x8 DCT-DCT witness leaf states"
+            );
+        }
+        if case.fixture == "coverage_h16x8_following_chroma_dct_dct_01.avif" {
+            assert_eq!(
+                case.entropy_operations.len(),
+                627,
+                "AV1 following Horizontal16x8 chroma witness entropy operation count"
+            );
+            let debug_lines = case
+                .decoder_events
+                .iter()
+                .filter_map(|event| event.as_object()?.get("line")?.as_str())
+                .filter(|line| {
+                    line.starts_with("Post-skip[")
+                        || line.starts_with("Post-cdef_idx[")
+                        || line.starts_with("Post-ymode[")
+                        || line.starts_with("Post-uvmode[")
+                        || line.starts_with("Post-tx[")
+                        || line.starts_with("Post-y-cf-blk[")
+                        || line.starts_with("Post-uv-cf-blk[")
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                debug_lines,
+                vec![
+                    "Post-skip[0]: r=53101",
+                    "Post-cdef_idx[0]: r=53101",
+                    "Post-ymode[0]: r=50630",
+                    "Post-uvmode[0]: r=64808",
+                    "Post-tx[8]: r=64808",
+                    "Post-y-cf-blk[tx=8,txtp=0,eob=99]: r=35080",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=-1]: r=58506 [x=0,cbx4=0]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=-1]: r=49252 [x=0,cbx4=0]",
+                    "Post-skip[0]: r=61940",
+                    "Post-ymode[0]: r=61124",
+                    "Post-uvmode[0]: r=41700",
+                    "Post-tx[8]: r=41700",
+                    "Post-y-cf-blk[tx=8,txtp=0,eob=112]: r=59144",
+                    "Post-uv-cf-blk[pl=0,tx=6,txtp=0,eob=25]: r=39432 [x=0,cbx4=2]",
+                    "Post-uv-cf-blk[pl=1,tx=6,txtp=0,eob=30]: r=41992 [x=0,cbx4=2]",
+                ],
+                "AV1 following Horizontal16x8 chroma witness leaf states"
             );
         }
         if case.fixture == "portable_lossy_420_q99_luma_eob_bin2_eob3.avif" {
@@ -14229,6 +14314,9 @@ fn test_av1_reconstruction_matches_pinned_dav1d_fixture() {
                 }
                 "coverage_h16x8_following_dct_dct_01.avif" => {
                     "f9ad4c74507066cd4e1096db30c5a90921ac76b6215d17ea752ccf0ce7e3833f"
+                }
+                "coverage_h16x8_following_chroma_dct_dct_01.avif" => {
+                    "58932efed7fe326d1de67786f8d595ec317ee217ed23a107b670a74fe1dd6892"
                 }
                 "coverage_r32x32_following_01.avif" => {
                     "da5131edb6e36e25f3604f7ff5eda45b4c796dcf4a06f2a4807cc9948e0827e7"

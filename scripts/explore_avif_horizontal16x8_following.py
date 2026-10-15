@@ -2,14 +2,15 @@
 """Search a bounded corpus for a following AV1 Horizontal16x8 leaf.
 
 The campaign creates one hundred deterministic 32x8 RGB candidates in ten
-families.  Each candidate is encoded twice through the pinned Pillow AVIF
+families. Each candidate is encoded twice through the pinned Pillow AVIF
 oracle and the extracted color item is decoded twice through the independent
-scalar dav1d diagnostic build.  A candidate qualifies only when the trace
-contains a root PARTITION_SPLIT with two level-3 top-row PARTITION_HORZ
-children (the two 16x8 leaves), both leaves use the bounded unsplit
-TX16x8/DCT_DCT plus skipped TX8x4 4:2:0 sentence, and the right-hand leaf has
-a non-empty luma residual.  The report records every candidate and rejection
-reason.  It never invokes repository Rust code.
+scalar dav1d diagnostic build. A candidate qualifies only when the parsed AV1
+frame header has base qindex 4, the trace contains a root PARTITION_SPLIT with
+two level-3 top-row PARTITION_HORZ children (the two 16x8 leaves), and both
+leaves use the bounded unsplit TX16x8/DCT_DCT sentence. The left leaf has
+skipped TX8x4 4:2:0 chroma, while the following right leaf has coded U and V
+TX8x4 blocks and a non-empty luma residual. The report records every
+candidate and rejection reason. It never invokes repository Rust code.
 """
 
 from __future__ import annotations
@@ -34,12 +35,13 @@ from generate_av1_reconstruction_refs import (
     run,
     verify_source,
 )
+from inspect_av1_obus import inspect as inspect_av1_obus
 
 
 SIZE = (32, 8)
 SUBSAMPLING = "4:2:0"
 EXPECTED_YUV_BYTES = SIZE[0] * SIZE[1] + 2 * (SIZE[0] // 2) * (SIZE[1] // 2)
-QUALITIES = (36, 44, 52, 60, 68, 76, 84, 90, 94, 98)
+QUALITIES = (36, 44, 52, 60, 68, 76, 84, 90, 94, 99)
 AMPLITUDES = (24, 32, 40, 48, 56, 64, 72, 80, 88, 96)
 FAMILY_NAMES = (
     "F01_vertical_checker",
@@ -103,6 +105,45 @@ def clamp(value: int) -> int:
     return max(0, min(255, value))
 
 
+def yuv_to_rgb(y: int, u: int, v: int) -> tuple[int, int, int]:
+    """Convert bounded full-range YUV samples to RGB for synthetic inputs."""
+
+    du = u - 128
+    dv = v - 128
+    return (
+        clamp(y + (358 * dv + 128) // 256),
+        clamp(y - (88 * du + 183 * dv + 128) // 256),
+        clamp(y + (453 * du + 128) // 256),
+    )
+
+
+def av1_frame_reference(path: Path) -> dict[str, object]:
+    """Read base qindex from the encoded AV1 frame-header syntax."""
+
+    report = inspect_av1_obus(path)
+    color_samples = [
+        sample for sample in report["samples"] if sample["role"] == "item_color"
+    ]
+    if len(color_samples) != 1:
+        raise RuntimeError(f"expected one AV1 color sample, found {len(color_samples)}")
+    frame_headers = [
+        obu["frame_header"]
+        for obu in color_samples[0]["obus"]
+        if "frame_header" in obu
+    ]
+    if len(frame_headers) != 1 or frame_headers[0].get("show_existing_frame"):
+        raise RuntimeError("expected one non-show-existing AV1 frame header")
+    quantization = frame_headers[0].get("quantization")
+    if not isinstance(quantization, dict) or "base" not in quantization:
+        raise RuntimeError("AV1 frame header is missing quantization base qindex")
+    return {
+        "qbase": int(quantization["base"]),
+        "delta_q_present": bool(
+            frame_headers[0].get("delta_q", {}).get("present", False)
+        ),
+    }
+
+
 def candidates() -> list[dict[str, object]]:
     """Return ten deterministic families with ten candidates each."""
 
@@ -112,6 +153,7 @@ def candidates() -> list[dict[str, object]]:
             seed = 328_000 + 100 * family + index
             state = random.Random(seed)
             amplitude = AMPLITUDES[index]
+            chroma_amplitude = 40 + index * 4
             column_prbs = [state.choice((-1, 1)) for _ in range(SIZE[0])]
             row_prbs = [state.choice((-1, 1)) for _ in range(SIZE[1])]
             impulses = {
@@ -145,8 +187,31 @@ def candidates() -> list[dict[str, object]]:
                         signal = state.randrange(-amplitude, amplitude + 1)
                     else:
                         signal = side * (amplitude // 2) + (y - 3) * 5
-                    base = 128 + signal
-                    pixels.extend((clamp(base),) * 3)
+                    luma = clamp(128 + signal)
+                    if x < SIZE[0] // 2:
+                        u = v = 128
+                    else:
+                        chroma_x = x // 2 - SIZE[0] // 4
+                        chroma_y = y // 2
+                        if family % 4 == 0:
+                            u_signal = chroma_amplitude * (1 if chroma_x % 2 else -1)
+                            v_signal = chroma_amplitude * (1 if chroma_y % 2 else -1)
+                        elif family % 4 == 1:
+                            u_signal = chroma_amplitude * (
+                                1 if (chroma_x + chroma_y) % 2 else -1
+                            )
+                            v_signal = chroma_amplitude * (
+                                1 if chroma_x < 4 else -1
+                            )
+                        elif family % 4 == 2:
+                            u_signal = (chroma_x - 3) * (chroma_amplitude // 3)
+                            v_signal = (chroma_y - 1) * (chroma_amplitude // 2)
+                        else:
+                            u_signal = chroma_amplitude * column_prbs[x]
+                            v_signal = chroma_amplitude * row_prbs[y]
+                        u = clamp(128 + u_signal)
+                        v = clamp(128 + v_signal)
+                    pixels.extend(yuv_to_rgb(luma, u, v))
             result.append(
                 {
                     "id": f"h16x8-following-f{family + 1:02d}-n{index:02d}",
@@ -156,6 +221,7 @@ def candidates() -> list[dict[str, object]]:
                     "seed": seed,
                     "quality": QUALITIES[index],
                     "amplitude": amplitude,
+                    "chroma_amplitude": chroma_amplitude,
                     "speed": 0,
                     "pixels": bytes(pixels),
                 }
@@ -272,7 +338,9 @@ def parse_group(group: list[str]) -> dict[str, object]:
     }
 
 
-def leaf_predicates(leaf: dict[str, object]) -> dict[str, bool]:
+def leaf_predicates(
+    leaf: dict[str, object], *, chroma_skipped: bool
+) -> dict[str, bool]:
     """Return the exact bounded syntax predicates for one leaf."""
 
     luma = leaf["luma_payloads"]
@@ -286,19 +354,25 @@ def leaf_predicates(leaf: dict[str, object]) -> dict[str, bool]:
         "one_luma_tx16x8": (
             len(luma) == 1 and luma[0]["tx"] == 8 and luma[0]["txtp"] == 0
         ),
-        "two_skipped_tx8x4_dc_chroma": (
+        "two_tx8x4_dc_chroma_planes": (
             len(chroma) == 2
             and [item["plane"] for item in chroma] == [0, 1]
-            and all(
-                item["tx"] == 6 and item["txtp"] == 0 and item["eob"] == -1
-                for item in chroma
-            )
+            and all(item["tx"] == 6 and item["txtp"] == 0 for item in chroma)
+        ),
+        "chroma_skip_state_matches_target": len(chroma) == 2
+        and all(
+            item["eob"] == -1 if chroma_skipped else item["eob"] >= 0
+            for item in chroma
         ),
     }
 
 
 def classify(
-    blocks: list[dict[str, int]], groups: list[list[str]], yuv: bytes, color: dict[str, object]
+    blocks: list[dict[str, int]],
+    groups: list[list[str]],
+    yuv: bytes,
+    color: dict[str, object],
+    frame: dict[str, object],
 ) -> dict[str, object]:
     """Apply exact frame, topology, and target-leaf predicates."""
 
@@ -321,8 +395,8 @@ def classify(
     ]
     left = parsed[0] if len(parsed) == 2 else {}
     right = parsed[1] if len(parsed) == 2 else {}
-    left_predicates = leaf_predicates(left) if left else {}
-    right_predicates = leaf_predicates(right) if right else {}
+    left_predicates = leaf_predicates(left, chroma_skipped=True) if left else {}
+    right_predicates = leaf_predicates(right, chroma_skipped=False) if right else {}
     common = {
         "frame_is_32x8_8bit_420": (
             color.get("width") == SIZE[0]
@@ -332,6 +406,7 @@ def classify(
             and color.get("subsampling_x") is True
             and color.get("subsampling_y") is True
         ),
+        "frame_header_qbase_is_4": frame.get("qbase") == 4,
         "root_partition_split": root is not None,
         "root_has_two_horizontal_children": sorted(
             (block["x"], block["context"]) for block in child_blocks
@@ -430,6 +505,7 @@ def decode_candidate(
         pillow_rgb_second = decoded.convert("RGB").tobytes()
     if pillow_rgb != pillow_rgb_second:
         raise RuntimeError(f"nondeterministic Pillow RGB decode for {candidate['id']}")
+    frame = av1_frame_reference(path)
     luma_bytes = SIZE[0] * SIZE[1]
     chroma_bytes = (SIZE[0] // 2) * (SIZE[1] // 2)
     return {
@@ -440,6 +516,7 @@ def decode_candidate(
         "seed": candidate["seed"],
         "quality": quality,
         "amplitude": candidate["amplitude"],
+        "chroma_amplitude": candidate["chroma_amplitude"],
         "input_rgb_sha256": sha256(pixels),
         "encoded_file_sha256": sha256(encoded),
         "encoded_file_second_sha256": sha256(encoded_second),
@@ -448,6 +525,7 @@ def decode_candidate(
         "encoded_item_length": len(item),
         "pillow_rgb_sha256": sha256(pillow_rgb),
         "pillow_rgb_second_sha256": sha256(pillow_rgb_second),
+        "av1_frame_header": frame,
         "dav1d_trace_sha256": sha256(trace_a.encode()),
         "dav1d_trace_second_sha256": sha256(trace_b.encode()),
         "decoded_yuv_sha256": sha256(yuv_a),
@@ -457,7 +535,7 @@ def decode_candidate(
         "entropy_operation_count": entropy_count,
         "partition_blocks": blocks,
         "repository_rust_invoked": False,
-        **classify(blocks, groups, yuv_a, color),
+        **classify(blocks, groups, yuv_a, color, frame),
     }
 
 
@@ -473,6 +551,11 @@ def main() -> None:
     parser.add_argument("--python-path", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--retain-dir", type=Path)
+    parser.add_argument(
+        "--candidate-id",
+        action="append",
+        help="run only this deterministic candidate ID (may be repeated)",
+    )
     args = parser.parse_args()
 
     if features.version("avif") != "1.4.1":
@@ -502,9 +585,17 @@ def main() -> None:
         version = (version_result.stdout + version_result.stderr).strip()
         if not version.startswith("1.5.3-0-gb546257"):
             raise RuntimeError(f"unexpected dav1d executable version: {version}")
+        selected = candidates()
+        if args.candidate_id:
+            requested = set(args.candidate_id)
+            known = {str(candidate["id"]) for candidate in selected}
+            missing = requested - known
+            if missing:
+                raise ValueError(f"unknown candidate IDs: {sorted(missing)}")
+            selected = [candidate for candidate in selected if candidate["id"] in requested]
         reports = [
             decode_candidate(executable, environment, work, candidate, args.retain_dir)
-            for candidate in candidates()
+            for candidate in selected
         ]
 
     common_reasons = (
@@ -512,7 +603,10 @@ def main() -> None:
         "root_partition_split",
         "root_has_two_horizontal_children",
         "two_leaf_groups",
+        "frame_header_qbase_is_4",
         "both_leaves_bounded",
+        "left_chroma_skip_state_matches_target",
+        "right_chroma_skip_state_matches_target",
         "right_luma_nonempty",
         "complete_yuv_output",
     )
@@ -530,6 +624,10 @@ def main() -> None:
             "subsampling": SUBSAMPLING,
             "quality_by_candidate_index": list(QUALITIES),
             "amplitude_by_candidate_index": list(AMPLITUDES),
+            "chroma_input": (
+                "left half is neutral U=V=128; right-half U and V vary by "
+                "candidate family over 4:2:0 chroma coordinates before RGB conversion"
+            ),
             "speed": 0,
             "max_threads": 1,
             "autotiling": False,
@@ -539,14 +637,15 @@ def main() -> None:
             "input_only": True,
             "repository_rust_invoked": False,
             "candidate_count": len(reports),
+            "candidate_filter": args.candidate_id,
             "family_count": len(FAMILY_NAMES),
             "candidates_per_family": 10,
             "target_id": "following_horizontal16x8_dct_dct",
             "target": (
-                "32x8 4:2:0 root PARTITION_SPLIT with two level-3 top-row "
-                "PARTITION_HORZ Horizontal16x8 leaves; both unsplit TX16x8 "
-                "DCT_DCT luma and skipped TX8x4 U/V chroma, right luma "
-                "non-empty"
+                "frame-header qbase=4; 32x8 4:2:0 root PARTITION_SPLIT with "
+                "two level-3 top-row PARTITION_HORZ Horizontal16x8 leaves; "
+                "both unsplit TX16x8 DCT_DCT luma; left TX8x4 U/V skipped; "
+                "right TX8x4 U/V coded and luma non-empty"
             ),
             "families": list(FAMILY_NAMES),
         },
