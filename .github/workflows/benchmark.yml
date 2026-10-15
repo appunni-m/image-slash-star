@@ -52,7 +52,7 @@ jobs:
         with:
           name: benchmark-${{ github.run_id }}
           path: target/benchmarks/jpeg/
-          if-no-files-found: error
+          if-no-files-found: warn
 
   x86-simd:
     name: Paired x86 SSE2 and AVX2 measurements
@@ -120,5 +120,5 @@ jobs:
         with:
           name: x86-simd-benchmarks-${{ github.run_id }}
           path: target/benchmarks/jpeg/simd-x86_64/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 90

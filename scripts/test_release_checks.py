@@ -247,6 +247,36 @@ jobs:
             ["publish must depend on release-coverage"],
         )
 
+    def test_release_coverage_must_execute_make_instead_of_printing_its_name(self) -> None:
+        for no_op in ('echo "make coverage"', "# make coverage"):
+            with self.subTest(run=no_op):
+                workflow = self.VALID_RELEASE_WORKFLOW.replace(
+                    "run: make coverage", f"run: {no_op}"
+                )
+                self.assertIn(
+                    "release-coverage must execute make coverage",
+                    check_workflows.release_coverage_gate_violations(workflow),
+                )
+
+    def test_release_coverage_command_cannot_ignore_failure(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "run: make coverage", "run: make coverage || true"
+        )
+        self.assertIn(
+            "release-coverage must not ignore make coverage failures",
+            check_workflows.release_coverage_gate_violations(workflow),
+        )
+
+    def test_release_coverage_must_propagate_failures_when_errexit_is_disabled(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "run: make coverage",
+            "run: |\n          set +e\n          make coverage 2>&1 | tee coverage.log\n          set -e",
+        )
+        self.assertIn(
+            "release-coverage must propagate failures while errexit is disabled",
+            check_workflows.release_coverage_gate_violations(workflow),
+        )
+
     def test_release_coverage_job_cannot_be_conditionally_skipped(self) -> None:
         workflow = self.VALID_RELEASE_WORKFLOW.replace(
             "  release-coverage:\n",

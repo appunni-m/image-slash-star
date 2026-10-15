@@ -96,6 +96,44 @@ def verify_action_pins(workflows: list[Path]) -> bool:
     return False
 
 
+def run_script(step: str) -> str | None:
+    """Return a workflow step's shell script without YAML block indentation."""
+
+    run_match = re.search(r"(?m)^ {8}run:\s*(?P<value>.*)$", step)
+    if run_match is None:
+        return None
+
+    first_line = run_match.group("value").strip()
+    if first_line and first_line[0] not in "|>":
+        return first_line
+
+    script_lines = []
+    for line in step[run_match.end():].splitlines():
+        if not line.strip():
+            script_lines.append("")
+            continue
+        if not line.startswith(" " * 10):
+            break
+        script_lines.append(line[10:])
+    return "\n".join(script_lines)
+
+
+def make_coverage_command_lines(script: str) -> list[str]:
+    """Find actual `make coverage` command lines, excluding comments and text."""
+
+    command = re.compile(
+        r"^(?:(?:[A-Za-z_][A-Za-z0-9_]*=\S+)\s+)*"
+        r"make\s+coverage(?=$|[\s;&|])"
+    )
+    return [
+        line.strip()
+        for line in script.splitlines()
+        if line.strip()
+        and not line.lstrip().startswith("#")
+        and command.match(line.strip())
+    ]
+
+
 def release_coverage_gate_violations(contents: str) -> list[str]:
     """Require tag coverage to pass before the release publish job can run."""
 
@@ -135,21 +173,31 @@ def release_coverage_gate_violations(contents: str) -> list[str]:
             violations.append("release workflow must pin its nightly coverage toolchain")
         if "cargo-llvm-cov --locked --version 0.8.7" not in coverage_job:
             violations.append("release-coverage must install the pinned coverage driver")
-        if not re.search(r"\bmake coverage\b", coverage_job):
-            violations.append("release-coverage must run make coverage")
         job_settings = coverage_job.split("    steps:", maxsplit=1)[0]
         if re.search(r"(?m)^    if:", job_settings):
             violations.append("release-coverage must not be conditionally skipped")
         if re.search(r"(?m)^    continue-on-error:\s*true\s*$", job_settings):
             violations.append("release-coverage must not ignore coverage failures")
-        coverage_step = next(
-            (
-                step
-                for step in re.split(r"(?m)^      - ", coverage_job)
-                if re.search(r"\bmake coverage\b", step)
-            ),
-            "",
-        )
+        coverage_step = ""
+        coverage_script = ""
+        for step in re.split(r"(?m)^      - ", coverage_job):
+            script = run_script(step)
+            if script is not None and make_coverage_command_lines(script):
+                coverage_step = step
+                coverage_script = script
+                break
+        if not coverage_step:
+            violations.append("release-coverage must execute make coverage")
+        elif any("||" in line for line in make_coverage_command_lines(coverage_script)):
+            violations.append("release-coverage must not ignore make coverage failures")
+        if re.search(r"(?m)^\s*set\s+\+e\s*$", coverage_script):
+            if (
+                "PIPESTATUS[0]" not in coverage_script
+                or not re.search(r"(?m)^\s*exit\s+\"?\$status\"?\s*$", coverage_script)
+            ):
+                violations.append(
+                    "release-coverage must propagate failures while errexit is disabled"
+                )
         if re.search(r"(?m)^(?:if:| {8}if:)", coverage_step):
             violations.append("make coverage step must not be conditionally skipped")
         if re.search(r"(?m)^(?:continue-on-error:| {8}continue-on-error:)\s*true\s*$", coverage_step):
