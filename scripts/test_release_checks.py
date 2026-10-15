@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression checks for coverage floors and release identity guards."""
+"""Regression checks for coverage and GitHub Actions release policies."""
 
 from __future__ import annotations
 
@@ -226,6 +226,19 @@ jobs:
         self.assertEqual(
             check_workflows.unpinned_action_uses(contents),
             [(4, "actions/checkout@v4"), (5, "owner/action@v1")],
+        )
+
+    def test_ci_manual_dispatches_use_unique_concurrency_groups(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "ci.yml")
+        group = next(
+            line.strip()
+            for line in workflow.read_text(encoding="utf-8").splitlines()
+            if line.lstrip().startswith("group:")
+        )
+        self.assertIn(
+            "github.event_name == 'workflow_dispatch' && github.run_id",
+            group,
         )
 
     def test_release_coverage_is_required_before_publishing(self) -> None:

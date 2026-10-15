@@ -6833,7 +6833,7 @@ Coverage MCP could not provide the branch-level delta because these reports do
 not contain exact branch observations. No full coverage campaign was run.
 Reports: `target/release-evidence/coverage-avif-monochrome-group-baseline-current.info`,
 `target/release-evidence/coverage-avif-monochrome-group-fault-current.info`.
-The coverage-origin inventory now records 148 exact guards across 24 Rust
+The coverage-origin inventory now records 149 exact guards across 25 Rust
 files; this is a static provenance count, not a new full-coverage measurement.
 
 ### BMP RLE4 edge parity and palette-reservation fault contract — 2026-10-15
