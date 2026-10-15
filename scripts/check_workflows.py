@@ -6,6 +6,7 @@ import errno
 import hashlib
 import http.client
 import io
+import os
 from pathlib import Path
 import platform
 import re
@@ -14,6 +15,7 @@ import ssl
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -208,6 +210,47 @@ def binary_bytes(archive: bytes, checksum: str) -> bytes:
         return source.read()
 
 
+def write_archive_atomically(archive: Path, data: bytes) -> None:
+    """Persist a verified archive without exposing a partially written cache."""
+
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=archive.parent, prefix=f".{archive.name}.", delete=False
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            temporary.write(data)
+            temporary.flush()
+            os.fsync(temporary.fileno())
+        os.replace(temporary_path, archive)
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
+def cached_actionlint_binary(archive: Path, url: str, checksum: str) -> bytes:
+    """Reuse a verified archive or replace a corrupt cache from the pinned URL."""
+
+    try:
+        data = archive.read_bytes()
+    except FileNotFoundError:
+        pass
+    else:
+        try:
+            return binary_bytes(data, checksum)
+        except (EOFError, KeyError, OSError, tarfile.TarError, ValueError) as error:
+            print(
+                f"Discarding invalid cached actionlint archive ({error}); downloading again",
+                file=sys.stderr,
+            )
+            archive.unlink(missing_ok=True)
+
+    data = download_archive(url)
+    executable = binary_bytes(data, checksum)
+    write_archive_atomically(archive, data)
+    return executable
+
+
 def is_transient_download_failure(error: BaseException) -> bool:
     """Return whether a failed release download is likely to recover."""
 
@@ -273,13 +316,11 @@ def main() -> int:
     directory = ROOT / "target" / "workflow-tools" / f"actionlint-{VERSION}-{suffix}"
     directory.mkdir(parents=True, exist_ok=True)
     archive = directory / "archive.tar.gz"
-    if archive.exists():
-        data = archive.read_bytes()
-    else:
-        url = f"https://github.com/rhysd/actionlint/releases/download/v{VERSION}/actionlint_{VERSION}_{suffix}.tar.gz"
-        data = download_archive(url)
-    executable = binary_bytes(data, checksum)
-    archive.write_bytes(data)
+    url = (
+        f"https://github.com/rhysd/actionlint/releases/download/v{VERSION}/"
+        f"actionlint_{VERSION}_{suffix}.tar.gz"
+    )
+    executable = cached_actionlint_binary(archive, url, checksum)
     binary = directory / "actionlint"
     binary.write_bytes(executable)
     binary.chmod(0o755)

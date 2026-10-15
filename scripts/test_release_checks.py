@@ -12,10 +12,11 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 import ssl
 import sys
+import tarfile
 import tempfile
-import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -416,6 +417,66 @@ class WorkflowDownloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "checksum mismatch"):
             check_workflows.binary_bytes(downloaded, "0" * 64)
         urlopen.assert_called_once()
+
+
+class WorkflowArchiveCacheTests(unittest.TestCase):
+    @staticmethod
+    def make_archive(binary: bytes = b"verified actionlint binary") -> bytes:
+        archive = io.BytesIO()
+        with tarfile.open(fileobj=archive, mode="w:gz") as contents:
+            member = tarfile.TarInfo("actionlint")
+            member.size = len(binary)
+            contents.addfile(member, io.BytesIO(binary))
+        return archive.getvalue()
+
+    def test_corrupt_cache_is_discarded_and_replaced_by_verified_download(self) -> None:
+        url = "https://example.test/actionlint.tar.gz"
+        downloaded = self.make_archive()
+        checksum = hashlib.sha256(downloaded).hexdigest()
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "archive.tar.gz"
+            archive.write_bytes(b"interrupted archive write")
+            with patch.object(
+                check_workflows, "download_archive", return_value=downloaded
+            ) as download:
+                executable = check_workflows.cached_actionlint_binary(
+                    archive, url, checksum
+                )
+
+            self.assertEqual(executable, b"verified actionlint binary")
+            self.assertEqual(archive.read_bytes(), downloaded)
+            self.assertEqual(list(Path(directory).iterdir()), [archive])
+            download.assert_called_once_with(url)
+
+    def test_invalid_download_is_rejected_and_not_cached(self) -> None:
+        url = "https://example.test/actionlint.tar.gz"
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "archive.tar.gz"
+            archive.write_bytes(b"corrupt cache")
+            with patch.object(
+                check_workflows, "download_archive", return_value=b"untrusted archive"
+            ) as download:
+                with self.assertRaisesRegex(ValueError, "checksum mismatch"):
+                    check_workflows.cached_actionlint_binary(archive, url, "0" * 64)
+
+            self.assertFalse(archive.exists())
+            download.assert_called_once_with(url)
+
+    def test_archive_cache_write_uses_same_directory_atomic_replace(self) -> None:
+        data = self.make_archive()
+        with tempfile.TemporaryDirectory() as directory:
+            archive = Path(directory) / "archive.tar.gz"
+            original_replace = os.replace
+            with patch.object(
+                check_workflows.os, "replace", wraps=original_replace
+            ) as replace:
+                check_workflows.write_archive_atomically(archive, data)
+
+            source, destination = replace.call_args.args
+            self.assertEqual(Path(source).parent, archive.parent)
+            self.assertEqual(Path(destination), archive)
+            self.assertEqual(archive.read_bytes(), data)
+            self.assertFalse(Path(source).exists())
 
 
 class CoverageCliTests(unittest.TestCase):
