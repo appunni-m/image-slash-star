@@ -1812,9 +1812,9 @@ Next recorded action: Add documented target-tool lookup tests for representative
 
 Status at ledger review: **open**.
 
-CI has no macOS, Windows, 32-bit runtime, or big-endian runtime lane; the WASM runtime lane covers `wasm32-wasip1` only.
+CI runs macOS ARM64, Linux x86-64 (including SSE2 and AVX2), Windows x86-64 MSVC, and native/WASI feature lanes. The 32-bit and big-endian native runtime lanes remain open; `wasm32-unknown-unknown` is compile/rustdoc-only.
 
-Next recorded action: Add the smallest target matrix that catches build-script, endian, pointer-width, and runtime differences.
+Next recorded action: Add suitable 32-bit and big-endian runtime lanes when stable runners and toolchains are available, keeping evidence separate by target.
 
 ### FTR-010
 

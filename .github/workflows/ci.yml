@@ -159,6 +159,31 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  windows-msvc:
+    name: Windows MSVC runtime and strict lint
+    needs: fixture-integrity
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      # The repository Cargo config selects sccache, which is not installed on
+      # the hosted Windows runner. Let Cargo invoke rustc directly here.
+      RUSTC_WRAPPER: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Check all features on Windows MSVC
+        run: cargo check --workspace --all-features --locked
+      - name: Run strict Clippy on Windows MSVC
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Run all-feature runtime and parity tests on Windows MSVC
+        run: cargo test --workspace --all-features --locked
+
   supply-chain:
     name: Dependencies and licenses
     runs-on: ubuntu-24.04

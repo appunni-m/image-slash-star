@@ -8871,10 +8871,10 @@
     },
     {
       "area": "features_package",
-      "finding": "CI has no macOS, Windows, 32-bit runtime, or big-endian runtime lane; the WASM runtime lane covers `wasm32-wasip1` only.",
+      "finding": "CI runs macOS ARM64, Linux x86-64 (including SSE2 and AVX2), Windows x86-64 MSVC, and native/WASI feature lanes. The 32-bit and big-endian native runtime lanes remain open; `wasm32-unknown-unknown` is compile/rustdoc-only.",
       "finding_class": "Target assurance",
       "id": "FTR-009",
-      "next": "Add the smallest target matrix that catches build-script, endian, pointer-width, and runtime differences.",
+      "next": "Add suitable 32-bit and big-endian runtime lanes when stable runners and toolchains are available, keeping evidence separate by target.",
       "source": "docs/roadmap.md historical finding context",
       "status": "open",
       "workstreams": [

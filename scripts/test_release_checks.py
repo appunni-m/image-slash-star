@@ -12,6 +12,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import ssl
 import sys
@@ -240,6 +241,26 @@ jobs:
             "github.event_name == 'workflow_dispatch' && github.run_id",
             group,
         )
+
+    def test_windows_msvc_lane_runs_all_feature_checks_and_parity(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "ci.yml")
+        contents = workflow.read_text(encoding="utf-8")
+        match = re.search(
+            r"(?ms)^  windows-msvc:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\s*$|\Z)",
+            contents,
+        )
+        self.assertIsNotNone(match, "CI must retain the Windows MSVC runtime job")
+        job = match.group("body")
+        self.assertIn("runs-on: windows-latest", job)
+        self.assertIn('RUSTC_WRAPPER: ""', job)
+        self.assertIn("run: cargo check --workspace --all-features --locked", job)
+        self.assertIn(
+            "run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings",
+            job,
+        )
+        self.assertIn("run: cargo test --workspace --all-features --locked", job)
+        self.assertNotRegex(job, r"(?m)^\s+(?:if|continue-on-error):")
 
     def test_release_coverage_is_required_before_publishing(self) -> None:
         workflow = (Path(__file__).resolve().parent.parent
