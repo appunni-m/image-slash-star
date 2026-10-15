@@ -7703,6 +7703,59 @@
       ]
     },
     {
+      "id": "pillow_tolerated_malformed_itxt_missing_keyword_separator",
+      "asset": "itxt_missing_keyword_separator.png",
+      "asset_sha256": "ef5663b10dd1bef8481a1f73bee3283038fc41a3bd928cd0ba7945654efb98cd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "expect_error": false,
+      "expect_sequence_error": false,
+      "verification_scope": "structure",
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null,
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/itxt_missing_keyword_separator.png",
+        "operations": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      },
+      "pillow_verify_call": [
+        "PIL.Image.open",
+        "verify"
+      ]
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "asset": "bad_idat_crc.png",
       "asset_sha256": "926e609477ab49489ee87cc4ca84cdf86df8d809940b29b27621f8ea9f17a43f",

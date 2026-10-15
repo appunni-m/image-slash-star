@@ -2193,6 +2193,10 @@ formats:
       description: Pillow preserves pixels when zTXt metadata has no keyword separator
       test_assets:
       - ztxt_missing_keyword_separator.png
+    - id: pillow_tolerated_malformed_itxt_missing_keyword_separator
+      description: Pillow preserves pixels when iTXt metadata has no keyword separator
+      test_assets:
+      - itxt_missing_keyword_separator.png
     - id: pillow_tolerated_malformed
       description: Malformed PNG structures tolerated by Pillow
       test_assets:

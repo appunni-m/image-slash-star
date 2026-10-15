@@ -11090,6 +11090,92 @@
       "rust_sequence_error_reason": null
     },
     {
+      "id": "pillow_tolerated_malformed_itxt_missing_keyword_separator",
+      "status": "ok",
+      "error_type": null,
+      "error_message": null,
+      "error_kind": null,
+      "inspect_status": "ok",
+      "inspect_error_type": null,
+      "inspect_error_message": null,
+      "inspect_error_kind": null,
+      "verify_status": "ok",
+      "verify_error_type": null,
+      "verify_error_message": null,
+      "verify_error_kind": null,
+      "verification_scope": "structure",
+      "inspect_container_format": "PNG",
+      "inspect_cursor_hotspot": null,
+      "inspect_source_byte_order": null,
+      "inspect_source_byte_order_origin": null,
+      "asset_sha256": "ef5663b10dd1bef8481a1f73bee3283038fc41a3bd928cd0ba7945654efb98cd",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "detection": "pillow_fixture",
+        "inspection": "pillow_fixture",
+        "verification": "pillow_fixture",
+        "decode": "pillow_fixture",
+        "operations": "pillow_fixture",
+        "decoded_source_color": "pillow_fixture"
+      },
+      "operations": {
+        "detect": "ok",
+        "inspect": "ok",
+        "verify": "ok",
+        "decode": "ok",
+        "decode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "ref_bit_depth": 8,
+      "ref_bit_depth_origin": "specification_reference",
+      "ref_path": "tests/fixtures/outputs/raws/Decode.png_itxt_missing_keyword_separator_png.bin",
+      "ref_bytes": 3,
+      "ref_sha256": "25ff297dd78c82468376d6e2c93b672b49c01fb125a2812b94f8f9693a51b67e",
+      "ref_mode": "Rgb8",
+      "ref_size": [
+        1,
+        1
+      ],
+      "ref_frame_count": 1,
+      "ref_is_animated": false,
+      "inspect_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_palette": {
+        "state": "absent",
+        "origin": "pillow_fixture"
+      },
+      "decoded_source_byte_order": null,
+      "decoded_source_byte_order_origin": null,
+      "decoded_source_color": {
+        "srgb": null,
+        "gamma": null,
+        "chromaticities": null,
+        "icc_profile_present": false
+      },
+      "sequence_status": null,
+      "sequence_error_type": null,
+      "sequence_error_message": null,
+      "sequence_error_kind": null,
+      "rust_expect_sequence_error": false,
+      "rust_sequence_error_kind": null,
+      "rust_sequence_error_reason": null
+    },
+    {
       "id": "pillow_tolerated_malformed",
       "status": "ok",
       "error_type": null,

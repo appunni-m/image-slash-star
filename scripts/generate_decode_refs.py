@@ -955,6 +955,7 @@ def validate_png_claim(case_id, data):
         "pillow_tolerated_malformed_text_metadata_edges": b"iTXt",
         "pillow_tolerated_malformed_ztxt_invalid_compression": b"zTXt",
         "pillow_tolerated_malformed_itxt_invalid_compression": b"iTXt",
+        "pillow_tolerated_malformed_itxt_missing_keyword_separator": b"iTXt",
         "pillow_tolerated_malformed_iccp_invalid_compression": b"iCCP",
         "chunk_time": b"tIME",
         "chunk_background": b"bKGD",

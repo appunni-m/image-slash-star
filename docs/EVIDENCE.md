@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `2329d536b1c504f185c69226eef2b77a6662c0b19a19533f86ca5be84bc7d98f`; matrix `c455febceccc23e0e441cfbcf9ccc9c9754862efbc2febda8d1e3b764585b8ab`.
+- Current fixture integrity only: manifest `8a9b065ec79786d261cde5028681829d9f1887a68b5705429c15126e1ea1aae5`; matrix `2ee6170c409e7ce264106951186a8dbe72911e6582929f1fb74300968607424e`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6872,8 +6872,8 @@ stream when pixels are loaded. Rust now preserves marker-only inspection and
 verification while returning a malformed decode error for the invalid
 frame-order scan.
 
-The current fixture matrix contains 2,238 total rows: 1,758 decode /
-inspect / verify rows and 480 encode rows. Of those, 1,758 decode rows and
+The current fixture matrix contains 2,239 total rows: 1,759 decode /
+inspect / verify rows and 480 encode rows. Of those, 1,759 decode rows and
 448 encode rows are active.
 
 The selected control, malformed case, and multi-scan control passed 3/3; the
@@ -6885,6 +6885,30 @@ the complete JPEG workload. Its local report has no source/build or test
 receipts, and comparison with the historical full-suite baseline is
 incomparable because exact detail does not match. This evidence
 does not claim an aggregate coverage gain or a full-suite coverage result.
+
+### Pillow-tolerated iTXt without a keyword separator — 2026-10-16
+
+The input-only row
+`decode:png:pillow_tolerated_malformed_itxt_missing_keyword_separator` uses
+a complete 1×1 RGB PNG with a valid-CRC iTXt chunk whose payload contains no
+NUL byte. Its reproducible generator pins the fixture SHA-256 to
+`ef5663b10dd1bef8481a1f73bee3283038fc41a3bd928cd0ba7945654efb98cd`.
+Pillow 12.2.0 opens and verifies the file, loads the same three RGB bytes as
+the base image, and omits the malformed metadata. The selected public parity
+row passed 1/1 across detection, inspection, verification, decode, and
+sequence decode. The fixture is an ordinary malformed-input case, not a
+target-only fault contract; runtime code is unchanged.
+
+Coverage MCP's focused report records 2,315/211,155 observed regions for the
+selected test process and still reports a missing observation at
+`src/codecs/png/decode.rs:119` in
+`invalid_compressed_metadata_identity`. The incremental comparison with the
+earlier PNG matrix report is incomparable because the selected report contains
+observations outside the baseline inventory. Both local reports lack
+source/build receipts and test attribution. No aggregate coverage gain or
+full-suite result is claimed, and no full coverage campaign was run. The
+selected report is
+`target/release-evidence/coverage-png-itxt-missing-keyword-separator-selected.json`.
 
 The same gap review identified redundant fast-path predicates. Component
 order is checked once at decode materialization; per-component sampling
