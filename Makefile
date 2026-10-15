@@ -62,6 +62,7 @@ verify-fixture-integrity:
 verify: release-tools-test docs-lint docs-test verify-fixture-integrity
 	$(PYTHON) scripts/verify_third_party_licenses.py
 	$(PYTHON) scripts/generate_malformed_ledger.py --check
+	$(PYTHON) scripts/generate_png_srgb_intent_fixtures.py --check
 	$(PYTHON) scripts/generate_jpeg_long_huffman_fixture.py --check
 	$(PYTHON) scripts/generate_jpeg_unused_custom_dc_chroma_table_fixture.py --check
 	$(PYTHON) scripts/generate_tiff_duplicate_rational_fill_order_fixture.py --check

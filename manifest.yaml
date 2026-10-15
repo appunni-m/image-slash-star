@@ -1998,6 +1998,18 @@ formats:
       description: PNG with sRGB chunk
       test_assets:
       - srgb.png
+    - id: chunk_srgb_relative_colorimetric
+      description: PNG sRGB rendering intent is relative colorimetric
+      test_assets:
+      - srgb_relative_colorimetric.png
+    - id: chunk_srgb_saturation
+      description: PNG sRGB rendering intent is saturation
+      test_assets:
+      - srgb_saturation.png
+    - id: chunk_srgb_absolute_colorimetric
+      description: PNG sRGB rendering intent is absolute colorimetric
+      test_assets:
+      - srgb_absolute_colorimetric.png
     - id: chunk_srgb_duplicate
       description: Duplicate sRGB chunks preserve the first Pillow-visible intent
       test_assets:

@@ -939,6 +939,9 @@ def validate_png_claim(case_id, data):
         "chunk_gama": b"gAMA",
         "chunk_gama_duplicate": b"gAMA",
         "chunk_srgb": b"sRGB",
+        "chunk_srgb_relative_colorimetric": b"sRGB",
+        "chunk_srgb_saturation": b"sRGB",
+        "chunk_srgb_absolute_colorimetric": b"sRGB",
         "chunk_srgb_duplicate": b"sRGB",
         "chunk_srgb_invalid_intent": b"sRGB",
         "pillow_tolerated_malformed_srgb_short": b"sRGB",
@@ -961,6 +964,20 @@ def validate_png_claim(case_id, data):
     expected_chunk = chunk_claims.get(case_id)
     if expected_chunk is not None and expected_chunk not in kinds:
         raise RuntimeError(f"fixture has no {expected_chunk.decode()} chunk")
+    srgb_intent_claims = {
+        "chunk_srgb_relative_colorimetric": 1,
+        "chunk_srgb_saturation": 2,
+        "chunk_srgb_absolute_colorimetric": 3,
+    }
+    expected_srgb_intent = srgb_intent_claims.get(case_id)
+    if expected_srgb_intent is not None:
+        srgb_payloads = [
+            payload for kind, payload in png["chunks"] if kind == b"sRGB"
+        ]
+        if srgb_payloads != [bytes((expected_srgb_intent,))]:
+            raise RuntimeError(
+                f"sRGB intent payload differs for {case_id}: {srgb_payloads!r}"
+            )
     if case_id == "chunk_text" and not {b"tEXt", b"zTXt", b"iTXt"}.issubset(kinds):
         raise RuntimeError("text-metadata fixture must include tEXt, zTXt, and iTXt")
     if case_id == "pillow_tolerated_malformed_text_metadata_edges" and not {
