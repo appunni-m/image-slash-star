@@ -9133,6 +9133,38 @@
     ],
     "jpeg": [
       {
+        "asset": "baseline_420_reversed_chroma_sos_order.jpg",
+        "class": "baseline_420_reversed_chroma_sos_order",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "broken data stream when reading image file",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "JPEG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "Baseline 4:2:0 JPEG reverses Cr and Cb in SOS against T.81 frame order, so Pillow opens and verifies but fails during pixel load",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "broken data stream when reading image file",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "spec_violation",
+        "verify_status": "ok"
+      },
+      {
         "asset": "corrupt.jpg",
         "class": "corrupt_header",
         "contracts": {
@@ -25684,23 +25716,23 @@
       "bmp": 65,
       "gif": 47,
       "ico": 30,
-      "jpeg": 98,
+      "jpeg": 99,
       "png": 61,
       "tiff": 116,
       "webp": 132
     },
     "by_origin": {
-      "pillow_fixture": 607,
+      "pillow_fixture": 608,
       "specification_reference": 58
     },
     "by_spec_status": {
       "ambiguous": 35,
       "not_the_format": 39,
-      "spec_violation": 343,
+      "spec_violation": 344,
       "tolerated": 0,
       "truncated": 190
     },
-    "classes": 607,
+    "classes": 608,
     "formats": 8
   }
 }
