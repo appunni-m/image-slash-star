@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate complete JPEGs with invalid first or later SOS declarations.
+"""Generate complete JPEGs with SOS declaration and component-order edges.
 
-The mutation preserves every entropy and tail byte. Pinned live Pillow
-establishes metadata/verification success followed by pixel-decode failure,
-except the UINT16_MAX declaration, which fails while opening the image.
+Mutations preserve every entropy and tail byte. Pinned live Pillow establishes
+the public open, verification, and pixel-decode boundary for each complete
+input.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DIRECTORY = ROOT / "tests" / "fixtures" / "input" / "images" / "jpeg"
 SOURCE_PINS = {
     "baseline_default.jpg": (4564, "2230f7e115c61b27bd33518c7f773e5987bad274e310597516c87e0cf5aa10f8"),
+    "baseline_420.jpg": (5948, "c669c42fcf388430afd4400bbdcbc66f30165d50e4b162ed77e1f67392cce4ef"),
     "progressive_spectral.jpg": (3939, "13588c6b896b425d2a0e2798e29702053f9f8a912d0b2b47efb2990d75ad392e"),
     "baseline_444_multiscan_interleaved_restart.jpg": (649, "ddbcf29eb1549aae0356661ff2b879b7b2b23b7aae924adbb424af22246e20d7"),
 }
@@ -33,7 +34,7 @@ SOURCE_PINS = {
 
 @dataclass(frozen=True)
 class Recipe:
-    """One bounded declaration mutation and its pinned complete input."""
+    """One bounded SOS mutation and its pinned complete input."""
 
     name: str
     sha256: str
@@ -42,6 +43,7 @@ class Recipe:
     source: str = "baseline_default.jpg"
     scan_index: int = 0
     open_error: bool = False
+    component_records: bytes | None = None
 
 
 RECIPES = (
@@ -67,6 +69,13 @@ RECIPES = (
         7,
         source="baseline_444_multiscan_interleaved_restart.jpg",
         scan_index=1,
+    ),
+    Recipe(
+        "baseline_420_reversed_chroma_sos_order",
+        "d2c2d756ed55c4cf7b6af6ee4a614edd53b261d72d3b1c4beadcf784c20bd26d",
+        12,
+        source="baseline_420.jpg",
+        component_records=bytes.fromhex("01 00 03 11 02 11"),
     ),
 )
 
@@ -116,7 +125,7 @@ def observe(data: bytes) -> dict:
 
 
 def mutate(source: bytes, recipe: Recipe) -> bytes:
-    """Locate the selected scan structurally and change only its declaration."""
+    """Locate the selected scan structurally and change only its SOS fields."""
     # The shared walker bounds segment extents and skips stuffed FF bytes and
     # restart markers in entropy before finding a subsequent scan header.
     scans, eoi = jpeg_scan_segments(source)
@@ -133,11 +142,17 @@ def mutate(source: bytes, recipe: Recipe) -> bytes:
         raise RuntimeError("pinned SOS declaration changed")
     candidate = bytearray(source)
     candidate[length_offset:length_offset + 2] = struct.pack(">H", recipe.length)
-    if recipe.count is not None:
-        candidate[length_offset + 2] = recipe.count
     allowed = set(range(length_offset, length_offset + 2))
     if recipe.count is not None:
+        candidate[length_offset + 2] = recipe.count
         allowed.add(length_offset + 2)
+    if recipe.component_records is not None:
+        records_start = length_offset + 3
+        records_end = records_start + len(recipe.component_records)
+        if len(recipe.component_records) != expected_count * 2:
+            raise RuntimeError("replacement SOS component records do not match the source count")
+        candidate[records_start:records_end] = recipe.component_records
+        allowed.update(range(records_start, records_end))
     if any(a != b and index not in allowed for index, (a, b) in enumerate(zip(source, candidate))):
         raise RuntimeError("SOS mutation changed media or an unrelated field")
     output = bytes(candidate)
@@ -152,7 +167,7 @@ def generate_fixtures(
     source_dir: Path = DEFAULT_DIRECTORY,
     check: bool = False,
 ) -> tuple[Path, ...]:
-    """Validate all eleven live outcomes before publishing or checking inputs."""
+    """Validate all twelve live outcomes before publishing or checking inputs."""
     verify_primary_oracle(yaml.safe_load((ROOT / "manifest.yaml").read_text()))
     sources = {}
     source_metadata = {}

@@ -84063,6 +84063,83 @@
           "rust_decode_with_metadata_limit": null
         },
         {
+          "id": "baseline_420_reversed_chroma_sos_order",
+          "type": "decode",
+          "format": "jpeg",
+          "category": "baseline",
+          "description": "Baseline 4:2:0 JPEG reverses Cr and Cb in SOS against T.81 frame order, so Pillow opens and verifies but fails during pixel load",
+          "asset": "baseline_420_reversed_chroma_sos_order.jpg",
+          "expect_error": true,
+          "expect_sequence_error": false,
+          "verification_scope": "structure",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": null,
+          "status": "active",
+          "asset_sha256": "d2c2d756ed55c4cf7b6af6ee4a614edd53b261d72d3b1c4beadcf784c20bd26d",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "JPEG",
+          "ref_bit_depth": 8,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "error",
+          "oracle_error_type": "builtins.OSError",
+          "oracle_error_message": "broken data stream when reading image file",
+          "oracle_error_kind": "malformed",
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "error",
+            "decode_sequence": "error"
+          },
+          "error_contracts": {
+            "decode": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            },
+            "decode_sequence": {
+              "pillow_type": "builtins.OSError",
+              "pillow_message": "broken data stream when reading image file",
+              "rust_kind": "malformed",
+              "rust_format": "JPEG",
+              "rust_message": "non_empty",
+              "origin": "pillow_fixture"
+            }
+          }
+        },
+        {
           "asset": "baseline_411.jpg",
           "asset_path": "tests/fixtures/input/images/jpeg/baseline_411.jpg",
           "category": "subsampling",
@@ -188554,12 +188631,12 @@
     }
   },
   "summary": {
-    "total_rows": 2233,
-    "decode_rows": 1753,
+    "total_rows": 2234,
+    "decode_rows": 1754,
     "encode_rows": 480,
     "formats": 8,
-    "assets_available": 1750,
-    "decode_active": 1753,
+    "assets_available": 1751,
+    "decode_active": 1754,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

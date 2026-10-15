@@ -646,6 +646,11 @@ formats:
       description: 4:2:0 chroma subsampling (most common)
       test_assets:
       - baseline_420.jpg
+    - id: baseline_420_reversed_chroma_sos_order
+      description: Baseline 4:2:0 JPEG reverses Cr and Cb in SOS against T.81 frame order, so Pillow opens and verifies but fails during pixel load
+      test_assets:
+      - baseline_420_reversed_chroma_sos_order.jpg
+      expect_error: true
     - id: subsampling_411
       description: 4:1:1 chroma subsampling
       test_assets:

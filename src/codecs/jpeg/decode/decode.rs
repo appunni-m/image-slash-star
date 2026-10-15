@@ -747,11 +747,7 @@ fn reconstruct_baseline_grayscale_direct_safe(
         || info.scan_components.len() != 1
         || info.components[0].h_samp != 1
         || info.components[0].v_samp != 1
-        || info.max_h_samp != 1
-        || info.max_v_samp != 1
-        || info.scan_components[0].comp_index != 0
         || entropy_segments.segments.len() != 1
-        || quant_tables.len() != 1
     {
         return Ok(None);
     }
@@ -963,22 +959,9 @@ fn reconstruct_baseline_cmyk_direct_safe(
             .components
             .iter()
             .any(|component| component.h_samp != 1 || component.v_samp != 1)
-        || info.max_h_samp != 1
-        || info.max_v_samp != 1
         || entropy_segments.segments.len() != 1
-        || quant_tables.len() != 4
     {
         return Ok(None);
-    }
-
-    let mut seen_components = [false; 4];
-    let mut component_to_scan = [0usize; 4];
-    for (scan_index, scan) in info.scan_components.iter().enumerate() {
-        if scan.comp_index >= 4 || seen_components[scan.comp_index] {
-            return Ok(None);
-        }
-        seen_components[scan.comp_index] = true;
-        component_to_scan[scan.comp_index] = scan_index;
     }
 
     let dc_table = |scan_index: usize| {
@@ -997,17 +980,11 @@ fn reconstruct_baseline_cmyk_direct_safe(
     };
     let dc_tables = [dc_table(0)?, dc_table(1)?, dc_table(2)?, dc_table(3)?];
     let ac_tables = [ac_table(0)?, ac_table(1)?, ac_table(2)?, ac_table(3)?];
-    let scan_components = [
-        info.scan_components[0].comp_index,
-        info.scan_components[1].comp_index,
-        info.scan_components[2].comp_index,
-        info.scan_components[3].comp_index,
-    ];
     let quant_tables_by_scan = [
-        &quant_tables[scan_components[0]],
-        &quant_tables[scan_components[1]],
-        &quant_tables[scan_components[2]],
-        &quant_tables[scan_components[3]],
+        &quant_tables[0],
+        &quant_tables[1],
+        &quant_tables[2],
+        &quant_tables[3],
     ];
     let scan_tables = [
         (dc_tables[0], ac_tables[0], quant_tables_by_scan[0]),
@@ -1068,10 +1045,10 @@ fn reconstruct_baseline_cmyk_direct_safe(
             let block_y = mcu_y.saturating_mul(8);
             let valid_width = width.saturating_sub(block_x).min(8);
             let valid_height = height.saturating_sub(block_y).min(8);
-            let cyan_block = &blocks_by_scan[component_to_scan[0]];
-            let magenta_block = &blocks_by_scan[component_to_scan[1]];
-            let yellow_block = &blocks_by_scan[component_to_scan[2]];
-            let black_block = &blocks_by_scan[component_to_scan[3]];
+            let cyan_block = &blocks_by_scan[0];
+            let magenta_block = &blocks_by_scan[1];
+            let yellow_block = &blocks_by_scan[2];
+            let black_block = &blocks_by_scan[3];
             for row in 0usize..valid_height {
                 let source_start = row.saturating_mul(8);
                 let destination_start = block_y
@@ -1162,6 +1139,9 @@ fn reconstruct_baseline_420_direct_safe(
             .saturating_mul(mcu_rows)
             .div_ceil(restart_interval)
     };
+    // `decode` validates frame order, so a three-component scan is `[0, 1, 2]`.
+    // Sampling maxima and quant-table count are derived from the checked
+    // components and the frame component count, respectively.
     if info.num_components != 3
         || info.scan_components.len() != 3
         || info.components[0].h_samp != 2
@@ -1170,14 +1150,8 @@ fn reconstruct_baseline_420_direct_safe(
         || info.components[1].v_samp != 1
         || info.components[2].h_samp != 1
         || info.components[2].v_samp != 1
-        || info.max_h_samp != 2
-        || info.max_v_samp != 2
-        || info.scan_components[0].comp_index != 0
-        || info.scan_components[1].comp_index != 1
-        || info.scan_components[2].comp_index != 2
         || !restart_is_row_aligned
         || entropy_segments.segments.len() != expected_segments
-        || quant_tables.len() != 3
     {
         return Ok(None);
     }
@@ -1429,13 +1403,7 @@ fn reconstruct_baseline_422_direct_safe(
         || info.components[1].v_samp != 1
         || info.components[2].h_samp != 1
         || info.components[2].v_samp != 1
-        || info.max_h_samp != 2
-        || info.max_v_samp != 1
-        || info.scan_components[0].comp_index != 0
-        || info.scan_components[1].comp_index != 1
-        || info.scan_components[2].comp_index != 2
         || entropy_segments.segments.len() != 1
-        || quant_tables.len() != 3
     {
         return Ok(None);
     }
@@ -1589,13 +1557,7 @@ fn reconstruct_baseline_444_direct_safe(
             .components
             .iter()
             .any(|component| component.h_samp != 1 || component.v_samp != 1)
-        || info.max_h_samp != 1
-        || info.max_v_samp != 1
-        || info.scan_components[0].comp_index != 0
-        || info.scan_components[1].comp_index != 1
-        || info.scan_components[2].comp_index != 2
         || entropy_segments.segments.len() != 1
-        || quant_tables.len() != 3
     {
         return Ok(None);
     }
@@ -1730,7 +1692,23 @@ fn reconstruct_baseline_444_direct_safe(
     )))
 }
 
-/// Reconstructs a baseline scan; `decode` dispatches progressive scans first.
+/// Enforces the frame-component order required by JPEG scans.
+fn validate_scan_component_order(info: &JpegInfo) -> CodecResult<()> {
+    for scan in &info.scans {
+        if scan
+            .components
+            .windows(2)
+            .any(|pair| pair[0].comp_index >= pair[1].comp_index)
+        {
+            return Err(CodecError::Malformed(
+                "JPEG scan components are not in frame order".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Reconstructs a baseline scan after `decode` validates scan component order.
 #[cfg_attr(coverage, inline(never))]
 pub(super) fn reconstruct_image(
     info: &JpegInfo,
@@ -2615,6 +2593,9 @@ pub fn decode(
 ) -> CodecResult<(DecodedImage, usize)> {
     crate::codecs::error::check_cancelled(token)?;
     let info = parse_jpeg(data)?;
+    // Pillow discovers SOS component-order violations when pixel data is loaded;
+    // keep marker-only inspection and verification on the shared parser path.
+    validate_scan_component_order(&info)?;
 
     debug_assert!(!info.scan_components.is_empty());
 

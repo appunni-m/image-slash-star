@@ -6442,7 +6442,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `e1326109e64643a1d81faeee0d3ffa1b0a97f5f3bb080355f6e0d1d47136b434`; matrix `f2f3d43d9f50b03429cb0eedc727ddd0aeef15b466182c63902765b43d161bae`.
+- Current fixture integrity only: manifest `7f50695c0a184060f48f346c7b563ea71f563a6e013dd45fcf5379c85b3dd0ef`; matrix `2b6cd41e54cdc54ebf21891a9b136f780e5b113c2b4cdd70ab7475890463da8f`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6860,3 +6860,40 @@ No aggregate coverage gain or full-coverage result is claimed.
 Selected reports: `target/release-evidence/coverage-bmp-rle4-odd-eol-current.json`,
 `target/release-evidence/coverage-bmp-rle4-odd-offset-current.json`, and
 `target/release-evidence/coverage-bmp-palette-fault-current.json`.
+
+### JPEG SOS frame-order parity and fast-path predicates — 2026-10-15
+
+The public parity row `decode:jpeg:baseline_420_reversed_chroma_sos_order`
+uses a pinned baseline 4:2:0 input (`baseline_420.jpg`, SHA-256
+`c669c42fcf388430afd4400bbdcbc66f30165d50e4b162ed77e1f67392cce4ef`) with
+only the SOS component records changed. The candidate hash is
+`d2c2d756ed55c4cf7b6af6ee4a614edd53b261d72d3b1c4beadcf784c20bd26d`. Pillow
+12.2.0 opens and structurally verifies the input, then reports a broken data
+stream when pixels are loaded. Rust now preserves marker-only inspection and
+verification while returning a malformed decode error for the invalid
+frame-order scan.
+
+The current fixture matrix contains 2,234 total rows: 1,754 decode /
+inspect / verify rows and 480 encode rows. Of those, 1,754 decode rows and
+448 encode rows are active.
+
+The selected control, malformed case, and multi-scan control passed 3/3; the
+complete JPEG decode matrix passed 252/252. After the final CMYK direct-index
+simplification, the CMYK control and partial-block cases passed 2/2. Coverage
+MCP reports no missing branch observations in
+`validate_scan_component_order` or the 4:2:0 direct reconstruction helper for
+the complete JPEG workload. Its local report has no source/build or test
+receipts, and comparison with the historical full-suite baseline is
+incomparable because exact detail does not match. This evidence
+does not claim an aggregate coverage gain or a full-suite coverage result.
+
+The same gap review identified redundant fast-path predicates. Component
+order is checked once at decode materialization; per-component sampling
+records determine their maxima, and the reconstruction table vector is built
+once per frame component. The 4:2:0, 4:2:2, 4:4:4, grayscale, and CMYK direct
+paths now avoid rechecking those derived facts. CMYK also uses the validated
+frame order directly instead of rebuilding a scan-order map. The new JPEG
+input remains ordinary Pillow parity evidence; it is not a target-only fault
+contract. Reports:
+`target/release-evidence/coverage-jpeg-direct-safe-cleanup-current.json` and
+`target/release-evidence/coverage-jpeg-cmyk-order-regression-current.json`.
