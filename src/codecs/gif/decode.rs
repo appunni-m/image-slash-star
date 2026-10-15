@@ -12,6 +12,7 @@ use crate::types::{
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
+const PADDING_BLOCK: u8 = 0x00;
 const TRAILER: u8 = 0x3b;
 const MAX_LZW_CODE: usize = 4096;
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
@@ -168,6 +169,10 @@ pub fn decode_sequence(
                 recovering_from_bad_gce = false;
             }
             TRAILER => break,
+            // Pillow tolerates zero-valued padding after a complete frame.
+            // Keep this leniency scoped to the post-frame stream so a zero
+            // byte cannot hide a missing or malformed first image block.
+            PADDING_BLOCK if !frames.is_empty() => {}
             _ if recovering_from_bad_gce => {}
             _ => {
                 return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
@@ -412,6 +417,7 @@ pub(crate) fn metadata_bytes(data: &[u8]) -> CodecResult<u64> {
                 saw_frame = true;
             }
             TRAILER => break,
+            PADDING_BLOCK if saw_frame => {}
             _ => {
                 return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));
             }

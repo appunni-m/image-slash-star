@@ -4455,6 +4455,22 @@ def gen_gif():
     one_pixel = bytearray((d / "1x1.gif").read_bytes())
     if len(one_pixel) < 23 or one_pixel[:6] not in (b"GIF87a", b"GIF89a"):
         raise RuntimeError("1x1 GIF must have a complete supported header")
+    post_frame_zero_padding = bytes(one_pixel[:-1]) + b"\x00" + bytes(one_pixel[-1:])
+    if hashlib.sha256(post_frame_zero_padding).hexdigest() != (
+        "8fc8ca03d0f841d9985b20c549b9b9b11b47f9ceeed0251f7757023a29d09dbf"
+    ):
+        raise RuntimeError("1x1 GIF post-frame padding mutation differs from its pinned hash")
+    post_frame_zero_padding_path = d / "post_frame_zero_padding.gif"
+    post_frame_zero_padding_path.write_bytes(post_frame_zero_padding)
+    with Image.open(post_frame_zero_padding_path) as oracle:
+        oracle.load()
+        if (
+            oracle.format != "GIF"
+            or oracle.mode != "P"
+            or oracle.size != (1, 1)
+            or oracle.tobytes() != b"\x00"
+        ):
+            raise RuntimeError("1x1 GIF post-frame padding changed Pillow pixels")
     screen_packed = one_pixel[10]
     if screen_packed & 0x80 == 0:
         raise RuntimeError("1x1 GIF must start with a global color table")

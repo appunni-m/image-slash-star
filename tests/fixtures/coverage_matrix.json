@@ -68700,6 +68700,128 @@
           "error_contracts": {}
         },
         {
+          "id": "post_frame_zero_padding",
+          "type": "decode",
+          "format": "gif",
+          "category": "post",
+          "description": "Pillow ignores a zero-valued block marker between a complete frame and the trailer",
+          "asset": "post_frame_zero_padding.gif",
+          "expect_error": false,
+          "expect_sequence_error": false,
+          "verification_scope": "header_only",
+          "rust_expect_sequence_error": false,
+          "rust_sequence_error_kind": null,
+          "rust_sequence_error_reason": null,
+          "rust_inspect_basic": false,
+          "rust_decode_with_metadata_limit": 34,
+          "status": "active",
+          "asset_sha256": "8fc8ca03d0f841d9985b20c549b9b9b11b47f9ceeed0251f7757023a29d09dbf",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "oracle_detects_format": true,
+          "inspect_container_format": "GIF",
+          "ref_bit_depth": 1,
+          "ref_bit_depth_origin": "pillow_fixture",
+          "inspect_source_byte_order": null,
+          "inspect_source_byte_order_origin": null,
+          "inspect_cursor_hotspot": null,
+          "inspect_status": "ok",
+          "verify_status": "ok",
+          "oracle_status": "ok",
+          "ref_sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+          "ref_path": "tests/fixtures/outputs/raws/Decode.gif_post_frame_zero_padding_gif.bin",
+          "ref_bytes": 1,
+          "ref_mode": "P",
+          "ref_size": [
+            1,
+            1
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "decoded_source_byte_order": null,
+          "decoded_source_byte_order_origin": null,
+          "decoded_source_color": null,
+          "inspect_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.gif_post_frame_zero_padding_gif.inspect-palette.rgb.bin",
+            "rgb_bytes": 6,
+            "rgb_sha256": "b0f66adc83641586656866813fd9dd0b8ebb63796075661ba45d1aa8089e1d44"
+          },
+          "decoded_palette": {
+            "state": "table",
+            "origin": "pillow_fixture",
+            "rgb_path": "tests/fixtures/outputs/raws/Decode.gif_post_frame_zero_padding_gif.decoded-palette.rgb.bin",
+            "rgb_bytes": 6,
+            "rgb_sha256": "b0f66adc83641586656866813fd9dd0b8ebb63796075661ba45d1aa8089e1d44"
+          },
+          "sequence": {
+            "canvas_size": [
+              1,
+              1
+            ],
+            "canvas_origin": "pillow_fixture",
+            "loop_count": null,
+            "loop_origin": "pillow_fixture",
+            "background": {
+              "palette_index": 0,
+              "origin": "pillow_fixture"
+            },
+            "frames": [
+              {
+                "index": 0,
+                "source_rect": [
+                  0,
+                  0,
+                  1,
+                  1
+                ],
+                "duration_num": 0,
+                "duration_den": 100,
+                "duration_origin": "pillow_fixture",
+                "disposal": "unspecified",
+                "blend": "unspecified",
+                "interlaced": false,
+                "is_default_image": false,
+                "pixel_layout": "source_rectangle",
+                "source_origin": "pillow_fixture",
+                "source_byte_order": null,
+                "source_byte_order_origin": null,
+                "pixel_assertion": "not_asserted_source_layout"
+              }
+            ]
+          },
+          "assertion_origins": {
+            "detection": "pillow_fixture",
+            "inspection": "pillow_fixture",
+            "verification": "pillow_fixture",
+            "decode": "pillow_fixture",
+            "operations": "pillow_fixture",
+            "sequence_canvas": "pillow_fixture",
+            "sequence_source": "pillow_fixture"
+          },
+          "operations": {
+            "detect": "ok",
+            "inspect": "ok",
+            "verify": "ok",
+            "decode": "ok",
+            "decode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "asset": "empty.gif",
           "asset_path": "tests/fixtures/input/images/gif/empty.gif",
           "category": "error",
@@ -189051,12 +189173,12 @@
     }
   },
   "summary": {
-    "total_rows": 2239,
-    "decode_rows": 1759,
+    "total_rows": 2240,
+    "decode_rows": 1760,
     "encode_rows": 480,
     "formats": 8,
-    "assets_available": 1756,
-    "decode_active": 1759,
+    "assets_available": 1757,
+    "decode_active": 1760,
     "decode_planned": 0,
     "encode_not_wired": 32
   },

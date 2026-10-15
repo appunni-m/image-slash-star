@@ -2802,6 +2802,11 @@ formats:
       rust_decode_with_metadata_limit: 32
       test_assets:
       - valid_frame_missing_trailer.gif
+    - id: post_frame_zero_padding
+      description: Pillow ignores a zero-valued block marker between a complete frame and the trailer
+      rust_decode_with_metadata_limit: 34
+      test_assets:
+      - post_frame_zero_padding.gif
     - id: error_empty
       description: Empty file
       test_assets:

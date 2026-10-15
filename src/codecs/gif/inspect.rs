@@ -5,6 +5,7 @@ use crate::types::{ImageFormat, ImageInfo, ImageMode, ImagePalette};
 
 const IMAGE_SEPARATOR: u8 = 0x2c;
 const EXTENSION_INTRODUCER: u8 = 0x21;
+const PADDING_BLOCK: u8 = 0x00;
 const TRAILER: u8 = 0x3b;
 const PILLOW_DECOMPRESSION_BOMB_ERROR_PIXELS: u64 = 178_956_970;
 
@@ -137,6 +138,9 @@ fn inspect_inner(data: &[u8], basic: bool) -> CodecResult<ImageInfo> {
                 }
             }
             TRAILER => break,
+            // Match Pillow's tolerance for zero-valued padding after the
+            // first complete frame while keeping pre-frame markers strict.
+            PADDING_BLOCK if first_mode.is_some() => {}
             _ if recovering_from_bad_gce => {}
             _ => {
                 return Err(CodecError::Malformed("unknown GIF block marker".to_owned()));

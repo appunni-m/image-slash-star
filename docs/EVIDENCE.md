@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `8a9b065ec79786d261cde5028681829d9f1887a68b5705429c15126e1ea1aae5`; matrix `2ee6170c409e7ce264106951186a8dbe72911e6582929f1fb74300968607424e`.
+- Current fixture integrity only: manifest `361d70c7305cc44ff1bd7043033ddb773fb88cec4648ace39ad54309aba061da`; matrix `60ea5826a2791cf007d4740e7a197ddc78df27e252d3b6c7ec60698e7bbe9017`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6872,8 +6872,8 @@ stream when pixels are loaded. Rust now preserves marker-only inspection and
 verification while returning a malformed decode error for the invalid
 frame-order scan.
 
-The current fixture matrix contains 2,239 total rows: 1,759 decode /
-inspect / verify rows and 480 encode rows. Of those, 1,759 decode rows and
+The current fixture matrix contains 2,240 total rows: 1,760 decode /
+inspect / verify rows and 480 encode rows. Of those, 1,760 decode rows and
 448 encode rows are active.
 
 The selected control, malformed case, and multi-scan control passed 3/3; the
