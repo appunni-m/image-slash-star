@@ -71,6 +71,106 @@ def verify_action_pins(workflows: list[Path]) -> bool:
     return False
 
 
+def release_coverage_gate_violations(contents: str) -> list[str]:
+    """Require tag coverage to pass before the release publish job can run."""
+
+    jobs_match = re.search(r"(?m)^jobs:\s*$", contents)
+    if jobs_match is None:
+        return ["release workflow has no jobs section"]
+
+    jobs_body = contents[jobs_match.end():]
+    headers = list(re.finditer(r"(?m)^  ([A-Za-z0-9_-]+):\s*$", jobs_body))
+    jobs = {}
+    for index, header in enumerate(headers):
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(jobs_body)
+        jobs[header.group(1)] = jobs_body[header.end():end]
+    violations = []
+
+    coverage_job = jobs.get("release-coverage")
+    if coverage_job is None:
+        violations.append("release workflow has no release-coverage job")
+    else:
+        if not re.search(r"(?m)^    steps:\s*$", coverage_job):
+            violations.append("release-coverage must define steps")
+        steps = re.split(r"(?m)^      - ", coverage_job)
+        checkout_step = next(
+            (step for step in steps if step.startswith("uses: actions/checkout@")),
+            None,
+        )
+        if checkout_step is None:
+            violations.append("release-coverage must check out the tagged source")
+        elif re.search(r"(?m)^\s+ref:", checkout_step):
+            violations.append("release-coverage checkout must use the tag event commit")
+        if "toolchain: ${{ env.COVERAGE_TOOLCHAIN }}" not in coverage_job:
+            violations.append("release-coverage must use the configured coverage toolchain")
+        if not re.search(
+            r"(?m)^  COVERAGE_TOOLCHAIN:\s*[\"']?nightly-\d{4}-\d{2}-\d{2}[\"']?\s*$",
+            contents,
+        ):
+            violations.append("release workflow must pin its nightly coverage toolchain")
+        if "cargo-llvm-cov --locked --version 0.8.7" not in coverage_job:
+            violations.append("release-coverage must install the pinned coverage driver")
+        if not re.search(r"\bmake coverage\b", coverage_job):
+            violations.append("release-coverage must run make coverage")
+        job_settings = coverage_job.split("    steps:", maxsplit=1)[0]
+        if re.search(r"(?m)^    if:", job_settings):
+            violations.append("release-coverage must not be conditionally skipped")
+        if re.search(r"(?m)^    continue-on-error:\s*true\s*$", job_settings):
+            violations.append("release-coverage must not ignore coverage failures")
+        coverage_step = next(
+            (
+                step
+                for step in re.split(r"(?m)^      - ", coverage_job)
+                if re.search(r"\bmake coverage\b", step)
+            ),
+            "",
+        )
+        if re.search(r"(?m)^(?:if:| {8}if:)", coverage_step):
+            violations.append("make coverage step must not be conditionally skipped")
+        if re.search(r"(?m)^(?:continue-on-error:| {8}continue-on-error:)\s*true\s*$", coverage_step):
+            violations.append("make coverage step must not ignore failures")
+
+    publish_job = jobs.get("publish")
+    if publish_job is None:
+        violations.append("release workflow has no publish job")
+    else:
+        publish_settings = publish_job.split("    steps:", maxsplit=1)[0]
+        if re.search(r"(?m)^    if:", publish_settings):
+            violations.append("publish must use the default successful-dependencies condition")
+        needs_match = re.search(
+            r"(?m)^    needs:\s*(?:\[(?P<list>[^\]]*)\]|(?P<scalar>[^\s#]+))",
+            publish_job,
+        )
+        if needs_match is None:
+            dependencies = set()
+        elif needs_match.group("list") is not None:
+            dependencies = {
+                dependency.strip()
+                for dependency in needs_match.group("list").split(",")
+                if dependency.strip()
+            }
+        else:
+            dependencies = {needs_match.group("scalar")}
+        required = {"preflight", "release-coverage"}
+        if not required.issubset(dependencies):
+            missing = ", ".join(sorted(required - dependencies))
+            violations.append(f"publish must depend on {missing}")
+
+    return violations
+
+
+def verify_release_coverage_gate(workflow: Path) -> bool:
+    """Reject release workflows that can publish without tagged-source coverage."""
+
+    violations = release_coverage_gate_violations(workflow.read_text(encoding="utf-8"))
+    if not violations:
+        return True
+    print("Release coverage gate validation failed:", file=sys.stderr)
+    for violation in violations:
+        print(f"  {workflow.relative_to(ROOT)}: {violation}", file=sys.stderr)
+    return False
+
+
 def binary_bytes(archive: bytes, checksum: str) -> bytes:
     if hashlib.sha256(archive).hexdigest() != checksum:
         raise ValueError("actionlint archive checksum mismatch")
@@ -90,6 +190,9 @@ def main() -> int:
     if not workflows:
         raise SystemExit("No GitHub workflows found")
     if not verify_action_pins(workflows):
+        return 1
+    release_workflow = ROOT / ".github" / "workflows" / "release.yml"
+    if not verify_release_coverage_gate(release_workflow):
         return 1
 
     target = (platform.system(), platform.machine())

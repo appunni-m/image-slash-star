@@ -34,6 +34,9 @@ or long-lived registry token is used by subsequent releases.
 
 The workflow builds and validates before publishing. It checks registry
 artifact identity and creates GitHub assets only after successful publication.
+The tag workflow also runs `make coverage` on the exact tagged source and
+blocks publication unless the aggregate report passes the current release
+floors. Its report and log are retained as `llvm-coverage-release-<tag>`.
 Use `make release-registry-verify` for a read-only candidate/registry comparison.
 Binary downloads must be hashed as archive bytes, not JSON redirect metadata.
 

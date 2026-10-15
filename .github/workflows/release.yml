@@ -78,9 +78,54 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+  release-coverage:
+    name: Measure coverage for tagged source
+    runs-on: macos-14
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: ${{ env.COVERAGE_TOOLCHAIN }}
+          components: llvm-tools-preview
+      - name: Install pinned coverage driver
+        run: cargo +${COVERAGE_TOOLCHAIN} install cargo-llvm-cov --locked --version 0.8.7
+      - name: Measure aggregate all-feature coverage and enforce alpha floors
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p target/release-evidence
+          log_file=target/release-evidence/coverage.log
+          set +e
+          make coverage 2>&1 | tee "$log_file"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            summary="$(tail -n 40 "$log_file" | tr '\n' ' ')"
+            summary="${summary//'%'/'%25'}"
+            summary="${summary//$'\r'/'%0D'}"
+            echo "::error title=release coverage failure::$summary"
+            exit "$status"
+          fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: llvm-coverage-release-${{ github.ref_name }}
+          path: |
+            target/release-evidence/coverage.json
+            target/release-evidence/coverage.log
+          if-no-files-found: error
+          retention-days: 90
+
   publish:
     name: Publish image-slash-star to crates.io
-    needs: preflight
+    needs: [preflight, release-coverage]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: crates-io

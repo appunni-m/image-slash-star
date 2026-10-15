@@ -179,6 +179,22 @@ class ReleaseTagTests(unittest.TestCase):
 
 
 class WorkflowPolicyTests(unittest.TestCase):
+    VALID_RELEASE_WORKFLOW = """env:
+  COVERAGE_TOOLCHAIN: "nightly-2026-07-16"
+jobs:
+  release-coverage:
+    steps:
+      - uses: actions/checkout@123
+      - uses: dtolnay/rust-toolchain@123
+        with:
+          toolchain: ${{ env.COVERAGE_TOOLCHAIN }}
+      - run: cargo +${COVERAGE_TOOLCHAIN} install cargo-llvm-cov --locked --version 0.8.7
+      - name: Measure coverage
+        run: make coverage
+  publish:
+    needs: [preflight, release-coverage]
+"""
+
     def test_external_actions_require_full_commit_shas(self) -> None:
         sha = "a" * 40
         contents = f"""jobs:
@@ -207,6 +223,75 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertEqual(
             check_workflows.unpinned_action_uses(contents),
             [(4, "actions/checkout@v4"), (5, "owner/action@v1")],
+        )
+
+    def test_release_coverage_is_required_before_publishing(self) -> None:
+        workflow = (Path(__file__).resolve().parent.parent
+                    / ".github" / "workflows" / "release.yml")
+        self.assertEqual(
+            check_workflows.release_coverage_gate_violations(
+                workflow.read_text(encoding="utf-8")
+            ),
+            [],
+        )
+
+    def test_release_cannot_publish_when_tag_coverage_is_skipped(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "needs: [preflight, release-coverage]", "needs: preflight"
+        )
+        self.assertEqual(
+            check_workflows.release_coverage_gate_violations(workflow),
+            ["publish must depend on release-coverage"],
+        )
+
+    def test_release_coverage_job_cannot_be_conditionally_skipped(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "  release-coverage:\n",
+            "  release-coverage:\n    if: github.event_name == 'workflow_dispatch'\n",
+        )
+        self.assertIn(
+            "release-coverage must not be conditionally skipped",
+            check_workflows.release_coverage_gate_violations(workflow),
+        )
+
+    def test_release_coverage_step_cannot_be_conditionally_skipped(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "      - name: Measure coverage\n",
+            "      - if: false\n        name: Measure coverage\n",
+        )
+        self.assertIn(
+            "make coverage step must not be conditionally skipped",
+            check_workflows.release_coverage_gate_violations(workflow),
+        )
+
+    def test_publish_cannot_ignore_failed_coverage_dependencies(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "  publish:\n",
+            "  publish:\n    if: always()\n",
+        )
+        self.assertIn(
+            "publish must use the default successful-dependencies condition",
+            check_workflows.release_coverage_gate_violations(workflow),
+        )
+
+    def test_release_coverage_cannot_ignore_failure(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "      - name: Measure coverage\n",
+            "      - continue-on-error: true\n        name: Measure coverage\n",
+        )
+        self.assertIn(
+            "make coverage step must not ignore failures",
+            check_workflows.release_coverage_gate_violations(workflow),
+        )
+
+    def test_release_coverage_cannot_check_out_main_instead_of_the_tag(self) -> None:
+        workflow = self.VALID_RELEASE_WORKFLOW.replace(
+            "      - uses: actions/checkout@123\n",
+            "      - uses: actions/checkout@123\n        with:\n          ref: main\n",
+        )
+        self.assertIn(
+            "release-coverage checkout must use the tag event commit",
+            check_workflows.release_coverage_gate_violations(workflow),
         )
 
 
