@@ -80,6 +80,7 @@ jobs:
         with:
           name: image-slash-star-candidate
           path: target/release-artifacts/
+          overwrite: true
           if-no-files-found: error
           retention-days: 90
 
