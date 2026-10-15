@@ -3557,6 +3557,32 @@ def gen_png():
     write_rgb_png(d / "filter_average.png", img, row_filter=3)
     write_rgb_png(d / "filter_paeth.png", img, row_filter=4)
     write_rgb_png(d / "filter_mixed.png", img, row_filter="mixed")
+    # The adjacent grayscale samples target Paeth's tie precedence at x=1:
+    # left wins the first tie, above wins the next, and upper-left wins later.
+    # The final zero rows also make adaptive filter scores tie exactly.
+    paeth_tie_rows = (
+        (20, 10),
+        (10, 10),
+        (2, 0),
+        (3, 0),
+        (1, 2),
+        (0, 0),
+        (0, 0),
+    )
+    paeth_tie_precedence = Image.new("L", (2, len(paeth_tie_rows)))
+    paeth_tie_precedence.putdata(
+        [sample for row in paeth_tie_rows for sample in row]
+    )
+    paeth_tie_precedence.save(d / "paeth_tie_precedence.png")
+    # Here Paeth wins adaptive selection, and at x=1 above and upper-left are
+    # equally close but contain different bytes. The encoded filter byte and
+    # residuals therefore make the tie choice observable in parity output.
+    paeth_emitted_tie_rows = ((2, 0, 0), (3, 1, 1))
+    paeth_emitted_tie = Image.new("L", (3, len(paeth_emitted_tie_rows)))
+    paeth_emitted_tie.putdata(
+        [sample for row in paeth_emitted_tie_rows for sample in row]
+    )
+    paeth_emitted_tie.save(d / "paeth_above_upper_left_tie.png")
     # Compression
     img.save(d / "compress_default.png")
     save_png_variants(img, d)

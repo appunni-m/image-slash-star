@@ -2971,6 +2971,86 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_paeth_tie_precedence",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_paeth_tie_precedence.bin",
+      "ref_bytes": 14,
+      "ref_mode": "L8",
+      "ref_size": [
+        2,
+        7
+      ],
+      "ref_sha256": "7317950bc7ae46029a32a55519ee9204198de3061894f4d037b4736ddd5e2d09",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_paeth_tie_precedence.bin",
+      "encoded_ref_bytes": 82,
+      "encoded_ref_sha256": "1eead4f378df2d2eadef793d64c50798027b9ddd16efa29ad00fa6261fc2d216",
+      "source_mode": "L8",
+      "source_sha256": "1eead4f378df2d2eadef793d64c50798027b9ddd16efa29ad00fa6261fc2d216",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
+      "id": "enc_paeth_emitted_above_upper_left_tie",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_paeth_emitted_above_upper_left_tie.bin",
+      "ref_bytes": 6,
+      "ref_mode": "L8",
+      "ref_size": [
+        3,
+        2
+      ],
+      "ref_sha256": "deca965479b7a9ace2cd62075926227118a745070617fe6e92728f6cfcd3c5ba",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_paeth_emitted_above_upper_left_tie.bin",
+      "encoded_ref_bytes": 73,
+      "encoded_ref_sha256": "e4526d0e199e19c501cceb46df35584103e53e0d2185bdb0343a63c33a8c432f",
+      "source_mode": "L8",
+      "source_sha256": "e4526d0e199e19c501cceb46df35584103e53e0d2185bdb0343a63c33a8c432f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_chunk_text",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_chunk_text.bin",
       "ref_bytes": 49152,

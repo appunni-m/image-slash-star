@@ -3530,6 +3530,92 @@
       }
     },
     {
+      "id": "enc_paeth_tie_precedence",
+      "source_asset": "paeth_tie_precedence.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "1eead4f378df2d2eadef793d64c50798027b9ddd16efa29ad00fa6261fc2d216",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/paeth_tie_precedence.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
+      "id": "enc_paeth_emitted_above_upper_left_tie",
+      "source_asset": "paeth_above_upper_left_tie.png",
+      "source_format": "png",
+      "source_mode": "L8",
+      "source_sha256": "e4526d0e199e19c501cceb46df35584103e53e0d2185bdb0343a63c33a8c432f",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {},
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/paeth_above_upper_left_tie.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_chunk_text",
       "source_asset": "rgb.png",
       "source_format": "png",

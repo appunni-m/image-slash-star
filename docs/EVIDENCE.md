@@ -3032,14 +3032,36 @@ and a 0.002902 percentage-point gain against the pre-row baseline. That
 increment is coordinate evidence only because source/build and test receipts
 are unavailable; branch-level incremental unions remain incomparable.
 
-The current matrix contains 2,229 total rows: 1,751 decode / inspect /
-verify rows and 478 encode rows. Of those, 1,751 decode rows and 446 encode
+The current matrix contains 2,231 total rows: 1,751 decode / inspect /
+verify rows and 480 encode rows. Of those, 1,751 decode rows and 448 encode
 rows are active; 0 decode rows and 32 encode rows are planned. TIFF has
 288 decode rows. The 30 fault contracts are tracked separately from the
 Pillow parity totals. Full
 and selected MCP reports lack source/build receipts and test attribution, so
 MCP locations are coordinate evidence rather than verified named-test
 attribution.
+
+### PNG Paeth tie parity — 2026-10-15
+
+Two active public encode rows now target Paeth predictor tie behavior.
+`enc_paeth_tie_precedence` uses a 2x7 grayscale raster to exercise the
+predictor return arms and equal adaptive filter scores.
+`enc_paeth_emitted_above_upper_left_tie` uses a 3x2 grayscale raster where
+Paeth wins adaptive selection and distinct, equally close above and
+upper-left samples make its tie choice visible in exact encoded bytes. The
+pinned Pillow 12.2.0 references and round-trip pixels are generated from the
+public encoder. The second reference decompresses to filter bytes `[0, 4]`
+with Paeth residuals `[1, 1, 0]`. The selected public matrix run passed both
+rows (2/2), made eight public encode calls, and had no panics.
+
+Coverage MCP returned no missing branch groups for
+`src/codecs/png/encode.rs:275` or `:339` in the selected report
+`target/release-evidence/coverage-png-paeth-tie-final.json`. That report
+observed 269/31,320 branch outcomes. It has no source/build receipt and test
+attribution is unknown. Incremental comparison with
+`coverage-png-matrix-current.json` is incomparable because the branch detail
+differs (31,320 versus 31,314 outcomes); no marginal gain or full-suite
+coverage claim is made. The saved full baseline remains unchanged.
 
 ### JPEG Huffman edge rows — 2026-10-14
 
@@ -6420,7 +6442,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `1f6ca2ee601d2a552cb144fd1f4c9313f8c48d328bbc5f79c3735960c3755fce`; matrix `763b3a1eea0d52f69e5bd2f7d68edd8e1f51f3e7ce4f57bbf1363f1dbef5b6f0`.
+- Current fixture integrity only: manifest `ab57c4de949fadd35f42edb6bd369660e271e37266eea80fc579c8fef8ad3a90`; matrix `b676c0800e06f940e1568b90c7ec6b01ce450d211dfba80afd21905a59edf3ee`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator

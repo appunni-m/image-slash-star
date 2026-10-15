@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `763b3a1eea0d52f69e5bd2f7d68edd8e1f51f3e7ce4f57bbf1363f1dbef5b6f0`.
+- Active fixture source SHA-256: `b676c0800e06f940e1568b90c7ec6b01ce450d211dfba80afd21905a59edf3ee`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 2,197 (1,751 decode; 446 encode).
+- Active fixture rows: 2,199 (1,751 decode; 448 encode).
 - Planned fixture rows excluded: 32 (0 decode; 32 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 128.
 
@@ -439,7 +439,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | JPEG | still_encode | rejected | Rgb8; invalid-mode witness: P8, La8, Rgba8, L16, La16, Rgb16, Rgba16, Rgb32F, Rgba32F, F32, I32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `jpeg:enc_error_public_mode_contract` |
 | PNG | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `png:enc_1bit` |
 | PNG | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 1: `png:enc_16bit` |
-| PNG | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 3: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8` |
+| PNG | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 5: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8`, `png:enc_paeth_emitted_above_upper_left_tie`, `png:enc_paeth_tie_precedence` |
 | PNG | sequence_encode | accepted | La8 | 1 frame | La8 | SingleFrame | — | 2: `png:enc_grayscale_alpha`, `png:enc_la8` |
 | PNG | sequence_encode | accepted | P8 | 1 frame | P8 | SingleFrame | — | 4: `png:enc_indexed`, `png:enc_indexed_alpha`, `png:enc_indexed_missing_palette`, `png:enc_indexed_opaque_trns` |
 | PNG | sequence_encode | accepted | Rgb8 | 1 frame | Rgb8 | SingleFrame | — | 51: `png:enc_1x1`, `png:enc_adam7`, `png:enc_chunk_gamma`, `png:enc_chunk_phys`, `png:enc_chunk_srgb`, `png:enc_chunk_text`, `png:enc_chunk_time`, `png:enc_compress_0`, `png:enc_compress_1`, `png:enc_compress_1_1x1`, `png:enc_compress_1_boundary`, `png:enc_compress_1_large_solid`, `png:enc_compress_2`, `png:enc_compress_2_boundary`, `png:enc_compress_3`, `png:enc_compress_3_1x1`, `png:enc_compress_3_boundary`, `png:enc_compress_4`, `png:enc_compress_4_boundary`, `png:enc_compress_5`, `png:enc_compress_5_boundary`, `png:enc_compress_6`, `png:enc_compress_6_boundary`, `png:enc_compress_6_large_solid`, `png:enc_compress_7`, `png:enc_compress_7_1x1`, `png:enc_compress_7_boundary`, `png:enc_compress_8`, `png:enc_compress_8_1x1`, `png:enc_compress_8_boundary`, `png:enc_compress_9`, `png:enc_compress_9_1x1`, `png:enc_compress_9_boundary`, `png:enc_compress_9_large_solid`, `png:enc_compress_default`, `png:enc_compress_max`, `png:enc_compress_none`, `png:enc_compress_stored`, `png:enc_filter_adaptive`, `png:enc_filter_avg`, `png:enc_filter_none`, `png:enc_filter_paeth`, `png:enc_filter_sub`, `png:enc_filter_up`, `png:enc_interlaced`, `png:enc_no_interlace`, `png:enc_odd_size`, `png:enc_optimize`, `png:enc_optimize_average`, `png:enc_rgb`, `png:enc_rgb8` |
@@ -450,7 +450,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | PNG | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 11: `png:enc_error_retained_sequence_background`, `png:enc_error_retained_sequence_blend`, `png:enc_error_retained_sequence_canvas_height`, `png:enc_error_retained_sequence_canvas_width`, `png:enc_error_retained_sequence_default_image`, `png:enc_error_retained_sequence_disposal`, `png:enc_error_retained_sequence_duration`, `png:enc_error_retained_sequence_geometry`, `png:enc_error_retained_sequence_interlace`, `png:enc_error_retained_sequence_loop`, `png:enc_error_retained_sequence_top` |
 | PNG | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 1: `png:enc_1bit` |
 | PNG | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 1: `png:enc_16bit` |
-| PNG | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 3: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8` |
+| PNG | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 5: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8`, `png:enc_paeth_emitted_above_upper_left_tie`, `png:enc_paeth_tie_precedence` |
 | PNG | still_encode | accepted | La8 | 1 frame | La8 | — (still result) | — | 2: `png:enc_grayscale_alpha`, `png:enc_la8` |
 | PNG | still_encode | accepted | P8 | 1 frame | P8 | — (still result) | — | 4: `png:enc_indexed`, `png:enc_indexed_alpha`, `png:enc_indexed_missing_palette`, `png:enc_indexed_opaque_trns` |
 | PNG | still_encode | accepted | Rgb8 | 1 frame | Rgb8 | — (still result) | — | 51: `png:enc_1x1`, `png:enc_adam7`, `png:enc_chunk_gamma`, `png:enc_chunk_phys`, `png:enc_chunk_srgb`, `png:enc_chunk_text`, `png:enc_chunk_time`, `png:enc_compress_0`, `png:enc_compress_1`, `png:enc_compress_1_1x1`, `png:enc_compress_1_boundary`, `png:enc_compress_1_large_solid`, `png:enc_compress_2`, `png:enc_compress_2_boundary`, `png:enc_compress_3`, `png:enc_compress_3_1x1`, `png:enc_compress_3_boundary`, `png:enc_compress_4`, `png:enc_compress_4_boundary`, `png:enc_compress_5`, `png:enc_compress_5_boundary`, `png:enc_compress_6`, `png:enc_compress_6_boundary`, `png:enc_compress_6_large_solid`, `png:enc_compress_7`, `png:enc_compress_7_1x1`, `png:enc_compress_7_boundary`, `png:enc_compress_8`, `png:enc_compress_8_1x1`, `png:enc_compress_8_boundary`, `png:enc_compress_9`, `png:enc_compress_9_1x1`, `png:enc_compress_9_boundary`, `png:enc_compress_9_large_solid`, `png:enc_compress_default`, `png:enc_compress_max`, `png:enc_compress_none`, `png:enc_compress_stored`, `png:enc_filter_adaptive`, `png:enc_filter_avg`, `png:enc_filter_none`, `png:enc_filter_paeth`, `png:enc_filter_sub`, `png:enc_filter_up`, `png:enc_interlaced`, `png:enc_no_interlace`, `png:enc_odd_size`, `png:enc_optimize`, `png:enc_optimize_average`, `png:enc_rgb`, `png:enc_rgb8` |

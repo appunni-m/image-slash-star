@@ -2562,6 +2562,12 @@ formats:
     - id: enc_filter_adaptive
       description: Pillow accepts but ignores the PNG filter option
       params: {'filter': 'adaptive'}
+    - id: enc_paeth_tie_precedence
+      description: Grayscale pixels exercise all Paeth predictor outcomes and equal adaptive filter scores
+      source_asset: paeth_tie_precedence.png
+    - id: enc_paeth_emitted_above_upper_left_tie
+      description: Paeth wins adaptive selection with distinct equally close above and upper-left predictors
+      source_asset: paeth_above_upper_left_tie.png
     - id: enc_chunk_text
       description: 
       params: {'text_chunks': True}

@@ -128605,6 +128605,108 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_paeth_tie_precedence",
+          "type": "encode",
+          "format": "png",
+          "category": "paeth",
+          "description": "Grayscale pixels exercise all Paeth predictor outcomes and equal adaptive filter scores",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "paeth_tie_precedence.png",
+          "source_sha256": "1eead4f378df2d2eadef793d64c50798027b9ddd16efa29ad00fa6261fc2d216",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {},
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_paeth_tie_precedence.bin",
+          "encoded_ref_bytes": 82,
+          "encoded_ref_sha256": "1eead4f378df2d2eadef793d64c50798027b9ddd16efa29ad00fa6261fc2d216",
+          "ref_sha256": "7317950bc7ae46029a32a55519ee9204198de3061894f4d037b4736ddd5e2d09",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_paeth_tie_precedence.bin",
+          "ref_bytes": 14,
+          "ref_mode": "L8",
+          "ref_size": [
+            2,
+            7
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false
+        },
+        {
+          "id": "enc_paeth_emitted_above_upper_left_tie",
+          "type": "encode",
+          "format": "png",
+          "category": "paeth",
+          "description": "Paeth wins adaptive selection with distinct equally close above and upper-left predictors",
+          "params": {},
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "paeth_above_upper_left_tie.png",
+          "source_sha256": "e4526d0e199e19c501cceb46df35584103e53e0d2185bdb0343a63c33a8c432f",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "L8",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_paeth_emitted_above_upper_left_tie.bin",
+          "encoded_ref_bytes": 73,
+          "encoded_ref_sha256": "e4526d0e199e19c501cceb46df35584103e53e0d2185bdb0343a63c33a8c432f",
+          "ref_sha256": "deca965479b7a9ace2cd62075926227118a745070617fe6e92728f6cfcd3c5ba",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_paeth_emitted_above_upper_left_tie.bin",
+          "ref_bytes": 6,
+          "ref_mode": "L8",
+          "ref_size": [
+            3,
+            2
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "description": "",
           "format": "png",
           "id": "enc_chunk_text",
@@ -188284,9 +188386,9 @@
     }
   },
   "summary": {
-    "total_rows": 2229,
+    "total_rows": 2231,
     "decode_rows": 1751,
-    "encode_rows": 478,
+    "encode_rows": 480,
     "formats": 8,
     "assets_available": 1748,
     "decode_active": 1751,
