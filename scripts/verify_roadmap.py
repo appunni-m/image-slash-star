@@ -374,7 +374,7 @@ def verify() -> str:
     exact_match(
         roadmap,
         rf"Whole matrix: {matrix_state['total_rows']:,} rows total, "
-        rf"{matrix_state['decode_active']} active decode rows, {matrix_state['encode_active']} active encode\s+rows, "
+        rf"{matrix_state['decode_active']:,} active decode rows, {matrix_state['encode_active']:,} active encode\s+rows, "
         rf"{matrix_state['decode_planned']} planned decode rows, and {matrix_state['encode_planned']} planned encode rows",
         "whole-matrix count",
     )

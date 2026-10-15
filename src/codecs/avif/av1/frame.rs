@@ -20,6 +20,8 @@ use crate::codecs::CodecError;
 
 const PRIMARY_REF_NONE: usize = 7;
 const REFERENCE_SLOTS: usize = 8;
+const MAX_TILE_WIDTH_PIXELS: u32 = 4_096;
+const MAX_TILE_HEIGHT_PIXELS: u32 = 2_304;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum FrameType {
@@ -3756,13 +3758,16 @@ fn read_tiling(
         .frame_height
         .saturating_add(superblock_size.saturating_sub(1))
         >> superblock_shift;
-    let maximum_tile_width = 4096_u32 >> superblock_shift;
-    let maximum_tile_area = 4096_u32.saturating_mul(2304) >> 2_u32.saturating_mul(superblock_shift);
-    let min_log2_columns = tile_log2(maximum_tile_width, superblock_width);
+    let maximum_tile_width_superblocks = MAX_TILE_WIDTH_PIXELS >> superblock_shift;
+    // Pixel area converts to superblock² by shifting twice the superblock log2.
+    let superblock_area_shift = 2_u32.saturating_mul(superblock_shift);
+    let maximum_tile_area_superblocks =
+        MAX_TILE_WIDTH_PIXELS.saturating_mul(MAX_TILE_HEIGHT_PIXELS) >> superblock_area_shift;
+    let min_log2_columns = tile_log2(maximum_tile_width_superblocks, superblock_width);
     let max_log2_columns = tile_log2(1, superblock_width.min(64));
     let max_log2_rows = tile_log2(1, superblock_height.min(64));
     let frame_area = superblock_width.saturating_mul(superblock_height);
-    let min_log2_tiles = tile_log2(maximum_tile_area, frame_area).max(min_log2_columns);
+    let min_log2_tiles = tile_log2(maximum_tile_area_superblocks, frame_area).max(min_log2_columns);
 
     let mut column_starts = Vec::new();
     let mut row_starts = Vec::new();
@@ -3796,7 +3801,7 @@ fn read_tiling(
             column_starts.push(start);
             let maximum = superblock_width
                 .saturating_sub(start)
-                .min(maximum_tile_width);
+                .min(maximum_tile_width_superblocks);
             let width = if maximum > 1 {
                 bits.ns(maximum)?.saturating_add(1)
             } else {

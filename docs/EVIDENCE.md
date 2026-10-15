@@ -6436,13 +6436,12 @@ Coverage MCP identities, and separately checks current fixture integrity. The pu
 so copied prose cannot drift across guides.
 
 <!-- current-claim-ledger:begin -->
-
 Current claim-ledger baseline (not current `HEAD`):
 - Measured revision: `93ec80ec99c42671dce6cf70694bce27ad8a2ef4`.
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `7f50695c0a184060f48f346c7b563ea71f563a6e013dd45fcf5379c85b3dd0ef`; matrix `2b6cd41e54cdc54ebf21891a9b136f780e5b113c2b4cdd70ab7475890463da8f`.
+- Current fixture integrity only: manifest `3026aceeffce74b2b942f36f649491077c173538c99c7f91e1eed0bf4fb1e005`; matrix `ca6011e07fe7cc6bd1a70cbb2d58718efd1e8133103874e97fd03aa6d4f861e3`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6873,8 +6872,8 @@ stream when pixels are loaded. Rust now preserves marker-only inspection and
 verification while returning a malformed decode error for the invalid
 frame-order scan.
 
-The current fixture matrix contains 2,234 total rows: 1,754 decode /
-inspect / verify rows and 480 encode rows. Of those, 1,754 decode rows and
+The current fixture matrix contains 2,235 total rows: 1,755 decode /
+inspect / verify rows and 480 encode rows. Of those, 1,755 decode rows and
 448 encode rows are active.
 
 The selected control, malformed case, and multi-scan control passed 3/3; the
@@ -6897,3 +6896,28 @@ input remains ordinary Pillow parity evidence; it is not a target-only fault
 contract. Reports:
 `target/release-evidence/coverage-jpeg-direct-safe-cleanup-current.json` and
 `target/release-evidence/coverage-jpeg-cmyk-order-regression-current.json`.
+
+### Pillow-tolerated zTXt without a keyword separator — 2026-10-16
+
+The input-only row
+`decode:png:pillow_tolerated_malformed_ztxt_missing_keyword_separator` uses a
+complete 1×1 RGB PNG with a valid-CRC zTXt chunk whose payload contains no NUL
+byte. The compressed text is valid, but the PNG text keyword separator is
+absent. Pinned Pillow 12.2.0 opens and verifies the file, then loads the same
+three RGB bytes as the unmodified input. The selected public parity row passes
+1/1 across detection, inspection, verification, decode, and sequence decode.
+The decoder already preserves this tolerated input; this change adds an
+independent malformed-metadata parity witness without altering runtime code.
+
+Coverage MCP's branch comparison with the earlier PNG matrix report is
+incomparable because the exact branch detail differs. A focused incremental
+comparison against the earlier full PNG matrix report is incomparable because
+the selected report contains observations outside that baseline inventory.
+Comparing the selected row with the invalid-compression control reports no new
+region observations and 17 control observations absent from the selected report;
+source/build identity is unverified, so those differences cannot establish a
+coverage gain or regression. The selected report still shows unobserved PNG
+regions, including in `invalid_compressed_metadata_identity`; no full-suite
+coverage campaign was run. Reports:
+`target/release-evidence/coverage-png-ztxt-invalid-compression-control-final.json`
+and `target/release-evidence/coverage-png-ztxt-missing-separator-final.json`.

@@ -2177,6 +2177,10 @@ formats:
       test_assets:
       - ztxt_unsupported_method.png
       expect_error: true
+    - id: pillow_tolerated_malformed_ztxt_missing_keyword_separator
+      description: Pillow preserves pixels when zTXt metadata has no keyword separator
+      test_assets:
+      - ztxt_missing_keyword_separator.png
     - id: pillow_tolerated_malformed
       description: Malformed PNG structures tolerated by Pillow
       test_assets:
