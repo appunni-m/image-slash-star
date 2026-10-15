@@ -6441,7 +6441,7 @@ Current claim-ledger baseline (not current `HEAD`):
 - Coverage MCP run: `ec4c4bbd-dbda-4e49-8109-d7da07722dc0`; snapshot: `7665cda3-f4a7-4568-b871-a9d34afaa92c`.
 - Coverage: 100,389/110,015 lines (91.2503%), 12,861/14,246 branches (90.2780%), 5,125/5,794 functions (88.4536%), and 150,221/166,375 regions (90.2906%).
 - Measured manifest SHA-256: `c1a1cccd485d066ffbe206a6e1577a1788aff8d4f288e4e8f8a933fa3c62ae7b`; measured matrix SHA-256: `f26151b3811aaab58556da422f476b714b5fac5925ff5b97807904096b4d2d58`.
-- Current fixture integrity only: manifest `777950a9d1c93df54604e4ff09483fa9a8a66498699b35caad4c3b578b935626`; matrix `952a1b3870eb174dbf678a1567baf7785324a0879f128a62e06982a1267c65dc`.
+- Current fixture integrity only: manifest `bf7cb2a37df82f1d975345569d1e1700b1cdaca7caecca43402c62d7c7a2f164`; matrix `a029f24e73a151618f6958ade3295ea770164c5cbba6661183c7d0badb1d6630`.
 <!-- current-claim-ledger:end -->
 
 The larger current source denominator and the historical source denominator
@@ -6872,9 +6872,9 @@ stream when pixels are loaded. Rust now preserves marker-only inspection and
 verification while returning a malformed decode error for the invalid
 frame-order scan.
 
-The current fixture matrix contains 2,241 total rows: 1,761 decode /
-inspect / verify rows and 480 encode rows. Of those, 1,761 decode rows and
-448 encode rows are active.
+The current fixture matrix contains 2,242 total rows: 1,761 decode /
+inspect / verify rows and 481 encode rows. Of those, 1,761 decode rows and
+449 encode rows are active.
 
 The selected control, malformed case, and multi-scan control passed 3/3; the
 complete JPEG decode matrix passed 252/252. After the final CMYK direct-index
@@ -6968,3 +6968,27 @@ regions, including in `invalid_compressed_metadata_identity`; no full-suite
 coverage campaign was run. Reports:
 `target/release-evidence/coverage-png-ztxt-invalid-compression-control-final.json`
 and `target/release-evidence/coverage-png-ztxt-missing-separator-final.json`.
+
+### Odd-width 1-bit PNG encode parity — 2026-10-16
+
+The public row `encode:png:enc_1bit_odd_width` uses a complete 9×3 mode-1 PNG
+saved by pinned Pillow 12.2.0. Its source SHA-256 is
+`ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675`;
+Pillow decodes pixels `5980a6000080` with SHA-256
+`36e3c5d288415910fd696272299e53b64a80b66782e965c506b57e7dd2d8d203`. The
+rows exercise unused packed tail bits while setting the ninth pixel to both
+zero and one. The exact 74-byte encoded reference is byte-identical to
+Pillow's output. The selected manifest parity test passed 1/1. Its fixture
+generator checks the pinned PNG without importing Pillow; the optional
+`--verify-pillow` path checks the pinned save and pixel roundtrip.
+
+The selected branch report records 230/31,276 observations and reaches the
+1-bit row packing plus non-palette encoder paths at `encode.rs:70` and
+`:107`/`:429`. Coverage MCP's selected-test comparison reports 28 newly
+observed branch coordinates, including the false arms at lines 107 and 429.
+This is limited coordinate evidence: source/build receipts and test
+attribution are unavailable. The saved PNG baseline is 559/31,314 branches;
+its exact detail differs from the selected report, so the incremental union is
+incomparable. No aggregate coverage gain, full-suite result, or full coverage
+campaign is claimed. The selected report is
+`target/release-evidence/coverage-png-1bit-odd-width-final.json`.

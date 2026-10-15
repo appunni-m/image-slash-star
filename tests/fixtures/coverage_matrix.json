@@ -128940,6 +128940,59 @@
           "ref_is_animated": false
         },
         {
+          "id": "enc_1bit_odd_width",
+          "type": "encode",
+          "format": "png",
+          "category": "1bit",
+          "description": "Nine-pixel grayscale rows exercise packed padding and the ninth pixel",
+          "params": {
+            "color_type": "1"
+          },
+          "status": "active",
+          "source_format": "png",
+          "source_asset": "1bit_odd_width.png",
+          "source_sha256": "ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675",
+          "execution": {
+            "target": "aarch64-apple-darwin",
+            "features": [
+              "jpeg",
+              "png",
+              "gif",
+              "bmp",
+              "tiff",
+              "webp",
+              "ico",
+              "avif"
+            ],
+            "suite": "native_all_features"
+          },
+          "source_mode": "1",
+          "source_frame_count": 1,
+          "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_1bit_odd_width.bin",
+          "encoded_ref_bytes": 74,
+          "encoded_ref_sha256": "ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675",
+          "ref_sha256": "36e3c5d288415910fd696272299e53b64a80b66782e965c506b57e7dd2d8d203",
+          "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_1bit_odd_width.bin",
+          "ref_bytes": 6,
+          "ref_mode": "1",
+          "ref_size": [
+            9,
+            3
+          ],
+          "ref_frame_count": 1,
+          "ref_is_animated": false,
+          "assertion_origins": {
+            "source": "pillow_fixture",
+            "encode": "pillow_fixture",
+            "operations": "pillow_fixture"
+          },
+          "operations": {
+            "encode": "ok",
+            "encode_sequence": "ok"
+          },
+          "error_contracts": {}
+        },
+        {
           "id": "enc_adam7",
           "type": "encode",
           "format": "png",
@@ -189251,9 +189304,9 @@
     }
   },
   "summary": {
-    "total_rows": 2241,
+    "total_rows": 2242,
     "decode_rows": 1761,
-    "encode_rows": 480,
+    "encode_rows": 481,
     "formats": 8,
     "assets_available": 1758,
     "decode_active": 1761,

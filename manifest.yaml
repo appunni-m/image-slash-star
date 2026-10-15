@@ -2573,6 +2573,11 @@ formats:
       description: 
       source_asset: 1bit.png
       params: {'color_type': '1'}
+    - id: enc_1bit_odd_width
+      description: Nine-pixel grayscale rows exercise packed padding and the ninth pixel
+      source_format: png
+      source_asset: 1bit_odd_width.png
+      params: {'color_type': '1'}
     - id: enc_adam7
       description: Pillow accepts but ignores the PNG interlace option
       params: {'interlace': True}

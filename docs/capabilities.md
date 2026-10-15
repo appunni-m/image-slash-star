@@ -10,14 +10,14 @@ This page is generated from committed runtime/cfg evidence and active fixture ev
 - Runtime source: `tests/fixtures/capability_tables.json`.
 - Active fixture source: `tests/fixtures/coverage_matrix.json`.
 - Runtime source SHA-256: `991d11738a600afc38ada30001f3ed8e4ffcadfbdecf01428f7554c7c9d25400`.
-- Active fixture source SHA-256: `952a1b3870eb174dbf678a1567baf7785324a0879f128a62e06982a1267c65dc`.
+- Active fixture source SHA-256: `a029f24e73a151618f6958ade3295ea770164c5cbba6661183c7d0badb1d6630`.
 - Runtime capability fixture format version: 1.
 - Runtime targets represented: 2 (`native`, `wasm32-wasip1`).
 - Feature lanes represented per target: 11.
 - Formats per lane: 8.
 - Operations per runtime capability row: 6.
 - Runtime capability rows rendered: 176.
-- Active fixture rows: 2,209 (1,761 decode; 448 encode).
+- Active fixture rows: 2,210 (1,761 decode; 449 encode).
 - Planned fixture rows excluded: 32 (0 decode; 32 encode).
 - Active `not_applicable` operation outcomes excluded from evidence groups: 128.
 
@@ -437,7 +437,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | JPEG | still_encode | accepted | Rgb8 | 1 frame | Rgb8 | — (still result) | — | 51: `jpeg:enc_1x1`, `jpeg:enc_8x8`, `jpeg:enc_baseline`, `jpeg:enc_dct_fast`, `jpeg:enc_dct_slow`, `jpeg:enc_exif`, `jpeg:enc_exif_mixed_hex_case`, `jpeg:enc_no_exif`, `jpeg:enc_no_optimize`, `jpeg:enc_no_restart`, `jpeg:enc_odd_size`, `jpeg:enc_optimize`, `jpeg:enc_optimize_odd`, `jpeg:enc_optimize_restart`, `jpeg:enc_progressive`, `jpeg:enc_q1`, `jpeg:enc_q10`, `jpeg:enc_q100`, `jpeg:enc_q25`, `jpeg:enc_q50`, `jpeg:enc_q75`, `jpeg:enc_q85`, `jpeg:enc_quality_10`, `jpeg:enc_quality_100`, `jpeg:enc_quality_50`, `jpeg:enc_quality_85`, `jpeg:enc_restart`, `jpeg:enc_rgb`, `jpeg:enc_sub_420`, `jpeg:enc_sub_420_aligned_batch_fast_path`, `jpeg:enc_sub_420_aligned_full_mcu_rows`, `jpeg:enc_sub_420_aligned_odd_height`, `jpeg:enc_sub_420_aligned_odd_height_streaming`, `jpeg:enc_sub_420_horizontal_tail_streaming`, `jpeg:enc_sub_420_odd_streaming_edge`, `jpeg:enc_sub_420_q10_odd_streaming_edge`, `jpeg:enc_sub_420_q10_small_image_threshold`, `jpeg:enc_sub_420_unaligned_even_height`, `jpeg:enc_sub_420_unaligned_row_tail`, `jpeg:enc_sub_422`, `jpeg:enc_sub_422_aligned_subthreshold`, `jpeg:enc_sub_422_aligned_width_partial_height`, `jpeg:enc_sub_422_streaming_exif_restart_rows`, `jpeg:enc_sub_422_unaligned_batch_tail`, `jpeg:enc_sub_444`, `jpeg:enc_sub_444_aligned_subthreshold`, `jpeg:enc_sub_444_streaming_exif_restart_rows`, `jpeg:enc_sub_444_unaligned_subthreshold`, `jpeg:enc_subsample_420`, `jpeg:enc_subsample_422_tiny_edge`, `jpeg:enc_subsample_444` |
 | JPEG | still_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | dimensions | 1: `jpeg:enc_zero_width` |
 | JPEG | still_encode | rejected | Rgb8; invalid-mode witness: P8, La8, Rgba8, L16, La16, Rgb16, Rgba16, Rgb32F, Rgba32F, F32, I32 | 1 frame | — (no Rust output) | — (no result) | unsupported | 1: `jpeg:enc_error_public_mode_contract` |
-| PNG | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 1: `png:enc_1bit` |
+| PNG | sequence_encode | accepted | L1 | 1 frame | L1 | SingleFrame | — | 2: `png:enc_1bit`, `png:enc_1bit_odd_width` |
 | PNG | sequence_encode | accepted | L16 | 1 frame | L16 | SingleFrame | — | 1: `png:enc_16bit` |
 | PNG | sequence_encode | accepted | L8 | 1 frame | L8 | SingleFrame | — | 5: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8`, `png:enc_paeth_emitted_above_upper_left_tie`, `png:enc_paeth_tie_precedence` |
 | PNG | sequence_encode | accepted | La8 | 1 frame | La8 | SingleFrame | — | 2: `png:enc_grayscale_alpha`, `png:enc_la8` |
@@ -448,7 +448,7 @@ Verification scope is a format-level property derived from active decode rows. I
 | PNG | sequence_encode | rejected | P8 | 1 frame | — (no Rust output) | — (no result) | parameter | 1: `png:enc_error_oversized_public_palette` |
 | PNG | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | parameter | 3: `png:enc_error_compression_level`, `png:enc_error_compression_text`, `png:enc_error_palette_on_nonindexed` |
 | PNG | sequence_encode | rejected | Rgb8 | 1 frame | — (no Rust output) | — (no result) | unsupported | 11: `png:enc_error_retained_sequence_background`, `png:enc_error_retained_sequence_blend`, `png:enc_error_retained_sequence_canvas_height`, `png:enc_error_retained_sequence_canvas_width`, `png:enc_error_retained_sequence_default_image`, `png:enc_error_retained_sequence_disposal`, `png:enc_error_retained_sequence_duration`, `png:enc_error_retained_sequence_geometry`, `png:enc_error_retained_sequence_interlace`, `png:enc_error_retained_sequence_loop`, `png:enc_error_retained_sequence_top` |
-| PNG | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 1: `png:enc_1bit` |
+| PNG | still_encode | accepted | L1 | 1 frame | L1 | — (still result) | — | 2: `png:enc_1bit`, `png:enc_1bit_odd_width` |
 | PNG | still_encode | accepted | L16 | 1 frame | L16 | — (still result) | — | 1: `png:enc_16bit` |
 | PNG | still_encode | accepted | L8 | 1 frame | L8 | — (still result) | — | 5: `png:enc_8bit`, `png:enc_grayscale`, `png:enc_l8`, `png:enc_paeth_emitted_above_upper_left_tie`, `png:enc_paeth_tie_precedence` |
 | PNG | still_encode | accepted | La8 | 1 frame | La8 | — (still result) | — | 2: `png:enc_grayscale_alpha`, `png:enc_la8` |

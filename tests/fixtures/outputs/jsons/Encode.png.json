@@ -2571,6 +2571,46 @@
       "error_contracts": {}
     },
     {
+      "id": "enc_1bit_odd_width",
+      "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_1bit_odd_width.bin",
+      "ref_bytes": 6,
+      "ref_mode": "1",
+      "ref_size": [
+        9,
+        3
+      ],
+      "ref_sha256": "36e3c5d288415910fd696272299e53b64a80b66782e965c506b57e7dd2d8d203",
+      "encoded_ref_path": "tests/fixtures/outputs/encoded/Encode.png_enc_1bit_odd_width.bin",
+      "encoded_ref_bytes": 74,
+      "encoded_ref_sha256": "ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675",
+      "source_mode": "1",
+      "source_sha256": "ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {}
+    },
+    {
       "id": "enc_adam7",
       "ref_path": "tests/fixtures/outputs/raws/Encode.png_enc_adam7.bin",
       "ref_bytes": 49152,

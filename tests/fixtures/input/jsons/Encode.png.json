@@ -3064,6 +3064,51 @@
       }
     },
     {
+      "id": "enc_1bit_odd_width",
+      "source_asset": "1bit_odd_width.png",
+      "source_format": "png",
+      "source_mode": "1",
+      "source_sha256": "ab470446e941a51011e157e861e3f920b911686d3e592e1b7cb1d6a683bdd675",
+      "execution": {
+        "target": "aarch64-apple-darwin",
+        "features": [
+          "jpeg",
+          "png",
+          "gif",
+          "bmp",
+          "tiff",
+          "webp",
+          "ico",
+          "avif"
+        ],
+        "suite": "native_all_features"
+      },
+      "assertion_origins": {
+        "source": "pillow_fixture",
+        "encode": "pillow_fixture",
+        "operations": "pillow_fixture"
+      },
+      "operations": {
+        "encode": "ok",
+        "encode_sequence": "ok"
+      },
+      "error_contracts": {},
+      "params": {
+        "color_type": "1"
+      },
+      "pillow_call": {
+        "open": "tests/fixtures/input/images/png/1bit_odd_width.png",
+        "method": "PIL.Image.Image.save",
+        "format": "PNG",
+        "kwargs": {},
+        "roundtrip": [
+          "PIL.Image.open",
+          "load",
+          "tobytes"
+        ]
+      }
+    },
+    {
       "id": "enc_adam7",
       "source_asset": "rgb.png",
       "source_format": "png",
