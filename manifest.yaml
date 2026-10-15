@@ -4471,6 +4471,10 @@ formats:
       description: Pillow decodes a complete TIFF raster when the final zlib Adler-32 byte is missing
       test_assets:
       - deflate_truncated_adler.tiff
+    - id: compression_deflate_missing_adler
+      description: Pillow decodes a complete TIFF raster when its zlib Adler-32 trailer is missing
+      test_assets:
+      - deflate_missing_adler.tiff
     - id: compression_deflate_oversized_output
       description: Pillow stops DEFLATE inflation after the declared TIFF raster is full
       test_assets:

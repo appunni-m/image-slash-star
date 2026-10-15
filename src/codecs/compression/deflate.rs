@@ -80,12 +80,10 @@ fn decompress_zlib_with_limit_and_token(
     token: Option<&crate::CancellationToken>,
 ) -> CompressionResult<(Vec<u8>, bool)> {
     crate::codecs::error::check_cancelled(token)?;
-    if data.len() < 6 {
+    if data.len() < 2 {
         return Err(CodecError::NeedMore {
-            minimum: 6,
-            message:
-                "invalid compressed stream: zlib stream is shorter than its header and trailer"
-                    .to_owned(),
+            minimum: 2,
+            message: "invalid compressed stream: zlib header is truncated".to_owned(),
         });
     }
     let cmf = data[0];

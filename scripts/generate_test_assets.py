@@ -9565,6 +9565,11 @@ def gen_tiff():
         zlib.compress(b"\x80")[:-1],
         8,
     )
+    write_compressed_grayscale_tiff(
+        d / "deflate_missing_adler.tiff",
+        zlib.compress(b"\x80")[:-4],
+        8,
+    )
     predictor_checkpoint = pattern_img("RGB", (343, 2))
     predictor_checkpoint_path = d / "deflate_predictor_checkpoint_343x2.tiff"
     predictor_checkpoint.save(

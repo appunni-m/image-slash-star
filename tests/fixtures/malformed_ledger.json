@@ -15581,6 +15581,38 @@
         "pillow_type": "PIL.UnidentifiedImageError",
         "spec_status": "not_the_format",
         "verify_status": "error"
+      },
+      {
+        "asset": "idat_short_truncated_zlib_adler.png",
+        "class": "idat_short_truncated_zlib_adler",
+        "contracts": {
+          "decode": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          },
+          "decode_sequence": {
+            "origin": "pillow_fixture",
+            "pillow_message": "image file is truncated (0 bytes not processed)",
+            "pillow_type": "builtins.OSError",
+            "rust_format": "PNG",
+            "rust_kind": "malformed",
+            "rust_message": "non_empty"
+          }
+        },
+        "description": "PNG IDAT has a one-byte raster prefix and an incomplete Adler-32 trailer",
+        "inspect_status": "ok",
+        "origins": [
+          "pillow_fixture"
+        ],
+        "pillow_message": "image file is truncated (0 bytes not processed)",
+        "pillow_status": "error",
+        "pillow_type": "builtins.OSError",
+        "spec_status": "truncated",
+        "verify_status": "ok"
       }
     ],
     "tiff": [
@@ -25653,12 +25685,12 @@
       "gif": 47,
       "ico": 30,
       "jpeg": 98,
-      "png": 60,
+      "png": 61,
       "tiff": 116,
       "webp": 132
     },
     "by_origin": {
-      "pillow_fixture": 606,
+      "pillow_fixture": 607,
       "specification_reference": 58
     },
     "by_spec_status": {
@@ -25666,9 +25698,9 @@
       "not_the_format": 39,
       "spec_violation": 343,
       "tolerated": 0,
-      "truncated": 189
+      "truncated": 190
     },
-    "classes": 606,
+    "classes": 607,
     "formats": 8
   }
 }
