@@ -1183,6 +1183,44 @@ def rebuild_png(chunks):
     )
 
 
+def append_png_idat_empty_zlib_member(source_path, output_path):
+    """Append one exact valid empty zlib member to a single-IDAT PNG."""
+    chunks = png_chunks(source_path.read_bytes())
+    idat_indices = [index for index, (kind, _) in enumerate(chunks) if kind == b"IDAT"]
+    if len(idat_indices) != 1:
+        raise ValueError(f"expected exactly one IDAT chunk in {source_path}")
+    index = idat_indices[0]
+    kind, payload = chunks[index]
+    chunks[index] = (kind, payload + bytes.fromhex("78 9c 03 00 00 00 00 01"))
+    output_path.write_bytes(rebuild_png(chunks))
+
+
+def truncate_png_idat_adler_byte(source_path, output_path):
+    """Remove the final Adler-32 byte from a single-IDAT PNG."""
+    chunks = png_chunks(source_path.read_bytes())
+    idat_indices = [index for index, (kind, _) in enumerate(chunks) if kind == b"IDAT"]
+    if len(idat_indices) != 1:
+        raise ValueError(f"expected exactly one IDAT chunk in {source_path}")
+    index = idat_indices[0]
+    kind, payload = chunks[index]
+    if len(payload) <= 4:
+        raise ValueError(f"IDAT zlib payload is too short in {source_path}")
+    chunks[index] = (kind, payload[:-1])
+    output_path.write_bytes(rebuild_png(chunks))
+
+
+def replace_png_idat_with_short_truncated_zlib(source_path, output_path):
+    """Use a one-byte raster prefix and remove its final Adler-32 byte."""
+    chunks = png_chunks(source_path.read_bytes())
+    idat_indices = [index for index, (kind, _) in enumerate(chunks) if kind == b"IDAT"]
+    if len(idat_indices) != 1:
+        raise ValueError(f"expected exactly one IDAT chunk in {source_path}")
+    index = idat_indices[0]
+    kind, _ = chunks[index]
+    chunks[index] = (kind, zlib.compress(b"\x00")[:-1])
+    output_path.write_bytes(rebuild_png(chunks))
+
+
 def insert_png_chunks(path, additions):
     """Insert ancillary chunks before IDAT and refresh every PNG CRC."""
     chunks = png_chunks(path.read_bytes())
@@ -2939,6 +2977,15 @@ def gen_png():
     img = pattern_img("RGB")
     img.save(d / "16x16.png")
     img.save(d / "rgb.png")
+    append_png_idat_empty_zlib_member(
+        d / "rgb.png", d / "idat_trailing_zlib_member.png"
+    )
+    truncate_png_idat_adler_byte(
+        d / "rgb.png", d / "idat_truncated_zlib_adler.png"
+    )
+    replace_png_idat_with_short_truncated_zlib(
+        d / "rgb.png", d / "idat_short_truncated_zlib_adler.png"
+    )
     pattern_img("RGB", (49, 32)).save(d / "rgb_49x32.png")
     webp_alpha_size = (64, 64)
     webp_alpha_rgb = (37, 91, 143)
@@ -9513,6 +9560,11 @@ def gen_tiff():
     img.save(d / "uncompressed.tiff", compression=None)
     img.save(d / "lzw.tiff", compression="tiff_lzw")
     img.save(d / "deflate.tiff", compression="tiff_adobe_deflate")
+    write_compressed_grayscale_tiff(
+        d / "deflate_truncated_adler.tiff",
+        zlib.compress(b"\x80")[:-1],
+        8,
+    )
     predictor_checkpoint = pattern_img("RGB", (343, 2))
     predictor_checkpoint_path = d / "deflate_predictor_checkpoint_343x2.tiff"
     predictor_checkpoint.save(

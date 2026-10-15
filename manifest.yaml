@@ -1856,6 +1856,19 @@ formats:
       description: RGB (color type 2)
       test_assets:
       - rgb.png
+    - id: idat_trailing_zlib_member
+      description: RGB image data followed by a valid empty zlib member in the same IDAT chunk
+      test_assets:
+      - idat_trailing_zlib_member.png
+    - id: idat_truncated_zlib_adler
+      description: RGB image data with the final Adler-32 byte missing from its IDAT stream
+      test_assets:
+      - idat_truncated_zlib_adler.png
+    - id: idat_short_truncated_zlib_adler
+      description: PNG IDAT has a one-byte raster prefix and an incomplete Adler-32 trailer
+      test_assets:
+      - idat_short_truncated_zlib_adler.png
+      expect_error: true
     - id: color_rgba
       description: RGBA (color type 6)
       test_assets:
@@ -4454,6 +4467,10 @@ formats:
       - gray16_deflate_predictor.tiff
       - float32_deflate_predictor.tiff
       - be_float32_predictor.tiff
+    - id: compression_deflate_truncated_adler
+      description: Pillow decodes a complete TIFF raster when the final zlib Adler-32 byte is missing
+      test_assets:
+      - deflate_truncated_adler.tiff
     - id: compression_deflate_oversized_output
       description: Pillow stops DEFLATE inflation after the declared TIFF raster is full
       test_assets:

@@ -29,8 +29,9 @@ const CODE_LENGTH_ORDER: [usize; 19] = [
 /// Inflate the requested prefix of a zlib stream.
 ///
 /// Pillow's PNG and TIFF decoders stop once their raster buffer is full, so
-/// extra inflated bytes and the remainder of that zlib stream are deliberately
-/// ignored.
+/// extra inflated bytes and bytes following the first complete zlib stream are
+/// deliberately ignored. A partial Adler-32 trailer is also ignored once the
+/// requested prefix is complete.
 pub(crate) fn decompress_zlib_prefix(data: &[u8], max_output: usize) -> CompressionResult<Vec<u8>> {
     decompress_zlib_prefix_with_status(data, max_output).map(|(output, _)| output)
 }
@@ -103,8 +104,7 @@ fn decompress_zlib_with_limit_and_token(
         ));
     }
 
-    let payload_end = data.len().saturating_sub(4);
-    let mut bits = BitReader::new(&data[2..payload_end]);
+    let mut bits = BitReader::new(&data[2..]);
     let mut output = Vec::with_capacity(max_output.min(65_536));
     loop {
         crate::codecs::error::check_cancelled(token)?;
@@ -147,7 +147,24 @@ fn decompress_zlib_with_limit_and_token(
         }
     }
 
-    let trailer = &data[payload_end..];
+    bits.align_to_byte();
+    let trailer_start = bits
+        .bit_position
+        .div_ceil(8)
+        .checked_add(2)
+        .ok_or_else(|| malformed("zlib Adler-32 checksum offset overflows"))?;
+    let trailer_end = trailer_start
+        .checked_add(4)
+        .ok_or_else(|| malformed("zlib Adler-32 checksum offset overflows"))?;
+    let Some(trailer) = data.get(trailer_start..trailer_end) else {
+        if output.len() == max_output {
+            return Ok((output, false));
+        }
+        return Err(CodecError::NeedMore {
+            minimum: trailer_end,
+            message: "invalid compressed stream: zlib Adler-32 checksum is truncated".to_owned(),
+        });
+    };
     let expected = u32::from_be_bytes([trailer[0], trailer[1], trailer[2], trailer[3]]);
     if adler32_with_optional_token(&output, token)? != expected {
         return Err(malformed("zlib Adler-32 checksum does not match"));
