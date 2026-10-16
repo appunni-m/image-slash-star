@@ -87,6 +87,9 @@ dead_code = "deny"
 deprecated = "deny"
 missing_docs = "warn"
 
+[lints.rustdoc]
+missing_crate_level_docs = "deny"
+
 [lints.clippy]
 allow_attributes_without_reason = "deny"
 # Keep Clippy's default correctness, style, complexity, and performance checks
