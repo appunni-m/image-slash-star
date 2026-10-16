@@ -547,7 +547,7 @@ pub fn decode(
     let mut saw_idat = false;
     let mut idat_offset = None;
     let mut saw_post_idat_control = false;
-    let mut next_sequence = 0;
+    let mut next_sequence = Some(0);
     let mut opaque_blocks = Vec::new();
     let mut metadata = Vec::new();
     let mut source_color = SourceColor::new();
@@ -997,7 +997,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
     let mut current = None::<ApngCompressedFrame>;
     let mut current_has_data = false;
     let mut frames = Vec::new();
-    let mut next_sequence = 0u32;
+    let mut next_sequence = Some(0u32);
     let mut controlled_frames = 0u32;
     let mut opaque_blocks = Vec::new();
     let mut metadata = Vec::new();
@@ -1164,7 +1164,7 @@ fn parse_apng(data: &[u8]) -> CodecResult<Option<(ParsedApng, usize)>> {
 fn parse_frame_control(
     data: &[u8],
     header: PngHeader,
-    next_sequence: &mut u32,
+    next_sequence: &mut Option<u32>,
 ) -> CodecResult<ApngFrameControl> {
     if data.len() < 26 {
         return Err(CodecError::Malformed(
@@ -1218,18 +1218,29 @@ fn parse_frame_control(
     })
 }
 
-fn consume_sequence(actual: u32, next: &mut u32) -> CodecResult<()> {
-    if actual != *next {
+fn consume_sequence(actual: u32, next: &mut Option<u32>) -> CodecResult<()> {
+    #[cfg(coverage)]
+    let actual = if crate::coverage_support::take_fault_point(
+        crate::coverage_support::CoverageFaultPoint::ApngSequenceCounterExhaustion,
+    ) {
+        // Represent the valid, otherwise unreachable prefix ending at MAX.
+        *next = Some(u32::MAX);
+        u32::MAX
+    } else {
+        actual
+    };
+
+    let Some(expected) = *next else {
+        return Err(CodecError::Malformed(
+            "APNG sequence number overflows".to_owned(),
+        ));
+    };
+    if actual != expected {
         return Err(CodecError::Malformed(
             "APNG frame sequence numbers are not continuous".to_owned(),
         ));
     }
-    if *next == u32::MAX {
-        return Err(CodecError::Malformed(
-            "APNG sequence number overflows".to_owned(),
-        ));
-    }
-    *next = next.wrapping_add(1);
+    *next = expected.checked_add(1);
     Ok(())
 }
 

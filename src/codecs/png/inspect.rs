@@ -46,7 +46,7 @@ pub fn inspect(data: &[u8]) -> CodecResult<ImageInfo> {
     let mut animation_declared = false;
     let mut saw_actl = false;
     let mut saw_frame_control = false;
-    let mut next_sequence = 0u32;
+    let mut next_sequence = Some(0u32);
     let mut saw_following_chunk = false;
     while position < data.len() {
         let chunk_offset = position as u64;
@@ -183,18 +183,18 @@ fn png_mode(color_type: u8, bit_depth: u8) -> CodecResult<ImageMode> {
     }
 }
 
-fn consume_sequence(actual: u32, next: &mut u32) -> CodecResult<()> {
-    if actual != *next {
+fn consume_sequence(actual: u32, next: &mut Option<u32>) -> CodecResult<()> {
+    let Some(expected) = *next else {
+        return Err(CodecError::Malformed(
+            "PNG animation sequence number overflows".to_owned(),
+        ));
+    };
+    if actual != expected {
         return Err(CodecError::Malformed(
             "PNG animation frame sequence is invalid".to_owned(),
         ));
     }
-    if *next == u32::MAX {
-        return Err(CodecError::Malformed(
-            "PNG animation sequence number overflows".to_owned(),
-        ));
-    }
-    *next = next.wrapping_add(1);
+    *next = expected.checked_add(1);
     Ok(())
 }
 

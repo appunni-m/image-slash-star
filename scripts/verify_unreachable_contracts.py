@@ -201,6 +201,14 @@ FAULT_CONTRACTS = {
         "point": "png.scanline.sample_buffer_reservation",
         "contract": "decode_error_then_retry_succeeds",
     },
+    "png_apng_sequence_counter_exhaustion": {
+        "format": "png",
+        "category": "structured-diagnostics",
+        "selector": "fault-contract:png:png_apng_sequence_counter_exhaustion",
+        "source_case": "decode:png:apng_sequence_controls",
+        "point": "png.apng.sequence_counter_exhaustion",
+        "contract": "sequence_decode_error_then_retry_succeeds",
+    },
     "avif_monochrome_tile_reservation_failure": {
         "format": "avif",
         "category": "structured-diagnostics",

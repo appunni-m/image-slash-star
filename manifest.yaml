@@ -96,6 +96,20 @@ fault_contracts:
       point: png.scanline.sample_buffer_reservation
       contract: decode_error_then_retry_succeeds
     oracle_status: not_applicable
+  - id: png_apng_sequence_counter_exhaustion
+    type: fault-contract
+    operation: decode
+    format: png
+    status: active
+    requirements:
+      - structured-diagnostics
+    verification: fault-contract
+    input:
+      source_case: decode:png:apng_sequence_controls
+    fault:
+      point: png.apng.sequence_counter_exhaustion
+      contract: sequence_decode_error_then_retry_succeeds
+    oracle_status: not_applicable
   - id: avif_retained_temporal_sample_reservation_failure
     type: fault-contract
     operation: decode

@@ -2682,6 +2682,9 @@ def sync_fault_contract_rows(manifest, matrix):
         "png.scanline.sample_buffer_reservation": {
             "decode_error_then_retry_succeeds"
         },
+        "png.apng.sequence_counter_exhaustion": {
+            "sequence_decode_error_then_retry_succeeds"
+        },
         "av1.frame.monochrome_tile_state_reservation": {
             "decode_error_then_retry_succeeds"
         },

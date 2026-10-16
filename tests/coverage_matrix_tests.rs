@@ -1307,6 +1307,15 @@ fn execute_fault_contract(
                 img::ImageFormat::Png,
                 img::ImageErrorStage::StillDecode,
             ),
+            (
+                "png.apng.sequence_counter_exhaustion",
+                "sequence_decode_error_then_retry_succeeds",
+            ) => (
+                img::CoverageFaultPoint::ApngSequenceCounterExhaustion,
+                true,
+                img::ImageFormat::Png,
+                img::ImageErrorStage::SequenceDecode,
+            ),
             ("tiff.strip_assembly.output_reservation", "decode_error_then_retry_succeeds") => (
                 img::CoverageFaultPoint::TiffStripAssemblyReservation,
                 false,
@@ -1403,6 +1412,9 @@ fn execute_fault_contract(
         "png.scanline.sample_buffer_reservation" => {
             Some("decode: unable to reserve PNG decoded sample buffer")
         }
+        "png.apng.sequence_counter_exhaustion" => {
+            Some("decode sequence: APNG sequence number overflows")
+        }
         _ => None,
     };
 
@@ -1453,6 +1465,15 @@ fn execute_fault_contract(
         }
     });
     match injected {
+        Err(img::ImageError::Malformed {
+            format: actual_format,
+            message,
+            stage: Some(stage),
+            ..
+        }) if row.fault.point == "png.apng.sequence_counter_exhaustion"
+            && actual_format == expected_format
+            && stage == expected_stage
+            && expected_message.is_none_or(|expected| message == expected) => {}
         Err(img::ImageError::Dimensions {
             format: Some(actual_format),
             message,

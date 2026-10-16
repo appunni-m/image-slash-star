@@ -62,6 +62,8 @@ pub enum CoverageFaultPoint {
     BmpPaletteReservation,
     /// Force PNG decoded-sample reservation to fail before scanline unpacking.
     PngDecodedSampleBufferReservation,
+    /// Advance APNG sequence validation through `u32::MAX` in coverage builds.
+    ApngSequenceCounterExhaustion,
     /// Force TIFF strip assembly output reservation to fail before decoding.
     TiffStripAssemblyReservation,
     /// Force AV1 partial monochrome tile-state retention to fail.
